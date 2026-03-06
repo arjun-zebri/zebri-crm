@@ -52,7 +52,7 @@ wedding MCs.
 
 Typical workflow:
 
-Lead → Enquiry → Quote → Booked → Wedding → Follow‑up
+Couple → Enquiry → Quote → Booked → Wedding → Follow‑up
 
 The CRM should feel:
 
@@ -75,7 +75,7 @@ Do NOT build:
 
 Focus on:
 
-• Leads • Couples • Events • Tasks
+• Couples • Vendors • Events • Tasks
 
 ---
 
@@ -87,7 +87,7 @@ Sidebar (240px)
 
 Navigation:
 
-Dashboard Leads Couples Events Tasks
+Dashboard Couples Vendors Events Tasks
 
 Main content area on the right.
 

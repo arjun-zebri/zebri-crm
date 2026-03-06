@@ -26,7 +26,7 @@ If it isn't faster, redesign it.
 
 Everything should revolve around:
 
-Lead → Booking → Wedding → Follow‑up
+Couple → Enquiry → Booking → Wedding → Follow‑up
 
 ------------------------------------------------------------------------
 

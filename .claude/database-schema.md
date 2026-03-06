@@ -17,7 +17,7 @@ created_at (timestamp)
 
 ------------------------------------------------------------------------
 
-# leads
+# couples
 
 Incoming enquiries from couples.
 
@@ -32,16 +32,18 @@ created_at (timestamp)
 
 ------------------------------------------------------------------------
 
-# couples
+# vendors
 
-Couples who have booked the MC.
+Other wedding vendors the MC liaises with.
 
 Columns:
 
-id (uuid) partner_1_name (text) partner_2_name (text) email (text) phone
-(text) wedding_date (date) venue (text) notes (text) status (text)
+id (uuid) name (text) contact_name (text) email (text) phone
+(text) category (text) notes (text) status (text)
 
-Status values: booked confirmed completed
+Category values: venue photographer videographer dj florist planner caterer other
+
+Status values: active inactive
 
 created_at (timestamp)
 
@@ -69,7 +71,7 @@ Follow-ups and reminders.
 Columns:
 
 id (uuid) title (text) description (text) due_date (date) status (text)
-user_id (uuid) related_event_id (uuid) related_lead_id (uuid)
+user_id (uuid) related_event_id (uuid) related_couple_id (uuid)
 
 Status values: todo in_progress done
 
@@ -79,9 +81,9 @@ created_at (timestamp)
 
 # Relationships
 
-leads -\> can convert to couples
-
 couples -\> have events
+
+vendors -\> can be linked to events
 
 events -\> can have tasks
 

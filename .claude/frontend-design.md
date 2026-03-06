@@ -107,11 +107,11 @@ Avoid: - flashy motion - bouncing effects
 
 Example:
 
-"No leads yet.
+"No couples yet.
 
-Start by adding your first enquiry."
+Start by adding your first couple."
 
-Button: Add Lead
+Button: Add Couple
 
 ------------------------------------------------------------------------
 

@@ -12,25 +12,9 @@ Quick overview of upcoming work.
 
 Modules:
 
-Upcoming Weddings Tasks Due Recent Leads
+Upcoming Weddings Tasks Due Recent Couples
 
 Avoid heavy analytics.
-
-------------------------------------------------------------------------
-
-# Leads Page
-
-Purpose:
-
-Manage enquiries.
-
-Table Columns:
-
-Name Email Phone Event Date Venue Status
-
-Actions:
-
-Add Lead Edit Lead Convert to Couple
 
 ------------------------------------------------------------------------
 
@@ -38,25 +22,41 @@ Add Lead Edit Lead Convert to Couple
 
 Purpose:
 
-List couples who have booked.
+Manage enquiries from couples.
 
-Columns:
+Table Columns:
 
-Couple Name Wedding Date Venue Status
+Name Email Phone Event Date Venue Status
 
-Clicking a row opens the couple profile.
+Actions:
+
+Add Couple Edit Couple Convert to Booking
 
 ------------------------------------------------------------------------
 
-# Couple Profile
+# Vendors Page
+
+Purpose:
+
+List vendors the MC liaises with for weddings.
+
+Columns:
+
+Vendor Name Contact Email Phone Category Status
+
+Clicking a row opens the vendor profile.
+
+------------------------------------------------------------------------
+
+# Vendor Profile
 
 Information:
 
-Partner names Email Phone Wedding date Venue Notes
+Vendor name Contact person Email Phone Category Notes
 
 Tabs:
 
-Overview Timeline Tasks
+Overview Events Tasks
 
 ------------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ Track follow‑ups and reminders.
 
 Columns:
 
-Task Due Date Status Related Lead/Event
+Task Due Date Status Related Couple/Event
 
 Actions:
 

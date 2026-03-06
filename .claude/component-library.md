@@ -99,7 +99,7 @@ Props: title description actions
 
 ## Table
 
-Used for lists such as Leads, Couples, Events.
+Used for lists such as Couples, Vendors, Events.
 
 Built using: tanstack-table
 
@@ -117,7 +117,7 @@ Status indicator.
 
 Examples:
 
-Lead: bg-yellow-100 text-yellow-700
+Couple: bg-yellow-100 text-yellow-700
 
 Confirmed: bg-green-100 text-green-700
 
@@ -131,7 +131,7 @@ Completed: bg-neutral-200 text-neutral-700
 
 Reusable modal dialog.
 
-Used for: - create lead - create task - edit couple
+Used for: - create couple - create task - edit vendor
 
 Features: overlay background escape to close click outside to close
 
@@ -141,7 +141,7 @@ Features: overlay background escape to close click outside to close
 
 Main navigation.
 
-Contains: Dashboard Leads Couples Events Tasks
+Contains: Dashboard Couples Vendors Events Tasks
 
 Width: 240px
 
@@ -153,6 +153,6 @@ Style: minimal light dividers active state indicator
 
 Keyboard shortcut: Cmd + K
 
-Functions: - create lead - create task - search couples - navigate pages
+Functions: - create couple - create task - search vendors - navigate pages
 
 Style inspired by: Linear / Vercel
