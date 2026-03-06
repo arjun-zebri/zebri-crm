@@ -1,0 +1,98 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Home,
+  Target,
+  Users,
+  Calendar,
+  CheckSquare,
+  Settings,
+  User,
+} from "lucide-react";
+
+const navItems = [
+  { label: "Dashboard", href: "/", icon: Home },
+  { label: "Leads", href: "/leads", icon: Target },
+  { label: "Couples", href: "/couples", icon: Users },
+  { label: "Events", href: "/events", icon: Calendar },
+  { label: "Tasks", href: "/tasks", icon: CheckSquare },
+];
+
+const bottomItems = [
+  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Account", href: "/account", icon: User },
+];
+
+export function Sidebar() {
+  const pathname = usePathname();
+
+  return (
+    <aside className="group/sidebar fixed top-0 left-0 h-screen w-[68px] hover:w-60 border-r border-gray-200 bg-white flex flex-col transition-all duration-300 ease-in-out z-50 overflow-hidden">
+      <Link
+        href="/"
+        className="flex items-center hover:opacity-80 transition px-[16px] pt-4"
+      >
+        <img
+          src="/zebri-icon.svg"
+          alt="Zebri"
+          className="shrink-0 min-w-[35px] min-h-[35px] w-[35px] h-[35px]"
+        />
+      </Link>
+
+      <nav className="flex-1 px-3 mt-8 space-y-2">
+        {navItems.map((item) => {
+          const isActive =
+            item.href === "/"
+              ? pathname === "/"
+              : pathname.startsWith(item.href);
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-[10px] py-2.5 rounded-lg text-base transition whitespace-nowrap ${
+                isActive
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
+              }`}
+            >
+              <Icon size={22} strokeWidth={1.5} className="flex-shrink-0" />
+              <span className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 text-[14px]">
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="px-3 pb-4">
+        <div className="border-t border-gray-200 pt-3 space-y-2">
+          {bottomItems.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-[10px] py-2.5 rounded-lg text-base transition whitespace-nowrap ${
+                  isActive
+                    ? "bg-gray-100 text-gray-900"
+                    : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <Icon size={22} strokeWidth={1.5} className="flex-shrink-0" />
+                <span className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 text-[14px]">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </aside>
+  );
+}

@@ -46,6 +46,41 @@ This component should provide a modern SaaS-style searchable dropdown that match
 
 Native <select> elements should not be used anywhere in Zebri.
 
+The Select component should be built using a combobox pattern.
+
+Recommended libraries:
+
+@radix-ui/react-popover - cmdk - lucide-react
+
+Structure:
+
+Button Trigger
+Popover
+Search Input
+Options List
+
+The Select trigger should visually match the Input component.
+
+Trigger styles:
+
+border - rounded-lg - px-3 - py-2 - bg-white - flex - items-center - justify-between - text-sm
+
+Focus state:
+
+ring-2 - ring-green-200
+
+Dropdown menu styles:
+
+bg-white - border - rounded-lg - shadow-lg - max-h-60 - overflow-y-auto p-1
+
+Option styles:
+
+px-3 - py-2 - rounded-md - cursor-pointer - hover:bg-gray-50
+
+Selected option:
+
+bg-green-50 - text-green-700
+
 ---
 
 ## Card
@@ -84,7 +119,9 @@ Examples:
 
 Lead: bg-yellow-100 text-yellow-700
 
-Booked: bg-green-100 text-green-700
+Confirmed: bg-green-100 text-green-700
+
+Paid: bg-emerald-100 - text-emerald-700
 
 Completed: bg-neutral-200 text-neutral-700
 

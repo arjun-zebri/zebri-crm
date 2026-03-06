@@ -127,6 +127,21 @@ tanstack-table react-query lucide-react dnd-kit
 
 ---
 
+# Brand Assets
+
+Brand assets are stored in:
+
+.claude/brand_assets/
+
+Contents:
+
+- zebri-logo.svg — the official Zebri wordmark logo (black on white, SVG)
+- zebri-icon.svg — the square Zebri icon (used in collapsed sidebar, favicons, etc.)
+
+Copy logos to public/ when using them in the app. Always use the official assets — do not recreate or approximate them.
+
+---
+
 # Component Rules
 
 Only use components defined in:

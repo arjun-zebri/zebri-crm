@@ -23,11 +23,11 @@ Text Secondary: #6B7280
 
 # Typography
 
-Primary font: Sora
+Primary font: Inter
 
-Fallback: Inter, system-ui
+Fallback: system-ui
 
-Example: font-family: "Sora", "Inter", system-ui, sans-serif;
+Example: font-family: "Inter", system-ui, sans-serif;
 
 ------------------------------------------------------------------------
 
