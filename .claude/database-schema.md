@@ -6,14 +6,11 @@ The schema is intentionally **simple for the MVP CRM**.
 
 ------------------------------------------------------------------------
 
-# users
+# User Data
 
-Represents Zebri accounts.
+There is no `users` table. User profile and subscription data is stored in Supabase Auth `user_metadata`. See `.claude/authentication.md` for the full schema.
 
-Columns:
-
-id (uuid, primary key) name (text) email (text, unique) role (text)
-created_at (timestamp)
+All CRM tables include a `user_id` column (uuid, not null) referencing `auth.users.id` for row-level security.
 
 ------------------------------------------------------------------------
 
@@ -23,7 +20,7 @@ Incoming enquiries from couples.
 
 Columns:
 
-id (uuid) name (text) email (text) phone (text) event_date (date) venue
+id (uuid) user_id (uuid, not null) name (text) email (text) phone (text) event_date (date) venue
 (text) notes (text) status (text)
 
 Status values: new contacted quoted lost
@@ -38,7 +35,7 @@ Other wedding vendors the MC liaises with.
 
 Columns:
 
-id (uuid) name (text) contact_name (text) email (text) phone
+id (uuid) user_id (uuid, not null) name (text) contact_name (text) email (text) phone
 (text) category (text) notes (text) status (text)
 
 Category values: venue photographer videographer dj florist planner caterer other
@@ -55,7 +52,7 @@ Actual weddings being managed.
 
 Columns:
 
-id (uuid) couple_id (uuid, foreign key) date (date) venue (text)
+id (uuid) user_id (uuid, not null) couple_id (uuid, foreign key) date (date) venue (text)
 timeline_notes (text) status (text)
 
 Status values: upcoming completed cancelled
@@ -87,4 +84,16 @@ vendors -\> can be linked to events
 
 events -\> can have tasks
 
-users -\> own tasks
+All tables -\> scoped to user via user_id (RLS)
+
+------------------------------------------------------------------------
+
+# stripe_customers
+
+Lookup table for resolving Stripe webhooks to Supabase users. See `.claude/payments.md` for details.
+
+Columns:
+
+stripe_customer_id (text, primary key) user_id (uuid, not null, references auth.users.id) created_at (timestamp)
+
+RLS: service role only (no client access).

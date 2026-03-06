@@ -26,6 +26,12 @@ Design system
 Database structure:
 .claude/database-schema.md
 
+Authentication:
+.claude/authentication.md
+
+Payments:
+.claude/payments.md
+
 ---
 
 # Always Load These Files
@@ -34,12 +40,13 @@ Before generating ANY code, always load:
 
 .claude/frontend-design.md .claude/component-library.md
 .claude/database-schema.md .claude/product-principles.md
-.claude/page-specs.md
+.claude/page-specs.md .claude/authentication.md
+.claude/payments.md
 
 These files define:
 
 • UI design system • allowed components • database structure • product
-philosophy • page requirements
+philosophy • page requirements • authentication • payments
 
 All generated code must follow them.
 
@@ -71,11 +78,11 @@ Build ONLY the CRM.
 
 Do NOT build:
 
-• payments • analytics • automation • AI • messaging • marketplace
+• analytics • automation • AI • messaging • marketplace
 
 Focus on:
 
-• Couples • Vendors • Events • Tasks
+• Authentication • Payments/Subscriptions • Couples • Vendors • Events • Tasks
 
 ---
 
