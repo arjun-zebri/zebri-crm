@@ -36,6 +36,7 @@ These fields live on the Supabase Auth user's `user_metadata` (see `authenticati
 | subscription_plan | text | Plan identifier (e.g. `zebri_pro`) |
 | trial_end | timestamp | When the trial expires |
 | subscription_end | timestamp | When the subscription expires (set on cancellation) |
+| is_beta_user | boolean | Beta user flag — uses `STRIPE_BETA_PRICE_ID` for lifetime discount |
 
 ---
 
@@ -96,6 +97,7 @@ Creates a Stripe Checkout Session.
 - Sets `client_reference_id` to the user's `auth.uid()`
 - Uses `STRIPE_PRICE_ID` for the subscription
 - Sets `subscription_data.trial_period_days` to 14 (if first subscription)
+- If `user_metadata.is_beta_user` is `true`, uses `STRIPE_BETA_PRICE_ID` instead of `STRIPE_PRICE_ID`
 - Returns `{ url: string }`
 
 ### `POST /api/stripe/portal`
@@ -191,6 +193,7 @@ The subscription section on `/account` shows state-specific messaging:
 | `STRIPE_PUBLISHABLE_KEY` | Public | Stripe publishable key (if needed client-side) |
 | `STRIPE_WEBHOOK_SECRET` | Server only | Webhook signing secret |
 | `STRIPE_PRICE_ID` | Server only | Price ID for Zebri Pro plan |
+| `STRIPE_BETA_PRICE_ID` | Server only | Price ID for beta user lifetime discount plan |
 
 ---
 

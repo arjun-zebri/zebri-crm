@@ -28,6 +28,7 @@ Stored in `user_metadata.account_type`:
 | subscription_plan | text | Plan identifier (e.g. `zebri_pro`) |
 | trial_end | timestamp | Trial expiry date |
 | subscription_end | timestamp | Subscription expiry date |
+| is_beta_user | boolean | Beta user flag — entitles lifetime discount pricing |
 
 Subscription fields are detailed in `.claude/payments.md`.
 
