@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import {
   Home,
   Target,
@@ -9,7 +11,7 @@ import {
   Calendar,
   CheckSquare,
   Settings,
-  User,
+  LogOut,
 } from "lucide-react";
 
 const navItems = [
@@ -22,11 +24,19 @@ const navItems = [
 
 const bottomItems = [
   { label: "Settings", href: "/settings", icon: Settings },
-  { label: "Account", href: "/account", icon: User },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   return (
     <aside className="group/sidebar fixed top-0 left-0 h-screen w-[68px] hover:w-60 border-r border-gray-200 bg-white flex flex-col transition-all duration-300 ease-in-out z-50 overflow-hidden">
@@ -91,6 +101,17 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          <button
+            onClick={handleSignOut}
+            disabled={signingOut}
+            className="flex items-center gap-3 px-[10px] py-2.5 rounded-lg text-base transition whitespace-nowrap w-full text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50"
+          >
+            <LogOut size={22} strokeWidth={1.5} className="flex-shrink-0" />
+            <span className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 text-[14px]">
+              {signingOut ? "Signing out..." : "Sign Out"}
+            </span>
+          </button>
         </div>
       </div>
     </aside>

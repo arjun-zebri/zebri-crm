@@ -39,7 +39,9 @@ Section titles: text-xl font-semibold
 
 Body: text-sm
 
-Labels: text-xs uppercase tracking-wide
+Labels: text-sm font-medium text-gray-700
+
+Dense page section titles (e.g. settings): text-sm font-medium text-gray-900
 
 ------------------------------------------------------------------------
 
@@ -112,6 +114,20 @@ Example:
 Start by adding your first couple."
 
 Button: Add Couple
+
+------------------------------------------------------------------------
+
+# Horizontal Tabs
+
+Style: Vercel / Beyond.so underline tabs.
+
+Container: `flex gap-6 border-b border-gray-200`
+
+Active tab: `text-gray-900 font-medium` + 2px `bg-gray-900` bottom border
+
+Inactive tab: `text-gray-500 hover:text-gray-700`
+
+Tab text: `text-sm`
 
 ------------------------------------------------------------------------
 

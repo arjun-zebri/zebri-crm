@@ -195,7 +195,7 @@ Sections:
 | Variable | Visibility | Description |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Public | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public | Supabase anon/public key |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Public | Supabase publishable (anon) key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only | Supabase service role key (for admin operations and webhooks) |
 
 ---

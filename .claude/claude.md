@@ -159,6 +159,29 @@ Do NOT invent new components unless necessary.
 
 ---
 
+# Component Architecture
+
+Follow React/Next.js best practices for component structure:
+
+- **Split pages into section components.** Each logical section of a page (e.g. a form card, a settings panel) should be its own component file, co-located with the page.
+- **Co-locate section components** next to their page file (e.g. `app/account/profile-section.tsx` alongside `app/account/page.tsx`).
+- **Page files are orchestrators.** They load data, manage top-level state, and compose section components. They should not contain form logic or complex UI.
+- **Each section component owns its own state and handlers.** Pass initial data via props. Keep side effects (API calls, mutations) inside the component that triggers them.
+- **Shared UI components** (Button, Input, Card, Badge, etc.) live in `components/ui/` and are used across section components.
+- **Keep components small and focused.** If a component exceeds ~150 lines, it likely needs to be split further.
+
+---
+
+# Typography
+
+All body text, labels, inputs, and buttons must use `text-sm` (14px) unless they are headings.
+
+- Page titles: `text-3xl font-semibold`
+- Section titles: `text-xl font-semibold`
+- Everything else: `text-sm` (14px)
+
+---
+
 # Database Rules
 
 Follow the schema defined in:

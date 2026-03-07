@@ -154,29 +154,35 @@ Create Task Mark Complete Edit Task
 
 ------------------------------------------------------------------------
 
-# Account Page
+# Settings Page
 
-Route: `/account`
+Route: `/settings`
 
 Route group: `(dashboard)`
 
-Purpose: Manage profile, password, subscription, and sign out.
+Purpose: Unified settings page with horizontal tab navigation.
 
-Sections:
+Header shows "Settings" title with user name and email below.
 
-## Profile
+## Tab Navigation
+
+Horizontal underline tabs (Vercel/Beyond.so style). Active tab driven by `?tab=` search param, default `personal-info`.
+
+Tabs:
+
+### Personal Info (`?tab=personal-info`)
 
 Fields: Display Name, Business Name, Phone, Avatar URL
 
 Action: Save Changes (updates user_metadata)
 
-## Password
+### Account (`?tab=account`)
 
 Fields: New Password, Confirm Password
 
 Action: Change Password
 
-## Subscription
+### Plans & Billing (`?tab=billing`)
 
 Shows state-specific messaging and CTAs based on subscription_status.
 
@@ -191,6 +197,10 @@ See `.claude/payments.md` for the full subscription UI table.
 | past_due | "Payment failed" | Update Payment |
 | expired | "Your subscription has expired" | Subscribe |
 
-## Sign Out
+### Packages (`?tab=packages`)
 
-Action: Sign Out — clears session and redirects to `/login`
+Placeholder empty state. Coming soon.
+
+### Notifications (`?tab=notifications`)
+
+Placeholder empty state. Coming soon.
