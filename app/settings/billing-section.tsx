@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Loader2, CreditCard } from 'lucide-react'
+import { Check, Loader2, CreditCard, Eye, EyeOff } from 'lucide-react'
 
 interface BillingSectionProps {
   status: string | null
@@ -56,6 +56,13 @@ export function BillingSection({ status }: BillingSectionProps) {
   const [selectedPlan, setSelectedPlan] = useState('pro')
   const [redirecting, setRedirecting] = useState(false)
 
+  const [cardNumber, setCardNumber] = useState('')
+  const [cardName, setCardName] = useState('')
+  const [expiryDate, setExpiryDate] = useState('')
+  const [cvv, setCvv] = useState('')
+  const [showCvv, setShowCvv] = useState(false)
+  const [savingCard, setSavingCard] = useState(false)
+
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId)
   }
@@ -63,6 +70,46 @@ export function BillingSection({ status }: BillingSectionProps) {
   const handleSubscribe = () => {
     setRedirecting(true)
     window.location.href = '/api/stripe/checkout'
+  }
+
+  const handleSaveCard = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setSavingCard(true)
+
+    // TODO: Integrate with Stripe API to tokenize and save card
+    // For now, this is a placeholder that would redirect to the Stripe portal for subscribed users
+    if (status === 'active' || status === 'trialing') {
+      window.location.href = '/api/stripe/portal'
+    }
+
+    setSavingCard(false)
+  }
+
+  const formatCardNumber = (value: string) => {
+    return value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim()
+  }
+
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCardNumber(e.target.value)
+    if (formatted.length <= 19) {
+      setCardNumber(formatted)
+    }
+  }
+
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '')
+    if (value.length >= 2) {
+      value = value.slice(0, 2) + '/' + value.slice(2, 4)
+    }
+    if (value.length <= 5) {
+      setExpiryDate(value)
+    }
+  }
+
+  const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value.length <= 4) {
+      setCvv(e.target.value)
+    }
   }
 
   return (
@@ -146,7 +193,92 @@ export function BillingSection({ status }: BillingSectionProps) {
             </button>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No payment method on file. Subscribe to a plan to add one.</p>
+          <form onSubmit={handleSaveCard} className="space-y-4 max-w-md">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="card-name">
+                Cardholder Name
+              </label>
+              <input
+                id="card-name"
+                type="text"
+                value={cardName}
+                onChange={(e) => setCardName(e.target.value)}
+                placeholder="John Doe"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="card-number">
+                Card Number
+              </label>
+              <input
+                id="card-number"
+                type="text"
+                value={cardNumber}
+                onChange={handleCardNumberChange}
+                placeholder="4242 4242 4242 4242"
+                maxLength={19}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="expiry">
+                  Expiry Date
+                </label>
+                <input
+                  id="expiry"
+                  type="text"
+                  value={expiryDate}
+                  onChange={handleExpiryChange}
+                  placeholder="MM/YY"
+                  maxLength={5}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="cvv">
+                  CVV
+                </label>
+                <div className="relative">
+                  <input
+                    id="cvv"
+                    type={showCvv ? 'text' : 'password'}
+                    value={cvv}
+                    onChange={handleCvvChange}
+                    placeholder="123"
+                    maxLength={4}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCvv(!showCvv)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    tabIndex={-1}
+                  >
+                    {showCvv ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={savingCard || !cardNumber || !cardName || !expiryDate || !cvv}
+              className="w-full bg-black text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition"
+            >
+              {savingCard ? (
+                <>
+                  <Loader2 size={14} className="animate-spin inline mr-2" />
+                  Saving...
+                </>
+              ) : (
+                'Save Card'
+              )}
+            </button>
+          </form>
         )}
       </div>
     </div>

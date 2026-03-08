@@ -34,6 +34,14 @@ export function AccountSection() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
+  const [emailPreferences, setEmailPreferences] = useState({
+    productUpdates: true,
+    bookingReminders: true,
+    tips: false,
+  })
+  const [savingPreferences, setSavingPreferences] = useState(false)
+  const [preferencesMessage, setPreferencesMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
   const strength = getPasswordStrength(newPassword)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -73,6 +81,31 @@ export function AccountSection() {
     // TODO: Implement server-side account deletion route (supabase.auth.admin.deleteUser requires service role key)
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  const handleSavePreferences = async () => {
+    setPreferencesMessage(null)
+    setSavingPreferences(true)
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        email_preferences: {
+          product_updates: emailPreferences.productUpdates,
+          booking_reminders: emailPreferences.bookingReminders,
+          tips: emailPreferences.tips,
+        },
+      },
+    })
+
+    if (error) {
+      setPreferencesMessage({ type: 'error', text: error.message })
+    } else {
+      setPreferencesMessage({ type: 'success', text: 'Preferences saved.' })
+      setTimeout(() => setPreferencesMessage(null), 3000)
+    }
+
+    setSavingPreferences(false)
   }
 
   const inputClass =
@@ -174,19 +207,54 @@ export function AccountSection() {
       {/* Email Preferences */}
       <div>
         <h3 className="text-sm font-medium text-gray-900 mb-4">Email Preferences</h3>
-        <div className="space-y-3">
+        <div className="space-y-3 mb-4">
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-gray-300 accent-black focus:ring-green-200" />
+            <input
+              type="checkbox"
+              checked={emailPreferences.productUpdates}
+              onChange={(e) => setEmailPreferences({ ...emailPreferences, productUpdates: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 accent-black focus:ring-green-200"
+            />
             <span className="text-sm text-gray-700">Product updates and announcements</span>
           </label>
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-gray-300 accent-black focus:ring-green-200" />
+            <input
+              type="checkbox"
+              checked={emailPreferences.bookingReminders}
+              onChange={(e) => setEmailPreferences({ ...emailPreferences, bookingReminders: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 accent-black focus:ring-green-200"
+            />
             <span className="text-sm text-gray-700">Booking reminders and event alerts</span>
           </label>
           <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" className="h-4 w-4 rounded border-gray-300 accent-black focus:ring-green-200" />
+            <input
+              type="checkbox"
+              checked={emailPreferences.tips}
+              onChange={(e) => setEmailPreferences({ ...emailPreferences, tips: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 accent-black focus:ring-green-200"
+            />
             <span className="text-sm text-gray-700">Tips and best practices</span>
           </label>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSavePreferences}
+            disabled={savingPreferences}
+            className="bg-black text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition"
+          >
+            {savingPreferences ? 'Saving...' : 'Save Preferences'}
+          </button>
+          {preferencesMessage && (
+            <span
+              role="alert"
+              className={`text-sm ${
+                preferencesMessage.type === 'success' ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
+              {preferencesMessage.text}
+            </span>
+          )}
         </div>
       </div>
 
