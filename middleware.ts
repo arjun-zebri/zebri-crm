@@ -1,0 +1,89 @@
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+
+const PUBLIC_ROUTES = ["/login", "/signup", "/reset-password", "/update-password"];
+
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  const { data: { session } } = await supabase.auth.getSession();
+
+  const pathname = request.nextUrl.pathname;
+  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+
+  // If no session and not a public route, redirect to login
+  if (!session && !isPublicRoute) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // If session exists and on a public route (auth pages), allow access
+  // (users can view login page even if logged in)
+  if (session && isPublicRoute) {
+    return response;
+  }
+
+  // If session exists and on protected route, check subscription paywall
+  // Skip paywall check for /settings and /api/stripe/*
+  if (
+    session &&
+    !isPublicRoute &&
+    !pathname.startsWith("/settings") &&
+    !pathname.startsWith("/api/stripe")
+  ) {
+    const user = session.user;
+    const metadata = user.user_metadata || {};
+
+    const subscriptionStatus = metadata.subscription_status;
+    const trialEnd = metadata.trial_end;
+    const subscriptionEnd = metadata.subscription_end;
+
+    const now = new Date().getTime();
+    const trialEndTime = trialEnd ? new Date(trialEnd).getTime() : 0;
+    const subscriptionEndTime = subscriptionEnd ? new Date(subscriptionEnd).getTime() : 0;
+
+    const hasAccess =
+      (subscriptionStatus === "trialing" && trialEndTime > now) ||
+      subscriptionStatus === "active" ||
+      (subscriptionStatus === "cancelled" && subscriptionEndTime > now);
+
+    if (!hasAccess) {
+      return NextResponse.redirect(new URL("/settings", request.url));
+    }
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
+};

@@ -1,9 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Eye, EyeOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+
+interface EmailPreferencesData {
+  product_updates?: boolean
+  booking_reminders?: boolean
+  tips?: boolean
+}
+
+interface AccountSectionProps {
+  emailPreferences?: EmailPreferencesData
+}
 
 function getPasswordStrength(password: string): { label: string; color: string; width: string } | null {
   if (!password) return null
@@ -21,7 +31,7 @@ function getPasswordStrength(password: string): { label: string; color: string; 
   return { label: 'Weak', color: 'bg-red-500', width: 'w-1/3' }
 }
 
-export function AccountSection() {
+export function AccountSection({ emailPreferences: initialEmailPreferences }: AccountSectionProps) {
   const router = useRouter()
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -35,9 +45,9 @@ export function AccountSection() {
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   const [emailPreferences, setEmailPreferences] = useState({
-    productUpdates: true,
-    bookingReminders: true,
-    tips: false,
+    productUpdates: initialEmailPreferences?.product_updates ?? true,
+    bookingReminders: initialEmailPreferences?.booking_reminders ?? true,
+    tips: initialEmailPreferences?.tips ?? false,
   })
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [preferencesMessage, setPreferencesMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -88,14 +98,28 @@ export function AccountSection() {
     setSavingPreferences(true)
 
     const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        email_preferences: {
-          product_updates: emailPreferences.productUpdates,
-          booking_reminders: emailPreferences.bookingReminders,
-          tips: emailPreferences.tips,
-        },
+
+    // Get current user to preserve existing metadata
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setPreferencesMessage({ type: 'error', text: 'Unable to load user data.' })
+      setSavingPreferences(false)
+      return
+    }
+
+    // Merge new preferences with existing metadata
+    const existingMetadata = user.user_metadata || {}
+    const updatedMetadata = {
+      ...existingMetadata,
+      email_preferences: {
+        product_updates: emailPreferences.productUpdates,
+        booking_reminders: emailPreferences.bookingReminders,
+        tips: emailPreferences.tips,
       },
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      data: updatedMetadata,
     })
 
     if (error) {

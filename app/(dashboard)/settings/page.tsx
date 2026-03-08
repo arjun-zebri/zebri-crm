@@ -9,6 +9,12 @@ import { BillingSection } from './billing-section'
 import { PackagesSection } from './packages-section'
 import { NotificationsSection } from './notifications-section'
 
+interface EmailPreferencesData {
+  product_updates?: boolean
+  booking_reminders?: boolean
+  tips?: boolean
+}
+
 interface UserMetadata {
   display_name?: string
   business_name?: string
@@ -21,6 +27,7 @@ interface UserMetadata {
   subscription_status?: string
   trial_end?: string
   subscription_end?: string
+  email_preferences?: EmailPreferencesData
 }
 
 const tabs = [
@@ -119,7 +126,9 @@ function SettingsContent() {
           email={email || ''}
         />
       )}
-      {activeTab === 'account' && <AccountSection />}
+      {activeTab === 'account' && (
+        <AccountSection emailPreferences={metadata?.email_preferences} />
+      )}
       {activeTab === 'billing' && (
         <BillingSection
           status={metadata?.subscription_status || null}

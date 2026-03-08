@@ -53,17 +53,30 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
 
     const supabase = createClient()
 
+    // Get current user to preserve existing metadata
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setMessage({ type: 'error', text: 'Unable to load user data.' })
+      setLoading(false)
+      return
+    }
+
+    // Merge new data with existing metadata
+    const existingMetadata = user.user_metadata || {}
+    const updatedMetadata = {
+      ...existingMetadata,
+      display_name: displayName,
+      business_name: businessName,
+      phone,
+      website,
+      instagram_url: instagramUrl,
+      facebook_url: facebookUrl,
+      business_type: businessType,
+    }
+
     // Update metadata
     const { error: metaError } = await supabase.auth.updateUser({
-      data: {
-        display_name: displayName,
-        business_name: businessName,
-        phone,
-        website,
-        instagram_url: instagramUrl,
-        facebook_url: facebookUrl,
-        business_type: businessType,
-      },
+      data: updatedMetadata,
     })
 
     if (metaError) {

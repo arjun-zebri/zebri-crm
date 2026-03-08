@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: Home },
@@ -30,6 +31,14 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+    });
+  }, []);
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -37,6 +46,9 @@ export function Sidebar() {
     await supabase.auth.signOut();
     router.push("/login");
   };
+
+  const displayName = user?.user_metadata?.display_name || user?.email?.split("@")[0] || "User";
+  const email = user?.email || "";
 
   return (
     <aside className="group/sidebar fixed top-0 left-0 h-screen w-[68px] hover:w-60 border-r border-gray-200 bg-white flex flex-col transition-all duration-300 ease-in-out z-50 overflow-hidden">
@@ -102,16 +114,21 @@ export function Sidebar() {
             );
           })}
 
-          <button
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className="flex items-center gap-3 px-[10px] py-2.5 rounded-lg text-base transition whitespace-nowrap w-full text-gray-500 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50"
-          >
-            <LogOut size={22} strokeWidth={1.5} className="flex-shrink-0" />
-            <span className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 text-[14px]">
-              {signingOut ? "Signing out..." : "Sign Out"}
-            </span>
-          </button>
+          {user && (
+            <div className="flex items-center px-[10px] py-2.5 rounded-lg">
+              <div className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 min-w-0 flex-1">
+                <div className="text-[14px] font-medium truncate">{displayName}</div>
+                <div className="text-[12px] text-gray-600 truncate">{email}</div>
+              </div>
+              <button
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="flex-shrink-0 text-gray-500 hover:text-gray-900 transition disabled:opacity-50 cursor-pointer ml-auto group-hover/sidebar:ml-3"
+              >
+                <LogOut size={22} strokeWidth={1.5} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </aside>
