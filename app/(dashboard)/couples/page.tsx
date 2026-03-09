@@ -3,11 +3,10 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useCouples, useCreateCouple, useUpdateCouple, useDeleteCouple } from './use-couples'
 import { CouplesHeader } from './couples-header'
-import { CouplesToolbar } from './couples-toolbar'
 import { CouplesList } from './couples-list'
 import { CouplesKanban } from './couples-kanban'
 import { CoupleModal } from './couple-modal'
-import { Couple, ViewMode, CoupleStatus } from './couples-types'
+import { Couple, ViewMode, CoupleStatus, SortField, SortDirection } from './couples-types'
 
 export default function CouplesPage() {
   const { data: couples, isLoading } = useCouples()
@@ -18,10 +17,11 @@ export default function CouplesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<CoupleStatus | 'all'>('all')
+  const [sortField, setSortField] = useState<SortField>('created_at')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCouple, setEditingCouple] = useState<Couple | undefined>()
 
-  // Load view mode preference from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('zebri_couples_view')
     if (saved === 'kanban' || saved === 'list') {
@@ -29,13 +29,11 @@ export default function CouplesPage() {
     }
   }, [])
 
-  // Save view mode to localStorage
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode)
     localStorage.setItem('zebri_couples_view', mode)
   }
 
-  // Keyboard shortcut for adding couple
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'n' && !e.ctrlKey && !e.metaKey) {
@@ -52,9 +50,8 @@ export default function CouplesPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Filter couples based on search and status
   const filteredCouples = useMemo(() => {
-    return couples.filter((couple) => {
+    const filtered = couples.filter((couple) => {
       const matchesSearch =
         search === '' ||
         couple.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -64,17 +61,24 @@ export default function CouplesPage() {
 
       return matchesSearch && matchesStatus
     })
-  }, [couples, search, statusFilter])
+
+    return filtered.sort((a, b) => {
+      const dir = sortDirection === 'asc' ? 1 : -1
+      const valA = a[sortField] ?? ''
+      const valB = b[sortField] ?? ''
+      if (valA < valB) return -1 * dir
+      if (valA > valB) return 1 * dir
+      return 0
+    })
+  }, [couples, search, statusFilter, sortField, sortDirection])
 
   const handleSaveCouple = async (data: Omit<Couple, 'id' | 'user_id' | 'created_at'> & { id?: string }) => {
     if (data.id && editingCouple) {
-      // Update
       await updateCouple.mutateAsync({
         ...editingCouple,
         ...data,
       })
     } else {
-      // Create
       await createCouple.mutateAsync(data)
     }
     setModalOpen(false)
@@ -100,8 +104,8 @@ export default function CouplesPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="space-y-4 px-6 pt-6 pb-3">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="px-6 pt-6 pb-3">
         <CouplesHeader
           couples={couples}
           onAddClick={() => {
@@ -110,16 +114,16 @@ export default function CouplesPage() {
           }}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
-        />
-      </div>
-
-      <div className="px-6 pb-3">
-        <CouplesToolbar
           search={search}
           onSearchChange={setSearch}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
-          couples={couples}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSortChange={(field, direction) => {
+            setSortField(field)
+            setSortDirection(direction)
+          }}
         />
       </div>
 
@@ -134,7 +138,7 @@ export default function CouplesPage() {
             loading={isLoading}
           />
         ) : (
-          <div className="h-full overflow-hidden">
+          <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <CouplesKanban
               couples={filteredCouples}
               onCardClick={(couple) => {

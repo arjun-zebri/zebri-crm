@@ -86,9 +86,7 @@ Purpose:
 
 Manage enquiries from couples.
 
-Header: Title "Couples" + total count + "Add Couple" button (no stat cards).
-
-Toolbar: Single row with search input, status filter pills with inline counts, view toggle (list/kanban).
+Header: Title "Couples" + total count. Compact Notion-style toolbar inline: expandable search icon, sort dropdown (ArrowUpDown icon), filter dropdown (SlidersHorizontal icon), small black "New" button. List/Board tabs below with larger gap from title.
 
 Status values: new, contacted, confirmed, paid, complete
 
@@ -96,13 +94,27 @@ Table Columns:
 
 Name Email Phone Event Date Venue Status
 
-Sortable columns: Name, Event Date, Status only.
+Sorting: Controlled via sort dropdown in header toolbar (name, event date, created date). No clickable sort on table headers.
 
 Actions:
 
 Add Couple Edit Couple Convert to Booking
 
 Views: List (table) and Kanban (5 columns, drag-and-drop).
+
+Kanban style: Notion-inspired board.
+- Columns with bg-gray-50 rounded-xl background
+- Colored text labels for status headers (amber/blue/purple/emerald/gray)
+- Cards are borderless text-only; hover shows subtle bg-gray-50
+- "+ New" button at bottom of each column with status-colored border
+- No icons on cards — date and venue shown as plain gray text
+- Scrollbar hidden on kanban container
+
+List style: Notion-inspired clean table.
+- No card wrapper (no border/rounded-xl around table)
+- Lighter headers: white background, bottom border, sentence-case text
+- Plain text pagination (Previous / Next) instead of bordered buttons
+- Table scrollable within its container
 
 ------------------------------------------------------------------------
 

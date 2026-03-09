@@ -32,3 +32,31 @@ export const STATUS_DOT_COLORS: Record<CoupleStatus, string> = {
   paid: 'bg-emerald-400',
   complete: 'bg-gray-400',
 }
+
+export const STATUS_TEXT_COLORS: Record<CoupleStatus, string> = {
+  new: 'text-amber-500',
+  contacted: 'text-blue-500',
+  confirmed: 'text-purple-500',
+  paid: 'text-emerald-500',
+  complete: 'text-gray-400',
+}
+
+export const STATUS_BORDER_COLORS: Record<CoupleStatus, string> = {
+  new: 'border-amber-300',
+  contacted: 'border-blue-300',
+  confirmed: 'border-purple-300',
+  paid: 'border-emerald-300',
+  complete: 'border-gray-300',
+}
+
+export type SortField = 'name' | 'event_date' | 'created_at'
+export type SortDirection = 'asc' | 'desc'
+
+export const SORT_OPTIONS: { label: string; field: SortField; direction: SortDirection }[] = [
+  { label: 'Name A–Z', field: 'name', direction: 'asc' },
+  { label: 'Name Z–A', field: 'name', direction: 'desc' },
+  { label: 'Event date (soonest)', field: 'event_date', direction: 'asc' },
+  { label: 'Event date (latest)', field: 'event_date', direction: 'desc' },
+  { label: 'Newest first', field: 'created_at', direction: 'desc' },
+  { label: 'Oldest first', field: 'created_at', direction: 'asc' },
+]

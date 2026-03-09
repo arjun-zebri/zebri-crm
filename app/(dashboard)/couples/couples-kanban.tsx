@@ -26,7 +26,7 @@ export function CouplesKanban({ couples, onCardClick, onDragEnd, onAddClick }: C
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-5 overflow-x-auto pb-4 h-full">
+      <div className="flex gap-5 pb-4">
         {STATUSES.map((status) => (
           <MemoKanbanColumn
             key={status}

@@ -107,7 +107,7 @@ Features: sorting\
 pagination\
 search
 
-Style: clean SaaS style rows hover:bg-gray-50
+Style: Notion-style clean table. No card wrapper (no border/rounded-xl container). White header with bottom border, sentence-case text. No clickable sort on table headers (sorting via header toolbar dropdown). Plain text pagination (Previous/Next). Rows: hover:bg-gray-50.
 
 ---
 

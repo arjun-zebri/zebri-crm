@@ -2,7 +2,7 @@
 
 import { Droppable } from '@hello-pangea/dnd'
 import { Plus } from 'lucide-react'
-import { Couple, CoupleStatus, STATUS_LABELS, STATUS_DOT_COLORS } from './couples-types'
+import { Couple, CoupleStatus, STATUS_LABELS, STATUS_TEXT_COLORS, STATUS_BORDER_COLORS } from './couples-types'
 import { KanbanCard } from './kanban-card'
 
 interface KanbanColumnProps {
@@ -13,30 +13,23 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ status, couples, onCardClick, onAddClick }: KanbanColumnProps) {
-  const dotColor = STATUS_DOT_COLORS[status as CoupleStatus] || 'bg-gray-400'
+  const textColor = STATUS_TEXT_COLORS[status as CoupleStatus] || 'text-gray-400'
+  const borderColor = STATUS_BORDER_COLORS[status as CoupleStatus] || 'border-gray-300'
 
   return (
-    <div className="w-64 flex-shrink-0 bg-gray-100 rounded-xl p-3 flex flex-col h-full">
+    <div className="w-64 flex-shrink-0 bg-gray-50 rounded-xl p-3">
       <div className="flex items-center gap-2 mb-3">
-        <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-        <span className="text-sm font-medium text-gray-900">
+        <span className={`text-sm font-medium ${textColor}`}>
           {STATUS_LABELS[status as keyof typeof STATUS_LABELS]}
         </span>
-        <span className="text-xs text-gray-400">{couples.length}</span>
-        <div className="flex-1" />
-        <button
-          onClick={() => onAddClick?.(status)}
-          className="text-gray-400 hover:text-gray-600 transition"
-        >
-          <Plus size={16} />
-        </button>
+        <span className="text-xs text-gray-300">{couples.length}</span>
       </div>
       <Droppable droppableId={status}>
-        {(provided, snapshot) => (
+        {(provided) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className="space-y-2 min-h-[200px] rounded-lg flex-1 overflow-y-auto"
+            className="space-y-1 min-h-[40px]"
           >
             {couples.map((couple, index) => (
               <KanbanCard
@@ -50,6 +43,13 @@ export function KanbanColumn({ status, couples, onCardClick, onAddClick }: Kanba
           </div>
         )}
       </Droppable>
+      <button
+        onClick={() => onAddClick?.(status)}
+        className={`flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition mt-2 py-1.5 px-2.5 rounded-lg border ${borderColor} bg-white hover:bg-gray-50 cursor-pointer`}
+      >
+        <Plus size={14} />
+        New
+      </button>
     </div>
   )
 }

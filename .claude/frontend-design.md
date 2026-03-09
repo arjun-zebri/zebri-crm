@@ -76,7 +76,26 @@ p-6
 border-b rows\
 hover:bg-gray-50
 
-Clean SaaS-style tables only.
+Clean Notion-style tables: no card wrapper (no border/rounded-xl container), white header with bottom border, sentence-case header text (not uppercase), plain text pagination.
+
+# Board Views
+
+Notion-style kanban aesthetic:
+- Columns with bg-gray-50 rounded-xl containers
+- Colored text labels for column headers
+- Borderless cards; hover bg-gray-50
+- Text-only cards (no icons for metadata)
+- "+ New" button at column bottom with status-colored border
+- Hidden scrollbar on kanban container
+
+# Toolbar Style
+
+Notion-style compact toolbar in header row:
+- Expandable search (icon → input on click, X clears text only when present)
+- Sort dropdown (ArrowUpDown icon) with sort options
+- Filter dropdown (SlidersHorizontal icon)
+- Small black "New" button
+- All buttons use cursor-pointer
 
 ------------------------------------------------------------------------
 
