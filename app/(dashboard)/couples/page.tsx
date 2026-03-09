@@ -32,6 +32,7 @@ export default function CouplesPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCouple, setEditingCouple] = useState<Couple | undefined>();
+  const [defaultStatus, setDefaultStatus] = useState<CoupleStatus | undefined>();
 
   useEffect(() => {
     const saved = localStorage.getItem("zebri_couples_view");
@@ -52,6 +53,7 @@ export default function CouplesPage() {
         if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
           e.preventDefault();
           setEditingCouple(undefined);
+          setDefaultStatus(undefined);
           setModalOpen(true);
         }
       }
@@ -128,6 +130,7 @@ export default function CouplesPage() {
           couples={couples}
           onAddClick={() => {
             setEditingCouple(undefined);
+            setDefaultStatus(undefined);
             setModalOpen(true);
           }}
           viewMode={viewMode}
@@ -164,8 +167,9 @@ export default function CouplesPage() {
                 setModalOpen(true);
               }}
               onDragEnd={handleDragEnd}
-              onAddClick={() => {
+              onAddClick={(status) => {
                 setEditingCouple(undefined);
+                setDefaultStatus(status as CoupleStatus);
                 setModalOpen(true);
               }}
             />
@@ -182,6 +186,7 @@ export default function CouplesPage() {
         onSave={handleSaveCouple}
         onDelete={handleDeleteCouple}
         couple={editingCouple}
+        defaultStatus={defaultStatus}
         loading={
           createCouple.isPending ||
           updateCouple.isPending ||

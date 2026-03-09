@@ -40,7 +40,6 @@ export function CouplesHeader({
   sortDirection,
   onSortChange,
 }: CouplesHeaderProps) {
-  const [searchOpen, setSearchOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -48,28 +47,22 @@ export function CouplesHeader({
   const sortRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (searchOpen) {
-      searchInputRef.current?.focus()
-    }
-  }, [searchOpen])
-
-  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '/') {
         const target = e.target as HTMLElement
         if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
           e.preventDefault()
-          setSearchOpen(true)
+          searchInputRef.current?.focus()
         }
       }
-      if (e.key === 'Escape' && searchOpen) {
-        setSearchOpen(false)
+      if (e.key === 'Escape') {
         onSearchChange('')
+        searchInputRef.current?.blur()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [searchOpen, onSearchChange])
+  }, [onSearchChange])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -98,37 +91,28 @@ export function CouplesHeader({
         </div>
 
         <div className="flex items-center gap-1">
-          {searchOpen ? (
-            <div className="relative mr-1">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search..."
-                value={search}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="w-56 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200"
-              />
-              {search && (
-                <button
-                  onClick={() => {
-                    onSearchChange('')
-                    searchInputRef.current?.focus()
-                  }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
-            >
-              <Search size={16} />
-            </button>
-          )}
+          <div className="relative mr-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-56 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200"
+            />
+            {search && (
+              <button
+                onClick={() => {
+                  onSearchChange('')
+                  searchInputRef.current?.focus()
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
 
           <div className="relative" ref={sortRef}>
             <button

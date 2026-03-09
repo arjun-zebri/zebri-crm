@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { Modal } from '@/components/ui/modal'
-import { Couple, STATUSES, STATUS_LABELS } from './couples-types'
+import { Couple, CoupleStatus, STATUSES, STATUS_LABELS } from './couples-types'
 
 interface CoupleModalProps {
   isOpen: boolean
@@ -12,6 +12,7 @@ interface CoupleModalProps {
   onSave: (couple: Omit<Couple, 'id' | 'user_id' | 'created_at'> & { id?: string }) => void
   onDelete: (id: string) => void
   couple?: Couple
+  defaultStatus?: CoupleStatus
   loading: boolean
 }
 
@@ -21,6 +22,7 @@ export function CoupleModal({
   onSave,
   onDelete,
   couple,
+  defaultStatus,
   loading,
 }: CoupleModalProps) {
   const [name, setName] = useState('')
@@ -45,6 +47,9 @@ export function CoupleModal({
       setNotes(couple.notes)
     } else {
       resetForm()
+      if (defaultStatus) {
+        setStatus(defaultStatus)
+      }
     }
     setDeleteConfirm(false)
   }, [couple, isOpen])
