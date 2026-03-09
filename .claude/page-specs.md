@@ -103,10 +103,10 @@ Add Couple Edit Couple Convert to Booking
 Views: List (table) and Kanban (5 columns, drag-and-drop).
 
 Kanban style: Notion-inspired board.
-- Columns with bg-gray-50 rounded-xl background
-- Colored text labels for status headers (amber/blue/purple/emerald/gray)
-- Cards are borderless text-only; hover shows subtle bg-gray-50
-- "+ New" button at bottom of each column with status-colored border
+- Columns with bg-gray-50 rounded-xl background, content-height (not equal)
+- Colored pill headers (e.g. amber-50 bg + amber-600 text for "New")
+- Cards are bg-white with shadow-sm; hover shows shadow-md
+- "+ New" button full-width at bottom of each column with status-colored border
 - No icons on cards — date and venue shown as plain gray text
 - Scrollbar hidden on kanban container
 

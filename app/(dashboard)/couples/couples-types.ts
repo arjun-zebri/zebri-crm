@@ -49,6 +49,14 @@ export const STATUS_BORDER_COLORS: Record<CoupleStatus, string> = {
   complete: 'border-gray-300',
 }
 
+export const STATUS_PILL_BG: Record<CoupleStatus, string> = {
+  new: 'bg-amber-50 text-amber-600',
+  contacted: 'bg-blue-50 text-blue-600',
+  confirmed: 'bg-purple-50 text-purple-600',
+  paid: 'bg-emerald-50 text-emerald-600',
+  complete: 'bg-gray-100 text-gray-500',
+}
+
 export type SortField = 'name' | 'event_date' | 'created_at'
 export type SortDirection = 'asc' | 'desc'
 

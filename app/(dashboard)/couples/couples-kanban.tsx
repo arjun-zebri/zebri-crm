@@ -1,32 +1,41 @@
-'use client'
+"use client";
 
-import { memo } from 'react'
-import { DragDropContext, DropResult } from '@hello-pangea/dnd'
-import { Couple, STATUSES } from './couples-types'
-import { KanbanColumn } from './kanban-column'
+import { memo } from "react";
+import { DragDropContext, DropResult } from "@hello-pangea/dnd";
+import { Couple, STATUSES } from "./couples-types";
+import { KanbanColumn } from "./kanban-column";
 
 interface CouplesKanbanProps {
-  couples: Couple[]
-  onCardClick: (couple: Couple) => void
-  onDragEnd: (source: string, destination: string, coupleId: string) => void
-  onAddClick?: (status: string) => void
+  couples: Couple[];
+  onCardClick: (couple: Couple) => void;
+  onDragEnd: (source: string, destination: string, coupleId: string) => void;
+  onAddClick?: (status: string) => void;
 }
 
-const MemoKanbanColumn = memo(KanbanColumn)
+const MemoKanbanColumn = memo(KanbanColumn);
 
-export function CouplesKanban({ couples, onCardClick, onDragEnd, onAddClick }: CouplesKanbanProps) {
+export function CouplesKanban({
+  couples,
+  onCardClick,
+  onDragEnd,
+  onAddClick,
+}: CouplesKanbanProps) {
   const handleDragEnd = (result: DropResult) => {
-    const { source, destination, draggableId } = result
+    const { source, destination, draggableId } = result;
 
-    if (!destination) return
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return
+    if (!destination) return;
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index
+    )
+      return;
 
-    onDragEnd(source.droppableId, destination.droppableId, draggableId)
-  }
+    onDragEnd(source.droppableId, destination.droppableId, draggableId);
+  };
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-5 pb-4">
+      <div className="flex gap-5 pb-4 items-start">
         {STATUSES.map((status) => (
           <MemoKanbanColumn
             key={status}
@@ -38,5 +47,5 @@ export function CouplesKanban({ couples, onCardClick, onDragEnd, onAddClick }: C
         ))}
       </div>
     </DragDropContext>
-  )
+  );
 }

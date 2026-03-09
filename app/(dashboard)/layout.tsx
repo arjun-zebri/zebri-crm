@@ -8,7 +8,9 @@ export default function DashboardLayout({
   return (
     <>
       <Sidebar />
-      <main className="ml-17 h-screen overflow-hidden px-8 py-4">{children}</main>
+      <main className="ml-17 h-screen overflow-hidden px-8 py-4">
+        {children}
+      </main>
     </>
   );
 }

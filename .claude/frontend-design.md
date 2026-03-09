@@ -81,11 +81,11 @@ Clean Notion-style tables: no card wrapper (no border/rounded-xl container), whi
 # Board Views
 
 Notion-style kanban aesthetic:
-- Columns with bg-gray-50 rounded-xl containers
-- Colored text labels for column headers
-- Borderless cards; hover bg-gray-50
+- Columns with bg-gray-50 rounded-xl containers, content-height (not equal)
+- Colored pill headers (bg + text color per status)
+- Cards: bg-white shadow-sm rounded-lg; hover shadow-md
 - Text-only cards (no icons for metadata)
-- "+ New" button at column bottom with status-colored border
+- "+ New" full-width button at column bottom with status-colored border
 - Hidden scrollbar on kanban container
 
 # Toolbar Style
