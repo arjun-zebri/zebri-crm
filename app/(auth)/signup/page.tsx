@@ -62,6 +62,11 @@ export default function SignupPage() {
     setLoading(true);
 
     const supabase = createClient();
+
+    // Calculate trial end date (14 days from now)
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 14);
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -70,6 +75,9 @@ export default function SignupPage() {
           account_type: "vendor",
           display_name: displayName,
           business_name: businessName,
+          subscription_status: "trialing",
+          trial_end: trialEnd.toISOString(),
+          is_subscribed: true,
         },
       },
     });

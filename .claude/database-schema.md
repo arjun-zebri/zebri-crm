@@ -23,7 +23,7 @@ Columns:
 id (uuid) user_id (uuid, not null) name (text) email (text) phone (text) event_date (date) venue
 (text) notes (text) status (text)
 
-Status values: new contacted quoted lost
+Status values: new contacted confirmed paid complete
 
 created_at (timestamp)
 

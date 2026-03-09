@@ -47,7 +47,7 @@ Subscription fields are detailed in `.claude/payments.md`.
 ### Sign Up (Vendor Self-Registration)
 
 1. User fills in email, password, display_name, business_name
-2. `supabase.auth.signUp()` with `data: { account_type: 'vendor', display_name, business_name }`
+2. `supabase.auth.signUp()` with `data: { account_type: 'vendor', display_name, business_name, subscription_status: 'trialing', trial_end: <14 days from now>, is_subscribed: true }`
 3. Redirect to dashboard (email confirmation optional — configure in Supabase dashboard)
 
 ### Sign In
@@ -111,9 +111,14 @@ After confirming auth, middleware checks `user_metadata.subscription_status` and
 - If status is `trialing` and `trial_end` is in the future — allow access
 - If status is `active` — allow access
 - If status is `cancelled` and `subscription_end` is in the future — allow access (grace period)
-- Otherwise — redirect to `/account` (where they can subscribe or resubscribe)
+- Otherwise — redirect to `/settings?tab=billing` (where they can subscribe or resubscribe)
 
-Paywall check skips `/account` and `/api/stripe/*` routes so users can manage billing.
+Paywall check skips `/settings` and `/api/stripe/*` routes so users can manage billing.
+
+**Redirect Logic:**
+- User not logged in → `/login`
+- User logged in with valid subscription → allow access
+- User logged in without valid subscription → `/settings?tab=billing`
 
 ---
 

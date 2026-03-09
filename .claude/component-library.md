@@ -113,23 +113,22 @@ Style: clean SaaS style rows hover:bg-gray-50
 
 ## Badge
 
-Status indicator.
+Status indicator with colored dot prefix. Uses `rounded-full`, `px-2 py-0.5`, `text-xs font-medium`.
 
-Examples:
+Variants:
 
-Couple: bg-yellow-100 text-yellow-700
-
-Confirmed: bg-green-100 text-green-700
-
-Paid: bg-emerald-100 - text-emerald-700
-
-Completed: bg-neutral-200 text-neutral-700
+- `new`: amber-50 bg, amber-700 text, amber-400 dot
+- `contacted`: blue-50 bg, blue-700 text, blue-400 dot
+- `confirmed`: purple-50 bg, purple-700 text, purple-400 dot
+- `paid`: emerald-50 bg, emerald-700 text, emerald-400 dot
+- `complete`: gray-100 bg, gray-600 text, gray-400 dot
+- `default`: gray-50 bg, gray-600 text, gray-400 dot
 
 ---
 
 ## Modal
 
-Reusable modal dialog.
+Centered modal dialog. `rounded-2xl shadow-xl max-w-lg max-h-[85vh]`, centered with `flex items-center justify-center`. Footer has `rounded-b-2xl bg-gray-50`.
 
 Used for: - create couple - create task - edit vendor
 

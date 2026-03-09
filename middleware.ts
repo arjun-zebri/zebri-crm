@@ -1,7 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/signup", "/reset-password", "/update-password"];
+const PUBLIC_ROUTES = [
+  "/login",
+  "/signup",
+  "/reset-password",
+  "/update-password",
+];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -27,10 +32,14 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   const pathname = request.nextUrl.pathname;
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
 
   // If no session and not a public route, redirect to login
   if (!session && !isPublicRoute) {
@@ -60,7 +69,9 @@ export async function middleware(request: NextRequest) {
 
     const now = new Date().getTime();
     const trialEndTime = trialEnd ? new Date(trialEnd).getTime() : 0;
-    const subscriptionEndTime = subscriptionEnd ? new Date(subscriptionEnd).getTime() : 0;
+    const subscriptionEndTime = subscriptionEnd
+      ? new Date(subscriptionEnd).getTime()
+      : 0;
 
     const hasAccess =
       (subscriptionStatus === "trialing" && trialEndTime > now) ||
@@ -68,7 +79,7 @@ export async function middleware(request: NextRequest) {
       (subscriptionStatus === "cancelled" && subscriptionEndTime > now);
 
     if (!hasAccess) {
-      return NextResponse.redirect(new URL("/settings", request.url));
+      return NextResponse.redirect(new URL("/settings?tab=billing", request.url));
     }
   }
 

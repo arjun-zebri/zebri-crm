@@ -86,13 +86,23 @@ Purpose:
 
 Manage enquiries from couples.
 
+Header: Title "Couples" + total count + "Add Couple" button (no stat cards).
+
+Toolbar: Single row with search input, status filter pills with inline counts, view toggle (list/kanban).
+
+Status values: new, contacted, confirmed, paid, complete
+
 Table Columns:
 
 Name Email Phone Event Date Venue Status
 
+Sortable columns: Name, Event Date, Status only.
+
 Actions:
 
 Add Couple Edit Couple Convert to Booking
+
+Views: List (table) and Kanban (5 columns, drag-and-drop).
 
 ------------------------------------------------------------------------
 
