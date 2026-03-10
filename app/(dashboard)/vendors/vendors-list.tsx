@@ -35,7 +35,7 @@ const columns = [
     header: 'Vendor name',
     enableSorting: false,
     cell: (info) => (
-      <span className="font-medium text-gray-900">{info.getValue()}</span>
+      <span className="text-sm text-gray-500">{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor('contact_name', {

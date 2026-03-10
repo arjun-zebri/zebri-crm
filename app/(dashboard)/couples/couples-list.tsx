@@ -37,7 +37,7 @@ const columns = [
     header: "Name",
     enableSorting: false,
     cell: (info) => (
-      <span className="font-medium text-gray-900">{info.getValue()}</span>
+      <span className="text-sm text-gray-500">{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor("email", {
@@ -60,7 +60,7 @@ const columns = [
     header: "Event date",
     enableSorting: false,
     cell: (info) => (
-      <span className="text-gray-600">{formatDate(info.getValue())}</span>
+      <span className="text-sm text-gray-500">{formatDate(info.getValue())}</span>
     ),
   }),
   columnHelper.accessor("venue", {
@@ -131,7 +131,7 @@ export function CouplesList({
               {table.getHeaderGroups()[0]?.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="py-3 text-left text-sm font-medium text-gray-900"
+                  className="px-6 py-3 text-left text-sm font-medium text-gray-900"
                   style={{ width: COL_WIDTHS[header.id] }}
                 >
                   {header.isPlaceholder
@@ -152,7 +152,7 @@ export function CouplesList({
                     className="animate-pulse border-b border-gray-100 last:border-0"
                   >
                     {columns.map((_, j) => (
-                      <td key={j} className="py-3.5">
+                      <td key={j} className="px-6 py-3.5">
                         <div
                           className={`h-4 bg-gray-100 rounded-md ${skeletonWidths[j]}`}
                         />
@@ -169,7 +169,7 @@ export function CouplesList({
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="py-3.5 text-sm overflow-hidden"
+                        className="px-6 py-3.5 text-sm overflow-hidden"
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
