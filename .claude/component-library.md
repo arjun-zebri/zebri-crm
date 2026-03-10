@@ -109,6 +109,16 @@ search
 
 Style: Notion-style clean table. No card wrapper (no border/rounded-xl container). White header with bottom border, sentence-case text. No clickable sort on table headers (sorting via header toolbar dropdown). Plain text pagination (Previous/Next). Rows: hover:bg-gray-50.
 
+Table styling rules:
+- Container: `flex flex-col flex-1 overflow-hidden`, inner `overflow-y-auto flex-1`
+- Table element: `w-full table-fixed max-w-[1800px]`
+- Header row: `sticky top-0 bg-white z-10`, `border-b border-gray-200`
+- Header cells: `px-6 py-3 text-left text-sm font-medium text-gray-900`
+- Body rows: `border-b border-gray-100 last:border-0 cursor-pointer transition hover:bg-gray-50`
+- Body cells: `px-6 py-3.5 text-sm overflow-hidden`
+- Skeleton loading: inside tbody, 5 rows, `animate-pulse`, `h-4 bg-gray-100 rounded-md`
+- Pagination: `px-6 py-3 border-t border-gray-100 text-sm`, Previous/Next text buttons
+
 ---
 
 ## Badge

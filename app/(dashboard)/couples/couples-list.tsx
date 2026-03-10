@@ -131,7 +131,7 @@ export function CouplesList({
               {table.getHeaderGroups()[0]?.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="py-3 text-left text-xs font-medium text-gray-500"
+                  className="py-3 text-left text-sm font-medium text-gray-900"
                   style={{ width: COL_WIDTHS[header.id] }}
                 >
                   {header.isPlaceholder

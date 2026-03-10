@@ -81,15 +81,11 @@ export default function VendorsPage() {
     data: Omit<Vendor, 'id' | 'user_id' | 'created_at'> & { id?: string }
   ) => {
     if (data.id && editingVendor) {
-      await updateVendor.mutateAsync({
-        ...editingVendor,
-        ...data,
-      })
+      const updated = { ...editingVendor, ...data }
+      await updateVendor.mutateAsync(updated)
+      // If the profile panel is open for this vendor, update it with fresh data
       if (selectedVendor?.id === data.id) {
-        setSelectedVendor({
-          ...editingVendor,
-          ...data,
-        })
+        setSelectedVendor(updated)
       }
     } else {
       await createVendor.mutateAsync(data)
@@ -144,13 +140,22 @@ export default function VendorsPage() {
       <div className="flex-1 min-h-0 overflow-hidden px-6">
         <VendorsList
           vendors={filteredVendors}
-          onRowClick={(vendor) => {
-            setSelectedVendor(vendor)
-          }}
+          onRowClick={(vendor) => setSelectedVendor(vendor)}
           loading={isLoading}
         />
       </div>
 
+      {/* Profile slide-over (z-40/50) — stays open behind the edit modal */}
+      <VendorProfile
+        vendor={selectedVendor}
+        onClose={() => setSelectedVendor(null)}
+        onEdit={(vendor) => {
+          setEditingVendor(vendor)
+          setModalOpen(true)
+        }}
+      />
+
+      {/* Edit/Add modal (z-50/60) — opens on top of everything */}
       <VendorModal
         isOpen={modalOpen}
         onClose={() => {
@@ -165,15 +170,6 @@ export default function VendorsPage() {
           updateVendor.isPending ||
           deleteVendor.isPending
         }
-      />
-
-      <VendorProfile
-        vendor={selectedVendor}
-        onClose={() => setSelectedVendor(null)}
-        onEdit={(vendor) => {
-          setEditingVendor(vendor)
-          setModalOpen(true)
-        }}
       />
     </div>
   )

@@ -11,6 +11,7 @@ import { CouplesHeader } from "./couples-header";
 import { CouplesList } from "./couples-list";
 import { CouplesKanban } from "./couples-kanban";
 import { CoupleModal } from "./couple-modal";
+import { CoupleProfile } from "./couple-profile";
 import {
   Couple,
   ViewMode,
@@ -32,6 +33,7 @@ export default function CouplesPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCouple, setEditingCouple] = useState<Couple | undefined>();
+  const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<CoupleStatus | undefined>();
 
   useEffect(() => {
@@ -90,10 +92,12 @@ export default function CouplesPage() {
     data: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
   ) => {
     if (data.id && editingCouple) {
-      await updateCouple.mutateAsync({
-        ...editingCouple,
-        ...data,
-      });
+      const updated = { ...editingCouple, ...data };
+      await updateCouple.mutateAsync(updated);
+      // If the profile panel is open for this couple, update it with fresh data
+      if (selectedCouple?.id === data.id) {
+        setSelectedCouple(updated);
+      }
     } else {
       await createCouple.mutateAsync(data);
     }
@@ -105,6 +109,9 @@ export default function CouplesPage() {
     await deleteCouple.mutateAsync(id);
     setModalOpen(false);
     setEditingCouple(undefined);
+    if (selectedCouple?.id === id) {
+      setSelectedCouple(null);
+    }
   };
 
   const handleDragEnd = async (
@@ -152,20 +159,14 @@ export default function CouplesPage() {
         {viewMode === "list" ? (
           <CouplesList
             couples={filteredCouples}
-            onRowClick={(couple) => {
-              setEditingCouple(couple);
-              setModalOpen(true);
-            }}
+            onRowClick={(couple) => setSelectedCouple(couple)}
             loading={isLoading}
           />
         ) : (
           <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <CouplesKanban
               couples={filteredCouples}
-              onCardClick={(couple) => {
-                setEditingCouple(couple);
-                setModalOpen(true);
-              }}
+              onCardClick={(couple) => setSelectedCouple(couple)}
               onDragEnd={handleDragEnd}
               onAddClick={(status) => {
                 setEditingCouple(undefined);
@@ -177,6 +178,17 @@ export default function CouplesPage() {
         )}
       </div>
 
+      {/* Profile slide-over (z-40/50) — stays open behind the edit modal */}
+      <CoupleProfile
+        couple={selectedCouple}
+        onClose={() => setSelectedCouple(null)}
+        onEdit={(couple) => {
+          setEditingCouple(couple);
+          setModalOpen(true);
+        }}
+      />
+
+      {/* Edit/Add modal (z-50/60) — opens on top of everything */}
       <CoupleModal
         isOpen={modalOpen}
         onClose={() => {

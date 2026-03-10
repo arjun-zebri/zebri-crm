@@ -9,7 +9,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { useState, useEffect } from 'react'
-import { Store, Phone, PhoneCall } from 'lucide-react'
+import { Store, Phone, Mail, MessageCircle } from 'lucide-react'
 import { Vendor, CATEGORY_LABELS } from './vendors-types'
 import { Badge } from '@/components/ui/badge'
 
@@ -72,17 +72,21 @@ const columns = [
     header: 'Status',
     enableSorting: false,
     cell: (info) => (
-      <div
-        title={info.getValue() === 'active' ? 'Active' : 'Inactive'}
-        className={`w-3 h-3 rounded-full ${
-          info.getValue() === 'active' ? 'bg-emerald-400' : 'bg-gray-300'
-        }`}
-      />
+      <div className="flex items-center gap-2">
+        <div
+          className={`w-2.5 h-2.5 rounded-full ${
+            info.getValue() === 'active' ? 'bg-emerald-400' : 'bg-gray-300'
+          }`}
+        />
+        <span className="text-sm text-gray-500">
+          {info.getValue() === 'active' ? 'Active' : 'Inactive'}
+        </span>
+      </div>
     ),
   }),
 ]
 
-const skeletonWidths = ['w-32', 'w-28', 'w-24', 'w-40', 'w-24', 'w-6']
+const skeletonWidths = ['w-32', 'w-28', 'w-24', 'w-40', 'w-24', 'w-16']
 
 export function VendorsList({
   vendors,
@@ -109,10 +113,6 @@ export function VendorsList({
     onPaginationChange: setPagination,
   })
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-  }
-
   if (vendors.length === 0 && !loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -134,7 +134,7 @@ export function VendorsList({
               {table.getHeaderGroups()[0]?.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                  className="px-6 py-3 text-left text-sm font-medium text-gray-900"
                   style={{ width: COL_WIDTHS[header.id] }}
                 >
                   {header.isPlaceholder
@@ -163,73 +163,109 @@ export function VendorsList({
                     ))}
                   </tr>
                 ))
-              : table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    onClick={() => onRowClick(row.original)}
-                    className="border-b border-gray-100 last:border-0 cursor-pointer transition hover:bg-gray-50"
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="px-6 py-3.5 text-sm overflow-hidden relative group"
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-
-                        {/* Row hover actions - show only on last cell */}
-                        {cell.column.id === 'status' && (
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition pointer-events-auto">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                copyToClipboard(row.original.phone)
-                              }}
-                              title="Copy phone"
-                              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition"
-                            >
-                              <Phone size={16} />
-                            </button>
-                            <a
-                              href={`tel:${row.original.phone}`}
-                              onClick={(e) => e.stopPropagation()}
-                              title="Call"
-                              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition"
-                            >
-                              <PhoneCall size={16} />
-                            </a>
-                          </div>
-                        )}
+              : table.getRowModel().rows.map((row) => {
+                  const v = row.original
+                  const hasPhone = !!v.phone
+                  const hasEmail = !!v.email
+                  return (
+                    <tr
+                      key={row.id}
+                      onClick={() => onRowClick(v)}
+                      className="border-b border-gray-100 last:border-0 cursor-pointer transition hover:bg-gray-50 group"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          className="px-6 py-3.5 text-sm overflow-hidden"
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </td>
+                      ))}
+                      {/* Row hover actions — positioned over the last cell */}
+                      <td className="p-0 w-0 overflow-visible">
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition bg-gray-50 rounded-lg px-1 py-0.5">
+                          <a
+                            href={hasPhone ? `tel:${v.phone}` : undefined}
+                            onClick={(e) => { e.stopPropagation(); if (!hasPhone) e.preventDefault() }}
+                            title={hasPhone ? `Call ${v.phone}` : 'No phone number'}
+                            className={`p-1.5 rounded transition ${
+                              hasPhone
+                                ? 'text-gray-500 hover:text-gray-900 hover:bg-white'
+                                : 'text-gray-200 cursor-not-allowed'
+                            }`}
+                          >
+                            <Phone size={15} />
+                          </a>
+                          <a
+                            href={hasEmail ? `mailto:${v.email}` : undefined}
+                            onClick={(e) => { e.stopPropagation(); if (!hasEmail) e.preventDefault() }}
+                            title={hasEmail ? `Email ${v.email}` : 'No email'}
+                            className={`p-1.5 rounded transition ${
+                              hasEmail
+                                ? 'text-gray-500 hover:text-gray-900 hover:bg-white'
+                                : 'text-gray-200 cursor-not-allowed'
+                            }`}
+                          >
+                            <Mail size={15} />
+                          </a>
+                          <a
+                            href={hasPhone ? `https://wa.me/${v.phone.replace(/\D/g, '')}` : undefined}
+                            target={hasPhone ? '_blank' : undefined}
+                            rel={hasPhone ? 'noopener noreferrer' : undefined}
+                            onClick={(e) => { e.stopPropagation(); if (!hasPhone) e.preventDefault() }}
+                            title={hasPhone ? `WhatsApp ${v.phone}` : 'No phone number'}
+                            className={`p-1.5 rounded transition ${
+                              hasPhone
+                                ? 'text-gray-500 hover:text-gray-900 hover:bg-white'
+                                : 'text-gray-200 cursor-not-allowed'
+                            }`}
+                          >
+                            <MessageCircle size={15} />
+                          </a>
+                        </div>
                       </td>
-                    ))}
-                  </tr>
-                ))}
+                    </tr>
+                  )
+                })}
           </tbody>
         </table>
       </div>
-
-      {/* Pagination */}
       {table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 text-sm">
-          <button
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="text-gray-600 hover:text-gray-900 disabled:text-gray-300 transition cursor-pointer"
-          >
-            Previous
-          </button>
-          <span className="text-gray-600">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 text-sm">
+          <span className="text-gray-500">
+            {table.getState().pagination.pageIndex *
+              table.getState().pagination.pageSize +
+              1}
+            –
+            {Math.min(
+              (table.getState().pagination.pageIndex + 1) *
+                table.getState().pagination.pageSize,
+              vendors.length
+            )}{' '}
+            of {vendors.length}
           </span>
-          <button
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="text-gray-600 hover:text-gray-900 disabled:text-gray-300 transition cursor-pointer"
-          >
-            Next
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="text-sm text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-400">
+              {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+            </span>
+            <button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="text-sm text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>
