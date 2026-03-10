@@ -24,12 +24,12 @@ const columnHelper = createColumnHelper<Couple>();
 
 // Column width percentages (total = 100%)
 const COL_WIDTHS: Record<string, string> = {
-  name: "20%",
-  email: "22%",
+  name: "22%",
+  email: "24%",
   phone: "14%",
-  event_date: "14%",
+  event_date: "12%",
   venue: "18%",
-  status: "12%",
+  status: "10%",
 };
 
 const columns = [
@@ -125,7 +125,7 @@ export function CouplesList({
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <div className="overflow-y-auto flex-1">
-        <table className="w-full table-fixed max-w-6xl">
+        <table className="w-full table-fixed max-w-[1800px]">
           <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
               {table.getHeaderGroups()[0]?.headers.map((header) => (

@@ -38,7 +38,7 @@ Columns:
 id (uuid) user_id (uuid, not null) name (text) contact_name (text) email (text) phone
 (text) category (text) notes (text) status (text)
 
-Category values: venue photographer videographer dj florist planner caterer other
+Category values: venue celebrant photographer videographer dj florist hair_makeup caterer photo_booth lighting_av planner other
 
 Status values: active inactive
 
@@ -68,7 +68,7 @@ Follow-ups and reminders.
 Columns:
 
 id (uuid) title (text) description (text) due_date (date) status (text)
-user_id (uuid) related_event_id (uuid) related_couple_id (uuid)
+user_id (uuid) related_event_id (uuid) related_couple_id (uuid) related_vendor_id (uuid, nullable, FK to vendors.id)
 
 Status values: todo in_progress done
 
@@ -76,15 +76,29 @@ created_at (timestamp)
 
 ------------------------------------------------------------------------
 
+# event_vendors
+
+Join table linking vendors to events.
+
+Columns:
+
+id (uuid) event_id (uuid, not null, FK to events.id) vendor_id (uuid, not null, FK to vendors.id) user_id (uuid, not null) role_notes (text) created_at (timestamp)
+
+Unique constraint on (event_id, vendor_id).
+
+------------------------------------------------------------------------
+
 # Relationships
 
-couples -\> have events
+couples -> have events
 
-vendors -\> can be linked to events
+vendors -> linked to events via event_vendors join table
 
-events -\> can have tasks
+vendors -> can have tasks (via tasks.related_vendor_id)
 
-All tables -\> scoped to user via user_id (RLS)
+events -> can have tasks
+
+All tables -> scoped to user via user_id (RLS)
 
 ------------------------------------------------------------------------
 

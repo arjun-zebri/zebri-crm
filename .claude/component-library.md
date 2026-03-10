@@ -115,7 +115,7 @@ Style: Notion-style clean table. No card wrapper (no border/rounded-xl container
 
 Status indicator with colored dot prefix. Uses `rounded-full`, `px-2 py-0.5`, `text-xs font-medium`.
 
-Variants:
+Variants (Couple status):
 
 - `new`: amber-50 bg, amber-700 text, amber-400 dot
 - `contacted`: blue-50 bg, blue-700 text, blue-400 dot
@@ -123,6 +123,21 @@ Variants:
 - `paid`: emerald-50 bg, emerald-700 text, emerald-400 dot
 - `complete`: gray-100 bg, gray-600 text, gray-400 dot
 - `default`: gray-50 bg, gray-600 text, gray-400 dot
+
+Variants (Vendor category):
+
+- `venue`: rose-50 bg, rose-700 text, rose-400 dot
+- `celebrant`: violet-50 bg, violet-700 text, violet-400 dot
+- `photographer`: sky-50 bg, sky-700 text, sky-400 dot
+- `videographer`: indigo-50 bg, indigo-700 text, indigo-400 dot
+- `dj`: fuchsia-50 bg, fuchsia-700 text, fuchsia-400 dot
+- `florist`: pink-50 bg, pink-700 text, pink-400 dot
+- `hair_makeup`: orange-50 bg, orange-700 text, orange-400 dot
+- `caterer`: amber-50 bg, amber-700 text, amber-400 dot
+- `photo_booth`: teal-50 bg, teal-700 text, teal-400 dot
+- `lighting_av`: cyan-50 bg, cyan-700 text, cyan-400 dot
+- `planner`: lime-50 bg, lime-700 text, lime-400 dot
+- `other` (vendor): gray-50 bg, gray-600 text, gray-400 dot
 
 ---
 
