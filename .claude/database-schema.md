@@ -88,15 +88,29 @@ Unique constraint on (event_id, vendor_id).
 
 ------------------------------------------------------------------------
 
+# couple_vendors
+
+Join table linking vendors to couples.
+
+Columns:
+
+id (uuid) couple_id (uuid, not null, FK to couples.id) vendor_id (uuid, not null, FK to vendors.id) user_id (uuid, not null) created_at (timestamp)
+
+Unique constraint on (couple_id, vendor_id).
+
+------------------------------------------------------------------------
+
 # Relationships
 
 couples -> have events
 
+couples -> linked to vendors via couple_vendors join table
+
+vendors -> linked to couples via couple_vendors join table
+
 vendors -> linked to events via event_vendors join table
 
-vendors -> can have tasks (via tasks.related_vendor_id)
-
-events -> can have tasks
+tasks -> can relate to couple (via tasks.related_couple_id), event (via tasks.related_event_id), or vendor (via tasks.related_vendor_id)
 
 All tables -> scoped to user via user_id (RLS)
 

@@ -9,7 +9,6 @@ import {
   Target,
   Users,
   Calendar,
-  CheckSquare,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -20,7 +19,6 @@ const navItems = [
   { label: "Couples", href: "/couples", icon: Target },
   { label: "Vendors", href: "/vendors", icon: Users },
   { label: "Events", href: "/events", icon: Calendar },
-  { label: "Tasks", href: "/tasks", icon: CheckSquare },
 ];
 
 const bottomItems = [

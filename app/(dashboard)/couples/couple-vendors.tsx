@@ -1,0 +1,128 @@
+'use client'
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { CATEGORY_LABELS } from '../vendors/vendors-types'
+import { Badge } from '@/components/ui/badge'
+import { X } from 'lucide-react'
+
+interface CoupleVendorsProps {
+  coupleId: string
+}
+
+interface VendorLink {
+  id: string
+  vendor_id: string
+  vendor: {
+    id: string
+    name: string
+    category: string
+    status: string
+  }
+}
+
+export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+  const [showAddVendor, setShowAddVendor] = useState(false)
+
+  const { data: vendors, isLoading } = useQuery({
+    queryKey: ['couple-vendors', coupleId],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('couple_vendors')
+        .select('id, vendor_id, vendor:vendor_id(id, name, category, status)')
+        .eq('couple_id', coupleId)
+        .eq('user_id', user.user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return (data || []) as unknown as VendorLink[]
+    },
+  })
+
+  const removeVendor = useMutation({
+    mutationFn: async (vendorLinkId: string) => {
+      const { error } = await supabase
+        .from('couple_vendors')
+        .delete()
+        .eq('id', vendorLinkId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-vendors', coupleId] })
+    },
+  })
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-12 bg-gray-200 rounded animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {!vendors || vendors.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-sm text-gray-500 mb-3">No vendors assigned yet.</p>
+          <button
+            onClick={() => setShowAddVendor(true)}
+            className="text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+          >
+            + Add Vendor
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {vendors.map((link) => (
+              <div
+                key={link.id}
+                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{link.vendor.name}</p>
+                  <p className="text-xs text-gray-500">{CATEGORY_LABELS[link.vendor.category as any] || link.vendor.category}</p>
+                </div>
+                <button
+                  onClick={() => removeVendor.mutate(link.id)}
+                  disabled={removeVendor.isPending}
+                  className="p-1 text-gray-400 hover:text-red-600 transition disabled:opacity-50"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowAddVendor(true)}
+            className="w-full text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+          >
+            + Add Vendor
+          </button>
+        </>
+      )}
+
+      {showAddVendor && (
+        <div className="mt-4 p-3 border border-amber-200 bg-amber-50 rounded-lg">
+          <p className="text-sm text-amber-900">Coming soon: vendor selection modal</p>
+          <button
+            onClick={() => setShowAddVendor(false)}
+            className="text-sm text-amber-700 underline hover:text-amber-900 mt-2"
+          >
+            Close
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}

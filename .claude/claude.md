@@ -94,7 +94,7 @@ Sidebar (240px)
 
 Navigation:
 
-Dashboard Couples Vendors Events Tasks
+Dashboard Couples Vendors Events
 
 Main content area on the right.
 

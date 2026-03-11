@@ -6,7 +6,6 @@ import { Vendor, CATEGORY_LABELS, STATUS_LABELS } from './vendors-types'
 import { Badge } from '@/components/ui/badge'
 import { VendorOverview } from './vendor-overview'
 import { VendorEvents } from './vendor-events'
-import { VendorTasks } from './vendor-tasks'
 
 interface VendorProfileProps {
   vendor: Vendor | null
@@ -15,7 +14,7 @@ interface VendorProfileProps {
 }
 
 export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'tasks'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'events'>('overview')
 
   if (!vendor) return null
 
@@ -137,16 +136,6 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
             >
               Events
             </button>
-            <button
-              onClick={() => setActiveTab('tasks')}
-              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
-                activeTab === 'tasks'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              Tasks
-            </button>
           </div>
         </div>
 
@@ -156,7 +145,6 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
             <VendorOverview vendor={vendor} onEditClick={() => onEdit(vendor)} />
           )}
           {activeTab === 'events' && <VendorEvents vendorId={vendor.id} />}
-          {activeTab === 'tasks' && <VendorTasks vendorId={vendor.id} />}
         </div>
       </div>
     </>

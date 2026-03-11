@@ -1,9 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { X, Phone, Mail, MessageCircle, Pencil } from 'lucide-react'
 import { Couple, STATUS_LABELS, STATUS_DOT_COLORS } from './couples-types'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
+import { CoupleOverview } from './couple-overview'
+import { CoupleVendors } from './couple-vendors'
+import { CoupleTasks } from './couple-tasks'
 
 interface CoupleProfileProps {
   couple: Couple | null
@@ -12,6 +16,8 @@ interface CoupleProfileProps {
 }
 
 export function CoupleProfile({ couple, onClose, onEdit }: CoupleProfileProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'tasks'>('overview')
+
   if (!couple) return null
 
   const hasPhone = !!couple.phone
@@ -96,56 +102,47 @@ export function CoupleProfile({ couple, onClose, onEdit }: CoupleProfileProps) {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto border-t border-gray-200 px-8 py-6">
-          <div className="space-y-6">
-            {/* Contact details */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-4">Details</h3>
-              <div className="space-y-3">
-                {couple.phone && (
-                  <div className="flex items-start justify-between">
-                    <span className="text-sm text-gray-500">Phone</span>
-                    <a href={`tel:${couple.phone}`} className="text-sm text-gray-900 hover:text-blue-600 transition">{couple.phone}</a>
-                  </div>
-                )}
-                {couple.email && (
-                  <div className="flex items-start justify-between">
-                    <span className="text-sm text-gray-500">Email</span>
-                    <a href={`mailto:${couple.email}`} className="text-sm text-gray-900 hover:text-blue-600 transition">{couple.email}</a>
-                  </div>
-                )}
-                {couple.event_date && (
-                  <div className="flex items-start justify-between">
-                    <span className="text-sm text-gray-500">Event date</span>
-                    <span className="text-sm text-gray-900">{formatDate(couple.event_date)}</span>
-                  </div>
-                )}
-                {couple.venue && (
-                  <div className="flex items-start justify-between">
-                    <span className="text-sm text-gray-500">Venue</span>
-                    <span className="text-sm text-gray-900">{couple.venue}</span>
-                  </div>
-                )}
-                <div className="flex items-start justify-between">
-                  <span className="text-sm text-gray-500">Status</span>
-                  <Badge variant={couple.status as any}>
-                    {STATUS_LABELS[couple.status]}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-4">Notes</h3>
-              {couple.notes ? (
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{couple.notes}</p>
-              ) : (
-                <p className="text-sm text-gray-400 italic">No notes yet.</p>
-              )}
-            </div>
+        {/* Tabs */}
+        <div className="flex-shrink-0 border-t border-b border-gray-200 px-8">
+          <div className="flex gap-6">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+                activeTab === 'overview'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('vendors')}
+              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+                activeTab === 'vendors'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              Vendors
+            </button>
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+                activeTab === 'tasks'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              Tasks
+            </button>
           </div>
+        </div>
+
+        {/* Tab content */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
+          {activeTab === 'overview' && <CoupleOverview couple={couple} />}
+          {activeTab === 'vendors' && <CoupleVendors coupleId={couple.id} />}
+          {activeTab === 'tasks' && <CoupleTasks coupleId={couple.id} />}
         </div>
       </div>
     </>

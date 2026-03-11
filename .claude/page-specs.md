@@ -74,7 +74,7 @@ Quick overview of upcoming work.
 
 Modules:
 
-Upcoming Weddings Tasks Due Recent Couples
+Upcoming Weddings Recent Couples
 
 Avoid heavy analytics.
 
@@ -100,7 +100,7 @@ Actions:
 
 Add Couple Edit Couple Convert to Booking
 
-Views: List (table) and Kanban (5 columns, drag-and-drop).
+Views: List (table), Kanban (5 columns, drag-and-drop), and Calendar (month view).
 
 Kanban style: Notion-inspired board.
 - Columns with bg-gray-50 rounded-xl background, content-height (not equal)
@@ -115,6 +115,45 @@ List style: Notion-inspired clean table.
 - Lighter headers: white background, bottom border, sentence-case text
 - Plain text pagination (Previous / Next) instead of bordered buttons
 - Table scrollable within its container
+
+Calendar style: Month view showing all couples' event dates.
+- Standard calendar grid (Sunday-Saturday columns, 6 weeks max)
+- Day cells show the date number top-left
+- Event dates within a day displayed as small pill tags below the date
+- Scrollbar hidden on calendar container
+- Pills show: couple name (text-xs), bg-color amber-100, text amber-700
+- Soft shadow on hover
+- Click opens couple profile (not event-specific, shows full couple context)
+- Multiple event dates in one day stack vertically
+- Navigation: Previous/Next month buttons, current month/year displayed, "Today" button
+- Filtering and sorting still apply in calendar view (search not applicable)
+
+## Couple Profile
+
+Opens as a slide-over panel from the right (640px width), not a full page navigation. Keeps the couple list visible in the background for context.
+
+**Profile header:**
+- Couple name (text-xl font-semibold)
+- Email, Phone below (text-sm text-gray-500)
+- Status badge
+- Quick actions right-aligned: Call, Email, Edit (opens edit modal)
+
+**Tabs:** Overview, Vendors, Tasks
+
+**Overview tab (default):**
+- Key details: Email, Phone, Event Date, Venue, Status
+- Notes section: rendered text. If empty: "No notes yet." in italic gray. Edit button opens edit modal.
+
+**Vendors tab:**
+- List of vendors assigned to this couple
+- Each row: vendor name, category, status. Can remove vendor from here.
+- "+ Add Vendor" button to attach vendors to this couple
+
+**Tasks tab:**
+- List of tasks related to this couple
+- Each row: task title, due date, status badge. Checkbox for inline completion.
+- "+ Add Task" button pre-filled with this couple
+- Empty state: "No tasks yet."
 
 ------------------------------------------------------------------------
 
@@ -219,7 +258,7 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 - Status dot + label
 - Quick actions right-aligned: Call (Phone icon + number as tel: link), Email (Mail icon + address as mailto: link), Edit (Pencil icon, opens edit modal)
 
-**Tabs:** Overview, Events, Tasks (horizontal underline tabs, same style as Settings page)
+**Tabs:** Overview, Events (horizontal underline tabs, same style as Settings page)
 
 **Overview tab (default):**
 - Contact details: key-value layout (Phone, Email, Category, Status). Phone and Email clickable.
@@ -230,11 +269,6 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 - Compact list of events where this vendor was involved (requires event_vendors join table).
 - Each row: event date, couple name, venue. Sorted by date desc.
 - Empty state: "No events linked yet. Events will appear here once this vendor is assigned to a wedding."
-
-**Tasks tab:**
-- Compact task list filtered to this vendor (requires related_vendor_id on tasks).
-- Each row: task title, due date, status badge. Checkbox for inline completion.
-- Empty state: "No tasks yet." with "+ Add Task" button pre-filled with this vendor.
 
 ## File Structure
 
@@ -249,40 +283,87 @@ app/(dashboard)/vendors/
   vendor-profile.tsx
   vendor-overview.tsx
   vendor-events.tsx
-  vendor-tasks.tsx
 ```
 
 ------------------------------------------------------------------------
 
 # Events Page
 
+Route: `/events`
+
+Route group: `(dashboard)`
+
 Purpose:
 
-List weddings.
+List and manage weddings.
 
-Columns:
+Header: Title "Events" + total count. Compact Notion-style toolbar: expandable search icon, sort dropdown, filter dropdown, small black "New" button.
+
+Status values: upcoming, completed, cancelled
+
+Table Columns:
 
 Date Couple Venue Status
 
-Future improvement:
+Sorting: Controlled via sort dropdown (date asc/desc, couple name). No clickable sort on table headers.
 
-Calendar view.
+Row click: Opens event profile panel.
 
-------------------------------------------------------------------------
+Views: List (table) and Calendar (month view).
 
-# Tasks Page
+## Calendar View
 
-Purpose:
+Month view showing all events for the displayed month.
 
-Track follow‑ups and reminders.
+Layout:
+- Standard calendar grid (Sunday-Saturday columns, 6 weeks max)
+- Day cells show the date number top-left
+- Events within a day displayed as small pill tags below the date
+- Scrollbar hidden on calendar container
 
-Columns:
+Event pills within cells:
+- Pill shows: couple name (text-xs)
+- bg-color based on event status (amber-100 for upcoming, gray-100 for completed, red-100 for cancelled)
+- text color matches status (amber-700 for upcoming, gray-600 for completed, red-700 for cancelled)
+- Soft shadow on hover
+- Click opens event profile panel
+- Multiple events in one day stack vertically
 
-Task Due Date Status Related Couple/Event
+Navigation:
+- Previous/Next month buttons in toolbar (ChevronLeft/ChevronRight icons)
+- Current month/year displayed in toolbar
+- "Today" button to jump to current month
 
-Actions:
+Filtering and sorting still apply in calendar view (status filter, search not applicable).
 
-Create Task Mark Complete Edit Task
+Empty state: If no events exist, show "No events this month. Upcoming events will appear here."
+
+## Event Profile
+
+Opens as a slide-over panel from the right (640px width).
+
+**Profile header:**
+- Event date (text-xl font-semibold) + Couple name
+- Venue below (text-sm text-gray-500)
+- Status badge
+- Quick actions right-aligned: Edit (opens edit modal)
+
+**Tabs:** Overview, Vendors, Tasks
+
+**Overview tab (default):**
+- Key details: Date, Couple, Venue, Status
+- Notes/timeline section
+
+**Vendors tab:**
+- List of vendors assigned to this event (event_vendors join table)
+- Each row: vendor name, category. Can remove vendor.
+- "+ Add Vendor" button
+
+**Tasks tab:**
+- List of tasks related to this event
+- Each row: task title, due date, status badge. Checkbox for inline completion.
+- "+ Add Task" button pre-filled with this event
+- Empty state: "No tasks yet."
 
 ------------------------------------------------------------------------
 
