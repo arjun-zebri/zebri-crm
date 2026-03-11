@@ -199,7 +199,7 @@ export function CouplesHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-10 border-b border-gray-200 mt-6">
+      <div className="flex items-center gap-6 border-b border-gray-200 mt-6">
         <button
           onClick={() => onViewModeChange('list')}
           className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${

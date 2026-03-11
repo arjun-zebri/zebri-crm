@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { Pencil, Trash2 } from 'lucide-react'
 
 interface CoupleTasksProps {
   coupleId: string
@@ -23,6 +24,9 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
   const [showAddTask, setShowAddTask] = useState(false)
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDueDate, setTaskDueDate] = useState('')
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDueDate, setEditDueDate] = useState('')
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['couple-tasks', coupleId],
@@ -81,6 +85,37 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
     },
   })
 
+  const editTaskMutation = useMutation({
+    mutationFn: async ({ id, title, dueDate }: { id: string; title: string; dueDate: string }) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ title, due_date: dueDate || null })
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-tasks', coupleId] })
+      setEditingTaskId(null)
+      setEditTitle('')
+      setEditDueDate('')
+    },
+  })
+
+  const deleteTask = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', taskId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-tasks', coupleId] })
+    },
+  })
+
   const handleToggleTask = (task: Task) => {
     const newStatus = task.status === 'done' ? 'todo' : 'done'
     updateTask.mutate({ ...task, status: newStatus })
@@ -128,38 +163,115 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
       ) : (
         <>
           <div className="space-y-2">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                <input
-                  type="checkbox"
-                  checked={task.status === 'done'}
-                  onChange={() => handleToggleTask(task)}
-                  className="w-4 h-4 rounded border-gray-300 text-black focus:ring-green-200"
-                />
-                <div className="flex-1 min-w-0">
-                  <p
-                    className={`text-sm ${
-                      task.status === 'done'
-                        ? 'text-gray-400 line-through'
-                        : 'text-gray-900'
-                    }`}
-                  >
-                    {task.title}
-                  </p>
+            {tasks.map((task) =>
+              editingTaskId === task.id ? (
+                <form
+                  key={task.id}
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (!editTitle.trim()) return
+                    editTaskMutation.mutate({ id: task.id, title: editTitle, dueDate: editDueDate })
+                  }}
+                  className="border border-gray-200 rounded-lg bg-white shadow-sm p-3 space-y-3"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Task title</label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="What needs to be done?"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Due date</label>
+                    <input
+                      type="date"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingTaskId(null)
+                        setEditTitle('')
+                        setEditDueDate('')
+                      }}
+                      disabled={editTaskMutation.isPending}
+                      className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={editTaskMutation.isPending || !editTitle.trim()}
+                      className="text-sm px-3 py-1.5 rounded-lg bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50"
+                    >
+                      {editTaskMutation.isPending ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 group"
+                >
+                  <input
+                    type="checkbox"
+                    checked={task.status === 'done'}
+                    onChange={() => handleToggleTask(task)}
+                    className="w-4 h-4 rounded border-gray-300 text-black focus:ring-green-200 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={`text-sm ${
+                        task.status === 'done'
+                          ? 'text-gray-400 line-through'
+                          : 'text-gray-900'
+                      }`}
+                    >
+                      {task.title}
+                    </p>
+                  </div>
+                  {task.due_date && (
+                    <span className="text-sm text-gray-500 whitespace-nowrap">
+                      {formatDate(task.due_date)}
+                    </span>
+                  )}
+                  <Badge variant={statusBadgeVariant(task.status) as any}>
+                    {task.status.replace('_', ' ')}
+                  </Badge>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0">
+                    <button
+                      onClick={() => {
+                        setEditingTaskId(task.id)
+                        setEditTitle(task.title)
+                        setEditDueDate(task.due_date || '')
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition cursor-pointer"
+                      title="Edit task"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => deleteTask.mutate(task.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
+                      title="Delete task"
+                      disabled={deleteTask.isPending}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-                {task.due_date && (
-                  <span className="text-xs text-gray-500 whitespace-nowrap">
-                    {formatDate(task.due_date)}
-                  </span>
-                )}
-                <Badge variant={statusBadgeVariant(task.status) as any}>
-                  {task.status.replace('_', ' ')}
-                </Badge>
-              </div>
-            ))}
+              )
+            )}
           </div>
           <button
             onClick={() => setShowAddTask(true)}
