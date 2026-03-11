@@ -82,7 +82,7 @@ Do NOT build:
 
 Focus on:
 
-• Authentication • Payments/Subscriptions • Couples • Vendors • Events • Tasks
+• Authentication • Payments/Subscriptions • Couples (with events) • Vendors • Tasks
 
 ---
 
@@ -94,7 +94,7 @@ Sidebar (240px)
 
 Navigation:
 
-Dashboard Couples Vendors Events
+Dashboard Couples Vendors
 
 Main content area on the right.
 

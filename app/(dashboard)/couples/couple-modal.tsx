@@ -1,19 +1,21 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { ChevronDown } from 'lucide-react'
-import * as Popover from '@radix-ui/react-popover'
-import { Modal } from '@/components/ui/modal'
-import { Couple, CoupleStatus, STATUSES, STATUS_LABELS } from './couples-types'
+import { useState, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
+import * as Popover from "@radix-ui/react-popover";
+import { Modal } from "@/components/ui/modal";
+import { Couple, CoupleStatus, STATUSES, STATUS_LABELS } from "./couples-types";
 
 interface CoupleModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSave: (couple: Omit<Couple, 'id' | 'user_id' | 'created_at'> & { id?: string }) => void
-  onDelete: (id: string) => void
-  couple?: Couple
-  defaultStatus?: CoupleStatus
-  loading: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (
+    couple: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
+  ) => void;
+  onDelete: (id: string) => void;
+  couple?: Couple;
+  defaultStatus?: CoupleStatus;
+  loading: boolean;
 }
 
 export function CoupleModal({
@@ -25,87 +27,81 @@ export function CoupleModal({
   defaultStatus,
   loading,
 }: CoupleModalProps) {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [eventDate, setEventDate] = useState('')
-  const [venue, setVenue] = useState('')
-  const [status, setStatus] = useState<string>('new')
-  const [notes, setNotes] = useState('')
-  const [statusOpen, setStatusOpen] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState(false)
-  const deleteTimeoutRef = useState<NodeJS.Timeout | null>(null)[1]
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [status, setStatus] = useState<string>("new");
+  const [notes, setNotes] = useState("");
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const deleteTimeoutRef = useState<NodeJS.Timeout | null>(null)[1];
 
   useEffect(() => {
     if (couple) {
-      setName(couple.name)
-      setEmail(couple.email)
-      setPhone(couple.phone)
-      setEventDate(couple.event_date || '')
-      setVenue(couple.venue)
-      setStatus(couple.status)
-      setNotes(couple.notes)
+      setName(couple.name);
+      setEmail(couple.email);
+      setPhone(couple.phone);
+      setStatus(couple.status);
+      setNotes(couple.notes);
     } else {
-      resetForm()
+      resetForm();
       if (defaultStatus) {
-        setStatus(defaultStatus)
+        setStatus(defaultStatus);
       }
     }
-    setDeleteConfirm(false)
-  }, [couple, isOpen])
+    setDeleteConfirm(false);
+  }, [couple, isOpen]);
 
   const resetForm = () => {
-    setName('')
-    setEmail('')
-    setPhone('')
-    setEventDate('')
-    setVenue('')
-    setStatus('new')
-    setNotes('')
-  }
+    setName("");
+    setEmail("");
+    setPhone("");
+    setStatus("new");
+    setNotes("");
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
+    e.preventDefault();
+    if (!name.trim()) return;
 
     onSave({
       id: couple?.id,
       name,
       email,
       phone,
-      event_date: eventDate || null,
-      venue,
+      event_date: couple?.event_date ?? null,
+      venue: couple?.venue ?? "",
       status: status as any,
       notes,
-    })
+    });
 
-    resetForm()
-  }
+    resetForm();
+  };
 
   const handleDelete = () => {
     if (!deleteConfirm) {
-      setDeleteConfirm(true)
+      setDeleteConfirm(true);
       const timeout = setTimeout(() => {
-        setDeleteConfirm(false)
-      }, 3000)
-      return
+        setDeleteConfirm(false);
+      }, 3000);
+      return;
     }
 
     if (couple) {
-      onDelete(couple.id)
+      onDelete(couple.id);
     }
-  }
+  };
 
   const inputClass =
-    'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
+    "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition";
 
-  const selectedLabel = STATUS_LABELS[status as keyof typeof STATUS_LABELS]
+  const selectedLabel = STATUS_LABELS[status as keyof typeof STATUS_LABELS];
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={couple ? 'Edit Couple' : 'Add Couple'}
+      title={couple ? "Edit Couple" : "Add Couple"}
       footer={
         <div className="flex items-center justify-between">
           {couple && (
@@ -114,11 +110,11 @@ export function CoupleModal({
               disabled={loading}
               className={`text-sm px-4 py-2 rounded-lg transition ${
                 deleteConfirm
-                  ? 'bg-red-600 text-white'
-                  : 'bg-red-50 text-red-600 hover:bg-red-100'
+                  ? "bg-red-600 text-white"
+                  : "bg-red-50 text-red-600 hover:bg-red-100"
               }`}
             >
-              {deleteConfirm ? 'Click again to confirm' : 'Delete'}
+              {deleteConfirm ? "Click again to confirm" : "Delete"}
             </button>
           )}
           <div className="flex gap-3 ml-auto">
@@ -134,7 +130,7 @@ export function CoupleModal({
               disabled={loading || !name.trim()}
               className="text-sm px-4 py-2 rounded-lg bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save'}
+              {loading ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
@@ -157,7 +153,9 @@ export function CoupleModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
             <input
               type="email"
               value={email}
@@ -168,7 +166,9 @@ export function CoupleModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone
+            </label>
             <input
               type="tel"
               value={phone}
@@ -179,36 +179,21 @@ export function CoupleModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Event Date</label>
-            <input
-              type="date"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Venue</label>
-            <input
-              type="text"
-              value={venue}
-              onChange={(e) => setVenue(e.target.value)}
-              className={inputClass}
-              placeholder="Venue name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
             <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
               <Popover.Trigger asChild>
                 <button
                   type="button"
                   className={`${inputClass} flex items-center justify-between text-left`}
                 >
-                  <span className={selectedLabel ? 'text-gray-900' : 'text-gray-400'}>
-                    {selectedLabel || 'Select status'}
+                  <span
+                    className={
+                      selectedLabel ? "text-gray-900" : "text-gray-400"
+                    }
+                  >
+                    {selectedLabel || "Select status"}
                   </span>
                   <ChevronDown size={14} className="text-gray-400 shrink-0" />
                 </button>
@@ -224,11 +209,13 @@ export function CoupleModal({
                       key={s}
                       type="button"
                       onClick={() => {
-                        setStatus(s)
-                        setStatusOpen(false)
+                        setStatus(s);
+                        setStatusOpen(false);
                       }}
                       className={`w-full text-left px-3 py-2 text-sm transition ${
-                        status === s ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'
+                        status === s
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
                       {STATUS_LABELS[s]}
@@ -241,7 +228,9 @@ export function CoupleModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Notes
+          </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -252,5 +241,5 @@ export function CoupleModal({
         </div>
       </form>
     </Modal>
-  )
+  );
 }

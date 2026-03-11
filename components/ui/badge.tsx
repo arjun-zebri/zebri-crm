@@ -1,5 +1,5 @@
 interface BadgeProps {
-  variant: 'default' | 'new' | 'contacted' | 'confirmed' | 'paid' | 'complete' | 'venue' | 'celebrant' | 'photographer' | 'videographer' | 'dj' | 'florist' | 'hair_makeup' | 'caterer' | 'photo_booth' | 'lighting_av' | 'planner' | 'other'
+  variant: 'default' | 'new' | 'contacted' | 'confirmed' | 'paid' | 'complete' | 'venue' | 'celebrant' | 'photographer' | 'videographer' | 'dj' | 'florist' | 'hair_makeup' | 'caterer' | 'photo_booth' | 'lighting_av' | 'planner' | 'other' | 'upcoming' | 'completed' | 'cancelled'
   children: React.ReactNode
 }
 
@@ -22,6 +22,9 @@ const variantStyles: Record<BadgeProps['variant'], { bg: string; text: string; d
   lighting_av: { bg: 'bg-cyan-50', text: 'text-cyan-700', dot: 'bg-cyan-400' },
   planner: { bg: 'bg-lime-50', text: 'text-lime-700', dot: 'bg-lime-400' },
   other: { bg: 'bg-gray-50', text: 'text-gray-600', dot: 'bg-gray-400' },
+  upcoming: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-400' },
+  completed: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+  cancelled: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-400' },
 }
 
 export function Badge({ variant = 'default', children }: BadgeProps) {

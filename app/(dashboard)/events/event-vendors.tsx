@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS } from '../vendors/vendors-types'
 import { Badge } from '@/components/ui/badge'
 import { X } from 'lucide-react'
+import { VendorPicker } from '../couples/vendor-picker'
 
 interface EventVendorsProps {
   eventId: string
@@ -59,6 +60,27 @@ export function EventVendors({ eventId }: EventVendorsProps) {
     },
   })
 
+  const addVendor = useMutation({
+    mutationFn: async (vendorId: string) => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const { error } = await supabase
+        .from('event_vendors')
+        .insert({
+          event_id: eventId,
+          vendor_id: vendorId,
+          user_id: user.user.id,
+        })
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-vendors', eventId] })
+      setShowAddVendor(false)
+    },
+  })
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -91,7 +113,7 @@ export function EventVendors({ eventId }: EventVendorsProps) {
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">{link.vendor.name}</p>
-                  <p className="text-xs text-gray-500">{CATEGORY_LABELS[link.vendor.category as any] || link.vendor.category}</p>
+                  <p className="text-xs text-gray-500">{CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}</p>
                 </div>
                 <button
                   onClick={() => removeVendor.mutate(link.id)}
@@ -113,15 +135,12 @@ export function EventVendors({ eventId }: EventVendorsProps) {
       )}
 
       {showAddVendor && (
-        <div className="mt-4 p-3 border border-amber-200 bg-amber-50 rounded-lg">
-          <p className="text-sm text-amber-900">Coming soon: vendor selection modal</p>
-          <button
-            onClick={() => setShowAddVendor(false)}
-            className="text-sm text-amber-700 underline hover:text-amber-900 mt-2"
-          >
-            Close
-          </button>
-        </div>
+        <VendorPicker
+          excludeVendorIds={vendors?.map(v => v.vendor_id) ?? []}
+          onAdd={(vendorId) => addVendor.mutate(vendorId)}
+          onClose={() => setShowAddVendor(false)}
+          isAdding={addVendor.isPending}
+        />
       )}
     </div>
   )

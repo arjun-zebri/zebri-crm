@@ -6,6 +6,7 @@ import { Couple, STATUS_LABELS, STATUS_DOT_COLORS } from './couples-types'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
 import { CoupleOverview } from './couple-overview'
+import { CoupleEvents } from './couple-events'
 import { CoupleVendors } from './couple-vendors'
 import { CoupleTasks } from './couple-tasks'
 
@@ -16,7 +17,7 @@ interface CoupleProfileProps {
 }
 
 export function CoupleProfile({ couple, onClose, onEdit }: CoupleProfileProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'tasks'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'vendors' | 'tasks'>('overview')
 
   if (!couple) return null
 
@@ -116,6 +117,16 @@ export function CoupleProfile({ couple, onClose, onEdit }: CoupleProfileProps) {
               Overview
             </button>
             <button
+              onClick={() => setActiveTab('events')}
+              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+                activeTab === 'events'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              Events
+            </button>
+            <button
               onClick={() => setActiveTab('vendors')}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
                 activeTab === 'vendors'
@@ -141,6 +152,7 @@ export function CoupleProfile({ couple, onClose, onEdit }: CoupleProfileProps) {
         {/* Tab content */}
         <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
           {activeTab === 'overview' && <CoupleOverview couple={couple} />}
+          {activeTab === 'events' && <CoupleEvents couple={couple} />}
           {activeTab === 'vendors' && <CoupleVendors coupleId={couple.id} />}
           {activeTab === 'tasks' && <CoupleTasks coupleId={couple.id} />}
         </div>

@@ -121,11 +121,12 @@ Calendar style: Month view showing all couples' event dates.
 - Day cells show the date number top-left
 - Event dates within a day displayed as small pill tags below the date
 - Scrollbar hidden on calendar container
-- Pills show: couple name (text-xs), bg-color amber-100, text amber-700
+- Pills show: couple name (text-xs), status-based colors: blue for upcoming, emerald for completed, red for cancelled
 - Soft shadow on hover
 - Click opens couple profile (not event-specific, shows full couple context)
 - Multiple event dates in one day stack vertically
-- Navigation: Previous/Next month buttons, current month/year displayed, "Today" button
+- Today's date highlighted with green ring (ring-2 ring-green-500)
+- Navigation: Previous/Next month buttons, current month/year displayed (no Today button)
 - Filtering and sorting still apply in calendar view (search not applicable)
 
 ## Couple Profile
@@ -138,11 +139,18 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 - Status badge
 - Quick actions right-aligned: Call, Email, Edit (opens edit modal)
 
-**Tabs:** Overview, Vendors, Tasks
+**Tabs:** Overview, Events, Vendors, Tasks
 
 **Overview tab (default):**
-- Key details: Email, Phone, Event Date, Venue, Status
+- Key details: Email, Phone, Status
 - Notes section: rendered text. If empty: "No notes yet." in italic gray. Edit button opens edit modal.
+
+**Events tab:**
+- List of events (weddings) for this couple
+- Each row: event date (formatted), venue, status badge.
+- "+ Add Event" button to create a new event for this couple
+- Empty state: "No events yet."
+- Events belong to a couple (one couple can have multiple events)
 
 **Vendors tab:**
 - List of vendors assigned to this couple
@@ -154,6 +162,19 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 - Each row: task title, due date, status badge. Checkbox for inline completion.
 - "+ Add Task" button pre-filled with this couple
 - Empty state: "No tasks yet."
+
+## Add/Edit Couple Modal
+
+Title: "Add Couple" or "Edit Couple"
+
+Form fields:
+- Name (text, required)
+- Email (email, optional)
+- Phone (tel, optional)
+- Status (select, required)
+- Notes (textarea, optional)
+
+Note: Event Date and Venue fields are managed exclusively via the Events tab. The couple modal does not expose these fields for editing.
 
 ------------------------------------------------------------------------
 
@@ -284,86 +305,6 @@ app/(dashboard)/vendors/
   vendor-overview.tsx
   vendor-events.tsx
 ```
-
-------------------------------------------------------------------------
-
-# Events Page
-
-Route: `/events`
-
-Route group: `(dashboard)`
-
-Purpose:
-
-List and manage weddings.
-
-Header: Title "Events" + total count. Compact Notion-style toolbar: expandable search icon, sort dropdown, filter dropdown, small black "New" button.
-
-Status values: upcoming, completed, cancelled
-
-Table Columns:
-
-Date Couple Venue Status
-
-Sorting: Controlled via sort dropdown (date asc/desc, couple name). No clickable sort on table headers.
-
-Row click: Opens event profile panel.
-
-Views: List (table) and Calendar (month view).
-
-## Calendar View
-
-Month view showing all events for the displayed month.
-
-Layout:
-- Standard calendar grid (Sunday-Saturday columns, 6 weeks max)
-- Day cells show the date number top-left
-- Events within a day displayed as small pill tags below the date
-- Scrollbar hidden on calendar container
-
-Event pills within cells:
-- Pill shows: couple name (text-xs)
-- bg-color based on event status (amber-100 for upcoming, gray-100 for completed, red-100 for cancelled)
-- text color matches status (amber-700 for upcoming, gray-600 for completed, red-700 for cancelled)
-- Soft shadow on hover
-- Click opens event profile panel
-- Multiple events in one day stack vertically
-
-Navigation:
-- Previous/Next month buttons in toolbar (ChevronLeft/ChevronRight icons)
-- Current month/year displayed in toolbar
-- "Today" button to jump to current month
-
-Filtering and sorting still apply in calendar view (status filter, search not applicable).
-
-Empty state: If no events exist, show "No events this month. Upcoming events will appear here."
-
-## Event Profile
-
-Opens as a slide-over panel from the right (640px width).
-
-**Profile header:**
-- Event date (text-xl font-semibold) + Couple name
-- Venue below (text-sm text-gray-500)
-- Status badge
-- Quick actions right-aligned: Edit (opens edit modal)
-
-**Tabs:** Overview, Vendors, Tasks
-
-**Overview tab (default):**
-- Key details: Date, Couple, Venue, Status
-- Notes/timeline section
-
-**Vendors tab:**
-- List of vendors assigned to this event (event_vendors join table)
-- Each row: vendor name, category. Can remove vendor.
-- "+ Add Vendor" button
-
-**Tasks tab:**
-- List of tasks related to this event
-- Each row: task title, due date, status badge. Checkbox for inline completion.
-- "+ Add Task" button pre-filled with this event
-- Empty state: "No tasks yet."
 
 ------------------------------------------------------------------------
 

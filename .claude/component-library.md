@@ -180,3 +180,32 @@ Keyboard shortcut: Cmd + K
 Functions: - create couple - create task - search vendors - navigate pages
 
 Style inspired by: Linear / Vercel
+
+---
+
+## VendorPicker
+
+Reusable inline vendor picker component used in both couple and event vendor assignment workflows.
+
+Purpose: Allow users to search active vendors and add them to a couple or event.
+
+Props:
+- `excludeVendorIds: string[]` — vendor IDs already assigned (excluded from search results)
+- `onAdd: (vendorId: string) => void` — callback when user selects a vendor
+- `onClose: () => void` — callback to close the picker
+- `isAdding: boolean` — loading state while mutation is pending
+
+Styles:
+- Container: `border border-gray-200 rounded-lg bg-white shadow-sm p-3`
+- Search input: matches standard Input styles with focus:ring-2 focus:ring-green-200
+- Vendor rows: text-left, p-2, hover:bg-gray-50, rounded-lg
+- Empty state: centered gray text
+- Close button (X) top-right of search bar
+
+Behavior:
+- Fetches all active vendors for the current user
+- Filters client-side by vendor name as user types
+- Excludes already-assigned vendors
+- Shows vendor name + category badge
+- Max height with scrollable overflow
+- Inline presentation (does not open a modal)

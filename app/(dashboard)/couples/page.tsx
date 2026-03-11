@@ -10,6 +10,7 @@ import {
 import { CouplesHeader } from "./couples-header";
 import { CouplesList } from "./couples-list";
 import { CouplesKanban } from "./couples-kanban";
+import { CouplesCalendar } from "./couples-calendar";
 import { CoupleModal } from "./couple-modal";
 import { CoupleProfile } from "./couple-profile";
 import {
@@ -38,8 +39,8 @@ export default function CouplesPage() {
 
   useEffect(() => {
     const saved = localStorage.getItem("zebri_couples_view");
-    if (saved === "kanban" || saved === "list") {
-      setViewMode(saved);
+    if (saved === "kanban" || saved === "list" || saved === "calendar") {
+      setViewMode(saved as ViewMode);
     }
   }, []);
 
@@ -162,7 +163,7 @@ export default function CouplesPage() {
             onRowClick={(couple) => setSelectedCouple(couple)}
             loading={isLoading}
           />
-        ) : (
+        ) : viewMode === "kanban" ? (
           <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <CouplesKanban
               couples={filteredCouples}
@@ -172,6 +173,15 @@ export default function CouplesPage() {
                 setEditingCouple(undefined);
                 setDefaultStatus(status as CoupleStatus);
                 setModalOpen(true);
+              }}
+            />
+          </div>
+        ) : (
+          <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <CouplesCalendar
+              onSelectCouple={(coupleId) => {
+                const couple = couples.find((c) => c.id === coupleId);
+                if (couple) setSelectedCouple(couple);
               }}
             />
           </div>

@@ -8,7 +8,6 @@ import {
   Home,
   Target,
   Users,
-  Calendar,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -18,7 +17,6 @@ const navItems = [
   { label: "Dashboard", href: "/", icon: Home },
   { label: "Couples", href: "/couples", icon: Target },
   { label: "Vendors", href: "/vendors", icon: Users },
-  { label: "Events", href: "/events", icon: Calendar },
 ];
 
 const bottomItems = [

@@ -13,7 +13,7 @@ export interface Couple {
   created_at: string
 }
 
-export type ViewMode = 'list' | 'kanban'
+export type ViewMode = 'list' | 'kanban' | 'calendar'
 
 export const STATUSES: CoupleStatus[] = ['new', 'contacted', 'confirmed', 'paid', 'complete']
 
