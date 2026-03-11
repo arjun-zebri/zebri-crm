@@ -2,7 +2,7 @@
 
 This document defines every page in the CRM.
 
-------------------------------------------------------------------------
+---
 
 # Login
 
@@ -16,7 +16,7 @@ Fields: Email, Password
 
 Actions: Sign In, "Forgot password?" link to `/reset-password`, "Sign up" link to `/signup`
 
-------------------------------------------------------------------------
+---
 
 # Sign Up
 
@@ -32,7 +32,7 @@ Actions: Create Account, "Already have an account?" link to `/login`
 
 On submit: creates account with `account_type: 'vendor'` in user_metadata.
 
-------------------------------------------------------------------------
+---
 
 # Reset Password
 
@@ -48,7 +48,7 @@ Actions: Send Reset Link
 
 Shows confirmation message after submission.
 
-------------------------------------------------------------------------
+---
 
 # Update Password
 
@@ -64,21 +64,97 @@ Actions: Update Password
 
 Redirects to `/login` on success.
 
-------------------------------------------------------------------------
+---
 
 # Dashboard
 
-Purpose:
+Route: `/dashboard` or `/` (landing page after login)
 
-Quick overview of upcoming work.
+Route group: `(dashboard)`
 
-Modules:
+Purpose: At a glance, see what's happening this week and this month. The MC's command centre — quick wins, immediate action items, and a pulse on the business. Focused on _action_ not analytics.
 
-Upcoming Weddings Recent Couples
+## Layout
 
-Avoid heavy analytics.
+Full-width page with two main modules, stacked vertically. Minimal header with no title (the dashboard speaks for itself).
 
-------------------------------------------------------------------------
+## Module 1: Upcoming Weddings
+
+**Card title:** "Upcoming Weddings"
+
+**Content:** Sortable, lightweight card grid or horizontal list showing upcoming event dates within the next 30 days.
+
+**For each event:**
+
+- Couple name (text-sm font-medium)
+- Event date (text-xs text-gray-500, formatted as "Sat, 22 Mar")
+- Venue (text-xs text-gray-500, truncated)
+- Status badge (small, matching Couples page badge styles)
+- Status values: confirmed, paid, complete (not "new" or "contacted" — those aren't actionable on wedding day)
+
+**Sorting:** Soonest first (default). User can click a sort icon to reverse to furthest first.
+
+**Empty state:** "No upcoming weddings this month. Time to grow!" with a link to the Couples page.
+
+**Click behaviour:** Click the card to open the couple's profile slide-over.
+
+**Card style:** Notion-inspired—light gray background (bg-gray-50), hover shadow, no border.
+
+## Module 2: Recent Couples
+
+**Card title:** "Recent Couples"
+
+**Content:** Compact table (or list) of the 5–10 most recently created couples.
+
+**For each couple:**
+
+- Couple name (text-sm font-medium)
+- Email (text-xs text-gray-500, truncated)
+- Status badge (small)
+- Created date (text-xs text-gray-500, relative: "2 days ago")
+
+**Empty state:** "No couples yet. Ready to onboard your first enquiry?" with a link/button to the Couples page.
+
+**Click behaviour:** Click the row to open the couple's profile slide-over.
+
+**Table style:** Notion-inspired clean table (light header, bottom border, no card wrapper).
+
+## Module 3: Quick Stats
+
+Show only 3 metrics in a simple grid:
+
+- Total Couples (count)
+- Active Vendors (count, status = active)
+- Weddings This Month (count of events in current month)
+
+**Important:** NO graphs, NO trends, NO analytics. Just numbers. This is informational, not dashboards reporting.
+
+## Overall Styling
+
+- Page background: white
+- Module cards: bg-white with shadow-sm
+- Typography: Follow page-specs typography rules (text-sm for body, text-xs for secondary)
+- Spacing: Generous vertical padding between modules (4–6 rem)
+- No sidebar clutter — focus the user on _what to do next_
+
+## File Structure
+
+```
+app/(dashboard)/
+  page.tsx (dashboard orchestrator)
+  dashboard-upcoming-weddings.tsx
+  dashboard-recent-couples.tsx
+  dashboard-stats.tsx (optional)
+```
+
+## Notes
+
+- **Fast loading:** Pre-fetch couple and event data in the layout so the dashboard renders instantly.
+- **No heavy queries:** Limit to the most recent 30 days for weddings, 10 for couples.
+- **Calm aesthetic:** Use neutral grays and the status badge colors from Couples/Vendors pages. No red/error colors unless something actually needs action.
+- **Keyboard friendly:** Arrow keys to navigate between cards, Enter to open profiles.
+
+---
 
 # Couples Page
 
@@ -103,6 +179,7 @@ Add Couple Edit Couple Convert to Booking
 Views: List (table), Kanban (5 columns, drag-and-drop), and Calendar (month view).
 
 Kanban style: Notion-inspired board.
+
 - Columns with bg-gray-50 rounded-xl background, content-height (not equal)
 - Colored pill headers (e.g. amber-50 bg + amber-600 text for "New")
 - Cards are bg-white with shadow-sm; hover shows shadow-md
@@ -111,12 +188,14 @@ Kanban style: Notion-inspired board.
 - Scrollbar hidden on kanban container
 
 List style: Notion-inspired clean table.
+
 - No card wrapper (no border/rounded-xl around table)
 - Lighter headers: white background, bottom border, sentence-case text
 - Plain text pagination (Previous / Next) instead of bordered buttons
 - Table scrollable within its container
 
 Calendar style: Month view showing all couples' event dates.
+
 - Standard calendar grid (Sunday-Saturday columns, 6 weeks max)
 - Day cells show the date number top-left
 - Event dates within a day displayed as small pill tags below the date
@@ -134,6 +213,7 @@ Calendar style: Month view showing all couples' event dates.
 Opens as a slide-over panel from the right (640px width), not a full page navigation. Keeps the couple list visible in the background for context.
 
 **Profile header:**
+
 - Couple name (text-xl font-semibold)
 - Email, Phone below (text-sm text-gray-500)
 - Status badge
@@ -142,10 +222,12 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 **Tabs:** Overview, Events, Vendors, Tasks
 
 **Overview tab (default):**
+
 - Key details: Email, Phone, Status
 - Notes section: rendered text. If empty: "No notes yet." in italic gray. Edit button opens edit modal.
 
 **Events tab:**
+
 - List of events (weddings) for this couple
 - Each row: event date (formatted), venue, status badge.
 - "+ Add Event" button to create a new event for this couple
@@ -153,11 +235,13 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 - Events belong to a couple (one couple can have multiple events)
 
 **Vendors tab:**
+
 - List of vendors assigned to this couple
 - Each row: vendor name, category, status. Can remove vendor from here.
 - "+ Add Vendor" button to attach vendors to this couple
 
 **Tasks tab:**
+
 - List of tasks related to this couple
 - Each row: task title, due date, status badge. Checkbox for inline completion.
 - "+ Add Task" button pre-filled with this couple
@@ -168,6 +252,7 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 Title: "Add Couple" or "Edit Couple"
 
 Form fields:
+
 - Name (text, required)
 - Email (email, optional)
 - Phone (tel, optional)
@@ -176,7 +261,7 @@ Form fields:
 
 Note: Event Date and Venue fields are managed exclusively via the Events tab. The couple modal does not expose these fields for editing.
 
-------------------------------------------------------------------------
+---
 
 # Vendors Page
 
@@ -274,6 +359,7 @@ Footer: Delete (red, left, with "click again to confirm" pattern) + Cancel + Sav
 Opens as a slide-over panel from the right (640px width), not a full page navigation. Keeps the vendor list visible in the background for context.
 
 **Profile header:**
+
 - Vendor name (text-xl font-semibold) + Category Badge inline
 - Contact person below (text-sm text-gray-500)
 - Status dot + label
@@ -282,11 +368,13 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 **Tabs:** Overview, Events (horizontal underline tabs, same style as Settings page)
 
 **Overview tab (default):**
+
 - Contact details: key-value layout (Phone, Email, Category, Status). Phone and Email clickable.
 - Notes section: rendered text (not form field). If empty: "No notes yet." in italic gray. Edit button next to "Notes" title opens edit modal.
 - Notes are the most valuable field — where MCs record things like "DJ prefers to be introduced as DJ Mike", "Photographer needs 20 min for portraits", "AV tech: ask for lapel mic, not handheld".
 
 **Events tab:**
+
 - Compact list of events where this vendor was involved (requires event_vendors join table).
 - Each row: event date, couple name, venue. Sorted by date desc.
 - Empty state: "No events linked yet. Events will appear here once this vendor is assigned to a wedding."
@@ -306,7 +394,7 @@ app/(dashboard)/vendors/
   vendor-events.tsx
 ```
 
-------------------------------------------------------------------------
+---
 
 # Settings Page
 
@@ -342,14 +430,14 @@ Shows state-specific messaging and CTAs based on subscription_status.
 
 See `.claude/payments.md` for the full subscription UI table.
 
-| Status | Message | CTA |
-|---|---|---|
-| No subscription | "Start your 14-day free trial" | Start Free Trial |
-| trialing | "Your trial ends on {date}" | Manage Billing |
-| active | "You're subscribed to Zebri Pro" | Manage Billing |
-| cancelled | "Your access ends on {date}" | Resubscribe |
-| past_due | "Payment failed" | Update Payment |
-| expired | "Your subscription has expired" | Subscribe |
+| Status          | Message                          | CTA              |
+| --------------- | -------------------------------- | ---------------- |
+| No subscription | "Start your 14-day free trial"   | Start Free Trial |
+| trialing        | "Your trial ends on {date}"      | Manage Billing   |
+| active          | "You're subscribed to Zebri Pro" | Manage Billing   |
+| cancelled       | "Your access ends on {date}"     | Resubscribe      |
+| past_due        | "Payment failed"                 | Update Payment   |
+| expired         | "Your subscription has expired"  | Subscribe        |
 
 ### Packages (`?tab=packages`)
 
