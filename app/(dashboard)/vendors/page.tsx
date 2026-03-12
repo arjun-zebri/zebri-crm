@@ -105,7 +105,7 @@ export default function VendorsPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-6 pt-6 pb-3">
+      <div className="px-6 pt-6 pb-6 flex-shrink-0">
         <VendorsHeader
           vendors={vendors}
           onAddClick={() => {
@@ -137,7 +137,7 @@ export default function VendorsPage() {
         />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden px-6">
+      <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
         <VendorsList
           vendors={filteredVendors}
           onRowClick={(vendor) => setSelectedVendor(vendor)}

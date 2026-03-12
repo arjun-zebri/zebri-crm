@@ -73,7 +73,7 @@ export function CouplesToolbar({
           <SlidersHorizontal size={14} /> Filters
         </button>
         {filtersOpen && (
-          <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-48">
+          <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-48">
             <button
               onClick={() => {
                 onStatusFilterChange('all')

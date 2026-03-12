@@ -39,36 +39,38 @@ export function DashboardRecentCouples({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-      <h2 className="text-xl font-semibold text-gray-900 p-6 pb-3">Recent Couples</h2>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-gray-200">
-            <th className="px-6 py-3 text-left font-medium text-gray-900">Name</th>
-            <th className="px-6 py-3 text-left font-medium text-gray-900">Email</th>
-            <th className="px-6 py-3 text-left font-medium text-gray-900">Status</th>
-            <th className="px-6 py-3 text-left font-medium text-gray-900">Added</th>
-          </tr>
-        </thead>
-        <tbody>
-          {couples.map((couple) => (
-            <tr
-              key={couple.id}
-              onClick={() => onCoupleClick(couple)}
-              className="border-b border-gray-100 last:border-0 cursor-pointer transition hover:bg-gray-50"
-            >
-              <td className="px-6 py-3.5 text-gray-900">{couple.name}</td>
-              <td className="px-6 py-3.5 text-gray-500 truncate">{couple.email || '–'}</td>
-              <td className="px-6 py-3.5">
-                <Badge variant={couple.status}>{couple.status}</Badge>
-              </td>
-              <td className="px-6 py-3.5 text-gray-500 text-xs whitespace-nowrap">
-                {getRelativeDate(couple.created_at)}
-              </td>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col">
+      <h2 className="text-xl font-semibold text-gray-900 p-4 pb-2 shrink-0">Recent Couples</h2>
+      <div className="overflow-y-auto flex-1">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-white">
+            <tr className="border-b border-gray-200">
+              <th className="px-6 py-3 text-left font-medium text-gray-900">Name</th>
+              <th className="px-6 py-3 text-left font-medium text-gray-900">Email</th>
+              <th className="px-6 py-3 text-left font-medium text-gray-900">Status</th>
+              <th className="px-6 py-3 text-left font-medium text-gray-900">Added</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {couples.map((couple) => (
+              <tr
+                key={couple.id}
+                onClick={() => onCoupleClick(couple)}
+                className="border-b border-gray-100 last:border-0 cursor-pointer transition hover:bg-gray-50"
+              >
+                <td className="px-6 py-3.5 text-gray-900">{couple.name}</td>
+                <td className="px-6 py-3.5 text-gray-500 truncate">{couple.email || '–'}</td>
+                <td className="px-6 py-3.5">
+                  <Badge variant={couple.status}>{couple.status}</Badge>
+                </td>
+                <td className="px-6 py-3.5 text-gray-500 text-xs whitespace-nowrap">
+                  {getRelativeDate(couple.created_at)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

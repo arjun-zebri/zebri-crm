@@ -12,6 +12,7 @@ export interface Event {
   couple?: {
     id: string
     name: string
+    status?: string
   }
 }
 
