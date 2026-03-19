@@ -1,70 +1,72 @@
-'use client'
+"use client";
 
-import { Suspense, useState, useEffect } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { PersonalInfoSection } from './personal-info-section'
-import { AccountSection } from './account-section'
-import { BillingSection } from './billing-section'
-import { PackagesSection } from './packages-section'
-import { NotificationsSection } from './notifications-section'
+import { Suspense, useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { PersonalInfoSection } from "./personal-info-section";
+import { AccountSection } from "./account-section";
+import { BillingSection } from "./billing-section";
+import { PackagesSection } from "./packages-section";
+import { NotificationsSection } from "./notifications-section";
 
 interface EmailPreferencesData {
-  product_updates?: boolean
-  booking_reminders?: boolean
-  tips?: boolean
+  product_updates?: boolean;
+  booking_reminders?: boolean;
+  tips?: boolean;
 }
 
 interface UserMetadata {
-  display_name?: string
-  business_name?: string
-  phone?: string
-  avatar_url?: string
-  website?: string
-  instagram_url?: string
-  facebook_url?: string
-  business_type?: string
-  subscription_status?: string
-  trial_end?: string
-  subscription_end?: string
-  email_preferences?: EmailPreferencesData
+  display_name?: string;
+  business_name?: string;
+  phone?: string;
+  avatar_url?: string;
+  website?: string;
+  instagram_url?: string;
+  facebook_url?: string;
+  business_type?: string;
+  subscription_status?: string;
+  trial_end?: string;
+  subscription_end?: string;
+  email_preferences?: EmailPreferencesData;
 }
 
 const tabs = [
-  { id: 'personal-info', label: 'Personal Info' },
-  { id: 'account', label: 'Account' },
-  { id: 'billing', label: 'Plans & Billing' },
-  { id: 'packages', label: 'Packages' },
-  { id: 'notifications', label: 'Notifications' },
-] as const
+  { id: "personal-info", label: "Personal Info" },
+  { id: "account", label: "Account" },
+  { id: "billing", label: "Plans & Billing" },
+  { id: "packages", label: "Packages" },
+  { id: "notifications", label: "Notifications" },
+] as const;
 
-type TabId = (typeof tabs)[number]['id']
+type TabId = (typeof tabs)[number]["id"];
 
 function SettingsContent() {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const [metadata, setMetadata] = useState<UserMetadata | null>(null)
-  const [email, setEmail] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [metadata, setMetadata] = useState<UserMetadata | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const activeTab = (searchParams.get('tab') as TabId) || 'personal-info'
+  const activeTab = (searchParams.get("tab") as TabId) || "personal-info";
 
   useEffect(() => {
     const load = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
-        setMetadata(user.user_metadata as UserMetadata)
-        setEmail(user.email ?? null)
+        setMetadata(user.user_metadata as UserMetadata);
+        setEmail(user.email ?? null);
       }
-      setLoading(false)
-    }
-    load()
-  }, [])
+      setLoading(false);
+    };
+    load();
+  }, []);
 
   const handleTabChange = (tabId: TabId) => {
-    router.replace(`/settings?tab=${tabId}`)
-  }
+    router.replace(`/settings?tab=${tabId}`);
+  };
 
   if (loading) {
     return (
@@ -83,12 +85,12 @@ function SettingsContent() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div>
-      <h1 className="text-lg font-semibold text-gray-900 mb-6">Settings</h1>
+    <div className="p-6">
+      <h1 className="text-3xl font-semibold text-gray-900 mb-6">Settings</h1>
 
       <div className="overflow-x-auto">
         <div className="flex gap-6 border-b border-gray-200 mb-8">
@@ -96,11 +98,11 @@ function SettingsContent() {
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              aria-current={activeTab === tab.id ? 'page' : undefined}
+              aria-current={activeTab === tab.id ? "page" : undefined}
               className={`pb-3 text-sm whitespace-nowrap transition-colors relative ${
                 activeTab === tab.id
-                  ? 'text-gray-900 font-medium'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? "text-gray-900 font-medium"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {tab.label}
@@ -112,34 +114,34 @@ function SettingsContent() {
         </div>
       </div>
 
-      {activeTab === 'personal-info' && (
+      {activeTab === "personal-info" && (
         <PersonalInfoSection
           initialData={{
-            displayName: metadata?.display_name || '',
-            businessName: metadata?.business_name || '',
-            phone: metadata?.phone || '',
-            website: metadata?.website || '',
-            instagramUrl: metadata?.instagram_url || '',
-            facebookUrl: metadata?.facebook_url || '',
-            businessType: metadata?.business_type || '',
+            displayName: metadata?.display_name || "",
+            businessName: metadata?.business_name || "",
+            phone: metadata?.phone || "",
+            website: metadata?.website || "",
+            instagramUrl: metadata?.instagram_url || "",
+            facebookUrl: metadata?.facebook_url || "",
+            businessType: metadata?.business_type || "",
           }}
-          email={email || ''}
+          email={email || ""}
         />
       )}
-      {activeTab === 'account' && (
+      {activeTab === "account" && (
         <AccountSection emailPreferences={metadata?.email_preferences} />
       )}
-      {activeTab === 'billing' && (
+      {activeTab === "billing" && (
         <BillingSection
           status={metadata?.subscription_status || null}
           trialEnd={metadata?.trial_end || null}
           subscriptionEnd={metadata?.subscription_end || null}
         />
       )}
-      {activeTab === 'packages' && <PackagesSection />}
-      {activeTab === 'notifications' && <NotificationsSection />}
+      {activeTab === "packages" && <PackagesSection />}
+      {activeTab === "notifications" && <NotificationsSection />}
     </div>
-  )
+  );
 }
 
 export default function SettingsPage() {
@@ -147,5 +149,5 @@ export default function SettingsPage() {
     <Suspense>
       <SettingsContent />
     </Suspense>
-  )
+  );
 }

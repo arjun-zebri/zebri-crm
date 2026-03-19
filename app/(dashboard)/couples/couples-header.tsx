@@ -122,7 +122,7 @@ export function CouplesHeader({
               <ArrowUpDown size={16} />
             </button>
             {sortOpen && (
-              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-48 py-1">
+              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-48 py-1">
                 {SORT_OPTIONS.map((option) => (
                   <button
                     key={`${option.field}-${option.direction}`}
@@ -155,7 +155,7 @@ export function CouplesHeader({
               <SlidersHorizontal size={16} />
             </button>
             {filtersOpen && (
-              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-44 py-1">
+              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-44 py-1">
                 <button
                   onClick={() => {
                     onStatusFilterChange('all')

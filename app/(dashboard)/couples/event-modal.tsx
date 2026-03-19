@@ -1,18 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { ChevronDown, X } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import * as Popover from '@radix-ui/react-popover'
 import { Modal } from '@/components/ui/modal'
 import { Event, EventStatus, STATUS_LABELS } from '../events/events-types'
+import { CATEGORY_LABELS } from '../vendors/vendors-types'
+import { createClient } from '@/lib/supabase/client'
 
 interface EventModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (event: Omit<Event, 'id' | 'user_id' | 'created_at'> & { id?: string }) => void
+  onSave: (event: Omit<Event, 'id' | 'user_id' | 'created_at'> & { id?: string; vendorIds?: string[] }) => void
   event?: Event
   coupleId: string
   loading: boolean
+  initialVendorIds?: string[]
+}
+
+interface VendorOption {
+  id: string
+  name: string
+  category: string
 }
 
 const EVENT_STATUSES: EventStatus[] = ['upcoming', 'completed', 'cancelled']
@@ -24,13 +34,36 @@ export function EventModal({
   event,
   coupleId,
   loading,
+  initialVendorIds,
 }: EventModalProps) {
+  const supabase = createClient()
   const [date, setDate] = useState('')
   const [venue, setVenue] = useState('')
   const [status, setStatus] = useState<EventStatus>('upcoming')
   const [notes, setNotes] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
+  const [vendorSearch, setVendorSearch] = useState('')
+
+  const { data: allVendors } = useQuery({
+    queryKey: ['all-vendors'],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('id, name, category')
+        .eq('user_id', user.user.id)
+        .eq('status', 'active')
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      return (data || []) as VendorOption[]
+    },
+    enabled: isOpen,
+  })
 
   useEffect(() => {
     if (event) {
@@ -41,14 +74,18 @@ export function EventModal({
     } else {
       resetForm()
     }
+    setSelectedVendorIds(initialVendorIds || [])
     setDeleteConfirm(false)
-  }, [event, isOpen])
+    setVendorSearch('')
+  }, [event, isOpen, initialVendorIds])
 
   const resetForm = () => {
     setDate('')
     setVenue('')
     setStatus('upcoming')
     setNotes('')
+    setSelectedVendorIds([])
+    setVendorSearch('')
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -62,6 +99,7 @@ export function EventModal({
       venue,
       status,
       timeline_notes: notes,
+      vendorIds: selectedVendorIds,
     })
 
     resetForm()
@@ -70,14 +108,23 @@ export function EventModal({
   const handleDelete = () => {
     if (!deleteConfirm) {
       setDeleteConfirm(true)
-      const timeout = setTimeout(() => {
-        setDeleteConfirm(false)
-      }, 3000)
-      return
+      setTimeout(() => setDeleteConfirm(false), 3000)
     }
-
-    // This won't be called from here - delete is handled in couple-events.tsx
   }
+
+  const filteredVendors = useMemo(() => {
+    if (!allVendors) return []
+    return allVendors.filter(
+      (v) =>
+        !selectedVendorIds.includes(v.id) &&
+        v.name.toLowerCase().includes(vendorSearch.toLowerCase())
+    )
+  }, [allVendors, vendorSearch, selectedVendorIds])
+
+  const selectedVendors = useMemo(() => {
+    if (!allVendors) return []
+    return allVendors.filter((v) => selectedVendorIds.includes(v.id))
+  }, [allVendors, selectedVendorIds])
 
   const inputClass =
     'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
@@ -190,6 +237,72 @@ export function EventModal({
                 ))}
               </Popover.Content>
             </Popover.Root>
+          </div>
+
+          {/* Vendors - 2 cols */}
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Vendors
+            </label>
+
+            {/* Selected vendors */}
+            {selectedVendors.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {selectedVendors.map((v) => (
+                  <span
+                    key={v.id}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-700"
+                  >
+                    {v.name}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedVendorIds((ids) => ids.filter((id) => id !== v.id))
+                      }
+                      className="text-gray-400 hover:text-gray-600 transition"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Vendor search */}
+            <div className="relative">
+              <input
+                type="text"
+                value={vendorSearch}
+                onChange={(e) => setVendorSearch(e.target.value)}
+                placeholder="Search vendors to add..."
+                className={inputClass}
+              />
+              {vendorSearch && filteredVendors.length > 0 && (
+                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                  {filteredVendors.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedVendorIds((ids) => [...ids, v.id])
+                        setVendorSearch('')
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 transition"
+                    >
+                      <p className="text-sm font-medium text-gray-900">{v.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {CATEGORY_LABELS[v.category as keyof typeof CATEGORY_LABELS] || v.category}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {vendorSearch && filteredVendors.length === 0 && (
+                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3">
+                  <p className="text-sm text-gray-500 text-center">No vendors found</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Notes - 2 cols */}

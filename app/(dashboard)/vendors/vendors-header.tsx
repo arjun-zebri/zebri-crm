@@ -87,7 +87,7 @@ export function VendorsHeader({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-3">
           <h1 className="text-3xl font-semibold text-gray-900">Vendors</h1>
           <span className="text-sm text-gray-400">{vendors.length} total</span>

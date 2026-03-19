@@ -80,28 +80,6 @@ function groupByDay(records: { created_at: string }[], daysBack = 7): number[] {
   return bins
 }
 
-function daysBetween(record: { created_at: string }): number {
-  const now = Date.now()
-  const msAgo = now - new Date(record.created_at).getTime()
-  return Math.floor(msAgo / 86400000)
-}
-
-function getDayOfMonth(dateStr: string): number {
-  return new Date(dateStr).getDate()
-}
-
-function isCurrentMonth(dateStr: string): boolean {
-  const now = new Date()
-  const date = new Date(dateStr)
-  return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
-}
-
-function isLastYearSameMonth(dateStr: string): boolean {
-  const now = new Date()
-  const date = new Date(dateStr)
-  return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear() - 1
-}
-
 export function useDashboardStats() {
   const supabase = createClient()
 
@@ -113,100 +91,68 @@ export function useDashboardStats() {
 
       const today = new Date()
       const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const thirtyDaysBefore = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
       const fourteenDaysBefore = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000)
 
       const todayStr = today.toISOString().split('T')[0]
       const thirtyDaysStr = thirtyDaysFromNow.toISOString().split('T')[0]
       const fourteenStr = fourteenDaysBefore.toISOString().split('T')[0]
-      const thirtyBeforeStr = thirtyDaysBefore.toISOString().split('T')[0]
+
+      // Current month boundaries
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+      const monthStartStr = monthStart.toISOString().split('T')[0]
+
+      // Previous month boundaries
+      const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+      const prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0)
+      const prevMonthStartStr = prevMonthStart.toISOString().split('T')[0]
+      const prevMonthEndStr = prevMonthEnd.toISOString().split('T')[0]
 
       // New enquiries (couples with status = 'new')
-      const { count: newEnquiries, error: newEnquiriesError } = await supabase
+      const { count: newEnquiries } = await supabase
         .from('couples')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
         .eq('status', 'new')
 
-      if (newEnquiriesError) throw newEnquiriesError
+      // Couples created this month vs last month (for sparkline & change)
+      const { data: couplesThisMonth } = await supabase
+        .from('couples')
+        .select('created_at')
+        .eq('user_id', user.user.id)
+        .gte('created_at', monthStartStr)
 
-      // Fetch couples created in last 14 days for sparkline
-      const { data: couplesData, error: couplesError } = await supabase
+      const { count: couplesLastMonth } = await supabase
+        .from('couples')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.user.id)
+        .gte('created_at', prevMonthStartStr)
+        .lte('created_at', prevMonthEndStr)
+
+      // Couples last 14 days for sparkline
+      const { data: couplesRecent } = await supabase
         .from('couples')
         .select('created_at')
         .eq('user_id', user.user.id)
         .gte('created_at', fourteenStr)
 
-      if (couplesError) throw couplesError
-
       // Open tasks (status != 'done')
-      const { count: openTasks, error: openTasksError } = await supabase
+      const { count: openTasks } = await supabase
         .from('tasks')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
         .neq('status', 'done')
 
-      if (openTasksError) throw openTasksError
-
-      // Fetch tasks created in last 14 days for sparkline
-      const { data: tasksData, error: tasksError } = await supabase
+      // Tasks created recently for sparkline
+      const { data: tasksRecent } = await supabase
         .from('tasks')
         .select('created_at')
         .eq('user_id', user.user.id)
         .gte('created_at', fourteenStr)
 
-      if (tasksError) throw tasksError
-
-      // Upcoming weddings (next 30 days)
-      const { count: upcomingWeddings, error: upcomingWeddingsError } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.user.id)
-        .gte('date', todayStr)
-        .lte('date', thirtyDaysStr)
-
-      if (upcomingWeddingsError) throw upcomingWeddingsError
-
-      // Fetch completed weddings (this month)
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-      const monthStartStr = monthStart.toISOString().split('T')[0]
-      const { data: completedWeddingsData, error: completedError } = await supabase
-        .from('events')
-        .select('created_at')
-        .eq('user_id', user.user.id)
-        .eq('status', 'completed')
-        .gte('created_at', monthStartStr)
-
-      if (completedError) throw completedError
-
-      // Fetch completed weddings (same month last year)
-      const lastYearMonthStart = new Date(today.getFullYear() - 1, today.getMonth(), 1)
-      const lastYearMonthEnd = new Date(today.getFullYear() - 1, today.getMonth() + 1, 0)
-      const lastYearMonthStartStr = lastYearMonthStart.toISOString().split('T')[0]
-      const lastYearMonthEndStr = lastYearMonthEnd.toISOString().split('T')[0]
-      const { count: completedLastYear, error: completedLastYearError } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.user.id)
-        .eq('status', 'completed')
-        .gte('created_at', lastYearMonthStartStr)
-        .lte('created_at', lastYearMonthEndStr)
-
-      if (completedLastYearError) throw completedLastYearError
-
-      // Fetch vendors (active)
-      const { count: vendorCount, error: vendorError } = await supabase
-        .from('vendors')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.user.id)
-        .eq('status', 'active')
-
-      if (vendorError) throw vendorError
-
-      // Fetch tasks due this week
+      // Tasks due this week
       const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
       const nextWeekStr = nextWeek.toISOString().split('T')[0]
-      const { count: dueThisWeek, error: dueThisWeekError } = await supabase
+      const { count: dueThisWeek } = await supabase
         .from('tasks')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
@@ -214,91 +160,97 @@ export function useDashboardStats() {
         .gte('due_date', todayStr)
         .lte('due_date', nextWeekStr)
 
-      if (dueThisWeekError) throw dueThisWeekError
-
-      // Fetch all couples for new enquiries this month
-      const { data: allCouplesData, error: allCouplesError } = await supabase
-        .from('couples')
-        .select('created_at')
-        .eq('user_id', user.user.id)
-
-      if (allCouplesError) throw allCouplesError
-
-      // Fetch open tasks from last year same period for comparison
-      const lastYearToday = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000)
-      const lastYearNextWeek = new Date(lastYearToday.getTime() + 7 * 24 * 60 * 60 * 1000)
-      const lastYearTodayStr = lastYearToday.toISOString().split('T')[0]
-      const lastYearNextWeekStr = lastYearNextWeek.toISOString().split('T')[0]
-      const { count: openTasksLastYear, error: openTasksLastYearError } = await supabase
+      // Tasks due last month same week window (for comparison)
+      const lastMonthToday = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
+      const lastMonthNextWeek = new Date(lastMonthToday.getTime() + 7 * 24 * 60 * 60 * 1000)
+      const { count: dueLastMonth } = await supabase
         .from('tasks')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
         .neq('status', 'done')
-        .gte('due_date', lastYearTodayStr)
-        .lte('due_date', lastYearNextWeekStr)
+        .gte('due_date', lastMonthToday.toISOString().split('T')[0])
+        .lte('due_date', lastMonthNextWeek.toISOString().split('T')[0])
 
-      if (openTasksLastYearError) throw openTasksLastYearError
-
-      // Fetch upcoming weddings from last year
-      const lastYearTodayStr2 = lastYearToday.toISOString().split('T')[0]
-      const lastYearThirtyDaysStr = new Date(lastYearToday.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      const { count: upcomingWeddingsLastYear, error: upcomingLastYearError } = await supabase
+      // Upcoming weddings (next 30 days)
+      const { count: upcomingWeddings } = await supabase
         .from('events')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
-        .gte('date', lastYearTodayStr2)
-        .lte('date', lastYearThirtyDaysStr)
+        .gte('date', todayStr)
+        .lte('date', thirtyDaysStr)
 
-      if (upcomingLastYearError) throw upcomingLastYearError
+      // Upcoming weddings from last month's equivalent window
+      const lastMonthTodayStr = lastMonthToday.toISOString().split('T')[0]
+      const lastMonthThirtyDays = new Date(lastMonthToday.getTime() + 30 * 24 * 60 * 60 * 1000)
+      const lastMonthThirtyDaysStr = lastMonthThirtyDays.toISOString().split('T')[0]
+      const { count: upcomingLastMonth } = await supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.user.id)
+        .gte('date', lastMonthTodayStr)
+        .lte('date', lastMonthThirtyDaysStr)
 
-      // Fetch active vendors from last year
-      const { count: vendorCountLastYear, error: vendorCountLastYearError } = await supabase
+      // Completed weddings this month
+      const { data: completedThisMonthData } = await supabase
+        .from('events')
+        .select('created_at')
+        .eq('user_id', user.user.id)
+        .eq('status', 'completed')
+        .gte('created_at', monthStartStr)
+
+      // Completed weddings last month
+      const { count: completedLastMonth } = await supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.user.id)
+        .eq('status', 'completed')
+        .gte('created_at', prevMonthStartStr)
+        .lte('created_at', prevMonthEndStr)
+
+      // Active vendors
+      const { count: vendorCount } = await supabase
         .from('vendors')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
         .eq('status', 'active')
 
-      if (vendorCountLastYearError) throw vendorCountLastYearError
+      // Vendors added this month vs last month
+      const { count: vendorsThisMonth } = await supabase
+        .from('vendors')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.user.id)
+        .gte('created_at', monthStartStr)
 
-      // Calculate sparklines
-      const newEnquiriesSparkline = groupByDay(couplesData || [])
-      const openTasksSparkline = groupByDay(tasksData || [])
-      const upcomingSparkline = groupByDay(couplesData || [])
-      const completedSparkline = groupByDay(completedWeddingsData || [])
+      const { count: vendorsLastMonth } = await supabase
+        .from('vendors')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.user.id)
+        .gte('created_at', prevMonthStartStr)
+        .lte('created_at', prevMonthEndStr)
 
-      // For vendors and tasks, use steady sparklines (all same value)
+      // Sparklines
+      const newEnquiriesSparkline = groupByDay(couplesRecent || [])
+      const openTasksSparkline = groupByDay(tasksRecent || [])
+      const upcomingSparkline = groupByDay(couplesRecent || [])
+      const completedSparkline = groupByDay(completedThisMonthData || [])
       const vendorSparkline = Array(7).fill(vendorCount !== null ? Math.ceil((vendorCount || 0) / 7) : 0)
-      const dueThisWeekSparkline = Array(7).fill(dueThisWeek !== null ? Math.ceil((dueThisWeek || 0) / 7) : 0)
+      const dueThisWeekSparkline = groupByDay(tasksRecent || [])
 
-      // Calculate year-over-year comparisons
-      const thisMonthCouples = (allCouplesData || []).filter((r) => isCurrentMonth(r.created_at)).length
-      const lastYearCouples = (allCouplesData || []).filter((r) => isLastYearSameMonth(r.created_at)).length
-      const newEnquiriesChange =
-        lastYearCouples > 0
-          ? Math.round(((thisMonthCouples - lastYearCouples) / lastYearCouples) * 100)
-          : null
+      // Calculate month-over-month changes
+      const calcChange = (current: number | null, previous: number | null): number | null => {
+        const curr = current || 0
+        const prev = previous || 0
+        if (prev === 0) return null
+        return Math.round(((curr - prev) / prev) * 100)
+      }
 
-      const completedThisMonth = completedWeddingsData?.length || 0
-      const completedChange =
-        (completedLastYear || 0) > 0
-          ? Math.round(((completedThisMonth - (completedLastYear || 0)) / (completedLastYear || 0)) * 100)
-          : null
-
-      const openTasksChange =
-        (openTasksLastYear || 0) > 0
-          ? Math.round(((dueThisWeek - (openTasksLastYear || 0)) / (openTasksLastYear || 0)) * 100)
-          : null
-
-      const upcomingChange =
-        (upcomingWeddingsLastYear || 0) > 0
-          ? Math.round(((upcomingWeddings - (upcomingWeddingsLastYear || 0)) / (upcomingWeddingsLastYear || 0)) * 100)
-          : null
-
-      const vendorChange =
-        (vendorCountLastYear || 0) > 0
-          ? Math.round(((vendorCount - (vendorCountLastYear || 0)) / (vendorCountLastYear || 0)) * 100)
-          : null
-
+      const thisMonthCouplesCount = couplesThisMonth?.length || 0
+      const newEnquiriesChange = calcChange(thisMonthCouplesCount, couplesLastMonth)
+      const completedThisMonth = completedThisMonthData?.length || 0
+      const completedChange = calcChange(completedThisMonth, completedLastMonth)
+      const openTasksChange = calcChange(dueThisWeek, dueLastMonth)
+      const upcomingChange = calcChange(upcomingWeddings, upcomingLastMonth)
+      const vendorChange = calcChange(vendorsThisMonth, vendorsLastMonth)
       const dueThisWeekChange = openTasksChange
 
       return {

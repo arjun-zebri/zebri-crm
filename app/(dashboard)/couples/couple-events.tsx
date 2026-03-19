@@ -19,6 +19,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
   const [showModal, setShowModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | undefined>()
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [editingVendorIds, setEditingVendorIds] = useState<string[]>([])
 
   const { data: events, isLoading } = useQuery({
     queryKey: ['couple-events', couple.id],
@@ -39,43 +40,85 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
   })
 
   const createEvent = useMutation({
-    mutationFn: async (eventData: Omit<Event, 'id' | 'user_id' | 'created_at'>) => {
+    mutationFn: async (eventData: Omit<Event, 'id' | 'user_id' | 'created_at'> & { vendorIds?: string[] }) => {
       const { data: user, error: userError } = await supabase.auth.getUser()
       if (userError || !user.user) throw new Error('Not authenticated')
 
+      const { vendorIds, ...rest } = eventData
       const { data, error } = await supabase
         .from('events')
         .insert({
-          ...eventData,
+          ...rest,
           user_id: user.user.id,
         })
         .select()
 
       if (error) throw error
-      return data?.[0] as Event
+      const newEvent = data?.[0] as Event
+
+      // Link vendors if any selected
+      if (vendorIds && vendorIds.length > 0 && newEvent) {
+        const vendorLinks = vendorIds.map((vendorId) => ({
+          event_id: newEvent.id,
+          vendor_id: vendorId,
+          user_id: user.user.id,
+        }))
+        await supabase.from('event_vendors').insert(vendorLinks)
+      }
+
+      return newEvent
     },
-    onSuccess: () => {
+    onSuccess: (newEvent) => {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
+      if (newEvent) {
+        queryClient.invalidateQueries({ queryKey: ['event-vendors', newEvent.id] })
+      }
       setShowModal(false)
     },
   })
 
   const updateEvent = useMutation({
-    mutationFn: async (eventData: Event) => {
+    mutationFn: async (eventData: Event & { vendorIds?: string[] }) => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const { vendorIds, ...rest } = eventData
       const { error } = await supabase
         .from('events')
         .update({
-          date: eventData.date,
-          venue: eventData.venue,
-          status: eventData.status,
-          timeline_notes: eventData.timeline_notes,
+          date: rest.date,
+          venue: rest.venue,
+          status: rest.status,
+          timeline_notes: rest.timeline_notes,
         })
-        .eq('id', eventData.id)
+        .eq('id', rest.id)
 
       if (error) throw error
+
+      // Sync vendors if provided
+      if (vendorIds !== undefined) {
+        // Remove existing links
+        await supabase
+          .from('event_vendors')
+          .delete()
+          .eq('event_id', rest.id)
+
+        // Insert new links
+        if (vendorIds.length > 0) {
+          const vendorLinks = vendorIds.map((vendorId) => ({
+            event_id: rest.id,
+            vendor_id: vendorId,
+            user_id: user.user.id,
+          }))
+          await supabase.from('event_vendors').insert(vendorLinks)
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
+      if (editingEvent) {
+        queryClient.invalidateQueries({ queryKey: ['event-vendors', editingEvent.id] })
+      }
       setShowModal(false)
       setEditingEvent(undefined)
     },
@@ -96,9 +139,9 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
     },
   })
 
-  const handleSaveEvent = async (eventData: Omit<Event, 'id' | 'user_id' | 'created_at'> & { id?: string }) => {
+  const handleSaveEvent = async (eventData: Omit<Event, 'id' | 'user_id' | 'created_at'> & { id?: string; vendorIds?: string[] }) => {
     if (eventData.id && editingEvent) {
-      await updateEvent.mutateAsync({ ...editingEvent, ...eventData })
+      await updateEvent.mutateAsync({ ...editingEvent, ...eventData } as Event & { vendorIds?: string[] })
     } else {
       await createEvent.mutateAsync(eventData)
     }
@@ -111,6 +154,24 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
       setDeleteConfirm(eventId)
       setTimeout(() => setDeleteConfirm(null), 3000)
     }
+  }
+
+  const handleEditEvent = async (event: Event) => {
+    // Fetch existing vendor links for this event
+    const { data: user } = await supabase.auth.getUser()
+    if (user?.user) {
+      const { data: vendorLinks } = await supabase
+        .from('event_vendors')
+        .select('vendor_id')
+        .eq('event_id', event.id)
+        .eq('user_id', user.user.id)
+
+      setEditingVendorIds((vendorLinks || []).map((l: { vendor_id: string }) => l.vendor_id))
+    } else {
+      setEditingVendorIds([])
+    }
+    setEditingEvent(event)
+    setShowModal(true)
   }
 
   if (isLoading) {
@@ -134,6 +195,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
             <button
               onClick={() => {
                 setEditingEvent(undefined)
+                setEditingVendorIds([])
                 setShowModal(true)
               }}
               className="text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
@@ -157,10 +219,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        setEditingEvent(event)
-                        setShowModal(true)
-                      }}
+                      onClick={() => handleEditEvent(event)}
                       className="p-1 text-gray-400 hover:text-gray-600 transition"
                     >
                       <Edit2 size={16} />
@@ -183,6 +242,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
             <button
               onClick={() => {
                 setEditingEvent(undefined)
+                setEditingVendorIds([])
                 setShowModal(true)
               }}
               className="w-full text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
@@ -198,12 +258,14 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
         onClose={() => {
           setShowModal(false)
           setEditingEvent(undefined)
+          setEditingVendorIds([])
           setDeleteConfirm(null)
         }}
         onSave={handleSaveEvent}
         event={editingEvent}
         coupleId={couple.id}
         loading={loading}
+        initialVendorIds={editingVendorIds}
       />
     </>
   )

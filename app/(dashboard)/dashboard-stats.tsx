@@ -85,8 +85,8 @@ export function DashboardStats({
   }: StatCard) => (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
       <div className="mb-4">
-        <div className="text-sm font-semibold text-gray-900">{label}</div>
-        <div className="text-xs text-gray-500">{description}</div>
+        <div className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</div>
+        <div className="text-xs text-gray-400 mt-0.5">{description}</div>
       </div>
 
       {isLoading ? (
@@ -95,29 +95,27 @@ export function DashboardStats({
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-end justify-between">
             <div>
               <div className="text-3xl font-semibold text-gray-900">
                 {value}
               </div>
               {change !== null && (
                 <div
-                  className={`flex items-center gap-0.5 mt-1 text-sm font-medium ${
-                    change >= 0 ? "text-emerald-600" : "text-red-600"
+                  className={`flex items-center gap-0.5 mt-1 text-xs font-medium ${
+                    change >= 0 ? "text-emerald-600" : "text-red-500"
                   }`}
                 >
                   {change >= 0 ? (
-                    <TrendingUp className="w-3.5 h-3.5" />
+                    <TrendingUp className="w-3 h-3" />
                   ) : (
-                    <TrendingDown className="w-3.5 h-3.5" />
+                    <TrendingDown className="w-3 h-3" />
                   )}
                   {change >= 0 ? "+" : ""}
-                  {change}% vs last year
+                  {change}% vs last month
                 </div>
               )}
             </div>
-          </div>
-          <div className="pt-2 border-t border-gray-100">
             <Sparkline
               data={sparkline}
               positive={change === null || change >= 0}
@@ -132,28 +130,28 @@ export function DashboardStats({
     <div className="grid grid-cols-3 gap-4">
       {renderCard({
         label: "New Enquiries",
-        description: "Couples contacted this month",
+        description: "Couples added this month",
         value: newEnquiries,
         change: newEnquiriesChange,
         sparkline: newEnquiriesSparkline,
       })}
       {renderCard({
         label: "Open Tasks",
-        description: "Pending action items",
+        description: "Actions awaiting completion",
         value: openTasks,
         change: openTasksChange,
         sparkline: openTasksSparkline,
       })}
       {renderCard({
-        label: "Weddings (next 30 days)",
-        description: "Events scheduled",
+        label: "Upcoming Weddings",
+        description: "Scheduled in the next 30 days",
         value: upcomingWeddings,
         change: upcomingChange,
         sparkline: upcomingSparkline,
       })}
       {renderCard({
-        label: "Completed this month",
-        description: "Weddings delivered",
+        label: "Completed",
+        description: "Weddings delivered this month",
         value: completedWeddings,
         change: completedChange,
         sparkline: completedSparkline,
@@ -166,8 +164,8 @@ export function DashboardStats({
         sparkline: vendorSparkline,
       })}
       {renderCard({
-        label: "Due this week",
-        description: "Tasks needing attention",
+        label: "Due This Week",
+        description: "Tasks needing your attention",
         value: dueThisWeek,
         change: dueThisWeekChange,
         sparkline: dueThisWeekSparkline,

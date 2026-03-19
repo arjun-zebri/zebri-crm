@@ -164,7 +164,7 @@ export function CouplesList({
                   <tr
                     key={row.id}
                     onClick={() => onRowClick(row.original)}
-                    className="border-b border-gray-100 last:border-0 cursor-pointer transition"
+                    className="border-b border-gray-100 last:border-0 cursor-pointer transition hover:bg-gray-50"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td

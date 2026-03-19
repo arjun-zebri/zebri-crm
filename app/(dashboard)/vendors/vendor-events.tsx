@@ -8,16 +8,16 @@ interface VendorEventsProps {
   vendorId: string
 }
 
-interface EventVendor {
+interface EventVendorRow {
   id: string
-  events: Array<{
+  event: {
     id: string
     date: string
     venue: string
-    couples: Array<{
+    couple: {
       name: string
-    }> | null
-  }> | null
+    } | null
+  } | null
 }
 
 export function VendorEvents({ vendorId }: VendorEventsProps) {
@@ -34,7 +34,7 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
         .select(
           `
           id,
-          events(id, date, venue, couples(name))
+          event:event_id(id, date, venue, couple:couple_id(name))
         `
         )
         .eq('vendor_id', vendorId)
@@ -42,7 +42,7 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return (data as EventVendor[]) || []
+      return (data as unknown as EventVendorRow[]) || []
     },
   })
 
@@ -69,17 +69,16 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
   return (
     <div className="space-y-2">
       {eventVendors.map((ev) => {
-        const events = ev.events
-        if (!events || events.length === 0) return null
-        const event = events[0]
-        const coupleName = event.couples?.[0]?.name
+        const event = ev.event
+        if (!event) return null
+        const coupleName = event.couple?.name
         return (
           <div
             key={ev.id}
             className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
           >
             <div>
-              <div className="text-sm font-medium text-gray-900">{coupleName}</div>
+              <div className="text-sm font-medium text-gray-900">{coupleName || 'Unknown couple'}</div>
               <div className="text-xs text-gray-500">{event.venue}</div>
             </div>
             <div className="text-sm text-gray-600">{formatDate(event.date)}</div>

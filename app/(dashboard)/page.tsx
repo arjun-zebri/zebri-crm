@@ -81,7 +81,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pb-6">
+      <div className="flex-1 min-h-0 overflow-y-auto pb-12">
         <div className="space-y-4 px-6">
           <DashboardStats
             newEnquiries={stats?.newEnquiries || 0}
