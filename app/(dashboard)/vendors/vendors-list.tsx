@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   createColumnHelper,
@@ -7,60 +7,69 @@ import {
   getPaginationRowModel,
   PaginationState,
   useReactTable,
-} from '@tanstack/react-table'
-import { useState, useEffect } from 'react'
-import { Store, Phone, Mail, MessageCircle } from 'lucide-react'
-import { Vendor, CATEGORY_LABELS } from './vendors-types'
-import { Badge } from '@/components/ui/badge'
+} from "@tanstack/react-table";
+import { useState, useEffect, useRef } from "react";
+import {
+  Store,
+  Phone,
+  Mail,
+  MessageCircle,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { Vendor, CATEGORY_LABELS } from "./vendors-types";
+import { Badge } from "@/components/ui/badge";
 
 interface VendorsListProps {
-  vendors: Vendor[]
-  onRowClick: (vendor: Vendor) => void
-  loading: boolean
+  vendors: Vendor[];
+  onRowClick: (vendor: Vendor) => void;
+  loading: boolean;
 }
 
-const columnHelper = createColumnHelper<Vendor>()
+const columnHelper = createColumnHelper<Vendor>();
 
 const COL_WIDTHS: Record<string, string> = {
-  name: '22%',
-  contact_name: '18%',
-  phone: '14%',
-  email: '20%',
-  category: '14%',
-  status: '12%',
-}
+  name: "22%",
+  contact_name: "18%",
+  phone: "14%",
+  email: "20%",
+  category: "14%",
+  status: "12%",
+};
 
 const columns = [
-  columnHelper.accessor('name', {
-    header: 'Vendor name',
+  columnHelper.accessor("name", {
+    header: "Vendor name",
     enableSorting: false,
     cell: (info) => (
       <span className="text-sm text-gray-500">{info.getValue()}</span>
     ),
   }),
-  columnHelper.accessor('contact_name', {
-    header: 'Contact',
+  columnHelper.accessor("contact_name", {
+    header: "Contact",
     enableSorting: false,
     cell: (info) => (
       <span className="text-sm text-gray-500">{info.getValue()}</span>
     ),
   }),
-  columnHelper.accessor('phone', {
-    header: 'Phone',
+  columnHelper.accessor("phone", {
+    header: "Phone",
     enableSorting: false,
     cell: (info) => (
       <span className="text-sm text-gray-500">{info.getValue()}</span>
     ),
   }),
-  columnHelper.accessor('email', {
-    header: 'Email',
+  columnHelper.accessor("email", {
+    header: "Email",
     enableSorting: false,
     cell: (info) => (
-      <span className="text-sm text-gray-500 truncate block">{info.getValue()}</span>
+      <span className="text-sm text-gray-500 truncate block">
+        {info.getValue()}
+      </span>
     ),
   }),
-  columnHelper.accessor('category', {
-    header: 'Category',
+  columnHelper.accessor("category", {
+    header: "Category",
     enableSorting: false,
     cell: (info) => (
       <Badge variant={info.getValue() as any}>
@@ -68,25 +77,25 @@ const columns = [
       </Badge>
     ),
   }),
-  columnHelper.accessor('status', {
-    header: 'Status',
+  columnHelper.accessor("status", {
+    header: "Status",
     enableSorting: false,
     cell: (info) => (
       <div className="flex items-center gap-2">
         <div
           className={`w-2.5 h-2.5 rounded-full ${
-            info.getValue() === 'active' ? 'bg-emerald-400' : 'bg-gray-300'
+            info.getValue() === "active" ? "bg-emerald-400" : "bg-gray-300"
           }`}
         />
         <span className="text-sm text-gray-500">
-          {info.getValue() === 'active' ? 'Active' : 'Inactive'}
+          {info.getValue() === "active" ? "Active" : "Inactive"}
         </span>
       </div>
     ),
   }),
-]
+];
 
-const skeletonWidths = ['w-32', 'w-28', 'w-24', 'w-40', 'w-24', 'w-16']
+const skeletonWidths = ["w-32", "w-28", "w-24", "w-40", "w-24", "w-16"];
 
 export function VendorsList({
   vendors,
@@ -96,11 +105,23 @@ export function VendorsList({
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
-  })
+  });
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
+  const pageSizeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setPagination({ pageIndex: 0, pageSize: 10 })
-  }, [vendors])
+    setPagination({ pageIndex: 0, pageSize: 10 });
+  }, [vendors]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (pageSizeRef.current && !pageSizeRef.current.contains(e.target as Node)) {
+        setPageSizeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const table = useReactTable({
     data: vendors,
@@ -111,7 +132,7 @@ export function VendorsList({
       pagination,
     },
     onPaginationChange: setPagination,
-  })
+  });
 
   if (vendors.length === 0 && !loading) {
     return (
@@ -122,12 +143,12 @@ export function VendorsList({
           Start building your vendor network.
         </p>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
-      <div className="overflow-y-auto flex-1">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <table className="w-full table-fixed max-w-[1800px]">
           <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
@@ -164,9 +185,9 @@ export function VendorsList({
                   </tr>
                 ))
               : table.getRowModel().rows.map((row) => {
-                  const v = row.original
-                  const hasPhone = !!v.phone
-                  const hasEmail = !!v.email
+                  const v = row.original;
+                  const hasPhone = !!v.phone;
+                  const hasEmail = !!v.email;
                   return (
                     <tr
                       key={row.id}
@@ -189,38 +210,57 @@ export function VendorsList({
                         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition bg-gray-50 rounded-lg px-1 py-0.5">
                           <a
                             href={hasPhone ? `tel:${v.phone}` : undefined}
-                            onClick={(e) => { e.stopPropagation(); if (!hasPhone) e.preventDefault() }}
-                            title={hasPhone ? `Call ${v.phone}` : 'No phone number'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!hasPhone) e.preventDefault();
+                            }}
+                            title={
+                              hasPhone ? `Call ${v.phone}` : "No phone number"
+                            }
                             className={`p-1.5 rounded transition ${
                               hasPhone
-                                ? 'text-gray-500 hover:text-gray-900 hover:bg-white'
-                                : 'text-gray-200 cursor-not-allowed'
+                                ? "text-gray-500 hover:text-gray-900 hover:bg-white"
+                                : "text-gray-200 cursor-not-allowed"
                             }`}
                           >
                             <Phone size={15} />
                           </a>
                           <a
                             href={hasEmail ? `mailto:${v.email}` : undefined}
-                            onClick={(e) => { e.stopPropagation(); if (!hasEmail) e.preventDefault() }}
-                            title={hasEmail ? `Email ${v.email}` : 'No email'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!hasEmail) e.preventDefault();
+                            }}
+                            title={hasEmail ? `Email ${v.email}` : "No email"}
                             className={`p-1.5 rounded transition ${
                               hasEmail
-                                ? 'text-gray-500 hover:text-gray-900 hover:bg-white'
-                                : 'text-gray-200 cursor-not-allowed'
+                                ? "text-gray-500 hover:text-gray-900 hover:bg-white"
+                                : "text-gray-200 cursor-not-allowed"
                             }`}
                           >
                             <Mail size={15} />
                           </a>
                           <a
-                            href={hasPhone ? `https://wa.me/${v.phone.replace(/\D/g, '')}` : undefined}
-                            target={hasPhone ? '_blank' : undefined}
-                            rel={hasPhone ? 'noopener noreferrer' : undefined}
-                            onClick={(e) => { e.stopPropagation(); if (!hasPhone) e.preventDefault() }}
-                            title={hasPhone ? `WhatsApp ${v.phone}` : 'No phone number'}
+                            href={
+                              hasPhone
+                                ? `https://wa.me/${v.phone.replace(/\D/g, "")}`
+                                : undefined
+                            }
+                            target={hasPhone ? "_blank" : undefined}
+                            rel={hasPhone ? "noopener noreferrer" : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!hasPhone) e.preventDefault();
+                            }}
+                            title={
+                              hasPhone
+                                ? `WhatsApp ${v.phone}`
+                                : "No phone number"
+                            }
                             className={`p-1.5 rounded transition ${
                               hasPhone
-                                ? 'text-gray-500 hover:text-gray-900 hover:bg-white'
-                                : 'text-gray-200 cursor-not-allowed'
+                                ? "text-gray-500 hover:text-gray-900 hover:bg-white"
+                                : "text-gray-200 cursor-not-allowed"
                             }`}
                           >
                             <MessageCircle size={15} />
@@ -228,46 +268,89 @@ export function VendorsList({
                         </div>
                       </td>
                     </tr>
-                  )
+                  );
                 })}
           </tbody>
         </table>
       </div>
-      {table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 text-sm bg-gray-50">
-          <span className="text-gray-600 font-medium">
-            {table.getState().pagination.pageIndex *
-              table.getState().pagination.pageSize +
-              1}
-            –
-            {Math.min(
-              (table.getState().pagination.pageIndex + 1) *
-                table.getState().pagination.pageSize,
-              vendors.length
-            )}{' '}
-            of {vendors.length}
-          </span>
-          <div className="flex items-center gap-4">
+
+      <div className="border-t border-gray-200 bg-white px-6 py-3.5 flex justify-end relative">
+        <div className="flex items-center gap-3">
+          {table.getPageCount() > 1 && (
+            <>
+              <button
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
+                title="Previous page"
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: table.getPageCount() }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => table.setPageIndex(i)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition ${
+                      table.getState().pagination.pageIndex === i
+                        ? "bg-gray-900 text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
+                title="Next page"
+              >
+                <ChevronRight size={16} />
+              </button>
+
+              <div className="h-5 w-px bg-gray-200" />
+            </>
+          )}
+
+          <div ref={pageSizeRef}>
             <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition rounded-lg cursor-pointer"
+              onClick={() => setPageSizeOpen(!pageSizeOpen)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
             >
-              Previous
+              {table.getState().pagination.pageSize}/page
             </button>
-            <span className="text-sm text-gray-500 px-2 py-1 bg-white rounded border border-gray-200">
-              {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
-            </span>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition rounded-lg cursor-pointer"
-            >
-              Next
-            </button>
+            {pageSizeOpen && (
+              <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1"
+                style={{
+                  bottom: window.innerHeight - (pageSizeRef.current?.getBoundingClientRect().top || 0) + 8,
+                  right: window.innerWidth - (pageSizeRef.current?.getBoundingClientRect().right || 0),
+                  width: pageSizeRef.current?.getBoundingClientRect().width,
+                }}>
+                {[10, 25, 50].map((pageSize) => (
+                  <button
+                    key={pageSize}
+                    onClick={() => {
+                      table.setPageSize(pageSize);
+                      setPageSizeOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
+                      table.getState().pagination.pageSize === pageSize
+                        ? 'bg-gray-50 text-gray-900 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageSize}/page
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
-  )
+  );
 }

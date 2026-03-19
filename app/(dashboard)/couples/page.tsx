@@ -156,7 +156,7 @@ export default function CouplesPage() {
         />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
+      <div className="flex-1 min-h-0 overflow-hidden px-6">
         {viewMode === "list" ? (
           <CouplesList
             couples={filteredCouples}

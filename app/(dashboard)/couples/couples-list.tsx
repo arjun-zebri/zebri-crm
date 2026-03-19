@@ -9,7 +9,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useState, useEffect } from "react";
-import { Users } from "lucide-react";
+import { Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef } from "react";
 import { Couple } from "./couples-types";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
@@ -94,10 +95,22 @@ export function CouplesList({
     pageIndex: 0,
     pageSize: 10,
   });
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
+  const pageSizeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setPagination({ pageIndex: 0, pageSize: 10 });
   }, [couples]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (pageSizeRef.current && !pageSizeRef.current.contains(e.target as Node)) {
+        setPageSizeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const table = useReactTable({
     data: couples,
@@ -123,8 +136,8 @@ export function CouplesList({
   }
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
-      <div className="overflow-y-auto flex-1">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <table className="w-full table-fixed max-w-[1800px]">
           <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
@@ -182,41 +195,84 @@ export function CouplesList({
           </tbody>
         </table>
       </div>
-      {table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 text-sm bg-gray-50">
-          <span className="text-gray-600 font-medium">
-            {table.getState().pagination.pageIndex *
-              table.getState().pagination.pageSize +
-              1}
-            –
-            {Math.min(
-              (table.getState().pagination.pageIndex + 1) *
-                table.getState().pagination.pageSize,
-              couples.length
-            )}{" "}
-            of {couples.length}
-          </span>
-          <div className="flex items-center gap-4">
+
+      <div className="border-t border-gray-200 bg-white px-6 py-3.5 flex justify-end relative">
+        <div className="flex items-center gap-3">
+          {table.getPageCount() > 1 && (
+            <>
+              <button
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
+                title="Previous page"
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: table.getPageCount() }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => table.setPageIndex(i)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition ${
+                      table.getState().pagination.pageIndex === i
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
+                title="Next page"
+              >
+                <ChevronRight size={16} />
+              </button>
+
+              <div className="h-5 w-px bg-gray-200" />
+            </>
+          )}
+
+          <div ref={pageSizeRef}>
             <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition rounded-lg cursor-pointer"
+              onClick={() => setPageSizeOpen(!pageSizeOpen)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
             >
-              Previous
+              {table.getState().pagination.pageSize}/page
             </button>
-            <span className="text-sm text-gray-500 px-2 py-1 bg-white rounded border border-gray-200">
-              {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
-            </span>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent transition rounded-lg cursor-pointer"
-            >
-              Next
-            </button>
+            {pageSizeOpen && (
+              <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1"
+                style={{
+                  bottom: window.innerHeight - (pageSizeRef.current?.getBoundingClientRect().top || 0) + 8,
+                  right: window.innerWidth - (pageSizeRef.current?.getBoundingClientRect().right || 0),
+                  width: pageSizeRef.current?.getBoundingClientRect().width,
+                }}>
+                {[10, 25, 50].map((pageSize) => (
+                  <button
+                    key={pageSize}
+                    onClick={() => {
+                      table.setPageSize(pageSize);
+                      setPageSizeOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
+                      table.getState().pagination.pageSize === pageSize
+                        ? 'bg-gray-50 text-gray-900 font-medium'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageSize}/page
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
