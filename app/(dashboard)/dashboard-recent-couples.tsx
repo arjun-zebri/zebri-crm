@@ -20,7 +20,7 @@ export function DashboardRecentCouples({
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent Couples</h2>
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" strokeWidth={1.5} />
         </div>
       </div>
     )

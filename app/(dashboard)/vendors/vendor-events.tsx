@@ -75,7 +75,7 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
         return (
           <div
             key={ev.id}
-            className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+            className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:bg-gray-50"
           >
             <div>
               <div className="text-sm font-medium text-gray-900">{coupleName || 'Unknown couple'}</div>

@@ -126,7 +126,7 @@ export function CouplesList({
   if (couples.length === 0 && !loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Users size={40} className="text-gray-300 mb-3" />
+        <Users size={40} strokeWidth={1.5} className="text-gray-300 mb-3" />
         <p className="text-gray-600 font-medium mb-2">No couples yet.</p>
         <p className="text-sm text-gray-500 mb-4">
           Start by adding your first couple.
@@ -206,7 +206,7 @@ export function CouplesList({
                 className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
                 title="Previous page"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={16} strokeWidth={1.5} />
               </button>
 
               <div className="flex items-center gap-1">
@@ -214,7 +214,7 @@ export function CouplesList({
                   <button
                     key={i}
                     onClick={() => table.setPageIndex(i)}
-                    className={`px-2.5 py-1 text-xs font-medium rounded transition ${
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
                       table.getState().pagination.pageIndex === i
                         ? 'bg-gray-900 text-white'
                         : 'text-gray-600 hover:bg-gray-100'
@@ -231,7 +231,7 @@ export function CouplesList({
                 className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
                 title="Next page"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={16} strokeWidth={1.5} />
               </button>
 
               <div className="h-5 w-px bg-gray-200" />
@@ -241,12 +241,12 @@ export function CouplesList({
           <div ref={pageSizeRef}>
             <button
               onClick={() => setPageSizeOpen(!pageSizeOpen)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
             >
               {table.getState().pagination.pageSize}/page
             </button>
             {pageSizeOpen && (
-              <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1"
+              <div className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1"
                 style={{
                   bottom: window.innerHeight - (pageSizeRef.current?.getBoundingClientRect().top || 0) + 8,
                   right: window.innerWidth - (pageSizeRef.current?.getBoundingClientRect().right || 0),

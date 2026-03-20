@@ -133,7 +133,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
   }
 
   const inputClass =
-    'w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
+    'w-full border border-gray-200 rounded-xl px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
 
   return (
     <div className="max-w-2xl space-y-10">
@@ -162,7 +162,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
                   tabIndex={-1}
                 >
-                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showNewPassword ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
                 </button>
               </div>
               {strength && (
@@ -199,7 +199,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
                   tabIndex={-1}
                 >
-                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showConfirmPassword ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
                 </button>
               </div>
             </div>
@@ -209,7 +209,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
             <button
               type="submit"
               disabled={loading}
-              className="bg-black text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition"
+              className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
             >
               {loading ? 'Changing...' : 'Change Password'}
             </button>
@@ -265,7 +265,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
             type="button"
             onClick={handleSavePreferences}
             disabled={savingPreferences}
-            className="bg-black text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition"
+            className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
           >
             {savingPreferences ? 'Saving...' : 'Save Preferences'}
           </button>
@@ -289,7 +289,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
         <button
           type="button"
           onClick={() => setShowDeleteModal(true)}
-          className="border border-red-300 text-red-600 text-sm font-medium rounded-lg px-4 py-2 hover:bg-red-50 transition"
+          className="border border-red-300 text-red-600 text-sm font-medium rounded-xl px-4 py-2 hover:bg-red-50 transition cursor-pointer"
         >
           Delete Account
         </button>
@@ -316,7 +316,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
                 type="text"
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-transparent transition"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-transparent transition"
                 placeholder="DELETE"
               />
             </div>
@@ -324,7 +324,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
               <button
                 type="button"
                 onClick={() => { setShowDeleteModal(false); setDeleteConfirmText('') }}
-                className="text-sm font-medium text-gray-500 hover:text-gray-700 transition"
+                className="text-sm font-medium text-gray-500 hover:text-gray-700 transition cursor-pointer"
               >
                 Cancel
               </button>
@@ -332,7 +332,7 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
                 type="button"
                 disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
                 onClick={handleDeleteAccount}
-                className="bg-red-600 text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-red-700 disabled:opacity-50 transition"
+                className="bg-red-600 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-red-700 disabled:opacity-50 transition cursor-pointer"
               >
                 {deleteLoading ? 'Deleting...' : 'Delete Account'}
               </button>

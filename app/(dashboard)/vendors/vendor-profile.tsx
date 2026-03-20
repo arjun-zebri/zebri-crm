@@ -49,14 +49,14 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
               onClick={onClose}
               className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
             >
-              <X size={20} />
+              <X size={20} strokeWidth={1.5} />
             </button>
           </div>
 
           {/* Status */}
           <div className="flex items-center gap-2 mb-5">
             <div
-              className={`w-2 h-2 rounded-full ${
+              className={`w-2 h-2 rounded-xl ${
                 vendor.status === 'active' ? 'bg-emerald-400' : 'bg-gray-300'
               }`}
             />
@@ -67,47 +67,47 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
           <div className="flex items-center gap-2">
             <a
               href={hasPhone ? `tel:${vendor.phone}` : undefined}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
                   ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
                   : 'text-gray-300 border-gray-100 cursor-not-allowed'
               }`}
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
-              <Phone size={14} />
+              <Phone size={14} strokeWidth={1.5} />
               Call
             </a>
             <a
               href={hasEmail ? `mailto:${vendor.email}` : undefined}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasEmail
                   ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
                   : 'text-gray-300 border-gray-100 cursor-not-allowed'
               }`}
               onClick={hasEmail ? undefined : (e) => e.preventDefault()}
             >
-              <Mail size={14} />
+              <Mail size={14} strokeWidth={1.5} />
               Email
             </a>
             <a
               href={hasPhone ? `https://wa.me/${vendor.phone.replace(/\D/g, '')}` : undefined}
               target={hasPhone ? '_blank' : undefined}
               rel={hasPhone ? 'noopener noreferrer' : undefined}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
                   ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
                   : 'text-gray-300 border-gray-100 cursor-not-allowed'
               }`}
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
-              <MessageCircle size={14} />
+              <MessageCircle size={14} strokeWidth={1.5} />
               WhatsApp
             </a>
             <button
               onClick={() => onEdit(vendor)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition cursor-pointer ml-auto"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer ml-auto"
             >
-              <Pencil size={14} />
+              <Pencil size={14} strokeWidth={1.5} />
               Edit
             </button>
           </div>

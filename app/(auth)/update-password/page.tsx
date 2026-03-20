@@ -38,7 +38,7 @@ export default function UpdatePasswordPage() {
       <h1 className="text-3xl font-semibold text-center mb-6">Set New Password</h1>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
@@ -55,14 +55,14 @@ export default function UpdatePasswordPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-black text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-neutral-800 transition disabled:opacity-50"
+          className="w-full bg-black text-white rounded-xl px-4 py-2 text-sm font-medium hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
         >
           {loading ? "Updating..." : "Update Password"}
         </button>

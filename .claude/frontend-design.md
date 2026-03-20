@@ -55,9 +55,9 @@ Structure: Sidebar \| Main Content
 
 # Buttons
 
-Primary: bg-black text-white rounded-lg px-4 py-2 hover:bg-neutral-800
+Primary: bg-black text-white rounded-xl px-4 py-2 hover:bg-neutral-800 cursor-pointer
 
-Secondary: bg-neutral-100 text-neutral-900
+Secondary: bg-neutral-100 text-neutral-900 rounded-xl cursor-pointer
 
 ------------------------------------------------------------------------
 
@@ -101,8 +101,8 @@ Notion-style compact toolbar in header row:
 
 # Inputs
 
-border\
-rounded-lg\
+border border-gray-200\
+rounded-xl\
 px-3\
 py-2\
 focus:ring-2\
@@ -112,7 +112,7 @@ focus:ring-green-200
 
 # Icons
 
-Use lucide-react.
+Use lucide-react. All icons must use `strokeWidth={1.5}` for a lighter, more refined line weight.
 
 ------------------------------------------------------------------------
 

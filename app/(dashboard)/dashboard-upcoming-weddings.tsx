@@ -21,7 +21,7 @@ export function DashboardUpcomingWeddings({
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <h2 className="text-xl font-semibold text-gray-900 mb-3">Upcoming Weddings</h2>
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" strokeWidth={1.5} />
         </div>
       </div>
     )
@@ -53,7 +53,7 @@ export function DashboardUpcomingWeddings({
                   onEventClick(event.couple)
                 }
               }}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition cursor-pointer text-sm"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition cursor-pointer text-sm"
             >
               <span className="font-medium text-gray-900 w-32 shrink-0 truncate">
                 {event.couple?.name || 'Unknown'}

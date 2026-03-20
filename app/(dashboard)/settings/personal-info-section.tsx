@@ -103,7 +103,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   }
 
   const inputClass =
-    'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
+    'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
 
   const selectedLabel = businessTypeOptions.find((o) => o.value === businessType)?.label
 
@@ -150,17 +150,17 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               <Popover.Trigger asChild>
                 <button
                   type="button"
-                  className={`${inputClass} flex items-center justify-between text-left`}
+                  className={`${inputClass} flex items-center justify-between text-left cursor-pointer`}
                 >
                   <span className={selectedLabel ? 'text-gray-900' : 'text-gray-400'}>
                     {selectedLabel || 'Select type'}
                   </span>
-                  <ChevronDown size={14} className="text-gray-400 shrink-0" />
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50 w-[var(--radix-popover-trigger-width)]"
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-50 w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -172,7 +172,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
                         setBusinessType(option.value)
                         setBusinessTypeOpen(false)
                       }}
-                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                      className={`w-full text-left px-3 py-2 text-sm transition cursor-pointer ${
                         businessType === option.value
                           ? 'bg-green-50 text-green-700'
                           : 'text-gray-700 hover:bg-gray-50'
@@ -235,7 +235,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
           <button
             type="submit"
             disabled={loading || !isDirty}
-            className="bg-black text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition"
+            className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
           >
             {loading ? 'Saving...' : 'Save Changes'}
           </button>

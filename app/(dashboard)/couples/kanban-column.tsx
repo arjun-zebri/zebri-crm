@@ -60,9 +60,9 @@ export function KanbanColumn({
       </Droppable>
       <button
         onClick={() => onAddClick?.(status)}
-        className={`w-full flex items-center justify-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition py-1.5 rounded-lg border ${borderColor} bg-white hover:bg-gray-50 cursor-pointer`}
+        className={`w-full flex items-center justify-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition py-1.5 rounded-full border ${borderColor} bg-white hover:bg-gray-50 cursor-pointer`}
       >
-        <Plus size={14} />
+        <Plus size={14} strokeWidth={1.5} />
         New
       </button>
     </div>

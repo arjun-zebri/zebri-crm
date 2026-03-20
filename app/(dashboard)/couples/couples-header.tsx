@@ -92,14 +92,14 @@ export function CouplesHeader({
 
         <div className="flex items-center gap-1">
           <div className="relative mr-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               ref={searchInputRef}
               type="text"
               placeholder="Search..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-56 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-56 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
             />
             {search && (
               <button
@@ -109,7 +109,7 @@ export function CouplesHeader({
                 }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
               >
-                <X size={14} />
+                <X size={14} strokeWidth={1.5} />
               </button>
             )}
           </div>
@@ -117,12 +117,12 @@ export function CouplesHeader({
           <div className="relative" ref={sortRef}>
             <button
               onClick={() => setSortOpen(!sortOpen)}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition cursor-pointer"
             >
-              <ArrowUpDown size={16} />
+              <ArrowUpDown size={16} strokeWidth={1.5} />
             </button>
             {sortOpen && (
-              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-48 py-1">
+              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-48 py-1">
                 {SORT_OPTIONS.map((option) => (
                   <button
                     key={`${option.field}-${option.direction}`}
@@ -146,16 +146,16 @@ export function CouplesHeader({
           <div className="relative" ref={filtersRef}>
             <button
               onClick={() => setFiltersOpen(!filtersOpen)}
-              className={`p-2 rounded-lg transition cursor-pointer ${
+              className={`p-2 rounded-xl transition cursor-pointer ${
                 hasActiveFilter
                   ? 'text-gray-900 bg-gray-100'
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
               }`}
             >
-              <SlidersHorizontal size={16} />
+              <SlidersHorizontal size={16} strokeWidth={1.5} />
             </button>
             {filtersOpen && (
-              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-44 py-1">
+              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-44 py-1">
                 <button
                   onClick={() => {
                     onStatusFilterChange('all')
@@ -191,9 +191,9 @@ export function CouplesHeader({
 
           <button
             onClick={onAddClick}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-black rounded-lg hover:bg-neutral-800 transition ml-1 cursor-pointer"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-black rounded-xl hover:bg-neutral-800 transition ml-1 cursor-pointer"
           >
-            <Plus size={14} />
+            <Plus size={14} strokeWidth={1.5} />
             New
           </button>
         </div>
@@ -208,7 +208,7 @@ export function CouplesHeader({
               : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
-          <List size={15} /> List
+          <List size={15} strokeWidth={1.5} /> List
         </button>
         <button
           onClick={() => onViewModeChange('kanban')}
@@ -218,7 +218,7 @@ export function CouplesHeader({
               : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
-          <LayoutGrid size={15} /> Board
+          <LayoutGrid size={15} strokeWidth={1.5} /> Board
         </button>
         <button
           onClick={() => onViewModeChange('calendar')}
@@ -228,7 +228,7 @@ export function CouplesHeader({
               : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
-          <Calendar size={15} /> Calendar
+          <Calendar size={15} strokeWidth={1.5} /> Calendar
         </button>
       </div>
     </div>

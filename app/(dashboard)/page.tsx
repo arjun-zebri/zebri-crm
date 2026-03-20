@@ -68,15 +68,15 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowAddVendorModal(true)}
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-neutral-100 text-neutral-900 hover:bg-neutral-200 transition cursor-pointer"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-neutral-100 text-neutral-900 hover:bg-neutral-200 transition cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> New Vendor
+            <Plus className="w-3.5 h-3.5" strokeWidth={1.5} /> New Vendor
           </button>
           <button
             onClick={() => setShowAddCoupleModal(true)}
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-black text-white hover:bg-neutral-800 transition cursor-pointer"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl bg-black text-white hover:bg-neutral-800 transition cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> New Couple
+            <Plus className="w-3.5 h-3.5" strokeWidth={1.5} /> New Couple
           </button>
         </div>
       </div>

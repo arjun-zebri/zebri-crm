@@ -83,7 +83,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
       {!tasks || tasks.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-sm text-gray-500 mb-3">No tasks yet.</p>
-          <button className="text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition">
+          <button className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
             + Add Task
           </button>
         </div>
@@ -93,7 +93,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50"
               >
                 <input
                   type="checkbox"
@@ -123,7 +123,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
               </div>
             ))}
           </div>
-          <button className="w-full text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition">
+          <button className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition">
             + Add Task
           </button>
         </>

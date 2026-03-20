@@ -15,8 +15,8 @@ Goal: Consistency, speed, and minimal design.
 
 Primary CTA button.
 
-Styles: - bg-black - text-white - rounded-lg - px-4 py-2 -
-hover:bg-neutral-800 - transition
+Styles: - bg-black - text-white - rounded-xl - px-4 py-2 -
+hover:bg-neutral-800 - transition - cursor-pointer
 
 Variants: - primary - secondary - ghost
 
@@ -28,8 +28,8 @@ Props: variant size icon loading disabled
 
 Standard text input.
 
-Styles: border\
-rounded-lg\
+Styles: border border-gray-200\
+rounded-xl\
 px-3 py-2\
 focus:ring-2\
 focus:ring-green-200
@@ -63,7 +63,7 @@ The Select trigger should visually match the Input component.
 
 Trigger styles:
 
-border - rounded-lg - px-3 - py-2 - bg-white - flex - items-center - justify-between - text-sm
+border border-gray-200 - rounded-xl - px-3 - py-2 - bg-white - flex - items-center - justify-between - text-sm
 
 Focus state:
 
@@ -71,7 +71,7 @@ ring-2 - ring-green-200
 
 Dropdown menu styles:
 
-bg-white - border - rounded-lg - shadow-lg - max-h-60 - overflow-y-auto p-1
+bg-white - border - rounded-xl - shadow-lg - max-h-60 - overflow-y-auto p-1
 
 Option styles:
 
@@ -196,9 +196,9 @@ Props:
 - `isAdding: boolean` — loading state while mutation is pending
 
 Styles:
-- Container: `border border-gray-200 rounded-lg bg-white shadow-sm p-3`
+- Container: `border border-gray-200 rounded-xl bg-white shadow-sm p-3`
 - Search input: matches standard Input styles with focus:ring-2 focus:ring-green-200
-- Vendor rows: text-left, p-2, hover:bg-gray-50, rounded-lg
+- Vendor rows: text-left, p-2, hover:bg-gray-50, rounded-xl
 - Empty state: centered gray text
 - Close button (X) top-right of search bar
 

@@ -83,7 +83,7 @@ export function DashboardStats({
     change,
     sparkline,
   }: StatCard) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
       <div className="mb-4">
         <div className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</div>
         <div className="text-xs text-gray-400 mt-0.5">{description}</div>
@@ -91,7 +91,7 @@ export function DashboardStats({
 
       {isLoading ? (
         <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+          <Loader2 className="w-4 h-4 text-gray-400 animate-spin" strokeWidth={1.5} />
         </div>
       ) : (
         <div className="space-y-3">
@@ -107,9 +107,9 @@ export function DashboardStats({
                   }`}
                 >
                   {change >= 0 ? (
-                    <TrendingUp className="w-3 h-3" />
+                    <TrendingUp className="w-3 h-3" strokeWidth={1.5} />
                   ) : (
-                    <TrendingDown className="w-3 h-3" />
+                    <TrendingDown className="w-3 h-3" strokeWidth={1.5} />
                   )}
                   {change >= 0 ? "+" : ""}
                   {change}% vs last month

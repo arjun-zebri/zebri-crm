@@ -98,7 +98,7 @@ export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
           <p className="text-sm text-gray-500 mb-3">No vendors assigned yet.</p>
           <button
             onClick={() => setShowAddVendor(true)}
-            className="text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+            className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add Vendor
           </button>
@@ -109,7 +109,7 @@ export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
             {vendors.map((link) => (
               <div
                 key={link.id}
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:bg-gray-50"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">{link.vendor.name}</p>
@@ -120,14 +120,14 @@ export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
                   disabled={removeVendor.isPending}
                   className="p-1 text-gray-400 hover:text-red-600 transition disabled:opacity-50"
                 >
-                  <X size={16} />
+                  <X size={16} strokeWidth={1.5} />
                 </button>
               </div>
             ))}
           </div>
           <button
             onClick={() => setShowAddVendor(true)}
-            className="w-full text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+            className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add Vendor
           </button>

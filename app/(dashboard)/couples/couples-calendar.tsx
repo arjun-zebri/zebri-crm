@@ -107,20 +107,20 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
       <div className="flex-shrink-0 flex items-center gap-4 mb-8">
         <button
           onClick={handlePrevMonth}
-          className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+          className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-xl transition"
           title="Previous month"
         >
-          <ChevronLeft size={18} />
+          <ChevronLeft size={18} strokeWidth={1.5} />
         </button>
         <h2 className="text-lg font-semibold text-gray-900">
           {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
         </h2>
         <button
           onClick={handleNextMonth}
-          className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+          className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-xl transition"
           title="Next month"
         >
-          <ChevronRight size={18} />
+          <ChevronRight size={18} strokeWidth={1.5} />
         </button>
       </div>
 
@@ -146,7 +146,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
             return (
               <div
                 key={idx}
-                className={`border rounded-lg p-2 text-xs flex flex-col gap-1 ${
+                className={`border rounded-xl p-2 text-xs flex flex-col gap-1 ${
                   isCurrent ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'
                 } ${isCurrentDay ? 'ring-2 ring-green-500' : ''}`}
               >

@@ -198,7 +198,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                 setEditingVendorIds([])
                 setShowModal(true)
               }}
-              className="text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+              className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add Event
             </button>
@@ -209,7 +209,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
               {events.map((event) => (
                 <div
                   key={event.id}
-                  className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:bg-gray-50"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{formatDate(event.date)}</p>
@@ -222,7 +222,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                       onClick={() => handleEditEvent(event)}
                       className="p-1 text-gray-400 hover:text-gray-600 transition"
                     >
-                      <Edit2 size={16} />
+                      <Edit2 size={16} strokeWidth={1.5} />
                     </button>
                     <button
                       onClick={() => handleDeleteEvent(event.id)}
@@ -233,7 +233,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                           : 'text-gray-400 hover:text-red-600'
                       }`}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={16} strokeWidth={1.5} />
                     </button>
                   </div>
                 </div>
@@ -245,7 +245,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                 setEditingVendorIds([])
                 setShowModal(true)
               }}
-              className="w-full text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+              className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add Event
             </button>

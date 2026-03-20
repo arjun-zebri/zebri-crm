@@ -155,7 +155,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
           <p className="text-sm text-gray-500 mb-3">No tasks yet.</p>
           <button
             onClick={() => setShowAddTask(true)}
-            className="text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+            className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add Task
           </button>
@@ -172,7 +172,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
                     if (!editTitle.trim()) return
                     editTaskMutation.mutate({ id: task.id, title: editTitle, dueDate: editDueDate })
                   }}
-                  className="border border-gray-200 rounded-lg bg-white shadow-sm p-3 space-y-3"
+                  className="border border-gray-200 rounded-xl bg-white shadow-sm p-3 space-y-3"
                 >
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Task title</label>
@@ -181,7 +181,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
                       placeholder="What needs to be done?"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200"
                       autoFocus
                     />
                   </div>
@@ -192,7 +192,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
                       type="date"
                       value={editDueDate}
                       onChange={(e) => setEditDueDate(e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
                     />
                   </div>
 
@@ -205,14 +205,14 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
                         setEditDueDate('')
                       }}
                       disabled={editTaskMutation.isPending}
-                      className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50"
+                      className="text-sm px-3 py-1.5 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={editTaskMutation.isPending || !editTitle.trim()}
-                      className="text-sm px-3 py-1.5 rounded-lg bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50"
+                      className="text-sm px-3 py-1.5 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
                     >
                       {editTaskMutation.isPending ? 'Saving...' : 'Save'}
                     </button>
@@ -221,7 +221,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
               ) : (
                 <div
                   key={task.id}
-                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 group"
+                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 group"
                 >
                   <input
                     type="checkbox"
@@ -258,7 +258,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
                       className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition cursor-pointer"
                       title="Edit task"
                     >
-                      <Pencil size={14} />
+                      <Pencil size={14} strokeWidth={1.5} />
                     </button>
                     <button
                       onClick={() => deleteTask.mutate(task.id)}
@@ -266,7 +266,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
                       title="Delete task"
                       disabled={deleteTask.isPending}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={14} strokeWidth={1.5} />
                     </button>
                   </div>
                 </div>
@@ -275,7 +275,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
           </div>
           <button
             onClick={() => setShowAddTask(true)}
-            className="w-full text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition"
+            className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition"
           >
             + Add Task
           </button>
@@ -283,7 +283,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
       )}
 
       {showAddTask && (
-        <form onSubmit={handleAddTask} className="border border-gray-200 rounded-lg bg-white shadow-sm p-3 space-y-3">
+        <form onSubmit={handleAddTask} className="border border-gray-200 rounded-xl bg-white shadow-sm p-3 space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Task title <span className="text-red-500">*</span>
@@ -293,7 +293,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
               value={taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
               placeholder="What needs to be done?"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200"
               autoFocus
             />
           </div>
@@ -304,7 +304,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
               type="date"
               value={taskDueDate}
               onChange={(e) => setTaskDueDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
             />
           </div>
 
@@ -317,14 +317,14 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
                 setTaskDueDate('')
               }}
               disabled={addTask.isPending}
-              className="text-sm px-3 py-1.5 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50"
+              className="text-sm px-3 py-1.5 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={addTask.isPending || !taskTitle.trim()}
-              className="text-sm px-3 py-1.5 rounded-lg bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50"
+              className="text-sm px-3 py-1.5 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {addTask.isPending ? 'Adding...' : 'Add Task'}
             </button>

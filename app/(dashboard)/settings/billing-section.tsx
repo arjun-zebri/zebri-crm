@@ -146,7 +146,7 @@ export function BillingSection({ status }: BillingSectionProps) {
                 <ul className="space-y-2">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2 text-sm text-gray-600">
-                      <Check size={14} className="text-green-500 shrink-0 mt-0.5" />
+                      <Check size={14} strokeWidth={1.5} className="text-green-500 shrink-0 mt-0.5" />
                       {feature}
                     </li>
                   ))}
@@ -160,11 +160,11 @@ export function BillingSection({ status }: BillingSectionProps) {
             <button
               onClick={handleSubscribe}
               disabled={redirecting}
-              className="bg-black text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition inline-flex items-center gap-2"
+              className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition inline-flex items-center gap-2 cursor-pointer"
             >
               {redirecting ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={14} strokeWidth={1.5} className="animate-spin" />
                   Redirecting...
                 </>
               ) : (
@@ -179,8 +179,8 @@ export function BillingSection({ status }: BillingSectionProps) {
       <div>
         <h3 className="text-sm font-medium text-gray-900 mb-4">Card Details</h3>
         {status === 'active' || status === 'trialing' ? (
-          <div className="flex items-center gap-3 border border-gray-200 rounded-lg p-4">
-            <CreditCard size={20} className="text-gray-400" />
+          <div className="flex items-center gap-3 border border-gray-200 rounded-xl p-4">
+            <CreditCard size={20} strokeWidth={1.5} className="text-gray-400" />
             <div className="flex-1">
               <p className="text-sm text-gray-900">&bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; &bull;&bull;&bull;&bull; 4242</p>
               <p className="text-xs text-gray-500">Expires 12/27</p>
@@ -204,7 +204,7 @@ export function BillingSection({ status }: BillingSectionProps) {
                 value={cardName}
                 onChange={(e) => setCardName(e.target.value)}
                 placeholder="John Doe"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
               />
             </div>
 
@@ -219,7 +219,7 @@ export function BillingSection({ status }: BillingSectionProps) {
                 onChange={handleCardNumberChange}
                 placeholder="4242 4242 4242 4242"
                 maxLength={19}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
               />
             </div>
 
@@ -235,7 +235,7 @@ export function BillingSection({ status }: BillingSectionProps) {
                   onChange={handleExpiryChange}
                   placeholder="MM/YY"
                   maxLength={5}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
                 />
               </div>
               <div>
@@ -250,7 +250,7 @@ export function BillingSection({ status }: BillingSectionProps) {
                     onChange={handleCvvChange}
                     placeholder="123"
                     maxLength={4}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
                   />
                   <button
                     type="button"
@@ -258,7 +258,7 @@ export function BillingSection({ status }: BillingSectionProps) {
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
                     tabIndex={-1}
                   >
-                    {showCvv ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showCvv ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
                   </button>
                 </div>
               </div>
@@ -267,11 +267,11 @@ export function BillingSection({ status }: BillingSectionProps) {
             <button
               type="submit"
               disabled={savingCard || !cardNumber || !cardName || !expiryDate || !cvv}
-              className="w-full bg-black text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition"
+              className="w-full bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
             >
               {savingCard ? (
                 <>
-                  <Loader2 size={14} className="animate-spin inline mr-2" />
+                  <Loader2 size={14} strokeWidth={1.5} className="animate-spin inline mr-2" />
                   Saving...
                 </>
               ) : (

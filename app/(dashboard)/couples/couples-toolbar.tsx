@@ -50,30 +50,30 @@ export function CouplesToolbar({
   return (
     <div className="flex items-center gap-3">
       <div className="relative flex-1 max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
         <input
           ref={searchInputRef}
           type="text"
           placeholder="Search couples..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+          className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
         />
       </div>
 
       <div className="relative" ref={filtersRef}>
         <button
           onClick={() => setFiltersOpen(!filtersOpen)}
-          className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition ${
+          className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl transition ${
             statusFilter !== 'all'
               ? 'border border-gray-900 bg-gray-900 text-white'
               : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
           }`}
         >
-          <SlidersHorizontal size={14} /> Filters
+          <SlidersHorizontal size={14} strokeWidth={1.5} /> Filters
         </button>
         {filtersOpen && (
-          <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-48">
+          <div className="absolute top-full mt-2 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-48">
             <button
               onClick={() => {
                 onStatusFilterChange('all')

@@ -127,7 +127,7 @@ export function EventModal({
   }, [allVendors, selectedVendorIds])
 
   const inputClass =
-    'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
+    'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
 
   return (
     <Modal
@@ -140,7 +140,7 @@ export function EventModal({
             <button
               onClick={handleDelete}
               disabled={loading}
-              className={`text-sm px-4 py-2 rounded-lg transition ${
+              className={`text-sm px-4 py-2 rounded-xl transition cursor-pointer ${
                 deleteConfirm
                   ? 'bg-red-600 text-white'
                   : 'bg-red-50 text-red-600 hover:bg-red-100'
@@ -153,14 +153,14 @@ export function EventModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-sm px-4 py-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading || !date.trim()}
-              className="text-sm px-4 py-2 rounded-lg bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? 'Saving...' : 'Save'}
             </button>
@@ -210,11 +210,11 @@ export function EventModal({
                   className={inputClass + ' flex items-center justify-between'}
                 >
                   {STATUS_LABELS[status]}
-                  <ChevronDown size={16} className="text-gray-400" />
+                  <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400" />
                 </button>
               </Popover.Trigger>
               <Popover.Content
-                className="z-50 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-1"
+                className="z-50 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-1"
                 side="bottom"
                 align="start"
               >
@@ -261,7 +261,7 @@ export function EventModal({
                       }
                       className="text-gray-400 hover:text-gray-600 transition"
                     >
-                      <X size={12} />
+                      <X size={12} strokeWidth={1.5} />
                     </button>
                   </span>
                 ))}
@@ -278,7 +278,7 @@ export function EventModal({
                 className={inputClass}
               />
               {vendorSearch && filteredVendors.length > 0 && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
                   {filteredVendors.map((v) => (
                     <button
                       key={v.id}
@@ -298,7 +298,7 @@ export function EventModal({
                 </div>
               )}
               {vendorSearch && filteredVendors.length === 0 && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3">
+                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-3">
                   <p className="text-sm text-gray-500 text-center">No vendors found</p>
                 </div>
               )}
@@ -314,7 +314,7 @@ export function EventModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Timeline, ceremony details, vendor notes..."
-              rows={6}
+              rows={8}
               className={`${inputClass} resize-none`}
             />
           </div>

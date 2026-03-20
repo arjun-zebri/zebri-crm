@@ -93,7 +93,7 @@ export function CoupleModal({
   };
 
   const inputClass =
-    "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition";
+    "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition";
 
   const selectedLabel = STATUS_LABELS[status as keyof typeof STATUS_LABELS];
 
@@ -108,7 +108,7 @@ export function CoupleModal({
             <button
               onClick={handleDelete}
               disabled={loading}
-              className={`text-sm px-4 py-2 rounded-lg transition ${
+              className={`text-sm px-4 py-2 rounded-xl transition cursor-pointer ${
                 deleteConfirm
                   ? "bg-red-600 text-white"
                   : "bg-red-50 text-red-600 hover:bg-red-100"
@@ -121,14 +121,14 @@ export function CoupleModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-sm px-4 py-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading || !name.trim()}
-              className="text-sm px-4 py-2 rounded-lg bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Saving..." : "Save"}
             </button>
@@ -195,12 +195,12 @@ export function CoupleModal({
                   >
                     {selectedLabel || "Select status"}
                   </span>
-                  <ChevronDown size={14} className="text-gray-400 shrink-0" />
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -236,7 +236,7 @@ export function CoupleModal({
             onChange={(e) => setNotes(e.target.value)}
             className={`${inputClass} resize-none`}
             placeholder="Any additional notes..."
-            rows={3}
+            rows={8}
           />
         </div>
       </form>

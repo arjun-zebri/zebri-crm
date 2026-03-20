@@ -50,7 +50,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition cursor-pointer"
             >
-              <X size={20} />
+              <X size={20} strokeWidth={1.5} />
             </button>
           </div>
 

@@ -137,7 +137,7 @@ export function VendorsList({
   if (vendors.length === 0 && !loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Store size={40} className="text-gray-300 mb-3" />
+        <Store size={40} className="text-gray-300 mb-3" strokeWidth={1.5} />
         <p className="text-gray-600 font-medium mb-2">No vendors yet.</p>
         <p className="text-sm text-gray-500 mb-4">
           Start building your vendor network.
@@ -207,7 +207,7 @@ export function VendorsList({
                       ))}
                       {/* Row hover actions — positioned over the last cell */}
                       <td className="p-0 w-0 overflow-visible">
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition bg-gray-50 rounded-lg px-1 py-0.5">
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition bg-gray-50 rounded-xl px-1 py-0.5">
                           <a
                             href={hasPhone ? `tel:${v.phone}` : undefined}
                             onClick={(e) => {
@@ -223,7 +223,7 @@ export function VendorsList({
                                 : "text-gray-200 cursor-not-allowed"
                             }`}
                           >
-                            <Phone size={15} />
+                            <Phone size={15} strokeWidth={1.5} />
                           </a>
                           <a
                             href={hasEmail ? `mailto:${v.email}` : undefined}
@@ -238,7 +238,7 @@ export function VendorsList({
                                 : "text-gray-200 cursor-not-allowed"
                             }`}
                           >
-                            <Mail size={15} />
+                            <Mail size={15} strokeWidth={1.5} />
                           </a>
                           <a
                             href={
@@ -263,7 +263,7 @@ export function VendorsList({
                                 : "text-gray-200 cursor-not-allowed"
                             }`}
                           >
-                            <MessageCircle size={15} />
+                            <MessageCircle size={15} strokeWidth={1.5} />
                           </a>
                         </div>
                       </td>
@@ -284,7 +284,7 @@ export function VendorsList({
                 className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
                 title="Previous page"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={16} strokeWidth={1.5} />
               </button>
 
               <div className="flex items-center gap-1">
@@ -292,7 +292,7 @@ export function VendorsList({
                   <button
                     key={i}
                     onClick={() => table.setPageIndex(i)}
-                    className={`px-2.5 py-1 text-xs font-medium rounded transition ${
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
                       table.getState().pagination.pageIndex === i
                         ? "bg-gray-900 text-white"
                         : "text-gray-600 hover:bg-gray-100"
@@ -309,7 +309,7 @@ export function VendorsList({
                 className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
                 title="Next page"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={16} strokeWidth={1.5} />
               </button>
 
               <div className="h-5 w-px bg-gray-200" />
@@ -319,12 +319,12 @@ export function VendorsList({
           <div ref={pageSizeRef}>
             <button
               onClick={() => setPageSizeOpen(!pageSizeOpen)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
             >
               {table.getState().pagination.pageSize}/page
             </button>
             {pageSizeOpen && (
-              <div className="fixed bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1"
+              <div className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1"
                 style={{
                   bottom: window.innerHeight - (pageSizeRef.current?.getBoundingClientRect().top || 0) + 8,
                   right: window.innerWidth - (pageSizeRef.current?.getBoundingClientRect().right || 0),

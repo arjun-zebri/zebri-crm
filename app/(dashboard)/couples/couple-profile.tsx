@@ -49,7 +49,7 @@ export function CoupleProfile({ couple, onClose, onEdit }: CoupleProfileProps) {
               onClick={onClose}
               className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
             >
-              <X size={20} />
+              <X size={20} strokeWidth={1.5} />
             </button>
           </div>
 
@@ -57,47 +57,47 @@ export function CoupleProfile({ couple, onClose, onEdit }: CoupleProfileProps) {
           <div className="flex items-center gap-2">
             <a
               href={hasPhone ? `tel:${couple.phone}` : undefined}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
                   ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
                   : 'text-gray-300 border-gray-100 cursor-not-allowed'
               }`}
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
-              <Phone size={14} />
+              <Phone size={14} strokeWidth={1.5} />
               Call
             </a>
             <a
               href={hasEmail ? `mailto:${couple.email}` : undefined}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasEmail
                   ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
                   : 'text-gray-300 border-gray-100 cursor-not-allowed'
               }`}
               onClick={hasEmail ? undefined : (e) => e.preventDefault()}
             >
-              <Mail size={14} />
+              <Mail size={14} strokeWidth={1.5} />
               Email
             </a>
             <a
               href={hasPhone ? `https://wa.me/${couple.phone.replace(/\D/g, '')}` : undefined}
               target={hasPhone ? '_blank' : undefined}
               rel={hasPhone ? 'noopener noreferrer' : undefined}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
                   ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
                   : 'text-gray-300 border-gray-100 cursor-not-allowed'
               }`}
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
-              <MessageCircle size={14} />
+              <MessageCircle size={14} strokeWidth={1.5} />
               WhatsApp
             </a>
             <button
               onClick={() => onEdit(couple)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition cursor-pointer ml-auto"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer ml-auto"
             >
-              <Pencil size={14} />
+              <Pencil size={14} strokeWidth={1.5} />
               Edit
             </button>
           </div>

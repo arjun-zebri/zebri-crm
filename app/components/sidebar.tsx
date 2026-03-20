@@ -71,7 +71,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-[10px] py-2.5 rounded-lg text-base transition whitespace-nowrap ${
+              className={`flex items-center gap-3 px-[10px] py-2.5 rounded-xl text-base transition whitespace-nowrap ${
                 isActive
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
@@ -96,7 +96,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-[10px] py-2.5 rounded-lg text-base transition whitespace-nowrap ${
+                className={`flex items-center gap-3 px-[10px] py-2.5 rounded-xl text-base transition whitespace-nowrap ${
                   isActive
                     ? "bg-gray-100 text-gray-900"
                     : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
@@ -111,7 +111,7 @@ export function Sidebar() {
           })}
 
           {user && (
-            <div className="flex items-center px-[10px] py-2.5 rounded-lg">
+            <div className="flex items-center px-[10px] py-2.5 rounded-xl">
               <div className="opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 min-w-0 flex-1">
                 <div className="text-[14px] font-medium truncate">{displayName}</div>
                 <div className="text-[12px] text-gray-600 truncate">{email}</div>

@@ -19,7 +19,7 @@ export function KanbanCard({ couple, index, onClick }: KanbanCardProps) {
           {...provided.draggableProps}
           {...provided.dragHandleProps}
           onClick={onClick}
-          className={`bg-white rounded-lg px-3 py-2.5 shadow-sm transition cursor-pointer ${
+          className={`bg-white rounded-xl px-3 py-2.5 shadow-sm transition cursor-pointer ${
             snapshot.isDragging
               ? "shadow-lg rotate-1 scale-[1.02]"
               : "hover:shadow-md"

@@ -102,7 +102,7 @@ export function VendorModal({
   };
 
   const inputClass =
-    "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition";
+    "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition";
 
   return (
     <Modal
@@ -115,7 +115,7 @@ export function VendorModal({
             <button
               onClick={handleDelete}
               disabled={loading}
-              className={`text-sm px-4 py-2 rounded-lg transition ${
+              className={`text-sm px-4 py-2 rounded-xl transition cursor-pointer ${
                 deleteConfirm
                   ? "bg-red-600 text-white"
                   : "bg-red-50 text-red-600 hover:bg-red-100"
@@ -128,14 +128,14 @@ export function VendorModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-sm px-4 py-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading || !name.trim()}
-              className="text-sm px-4 py-2 rounded-lg bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Saving..." : "Save"}
             </button>
@@ -214,11 +214,11 @@ export function VendorModal({
                   className={inputClass + " flex items-center justify-between"}
                 >
                   {CATEGORY_LABELS[category]}
-                  <ChevronDown size={16} className="text-gray-400" />
+                  <ChevronDown size={16} className="text-gray-400" strokeWidth={1.5} />
                 </button>
               </Popover.Trigger>
               <Popover.Content
-                className="z-50 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-1"
+                className="z-50 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-1"
                 side="bottom"
                 align="start"
               >
@@ -255,11 +255,11 @@ export function VendorModal({
                   className={inputClass + " flex items-center justify-between"}
                 >
                   {STATUS_LABELS[status]}
-                  <ChevronDown size={16} className="text-gray-400" />
+                  <ChevronDown size={16} className="text-gray-400" strokeWidth={1.5} />
                 </button>
               </Popover.Trigger>
               <Popover.Content
-                className="z-50 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-1"
+                className="z-50 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-1"
                 side="bottom"
                 align="start"
               >
