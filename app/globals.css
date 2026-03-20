@@ -30,3 +30,22 @@
     transform: translateX(0);
   }
 }
+
+/* Always-visible thin scrollbar */
+.scrollbar-thin {
+  overflow-y: scroll !important;
+  scrollbar-width: thin;
+  scrollbar-color: #D1D5DB transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  -webkit-appearance: none;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #D1D5DB;
+  border-radius: 9999px;
+  min-height: 20px;
+}

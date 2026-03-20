@@ -25,6 +25,10 @@ id (uuid) user_id (uuid, not null) name (text) email (text) phone (text) event_d
 
 Status values: new contacted confirmed paid complete
 
+lead_source (text, nullable)
+
+Lead source values: referral website social_media word_of_mouth wedding_expo venue_partner
+
 created_at (timestamp)
 
 ------------------------------------------------------------------------
@@ -53,7 +57,7 @@ Actual weddings being managed.
 Columns:
 
 id (uuid) user_id (uuid, not null) couple_id (uuid, foreign key) date (date) venue (text)
-timeline_notes (text) status (text)
+timeline_notes (text) price (numeric(10,2), nullable) status (text)
 
 Status values: upcoming completed cancelled
 

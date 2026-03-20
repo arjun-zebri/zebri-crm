@@ -1,175 +1,117 @@
-"use client";
+'use client'
 
-import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
+import { Loader2 } from 'lucide-react'
 
 interface DashboardStatsProps {
-  newEnquiries: number;
-  newEnquiriesChange: number | null;
-  newEnquiriesSparkline: number[];
-  openTasks: number;
-  openTasksChange: number | null;
-  openTasksSparkline: number[];
-  upcomingWeddings: number;
-  upcomingChange: number | null;
-  upcomingSparkline: number[];
-  completedWeddings: number;
-  completedChange: number | null;
-  completedSparkline: number[];
-  vendorCount: number;
-  vendorChange: number | null;
-  vendorSparkline: number[];
-  dueThisWeek: number;
-  dueThisWeekChange: number | null;
-  dueThisWeekSparkline: number[];
-  isLoading: boolean;
+  totalLeads: number
+  leadsPercentChange: number
+  leadsDiff: number
+  conversionRate: number
+  conversionDiff: number
+  totalRevenue: number
+  revenuePercentChange: number
+  revenueDiff: number
+  isLoading: boolean
 }
 
-interface StatCard {
-  label: string;
-  description: string;
-  value: number;
-  change: number | null;
-  sparkline: number[];
-}
+const formatAUD = (value: number) =>
+  value === 0
+    ? '—'
+    : new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(value)
 
-function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
-  const max = Math.max(...data, 1);
-  const W = 100;
-  const H = 32;
-  const pts = data.map((v, i) => [
-    (i / (data.length - 1)) * W,
-    H - (v / max) * H,
-  ]);
-  const d = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x},${y}`).join(" ");
+const formatDiffAUD = (value: number) =>
+  new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 }).format(Math.abs(value))
+
+function StatBadge({ percent }: { percent: number }) {
+  if (percent === 0) return null
+  const isPositive = percent > 0
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0">
-      <path
-        d={d}
-        fill="none"
-        stroke={positive ? "#10b981" : "#ef4444"}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+    <span
+      className={`inline-flex items-center text-xs font-medium px-1.5 py-0.5 rounded-md ${
+        isPositive
+          ? 'bg-emerald-50 text-emerald-600'
+          : 'bg-red-50 text-red-600'
+      }`}
+    >
+      {isPositive ? '+' : ''}{percent}%
+    </span>
+  )
+}
+
+function DiffText({ diff, formatter }: { diff: number; formatter: (v: number) => string }) {
+  if (diff === 0) return null
+  const isPositive = diff > 0
+  return (
+    <span className="text-xs text-gray-500">
+      {isPositive ? '+' : '-'}{formatter(Math.abs(diff))} vs last week
+    </span>
+  )
 }
 
 export function DashboardStats({
-  newEnquiries,
-  newEnquiriesChange,
-  newEnquiriesSparkline,
-  openTasks,
-  openTasksChange,
-  openTasksSparkline,
-  upcomingWeddings,
-  upcomingChange,
-  upcomingSparkline,
-  completedWeddings,
-  completedChange,
-  completedSparkline,
-  vendorCount,
-  vendorChange,
-  vendorSparkline,
-  dueThisWeek,
-  dueThisWeekChange,
-  dueThisWeekSparkline,
+  totalLeads,
+  leadsPercentChange,
+  leadsDiff,
+  conversionRate,
+  conversionDiff,
+  totalRevenue,
+  revenuePercentChange,
+  revenueDiff,
   isLoading,
 }: DashboardStatsProps) {
-  const renderCard = ({
-    label,
-    description,
-    value,
-    change,
-    sparkline,
-  }: StatCard) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-      <div className="mb-4">
-        <div className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</div>
-        <div className="text-xs text-gray-400 mt-0.5">{description}</div>
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-4 h-4 text-gray-400 animate-spin" strokeWidth={1.5} />
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-3xl font-semibold text-gray-900">
-                {value}
-              </div>
-              {change !== null && (
-                <div
-                  className={`flex items-center gap-0.5 mt-1 text-xs font-medium ${
-                    change >= 0 ? "text-emerald-600" : "text-red-500"
-                  }`}
-                >
-                  {change >= 0 ? (
-                    <TrendingUp className="w-3 h-3" strokeWidth={1.5} />
-                  ) : (
-                    <TrendingDown className="w-3 h-3" strokeWidth={1.5} />
-                  )}
-                  {change >= 0 ? "+" : ""}
-                  {change}% vs last month
-                </div>
-              )}
-            </div>
-            <Sparkline
-              data={sparkline}
-              positive={change === null || change >= 0}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const cards = [
+    {
+      label: 'Leads',
+      value: totalLeads === 0 ? '—' : String(totalLeads),
+      percent: leadsPercentChange,
+      diff: leadsDiff,
+      diffFormatter: (v: number) => String(v),
+    },
+    {
+      label: 'Conversion Rate',
+      value: `${conversionRate}%`,
+      percent: conversionDiff,
+      diff: conversionDiff,
+      diffFormatter: (v: number) => `${v}%`,
+    },
+    {
+      label: 'Revenue',
+      value: formatAUD(totalRevenue),
+      percent: revenuePercentChange,
+      diff: revenueDiff,
+      diffFormatter: (v: number) => formatDiffAUD(v),
+    },
+  ]
 
   return (
     <div className="grid grid-cols-3 gap-4">
-      {renderCard({
-        label: "New Enquiries",
-        description: "Couples added this month",
-        value: newEnquiries,
-        change: newEnquiriesChange,
-        sparkline: newEnquiriesSparkline,
-      })}
-      {renderCard({
-        label: "Open Tasks",
-        description: "Actions awaiting completion",
-        value: openTasks,
-        change: openTasksChange,
-        sparkline: openTasksSparkline,
-      })}
-      {renderCard({
-        label: "Upcoming Weddings",
-        description: "Scheduled in the next 30 days",
-        value: upcomingWeddings,
-        change: upcomingChange,
-        sparkline: upcomingSparkline,
-      })}
-      {renderCard({
-        label: "Completed",
-        description: "Weddings delivered this month",
-        value: completedWeddings,
-        change: completedChange,
-        sparkline: completedSparkline,
-      })}
-      {renderCard({
-        label: "Active Vendors",
-        description: "Partners in your network",
-        value: vendorCount,
-        change: vendorChange,
-        sparkline: vendorSparkline,
-      })}
-      {renderCard({
-        label: "Due This Week",
-        description: "Tasks needing your attention",
-        value: dueThisWeek,
-        change: dueThisWeekChange,
-        sparkline: dueThisWeekSparkline,
-      })}
+      {cards.map((card) => (
+        <div
+          key={card.label}
+          className="bg-white rounded-xl border border-gray-200 p-6"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              {card.label}
+            </span>
+            {!isLoading && <StatBadge percent={card.percent} />}
+          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-4 h-4 text-gray-400 animate-spin" strokeWidth={1.5} />
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-semibold text-gray-900">
+                {card.value}
+              </span>
+              {card.diff !== 0 && (
+                <DiffText diff={card.diff} formatter={card.diffFormatter} />
+              )}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
-  );
+  )
 }

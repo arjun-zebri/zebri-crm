@@ -39,6 +39,7 @@ export function EventModal({
   const supabase = createClient()
   const [date, setDate] = useState('')
   const [venue, setVenue] = useState('')
+  const [price, setPrice] = useState('')
   const [status, setStatus] = useState<EventStatus>('upcoming')
   const [notes, setNotes] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
@@ -69,6 +70,7 @@ export function EventModal({
     if (event) {
       setDate(event.date)
       setVenue(event.venue)
+      setPrice(event.price != null ? String(event.price) : '')
       setStatus(event.status)
       setNotes(event.timeline_notes)
     } else {
@@ -82,6 +84,7 @@ export function EventModal({
   const resetForm = () => {
     setDate('')
     setVenue('')
+    setPrice('')
     setStatus('upcoming')
     setNotes('')
     setSelectedVendorIds([])
@@ -97,6 +100,7 @@ export function EventModal({
       couple_id: coupleId,
       date,
       venue,
+      price: price ? parseFloat(price) : null,
       status,
       timeline_notes: notes,
       vendorIds: selectedVendorIds,
@@ -194,6 +198,22 @@ export function EventModal({
               value={venue}
               onChange={(e) => setVenue(e.target.value)}
               placeholder="e.g., Grand Hotel Ballroom"
+              className={inputClass}
+            />
+          </div>
+
+          {/* Price - 1 col */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Price
+            </label>
+            <input
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
               className={inputClass}
             />
           </div>

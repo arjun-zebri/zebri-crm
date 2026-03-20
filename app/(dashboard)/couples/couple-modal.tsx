@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { Modal } from "@/components/ui/modal";
-import { Couple, CoupleStatus, STATUSES, STATUS_LABELS } from "./couples-types";
+import { Couple, CoupleStatus, STATUSES, STATUS_LABELS, LeadSource, LEAD_SOURCES, LEAD_SOURCE_LABELS } from "./couples-types";
 
 interface CoupleModalProps {
   isOpen: boolean;
@@ -32,7 +32,9 @@ export function CoupleModal({
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState<string>("new");
   const [notes, setNotes] = useState("");
+  const [leadSource, setLeadSource] = useState<string>("");
   const [statusOpen, setStatusOpen] = useState(false);
+  const [leadSourceOpen, setLeadSourceOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const deleteTimeoutRef = useState<NodeJS.Timeout | null>(null)[1];
 
@@ -42,6 +44,7 @@ export function CoupleModal({
       setEmail(couple.email);
       setPhone(couple.phone);
       setStatus(couple.status);
+      setLeadSource(couple.lead_source || "");
       setNotes(couple.notes);
     } else {
       resetForm();
@@ -57,6 +60,7 @@ export function CoupleModal({
     setEmail("");
     setPhone("");
     setStatus("new");
+    setLeadSource("");
     setNotes("");
   };
 
@@ -72,6 +76,7 @@ export function CoupleModal({
       event_date: couple?.event_date ?? null,
       venue: couple?.venue ?? "",
       status: status as any,
+      lead_source: leadSource || null,
       notes,
     });
 
@@ -219,6 +224,68 @@ export function CoupleModal({
                       }`}
                     >
                       {STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Lead Source
+            </label>
+            <Popover.Root open={leadSourceOpen} onOpenChange={setLeadSourceOpen}>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className={`${inputClass} flex items-center justify-between text-left`}
+                >
+                  <span
+                    className={
+                      leadSource ? "text-gray-900" : "text-gray-400"
+                    }
+                  >
+                    {leadSource ? LEAD_SOURCE_LABELS[leadSource as LeadSource] : "Select source"}
+                  </span>
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  sideOffset={4}
+                  align="start"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLeadSource("");
+                      setLeadSourceOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm transition ${
+                      !leadSource
+                        ? "bg-green-50 text-green-700"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    None
+                  </button>
+                  {LEAD_SOURCES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setLeadSource(s);
+                        setLeadSourceOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                        leadSource === s
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {LEAD_SOURCE_LABELS[s]}
                     </button>
                   ))}
                 </Popover.Content>

@@ -1,5 +1,18 @@
 export type CoupleStatus = 'new' | 'contacted' | 'confirmed' | 'paid' | 'complete'
 
+export type LeadSource = 'referral' | 'website' | 'social_media' | 'word_of_mouth' | 'wedding_expo' | 'venue_partner'
+
+export const LEAD_SOURCES: LeadSource[] = ['referral', 'website', 'social_media', 'word_of_mouth', 'wedding_expo', 'venue_partner']
+
+export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
+  referral: 'Referral',
+  website: 'Website',
+  social_media: 'Social Media',
+  word_of_mouth: 'Word of Mouth',
+  wedding_expo: 'Wedding Expo',
+  venue_partner: 'Venue Partner',
+}
+
 export interface Couple {
   id: string
   user_id: string
@@ -10,6 +23,7 @@ export interface Couple {
   venue: string
   notes: string
   status: CoupleStatus
+  lead_source: string | null
   created_at: string
 }
 

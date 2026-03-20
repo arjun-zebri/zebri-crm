@@ -3,82 +3,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Event } from './events/events-types'
-import { Couple } from './couples/couples-types'
-
-export function useUpcomingWeddings() {
-  const supabase = createClient()
-
-  return useQuery({
-    queryKey: ['upcomingWeddings'],
-    queryFn: async () => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-
-      // Get today's date and 30 days from now
-      const today = new Date()
-      const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const todayStr = today.toISOString().split('T')[0]
-      const thirtyDaysStr = thirtyDaysFromNow.toISOString().split('T')[0]
-
-      const { data, error } = await supabase
-        .from('events')
-        .select('*, couple:couples(id, name, status)')
-        .eq('user_id', user.user.id)
-        .eq('status', 'upcoming')
-        .gte('date', todayStr)
-        .lte('date', thirtyDaysStr)
-        .order('date', { ascending: true })
-
-      if (error) throw error
-      return (data as Event[]) || []
-    },
-  })
-}
-
-export function useRecentCouples() {
-  const supabase = createClient()
-
-  return useQuery({
-    queryKey: ['recentCouples'],
-    queryFn: async () => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-
-      const { data, error } = await supabase
-        .from('couples')
-        .select('*')
-        .eq('user_id', user.user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      if (error) throw error
-      return (data as Couple[]) || []
-    },
-  })
-}
-
-export function useUpcomingWeddingsWithDefault() {
-  const query = useUpcomingWeddings()
-  return { ...query, data: query.data || [] }
-}
-
-export function useRecentCouplesWithDefault() {
-  const query = useRecentCouples()
-  return { ...query, data: query.data || [] }
-}
-
-function groupByDay(records: { created_at: string }[], daysBack = 7): number[] {
-  const bins = Array(daysBack).fill(0)
-  const now = Date.now()
-  records.forEach((r) => {
-    const msAgo = now - new Date(r.created_at).getTime()
-    const daysAgo = Math.floor(msAgo / 86400000)
-    if (daysAgo >= 0 && daysAgo < daysBack) {
-      bins[daysBack - 1 - daysAgo]++
-    }
-  })
-  return bins
-}
+import { CoupleStatus, STATUSES, LeadSource, LEAD_SOURCES } from './couples/couples-types'
 
 export function useDashboardStats() {
   const supabase = createClient()
@@ -89,190 +14,464 @@ export function useDashboardStats() {
       const { data: user, error: userError } = await supabase.auth.getUser()
       if (userError || !user.user) throw new Error('Not authenticated')
 
-      const today = new Date()
-      const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const fourteenDaysBefore = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000)
+      const now = new Date()
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+      const oneWeekAgoStr = oneWeekAgo.toISOString()
+      const twoWeeksAgoStr = twoWeeksAgo.toISOString()
 
-      const todayStr = today.toISOString().split('T')[0]
-      const thirtyDaysStr = thirtyDaysFromNow.toISOString().split('T')[0]
-      const fourteenStr = fourteenDaysBefore.toISOString().split('T')[0]
-
-      // Current month boundaries
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-      const monthStartStr = monthStart.toISOString().split('T')[0]
-
-      // Previous month boundaries
-      const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-      const prevMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0)
-      const prevMonthStartStr = prevMonthStart.toISOString().split('T')[0]
-      const prevMonthEndStr = prevMonthEnd.toISOString().split('T')[0]
-
-      // New enquiries (couples with status = 'new')
-      const { count: newEnquiries } = await supabase
+      // Total leads (all couples)
+      const { count: totalLeads } = await supabase
         .from('couples')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
-        .eq('status', 'new')
 
-      // Couples created this month vs last month (for sparkline & change)
-      const { data: couplesThisMonth } = await supabase
-        .from('couples')
-        .select('created_at')
-        .eq('user_id', user.user.id)
-        .gte('created_at', monthStartStr)
-
-      const { count: couplesLastMonth } = await supabase
+      // Leads added this week
+      const { count: leadsThisWeek } = await supabase
         .from('couples')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
-        .gte('created_at', prevMonthStartStr)
-        .lte('created_at', prevMonthEndStr)
+        .gte('created_at', oneWeekAgoStr)
 
-      // Couples last 14 days for sparkline
-      const { data: couplesRecent } = await supabase
+      // Leads added last week
+      const { count: leadsLastWeek } = await supabase
         .from('couples')
-        .select('created_at')
-        .eq('user_id', user.user.id)
-        .gte('created_at', fourteenStr)
-
-      // Open tasks (status != 'done')
-      const { count: openTasks } = await supabase
-        .from('tasks')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
-        .neq('status', 'done')
+        .gte('created_at', twoWeeksAgoStr)
+        .lt('created_at', oneWeekAgoStr)
 
-      // Tasks created recently for sparkline
-      const { data: tasksRecent } = await supabase
-        .from('tasks')
-        .select('created_at')
-        .eq('user_id', user.user.id)
-        .gte('created_at', fourteenStr)
+      const leadsDiff = (leadsThisWeek || 0) - (leadsLastWeek || 0)
 
-      // Tasks due this week
-      const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
-      const nextWeekStr = nextWeek.toISOString().split('T')[0]
-      const { count: dueThisWeek } = await supabase
-        .from('tasks')
+      // Conversion rate: confirmed+paid+complete / all couples
+      const { count: convertedCouples } = await supabase
+        .from('couples')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
-        .neq('status', 'done')
-        .gte('due_date', todayStr)
-        .lte('due_date', nextWeekStr)
+        .in('status', ['confirmed', 'paid', 'complete'])
 
-      // Tasks due last month same week window (for comparison)
-      const lastMonthToday = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
-      const lastMonthNextWeek = new Date(lastMonthToday.getTime() + 7 * 24 * 60 * 60 * 1000)
-      const { count: dueLastMonth } = await supabase
-        .from('tasks')
+      const conversionRate =
+        totalLeads && totalLeads > 0
+          ? Math.round(((convertedCouples || 0) / totalLeads) * 100)
+          : 0
+
+      // Previous week conversion rate (couples that existed as of last week)
+      const { count: totalLeadsLastWeek } = await supabase
+        .from('couples')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.user.id)
-        .neq('status', 'done')
-        .gte('due_date', lastMonthToday.toISOString().split('T')[0])
-        .lte('due_date', lastMonthNextWeek.toISOString().split('T')[0])
+        .lt('created_at', oneWeekAgoStr)
 
-      // Upcoming weddings (next 30 days)
-      const { count: upcomingWeddings } = await supabase
+      const { count: convertedLastWeek } = await supabase
+        .from('couples')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.user.id)
+        .in('status', ['confirmed', 'paid', 'complete'])
+        .lt('created_at', oneWeekAgoStr)
+
+      const prevConversionRate =
+        totalLeadsLastWeek && totalLeadsLastWeek > 0
+          ? Math.round(((convertedLastWeek || 0) / totalLeadsLastWeek) * 100)
+          : 0
+
+      const conversionDiff = conversionRate - prevConversionRate
+
+      // Total revenue: SUM(price) where status='completed' (all time)
+      const { data: totalRevenueData } = await supabase
         .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.user.id)
-        .gte('date', todayStr)
-        .lte('date', thirtyDaysStr)
-
-      // Upcoming weddings from last month's equivalent window
-      const lastMonthTodayStr = lastMonthToday.toISOString().split('T')[0]
-      const lastMonthThirtyDays = new Date(lastMonthToday.getTime() + 30 * 24 * 60 * 60 * 1000)
-      const lastMonthThirtyDaysStr = lastMonthThirtyDays.toISOString().split('T')[0]
-      const { count: upcomingLastMonth } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.user.id)
-        .gte('date', lastMonthTodayStr)
-        .lte('date', lastMonthThirtyDaysStr)
-
-      // Completed weddings this month
-      const { data: completedThisMonthData } = await supabase
-        .from('events')
-        .select('created_at')
+        .select('price')
         .eq('user_id', user.user.id)
         .eq('status', 'completed')
-        .gte('created_at', monthStartStr)
+        .not('price', 'is', null)
 
-      // Completed weddings last month
-      const { count: completedLastMonth } = await supabase
+      const totalRevenue = (totalRevenueData || []).reduce(
+        (sum, e) => sum + (Number(e.price) || 0),
+        0
+      )
+
+      // Revenue from events completed this week
+      const { data: revenueThisWeekData } = await supabase
         .from('events')
-        .select('*', { count: 'exact', head: true })
+        .select('price')
         .eq('user_id', user.user.id)
         .eq('status', 'completed')
-        .gte('created_at', prevMonthStartStr)
-        .lte('created_at', prevMonthEndStr)
+        .gte('date', oneWeekAgoStr.split('T')[0])
+        .not('price', 'is', null)
 
-      // Active vendors
-      const { count: vendorCount } = await supabase
-        .from('vendors')
-        .select('*', { count: 'exact', head: true })
+      const revenueThisWeek = (revenueThisWeekData || []).reduce(
+        (sum, e) => sum + (Number(e.price) || 0),
+        0
+      )
+
+      // Revenue from events completed last week
+      const { data: revenueLastWeekData } = await supabase
+        .from('events')
+        .select('price')
         .eq('user_id', user.user.id)
-        .eq('status', 'active')
+        .eq('status', 'completed')
+        .gte('date', twoWeeksAgoStr.split('T')[0])
+        .lt('date', oneWeekAgoStr.split('T')[0])
+        .not('price', 'is', null)
 
-      // Vendors added this month vs last month
-      const { count: vendorsThisMonth } = await supabase
-        .from('vendors')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.user.id)
-        .gte('created_at', monthStartStr)
+      const revenueLastWeek = (revenueLastWeekData || []).reduce(
+        (sum, e) => sum + (Number(e.price) || 0),
+        0
+      )
 
-      const { count: vendorsLastMonth } = await supabase
-        .from('vendors')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.user.id)
-        .gte('created_at', prevMonthStartStr)
-        .lte('created_at', prevMonthEndStr)
+      const revenueDiff = revenueThisWeek - revenueLastWeek
 
-      // Sparklines
-      const newEnquiriesSparkline = groupByDay(couplesRecent || [])
-      const openTasksSparkline = groupByDay(tasksRecent || [])
-      const upcomingSparkline = groupByDay(couplesRecent || [])
-      const completedSparkline = groupByDay(completedThisMonthData || [])
-      const vendorSparkline = Array(7).fill(vendorCount !== null ? Math.ceil((vendorCount || 0) / 7) : 0)
-      const dueThisWeekSparkline = groupByDay(tasksRecent || [])
+      // Percentage changes
+      const leadsPercentChange = (leadsLastWeek || 0) > 0
+        ? Math.round(((leadsThisWeek || 0) - (leadsLastWeek || 0)) / (leadsLastWeek || 1) * 100)
+        : (leadsThisWeek || 0) > 0 ? 100 : 0
 
-      // Calculate month-over-month changes
-      const calcChange = (current: number | null, previous: number | null): number | null => {
-        const curr = current || 0
-        const prev = previous || 0
-        if (prev === 0) return null
-        return Math.round(((curr - prev) / prev) * 100)
-      }
-
-      const thisMonthCouplesCount = couplesThisMonth?.length || 0
-      const newEnquiriesChange = calcChange(thisMonthCouplesCount, couplesLastMonth)
-      const completedThisMonth = completedThisMonthData?.length || 0
-      const completedChange = calcChange(completedThisMonth, completedLastMonth)
-      const openTasksChange = calcChange(dueThisWeek, dueLastMonth)
-      const upcomingChange = calcChange(upcomingWeddings, upcomingLastMonth)
-      const vendorChange = calcChange(vendorsThisMonth, vendorsLastMonth)
-      const dueThisWeekChange = openTasksChange
+      const revenuePercentChange = revenueLastWeek > 0
+        ? Math.round((revenueThisWeek - revenueLastWeek) / revenueLastWeek * 100)
+        : revenueThisWeek > 0 ? 100 : 0
 
       return {
-        newEnquiries: newEnquiries || 0,
-        newEnquiriesChange,
-        newEnquiriesSparkline,
-        openTasks: openTasks || 0,
-        openTasksChange,
-        openTasksSparkline,
-        upcomingWeddings: upcomingWeddings || 0,
-        upcomingChange,
-        upcomingSparkline,
-        completedWeddings: completedThisMonth,
-        completedChange,
-        completedSparkline,
-        vendorCount: vendorCount || 0,
-        vendorChange,
-        vendorSparkline,
-        dueThisWeek: dueThisWeek || 0,
-        dueThisWeekChange,
-        dueThisWeekSparkline,
+        totalLeads: totalLeads || 0,
+        leadsPercentChange,
+        leadsDiff,
+        conversionRate,
+        conversionDiff,
+        totalRevenue,
+        revenuePercentChange,
+        revenueDiff,
       }
+    },
+  })
+}
+
+export type ChartPeriod = '1m' | '3m' | '6m' | '1Y'
+
+function getPeriodMonths(period: ChartPeriod): number {
+  switch (period) {
+    case '1m': return 1
+    case '3m': return 3
+    case '6m': return 6
+    case '1Y': return 12
+  }
+}
+
+export function useRevenueChart(period: ChartPeriod) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['revenueChart', period],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const months = getPeriodMonths(period)
+      const now = new Date()
+      const startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
+      const startStr = startDate.toISOString().split('T')[0]
+
+      const { data, error } = await supabase
+        .from('events')
+        .select('date, price')
+        .eq('user_id', user.user.id)
+        .eq('status', 'completed')
+        .gte('date', startStr)
+        .not('price', 'is', null)
+
+      if (error) throw error
+
+      // Group by month
+      const monthMap = new Map<string, number>()
+
+      // Initialize all months in range
+      for (let i = 0; i < months; i++) {
+        const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1)
+        const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+        monthMap.set(key, 0)
+      }
+
+      // Sum prices per month
+      for (const event of data || []) {
+        const d = new Date(event.date)
+        const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+        monthMap.set(key, (monthMap.get(key) || 0) + (Number(event.price) || 0))
+      }
+
+      const chartData = Array.from(monthMap.entries()).map(([month, revenue]) => ({
+        month,
+        revenue,
+      }))
+
+      const total = chartData.reduce((sum, d) => sum + d.revenue, 0)
+
+      // Calculate % change vs previous period
+      const prevStartDate = new Date(startDate.getFullYear(), startDate.getMonth() - months, 1)
+      const prevStartStr = prevStartDate.toISOString().split('T')[0]
+      const prevEndStr = startDate.toISOString().split('T')[0]
+
+      const { data: prevData } = await supabase
+        .from('events')
+        .select('price')
+        .eq('user_id', user.user.id)
+        .eq('status', 'completed')
+        .gte('date', prevStartStr)
+        .lt('date', prevEndStr)
+        .not('price', 'is', null)
+
+      const prevTotal = (prevData || []).reduce(
+        (sum, e) => sum + (Number(e.price) || 0),
+        0
+      )
+
+      const percentChange = prevTotal > 0
+        ? Math.round(((total - prevTotal) / prevTotal) * 100)
+        : total > 0 ? 100 : 0
+
+      return { chartData, total, percentChange }
+    },
+  })
+}
+
+export function useLeadsChart(period: ChartPeriod) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['leadsChart', period],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const months = getPeriodMonths(period)
+      const now = new Date()
+      const startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
+      const startStr = startDate.toISOString()
+
+      const { data, error } = await supabase
+        .from('couples')
+        .select('created_at')
+        .eq('user_id', user.user.id)
+        .gte('created_at', startStr)
+
+      if (error) throw error
+
+      // Group by month
+      const monthMap = new Map<string, number>()
+      for (let i = 0; i < months; i++) {
+        const d = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1)
+        const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+        monthMap.set(key, 0)
+      }
+
+      for (const couple of data || []) {
+        const d = new Date(couple.created_at)
+        const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+        monthMap.set(key, (monthMap.get(key) || 0) + 1)
+      }
+
+      const chartData = Array.from(monthMap.entries()).map(([month, leads]) => ({
+        month,
+        leads,
+      }))
+
+      const total = chartData.reduce((sum, d) => sum + d.leads, 0)
+
+      // Previous period
+      const prevStartDate = new Date(startDate.getFullYear(), startDate.getMonth() - months, 1)
+      const prevStartStr = prevStartDate.toISOString()
+
+      const { count: prevTotal } = await supabase
+        .from('couples')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.user.id)
+        .gte('created_at', prevStartStr)
+        .lt('created_at', startStr)
+
+      const percentChange = (prevTotal || 0) > 0
+        ? Math.round(((total - (prevTotal || 0)) / (prevTotal || 1)) * 100)
+        : total > 0 ? 100 : 0
+
+      return { chartData, total, percentChange }
+    },
+  })
+}
+
+export function useCalendarEvents(year: number, month: number) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['calendarEvents', year, month],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const startDate = new Date(year, month, 1)
+      const endDate = new Date(year, month + 1, 0)
+      const startStr = startDate.toISOString().split('T')[0]
+      const endStr = endDate.toISOString().split('T')[0]
+
+      const { data, error } = await supabase
+        .from('events')
+        .select('*, couple:couples(id, name)')
+        .eq('user_id', user.user.id)
+        .gte('date', startStr)
+        .lte('date', endStr)
+        .order('date', { ascending: true })
+
+      if (error) throw error
+      return (data as Event[]) || []
+    },
+  })
+}
+
+export function useLeadsManagement() {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['leadsManagement'],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const now = new Date()
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const oneWeekAgoStr = oneWeekAgo.toISOString()
+
+      const counts: Record<CoupleStatus, number> = {
+        new: 0,
+        contacted: 0,
+        confirmed: 0,
+        paid: 0,
+        complete: 0,
+      }
+
+      const prevCounts: Record<CoupleStatus, number> = {
+        new: 0,
+        contacted: 0,
+        confirmed: 0,
+        paid: 0,
+        complete: 0,
+      }
+
+      for (const status of STATUSES) {
+        const { count } = await supabase
+          .from('couples')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.user.id)
+          .eq('status', status)
+
+        counts[status] = count || 0
+
+        // Count for prior week (couples that existed before one week ago)
+        const { count: prevCount } = await supabase
+          .from('couples')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.user.id)
+          .eq('status', status)
+          .lt('created_at', oneWeekAgoStr)
+
+        prevCounts[status] = prevCount || 0
+      }
+
+      const total = Object.values(counts).reduce((sum, c) => sum + c, 0)
+      const prevTotal = Object.values(prevCounts).reduce((sum, c) => sum + c, 0)
+
+      return { counts, prevCounts, total, prevTotal }
+    },
+  })
+}
+
+export function useLeadSources() {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['leadSources'],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const now = new Date()
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const oneWeekAgoStr = oneWeekAgo.toISOString()
+
+      const counts: Record<string, number> = {}
+      const prevCounts: Record<string, number> = {}
+
+      for (const source of LEAD_SOURCES) {
+        const { count } = await supabase
+          .from('couples')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.user.id)
+          .eq('lead_source', source)
+
+        counts[source] = count || 0
+
+        const { count: prevCount } = await supabase
+          .from('couples')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.user.id)
+          .eq('lead_source', source)
+          .lt('created_at', oneWeekAgoStr)
+
+        prevCounts[source] = prevCount || 0
+      }
+
+      // Count couples with no lead source
+      const { count: noSource } = await supabase
+        .from('couples')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.user.id)
+        .is('lead_source', null)
+
+      counts['unknown'] = noSource || 0
+
+      const { count: prevNoSource } = await supabase
+        .from('couples')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.user.id)
+        .is('lead_source', null)
+        .lt('created_at', oneWeekAgoStr)
+
+      prevCounts['unknown'] = prevNoSource || 0
+
+      const total = Object.values(counts).reduce((sum, c) => sum + c, 0)
+      const prevTotal = Object.values(prevCounts).reduce((sum, c) => sum + c, 0)
+
+      return { counts, prevCounts, total, prevTotal }
+    },
+  })
+}
+
+interface DashboardTask {
+  id: string
+  title: string
+  due_date: string | null
+  status: 'todo' | 'in_progress' | 'done'
+  related_couple_id: string | null
+  couple?: { id: string; name: string } | null
+}
+
+export function useDashboardTasks() {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['dashboardTasks'],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id, title, due_date, status, related_couple_id, couple:couples(id, name)')
+        .eq('user_id', user.user.id)
+        .neq('status', 'done')
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .limit(10)
+
+      if (error) throw error
+      // Supabase returns joined relations as arrays; normalize to single object
+      const normalized = (data || []).map((t: any) => ({
+        ...t,
+        couple: Array.isArray(t.couple) ? t.couple[0] || null : t.couple,
+      }))
+      return normalized as DashboardTask[]
     },
   })
 }

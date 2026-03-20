@@ -76,83 +76,118 @@ Purpose: At a glance, see what's happening this week and this month. The MC's co
 
 ## Layout
 
-Full-width page with two main modules, stacked vertically. Minimal header with no title (the dashboard speaks for itself).
+Full-width page. Header with "Dashboard" title and New Vendor / New Couple buttons.
 
-## Module 1: Upcoming Weddings
+Two-tier grid layout:
 
-**Card title:** "Upcoming Weddings"
+1. **Top section:** `grid-cols-5` — Stats + Revenue Chart (left 3 cols) | Calendar Widget (right 2 cols)
+2. **Bottom section:** `grid-cols-3` — Leads (left) | Lead Sources (center) | Outstanding Tasks (right)
 
-**Content:** Sortable, lightweight card grid or horizontal list showing upcoming event dates within the next 30 days.
+## Top Left: Stats (3 metric cards)
 
-**For each event:**
+3 minimal metric cards in a single row (`grid-cols-3`):
 
-- Couple name (text-sm font-medium)
-- Event date (text-xs text-gray-500, formatted as "Sat, 22 Mar")
-- Venue (text-xs text-gray-500, truncated)
-- Status badge (small, matching Couples page badge styles)
-- Status values: confirmed, paid, complete (not "new" or "contacted" — those aren't actionable on wedding day)
+| Metric | Calculation |
+|--------|-------------|
+| Leads | COUNT(all couples) |
+| Conversion Rate | COUNT(confirmed+paid+complete couples) / COUNT(all couples) * 100 |
+| Revenue | SUM(events.price) where status='completed' (all time) |
 
-**Sorting:** Soonest first (default). User can click a sort icon to reverse to furthest first.
+Each card shows:
+- Label (text-xs font-medium uppercase tracking-wide gray-500) + percentage badge (green/red pill)
+- Value (text-2xl font-semibold)
+- Diff text: "+X vs last week" (text-xs text-gray-500)
+- Percentage badge: emerald-50/emerald-600 for positive, red-50/red-600 for negative
+- Currency formatted as AUD
+- Values show "—" when 0
 
-**Empty state:** "No upcoming weddings this month. Time to grow!" with a link to the Couples page.
+## Top Left: Revenue Chart
 
-**Click behaviour:** Click the card to open the couple's profile slide-over.
+**Card title:** "Revenue"
 
-**Card style:** Notion-inspired—light gray background (bg-gray-50), hover shadow, no border.
+**Content:** Recharts AreaChart showing revenue over time. Period selectors: 1m, 3m, 6m (default), 1Y as pill-style toggle.
 
-## Module 2: Recent Couples
+- Large dollar total display + % change vs previous period
+- Stroke: #111111, fill gradient from #A7F3D0 to transparent
+- Empty state: "No revenue data yet."
 
-**Card title:** "Recent Couples"
+## Top Right: Calendar Widget
 
-**Content:** Compact table (or list) of the 5–10 most recently created couples.
+**Card title:** "Calendar"
 
-**For each couple:**
+**Content:** Mini month calendar with event dot indicators.
 
-- Couple name (text-sm font-medium)
-- Email (text-xs text-gray-500, truncated)
-- Status badge (small)
-- Created date (text-xs text-gray-500, relative: "2 days ago")
+- Month/year header with prev/next chevron navigation
+- 7-column day grid (Su–Sa), 6 rows
+- Today highlighted with green ring
+- Days with events show small emerald dot
+- Selected day: black bg, white text
+- Below grid: list of events for selected date (couple name, venue)
+- Click event to open couple's profile slide-over
 
-**Empty state:** "No couples yet. Ready to onboard your first enquiry?" with a link/button to the Couples page.
+## Bottom Left: Leads
 
-**Click behaviour:** Click the row to open the couple's profile slide-over.
+**Card title:** "Leads"
 
-**Table style:** Notion-inspired clean table (light header, bottom border, no card wrapper).
+**Content:** Status breakdown of all couples with proportional bar chart.
 
-## Module 3: Quick Stats
+- Row per status: colored dot + label + proportional bar + count
+- Bar colors from STATUS_DOT_COLORS in couples-types.ts
+- Total count shown in header
 
-Show only 3 metrics in a simple grid:
+## Bottom Center: Lead Sources
 
-- Total Couples (count)
-- Active Vendors (count, status = active)
-- Weddings This Month (count of events in current month)
+**Card title:** "Lead Sources"
 
-**Important:** NO graphs, NO trends, NO analytics. Just numbers. This is informational, not dashboards reporting.
+**Content:** Breakdown of couples by lead_source with proportional bar chart.
+
+- Row per source (sorted by count, descending): colored dot + label + proportional bar + count
+- Sources with 0 couples are hidden
+- Total count shown in header
+- Unknown source shown for couples with no lead_source set
+
+## Bottom Right: Outstanding Tasks
+
+**Card title:** "Outstanding Tasks"
+
+**Content:** Up to 10 incomplete tasks (status != 'done'), ordered by due_date ascending.
+
+**For each task:**
+- Checkbox (accent-black) to mark done (optimistic update)
+- Task title
+- Couple name (gray, if linked)
+- Due date (overdue dates in text-red-500)
+
+**Empty state:** "All caught up."
+
+**Click behaviour:** Click row to open couple's profile slide-over.
 
 ## Overall Styling
 
 - Page background: white
-- Module cards: bg-white with shadow-sm
-- Typography: Follow page-specs typography rules (text-sm for body, text-xs for secondary)
-- Spacing: Generous vertical padding between modules (4–6 rem)
-- No sidebar clutter — focus the user on _what to do next_
+- Module cards: bg-white with shadow-sm, rounded-xl, border
+- Typography: text-sm for body, text-xs for secondary
+- Calm aesthetic with neutral grays
 
 ## File Structure
 
 ```
 app/(dashboard)/
   page.tsx (dashboard orchestrator)
-  dashboard-upcoming-weddings.tsx
-  dashboard-recent-couples.tsx
-  dashboard-stats.tsx (optional)
+  use-dashboard.ts (data hooks)
+  dashboard-stats.tsx (3 metric cards)
+  dashboard-revenue-chart.tsx (recharts area chart)
+  dashboard-calendar.tsx (mini month calendar widget)
+  dashboard-leads.tsx (status breakdown bars)
+  dashboard-lead-sources.tsx (lead source breakdown bars)
+  dashboard-tasks.tsx (outstanding tasks list)
 ```
 
 ## Notes
 
-- **Fast loading:** Pre-fetch couple and event data in the layout so the dashboard renders instantly.
-- **No heavy queries:** Limit to the most recent 30 days for weddings, 10 for couples.
-- **Calm aesthetic:** Use neutral grays and the status badge colors from Couples/Vendors pages. No red/error colors unless something actually needs action.
-- **Keyboard friendly:** Arrow keys to navigate between cards, Enter to open profiles.
+- **Fast loading:** Limit queries — 10 for tasks, calendar scoped to selected month.
+- **Calm aesthetic:** Neutral grays and status badge colors. Red only for overdue task dates.
+- **Keyboard friendly:** Arrow keys to navigate, Enter to open profiles.
 
 ---
 
@@ -257,6 +292,7 @@ Form fields:
 - Email (email, optional)
 - Phone (tel, optional)
 - Status (select, required)
+- Lead Source (select, optional — referral, website, social_media, word_of_mouth, wedding_expo, venue_partner)
 - Notes (textarea, optional)
 
 Note: Event Date and Venue fields are managed exclusively via the Events tab. The couple modal does not expose these fields for editing.

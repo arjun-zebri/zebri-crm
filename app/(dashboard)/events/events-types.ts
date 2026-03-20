@@ -7,6 +7,7 @@ export interface Event {
   date: string
   venue: string
   timeline_notes: string
+  price: number | null
   status: EventStatus
   created_at: string
   couple?: {
