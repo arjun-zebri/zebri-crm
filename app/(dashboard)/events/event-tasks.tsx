@@ -99,7 +99,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
                   type="checkbox"
                   checked={task.status === 'done'}
                   onChange={() => handleToggleTask(task)}
-                  className="w-4 h-4 rounded border-gray-300 text-black focus:ring-green-200"
+                  className="w-4 h-4 rounded border-gray-300 accent-black focus:ring-green-200 cursor-pointer"
                 />
                 <div className="flex-1 min-w-0">
                   <p

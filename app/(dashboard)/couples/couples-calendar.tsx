@@ -3,8 +3,9 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Check, Users, CheckSquare, Calendar } from 'lucide-react'
 import { Event } from '../events/events-types'
+import { CoupleStatus, STATUS_DOT_COLORS, STATUS_PILL_BG, STATUSES, STATUS_LABELS } from './couples-types'
 
 interface CouplesCalendarProps {
   onSelectCouple: (coupleId: string) => void
@@ -16,16 +17,55 @@ interface EventWithCouple extends Event {
     name: string
     status?: string
   }
+  event_vendors?: { count: number }[]
+  tasks?: { count: number }[]
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WEEKDAYS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+type CalendarView = 'month' | 'week' | 'day'
+
+const PILL_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  new: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  contacted: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+  confirmed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+  paid: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  complete: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
+}
+
+const CHECKBOX_COLORS: Record<CoupleStatus, string> = {
+  new: 'bg-amber-500',
+  contacted: 'bg-blue-500',
+  confirmed: 'bg-purple-500',
+  paid: 'bg-emerald-500',
+  complete: 'bg-gray-400',
+}
+
+function StatusCheckbox({ checked, color, onClick }: { checked: boolean; color: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 cursor-pointer transition ${
+        checked ? `${color} border-transparent` : 'border-2 border-gray-300 bg-white'
+      }`}
+    >
+      {checked && <Check size={10} strokeWidth={2.5} className="text-white" />}
+    </button>
+  )
+}
 
 export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   const supabase = createClient()
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [calendarView, setCalendarView] = useState<CalendarView>('week')
+  const [activeStatuses, setActiveStatuses] = useState<Set<CoupleStatus>>(new Set(STATUSES))
+  const [miniNavDate, setMiniNavDate] = useState(new Date())
+  const [coupleSearch, setCoupleSearch] = useState('')
 
-  const { data: events, isLoading } = useQuery({
+  const { data: events } = useQuery({
     queryKey: ['calendar-events'],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser()
@@ -33,12 +73,11 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
 
       const { data, error } = await supabase
         .from('events')
-        .select('id, user_id, date, couple_id, status, created_at, venue, timeline_notes, couples(id, name, status)')
+        .select('id, user_id, date, couple_id, status, created_at, venue, timeline_notes, couples(id, name, status), event_vendors(count), tasks!tasks_related_event_id_fkey(count)')
         .eq('user_id', user.user.id)
         .not('date', 'is', null)
 
       if (error) throw error
-      // Map couples relationship to couple property for consistency
       return ((data || []) as any[]).map(event => ({
         ...event,
         couple: event.couples
@@ -46,46 +85,28 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
     },
   })
 
+  const filteredEvents = useMemo(() => {
+    if (!events) return []
+    return events.filter(event => {
+      const status = (event.couple?.status as CoupleStatus) || 'new'
+      const hasStatus = activeStatuses.has(status)
+      const hasSearch = coupleSearch === '' || event.couple?.name?.toLowerCase().includes(coupleSearch.toLowerCase())
+      return hasStatus && hasSearch
+    })
+  }, [events, activeStatuses, coupleSearch])
+
   const eventsByDate = useMemo(() => {
-    if (!events) return {}
     const grouped: Record<string, EventWithCouple[]> = {}
-    events.forEach((event) => {
+    filteredEvents.forEach((event) => {
       const dateStr = event.date
       if (!grouped[dateStr]) grouped[dateStr] = []
       grouped[dateStr].push(event)
     })
     return grouped
-  }, [events])
-
-  // Build calendar grid: 6 weeks (42 days) starting from the first Sunday on or before the 1st of the month
-  const calendarDays = useMemo(() => {
-    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-    const startDate = new Date(firstDay)
-    startDate.setDate(startDate.getDate() - firstDay.getDay())
-
-    const days = []
-    for (let i = 0; i < 42; i++) {
-      const date = new Date(startDate)
-      date.setDate(date.getDate() + i)
-      days.push(date)
-    }
-    return days
-  }, [currentDate])
-
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
-  }
-
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
-  }
+  }, [filteredEvents])
 
   const formatDateKey = (date: Date): string => {
     return date.toISOString().split('T')[0]
-  }
-
-  const isCurrentMonth = (date: Date): boolean => {
-    return date.getMonth() === currentDate.getMonth() && date.getFullYear() === currentDate.getFullYear()
   }
 
   const isToday = (date: Date): boolean => {
@@ -93,87 +114,494 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
     return date.toDateString() === today.toDateString()
   }
 
-  const PILL_COLORS: Record<string, string> = {
-    new: 'bg-amber-100 text-amber-700',
-    contacted: 'bg-blue-100 text-blue-700',
-    confirmed: 'bg-purple-100 text-purple-700',
-    paid: 'bg-emerald-100 text-emerald-700',
-    complete: 'bg-gray-100 text-gray-600',
+  const toggleStatus = (status: CoupleStatus) => {
+    const newStatuses = new Set(activeStatuses)
+    if (newStatuses.has(status)) {
+      newStatuses.delete(status)
+    } else {
+      newStatuses.add(status)
+    }
+    setActiveStatuses(newStatuses)
   }
 
-  return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center gap-4 mb-8">
-        <button
-          onClick={handlePrevMonth}
-          className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-xl transition"
-          title="Previous month"
-        >
-          <ChevronLeft size={18} strokeWidth={1.5} />
-        </button>
-        <h2 className="text-lg font-semibold text-gray-900">
-          {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
-        </h2>
-        <button
-          onClick={handleNextMonth}
-          className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-xl transition"
-          title="Next month"
-        >
-          <ChevronRight size={18} strokeWidth={1.5} />
-        </button>
-      </div>
+  const handlePrev = () => {
+    if (calendarView === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
+    } else if (calendarView === 'week') {
+      const d = new Date(currentDate)
+      d.setDate(d.getDate() - 7)
+      setCurrentDate(d)
+    } else {
+      const d = new Date(currentDate)
+      d.setDate(d.getDate() - 1)
+      setCurrentDate(d)
+    }
+  }
 
-      {/* Calendar Grid */}
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        {/* Weekday headers */}
-        <div className="grid grid-cols-7 gap-1 flex-shrink-0 mb-2">
-          {WEEKDAYS.map((day) => (
-            <div key={day} className="text-center text-xs font-medium text-gray-600 py-2">
-              {day}
-            </div>
+  const handleNext = () => {
+    if (calendarView === 'month') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
+    } else if (calendarView === 'week') {
+      const d = new Date(currentDate)
+      d.setDate(d.getDate() + 7)
+      setCurrentDate(d)
+    } else {
+      const d = new Date(currentDate)
+      d.setDate(d.getDate() + 1)
+      setCurrentDate(d)
+    }
+  }
+
+  const getHeaderLabel = (): string => {
+    if (calendarView === 'month') {
+      return `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`
+    }
+    if (calendarView === 'week') {
+      const weekStart = getWeekStart(currentDate)
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekEnd.getDate() + 6)
+      if (weekStart.getMonth() === weekEnd.getMonth()) {
+        return `${MONTHS[weekStart.getMonth()]} ${weekStart.getDate()}\u2013${weekEnd.getDate()}, ${weekStart.getFullYear()}`
+      }
+      return `${MONTHS_SHORT[weekStart.getMonth()]} ${weekStart.getDate()} \u2013 ${MONTHS_SHORT[weekEnd.getMonth()]} ${weekEnd.getDate()}, ${weekEnd.getFullYear()}`
+    }
+    return `${WEEKDAYS[currentDate.getDay()]}, ${MONTHS[currentDate.getMonth()]} ${currentDate.getDate()}`
+  }
+
+  const miniMonthDays = getMonthDays(miniNavDate)
+  const daysWithEvents = new Set(
+    (events || [])
+      .filter(e => e.couple && activeStatuses.has((e.couple.status as CoupleStatus) || 'new'))
+      .map(e => e.date)
+  )
+
+  return (
+    <div className="flex h-full">
+      {/* Left Sidebar */}
+      <div className="w-56 flex-shrink-0 flex flex-col gap-5 pb-6 overflow-y-auto border-r border-gray-200 pr-5">
+        {/* Mini Month */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setMiniNavDate(new Date(miniNavDate.getFullYear(), miniNavDate.getMonth() - 1, 1))}
+              className="p-1 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+            >
+              <ChevronLeft size={14} strokeWidth={1.5} />
+            </button>
+            <span className="text-sm font-medium text-gray-900">
+              {MONTHS_SHORT[miniNavDate.getMonth()]} {miniNavDate.getFullYear()}
+            </span>
+            <button
+              onClick={() => setMiniNavDate(new Date(miniNavDate.getFullYear(), miniNavDate.getMonth() + 1, 1))}
+              className="p-1 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+            >
+              <ChevronRight size={14} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Mini weekday headers */}
+          <div className="grid grid-cols-7">
+            {WEEKDAYS_SHORT.map((day, i) => (
+              <div key={i} className="text-center text-xs text-gray-400 py-1">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Mini calendar grid */}
+          <div className="grid grid-cols-7">
+            {miniMonthDays.map((date, idx) => {
+              const dateKey = formatDateKey(date)
+              const hasEvents = daysWithEvents.has(dateKey)
+              const isMiniMonth = date.getMonth() === miniNavDate.getMonth()
+              const isCurrentDay = isToday(date)
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentDate(new Date(date))}
+                  className={`h-7 w-7 mx-auto flex flex-col items-center justify-center text-xs rounded-md transition cursor-pointer relative ${
+                    isMiniMonth ? 'text-gray-900 hover:bg-gray-100' : 'text-gray-300'
+                  } ${isCurrentDay ? 'bg-gray-900 text-white hover:bg-gray-800' : ''}`}
+                >
+                  {date.getDate()}
+                  {hasEvents && !isCurrentDay && (
+                    <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-emerald-500"></div>
+                  )}
+                  {hasEvents && isCurrentDay && (
+                    <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-white"></div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Status Filters */}
+        <div className="flex flex-col gap-2 border-t border-gray-200 pt-4">
+          <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Status</h3>
+          {STATUSES.map((status) => (
+            <button
+              key={status}
+              onClick={() => toggleStatus(status)}
+              className="flex items-center gap-2.5 text-sm hover:bg-gray-50 rounded-md px-1.5 py-1 transition cursor-pointer"
+            >
+              <StatusCheckbox
+                checked={activeStatuses.has(status)}
+                color={CHECKBOX_COLORS[status]}
+                onClick={() => toggleStatus(status)}
+              />
+              <span className="text-sm text-gray-700">{STATUS_LABELS[status]}</span>
+            </button>
           ))}
         </div>
 
-        {/* Calendar days */}
-        <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-7 gap-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {calendarDays.map((date, idx) => {
-            const dateKey = formatDateKey(date)
-            const dayEvents = eventsByDate[dateKey] || []
-            const isCurrent = isCurrentMonth(date)
-            const isCurrentDay = isToday(date)
+        {/* Couple Search */}
+        <div className="flex flex-col gap-2 border-t border-gray-200 pt-4">
+          <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Search</h3>
+          <input
+            type="text"
+            placeholder="Filter by couple..."
+            value={coupleSearch}
+            onChange={(e) => setCoupleSearch(e.target.value)}
+            className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-200 outline-none"
+          />
+        </div>
+      </div>
 
-            return (
-              <div
-                key={idx}
-                className={`border rounded-xl p-2 text-xs flex flex-col gap-1 ${
-                  isCurrent ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'
-                } ${isCurrentDay ? 'ring-2 ring-green-500' : ''}`}
+      {/* Main Calendar Area */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden pl-6">
+        {/* Header */}
+        <div className="flex-shrink-0 flex items-center justify-between mb-5 pb-4 border-b border-gray-200">
+          {/* Left: Nav */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrev}
+              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+            >
+              <ChevronLeft size={16} strokeWidth={1.5} />
+            </button>
+            <h2 className="text-sm font-semibold text-gray-900 min-w-44 text-center select-none">
+              {getHeaderLabel()}
+            </h2>
+            <button
+              onClick={handleNext}
+              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+            >
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Right: View tabs */}
+          <div className="flex bg-gray-100 rounded-lg p-0.5">
+            {(['day', 'week', 'month'] as const).map((view) => (
+              <button
+                key={view}
+                onClick={() => setCalendarView(view)}
+                className={`px-3 py-1 text-sm rounded-md transition cursor-pointer capitalize font-medium ${
+                  calendarView === view
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
-                <div
-                  className={`font-medium ${
-                    isCurrent ? 'text-gray-900' : 'text-gray-300'
-                  }`}
-                >
-                  {date.getDate()}
-                </div>
+                {view}
+              </button>
+            ))}
+          </div>
+        </div>
 
-                <div className="flex-1 flex flex-col gap-0.5">
-                  {dayEvents.map((event) => (
+        {/* Calendar Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {calendarView === 'month' && (
+            <MonthView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} />
+          )}
+          {calendarView === 'week' && (
+            <WeekView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} />
+          )}
+          {calendarView === 'day' && (
+            <DayView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Helpers ──────────────────────────────────────────── */
+
+function getMonthDays(date: Date): Date[] {
+  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1)
+  const startDate = new Date(firstDay)
+  startDate.setDate(startDate.getDate() - firstDay.getDay())
+  const days = []
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(startDate)
+    d.setDate(d.getDate() + i)
+    days.push(d)
+  }
+  return days
+}
+
+function getWeekStart(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  d.setDate(d.getDate() - day)
+  return d
+}
+
+function getWeekDays(date: Date): Date[] {
+  const start = getWeekStart(date)
+  const days = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start)
+    d.setDate(d.getDate() + i)
+    days.push(d)
+  }
+  return days
+}
+
+function formatDateKey(date: Date): string {
+  return date.toISOString().split('T')[0]
+}
+
+function isTodayFn(date: Date): boolean {
+  const today = new Date()
+  return date.toDateString() === today.toDateString()
+}
+
+function EventPill({ event, onSelectCouple }: { event: EventWithCouple; onSelectCouple: (id: string) => void }) {
+  const status = (event.couple?.status as string) || 'new'
+  const colors = PILL_COLORS[status] || PILL_COLORS.new
+  return (
+    <button
+      onClick={() => event.couple && onSelectCouple(event.couple.id)}
+      className={`text-left w-full px-2.5 py-1.5 rounded-md text-xs font-medium truncate border transition hover:shadow-sm cursor-pointer ${colors.bg} ${colors.text} ${colors.border}`}
+    >
+      {event.couple?.name || 'Unnamed'}
+    </button>
+  )
+}
+
+/* ─── Month View ───────────────────────────────────────── */
+
+function MonthView({
+  currentDate,
+  eventsByDate,
+  onSelectCouple,
+}: {
+  currentDate: Date
+  eventsByDate: Record<string, EventWithCouple[]>
+  onSelectCouple: (coupleId: string) => void
+}) {
+  const monthDays = getMonthDays(currentDate)
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="grid grid-cols-7 flex-shrink-0 border-b border-gray-200">
+        {WEEKDAYS.map((day) => (
+          <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex-1 min-h-0 grid grid-cols-7 auto-rows-fr">
+        {monthDays.map((date, idx) => {
+          const dateKey = formatDateKey(date)
+          const dayEvents = eventsByDate[dateKey] || []
+          const isCurrent = date.getMonth() === currentDate.getMonth() && date.getFullYear() === currentDate.getFullYear()
+          const isCurrentDay = isTodayFn(date)
+
+          return (
+            <div
+              key={idx}
+              className={`border-b border-r border-gray-100 p-1.5 flex flex-col gap-0.5 min-h-[80px] ${
+                !isCurrent ? 'bg-gray-50/50' : ''
+              }`}
+            >
+              <div className={`text-xs font-medium mb-0.5 ${isCurrent ? 'text-gray-900' : 'text-gray-300'}`}>
+                <span className={isCurrentDay ? 'bg-gray-900 text-white rounded-full w-5 h-5 inline-flex items-center justify-center' : ''}>
+                  {date.getDate()}
+                </span>
+              </div>
+              {dayEvents.slice(0, 3).map((event) => (
+                <EventPill key={event.id} event={event} onSelectCouple={onSelectCouple} />
+              ))}
+              {dayEvents.length > 3 && (
+                <div className="text-xs text-gray-400 px-1">+{dayEvents.length - 3} more</div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Week View ────────────────────────────────────────── */
+
+function WeekView({
+  currentDate,
+  eventsByDate,
+  onSelectCouple,
+}: {
+  currentDate: Date
+  eventsByDate: Record<string, EventWithCouple[]>
+  onSelectCouple: (coupleId: string) => void
+}) {
+  const weekDays = getWeekDays(currentDate)
+
+  return (
+    <div className="grid grid-cols-7 h-full">
+      {weekDays.map((date, idx) => {
+        const dateKey = formatDateKey(date)
+        const dayEvents = eventsByDate[dateKey] || []
+        const isCurrentDay = isTodayFn(date)
+
+        return (
+          <div key={idx} className="flex flex-col border-r border-gray-100 last:border-r-0 min-h-0">
+            {/* Day header */}
+            <div className={`px-2 py-3 text-center border-b border-gray-200 flex-shrink-0 ${isCurrentDay ? 'bg-green-50/50' : ''}`}>
+              <div className="text-xs text-gray-500 font-medium">{WEEKDAYS[date.getDay()]}</div>
+              <div className={`text-sm font-semibold mt-0.5 ${isCurrentDay ? 'text-gray-900' : 'text-gray-900'}`}>
+                <span className={isCurrentDay ? 'bg-gray-900 text-white rounded-full w-6 h-6 inline-flex items-center justify-center text-xs' : ''}>
+                  {date.getDate()}
+                </span>
+              </div>
+            </div>
+
+            {/* Events */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-1.5">
+              {dayEvents.length === 0 ? (
+                <div className="flex-1" />
+              ) : (
+                dayEvents.map((event) => {
+                  const status = (event.couple?.status as string) || 'new'
+                  const colors = PILL_COLORS[status] || PILL_COLORS.new
+                  return (
                     <button
                       key={event.id}
                       onClick={() => event.couple && onSelectCouple(event.couple.id)}
-                      className={`text-left px-1.5 py-0.5 rounded text-sm font-medium truncate hover:shadow-sm transition cursor-pointer ${PILL_COLORS[event.couple?.status || 'new'] || 'bg-gray-100 text-gray-700'}`}
+                      className={`text-left w-full px-2.5 py-2 rounded-lg border transition hover:shadow-md cursor-pointer ${colors.bg} ${colors.border}`}
                     >
-                      {event.couple?.name || 'Unnamed'}
+                      <div className={`text-xs font-semibold truncate ${colors.text}`}>
+                        {event.couple?.name || 'Unnamed'}
+                      </div>
+                      {event.venue && (
+                        <div className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1">
+                          <MapPin size={10} strokeWidth={1.5} />
+                          {event.venue}
+                        </div>
+                      )}
                     </button>
-                  ))}
+                  )
+                })
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ─── Day View ─────────────────────────────────────────── */
+
+const ACCENT_BAR_COLORS: Record<string, string> = {
+  new: 'bg-amber-400',
+  contacted: 'bg-blue-400',
+  confirmed: 'bg-purple-400',
+  paid: 'bg-emerald-400',
+  complete: 'bg-gray-400',
+}
+
+const EVENT_STATUS_LABELS: Record<string, string> = {
+  upcoming: 'Upcoming',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+}
+
+function DayView({
+  currentDate,
+  eventsByDate,
+  onSelectCouple,
+}: {
+  currentDate: Date
+  eventsByDate: Record<string, EventWithCouple[]>
+  onSelectCouple: (coupleId: string) => void
+}) {
+  const dateKey = formatDateKey(currentDate)
+  const dayEvents = eventsByDate[dateKey] || []
+
+  return (
+    <div className="flex flex-col h-full">
+      {dayEvents.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-3">
+          <Calendar size={40} strokeWidth={1} />
+          <p className="text-sm text-gray-400">No events on this day</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3 p-6">
+          {dayEvents.map((event) => {
+            const coupleStatus = (event.couple?.status as string) || 'new'
+            const accentColor = ACCENT_BAR_COLORS[coupleStatus] || ACCENT_BAR_COLORS.new
+            const pillColors = PILL_COLORS[coupleStatus] || PILL_COLORS.new
+            const vendorCount = event.event_vendors?.[0]?.count || 0
+            const taskCount = event.tasks?.[0]?.count || 0
+            const eventStatus = event.status || 'upcoming'
+
+            return (
+              <div
+                key={event.id}
+                onClick={() => event.couple && onSelectCouple(event.couple.id)}
+                className="relative bg-white border border-gray-200 rounded-xl overflow-hidden transition hover:shadow-md cursor-pointer"
+              >
+                {/* Left accent bar */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentColor}`} />
+
+                <div className="pl-6 pr-6 py-5">
+                  {/* Top row: name + status badge */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="text-base font-semibold text-gray-900">
+                        {event.couple?.name || 'Unnamed'}
+                      </h4>
+                      {event.venue && (
+                        <div className="flex items-center gap-1.5 mt-1.5 text-sm text-gray-500">
+                          <MapPin size={14} strokeWidth={1.5} className="flex-shrink-0" />
+                          {event.venue}
+                        </div>
+                      )}
+                    </div>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 capitalize border ${pillColors.bg} ${pillColors.text} ${pillColors.border}`}>
+                      {STATUS_LABELS[coupleStatus as CoupleStatus] || coupleStatus}
+                    </span>
+                  </div>
+
+                  {/* Timeline notes */}
+                  {event.timeline_notes && (
+                    <p className="text-sm text-gray-500 mt-3 whitespace-pre-line leading-relaxed">{event.timeline_notes}</p>
+                  )}
+
+                  {/* Footer: counts */}
+                  <div className="flex items-center gap-5 mt-4 pt-4 border-t border-gray-100 text-xs">
+                    <span className="flex items-center gap-1.5 text-gray-500">
+                      <Users size={14} strokeWidth={1.5} />
+                      <span className="font-medium">{vendorCount}</span>
+                      <span className="text-gray-400">vendor{vendorCount !== 1 ? 's' : ''}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 text-gray-500">
+                      <CheckSquare size={14} strokeWidth={1.5} />
+                      <span className="font-medium">{taskCount}</span>
+                      <span className="text-gray-400">task{taskCount !== 1 ? 's' : ''}</span>
+                    </span>
+                  </div>
                 </div>
               </div>
             )
           })}
         </div>
-      </div>
+      )}
     </div>
   )
 }

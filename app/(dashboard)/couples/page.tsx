@@ -156,7 +156,7 @@ export default function CouplesPage() {
         />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden px-6">
+      <div className={`flex-1 min-h-0 overflow-hidden px-6 ${viewMode !== 'list' ? 'pb-14' : ''}`}>
         {viewMode === "list" ? (
           <CouplesList
             couples={filteredCouples}
@@ -177,14 +177,12 @@ export default function CouplesPage() {
             />
           </div>
         ) : (
-          <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            <CouplesCalendar
-              onSelectCouple={(coupleId) => {
-                const couple = couples.find((c) => c.id === coupleId);
-                if (couple) setSelectedCouple(couple);
-              }}
-            />
-          </div>
+          <CouplesCalendar
+            onSelectCouple={(coupleId) => {
+              const couple = couples.find((c) => c.id === coupleId);
+              if (couple) setSelectedCouple(couple);
+            }}
+          />
         )}
       </div>
 
