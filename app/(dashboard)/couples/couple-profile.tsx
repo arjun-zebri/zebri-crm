@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Phone, Mail, MessageCircle, Pencil } from 'lucide-react'
 import { Couple, STATUS_LABELS, STATUS_DOT_COLORS } from './couples-types'
 import { Badge } from '@/components/ui/badge'
@@ -14,10 +14,15 @@ interface CoupleProfileProps {
   couple: Couple | null
   onClose: () => void
   onEdit: (couple: Couple) => void
+  defaultTab?: 'overview' | 'events' | 'vendors' | 'tasks'
 }
 
-export function CoupleProfile({ couple, onClose, onEdit }: CoupleProfileProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'vendors' | 'tasks'>('overview')
+export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview' }: CoupleProfileProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'vendors' | 'tasks'>(defaultTab)
+
+  useEffect(() => {
+    setActiveTab(defaultTab)
+  }, [defaultTab])
 
   if (!couple) return null
 

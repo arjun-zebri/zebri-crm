@@ -126,7 +126,6 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
               if (day === null) {
                 return <div key={i} className="h-7" />;
               }
-              const hasEvents = eventsByDay.has(day);
               const todayHighlight = isToday(day);
 
               return (

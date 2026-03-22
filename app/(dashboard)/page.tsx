@@ -15,8 +15,10 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: tasks, isLoading: tasksLoading } = useDashboardTasks();
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
+  const [defaultTab, setDefaultTab] = useState<'overview' | 'events' | 'vendors' | 'tasks'>('overview');
 
   const handleEventClick = (coupleData: { id: string; name: string }) => {
+    setDefaultTab('overview');
     setSelectedCouple({
       id: coupleData.id,
       name: coupleData.name,
@@ -33,7 +35,20 @@ export default function DashboardPage() {
   };
 
   const handleTaskCoupleClick = (coupleData: { id: string; name: string }) => {
-    handleEventClick(coupleData);
+    setDefaultTab('tasks');
+    setSelectedCouple({
+      id: coupleData.id,
+      name: coupleData.name,
+      user_id: "",
+      email: "",
+      phone: "",
+      event_date: null,
+      venue: "",
+      notes: "",
+      status: "new",
+      lead_source: null,
+      created_at: new Date().toISOString(),
+    });
   };
 
   return (
@@ -85,6 +100,7 @@ export default function DashboardPage() {
         couple={selectedCouple}
         onClose={() => setSelectedCouple(null)}
         onEdit={() => {}}
+        defaultTab={defaultTab}
       />
     </div>
   );
