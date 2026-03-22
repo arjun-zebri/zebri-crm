@@ -11,9 +11,6 @@ import {
 import { useState, useEffect, useRef } from "react";
 import {
   Store,
-  Phone,
-  Mail,
-  MessageCircle,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -186,8 +183,6 @@ export function VendorsList({
                 ))
               : table.getRowModel().rows.map((row) => {
                   const v = row.original;
-                  const hasPhone = !!v.phone;
-                  const hasEmail = !!v.email;
                   return (
                     <tr
                       key={row.id}
@@ -205,68 +200,6 @@ export function VendorsList({
                           )}
                         </td>
                       ))}
-                      {/* Row hover actions — positioned over the last cell */}
-                      <td className="p-0 w-0 overflow-visible">
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition bg-gray-50 rounded-xl px-1 py-0.5">
-                          <a
-                            href={hasPhone ? `tel:${v.phone}` : undefined}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!hasPhone) e.preventDefault();
-                            }}
-                            title={
-                              hasPhone ? `Call ${v.phone}` : "No phone number"
-                            }
-                            className={`p-1.5 rounded transition ${
-                              hasPhone
-                                ? "text-gray-500 hover:text-gray-900 hover:bg-white"
-                                : "text-gray-200 cursor-not-allowed"
-                            }`}
-                          >
-                            <Phone size={15} strokeWidth={1.5} />
-                          </a>
-                          <a
-                            href={hasEmail ? `mailto:${v.email}` : undefined}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!hasEmail) e.preventDefault();
-                            }}
-                            title={hasEmail ? `Email ${v.email}` : "No email"}
-                            className={`p-1.5 rounded transition ${
-                              hasEmail
-                                ? "text-gray-500 hover:text-gray-900 hover:bg-white"
-                                : "text-gray-200 cursor-not-allowed"
-                            }`}
-                          >
-                            <Mail size={15} strokeWidth={1.5} />
-                          </a>
-                          <a
-                            href={
-                              hasPhone
-                                ? `https://wa.me/${v.phone.replace(/\D/g, "")}`
-                                : undefined
-                            }
-                            target={hasPhone ? "_blank" : undefined}
-                            rel={hasPhone ? "noopener noreferrer" : undefined}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!hasPhone) e.preventDefault();
-                            }}
-                            title={
-                              hasPhone
-                                ? `WhatsApp ${v.phone}`
-                                : "No phone number"
-                            }
-                            className={`p-1.5 rounded transition ${
-                              hasPhone
-                                ? "text-gray-500 hover:text-gray-900 hover:bg-white"
-                                : "text-gray-200 cursor-not-allowed"
-                            }`}
-                          >
-                            <MessageCircle size={15} strokeWidth={1.5} />
-                          </a>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })}
