@@ -5,7 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { ChevronLeft, ChevronRight, MapPin, Check, Users, CheckSquare, Calendar } from 'lucide-react'
 import { Event } from '../events/events-types'
-import { CoupleStatus, STATUS_DOT_COLORS, STATUS_PILL_BG, STATUSES, STATUS_LABELS } from './couples-types'
+import { CoupleStatusRecord, getStatusClasses } from './couples-types'
+import { useCoupleStatuses } from './use-couple-statuses'
 
 interface CouplesCalendarProps {
   onSelectCouple: (coupleId: string) => void
@@ -28,20 +29,17 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 
 type CalendarView = 'month' | 'week' | 'day'
 
-const PILL_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  new: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-  contacted: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-  confirmed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-  paid: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  complete: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
-}
-
-const CHECKBOX_COLORS: Record<CoupleStatus, string> = {
-  new: 'bg-amber-500',
-  contacted: 'bg-blue-500',
-  confirmed: 'bg-purple-500',
-  paid: 'bg-emerald-500',
-  complete: 'bg-gray-400',
+const CHECKBOX_COLOR_MAP: Record<string, string> = {
+  amber: 'bg-amber-500',
+  blue: 'bg-blue-500',
+  purple: 'bg-purple-500',
+  emerald: 'bg-emerald-500',
+  gray: 'bg-gray-400',
+  green: 'bg-green-500',
+  red: 'bg-red-500',
+  orange: 'bg-orange-500',
+  pink: 'bg-pink-500',
+  indigo: 'bg-indigo-500',
 }
 
 function StatusCheckbox({ checked, color }: { checked: boolean; color: string }) {
@@ -58,9 +56,10 @@ function StatusCheckbox({ checked, color }: { checked: boolean; color: string })
 
 export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   const supabase = createClient()
+  const { data: statuses } = useCoupleStatuses()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [calendarView, setCalendarView] = useState<CalendarView>('week')
-  const [activeStatuses, setActiveStatuses] = useState<Set<CoupleStatus>>(new Set(STATUSES))
+  const [activeStatuses, setActiveStatuses] = useState<Set<string>>(new Set(statuses.map(s => s.slug)))
   const [miniNavDate, setMiniNavDate] = useState(new Date())
   const [coupleSearch, setCoupleSearch] = useState('')
 
@@ -87,7 +86,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   const filteredEvents = useMemo(() => {
     if (!events) return []
     return events.filter(event => {
-      const status = (event.couple?.status as CoupleStatus) || 'new'
+      const status = event.couple?.status || 'new'
       const hasStatus = activeStatuses.has(status)
       const hasSearch = coupleSearch === '' || event.couple?.name?.toLowerCase().includes(coupleSearch.toLowerCase())
       return hasStatus && hasSearch
@@ -113,12 +112,12 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
     return date.toDateString() === today.toDateString()
   }
 
-  const toggleStatus = (status: CoupleStatus) => {
+  const toggleStatus = (statusSlug: string) => {
     const newStatuses = new Set(activeStatuses)
-    if (newStatuses.has(status)) {
-      newStatuses.delete(status)
+    if (newStatuses.has(statusSlug)) {
+      newStatuses.delete(statusSlug)
     } else {
-      newStatuses.add(status)
+      newStatuses.add(statusSlug)
     }
     setActiveStatuses(newStatuses)
   }
@@ -170,7 +169,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   const miniMonthDays = getMonthDays(miniNavDate)
   const daysWithEvents = new Set(
     (events || [])
-      .filter(e => e.couple && activeStatuses.has((e.couple.status as CoupleStatus) || 'new'))
+      .filter(e => e.couple && activeStatuses.has(e.couple.status || 'new'))
       .map(e => e.date)
   )
 
@@ -239,17 +238,17 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
         {/* Status Filters */}
         <div className="flex flex-col gap-2 border-t border-gray-200 pt-4">
           <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Status</h3>
-          {STATUSES.map((status) => (
+          {statuses.map((status) => (
             <button
-              key={status}
-              onClick={() => toggleStatus(status)}
+              key={status.slug}
+              onClick={() => toggleStatus(status.slug)}
               className="flex items-center gap-2.5 text-sm hover:bg-gray-50 rounded-md px-1.5 py-1 transition cursor-pointer"
             >
               <StatusCheckbox
-                checked={activeStatuses.has(status)}
-                color={CHECKBOX_COLORS[status]}
+                checked={activeStatuses.has(status.slug)}
+                color={CHECKBOX_COLOR_MAP[status.color] || 'bg-gray-400'}
               />
-              <span className="text-sm text-gray-700">{STATUS_LABELS[status]}</span>
+              <span className="text-sm text-gray-700">{status.name}</span>
             </button>
           ))}
         </div>
@@ -311,13 +310,13 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
         {/* Calendar Content */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           {calendarView === 'month' && (
-            <MonthView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} />
+            <MonthView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} statuses={statuses} />
           )}
           {calendarView === 'week' && (
-            <WeekView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} />
+            <WeekView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} statuses={statuses} />
           )}
           {calendarView === 'day' && (
-            <DayView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} />
+            <DayView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} statuses={statuses} />
           )}
         </div>
       </div>
@@ -367,13 +366,14 @@ function isTodayFn(date: Date): boolean {
   return date.toDateString() === today.toDateString()
 }
 
-function EventPill({ event, onSelectCouple }: { event: EventWithCouple; onSelectCouple: (id: string) => void }) {
-  const status = (event.couple?.status as string) || 'new'
-  const colors = PILL_COLORS[status] || PILL_COLORS.new
+function EventPill({ event, onSelectCouple, statuses }: { event: EventWithCouple; onSelectCouple: (id: string) => void; statuses: CoupleStatusRecord[] }) {
+  const statusSlug = event.couple?.status || 'new'
+  const status = statuses.find(s => s.slug === statusSlug)
+  const classes = status ? getStatusClasses(status.color) : getStatusClasses('gray')
   return (
     <button
       onClick={() => event.couple && onSelectCouple(event.couple.id)}
-      className={`text-left w-full px-2.5 py-1.5 rounded-md text-xs font-medium truncate border transition hover:shadow-sm cursor-pointer ${colors.bg} ${colors.text} ${colors.border}`}
+      className={`text-left w-full px-2.5 py-1.5 rounded-md text-xs font-medium truncate border transition hover:shadow-sm cursor-pointer ${classes.pill} border-gray-200`}
     >
       {event.couple?.name || 'Unnamed'}
     </button>
@@ -386,10 +386,12 @@ function MonthView({
   currentDate,
   eventsByDate,
   onSelectCouple,
+  statuses,
 }: {
   currentDate: Date
   eventsByDate: Record<string, EventWithCouple[]>
   onSelectCouple: (coupleId: string) => void
+  statuses: CoupleStatusRecord[]
 }) {
   const monthDays = getMonthDays(currentDate)
 
@@ -423,7 +425,7 @@ function MonthView({
                 </span>
               </div>
               {dayEvents.slice(0, 3).map((event) => (
-                <EventPill key={event.id} event={event} onSelectCouple={onSelectCouple} />
+                <EventPill key={event.id} event={event} onSelectCouple={onSelectCouple} statuses={statuses} />
               ))}
               {dayEvents.length > 3 && (
                 <div className="text-xs text-gray-400 px-1">+{dayEvents.length - 3} more</div>
@@ -442,10 +444,12 @@ function WeekView({
   currentDate,
   eventsByDate,
   onSelectCouple,
+  statuses,
 }: {
   currentDate: Date
   eventsByDate: Record<string, EventWithCouple[]>
   onSelectCouple: (coupleId: string) => void
+  statuses: CoupleStatusRecord[]
 }) {
   const weekDays = getWeekDays(currentDate)
 
@@ -474,15 +478,16 @@ function WeekView({
                 <div className="flex-1" />
               ) : (
                 dayEvents.map((event) => {
-                  const status = (event.couple?.status as string) || 'new'
-                  const colors = PILL_COLORS[status] || PILL_COLORS.new
+                  const statusSlug = event.couple?.status || 'new'
+                  const status = statuses.find(s => s.slug === statusSlug)
+                  const classes = status ? getStatusClasses(status.color) : getStatusClasses('gray')
                   return (
                     <button
                       key={event.id}
                       onClick={() => event.couple && onSelectCouple(event.couple.id)}
-                      className={`text-left w-full px-2.5 py-2 rounded-lg border transition hover:shadow-md cursor-pointer ${colors.bg} ${colors.border}`}
+                      className={`text-left w-full px-2.5 py-2 rounded-lg border transition hover:shadow-md cursor-pointer ${classes.pill} border-gray-200`}
                     >
-                      <div className={`text-xs font-semibold truncate ${colors.text}`}>
+                      <div className={`text-xs font-semibold truncate text-gray-900`}>
                         {event.couple?.name || 'Unnamed'}
                       </div>
                       {event.venue && (
@@ -505,28 +510,35 @@ function WeekView({
 
 /* ─── Day View ─────────────────────────────────────────── */
 
-const ACCENT_BAR_COLORS: Record<string, string> = {
-  new: 'bg-amber-400',
-  contacted: 'bg-blue-400',
-  confirmed: 'bg-purple-400',
-  paid: 'bg-emerald-400',
-  complete: 'bg-gray-400',
-}
-
 const EVENT_STATUS_LABELS: Record<string, string> = {
   upcoming: 'Upcoming',
   completed: 'Completed',
   cancelled: 'Cancelled',
 }
 
+const ACCENT_BAR_COLOR_MAP: Record<string, string> = {
+  amber: 'bg-amber-400',
+  blue: 'bg-blue-400',
+  purple: 'bg-purple-400',
+  emerald: 'bg-emerald-400',
+  gray: 'bg-gray-400',
+  green: 'bg-green-400',
+  red: 'bg-red-400',
+  orange: 'bg-orange-400',
+  pink: 'bg-pink-400',
+  indigo: 'bg-indigo-400',
+}
+
 function DayView({
   currentDate,
   eventsByDate,
   onSelectCouple,
+  statuses,
 }: {
   currentDate: Date
   eventsByDate: Record<string, EventWithCouple[]>
   onSelectCouple: (coupleId: string) => void
+  statuses: CoupleStatusRecord[]
 }) {
   const dateKey = formatDateKey(currentDate)
   const dayEvents = eventsByDate[dateKey] || []
@@ -541,9 +553,11 @@ function DayView({
       ) : (
         <div className="flex flex-col gap-3 p-6">
           {dayEvents.map((event) => {
-            const coupleStatus = (event.couple?.status as string) || 'new'
-            const accentColor = ACCENT_BAR_COLORS[coupleStatus] || ACCENT_BAR_COLORS.new
-            const pillColors = PILL_COLORS[coupleStatus] || PILL_COLORS.new
+            const coupleStatusSlug = event.couple?.status || 'new'
+            const coupleStatus = statuses.find(s => s.slug === coupleStatusSlug)
+            const accentColor = coupleStatus ? ACCENT_BAR_COLOR_MAP[coupleStatus.color] : ACCENT_BAR_COLOR_MAP.gray
+            const classes = coupleStatus ? getStatusClasses(coupleStatus.color) : getStatusClasses('gray')
+            const statusName = coupleStatus?.name || coupleStatusSlug.charAt(0).toUpperCase() + coupleStatusSlug.slice(1)
             const vendorCount = event.event_vendors?.[0]?.count || 0
             const taskCount = event.tasks?.[0]?.count || 0
             const eventStatus = event.status || 'upcoming'
@@ -571,8 +585,8 @@ function DayView({
                         </div>
                       )}
                     </div>
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 capitalize border ${pillColors.bg} ${pillColors.text} ${pillColors.border}`}>
-                      {STATUS_LABELS[coupleStatus as CoupleStatus] || coupleStatus}
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 capitalize border border-gray-200 ${classes.pill}`}>
+                      {statusName}
                     </span>
                   </div>
 

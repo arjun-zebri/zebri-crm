@@ -4,11 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { Event } from "./events/events-types";
 import {
-  CoupleStatus,
-  STATUSES,
   LeadSource,
   LEAD_SOURCES,
 } from "./couples/couples-types";
+import { CoupleStatusRecord } from "./couples/couples-types";
 
 export function useDashboardStats() {
   const supabase = createClient();
@@ -403,40 +402,37 @@ export function useLeadsManagement() {
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const oneWeekAgoStr = oneWeekAgo.toISOString();
 
-      const counts: Record<CoupleStatus, number> = {
-        new: 0,
-        contacted: 0,
-        confirmed: 0,
-        paid: 0,
-        complete: 0,
-      };
+      // Fetch user's statuses
+      const { data: statusesData, error: statusesError } = await supabase
+        .from("couple_statuses")
+        .select("*")
+        .eq("user_id", user.user.id)
+        .order("position", { ascending: true });
 
-      const prevCounts: Record<CoupleStatus, number> = {
-        new: 0,
-        contacted: 0,
-        confirmed: 0,
-        paid: 0,
-        complete: 0,
-      };
+      if (statusesError) throw statusesError;
+      const statuses = (statusesData as CoupleStatusRecord[]) || [];
 
-      for (const status of STATUSES) {
+      const counts: Record<string, number> = {};
+      const prevCounts: Record<string, number> = {};
+
+      for (const status of statuses) {
         const { count } = await supabase
           .from("couples")
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.user.id)
-          .eq("status", status);
+          .eq("status", status.slug);
 
-        counts[status] = count || 0;
+        counts[status.slug] = count || 0;
 
         // Count for prior week (couples that existed before one week ago)
         const { count: prevCount } = await supabase
           .from("couples")
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.user.id)
-          .eq("status", status)
+          .eq("status", status.slug)
           .lt("created_at", oneWeekAgoStr);
 
-        prevCounts[status] = prevCount || 0;
+        prevCounts[status.slug] = prevCount || 0;
       }
 
       const total = Object.values(counts).reduce((sum, c) => sum + c, 0);
@@ -445,7 +441,7 @@ export function useLeadsManagement() {
         0
       );
 
-      return { counts, prevCounts, total, prevTotal };
+      return { statuses, counts, prevCounts, total, prevTotal };
     },
   });
 }

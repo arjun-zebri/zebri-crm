@@ -1,14 +1,18 @@
 'use client'
 
-import { Couple, STATUS_LABELS } from './couples-types'
-import { Badge } from '@/components/ui/badge'
+import { Couple, CoupleStatusRecord, getStatusClasses } from './couples-types'
 import { formatDate } from '@/lib/utils'
 
 interface CoupleOverviewProps {
   couple: Couple
+  statuses: CoupleStatusRecord[]
 }
 
-export function CoupleOverview({ couple }: CoupleOverviewProps) {
+export function CoupleOverview({ couple, statuses }: CoupleOverviewProps) {
+  const status = statuses.find(s => s.slug === couple.status)
+  const statusName = status?.name || couple.status.charAt(0).toUpperCase() + couple.status.slice(1)
+  const statusClasses = status ? getStatusClasses(status.color) : getStatusClasses('gray')
+
   return (
     <div className="space-y-6">
       {/* Contact details */}
@@ -41,9 +45,9 @@ export function CoupleOverview({ couple }: CoupleOverviewProps) {
           )}
           <div className="flex items-start justify-between">
             <span className="text-sm text-gray-500">Status</span>
-            <Badge variant={couple.status as any}>
-              {STATUS_LABELS[couple.status]}
-            </Badge>
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}>
+              {statusName}
+            </span>
           </div>
         </div>
       </div>

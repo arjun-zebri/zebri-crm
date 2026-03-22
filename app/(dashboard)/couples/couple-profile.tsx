@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { X, Phone, Mail, MessageCircle, Pencil } from 'lucide-react'
-import { Couple, STATUS_LABELS, STATUS_DOT_COLORS } from './couples-types'
+import { Couple, CoupleStatusRecord, getStatusClasses } from './couples-types'
+import { useCoupleStatuses } from './use-couple-statuses'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
 import { CoupleOverview } from './couple-overview'
@@ -18,6 +19,7 @@ interface CoupleProfileProps {
 }
 
 export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview' }: CoupleProfileProps) {
+  const { data: statuses } = useCoupleStatuses()
   const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'vendors' | 'tasks'>(defaultTab)
 
   useEffect(() => {
@@ -28,6 +30,9 @@ export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview'
 
   const hasPhone = !!couple.phone
   const hasEmail = !!couple.email
+  const status = statuses.find(s => s.slug === couple.status)
+  const statusName = status?.name || couple.status.charAt(0).toUpperCase() + couple.status.slice(1)
+  const statusClasses = status ? getStatusClasses(status.color) : getStatusClasses('gray')
 
   return (
     <>
@@ -45,9 +50,9 @@ export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview'
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-xl font-semibold text-gray-900 truncate">{couple.name}</h1>
-                <Badge variant={couple.status as any}>
-                  {STATUS_LABELS[couple.status]}
-                </Badge>
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}>
+                  {statusName}
+                </span>
               </div>
             </div>
             <button
@@ -156,7 +161,7 @@ export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview'
 
         {/* Tab content */}
         <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
-          {activeTab === 'overview' && <CoupleOverview couple={couple} />}
+          {activeTab === 'overview' && <CoupleOverview couple={couple} statuses={statuses} />}
           {activeTab === 'events' && <CoupleEvents couple={couple} />}
           {activeTab === 'vendors' && <CoupleVendors coupleId={couple.id} />}
           {activeTab === 'tasks' && <CoupleTasks coupleId={couple.id} />}

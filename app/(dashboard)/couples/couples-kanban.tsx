@@ -2,20 +2,22 @@
 
 import { memo } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
-import { Couple, STATUSES } from "./couples-types";
+import { Couple, CoupleStatusRecord } from "./couples-types";
 import { KanbanColumn } from "./kanban-column";
 
 interface CouplesKanbanProps {
   couples: Couple[];
+  statuses: CoupleStatusRecord[];
   onCardClick: (couple: Couple) => void;
   onDragEnd: (source: string, destination: string, coupleId: string) => void;
-  onAddClick?: (status: string) => void;
+  onAddClick?: (statusSlug: string) => void;
 }
 
 const MemoKanbanColumn = memo(KanbanColumn);
 
 export function CouplesKanban({
   couples,
+  statuses,
   onCardClick,
   onDragEnd,
   onAddClick,
@@ -36,11 +38,11 @@ export function CouplesKanban({
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
       <div className="flex gap-5 pb-4 items-start">
-        {STATUSES.map((status) => (
+        {statuses.map((status) => (
           <MemoKanbanColumn
-            key={status}
+            key={status.id}
             status={status}
-            couples={couples.filter((c) => c.status === status)}
+            couples={couples.filter((c) => c.status === status.slug)}
             onCardClick={onCardClick}
             onAddClick={onAddClick}
           />

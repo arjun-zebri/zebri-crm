@@ -23,13 +23,31 @@ Columns:
 id (uuid) user_id (uuid, not null) name (text) email (text) phone (text) event_date (date) venue
 (text) notes (text) status (text)
 
-Status values: new contacted confirmed paid complete
+Status values: stored as custom couple status slug (e.g. 'new', 'contacted', 'confirmed', 'paid', 'complete'). See couple_statuses table for user-defined statuses.
 
 lead_source (text, nullable)
 
 Lead source values: referral website social_media word_of_mouth wedding_expo venue_partner
 
 created_at (timestamp)
+
+------------------------------------------------------------------------
+
+# couple_statuses
+
+User-defined statuses for couples, allowing customization beyond the defaults.
+
+Columns:
+
+id (uuid) user_id (uuid, not null) name (text) slug (text, not null)
+
+color (text, default 'gray')
+
+Supported colors: amber, blue, purple, emerald, gray, green, red, orange, pink, indigo
+
+position (integer) created_at (timestamp)
+
+Each user has their own set of custom statuses. The slug is stored in couples.status. Defaults include: new, contacted, confirmed, paid, complete.
 
 ------------------------------------------------------------------------
 

@@ -11,12 +11,13 @@ import {
 import { useState, useEffect } from "react";
 import { Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
-import { Couple } from "./couples-types";
+import { Couple, CoupleStatusRecord, getStatusClasses } from "./couples-types";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 
 interface CouplesListProps {
   couples: Couple[];
+  statuses: CoupleStatusRecord[];
   onRowClick: (couple: Couple) => void;
   loading: boolean;
 }
@@ -33,61 +34,70 @@ const COL_WIDTHS: Record<string, string> = {
   status: "10%",
 };
 
-const columns = [
-  columnHelper.accessor("name", {
-    header: "Name",
-    enableSorting: false,
-    cell: (info) => (
-      <span className="text-sm text-gray-500">{info.getValue()}</span>
-    ),
-  }),
-  columnHelper.accessor("email", {
-    header: "Email",
-    enableSorting: false,
-    cell: (info) => (
-      <span className="text-sm text-gray-500 truncate block">
-        {info.getValue()}
-      </span>
-    ),
-  }),
-  columnHelper.accessor("phone", {
-    header: "Phone",
-    enableSorting: false,
-    cell: (info) => (
-      <span className="text-sm text-gray-500">{info.getValue()}</span>
-    ),
-  }),
-  columnHelper.accessor("event_date", {
-    header: "Event date",
-    enableSorting: false,
-    cell: (info) => (
-      <span className="text-sm text-gray-500">{formatDate(info.getValue())}</span>
-    ),
-  }),
-  columnHelper.accessor("venue", {
-    header: "Venue",
-    enableSorting: false,
-    cell: (info) => (
-      <span className="text-sm text-gray-500 truncate block">
-        {info.getValue()}
-      </span>
-    ),
-  }),
-  columnHelper.accessor("status", {
-    header: "Status",
-    enableSorting: false,
-    cell: (info) => (
-      <Badge variant={info.getValue() as any}>
-        {info.getValue().charAt(0).toUpperCase() + info.getValue().slice(1)}
-      </Badge>
-    ),
-  }),
-];
+function createColumns(statuses: CoupleStatusRecord[]) {
+  return [
+    columnHelper.accessor("name", {
+      header: "Name",
+      enableSorting: false,
+      cell: (info) => (
+        <span className="text-sm text-gray-500">{info.getValue()}</span>
+      ),
+    }),
+    columnHelper.accessor("email", {
+      header: "Email",
+      enableSorting: false,
+      cell: (info) => (
+        <span className="text-sm text-gray-500 truncate block">
+          {info.getValue()}
+        </span>
+      ),
+    }),
+    columnHelper.accessor("phone", {
+      header: "Phone",
+      enableSorting: false,
+      cell: (info) => (
+        <span className="text-sm text-gray-500">{info.getValue()}</span>
+      ),
+    }),
+    columnHelper.accessor("event_date", {
+      header: "Event date",
+      enableSorting: false,
+      cell: (info) => (
+        <span className="text-sm text-gray-500">{formatDate(info.getValue())}</span>
+      ),
+    }),
+    columnHelper.accessor("venue", {
+      header: "Venue",
+      enableSorting: false,
+      cell: (info) => (
+        <span className="text-sm text-gray-500 truncate block">
+          {info.getValue()}
+        </span>
+      ),
+    }),
+    columnHelper.accessor("status", {
+      header: "Status",
+      enableSorting: false,
+      cell: (info) => {
+        const statusSlug = info.getValue();
+        const status = statuses.find(s => s.slug === statusSlug);
+        const classes = status ? getStatusClasses(status.color) : getStatusClasses('gray');
+        const statusName = status?.name || statusSlug.charAt(0).toUpperCase() + statusSlug.slice(1);
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${classes.pill}`}>
+            {statusName}
+          </span>
+        );
+      },
+    }),
+  ];
+}
 
 const skeletonWidths = ["w-32", "w-40", "w-24", "w-20", "w-28", "w-16"];
 
 export function CouplesList({
   couples,
+  statuses,
   onRowClick,
   loading,
 }: CouplesListProps) {
@@ -97,6 +107,7 @@ export function CouplesList({
   });
   const [pageSizeOpen, setPageSizeOpen] = useState(false);
   const pageSizeRef = useRef<HTMLDivElement>(null);
+  const columns = createColumns(statuses);
 
   useEffect(() => {
     setPagination({ pageIndex: 0, pageSize: 10 });

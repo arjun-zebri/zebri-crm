@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Search, SlidersHorizontal } from 'lucide-react'
-import { Couple, CoupleStatus, STATUSES, STATUS_LABELS } from './couples-types'
+import { Couple, CoupleStatusRecord } from './couples-types'
 
 interface CouplesToolbarProps {
   search: string
   onSearchChange: (search: string) => void
-  statusFilter: CoupleStatus | 'all'
-  onStatusFilterChange: (status: CoupleStatus | 'all') => void
+  statusFilter: string | 'all'
+  onStatusFilterChange: (status: string | 'all') => void
+  statuses: CoupleStatusRecord[]
   couples: Couple[]
 }
 
@@ -17,6 +18,7 @@ export function CouplesToolbar({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
+  statuses,
   couples,
 }: CouplesToolbarProps) {
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -44,8 +46,8 @@ export function CouplesToolbar({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const countByStatus = (status: CoupleStatus) =>
-    couples.filter((c) => c.status === status).length
+  const countByStatus = (slug: string) =>
+    couples.filter((c) => c.status === slug).length
 
   return (
     <div className="flex items-center gap-3">
@@ -87,20 +89,20 @@ export function CouplesToolbar({
             >
               All ({couples.length})
             </button>
-            {STATUSES.map((status) => (
+            {statuses.map((status) => (
               <button
-                key={status}
+                key={status.slug}
                 onClick={() => {
-                  onStatusFilterChange(status)
+                  onStatusFilterChange(status.slug)
                   setFiltersOpen(false)
                 }}
                 className={`w-full text-left px-4 py-2 text-sm transition ${
-                  statusFilter === status
+                  statusFilter === status.slug
                     ? 'bg-gray-100 text-gray-900 font-medium'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                {STATUS_LABELS[status]} ({countByStatus(status)})
+                {status.name} ({countByStatus(status.slug)})
               </button>
             ))}
           </div>

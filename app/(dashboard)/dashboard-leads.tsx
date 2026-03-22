@@ -2,7 +2,6 @@
 
 import { Loader2 } from 'lucide-react'
 import { useLeadsManagement } from './use-dashboard'
-import { STATUSES, STATUS_LABELS, CoupleStatus } from './couples/couples-types'
 
 export function DashboardLeads() {
   const { data, isLoading } = useLeadsManagement()
@@ -26,16 +25,16 @@ export function DashboardLeads() {
         </div>
       ) : (
         <div className="space-y-4 flex-1 min-h-0 scrollbar-thin pr-1">
-          {STATUSES.map((status) => {
-            const count = data.counts[status]
-            const prevCount = data.prevCounts[status]
+          {data.statuses.map((status) => {
+            const count = data.counts[status.slug]
+            const prevCount = data.prevCounts[status.slug]
             const pct = data.total > 0 ? Math.round((count / data.total) * 100) : 0
             const diff = count - prevCount
 
             return (
-              <div key={status} className="flex items-center gap-3">
+              <div key={status.slug} className="flex items-center gap-3">
                 <span className="text-sm text-gray-700 w-24 shrink-0">
-                  {STATUS_LABELS[status]}
+                  {status.name}
                 </span>
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div

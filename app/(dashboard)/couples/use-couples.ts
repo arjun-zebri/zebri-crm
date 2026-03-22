@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Couple, CoupleStatus } from './couples-types'
+import { Couple } from './couples-types'
 
 export function useCouples() {
   const queryClient = useQueryClient()

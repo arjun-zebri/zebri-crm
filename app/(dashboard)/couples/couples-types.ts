@@ -1,5 +1,3 @@
-export type CoupleStatus = 'new' | 'contacted' | 'confirmed' | 'paid' | 'complete'
-
 export type LeadSource = 'referral' | 'website' | 'social_media' | 'word_of_mouth' | 'wedding_expo' | 'venue_partner'
 
 export const LEAD_SOURCES: LeadSource[] = ['referral', 'website', 'social_media', 'word_of_mouth', 'wedding_expo', 'venue_partner']
@@ -22,53 +20,41 @@ export interface Couple {
   event_date: string | null
   venue: string
   notes: string
-  status: CoupleStatus
+  status: string
   lead_source: string | null
+  created_at: string
+}
+
+export interface CoupleStatusRecord {
+  id: string
+  user_id: string
+  name: string
+  slug: string
+  color: string
+  position: number
   created_at: string
 }
 
 export type ViewMode = 'list' | 'kanban' | 'calendar'
 
-export const STATUSES: CoupleStatus[] = ['new', 'contacted', 'confirmed', 'paid', 'complete']
+export const COLOR_PALETTE = ['amber', 'blue', 'purple', 'emerald', 'gray', 'green', 'red', 'orange', 'pink', 'indigo'] as const
+export type StatusColor = typeof COLOR_PALETTE[number]
 
-export const STATUS_LABELS: Record<CoupleStatus, string> = {
-  new: 'New',
-  contacted: 'Contacted',
-  confirmed: 'Confirmed',
-  paid: 'Paid',
-  complete: 'Complete',
+export const STATUS_CLASSES: Record<StatusColor, { pill: string; dot: string; border: string; text: string }> = {
+  amber: { pill: 'bg-amber-50 text-amber-600', dot: 'bg-amber-400', border: 'border-amber-300', text: 'text-amber-500' },
+  blue: { pill: 'bg-blue-50 text-blue-600', dot: 'bg-blue-400', border: 'border-blue-300', text: 'text-blue-500' },
+  purple: { pill: 'bg-purple-50 text-purple-600', dot: 'bg-purple-400', border: 'border-purple-300', text: 'text-purple-500' },
+  emerald: { pill: 'bg-emerald-50 text-emerald-600', dot: 'bg-emerald-400', border: 'border-emerald-300', text: 'text-emerald-500' },
+  gray: { pill: 'bg-gray-100 text-gray-500', dot: 'bg-gray-400', border: 'border-gray-300', text: 'text-gray-400' },
+  green: { pill: 'bg-green-50 text-green-600', dot: 'bg-green-400', border: 'border-green-300', text: 'text-green-500' },
+  red: { pill: 'bg-red-50 text-red-600', dot: 'bg-red-400', border: 'border-red-300', text: 'text-red-500' },
+  orange: { pill: 'bg-orange-50 text-orange-600', dot: 'bg-orange-400', border: 'border-orange-300', text: 'text-orange-500' },
+  pink: { pill: 'bg-pink-50 text-pink-600', dot: 'bg-pink-400', border: 'border-pink-300', text: 'text-pink-500' },
+  indigo: { pill: 'bg-indigo-50 text-indigo-600', dot: 'bg-indigo-400', border: 'border-indigo-300', text: 'text-indigo-500' },
 }
 
-export const STATUS_DOT_COLORS: Record<CoupleStatus, string> = {
-  new: 'bg-amber-400',
-  contacted: 'bg-blue-400',
-  confirmed: 'bg-purple-400',
-  paid: 'bg-emerald-400',
-  complete: 'bg-gray-400',
-}
-
-export const STATUS_TEXT_COLORS: Record<CoupleStatus, string> = {
-  new: 'text-amber-500',
-  contacted: 'text-blue-500',
-  confirmed: 'text-purple-500',
-  paid: 'text-emerald-500',
-  complete: 'text-gray-400',
-}
-
-export const STATUS_BORDER_COLORS: Record<CoupleStatus, string> = {
-  new: 'border-amber-300',
-  contacted: 'border-blue-300',
-  confirmed: 'border-purple-300',
-  paid: 'border-emerald-300',
-  complete: 'border-gray-300',
-}
-
-export const STATUS_PILL_BG: Record<CoupleStatus, string> = {
-  new: 'bg-amber-50 text-amber-600',
-  contacted: 'bg-blue-50 text-blue-600',
-  confirmed: 'bg-purple-50 text-purple-600',
-  paid: 'bg-emerald-50 text-emerald-600',
-  complete: 'bg-gray-100 text-gray-500',
+export function getStatusClasses(color: string) {
+  return STATUS_CLASSES[color as StatusColor] ?? STATUS_CLASSES.gray
 }
 
 export type SortField = 'name' | 'event_date' | 'created_at'

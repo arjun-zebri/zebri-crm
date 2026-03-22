@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { Modal } from "@/components/ui/modal";
-import { Couple, CoupleStatus, STATUSES, STATUS_LABELS, LeadSource, LEAD_SOURCES, LEAD_SOURCE_LABELS } from "./couples-types";
+import { Couple, CoupleStatusRecord, LeadSource, LEAD_SOURCES, LEAD_SOURCE_LABELS } from "./couples-types";
 
 interface CoupleModalProps {
   isOpen: boolean;
@@ -14,7 +14,8 @@ interface CoupleModalProps {
   ) => void;
   onDelete: (id: string) => void;
   couple?: Couple;
-  defaultStatus?: CoupleStatus;
+  statuses: CoupleStatusRecord[];
+  defaultStatus?: string;
   loading: boolean;
 }
 
@@ -24,6 +25,7 @@ export function CoupleModal({
   onSave,
   onDelete,
   couple,
+  statuses,
   defaultStatus,
   loading,
 }: CoupleModalProps) {
@@ -100,7 +102,8 @@ export function CoupleModal({
   const inputClass =
     "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition";
 
-  const selectedLabel = STATUS_LABELS[status as keyof typeof STATUS_LABELS];
+  const selectedStatus = statuses.find(s => s.slug === status);
+  const selectedLabel = selectedStatus?.name || "Select status";
 
   return (
     <Modal
@@ -209,21 +212,21 @@ export function CoupleModal({
                   sideOffset={4}
                   align="start"
                 >
-                  {STATUSES.map((s) => (
+                  {statuses.map((s) => (
                     <button
-                      key={s}
+                      key={s.slug}
                       type="button"
                       onClick={() => {
-                        setStatus(s);
+                        setStatus(s.slug);
                         setStatusOpen(false);
                       }}
                       className={`w-full text-left px-3 py-2 text-sm transition ${
-                        status === s
+                        status === s.slug
                           ? "bg-green-50 text-green-700"
                           : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
-                      {STATUS_LABELS[s]}
+                      {s.name}
                     </button>
                   ))}
                 </Popover.Content>

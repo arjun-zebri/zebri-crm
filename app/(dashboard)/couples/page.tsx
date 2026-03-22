@@ -7,6 +7,7 @@ import {
   useUpdateCouple,
   useDeleteCouple,
 } from "./use-couples";
+import { useCoupleStatuses } from "./use-couple-statuses";
 import { CouplesHeader } from "./couples-header";
 import { CouplesList } from "./couples-list";
 import { CouplesKanban } from "./couples-kanban";
@@ -16,26 +17,26 @@ import { CoupleProfile } from "./couple-profile";
 import {
   Couple,
   ViewMode,
-  CoupleStatus,
   SortField,
   SortDirection,
 } from "./couples-types";
 
 export default function CouplesPage() {
   const { data: couples, isLoading } = useCouples();
+  const { data: statuses } = useCoupleStatuses();
   const createCouple = useCreateCouple();
   const updateCouple = useUpdateCouple();
   const deleteCouple = useDeleteCouple();
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<CoupleStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<string | "all">("all");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCouple, setEditingCouple] = useState<Couple | undefined>();
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
-  const [defaultStatus, setDefaultStatus] = useState<CoupleStatus | undefined>();
+  const [defaultStatus, setDefaultStatus] = useState<string | undefined>();
 
   useEffect(() => {
     const saved = localStorage.getItem("zebri_couples_view");
@@ -125,9 +126,10 @@ export default function CouplesPage() {
     const couple = couples.find((c) => c.id === coupleId);
     if (!couple) return;
 
+    // destination is the slug from the status
     await updateCouple.mutateAsync({
       ...couple,
-      status: destination as CoupleStatus,
+      status: destination,
     });
   };
 
@@ -136,6 +138,7 @@ export default function CouplesPage() {
       <div className="px-6 pt-6 pb-3 flex-shrink-0">
         <CouplesHeader
           couples={couples}
+          statuses={statuses}
           onAddClick={() => {
             setEditingCouple(undefined);
             setDefaultStatus(undefined);
@@ -160,6 +163,7 @@ export default function CouplesPage() {
         {viewMode === "list" ? (
           <CouplesList
             couples={filteredCouples}
+            statuses={statuses}
             onRowClick={(couple) => setSelectedCouple(couple)}
             loading={isLoading}
           />
@@ -167,11 +171,12 @@ export default function CouplesPage() {
           <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <CouplesKanban
               couples={filteredCouples}
+              statuses={statuses}
               onCardClick={(couple) => setSelectedCouple(couple)}
               onDragEnd={handleDragEnd}
-              onAddClick={(status) => {
+              onAddClick={(statusSlug) => {
                 setEditingCouple(undefined);
-                setDefaultStatus(status as CoupleStatus);
+                setDefaultStatus(statusSlug);
                 setModalOpen(true);
               }}
             />
@@ -206,6 +211,7 @@ export default function CouplesPage() {
         onSave={handleSaveCouple}
         onDelete={handleDeleteCouple}
         couple={editingCouple}
+        statuses={statuses}
         defaultStatus={defaultStatus}
         loading={
           createCouple.isPending ||

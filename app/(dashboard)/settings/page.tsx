@@ -8,6 +8,7 @@ import { AccountSection } from "./account-section";
 import { BillingSection } from "./billing-section";
 import { PackagesSection } from "./packages-section";
 import { NotificationsSection } from "./notifications-section";
+import { StatusesSection } from "./statuses-section";
 
 interface EmailPreferencesData {
   product_updates?: boolean;
@@ -35,6 +36,7 @@ const tabs = [
   { id: "account", label: "Account" },
   { id: "billing", label: "Plans & Billing" },
   { id: "packages", label: "Packages" },
+  { id: "statuses", label: "Statuses" },
   { id: "notifications", label: "Notifications" },
 ] as const;
 
@@ -139,6 +141,7 @@ function SettingsContent() {
         />
       )}
       {activeTab === "packages" && <PackagesSection />}
+      {activeTab === "statuses" && <StatusesSection />}
       {activeTab === "notifications" && <NotificationsSection />}
     </div>
   );

@@ -4,10 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, X, Calendar } from 'lucide-react'
 import {
   Couple,
+  CoupleStatusRecord,
   ViewMode,
-  CoupleStatus,
-  STATUSES,
-  STATUS_LABELS,
   SortField,
   SortDirection,
   SORT_OPTIONS,
@@ -15,13 +13,14 @@ import {
 
 interface CouplesHeaderProps {
   couples: Couple[]
+  statuses: CoupleStatusRecord[]
   onAddClick: () => void
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
   search: string
   onSearchChange: (search: string) => void
-  statusFilter: CoupleStatus | 'all'
-  onStatusFilterChange: (status: CoupleStatus | 'all') => void
+  statusFilter: string | 'all'
+  onStatusFilterChange: (status: string | 'all') => void
   sortField: SortField
   sortDirection: SortDirection
   onSortChange: (field: SortField, direction: SortDirection) => void
@@ -29,6 +28,7 @@ interface CouplesHeaderProps {
 
 export function CouplesHeader({
   couples,
+  statuses,
   onAddClick,
   viewMode,
   onViewModeChange,
@@ -77,8 +77,8 @@ export function CouplesHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const countByStatus = (status: CoupleStatus) =>
-    couples.filter((c) => c.status === status).length
+  const countByStatus = (slug: string) =>
+    couples.filter((c) => c.status === slug).length
 
   const hasActiveFilter = statusFilter !== 'all'
 
@@ -169,20 +169,20 @@ export function CouplesHeader({
                 >
                   All ({couples.length})
                 </button>
-                {STATUSES.map((status) => (
+                {statuses.map((status) => (
                   <button
-                    key={status}
+                    key={status.slug}
                     onClick={() => {
-                      onStatusFilterChange(status)
+                      onStatusFilterChange(status.slug)
                       setFiltersOpen(false)
                     }}
                     className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                      statusFilter === status
+                      statusFilter === status.slug
                         ? 'bg-gray-50 text-gray-900 font-medium'
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    {STATUS_LABELS[status]} ({countByStatus(status)})
+                    {status.name} ({countByStatus(status.slug)})
                   </button>
                 ))}
               </div>
