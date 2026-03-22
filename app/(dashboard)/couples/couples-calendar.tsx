@@ -44,16 +44,15 @@ const CHECKBOX_COLORS: Record<CoupleStatus, string> = {
   complete: 'bg-gray-400',
 }
 
-function StatusCheckbox({ checked, color, onClick }: { checked: boolean; color: string; onClick: () => void }) {
+function StatusCheckbox({ checked, color }: { checked: boolean; color: string }) {
   return (
-    <button
-      onClick={onClick}
-      className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 cursor-pointer transition ${
+    <div
+      className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 pointer-events-none transition ${
         checked ? `${color} border-transparent` : 'border-2 border-gray-300 bg-white'
       }`}
     >
       {checked && <Check size={10} strokeWidth={2.5} className="text-white" />}
-    </button>
+    </div>
   )
 }
 
@@ -249,7 +248,6 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
               <StatusCheckbox
                 checked={activeStatuses.has(status)}
                 color={CHECKBOX_COLORS[status]}
-                onClick={() => toggleStatus(status)}
               />
               <span className="text-sm text-gray-700">{STATUS_LABELS[status]}</span>
             </button>
