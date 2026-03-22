@@ -6,6 +6,7 @@ const PUBLIC_ROUTES = [
   "/signup",
   "/reset-password",
   "/update-password",
+  "/api/alerts",
 ];
 
 export async function middleware(request: NextRequest) {
@@ -53,12 +54,13 @@ export async function middleware(request: NextRequest) {
   }
 
   // If user exists and on protected route, check subscription paywall
-  // Skip paywall check for /settings and /api/stripe/*
+  // Skip paywall check for /settings, /api/stripe/*, and /api/alerts/*
   if (
     user &&
     !isPublicRoute &&
     !pathname.startsWith("/settings") &&
-    !pathname.startsWith("/api/stripe")
+    !pathname.startsWith("/api/stripe") &&
+    !pathname.startsWith("/api/alerts")
   ) {
     const metadata = user.user_metadata || {};
 

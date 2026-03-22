@@ -88,6 +88,36 @@ export default function SignupPage() {
       return;
     }
 
+    // Fire Slack alert for new sign-up
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 14);
+
+    fetch("/api/alerts/slack", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: ":tada: New sign-up on Zebri CRM",
+        blocks: [
+          {
+            type: "header",
+            text: { type: "plain_text", text: ":tada: New Sign-Up" },
+          },
+          {
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*Name:*\n${displayName}` },
+              { type: "mrkdwn", text: `*Business:*\n${businessName}` },
+              { type: "mrkdwn", text: `*Email:*\n${email}` },
+              {
+                type: "mrkdwn",
+                text: `*Trial ends:*\n${trialEndDate.toLocaleDateString("en-AU")}`,
+              },
+            ],
+          },
+        ],
+      }),
+    }).catch(() => {});
+
     router.push("/");
   };
 
