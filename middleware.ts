@@ -33,34 +33,33 @@ export async function middleware(request: NextRequest) {
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
   const isPublicRoute = PUBLIC_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
 
-  // If no session and not a public route, redirect to login
-  if (!session && !isPublicRoute) {
+  // If no user and not a public route, redirect to login
+  if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // If session exists and on a public route (auth pages), allow access
+  // If user exists and on a public route (auth pages), allow access
   // (users can view login page even if logged in)
-  if (session && isPublicRoute) {
+  if (user && isPublicRoute) {
     return response;
   }
 
-  // If session exists and on protected route, check subscription paywall
+  // If user exists and on protected route, check subscription paywall
   // Skip paywall check for /settings and /api/stripe/*
   if (
-    session &&
+    user &&
     !isPublicRoute &&
     !pathname.startsWith("/settings") &&
     !pathname.startsWith("/api/stripe")
   ) {
-    const user = session.user;
     const metadata = user.user_metadata || {};
 
     const subscriptionStatus = metadata.subscription_status;
