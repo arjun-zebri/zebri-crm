@@ -29,6 +29,14 @@ export function KanbanColumn({
   const borderColor =
     STATUS_BORDER_COLORS[status as CoupleStatus] || "border-gray-300";
 
+  const hoverBg: Record<string, string> = {
+    new: "hover:bg-amber-600 hover:text-white",
+    contacted: "hover:bg-blue-600 hover:text-white",
+    confirmed: "hover:bg-purple-600 hover:text-white",
+    paid: "hover:bg-emerald-600 hover:text-white",
+    complete: "hover:bg-gray-500 hover:text-white",
+  };
+
   return (
     <div className="w-64 shrink-0 bg-gray-50 rounded-xl p-3">
       <div className="flex items-center gap-2 mb-2">
@@ -60,7 +68,7 @@ export function KanbanColumn({
       </Droppable>
       <button
         onClick={() => onAddClick?.(status)}
-        className={`w-full flex items-center justify-center gap-1 text-sm text-gray-400 hover:text-gray-600 transition py-1.5 rounded-full border ${borderColor} bg-white hover:bg-gray-50 cursor-pointer`}
+        className={`w-full flex items-center justify-center gap-1 text-sm text-gray-400 transition py-1.5 rounded-full border ${borderColor} bg-white ${hoverBg[status] || "hover:bg-gray-50"} cursor-pointer`}
       >
         <Plus size={14} strokeWidth={1.5} />
         New
