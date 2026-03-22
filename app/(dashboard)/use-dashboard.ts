@@ -309,7 +309,7 @@ export function useCalendarEvents(year: number, month: number) {
 
       const { data, error } = await supabase
         .from('events')
-        .select('*, couple:couples(id, name)')
+        .select('*, couple:couples(id, name, status)')
         .eq('user_id', user.user.id)
         .gte('date', startStr)
         .lte('date', endStr)
