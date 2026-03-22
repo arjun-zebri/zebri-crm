@@ -149,12 +149,21 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
   }
 
   const handleDeleteEvent = (eventId: string) => {
-    if (deleteConfirm === eventId) {
-      deleteEvent.mutate(eventId)
-    } else {
-      setDeleteConfirm(eventId)
-      setTimeout(() => setDeleteConfirm(null), 3000)
+    setDeleteConfirm(eventId)
+  }
+
+  const handleConfirmDeleteEvent = () => {
+    if (deleteConfirm) {
+      deleteEvent.mutate(deleteConfirm)
     }
+  }
+
+  const handleDeleteFromModal = async () => {
+    if (!editingEvent) return
+    await deleteEvent.mutateAsync(editingEvent.id)
+    setShowModal(false)
+    setEditingEvent(undefined)
+    setEditingVendorIds([])
   }
 
   const handleEditEvent = async (event: Event) => {
@@ -199,7 +208,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                 setEditingVendorIds([])
                 setShowModal(true)
               }}
-              className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+              className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add Event
             </button>
@@ -221,18 +230,14 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleEditEvent(event)}
-                      className="p-1 text-gray-400 hover:text-gray-600 transition"
+                      className="p-1 text-gray-400 hover:text-gray-600 transition cursor-pointer"
                     >
                       <Edit2 size={16} strokeWidth={1.5} />
                     </button>
                     <button
                       onClick={() => handleDeleteEvent(event.id)}
                       disabled={loading}
-                      className={`p-1 transition ${
-                        deleteConfirm === event.id
-                          ? 'text-red-600 bg-red-50 rounded'
-                          : 'text-gray-400 hover:text-red-600'
-                      }`}
+                      className="p-1 text-gray-400 hover:text-red-600 transition cursor-pointer"
                     >
                       <Trash2 size={16} strokeWidth={1.5} />
                     </button>
@@ -246,7 +251,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                 setEditingVendorIds([])
                 setShowModal(true)
               }}
-              className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+              className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
             >
               + Add Event
             </button>
@@ -260,14 +265,52 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
           setShowModal(false)
           setEditingEvent(undefined)
           setEditingVendorIds([])
-          setDeleteConfirm(null)
         }}
         onSave={handleSaveEvent}
+        onDelete={editingEvent ? handleDeleteFromModal : undefined}
         event={editingEvent}
         coupleId={couple.id}
         loading={loading}
         initialVendorIds={editingVendorIds}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/20 z-[70]"
+            onClick={() => setDeleteConfirm(null)}
+          />
+          <div className="fixed inset-0 z-[80] flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
+              <div className="px-6 py-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Delete Event
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Are you sure you want to delete this event? This action cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDeleteEvent}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-xl hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
+                  >
+                    {loading ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   )
 }
