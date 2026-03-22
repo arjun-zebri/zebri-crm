@@ -1,38 +1,50 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { X, Phone, Mail, MessageCircle, Pencil } from 'lucide-react'
-import { Couple, CoupleStatusRecord, getStatusClasses } from './couples-types'
-import { useCoupleStatuses } from './use-couple-statuses'
-import { Badge } from '@/components/ui/badge'
-import { formatDate } from '@/lib/utils'
-import { CoupleOverview } from './couple-overview'
-import { CoupleEvents } from './couple-events'
-import { CoupleVendors } from './couple-vendors'
-import { CoupleTasks } from './couple-tasks'
+import { useState, useEffect } from "react";
+import { X, Phone, Mail, Pencil } from "lucide-react";
+import { PiWhatsappLogoLight } from "react-icons/pi";
+import { Couple, CoupleStatusRecord, getStatusClasses } from "./couples-types";
+import { useCoupleStatuses } from "./use-couple-statuses";
+import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/utils";
+import { CoupleOverview } from "./couple-overview";
+import { CoupleEvents } from "./couple-events";
+import { CoupleVendors } from "./couple-vendors";
+import { CoupleTasks } from "./couple-tasks";
 
 interface CoupleProfileProps {
-  couple: Couple | null
-  onClose: () => void
-  onEdit: (couple: Couple) => void
-  defaultTab?: 'overview' | 'events' | 'vendors' | 'tasks'
+  couple: Couple | null;
+  onClose: () => void;
+  onEdit: (couple: Couple) => void;
+  defaultTab?: "overview" | "events" | "vendors" | "tasks";
 }
 
-export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview' }: CoupleProfileProps) {
-  const { data: statuses } = useCoupleStatuses()
-  const [activeTab, setActiveTab] = useState<'overview' | 'events' | 'vendors' | 'tasks'>(defaultTab)
+export function CoupleProfile({
+  couple,
+  onClose,
+  onEdit,
+  defaultTab = "overview",
+}: CoupleProfileProps) {
+  const { data: statuses } = useCoupleStatuses();
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "events" | "vendors" | "tasks"
+  >(defaultTab);
 
   useEffect(() => {
-    setActiveTab(defaultTab)
-  }, [defaultTab])
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
 
-  if (!couple) return null
+  if (!couple) return null;
 
-  const hasPhone = !!couple.phone
-  const hasEmail = !!couple.email
-  const status = statuses.find(s => s.slug === couple.status)
-  const statusName = status?.name || couple.status.charAt(0).toUpperCase() + couple.status.slice(1)
-  const statusClasses = status ? getStatusClasses(status.color) : getStatusClasses('gray')
+  const hasPhone = !!couple.phone;
+  const hasEmail = !!couple.email;
+  const status = statuses.find((s) => s.slug === couple.status);
+  const statusName =
+    status?.name ||
+    couple.status.charAt(0).toUpperCase() + couple.status.slice(1);
+  const statusClasses = status
+    ? getStatusClasses(status.color)
+    : getStatusClasses("gray");
 
   return (
     <>
@@ -49,8 +61,12 @@ export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview'
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl font-semibold text-gray-900 truncate">{couple.name}</h1>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}>
+                <h1 className="text-xl font-semibold text-gray-900 truncate">
+                  {couple.name}
+                </h1>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}
+                >
                   {statusName}
                 </span>
               </div>
@@ -69,8 +85,8 @@ export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview'
               href={hasPhone ? `tel:${couple.phone}` : undefined}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
-                  ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
-                  : 'text-gray-300 border-gray-100 cursor-not-allowed'
+                  ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
+                  : "text-gray-300 border-gray-100 cursor-not-allowed"
               }`}
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
@@ -81,8 +97,8 @@ export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview'
               href={hasEmail ? `mailto:${couple.email}` : undefined}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasEmail
-                  ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
-                  : 'text-gray-300 border-gray-100 cursor-not-allowed'
+                  ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
+                  : "text-gray-300 border-gray-100 cursor-not-allowed"
               }`}
               onClick={hasEmail ? undefined : (e) => e.preventDefault()}
             >
@@ -90,17 +106,21 @@ export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview'
               Email
             </a>
             <a
-              href={hasPhone ? `https://wa.me/${couple.phone.replace(/\D/g, '')}` : undefined}
-              target={hasPhone ? '_blank' : undefined}
-              rel={hasPhone ? 'noopener noreferrer' : undefined}
+              href={
+                hasPhone
+                  ? `https://wa.me/${couple.phone.replace(/\D/g, "")}`
+                  : undefined
+              }
+              target={hasPhone ? "_blank" : undefined}
+              rel={hasPhone ? "noopener noreferrer" : undefined}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
-                  ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
-                  : 'text-gray-300 border-gray-100 cursor-not-allowed'
+                  ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
+                  : "text-gray-300 border-gray-100 cursor-not-allowed"
               }`}
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
-              <MessageCircle size={14} strokeWidth={1.5} />
+              <PiWhatsappLogoLight size={16} />
               WhatsApp
             </a>
             <button
@@ -117,41 +137,41 @@ export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview'
         <div className="flex-shrink-0 border-t border-b border-gray-200 px-8">
           <div className="flex gap-6">
             <button
-              onClick={() => setActiveTab('overview')}
+              onClick={() => setActiveTab("overview")}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
-                activeTab === 'overview'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                activeTab === "overview"
+                  ? "border-gray-900 text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
             >
               Overview
             </button>
             <button
-              onClick={() => setActiveTab('events')}
+              onClick={() => setActiveTab("events")}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
-                activeTab === 'events'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                activeTab === "events"
+                  ? "border-gray-900 text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
             >
               Events
             </button>
             <button
-              onClick={() => setActiveTab('vendors')}
+              onClick={() => setActiveTab("vendors")}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
-                activeTab === 'vendors'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                activeTab === "vendors"
+                  ? "border-gray-900 text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
             >
               Vendors
             </button>
             <button
-              onClick={() => setActiveTab('tasks')}
+              onClick={() => setActiveTab("tasks")}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
-                activeTab === 'tasks'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                activeTab === "tasks"
+                  ? "border-gray-900 text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
             >
               Tasks
@@ -161,12 +181,14 @@ export function CoupleProfile({ couple, onClose, onEdit, defaultTab = 'overview'
 
         {/* Tab content */}
         <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
-          {activeTab === 'overview' && <CoupleOverview couple={couple} statuses={statuses} />}
-          {activeTab === 'events' && <CoupleEvents couple={couple} />}
-          {activeTab === 'vendors' && <CoupleVendors coupleId={couple.id} />}
-          {activeTab === 'tasks' && <CoupleTasks coupleId={couple.id} />}
+          {activeTab === "overview" && (
+            <CoupleOverview couple={couple} statuses={statuses} />
+          )}
+          {activeTab === "events" && <CoupleEvents couple={couple} />}
+          {activeTab === "vendors" && <CoupleVendors coupleId={couple.id} />}
+          {activeTab === "tasks" && <CoupleTasks coupleId={couple.id} />}
         </div>
       </div>
     </>
-  )
+  );
 }

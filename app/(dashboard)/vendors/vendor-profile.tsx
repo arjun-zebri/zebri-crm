@@ -1,25 +1,26 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { X, Phone, Mail, MessageCircle, Pencil } from 'lucide-react'
-import { Vendor, CATEGORY_LABELS, STATUS_LABELS } from './vendors-types'
-import { Badge } from '@/components/ui/badge'
-import { VendorOverview } from './vendor-overview'
-import { VendorEvents } from './vendor-events'
+import { useState } from "react";
+import { X, Phone, Mail, Pencil } from "lucide-react";
+import { PiWhatsappLogoLight } from "react-icons/pi";
+import { Vendor, CATEGORY_LABELS, STATUS_LABELS } from "./vendors-types";
+import { Badge } from "@/components/ui/badge";
+import { VendorOverview } from "./vendor-overview";
+import { VendorEvents } from "./vendor-events";
 
 interface VendorProfileProps {
-  vendor: Vendor | null
-  onClose: () => void
-  onEdit: (vendor: Vendor) => void
+  vendor: Vendor | null;
+  onClose: () => void;
+  onEdit: (vendor: Vendor) => void;
 }
 
 export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'events'>('overview')
+  const [activeTab, setActiveTab] = useState<"overview" | "events">("overview");
 
-  if (!vendor) return null
+  if (!vendor) return null;
 
-  const hasPhone = !!vendor.phone
-  const hasEmail = !!vendor.email
+  const hasPhone = !!vendor.phone;
+  const hasEmail = !!vendor.email;
 
   return (
     <>
@@ -36,7 +37,9 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl font-semibold text-gray-900 truncate">{vendor.name}</h1>
+                <h1 className="text-xl font-semibold text-gray-900 truncate">
+                  {vendor.name}
+                </h1>
                 <Badge variant={vendor.category as any}>
                   {CATEGORY_LABELS[vendor.category]}
                 </Badge>
@@ -57,10 +60,12 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
           <div className="flex items-center gap-2 mb-5">
             <div
               className={`w-2 h-2 rounded-xl ${
-                vendor.status === 'active' ? 'bg-emerald-400' : 'bg-gray-300'
+                vendor.status === "active" ? "bg-emerald-400" : "bg-gray-300"
               }`}
             />
-            <span className="text-sm text-gray-600">{STATUS_LABELS[vendor.status]}</span>
+            <span className="text-sm text-gray-600">
+              {STATUS_LABELS[vendor.status]}
+            </span>
           </div>
 
           {/* Actions row */}
@@ -69,8 +74,8 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
               href={hasPhone ? `tel:${vendor.phone}` : undefined}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
-                  ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
-                  : 'text-gray-300 border-gray-100 cursor-not-allowed'
+                  ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
+                  : "text-gray-300 border-gray-100 cursor-not-allowed"
               }`}
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
@@ -81,8 +86,8 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
               href={hasEmail ? `mailto:${vendor.email}` : undefined}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasEmail
-                  ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
-                  : 'text-gray-300 border-gray-100 cursor-not-allowed'
+                  ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
+                  : "text-gray-300 border-gray-100 cursor-not-allowed"
               }`}
               onClick={hasEmail ? undefined : (e) => e.preventDefault()}
             >
@@ -90,17 +95,21 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
               Email
             </a>
             <a
-              href={hasPhone ? `https://wa.me/${vendor.phone.replace(/\D/g, '')}` : undefined}
-              target={hasPhone ? '_blank' : undefined}
-              rel={hasPhone ? 'noopener noreferrer' : undefined}
+              href={
+                hasPhone
+                  ? `https://wa.me/${vendor.phone.replace(/\D/g, "")}`
+                  : undefined
+              }
+              target={hasPhone ? "_blank" : undefined}
+              rel={hasPhone ? "noopener noreferrer" : undefined}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
-                  ? 'text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer'
-                  : 'text-gray-300 border-gray-100 cursor-not-allowed'
+                  ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
+                  : "text-gray-300 border-gray-100 cursor-not-allowed"
               }`}
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
-              <MessageCircle size={14} strokeWidth={1.5} />
+              <PiWhatsappLogoLight size={16} />
               WhatsApp
             </a>
             <button
@@ -117,21 +126,21 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
         <div className="flex-shrink-0 border-t border-b border-gray-200 px-8">
           <div className="flex gap-6">
             <button
-              onClick={() => setActiveTab('overview')}
+              onClick={() => setActiveTab("overview")}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
-                activeTab === 'overview'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                activeTab === "overview"
+                  ? "border-gray-900 text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
             >
               Overview
             </button>
             <button
-              onClick={() => setActiveTab('events')}
+              onClick={() => setActiveTab("events")}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
-                activeTab === 'events'
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
+                activeTab === "events"
+                  ? "border-gray-900 text-gray-900"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
             >
               Events
@@ -141,12 +150,15 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
 
         {/* Tab content */}
         <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
-          {activeTab === 'overview' && (
-            <VendorOverview vendor={vendor} onEditClick={() => onEdit(vendor)} />
+          {activeTab === "overview" && (
+            <VendorOverview
+              vendor={vendor}
+              onEditClick={() => onEdit(vendor)}
+            />
           )}
-          {activeTab === 'events' && <VendorEvents vendorId={vendor.id} />}
+          {activeTab === "events" && <VendorEvents vendorId={vendor.id} />}
         </div>
       </div>
     </>
-  )
+  );
 }
