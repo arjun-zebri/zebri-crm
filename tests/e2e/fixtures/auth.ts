@@ -1,6 +1,7 @@
 import { test as base, expect } from '@playwright/test';
+import { Page } from '@playwright/test';
 
-export const test = base.extend({
+export const test = base.extend<{ authenticatedPage: Page }>({
   authenticatedPage: async ({ page }, use) => {
     // Go to login page
     await page.goto('/login');
