@@ -292,6 +292,119 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 - "+ Add Task" button pre-filled with this couple
 - Empty state: "No tasks yet."
 
+## Event Profile
+
+Opens as a slide-over panel within the Events tab of the Couple Profile (or can open from Calendar view). 640px width on desktop, full-width on mobile.
+
+**Profile header:**
+
+- Event date (formatted, e.g. "Saturday, 12 April 2025") + venue (text-sm text-gray-500)
+- Status badge (upcoming / completed / cancelled)
+- Quick actions right-aligned: Edit (opens edit modal)
+
+**Tabs:** Overview | Vendors | Tasks | Timeline
+
+**Overview tab:** Key event details — date, venue, price, status, timeline_notes.
+
+**Vendors tab:** Contacts assigned to this event via event_contacts. Add/remove contacts.
+
+**Tasks tab:** Tasks linked to this event via tasks.related_event_id.
+
+**Timeline tab:**
+
+Two sections stacked vertically:
+
+**Section 1 — Timeline Items**
+
+Header row: "Timeline" label (text-sm font-medium text-gray-900) + right-aligned "Add item" button (ghost border style, same as other `+ Add` buttons in tab panels).
+
+Item list: each item is a row with `border border-gray-200 rounded-xl p-3 mb-2`. Row layout:
+- Drag handle: GripVertical icon (text-gray-300), visible on hover only. Desktop only — hidden on mobile.
+- Time column: text-sm text-gray-500, min-w-[64px]. Shows "—" when no time set.
+- Title: text-sm font-medium text-gray-900, flex-1.
+- Duration badge: "~30 min" style, text-xs text-gray-400.
+- Contact badge: category color dot + contact name, text-xs.
+- Edit / delete icons: fade in on hover (same pattern as Vendor row actions).
+
+Sort order: items with `start_time` set are sorted ascending; untimed items sit below, ordered by `position`. Drag-to-reorder adjusts `position` only — timed items stay anchored to their time.
+
+Drag and drop: dnd-kit `SortableContext` with vertical list strategy. Drag handle is the only drag initiator (no accidental drags on scroll/tap). On drop, fire optimistic position update mutation.
+
+Empty state: "No timeline items yet." centered + "+ Add first item" button.
+
+Mobile: drag handle hidden; tap row to open edit modal.
+
+**Add/Edit Timeline Item Modal:**
+
+Title: "Add item" / "Edit item"
+
+Form fields (single-column):
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| Time | `<input type="time">` | No | Native time picker. Displays as "5:30 PM" (12-hour). Clear button to unset. |
+| Title | text | Yes | Placeholder: "e.g. Bridal party entrance" |
+| Description | textarea 2 rows | No | Placeholder: "Internal notes, cues, reminders..." |
+| Duration | number + "min" suffix | No | Placeholder: "e.g. 30" |
+| Assigned contact | searchable Select | No | Populated from contacts in this event only (event_contacts). Shows name + category badge. |
+
+Footer: Delete (red, left, "click again to confirm" pattern) + Cancel + Save (black).
+
+**Section 2 — Share Link**
+
+Separated by `border-t border-gray-100 mt-6 pt-6`.
+
+Header: "Share link" (text-sm font-medium text-gray-900)
+Subtext: "Anyone with this link can view the timeline." (text-xs text-gray-500)
+
+**Disabled state (default):** Pill toggle off. "Copy link" button grayed and disabled. Label: "Enable link to share."
+
+**Enabled state:** Toggle on (green fill). Active "Copy link" button — clicking copies `/timeline/[token]` to clipboard and shows inline "Copied!" text (no toast). "Regenerate" ghost button (RotateCw icon) right of Copy. Clicking Regenerate shows inline confirm: "This will break the existing link. Regenerate?" with Confirm / Cancel. On toggle enable: toast "Share link enabled."
+
+**New component files** (co-located in `app/(dashboard)/events/`):
+
+```
+event-timeline.tsx
+event-timeline-item.tsx
+event-timeline-modal.tsx
+event-timeline-share.tsx
+use-event-timeline.ts
+```
+
+## Timeline Access from Events Route
+
+Route: `/events/[id]/timeline`
+
+Route group: `(dashboard)` — authenticated, full sidebar layout.
+
+Purpose: A dedicated full-page view for building and managing the timeline for a specific event. Accessible directly (bookmarkable by the MC) without navigating through the couple profile slide-over.
+
+**Entry points:**
+
+- Event row in the Couple Profile Events tab: "Timeline" link/button on each event row (next to the Edit action). On desktop this is a text link; on mobile it's an icon button (CalendarClock icon).
+- Direct URL navigation: `/events/[id]/timeline`
+
+**Page layout:**
+
+Two-column on desktop (`lg:grid-cols-[1fr_320px]`), single-column on mobile.
+
+- Left column (main): timeline items list with the same drag-to-reorder, add/edit/delete behaviour as the Timeline tab in the Event Profile slide-over.
+- Right column (sidebar): event summary card (couple name, date, venue, status badge) + Share Link section.
+
+**Back navigation:** Breadcrumb or back link at top: "← [Couple Name]" — opens the couple profile slide-over.
+
+**Page title:** "[Couple Name] — Timeline" (`text-3xl font-semibold`)
+
+**No duplication of logic:** `event-timeline.tsx`, `event-timeline-modal.tsx`, `event-timeline-share.tsx` are the same components reused from the Event Profile slide-over. Only the layout wrapper differs.
+
+**File:**
+
+```
+app/(dashboard)/events/[id]/timeline/page.tsx  — layout wrapper only, imports event-timeline.tsx
+```
+
+---
+
 ## Add/Edit Couple Modal
 
 Title: "Add Couple" or "Edit Couple"
@@ -492,3 +605,74 @@ Placeholder empty state. Coming soon.
 ### Notifications (`?tab=notifications`)
 
 Placeholder empty state. Coming soon.
+
+---
+
+# Public Timeline Page
+
+Route: `/timeline/[token]`
+
+Route group: Top-level `app/timeline/[token]/` — outside `(dashboard)` and `(auth)`. No auth required.
+
+**Middleware:** `/timeline/` must be in PUBLIC_ROUTES so the auth middleware does not redirect unauthenticated visitors.
+
+Purpose: A read-only, shareable view of an event's running order. Couples and vendors open this link without logging in.
+
+## Layout
+
+No sidebar, no app chrome. Centered content: `max-w-2xl mx-auto px-4`. White background with a subtle top gradient (`bg-gradient-to-b from-gray-50 to-white h-8`).
+
+## Page Sections
+
+**1. Event header** (`pt-12 pb-8`):
+- Couple name: `text-2xl font-semibold text-gray-900`
+- Event date (formatted, e.g. "Saturday, 12 April 2025") + venue: `text-sm text-gray-500`, separated by a centered dot (·)
+- No status badge — irrelevant to the viewer.
+
+**2. Timeline items list:**
+
+Classic left-rail timeline visual — `border-l-2 border-gray-200 ml-4 pl-6 pb-6` per item block.
+
+Time dot: `w-2 h-2 rounded-full bg-gray-400` positioned on the rail (`-ml-[25px]`).
+
+Per item:
+- Time: `text-xs font-medium text-gray-500 uppercase` (shows "—" if not set)
+- Duration: `text-xs text-gray-400` ("~30 min"), right-aligned on the same row as time
+- Title: `text-sm font-semibold text-gray-900`
+- Description (if present): `text-sm text-gray-600 mt-1`
+- Assigned contact (if present): category dot + contact name, `text-xs text-gray-500`
+
+**3. Footer:** `border-t pt-6 pb-10 text-center`
+- "Prepared by [business_name]" — `text-xs text-gray-400`
+- No Zebri logo. No link back to the app. White-label for the MC.
+
+## Not-Found / Disabled State
+
+If the token doesn't match any event, or `share_token_enabled = false`: show centered message "This timeline is no longer available." in place of content. No redirect to login. No error stack.
+
+## Print
+
+Apply `print:` Tailwind utilities at the page root to reduce header padding and hide the footer gradient. No Print button needed — browser Cmd+P works. Zero server infrastructure required.
+
+## Data Fetching
+
+Server component. Calls `get_public_timeline(token)` Supabase SECURITY DEFINER function. Returns null → render not-found state.
+
+Query shape:
+```
+event { date, venue, share_token_enabled,
+  couple { name },
+  timeline_items (ordered by position) { time, title, description, duration_min,
+    contact { name, category }
+  }
+}
+```
+
+## File Structure
+
+```
+app/timeline/
+  [token]/
+    page.tsx           — server component, fetches + renders
+    timeline-item.tsx  — presentational component for each item row
+```

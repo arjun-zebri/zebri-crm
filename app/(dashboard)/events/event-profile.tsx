@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { EventOverview } from './event-overview'
 import { EventVendors } from './event-vendors'
 import { EventTasks } from './event-tasks'
+import { EventTimeline } from './event-timeline'
 
 interface EventProfileProps {
   event: Event | null
@@ -15,7 +16,7 @@ interface EventProfileProps {
 }
 
 export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'tasks'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'vendors' | 'tasks' | 'timeline'>('overview')
 
   if (!event) return null
 
@@ -98,6 +99,16 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
             >
               Tasks
             </button>
+            <button
+              onClick={() => setActiveTab('timeline')}
+              className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+                activeTab === 'timeline'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              Timeline
+            </button>
           </div>
         </div>
 
@@ -106,6 +117,7 @@ export function EventProfile({ event, onClose, onEdit }: EventProfileProps) {
           {activeTab === 'overview' && <EventOverview event={event} />}
           {activeTab === 'vendors' && <EventVendors eventId={event.id} />}
           {activeTab === 'tasks' && <EventTasks eventId={event.id} />}
+          {activeTab === 'timeline' && <EventTimeline eventId={event.id} />}
         </div>
       </div>
     </>

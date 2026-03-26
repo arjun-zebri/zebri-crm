@@ -79,7 +79,37 @@ timeline_notes (text) price (numeric(10,2), nullable) status (text)
 
 Status values: upcoming completed cancelled
 
+share_token (uuid, nullable, default gen_random_uuid()) — generated on row creation; used as the public share URL key.
+
+share_token_enabled (boolean, not null, default false) — link is inactive until the MC explicitly enables it. Disabling preserves the token. Regenerating updates share_token to a new gen_random_uuid(), permanently invalidating the old URL.
+
 created_at (timestamp)
+
+------------------------------------------------------------------------
+
+# timeline_items
+
+Ordered run-sheet items for an event's wedding timeline.
+
+Columns:
+
+id (uuid, primary key, default gen_random_uuid()) event_id (uuid, not null, FK to events.id, on delete cascade) user_id (uuid, not null)
+
+start_time (time, nullable) — stored as HH:MM, displayed as "5:30 PM". Nullable — MC can add untimed items. Items are sorted by start_time ascending when set; untimed items fall below by position.
+
+title (text, not null) — e.g. "Bridal party entrance"
+
+description (text, nullable) — MC's internal notes or cues
+
+duration_min (integer, nullable) — estimated duration in minutes
+
+contact_id (uuid, nullable, FK to contacts.id, on delete set null) — the contact assigned to this item; scoped to contacts already linked to the event via event_contacts
+
+position (integer, not null) — ordering; stored as multiples of 1000 on creation to allow insertion between items without a full renumber
+
+created_at (timestamp)
+
+RLS: Standard user_id = auth.uid() policy for authenticated CRUD. Anon SELECT is granted via a SECURITY DEFINER Supabase function get_public_timeline(token uuid) — returns event + items only when share_token_enabled = true; returns null otherwise. This avoids complex anon policy joins.
 
 ------------------------------------------------------------------------
 
@@ -131,6 +161,10 @@ couples -> linked to contacts via couple_contacts join table
 contacts -> linked to couples via couple_contacts join table
 
 contacts -> linked to events via event_contacts join table
+
+events -> have timeline_items (one-to-many, cascade delete)
+
+timeline_items -> contact (many-to-one, nullable, set null on contact delete)
 
 tasks -> can relate to couple (via tasks.related_couple_id), event (via tasks.related_event_id), or contact (via tasks.related_contact_id)
 

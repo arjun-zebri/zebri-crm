@@ -9,12 +9,32 @@ export interface Event {
   timeline_notes: string
   price: number | null
   status: EventStatus
+  share_token?: string | null
+  share_token_enabled?: boolean
   created_at: string
   couple?: {
     id: string
     name: string
     status?: string
   }
+}
+
+export interface TimelineItem {
+  id: string
+  event_id: string
+  user_id: string
+  start_time: string | null
+  title: string
+  description: string | null
+  duration_min: number | null
+  contact_id: string | null
+  position: number
+  created_at: string
+  contact?: {
+    id: string
+    name: string
+    category: string
+  } | null
 }
 
 export const STATUS_LABELS: Record<EventStatus, string> = {

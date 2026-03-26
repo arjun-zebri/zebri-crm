@@ -7,6 +7,7 @@ const PUBLIC_ROUTES = [
   "/reset-password",
   "/update-password",
   "/api/alerts",
+  "/timeline",
 ];
 
 export async function middleware(request: NextRequest) {

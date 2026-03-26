@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
-import { Edit2, Trash2 } from 'lucide-react'
+import { Edit2, Trash2, CalendarClock } from 'lucide-react'
+import Link from 'next/link'
 import { Event } from '../events/events-types'
 import { EventModal } from './event-modal'
 import { Couple } from './couples-types'
@@ -236,6 +237,13 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    <Link
+                      href={`/events/${event.id}/timeline`}
+                      className="p-1 text-gray-400 hover:text-gray-600 transition"
+                      title="Open timeline"
+                    >
+                      <CalendarClock size={16} strokeWidth={1.5} />
+                    </Link>
                     <button
                       onClick={() => handleEditEvent(event)}
                       className="p-1 text-gray-400 hover:text-gray-600 transition cursor-pointer"
