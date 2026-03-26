@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { ChevronLeft, ChevronRight, MapPin, Check, Users, CheckSquare, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Check, Users, CheckSquare, Calendar, SlidersHorizontal, X } from 'lucide-react'
 import { Event } from '../events/events-types'
 import { CoupleStatusRecord, getStatusClasses } from './couples-types'
 import { useCoupleStatuses } from './use-couple-statuses'
@@ -62,6 +62,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   const [activeStatuses, setActiveStatuses] = useState<Set<string>>(new Set(statuses.map(s => s.slug)))
   const [miniNavDate, setMiniNavDate] = useState(new Date())
   const [coupleSearch, setCoupleSearch] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const { data: events } = useQuery({
     queryKey: ['calendar-events'],
@@ -175,8 +176,31 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
 
   return (
     <div className="flex h-full">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-10 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar */}
-      <div className="w-56 flex-shrink-0 flex flex-col gap-5 pb-6 overflow-y-auto border-r border-gray-200 pr-5">
+      <div className={`
+        flex-col gap-5 pb-6 overflow-y-auto
+        ${sidebarOpen
+          ? 'fixed top-0 left-0 h-full w-[280px] z-20 bg-white shadow-xl p-5 flex'
+          : 'hidden md:flex md:w-56 md:flex-shrink-0 border-r border-gray-200 pr-5'}
+      `}>
+        {/* Mobile close button */}
+        <div className="flex justify-end md:hidden mb-1">
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+          >
+            <X size={18} strokeWidth={1.5} />
+          </button>
+        </div>
+
         {/* Mini Month */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -270,15 +294,21 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden pl-6">
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between mb-5 pb-4 border-b border-gray-200">
-          {/* Left: Nav */}
+          {/* Left: Filter toggle (mobile) + Nav */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+            >
+              <SlidersHorizontal size={16} strokeWidth={1.5} />
+            </button>
             <button
               onClick={handlePrev}
               className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
             >
               <ChevronLeft size={16} strokeWidth={1.5} />
             </button>
-            <h2 className="text-sm font-semibold text-gray-900 min-w-44 text-center select-none">
+            <h2 className="text-sm font-semibold text-gray-900 min-w-32 sm:min-w-44 text-center select-none">
               {getHeaderLabel()}
             </h2>
             <button
@@ -295,13 +325,14 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
               <button
                 key={view}
                 onClick={() => setCalendarView(view)}
-                className={`px-3 py-1 text-sm rounded-md transition cursor-pointer capitalize font-medium ${
+                className={`px-2 sm:px-3 py-1 text-sm rounded-md transition cursor-pointer font-medium ${
                   calendarView === view
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {view}
+                <span className="sm:hidden">{view[0].toUpperCase()}</span>
+                <span className="hidden sm:inline capitalize">{view}</span>
               </button>
             ))}
           </div>

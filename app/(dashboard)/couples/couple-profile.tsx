@@ -55,9 +55,9 @@ export function CoupleProfile({
       />
 
       {/* Panel */}
-      <div className="fixed top-0 right-0 h-full w-[640px] bg-white shadow-2xl z-50 flex flex-col animate-slide-in-right">
+      <div className="fixed top-0 right-0 h-full w-full md:w-[640px] bg-white shadow-2xl z-50 flex flex-col animate-slide-in-right">
         {/* Header */}
-        <div className="flex-shrink-0 px-8 pt-6 pb-5">
+        <div className="flex-shrink-0 px-4 md:px-8 pt-5 md:pt-6 pb-4 md:pb-5">
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-1">
@@ -91,7 +91,7 @@ export function CoupleProfile({
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
               <Phone size={14} strokeWidth={1.5} />
-              Call
+              <span className="hidden sm:inline">Call</span>
             </a>
             <a
               href={hasEmail ? `mailto:${couple.email}` : undefined}
@@ -103,7 +103,7 @@ export function CoupleProfile({
               onClick={hasEmail ? undefined : (e) => e.preventDefault()}
             >
               <Mail size={14} strokeWidth={1.5} />
-              Email
+              <span className="hidden sm:inline">Email</span>
             </a>
             <a
               href={
@@ -121,20 +121,20 @@ export function CoupleProfile({
               onClick={hasPhone ? undefined : (e) => e.preventDefault()}
             >
               <PiWhatsappLogoLight size={16} />
-              WhatsApp
+              <span className="hidden sm:inline">WhatsApp</span>
             </a>
             <button
               onClick={() => onEdit(couple)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer ml-auto"
             >
               <Pencil size={14} strokeWidth={1.5} />
-              Edit
+              <span className="hidden sm:inline">Edit</span>
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex-shrink-0 border-t border-b border-gray-200 px-8">
+        <div className="flex-shrink-0 border-t border-b border-gray-200 px-4 md:px-8">
           <div className="flex gap-6">
             <button
               onClick={() => setActiveTab("overview")}
@@ -180,7 +180,7 @@ export function CoupleProfile({
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6">
           {activeTab === "overview" && (
             <CoupleOverview couple={couple} statuses={statuses} />
           )}

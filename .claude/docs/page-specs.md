@@ -2,6 +2,16 @@
 
 This document defines every page in the CRM.
 
+## Mobile Layout Notes
+
+All pages are fully responsive. Key patterns:
+
+- **Dashboard**: Stats stack to 1-col on mobile → 3-col on sm+. Top grid is 1-col on mobile → 7-col on lg. Bottom grid is 1-col → 2-col md → 3-col lg.
+- **Couples / Vendors list**: Table scrolls horizontally on mobile. Only name+status columns visible at 375px; more columns revealed at sm/lg breakpoints.
+- **Couples / Vendors slide-over**: Full-width on mobile, 640px on md+. Action button labels hidden on mobile (icons only).
+- **Calendar (Couples)**: Filter sidebar hidden on mobile, opens as overlay drawer via SlidersHorizontal button. View switcher shows single letter (D/W/M) on mobile.
+- **Headers (Couples/Vendors)**: Search input narrows to w-36 on mobile (w-56 on sm+). New button has larger touch target on mobile.
+
 ---
 
 # Login

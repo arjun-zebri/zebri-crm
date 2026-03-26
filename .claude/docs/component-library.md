@@ -110,14 +110,15 @@ search
 Style: Notion-style clean table. No card wrapper (no border/rounded-xl container). White header with bottom border, sentence-case text. No clickable sort on table headers (sorting via header toolbar dropdown). Plain text pagination (Previous/Next). Rows: hover:bg-gray-50.
 
 Table styling rules:
-- Container: `flex flex-col flex-1 overflow-hidden`, inner `overflow-y-auto flex-1`
-- Table element: `w-full table-fixed max-w-[1800px]`
+- Container: `flex flex-col flex-1 overflow-hidden`, inner `overflow-y-auto overflow-x-auto flex-1`
+- Table element: `w-full table-fixed min-w-[400px] md:max-w-[1800px]`
 - Header row: `sticky top-0 bg-white z-10`, `border-b border-gray-200`
-- Header cells: `px-6 py-3 text-left text-sm font-medium text-gray-900`
+- Header cells: `px-3 md:px-6 py-3 text-left text-sm font-medium text-gray-900`
 - Body rows: `border-b border-gray-100 last:border-0 cursor-pointer transition hover:bg-gray-50`
-- Body cells: `px-6 py-3.5 text-sm overflow-hidden`
+- Body cells: `px-3 md:px-6 py-3.5 text-sm overflow-hidden`
 - Skeleton loading: inside tbody, 5 rows, `animate-pulse`, `h-4 bg-gray-100 rounded-md`
 - Pagination: `px-6 py-3 border-t border-gray-100 text-sm`, Previous/Next text buttons
+- Column visibility: use `meta: { hidden: "hidden sm:table-cell" }` (or `lg:`) on column defs, apply via `(col.columnDef.meta as any)?.hidden` in `<th>` and `<td>` classNames
 
 ---
 
@@ -165,11 +166,17 @@ Features: overlay background escape to close click outside to close
 
 Main navigation.
 
-Contains: Dashboard Couples Vendors Events Tasks
+Contains: Dashboard, Couples, Vendors, Settings
 
-Width: 240px
+Desktop: fixed 68px icon-only, expands to 240px on hover (`group/sidebar` pattern). Nav labels hidden via `md:opacity-0 md:group-hover/sidebar:opacity-100`.
 
-Style: minimal light dividers active state indicator
+Mobile: hidden by default (`-translate-x-full`), opens as a 280px left drawer when `mobileOpen` prop is true. Labels always visible on mobile (`opacity-100`).
+
+Props:
+- `mobileOpen?: boolean` — controls mobile drawer visibility
+- `onMobileClose?: () => void` — called when backdrop or any nav Link is clicked
+
+Mobile top bar is rendered in `DashboardLayout` (not in Sidebar): fixed h-14, z-30, hamburger + centered logo.
 
 ---
 

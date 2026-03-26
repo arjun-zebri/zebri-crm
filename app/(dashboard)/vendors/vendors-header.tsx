@@ -87,7 +87,7 @@ export function VendorsHeader({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-y-2">
         <div className="flex items-baseline gap-3">
           <h1 className="text-3xl font-semibold text-gray-900">Vendors</h1>
           <span className="text-sm text-gray-400">{vendors.length} total</span>
@@ -102,7 +102,7 @@ export function VendorsHeader({
               placeholder="Search..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-56 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-36 sm:w-56 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
             />
             {search && (
               <button
@@ -217,7 +217,7 @@ export function VendorsHeader({
 
           <button
             onClick={onAddClick}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-black rounded-xl hover:bg-neutral-800 transition ml-1 cursor-pointer"
+            className="flex items-center gap-1 px-3 py-2 md:py-1.5 text-sm font-medium text-white bg-black rounded-xl hover:bg-neutral-800 transition ml-1 cursor-pointer"
           >
             <Plus size={14} strokeWidth={1.5} />
             New

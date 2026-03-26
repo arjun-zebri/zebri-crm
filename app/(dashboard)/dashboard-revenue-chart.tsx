@@ -38,7 +38,7 @@ export function DashboardRevenueChart() {
   const label = mode === 'revenue' ? 'Revenue' : 'Leads'
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 h-full flex flex-col">
+    <div className="bg-white rounded-xl border border-gray-200 p-6 h-[300px] lg:h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <div className="relative" ref={dropdownRef}>
           <button

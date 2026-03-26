@@ -46,6 +46,7 @@ function createColumns(statuses: CoupleStatusRecord[]) {
     columnHelper.accessor("email", {
       header: "Email",
       enableSorting: false,
+      meta: { hidden: "hidden sm:table-cell" },
       cell: (info) => (
         <span className="text-sm text-gray-500 truncate block">
           {info.getValue()}
@@ -55,6 +56,7 @@ function createColumns(statuses: CoupleStatusRecord[]) {
     columnHelper.accessor("phone", {
       header: "Phone",
       enableSorting: false,
+      meta: { hidden: "hidden lg:table-cell" },
       cell: (info) => (
         <span className="text-sm text-gray-500">{info.getValue()}</span>
       ),
@@ -62,6 +64,7 @@ function createColumns(statuses: CoupleStatusRecord[]) {
     columnHelper.accessor("event_date", {
       header: "Event date",
       enableSorting: false,
+      meta: { hidden: "hidden sm:table-cell" },
       cell: (info) => (
         <span className="text-sm text-gray-500">{formatDate(info.getValue())}</span>
       ),
@@ -69,6 +72,7 @@ function createColumns(statuses: CoupleStatusRecord[]) {
     columnHelper.accessor("venue", {
       header: "Venue",
       enableSorting: false,
+      meta: { hidden: "hidden lg:table-cell" },
       cell: (info) => (
         <span className="text-sm text-gray-500 truncate block">
           {info.getValue()}
@@ -148,14 +152,14 @@ export function CouplesList({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <table className="w-full table-fixed max-w-[1800px]">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
+        <table className="w-full table-fixed min-w-[400px] md:max-w-[1800px]">
           <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
               {table.getHeaderGroups()[0]?.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="px-6 py-3 text-left text-sm font-medium text-gray-900"
+                  className={`px-3 md:px-6 py-3 text-left text-sm font-medium text-gray-900 ${(header.column.columnDef.meta as any)?.hidden || ""}`}
                   style={{ width: COL_WIDTHS[header.id] }}
                 >
                   {header.isPlaceholder
@@ -176,7 +180,7 @@ export function CouplesList({
                     className="animate-pulse border-b border-gray-100 last:border-0"
                   >
                     {columns.map((_, j) => (
-                      <td key={j} className="px-6 py-3.5">
+                      <td key={j} className="px-3 md:px-6 py-3.5">
                         <div
                           className={`h-4 bg-gray-100 rounded-md ${skeletonWidths[j]}`}
                         />
@@ -193,7 +197,7 @@ export function CouplesList({
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="px-6 py-3.5 text-sm overflow-hidden"
+                        className={`px-3 md:px-6 py-3.5 text-sm overflow-hidden ${(cell.column.columnDef.meta as any)?.hidden || ""}`}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,

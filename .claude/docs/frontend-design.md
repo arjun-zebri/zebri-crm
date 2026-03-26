@@ -47,9 +47,37 @@ Dense page section titles (e.g. settings): text-sm font-medium text-gray-900
 
 # Layout
 
-Sidebar width: 240px
+Sidebar width: 240px (desktop expanded), 68px (desktop collapsed)
 
 Structure: Sidebar \| Main Content
+
+## Mobile Breakpoint Strategy
+
+Breakpoints follow Tailwind defaults: `sm` = 640px, `md` = 768px, `lg` = 1024px.
+
+**Sidebar:**
+- Mobile (`< md`): hidden by default, opens as a 280px drawer from the left via hamburger button in top bar
+- Desktop (`md+`): fixed 68px icon-only sidebar, expands to 240px on hover
+- Mobile top bar: fixed h-14 bar with hamburger, centered logo, z-30
+
+**Slide-over panels** (CoupleProfile, VendorProfile):
+- Mobile: `w-full` (full screen)
+- Desktop (`md+`): `w-[640px]`
+- Action button labels hidden on mobile (icons only via `hidden sm:inline`)
+
+**Tables:**
+- Wrapper: `overflow-x-auto`; table: `min-w-[400px]`
+- Couples column visibility: name+status always; email+event_date at `sm`; phone+venue at `lg`
+- Vendors column visibility: name+status always; category at `sm`; contact_name+phone+email at `lg`
+
+**Dashboard grids:**
+- Top section: `grid-cols-1` → `lg:grid-cols-7`
+- Bottom section: `grid-cols-1` → `md:grid-cols-2` → `lg:grid-cols-3`
+- Stats: `grid-cols-1` → `sm:grid-cols-3`
+
+**Calendar filter sidebar:**
+- Mobile: hidden, opens as overlay drawer via SlidersHorizontal button
+- Desktop (`md+`): always visible inline
 
 ------------------------------------------------------------------------
 
