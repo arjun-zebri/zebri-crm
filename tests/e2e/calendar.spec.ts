@@ -33,19 +33,18 @@ test.describe('Calendar View', () => {
     await page.waitForLoadState('networkidle')
     // Weekday abbreviations should be visible
     for (const day of ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) {
-      await expect(page.locator(`text=${day}`)).toBeVisible()
+      await expect(page.locator(`[data-testid="weekday-${day}"]`)).toBeVisible()
     }
   })
 
   // ── 4. Next advances period ───────────────────────────────────────────────
   test('Next button advances the calendar period', async ({ page }) => {
     // Get the current header label
-    const header = page.locator('h2, .text-lg, [class*="font-semibold"]').filter({ hasText: /\d{4}/ }).first()
+    const header = page.locator('[data-testid="calendar-header"]')
     const initialText = await header.textContent()
 
-    // Find and click a "next" nav button (contains ChevronRight SVG)
-    // Use the second nav button (next) — first SVG-only button after month/week/day toggles
-    const nextBtn = page.locator('button').filter({ has: page.locator('svg') }).nth(1)
+    // Click the next button
+    const nextBtn = page.locator('[data-testid="calendar-next-btn"]')
     await nextBtn.click()
     await page.waitForLoadState('networkidle')
 
@@ -55,18 +54,18 @@ test.describe('Calendar View', () => {
 
   // ── 5. Prev goes back ─────────────────────────────────────────────────────
   test('Prev button goes back to previous period', async ({ page }) => {
-    const header = page.locator('h2, .text-lg, [class*="font-semibold"]').filter({ hasText: /\d{4}/ }).first()
+    const header = page.locator('[data-testid="calendar-header"]')
 
     // Click next first so we can go back
-    const nextBtn = page.locator('button').filter({ has: page.locator('svg') }).nth(1)
+    const nextBtn = page.locator('[data-testid="calendar-next-btn"]')
     await nextBtn.click()
-    await page.waitForTimeout(300)
+    await page.waitForLoadState('networkidle')
     const movedText = await header.textContent()
 
     // Now click prev
-    const prevBtn = page.locator('button').filter({ has: page.locator('svg') }).nth(0)
+    const prevBtn = page.locator('[data-testid="calendar-prev-btn"]')
     await prevBtn.click()
-    await page.waitForTimeout(300)
+    await page.waitForLoadState('networkidle')
     const backText = await header.textContent()
 
     expect(backText).not.toEqual(movedText)

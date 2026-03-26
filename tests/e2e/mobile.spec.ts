@@ -92,9 +92,9 @@ test.describe('Mobile — Pixel 5 (393×851)', () => {
     await searchInput.fill(name)
     await page.waitForLoadState('networkidle')
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await page.waitForSelector('div.fixed.top-0.right-0 h1')
+    await page.waitForSelector('[data-testid="couple-profile-panel"] h1')
 
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
     const box = await panel.boundingBox()
     expect(box).not.toBeNull()
     // On mobile (393px wide) it should be full-width (no md:w-[640px])

@@ -70,17 +70,17 @@ export async function addCouple(
 export async function openCoupleProfile(page: Page, name: string) {
   await search(page, name)
   await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-  await page.waitForSelector('div.fixed.top-0.right-0 h1')
+  await page.waitForSelector('[data-testid="couple-profile-panel"] h1')
 }
 
 export async function closeProfile(page: Page) {
-  await page.locator('div.fixed.top-0.right-0').locator('button').first().click()
-  await page.waitForSelector('div.fixed.top-0.right-0', { state: 'hidden' })
+  await page.locator('[data-testid="couple-profile-panel"]').locator('button').first().click()
+  await page.waitForSelector('[data-testid="couple-profile-panel"]', { state: 'hidden' })
 }
 
 export async function deleteCouple(page: Page, name: string) {
   await openCoupleProfile(page, name)
-  await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+  await page.locator('[data-testid="couple-profile-panel"]').locator('button:has-text("Edit")').click()
   await page.waitForSelector('h2:has-text("Edit Couple")')
   await page.locator('button:has-text("Delete")').click()
   await page.locator('button:has-text("Click again to confirm")').click()
@@ -92,7 +92,7 @@ export async function navigateToProfileTab(
   page: Page,
   tab: 'Overview' | 'Events' | 'Vendors' | 'Tasks'
 ) {
-  await page.locator('div.fixed.top-0.right-0').locator(`button:has-text("${tab}")`).click()
+  await page.locator('[data-testid="couple-profile-panel"]').locator(`button:has-text("${tab}")`).click()
   await page.waitForLoadState('networkidle')
 }
 
@@ -121,8 +121,8 @@ export async function addVendor(
 export async function deleteVendor(page: Page, name: string) {
   await search(page, name)
   await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-  await page.waitForSelector('div.fixed.top-0.right-0 h1')
-  await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+  await page.waitForSelector('[data-testid="vendor-profile-panel"] h1')
+  await page.locator('[data-testid="vendor-profile-panel"]').locator('button:has-text("Edit")').click()
   await page.waitForSelector('h2:has-text("Edit Vendor")')
   await page.locator('button:has-text("Delete")').click()
   await page.locator('button:has-text("Click again to confirm")').click()

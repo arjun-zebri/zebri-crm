@@ -79,10 +79,10 @@ test.describe('Kanban / Board View', () => {
 
     // Click the card
     await page.locator(`.bg-gray-50:has-text("${name}")`).click()
-    await expect(page.locator('div.fixed.top-0.right-0 h1')).toBeVisible()
+    await expect(page.locator('[data-testid="couple-profile-panel"] h1')).toBeVisible()
 
     // Close profile
-    await page.locator('div.fixed.top-0.right-0').locator('button').first().click()
+    await page.locator('[data-testid="couple-profile-panel"]').locator('button').first().click()
     await page.locator('button:has-text("List")').click()
     await page.waitForLoadState('networkidle')
     await deleteCouple(page, name)

@@ -303,15 +303,17 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
               <SlidersHorizontal size={16} strokeWidth={1.5} />
             </button>
             <button
+              data-testid="calendar-prev-btn"
               onClick={handlePrev}
               className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
             >
               <ChevronLeft size={16} strokeWidth={1.5} />
             </button>
-            <h2 className="text-sm font-semibold text-gray-900 min-w-32 sm:min-w-44 text-center select-none">
+            <h2 data-testid="calendar-header" className="text-sm font-semibold text-gray-900 min-w-32 sm:min-w-44 text-center select-none">
               {getHeaderLabel()}
             </h2>
             <button
+              data-testid="calendar-next-btn"
               onClick={handleNext}
               className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
             >
@@ -430,7 +432,7 @@ function MonthView({
     <div className="flex flex-col h-full">
       <div className="grid grid-cols-7 flex-shrink-0 border-b border-gray-200">
         {WEEKDAYS.map((day) => (
-          <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+          <div key={day} data-testid={`weekday-${day}`} className="text-center text-xs font-medium text-gray-500 py-2">
             {day}
           </div>
         ))}

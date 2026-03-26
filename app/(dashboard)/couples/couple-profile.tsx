@@ -55,7 +55,7 @@ export function CoupleProfile({
       />
 
       {/* Panel */}
-      <div className="fixed top-0 right-0 h-full w-full md:w-[640px] bg-white shadow-2xl z-50 flex flex-col animate-slide-in-right">
+      <div data-testid="couple-profile-panel" className="fixed top-0 right-0 h-full w-full md:w-[640px] bg-white shadow-2xl z-50 flex flex-col animate-slide-in-right">
         {/* Header */}
         <div className="flex-shrink-0 px-4 md:px-8 pt-5 md:pt-6 pb-4 md:pb-5">
           <div className="flex items-start justify-between mb-3">

@@ -31,18 +31,18 @@ test.describe('Couple Profile', () => {
 
   // ── OVERVIEW tab ──────────────────────────────────────────────────────────
   test('Overview: contact email and phone are visible', async ({ page }) => {
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
     await expect(panel).toContainText('profile@test.com')
     await expect(panel).toContainText('+61 400 111 222')
   })
 
   test('Overview: notes appear when provided', async ({ page }) => {
     await navigateToProfileTab(page, 'Overview')
-    await expect(page.locator('div.fixed.top-0.right-0')).toContainText('Profile test notes')
+    await expect(page.locator('[data-testid="couple-profile-panel"]')).toContainText('Profile test notes')
   })
 
   test('Overview: Edit button opens Edit modal with pre-filled Name', async ({ page }) => {
-    await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+    await page.locator('[data-testid="couple-profile-panel"]').locator('button:has-text("Edit")').click()
     await page.waitForSelector('h2:has-text("Edit Couple")')
     const nameInput = page.locator('input[placeholder="Couple\'s name"]')
     await expect(nameInput).toHaveValue(coupleName)
@@ -52,14 +52,14 @@ test.describe('Couple Profile', () => {
   // ── EVENTS tab ────────────────────────────────────────────────────────────
   test('Events: empty state shows "No events yet." and "+ Add Event"', async ({ page }) => {
     await navigateToProfileTab(page, 'Events')
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
     await expect(panel.locator('text=No events yet.')).toBeVisible()
     await expect(panel.locator('text=+ Add Event')).toBeVisible()
   })
 
   test('Events: add event shows it in list', async ({ page }) => {
     await navigateToProfileTab(page, 'Events')
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
 
     await panel.locator('text=+ Add Event').click()
     await page.waitForSelector('h2:has-text("Add Event")')
@@ -83,7 +83,7 @@ test.describe('Couple Profile', () => {
   test('Events: delete event via trash icon shows confirmation dialog', async ({ page }) => {
     // First add an event
     await navigateToProfileTab(page, 'Events')
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
 
     await panel.locator('text=+ Add Event').click()
     await page.waitForSelector('h2:has-text("Add Event")')
@@ -104,14 +104,14 @@ test.describe('Couple Profile', () => {
   // ── VENDORS tab ───────────────────────────────────────────────────────────
   test('Vendors: empty state shows "No vendors assigned yet." and "+ Add Vendor"', async ({ page }) => {
     await navigateToProfileTab(page, 'Vendors')
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
     await expect(panel.locator('text=No vendors assigned yet.')).toBeVisible()
     await expect(panel.locator('text=+ Add Vendor')).toBeVisible()
   })
 
   test('Vendors: clicking "+ Add Vendor" shows vendor picker', async ({ page }) => {
     await navigateToProfileTab(page, 'Vendors')
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
     await panel.locator('text=+ Add Vendor').click()
     // VendorPicker should be visible — look for search input
     await expect(panel.locator('input[placeholder*="Search"], input[placeholder*="vendor"]')).toBeVisible({ timeout: 3000 })
@@ -120,14 +120,14 @@ test.describe('Couple Profile', () => {
   // ── TASKS tab ─────────────────────────────────────────────────────────────
   test('Tasks: empty state shows "No tasks yet." and "+ Add Task"', async ({ page }) => {
     await navigateToProfileTab(page, 'Tasks')
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
     await expect(panel.locator('text=No tasks yet.')).toBeVisible()
     await expect(panel.locator('text=+ Add Task')).toBeVisible()
   })
 
   test('Tasks: create task — row with title and "todo" badge appears', async ({ page }) => {
     await navigateToProfileTab(page, 'Tasks')
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
 
     await panel.locator('text=+ Add Task').click()
     await page.waitForSelector('input[placeholder="What needs to be done?"]')
@@ -142,7 +142,7 @@ test.describe('Couple Profile', () => {
 
   test('Tasks: toggle task complete changes badge to "done"', async ({ page }) => {
     await navigateToProfileTab(page, 'Tasks')
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="couple-profile-panel"]')
 
     // Add a task first
     await panel.locator('text=+ Add Task').click()

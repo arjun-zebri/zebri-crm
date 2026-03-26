@@ -35,8 +35,8 @@ test.describe('Vendor Management', () => {
 
     // Edit notes
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await page.waitForSelector('div.fixed.top-0.right-0 h1')
-    await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+    await page.waitForSelector('[data-testid="vendor-profile-panel"] h1')
+    await page.locator('[data-testid="vendor-profile-panel"]').locator('button:has-text("Edit")').click()
     await page.waitForSelector('h2:has-text("Edit Vendor")')
     await page.locator('textarea').fill(updatedNotes)
     await page.locator('button:has-text("Save")').click()
@@ -44,7 +44,7 @@ test.describe('Vendor Management', () => {
     await page.waitForLoadState('networkidle')
 
     // Delete
-    await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+    await page.locator('[data-testid="vendor-profile-panel"]').locator('button:has-text("Edit")').click()
     await page.waitForSelector('h2:has-text("Edit Vendor")')
     await page.locator('button:has-text("Delete")').click()
     await page.locator('button:has-text("Click again to confirm")').click()
@@ -127,11 +127,11 @@ test.describe('Vendor Management', () => {
     await addVendor(page, { name })
     await search(page, name)
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await expect(page.locator('div.fixed.top-0.right-0 h1')).toBeVisible()
-    await expect(page.locator('div.fixed.top-0.right-0')).toContainText(name)
+    await expect(page.locator('[data-testid="vendor-profile-panel"] h1')).toBeVisible()
+    await expect(page.locator('[data-testid="vendor-profile-panel"]')).toContainText(name)
 
     // Clean up
-    await page.locator('div.fixed.top-0.right-0').locator('button').first().click()
+    await page.locator('[data-testid="vendor-profile-panel"]').locator('button').first().click()
     await deleteVendor(page, name)
   })
 
@@ -141,9 +141,9 @@ test.describe('Vendor Management', () => {
     await addVendor(page, { name, email: 'overview@vendor.com', phone: '+61 400 777 666' })
     await search(page, name)
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await page.waitForSelector('div.fixed.top-0.right-0 h1')
+    await page.waitForSelector('[data-testid="vendor-profile-panel"] h1')
 
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="vendor-profile-panel"]')
     await expect(panel).toContainText('overview@vendor.com')
     await expect(panel).toContainText('+61 400 777 666')
 
@@ -158,10 +158,10 @@ test.describe('Vendor Management', () => {
     await addVendor(page, { name })
     await search(page, name)
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await page.waitForSelector('div.fixed.top-0.right-0 h1')
+    await page.waitForSelector('[data-testid="vendor-profile-panel"] h1')
 
-    await page.locator('div.fixed.top-0.right-0').locator('button').first().click()
-    await expect(page.locator('div.fixed.top-0.right-0')).not.toBeVisible()
+    await page.locator('[data-testid="vendor-profile-panel"]').locator('button').first().click()
+    await expect(page.locator('[data-testid="vendor-profile-panel"]')).not.toBeVisible()
 
     // Clean up
     await deleteVendor(page, name)
@@ -173,9 +173,9 @@ test.describe('Vendor Management', () => {
     await addVendor(page, { name })
     await search(page, name)
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await page.waitForSelector('div.fixed.top-0.right-0 h1')
+    await page.waitForSelector('[data-testid="vendor-profile-panel"] h1')
 
-    const panel = page.locator('div.fixed.top-0.right-0')
+    const panel = page.locator('[data-testid="vendor-profile-panel"]')
     await panel.locator('button:has-text("Events")').click()
     await page.waitForLoadState('networkidle')
     // Should render the tab content without error

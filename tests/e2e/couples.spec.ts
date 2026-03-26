@@ -75,8 +75,8 @@ test.describe('Couple Management', () => {
 
     // Open profile → Edit → change notes → Save
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await page.waitForSelector('div.fixed.top-0.right-0 h1')
-    await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+    await page.waitForSelector('[data-testid="couple-profile-panel"] h1')
+    await page.locator('[data-testid="couple-profile-panel"]').locator('button:has-text("Edit")').click()
     await page.waitForSelector('h2:has-text("Edit Couple")')
     await page.locator('textarea').fill(updatedNotes)
     await page.locator('button:has-text("Save")').click()
@@ -87,7 +87,7 @@ test.describe('Couple Management', () => {
     await expect(page.locator(`text=${updatedNotes}`)).toBeVisible()
 
     // Delete
-    await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+    await page.locator('[data-testid="couple-profile-panel"]').locator('button:has-text("Edit")').click()
     await page.waitForSelector('h2:has-text("Edit Couple")')
     await page.locator('button:has-text("Delete")').click()
     await page.locator('button:has-text("Click again to confirm")').click()
@@ -162,7 +162,7 @@ test.describe('Couple Management', () => {
 
     // Clean up
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await page.waitForSelector('div.fixed.top-0.right-0 h1')
+    await page.waitForSelector('[data-testid="couple-profile-panel"] h1')
     await deleteCouple(page, name)
   })
 
@@ -187,8 +187,8 @@ test.describe('Couple Management', () => {
     await addCouple(page, { name })
     await search(page, name)
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await expect(page.locator('div.fixed.top-0.right-0 h1')).toBeVisible()
-    await expect(page.locator('div.fixed.top-0.right-0')).toContainText(name)
+    await expect(page.locator('[data-testid="couple-profile-panel"] h1')).toBeVisible()
+    await expect(page.locator('[data-testid="couple-profile-panel"]')).toContainText(name)
 
     // Clean up
     await deleteCouple(page, name)
@@ -200,11 +200,11 @@ test.describe('Couple Management', () => {
     await addCouple(page, { name })
     await search(page, name)
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await page.waitForSelector('div.fixed.top-0.right-0 h1')
+    await page.waitForSelector('[data-testid="couple-profile-panel"] h1')
 
     // X is the first button in the panel header
-    await page.locator('div.fixed.top-0.right-0').locator('button').first().click()
-    await expect(page.locator('div.fixed.top-0.right-0')).not.toBeVisible()
+    await page.locator('[data-testid="couple-profile-panel"]').locator('button').first().click()
+    await expect(page.locator('[data-testid="couple-profile-panel"]')).not.toBeVisible()
 
     // Clean up
     await deleteCouple(page, name)
