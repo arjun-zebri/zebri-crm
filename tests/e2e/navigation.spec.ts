@@ -33,11 +33,11 @@ test.describe('Navigation', () => {
     await expect(page.locator('h1:has-text("Couples")')).toBeVisible()
   })
 
-  // ── 4. Vendors link ───────────────────────────────────────────────────────
-  test('sidebar Vendors link navigates to /vendors', async ({ page }) => {
-    await page.locator('a[href="/vendors"]').click()
-    await expect(page).toHaveURL(/\/vendors/)
-    await expect(page.locator('h1:has-text("Vendors")')).toBeVisible()
+  // ── 4. Contacts link ───────────────────────────────────────────────────────
+  test('sidebar Contacts link navigates to /contacts', async ({ page }) => {
+    await page.locator('a[href="/contacts"]').click()
+    await expect(page).toHaveURL(/\/contacts/)
+    await expect(page.locator('h1:has-text("Contacts")')).toBeVisible()
   })
 
   // ── 5. Home link ──────────────────────────────────────────────────────────

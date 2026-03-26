@@ -8,7 +8,7 @@ import { X, Search, Trash2, Edit2 } from "lucide-react";
 import { EventModal } from "../couples/event-modal";
 import { Event } from "../events/events-types";
 
-interface VendorEventsProps {
+interface ContactEventsProps {
   vendorId: string;
 }
 
@@ -38,7 +38,7 @@ interface CoupleSummary {
   name: string;
 }
 
-export function VendorEvents({ vendorId }: VendorEventsProps) {
+export function ContactEvents({ vendorId }: ContactEventsProps) {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -62,20 +62,20 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
   }, [selectedCoupleId, showCoupleSelector]);
 
   const { data: eventVendors, isLoading } = useQuery({
-    queryKey: ["vendor-events", vendorId],
+    queryKey: ["contact-events", vendorId],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
-        .from("event_vendors")
+        .from("event_contacts")
         .select(
           `
           id,
           event:event_id(id, date, venue, couple:couple_id(name))
         `
         )
-        .eq("vendor_id", vendorId)
+        .eq("contact_id", vendorId)
         .eq("user_id", user.user.id)
         .order("created_at", { ascending: false });
 
@@ -85,7 +85,7 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
   });
 
   const { data: availableEvents, isLoading: availableLoading } = useQuery({
-    queryKey: ["vendor-available-events", vendorId],
+    queryKey: ["contact-available-events", vendorId],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error("Not authenticated");
@@ -99,9 +99,9 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
       if (eventsError) throw eventsError;
 
       const { data: linkedEvents, error: linkedError } = await supabase
-        .from("event_vendors")
+        .from("event_contacts")
         .select("event_id")
-        .eq("vendor_id", vendorId)
+        .eq("contact_id", vendorId)
         .eq("user_id", user.user.id);
 
       if (linkedError) throw linkedError;
@@ -115,7 +115,7 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
   });
 
   const { data: couples, isLoading: couplesLoading } = useQuery({
-    queryKey: ["vendor-couples-for-create"],
+    queryKey: ["contact-couples-for-create"],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error("Not authenticated");
@@ -138,18 +138,18 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
       if (userError || !user.user) throw new Error("Not authenticated");
       if (!selectedEventId) throw new Error("No event selected");
 
-      const { error } = await supabase.from("event_vendors").insert({
+      const { error } = await supabase.from("event_contacts").insert({
         event_id: selectedEventId,
-        vendor_id: vendorId,
+        contact_id: vendorId,
         user_id: user.user.id,
       });
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vendor-events", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-events", vendorId] });
       queryClient.invalidateQueries({
-        queryKey: ["vendor-available-events", vendorId],
+        queryKey: ["contact-available-events", vendorId],
       });
       setShowLinkModal(false);
       setSelectedEventId(null);
@@ -159,16 +159,16 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
   const deleteEvent = useMutation({
     mutationFn: async (eventVendorId: string) => {
       const { error } = await supabase
-        .from("event_vendors")
+        .from("event_contacts")
         .delete()
         .eq("id", eventVendorId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vendor-events", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-events", vendorId] });
       queryClient.invalidateQueries({
-        queryKey: ["vendor-available-events", vendorId],
+        queryKey: ["contact-available-events", vendorId],
       });
       setDeleteConfirm(null);
     },
@@ -193,22 +193,22 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
 
       if (error) throw error;
 
-      // Sync vendors if provided
+      // Sync contacts if provided
       if (vendorIds !== undefined) {
-        await supabase.from("event_vendors").delete().eq("event_id", rest.id);
+        await supabase.from("event_contacts").delete().eq("event_id", rest.id);
 
         if (vendorIds.length > 0) {
-          const vendorLinks = vendorIds.map((id) => ({
+          const contactLinks = vendorIds.map((id) => ({
             event_id: rest.id,
-            vendor_id: id,
+            contact_id: id,
             user_id: user.user.id,
           }));
-          await supabase.from("event_vendors").insert(vendorLinks);
+          await supabase.from("event_contacts").insert(contactLinks);
         }
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vendor-events", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-events", vendorId] });
       setEditingEvent(undefined);
       setEditingVendorIds([]);
     },
@@ -239,15 +239,15 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
 
     if (eventError || !fullEvent) return;
 
-    // Fetch vendor links for this event
-    const { data: vendorLinks } = await supabase
-      .from("event_vendors")
-      .select("vendor_id")
+    // Fetch contact links for this event
+    const { data: contactLinks } = await supabase
+      .from("event_contacts")
+      .select("contact_id")
       .eq("event_id", event.id)
       .eq("user_id", user.user.id);
 
     setEditingVendorIds(
-      (vendorLinks || []).map((l: { vendor_id: string }) => l.vendor_id)
+      (contactLinks || []).map((l: { contact_id: string }) => l.contact_id)
     );
     setEditingEvent(fullEvent as Event);
   };
@@ -272,16 +272,16 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
     if (!user?.user) return;
 
     const { error } = await supabase
-      .from("event_vendors")
+      .from("event_contacts")
       .delete()
       .eq("event_id", editingEvent.id)
-      .eq("vendor_id", vendorId)
+      .eq("contact_id", vendorId)
       .eq("user_id", user.user.id);
 
     if (!error) {
-      queryClient.invalidateQueries({ queryKey: ["vendor-events", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-events", vendorId] });
       queryClient.invalidateQueries({
-        queryKey: ["vendor-available-events", vendorId],
+        queryKey: ["contact-available-events", vendorId],
       });
       setEditingEvent(undefined);
       setEditingVendorIds([]);
@@ -314,25 +314,25 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
       if (error) throw error;
       const newEvent = data?.[0] as Event;
 
-      // Link vendor to the new event and any other selected vendors
-      const vendorLinksToInsert = [
+      // Link contact to the new event and any other selected contacts
+      const contactLinksToInsert = [
         {
           event_id: newEvent.id,
-          vendor_id: vendorId,
+          contact_id: vendorId,
           user_id: user.user.id,
         },
         ...(vendorIds
           ?.filter((id) => id !== vendorId)
           .map((id) => ({
             event_id: newEvent.id,
-            vendor_id: id,
+            contact_id: id,
             user_id: user.user.id,
           })) || []),
       ];
 
-      await supabase.from("event_vendors").insert(vendorLinksToInsert);
+      await supabase.from("event_contacts").insert(contactLinksToInsert);
 
-      queryClient.invalidateQueries({ queryKey: ["vendor-events", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["contact-events", vendorId] });
       setShowEventModal(false);
       setSelectedCoupleId(null);
       setCoupleSearch("");
@@ -375,7 +375,7 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
         {!eventVendors || eventVendors.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-gray-500 mb-4">
-              No events linked yet. Events will appear here once this vendor is
+              No events linked yet. Events will appear here once this contact is
               assigned to a wedding.
             </p>
             <div className="flex gap-2 justify-center">
@@ -506,7 +506,7 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
                   </div>
                 ) : !availableEvents || availableEvents.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-8">
-                    All events already have this vendor assigned.
+                    All events already have this contact assigned.
                   </p>
                 ) : filteredEvents.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-8">
@@ -685,7 +685,7 @@ export function VendorEvents({ vendorId }: VendorEventsProps) {
                   Remove Event
                 </h3>
                 <p className="text-sm text-gray-600 mb-6">
-                  Are you sure you want to remove this vendor from the event?
+                  Are you sure you want to remove this contact from the event?
                 </p>
                 <div className="flex gap-3">
                   <button

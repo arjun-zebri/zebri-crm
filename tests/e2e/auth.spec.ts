@@ -88,9 +88,9 @@ test.describe('Authentication', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 
-  // ── 11. /vendors redirect ─────────────────────────────────────────────────
-  test('/vendors redirects to /login when unauthenticated', async ({ page }) => {
-    await page.goto('/vendors', { waitUntil: 'domcontentloaded' })
+  // ── 11. /contacts redirect ─────────────────────────────────────────────────
+  test('/contacts redirects to /login when unauthenticated', async ({ page }) => {
+    await page.goto('/contacts', { waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(/\/login/)
   })
 
@@ -106,7 +106,7 @@ test.describe('Authentication', () => {
     await page.locator('input[id="password"]').dispatchEvent('change')
     await page.waitForTimeout(300)
     await page.locator('button[type="submit"]').click()
-    await page.waitForURL(/\/(|dashboard|couples|vendors|settings)/, { timeout: 20000 })
+    await page.waitForURL(/\/(|dashboard|couples|contacts|settings)/, { timeout: 20000 })
     await expect(page).not.toHaveURL(/\/login/)
   })
 })

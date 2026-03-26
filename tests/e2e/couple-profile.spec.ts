@@ -101,20 +101,20 @@ test.describe('Couple Profile', () => {
     await expect(page.locator('text=Delete Event').or(page.locator('text=Are you sure'))).toBeVisible({ timeout: 3000 })
   })
 
-  // ── VENDORS tab ───────────────────────────────────────────────────────────
-  test('Vendors: empty state shows "No vendors assigned yet." and "+ Add Vendor"', async ({ page }) => {
-    await navigateToProfileTab(page, 'Vendors')
+  // ── CONTACTS tab ───────────────────────────────────────────────────────────
+  test('Contacts: empty state shows "No contacts assigned yet." and "+ Add Contact"', async ({ page }) => {
+    await navigateToProfileTab(page, 'Contacts')
     const panel = page.locator('[data-testid="couple-profile-panel"]')
-    await expect(panel.locator('text=No vendors assigned yet.')).toBeVisible()
-    await expect(panel.locator('text=+ Add Vendor')).toBeVisible()
+    await expect(panel.locator('text=No contacts assigned yet.')).toBeVisible()
+    await expect(panel.locator('text=+ Add Contact')).toBeVisible()
   })
 
-  test('Vendors: clicking "+ Add Vendor" shows vendor picker', async ({ page }) => {
-    await navigateToProfileTab(page, 'Vendors')
+  test('Contacts: clicking "+ Add Contact" shows contact picker', async ({ page }) => {
+    await navigateToProfileTab(page, 'Contacts')
     const panel = page.locator('[data-testid="couple-profile-panel"]')
-    await panel.locator('text=+ Add Vendor').click()
-    // VendorPicker should be visible — look for search input
-    await expect(panel.locator('input[placeholder*="Search"], input[placeholder*="vendor"]')).toBeVisible({ timeout: 3000 })
+    await panel.locator('text=+ Add Contact').click()
+    // ContactPicker should be visible — look for search input
+    await expect(panel.locator('input[placeholder*="Search"], input[placeholder*="contact"]')).toBeVisible({ timeout: 3000 })
   })
 
   // ── TASKS tab ─────────────────────────────────────────────────────────────

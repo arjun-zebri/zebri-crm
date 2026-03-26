@@ -3,18 +3,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { CATEGORY_LABELS } from '../vendors/vendors-types'
+import { CATEGORY_LABELS } from '../contacts/contacts-types'
 import { Badge } from '@/components/ui/badge'
 import { X } from 'lucide-react'
-import { VendorPicker } from '../couples/vendor-picker'
+import { ContactPicker } from '../couples/contact-picker'
 
 interface EventVendorsProps {
   eventId: string
 }
 
-interface VendorLink {
+interface ContactLink {
   id: string
-  vendor_id: string
+  contact_id: string
   vendor: {
     id: string
     name: string
@@ -29,54 +29,54 @@ export function EventVendors({ eventId }: EventVendorsProps) {
   const [showAddVendor, setShowAddVendor] = useState(false)
 
   const { data: vendors, isLoading } = useQuery({
-    queryKey: ['event-vendors', eventId],
+    queryKey: ['event-contacts', eventId],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser()
       if (userError || !user.user) throw new Error('Not authenticated')
 
       const { data, error } = await supabase
-        .from('event_vendors')
-        .select('id, vendor_id, vendor:vendor_id(id, name, category, status)')
+        .from('event_contacts')
+        .select('id, contact_id, vendor:contact_id(id, name, category, status)')
         .eq('event_id', eventId)
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return (data || []) as unknown as VendorLink[]
+      return (data || []) as unknown as ContactLink[]
     },
   })
 
   const removeVendor = useMutation({
-    mutationFn: async (vendorLinkId: string) => {
+    mutationFn: async (contactLinkId: string) => {
       const { error } = await supabase
-        .from('event_vendors')
+        .from('event_contacts')
         .delete()
-        .eq('id', vendorLinkId)
+        .eq('id', contactLinkId)
 
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event-vendors', eventId] })
+      queryClient.invalidateQueries({ queryKey: ['event-contacts', eventId] })
     },
   })
 
   const addVendor = useMutation({
-    mutationFn: async (vendorId: string) => {
+    mutationFn: async (contactId: string) => {
       const { data: user, error: userError } = await supabase.auth.getUser()
       if (userError || !user.user) throw new Error('Not authenticated')
 
       const { error } = await supabase
-        .from('event_vendors')
+        .from('event_contacts')
         .insert({
           event_id: eventId,
-          vendor_id: vendorId,
+          contact_id: contactId,
           user_id: user.user.id,
         })
 
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event-vendors', eventId] })
+      queryClient.invalidateQueries({ queryKey: ['event-contacts', eventId] })
       setShowAddVendor(false)
     },
   })
@@ -95,12 +95,12 @@ export function EventVendors({ eventId }: EventVendorsProps) {
     <div className="space-y-4">
       {!vendors || vendors.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-sm text-gray-500 mb-3">No vendors assigned yet.</p>
+          <p className="text-sm text-gray-500 mb-3">No contacts assigned yet.</p>
           <button
             onClick={() => setShowAddVendor(true)}
             className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
           >
-            + Add Vendor
+            + Add Contact
           </button>
         </div>
       ) : (
@@ -129,15 +129,15 @@ export function EventVendors({ eventId }: EventVendorsProps) {
             onClick={() => setShowAddVendor(true)}
             className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
           >
-            + Add Vendor
+            + Add Contact
           </button>
         </>
       )}
 
       {showAddVendor && (
-        <VendorPicker
-          excludeVendorIds={vendors?.map(v => v.vendor_id) ?? []}
-          onAdd={(vendorId) => addVendor.mutate(vendorId)}
+        <ContactPicker
+          excludeVendorIds={vendors?.map(v => v.contact_id) ?? []}
+          onAdd={(contactId) => addVendor.mutate(contactId)}
           onClose={() => setShowAddVendor(false)}
           isAdding={addVendor.isPending}
         />

@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus, Search, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react'
 import {
-  Vendor,
-  VendorCategory,
-  VendorStatus,
+  Contact,
+  ContactCategory,
+  ContactStatus,
   CATEGORIES,
   CATEGORY_LABELS,
   STATUSES,
@@ -13,22 +13,22 @@ import {
   SortField,
   SortDirection,
   SORT_OPTIONS,
-} from './vendors-types'
+} from './contacts-types'
 
-interface VendorsHeaderProps {
-  vendors: Vendor[]
+interface ContactsHeaderProps {
+  vendors: Contact[]
   onAddClick: () => void
   search: string
   onSearchChange: (search: string) => void
-  categoryFilter: VendorCategory | null
-  statusFilter: VendorStatus | null
-  onFilterChange: (filter: { type: 'category'; value: VendorCategory } | { type: 'status'; value: VendorStatus } | null) => void
+  categoryFilter: ContactCategory | null
+  statusFilter: ContactStatus | null
+  onFilterChange: (filter: { type: 'category'; value: ContactCategory } | { type: 'status'; value: ContactStatus } | null) => void
   sortField: SortField
   sortDirection: SortDirection
   onSortChange: (field: SortField, direction: SortDirection) => void
 }
 
-export function VendorsHeader({
+export function ContactsHeader({
   vendors,
   onAddClick,
   search,
@@ -39,7 +39,7 @@ export function VendorsHeader({
   sortField,
   sortDirection,
   onSortChange,
-}: VendorsHeaderProps) {
+}: ContactsHeaderProps) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortOpen, setSortOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -77,10 +77,10 @@ export function VendorsHeader({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const countByCategory = (category: VendorCategory) =>
+  const countByCategory = (category: ContactCategory) =>
     vendors.filter((v) => v.category === category).length
 
-  const countByStatus = (status: VendorStatus) =>
+  const countByStatus = (status: ContactStatus) =>
     vendors.filter((v) => v.status === status).length
 
   const hasActiveFilter = categoryFilter !== null || statusFilter !== null
@@ -89,7 +89,7 @@ export function VendorsHeader({
     <div>
       <div className="flex items-center justify-between flex-wrap gap-y-2">
         <div className="flex items-baseline gap-3">
-          <h1 className="text-3xl font-semibold text-gray-900">Vendors</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">Contacts</h1>
           <span className="text-sm text-gray-400">{vendors.length} total</span>
         </div>
 

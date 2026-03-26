@@ -90,13 +90,13 @@ export async function deleteCouple(page: Page, name: string) {
 
 export async function navigateToProfileTab(
   page: Page,
-  tab: 'Overview' | 'Events' | 'Vendors' | 'Tasks'
+  tab: 'Overview' | 'Events' | 'Contacts' | 'Tasks'
 ) {
   await page.locator('[data-testid="couple-profile-panel"]').locator(`button:has-text("${tab}")`).click()
   await page.waitForLoadState('networkidle')
 }
 
-export async function addVendor(
+export async function addContact(
   page: Page,
   opts: {
     name: string
@@ -107,28 +107,33 @@ export async function addVendor(
   }
 ) {
   await page.locator('button:has-text("New")').first().click()
-  await page.waitForSelector('h2:has-text("Add Vendor")')
+  await page.waitForSelector('h2:has-text("Add Contact")')
   await page.locator('input[placeholder="e.g., Elegant Venues"]').fill(opts.name)
   if (opts.contactName) await page.locator('input[placeholder="e.g., John Smith"]').fill(opts.contactName)
   if (opts.phone) await page.locator('input[type="tel"]').fill(opts.phone)
   if (opts.email) await page.locator('input[type="email"]').fill(opts.email)
   if (opts.notes) await page.locator('textarea').fill(opts.notes)
   await page.locator('button:has-text("Save")').click()
-  await page.waitForSelector('h2:has-text("Add Vendor")', { state: 'hidden' })
+  await page.waitForSelector('h2:has-text("Add Contact")', { state: 'hidden' })
   await page.waitForLoadState('networkidle')
 }
 
-export async function deleteVendor(page: Page, name: string) {
+export async function deleteContact(page: Page, name: string) {
   await search(page, name)
   await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-  await page.waitForSelector('[data-testid="vendor-profile-panel"] h1')
-  await page.locator('[data-testid="vendor-profile-panel"]').locator('button:has-text("Edit")').click()
-  await page.waitForSelector('h2:has-text("Edit Vendor")')
+  await page.waitForSelector('[data-testid="contact-profile-panel"] h1')
+  await page.locator('[data-testid="contact-profile-panel"]').locator('button:has-text("Edit")').click()
+  await page.waitForSelector('h2:has-text("Edit Contact")')
   await page.locator('button:has-text("Delete")').click()
   await page.locator('button:has-text("Click again to confirm")').click()
-  await page.waitForSelector('h2:has-text("Edit Vendor")', { state: 'hidden' })
+  await page.waitForSelector('h2:has-text("Edit Contact")', { state: 'hidden' })
   await page.waitForLoadState('networkidle')
 }
+
+/** @deprecated Use addContact instead */
+export const addVendor = addContact
+/** @deprecated Use deleteContact instead */
+export const deleteVendor = deleteContact
 
 export async function search(page: Page, term: string) {
   const searchInput = page.locator('input[placeholder="Search..."]').first()

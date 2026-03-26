@@ -3,38 +3,38 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useToast } from '@/components/ui/toast'
 import {
-  useVendors,
-  useCreateVendor,
-  useUpdateVendor,
-  useDeleteVendor,
-} from './use-vendors'
-import { VendorsHeader } from './vendors-header'
-import { VendorsList } from './vendors-list'
-import { VendorModal } from './vendor-modal'
-import { VendorProfile } from './vendor-profile'
+  useContacts,
+  useCreateContact,
+  useUpdateContact,
+  useDeleteContact,
+} from './use-contacts'
+import { ContactsHeader } from './contacts-header'
+import { ContactsList } from './contacts-list'
+import { ContactModal } from './contact-modal'
+import { ContactProfile } from './contact-profile'
 import {
-  Vendor,
-  VendorCategory,
-  VendorStatus,
+  Contact,
+  ContactCategory,
+  ContactStatus,
   SortField,
   SortDirection,
   CATEGORY_LABELS,
-} from './vendors-types'
+} from './contacts-types'
 
-export default function VendorsPage() {
-  const { data: vendors, isLoading } = useVendors()
-  const createVendor = useCreateVendor()
-  const updateVendor = useUpdateVendor()
-  const deleteVendor = useDeleteVendor()
+export default function ContactsPage() {
+  const { data: vendors, isLoading } = useContacts()
+  const createContact = useCreateContact()
+  const updateContact = useUpdateContact()
+  const deleteContact = useDeleteContact()
 
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<VendorCategory | null>(null)
-  const [statusFilter, setStatusFilter] = useState<VendorStatus | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<ContactCategory | null>(null)
+  const [statusFilter, setStatusFilter] = useState<ContactStatus | null>(null)
   const [sortField, setSortField] = useState<SortField>('created_at')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [modalOpen, setModalOpen] = useState(false)
-  const [editingVendor, setEditingVendor] = useState<Vendor | undefined>()
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const [editingContact, setEditingContact] = useState<Contact | undefined>()
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function VendorsPage() {
         const target = e.target as HTMLElement
         if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
           e.preventDefault()
-          setEditingVendor(undefined)
+          setEditingContact(undefined)
           setModalOpen(true)
         }
       }
@@ -53,18 +53,18 @@ export default function VendorsPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  const filteredVendors = useMemo(() => {
-    const filtered = vendors.filter((vendor) => {
+  const filteredContacts = useMemo(() => {
+    const filtered = vendors.filter((contact) => {
       const matchesSearch =
         search === '' ||
-        vendor.name.toLowerCase().includes(search.toLowerCase()) ||
-        vendor.contact_name.toLowerCase().includes(search.toLowerCase()) ||
-        vendor.email.toLowerCase().includes(search.toLowerCase()) ||
-        vendor.phone.toLowerCase().includes(search.toLowerCase()) ||
-        CATEGORY_LABELS[vendor.category].toLowerCase().includes(search.toLowerCase())
+        contact.name.toLowerCase().includes(search.toLowerCase()) ||
+        contact.contact_name.toLowerCase().includes(search.toLowerCase()) ||
+        contact.email.toLowerCase().includes(search.toLowerCase()) ||
+        contact.phone.toLowerCase().includes(search.toLowerCase()) ||
+        CATEGORY_LABELS[contact.category].toLowerCase().includes(search.toLowerCase())
 
-      const matchesCategory = categoryFilter === null || vendor.category === categoryFilter
-      const matchesStatus = statusFilter === null || vendor.status === statusFilter
+      const matchesCategory = categoryFilter === null || contact.category === categoryFilter
+      const matchesStatus = statusFilter === null || contact.status === statusFilter
 
       return matchesSearch && matchesCategory && matchesStatus
     })
@@ -79,41 +79,41 @@ export default function VendorsPage() {
     })
   }, [vendors, search, categoryFilter, statusFilter, sortField, sortDirection])
 
-  const handleSaveVendor = async (
-    data: Omit<Vendor, 'id' | 'user_id' | 'created_at'> & { id?: string }
+  const handleSaveContact = async (
+    data: Omit<Contact, 'id' | 'user_id' | 'created_at'> & { id?: string }
   ) => {
-    if (data.id && editingVendor) {
-      const updated = { ...editingVendor, ...data }
-      await updateVendor.mutateAsync(updated)
-      if (selectedVendor?.id === data.id) {
-        setSelectedVendor(updated)
+    if (data.id && editingContact) {
+      const updated = { ...editingContact, ...data }
+      await updateContact.mutateAsync(updated)
+      if (selectedContact?.id === data.id) {
+        setSelectedContact(updated)
       }
-      toast('Vendor updated')
+      toast('Contact updated')
     } else {
-      await createVendor.mutateAsync(data)
-      toast('Vendor added')
+      await createContact.mutateAsync(data)
+      toast('Contact added')
     }
     setModalOpen(false)
-    setEditingVendor(undefined)
+    setEditingContact(undefined)
   }
 
-  const handleDeleteVendor = async (id: string) => {
-    await deleteVendor.mutateAsync(id)
+  const handleDeleteContact = async (id: string) => {
+    await deleteContact.mutateAsync(id)
     setModalOpen(false)
-    setEditingVendor(undefined)
-    if (selectedVendor?.id === id) {
-      setSelectedVendor(null)
+    setEditingContact(undefined)
+    if (selectedContact?.id === id) {
+      setSelectedContact(null)
     }
-    toast('Vendor deleted')
+    toast('Contact deleted')
   }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-6 pt-6 pb-3 flex-shrink-0">
-        <VendorsHeader
+        <ContactsHeader
           vendors={vendors}
           onAddClick={() => {
-            setEditingVendor(undefined)
+            setEditingContact(undefined)
             setModalOpen(true)
           }}
           search={search}
@@ -142,37 +142,37 @@ export default function VendorsPage() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-hidden px-6">
-        <VendorsList
-          vendors={filteredVendors}
-          onRowClick={(vendor) => setSelectedVendor(vendor)}
+        <ContactsList
+          vendors={filteredContacts}
+          onRowClick={(contact) => setSelectedContact(contact)}
           loading={isLoading}
         />
       </div>
 
       {/* Profile slide-over (z-40/50) — stays open behind the edit modal */}
-      <VendorProfile
-        vendor={selectedVendor}
-        onClose={() => setSelectedVendor(null)}
-        onEdit={(vendor) => {
-          setEditingVendor(vendor)
+      <ContactProfile
+        vendor={selectedContact}
+        onClose={() => setSelectedContact(null)}
+        onEdit={(contact) => {
+          setEditingContact(contact)
           setModalOpen(true)
         }}
       />
 
       {/* Edit/Add modal (z-50/60) — opens on top of everything */}
-      <VendorModal
+      <ContactModal
         isOpen={modalOpen}
         onClose={() => {
           setModalOpen(false)
-          setEditingVendor(undefined)
+          setEditingContact(undefined)
         }}
-        onSave={handleSaveVendor}
-        onDelete={handleDeleteVendor}
-        vendor={editingVendor}
+        onSave={handleSaveContact}
+        onDelete={handleDeleteContact}
+        vendor={editingContact}
         loading={
-          createVendor.isPending ||
-          updateVendor.isPending ||
-          deleteVendor.isPending
+          createContact.isPending ||
+          updateContact.isPending ||
+          deleteContact.isPending
         }
       />
     </div>

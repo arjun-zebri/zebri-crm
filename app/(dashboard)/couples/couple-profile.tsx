@@ -16,7 +16,7 @@ interface CoupleProfileProps {
   couple: Couple | null;
   onClose: () => void;
   onEdit: (couple: Couple) => void;
-  defaultTab?: "overview" | "events" | "vendors" | "tasks";
+  defaultTab?: "overview" | "events" | "contacts" | "tasks";
 }
 
 export function CoupleProfile({
@@ -27,7 +27,7 @@ export function CoupleProfile({
 }: CoupleProfileProps) {
   const { data: statuses } = useCoupleStatuses();
   const [activeTab, setActiveTab] = useState<
-    "overview" | "events" | "vendors" | "tasks"
+    "overview" | "events" | "contacts" | "tasks"
   >(defaultTab);
 
   useEffect(() => {
@@ -161,14 +161,14 @@ export function CoupleProfile({
               Events
             </button>
             <button
-              onClick={() => setActiveTab("vendors")}
+              onClick={() => setActiveTab("contacts")}
               className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
-                activeTab === "vendors"
+                activeTab === "contacts"
                   ? "border-gray-900 text-gray-900"
                   : "border-transparent text-gray-400 hover:text-gray-600"
               }`}
             >
-              Vendors
+              Contacts
             </button>
             <button
               onClick={() => setActiveTab("tasks")}
@@ -189,7 +189,7 @@ export function CoupleProfile({
             <CoupleOverview couple={couple} statuses={statuses} />
           )}
           {activeTab === "events" && <CoupleEvents couple={couple} />}
-          {activeTab === "vendors" && <CoupleVendors coupleId={couple.id} />}
+          {activeTab === "contacts" && <CoupleVendors coupleId={couple.id} />}
           {activeTab === "tasks" && <CoupleTasks coupleId={couple.id} />}
         </div>
       </div>

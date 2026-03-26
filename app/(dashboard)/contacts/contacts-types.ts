@@ -1,4 +1,4 @@
-export type VendorCategory =
+export type ContactCategory =
   | 'venue'
   | 'celebrant'
   | 'photographer'
@@ -12,22 +12,22 @@ export type VendorCategory =
   | 'planner'
   | 'other'
 
-export type VendorStatus = 'active' | 'inactive'
+export type ContactStatus = 'active' | 'inactive'
 
-export interface Vendor {
+export interface Contact {
   id: string
   user_id: string
   name: string
   contact_name: string
   email: string
   phone: string
-  category: VendorCategory
+  category: ContactCategory
   notes: string
-  status: VendorStatus
+  status: ContactStatus
   created_at: string
 }
 
-export const CATEGORIES: VendorCategory[] = [
+export const CATEGORIES: ContactCategory[] = [
   'venue',
   'celebrant',
   'photographer',
@@ -42,7 +42,7 @@ export const CATEGORIES: VendorCategory[] = [
   'other',
 ]
 
-export const CATEGORY_LABELS: Record<VendorCategory, string> = {
+export const CATEGORY_LABELS: Record<ContactCategory, string> = {
   venue: 'Venue',
   celebrant: 'Celebrant',
   photographer: 'Photographer',
@@ -57,9 +57,9 @@ export const CATEGORY_LABELS: Record<VendorCategory, string> = {
   other: 'Other',
 }
 
-export const STATUSES: VendorStatus[] = ['active', 'inactive']
+export const STATUSES: ContactStatus[] = ['active', 'inactive']
 
-export const STATUS_LABELS: Record<VendorStatus, string> = {
+export const STATUS_LABELS: Record<ContactStatus, string> = {
   active: 'Active',
   inactive: 'Inactive',
 }

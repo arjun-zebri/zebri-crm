@@ -15,7 +15,7 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: tasks, isLoading: tasksLoading } = useDashboardTasks();
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
-  const [defaultTab, setDefaultTab] = useState<'overview' | 'events' | 'vendors' | 'tasks'>('overview');
+  const [defaultTab, setDefaultTab] = useState<'overview' | 'events' | 'contacts' | 'tasks'>('overview');
 
   const handleEventClick = (coupleData: { id: string; name: string }) => {
     setDefaultTab('overview');

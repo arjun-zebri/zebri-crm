@@ -51,9 +51,9 @@ Each user has their own set of custom statuses. The slug is stored in couples.st
 
 ------------------------------------------------------------------------
 
-# vendors
+# contacts
 
-Other wedding vendors the MC liaises with.
+Other wedding contacts the MC liaises with.
 
 Columns:
 
@@ -90,7 +90,7 @@ Follow-ups and reminders.
 Columns:
 
 id (uuid) title (text) description (text) due_date (date) status (text)
-user_id (uuid) related_event_id (uuid) related_couple_id (uuid) related_vendor_id (uuid, nullable, FK to vendors.id)
+user_id (uuid) related_event_id (uuid) related_couple_id (uuid) related_contact_id (uuid, nullable, FK to contacts.id)
 
 Status values: todo in_progress done
 
@@ -98,27 +98,27 @@ created_at (timestamp)
 
 ------------------------------------------------------------------------
 
-# event_vendors
+# event_contacts
 
-Join table linking vendors to events.
+Join table linking contacts to events.
 
 Columns:
 
-id (uuid) event_id (uuid, not null, FK to events.id) vendor_id (uuid, not null, FK to vendors.id) user_id (uuid, not null) role_notes (text) created_at (timestamp)
+id (uuid) event_id (uuid, not null, FK to events.id) contact_id (uuid, not null, FK to contacts.id) user_id (uuid, not null) role_notes (text) created_at (timestamp)
 
-Unique constraint on (event_id, vendor_id).
+Unique constraint on (event_id, contact_id).
 
 ------------------------------------------------------------------------
 
-# couple_vendors
+# couple_contacts
 
-Join table linking vendors to couples.
+Join table linking contacts to couples.
 
 Columns:
 
-id (uuid) couple_id (uuid, not null, FK to couples.id) vendor_id (uuid, not null, FK to vendors.id) user_id (uuid, not null) created_at (timestamp)
+id (uuid) couple_id (uuid, not null, FK to couples.id) contact_id (uuid, not null, FK to contacts.id) user_id (uuid, not null) created_at (timestamp)
 
-Unique constraint on (couple_id, vendor_id).
+Unique constraint on (couple_id, contact_id).
 
 ------------------------------------------------------------------------
 
@@ -126,13 +126,13 @@ Unique constraint on (couple_id, vendor_id).
 
 couples -> have events
 
-couples -> linked to vendors via couple_vendors join table
+couples -> linked to contacts via couple_contacts join table
 
-vendors -> linked to couples via couple_vendors join table
+contacts -> linked to couples via couple_contacts join table
 
-vendors -> linked to events via event_vendors join table
+contacts -> linked to events via event_contacts join table
 
-tasks -> can relate to couple (via tasks.related_couple_id), event (via tasks.related_event_id), or vendor (via tasks.related_vendor_id)
+tasks -> can relate to couple (via tasks.related_couple_id), event (via tasks.related_event_id), or contact (via tasks.related_contact_id)
 
 All tables -> scoped to user via user_id (RLS)
 

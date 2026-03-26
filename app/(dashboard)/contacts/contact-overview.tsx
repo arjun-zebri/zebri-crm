@@ -1,14 +1,14 @@
 'use client'
 
-import { Vendor, CATEGORY_LABELS, STATUS_LABELS } from './vendors-types'
+import { Contact, CATEGORY_LABELS, STATUS_LABELS } from './contacts-types'
 import { Badge } from '@/components/ui/badge'
 
-interface VendorOverviewProps {
-  vendor: Vendor
+interface ContactOverviewProps {
+  vendor: Contact
   onEditClick: () => void
 }
 
-export function VendorOverview({ vendor, onEditClick }: VendorOverviewProps) {
+export function ContactOverview({ vendor, onEditClick }: ContactOverviewProps) {
   return (
     <div className="space-y-6">
       {/* Contact Details Section */}

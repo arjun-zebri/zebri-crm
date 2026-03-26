@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import * as Popover from '@radix-ui/react-popover'
 import { Modal } from '@/components/ui/modal'
 import { Event, EventStatus, STATUS_LABELS } from '../events/events-types'
-import { CATEGORY_LABELS } from '../vendors/vendors-types'
+import { CATEGORY_LABELS } from '../contacts/contacts-types'
 import { createClient } from '@/lib/supabase/client'
 
 interface EventModalProps {
@@ -50,13 +50,13 @@ export function EventModal({
   const [vendorSearch, setVendorSearch] = useState('')
 
   const { data: allVendors } = useQuery({
-    queryKey: ['all-vendors'],
+    queryKey: ['all-contacts'],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser()
       if (userError || !user.user) throw new Error('Not authenticated')
 
       const { data, error } = await supabase
-        .from('vendors')
+        .from('contacts')
         .select('id, name, category')
         .eq('user_id', user.user.id)
         .eq('status', 'active')
@@ -262,10 +262,10 @@ export function EventModal({
             </Popover.Root>
           </div>
 
-          {/* Vendors - 2 cols */}
+          {/* Contacts - 2 cols */}
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Vendors
+              Contacts
             </label>
 
             {/* Selected vendors */}
@@ -297,7 +297,7 @@ export function EventModal({
                 type="text"
                 value={vendorSearch}
                 onChange={(e) => setVendorSearch(e.target.value)}
-                placeholder="Search vendors to add..."
+                placeholder="Search contacts to add..."
                 className={inputClass}
               />
               {vendorSearch && filteredVendors.length > 0 && (
@@ -322,7 +322,7 @@ export function EventModal({
               )}
               {vendorSearch && filteredVendors.length === 0 && (
                 <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-3">
-                  <p className="text-sm text-gray-500 text-center">No vendors found</p>
+                  <p className="text-sm text-gray-500 text-center">No contacts found</p>
                 </div>
               )}
             </div>

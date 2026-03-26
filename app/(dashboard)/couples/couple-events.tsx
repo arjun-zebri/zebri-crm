@@ -58,14 +58,14 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
       if (error) throw error
       const newEvent = data?.[0] as Event
 
-      // Link vendors if any selected
+      // Link contacts if any selected
       if (vendorIds && vendorIds.length > 0 && newEvent) {
-        const vendorLinks = vendorIds.map((vendorId) => ({
+        const contactLinks = vendorIds.map((contactId) => ({
           event_id: newEvent.id,
-          vendor_id: vendorId,
+          contact_id: contactId,
           user_id: user.user.id,
         }))
-        await supabase.from('event_vendors').insert(vendorLinks)
+        await supabase.from('event_contacts').insert(contactLinks)
       }
 
       return newEvent
@@ -74,7 +74,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
       if (newEvent) {
-        queryClient.invalidateQueries({ queryKey: ['event-vendors', newEvent.id] })
+        queryClient.invalidateQueries({ queryKey: ['event-contacts', newEvent.id] })
       }
       setShowModal(false)
       toast('Event added')
@@ -100,22 +100,22 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
 
       if (error) throw error
 
-      // Sync vendors if provided
+      // Sync contacts if provided
       if (vendorIds !== undefined) {
         // Remove existing links
         await supabase
-          .from('event_vendors')
+          .from('event_contacts')
           .delete()
           .eq('event_id', rest.id)
 
         // Insert new links
         if (vendorIds.length > 0) {
-          const vendorLinks = vendorIds.map((vendorId) => ({
+          const contactLinks = vendorIds.map((contactId) => ({
             event_id: rest.id,
-            vendor_id: vendorId,
+            contact_id: contactId,
             user_id: user.user.id,
           }))
-          await supabase.from('event_vendors').insert(vendorLinks)
+          await supabase.from('event_contacts').insert(contactLinks)
         }
       }
     },
@@ -123,7 +123,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
       if (editingEvent) {
-        queryClient.invalidateQueries({ queryKey: ['event-vendors', editingEvent.id] })
+        queryClient.invalidateQueries({ queryKey: ['event-contacts', editingEvent.id] })
       }
       setShowModal(false)
       setEditingEvent(undefined)
@@ -178,13 +178,13 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
     // Fetch existing vendor links for this event
     const { data: user } = await supabase.auth.getUser()
     if (user?.user) {
-      const { data: vendorLinks } = await supabase
-        .from('event_vendors')
-        .select('vendor_id')
+      const { data: contactLinks } = await supabase
+        .from('event_contacts')
+        .select('contact_id')
         .eq('event_id', event.id)
         .eq('user_id', user.user.id)
 
-      setEditingVendorIds((vendorLinks || []).map((l: { vendor_id: string }) => l.vendor_id))
+      setEditingVendorIds((contactLinks || []).map((l: { contact_id: string }) => l.contact_id))
     } else {
       setEditingVendorIds([])
     }

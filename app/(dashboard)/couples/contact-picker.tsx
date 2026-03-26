@@ -3,46 +3,46 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { CATEGORY_LABELS } from '../vendors/vendors-types'
+import { CATEGORY_LABELS } from '../contacts/contacts-types'
 import { X } from 'lucide-react'
 
-interface VendorPickerProps {
+interface ContactPickerProps {
   excludeVendorIds: string[]
-  onAdd: (vendorId: string) => void
+  onAdd: (contactId: string) => void
   onClose: () => void
   isAdding: boolean
 }
 
-interface Vendor {
+interface Contact {
   id: string
   name: string
   category: string
 }
 
-export function VendorPicker({
+export function ContactPicker({
   excludeVendorIds,
   onAdd,
   onClose,
   isAdding,
-}: VendorPickerProps) {
+}: ContactPickerProps) {
   const supabase = createClient()
   const [search, setSearch] = useState('')
 
   const { data: vendors, isLoading } = useQuery({
-    queryKey: ['all-vendors'],
+    queryKey: ['all-contacts'],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser()
       if (userError || !user.user) throw new Error('Not authenticated')
 
       const { data, error } = await supabase
-        .from('vendors')
+        .from('contacts')
         .select('id, name, category')
         .eq('user_id', user.user.id)
         .eq('status', 'active')
         .order('name', { ascending: true })
 
       if (error) throw error
-      return (data || []) as Vendor[]
+      return (data || []) as Contact[]
     },
   })
 
@@ -70,7 +70,7 @@ export function VendorPicker({
       <div className="flex items-center justify-between gap-2">
         <input
           type="text"
-          placeholder="Search vendors..."
+          placeholder="Search contacts..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200"
@@ -86,8 +86,8 @@ export function VendorPicker({
       {filteredVendors.length === 0 ? (
         <p className="text-sm text-gray-500 py-4 text-center">
           {vendors && vendors.length === 0
-            ? 'No vendors available'
-            : 'No vendors found'}
+            ? 'No contacts available'
+            : 'No contacts found'}
         </p>
       ) : (
         <div className="space-y-1 max-h-64 overflow-y-auto">

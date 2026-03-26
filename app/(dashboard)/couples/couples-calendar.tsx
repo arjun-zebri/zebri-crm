@@ -18,7 +18,7 @@ interface EventWithCouple extends Event {
     name: string
     status?: string
   }
-  event_vendors?: { count: number }[]
+  event_contacts?: { count: number }[]
   tasks?: { count: number }[]
 }
 
@@ -72,7 +72,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
 
       const { data, error } = await supabase
         .from('events')
-        .select('id, user_id, date, couple_id, status, created_at, venue, timeline_notes, couples(id, name, status), event_vendors(count), tasks!tasks_related_event_id_fkey(count)')
+        .select('id, user_id, date, couple_id, status, created_at, venue, timeline_notes, couples(id, name, status), event_contacts(count), tasks!tasks_related_event_id_fkey(count)')
         .eq('user_id', user.user.id)
         .not('date', 'is', null)
 
@@ -591,7 +591,7 @@ function DayView({
             const accentColor = coupleStatus ? ACCENT_BAR_COLOR_MAP[coupleStatus.color] : ACCENT_BAR_COLOR_MAP.gray
             const classes = coupleStatus ? getStatusClasses(coupleStatus.color) : getStatusClasses('gray')
             const statusName = coupleStatus?.name || coupleStatusSlug.charAt(0).toUpperCase() + coupleStatusSlug.slice(1)
-            const vendorCount = event.event_vendors?.[0]?.count || 0
+            const vendorCount = event.event_contacts?.[0]?.count || 0
             const taskCount = event.tasks?.[0]?.count || 0
             const eventStatus = event.status || 'upcoming'
 
@@ -633,7 +633,7 @@ function DayView({
                     <span className="flex items-center gap-1.5 text-gray-500">
                       <Users size={14} strokeWidth={1.5} />
                       <span className="font-medium">{vendorCount}</span>
-                      <span className="text-gray-400">vendor{vendorCount !== 1 ? 's' : ''}</span>
+                      <span className="text-gray-400">contact{vendorCount !== 1 ? 's' : ''}</span>
                     </span>
                     <span className="flex items-center gap-1.5 text-gray-500">
                       <CheckSquare size={14} strokeWidth={1.5} />

@@ -3,18 +3,18 @@
 import { useState } from "react";
 import { X, Phone, Mail, Pencil } from "lucide-react";
 import { PiWhatsappLogoLight } from "react-icons/pi";
-import { Vendor, CATEGORY_LABELS, STATUS_LABELS } from "./vendors-types";
+import { Contact, CATEGORY_LABELS, STATUS_LABELS } from "./contacts-types";
 import { Badge } from "@/components/ui/badge";
-import { VendorOverview } from "./vendor-overview";
-import { VendorEvents } from "./vendor-events";
+import { ContactOverview } from "./contact-overview";
+import { ContactEvents } from "./contact-events";
 
-interface VendorProfileProps {
-  vendor: Vendor | null;
+interface ContactProfileProps {
+  vendor: Contact | null;
   onClose: () => void;
-  onEdit: (vendor: Vendor) => void;
+  onEdit: (contact: Contact) => void;
 }
 
-export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
+export function ContactProfile({ vendor, onClose, onEdit }: ContactProfileProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "events">("overview");
 
   if (!vendor) return null;
@@ -31,7 +31,7 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
       />
 
       {/* Panel */}
-      <div data-testid="vendor-profile-panel" className="fixed top-0 right-0 h-full w-full md:w-[640px] bg-white shadow-2xl z-50 flex flex-col animate-slide-in-right">
+      <div data-testid="contact-profile-panel" className="fixed top-0 right-0 h-full w-full md:w-[640px] bg-white shadow-2xl z-50 flex flex-col animate-slide-in-right">
         {/* Header */}
         <div className="flex-shrink-0 px-4 md:px-8 pt-5 md:pt-6 pb-4 md:pb-5">
           <div className="flex items-start justify-between mb-3">
@@ -117,7 +117,7 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
             </a>
             <button
               onClick={() => onEdit(vendor)}
-              title="Edit vendor"
+              title="Edit contact"
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer ml-auto"
             >
               <Pencil size={14} strokeWidth={1.5} />
@@ -155,12 +155,12 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
         {/* Tab content */}
         <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-8 py-6">
           {activeTab === "overview" && (
-            <VendorOverview
+            <ContactOverview
               vendor={vendor}
               onEditClick={() => onEdit(vendor)}
             />
           )}
-          {activeTab === "events" && <VendorEvents vendorId={vendor.id} />}
+          {activeTab === "events" && <ContactEvents vendorId={vendor.id} />}
         </div>
       </div>
     </>

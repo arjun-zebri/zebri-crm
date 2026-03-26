@@ -20,7 +20,7 @@ const navItems = [
   { label: "Couples", href: "/couples", icon: Target },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Tasks", href: "/tasks", icon: CheckSquare },
-  { label: "Vendors", href: "/vendors", icon: Users },
+  { label: "Contacts", href: "/contacts", icon: Users },
 ];
 
 const bottomItems = [

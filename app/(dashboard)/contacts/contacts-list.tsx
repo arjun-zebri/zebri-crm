@@ -14,16 +14,16 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { Vendor, CATEGORY_LABELS } from "./vendors-types";
+import { Contact, CATEGORY_LABELS } from "./contacts-types";
 import { Badge } from "@/components/ui/badge";
 
-interface VendorsListProps {
-  vendors: Vendor[];
-  onRowClick: (vendor: Vendor) => void;
+interface ContactsListProps {
+  vendors: Contact[];
+  onRowClick: (contact: Contact) => void;
   loading: boolean;
 }
 
-const columnHelper = createColumnHelper<Vendor>();
+const columnHelper = createColumnHelper<Contact>();
 
 const COL_WIDTHS: Record<string, string> = {
   name: "22%",
@@ -36,7 +36,7 @@ const COL_WIDTHS: Record<string, string> = {
 
 const columns = [
   columnHelper.accessor("name", {
-    header: "Vendor name",
+    header: "Contact name",
     enableSorting: false,
     cell: (info) => (
       <span className="text-sm text-gray-500">{info.getValue()}</span>
@@ -98,11 +98,11 @@ const columns = [
 
 const skeletonWidths = ["w-32", "w-28", "w-24", "w-40", "w-24", "w-16"];
 
-export function VendorsList({
+export function ContactsList({
   vendors,
   onRowClick,
   loading,
-}: VendorsListProps) {
+}: ContactsListProps) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -139,9 +139,9 @@ export function VendorsList({
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Store size={40} className="text-gray-300 mb-3" strokeWidth={1.5} />
-        <p className="text-gray-600 font-medium mb-2">No vendors yet.</p>
+        <p className="text-gray-600 font-medium mb-2">No contacts yet.</p>
         <p className="text-sm text-gray-500 mb-4">
-          Start building your vendor network.
+          Start building your contact network.
         </p>
       </div>
     );

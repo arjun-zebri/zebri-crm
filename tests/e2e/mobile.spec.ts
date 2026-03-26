@@ -38,7 +38,7 @@ test.describe('Mobile — Pixel 5 (393×851)', () => {
     await expect(sidebar).toHaveClass(/translate-x-0/)
     // Nav items should be visible
     await expect(page.locator('aside a[href="/couples"]')).toBeVisible()
-    await expect(page.locator('aside a[href="/vendors"]')).toBeVisible()
+    await expect(page.locator('aside a[href="/contacts"]')).toBeVisible()
   })
 
   // 4. Tapping nav link navigates and closes sidebar

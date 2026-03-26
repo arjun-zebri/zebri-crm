@@ -6,40 +6,40 @@ import * as Popover from "@radix-ui/react-popover";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
-  Vendor,
-  VendorCategory,
-  VendorStatus,
+  Contact,
+  ContactCategory,
+  ContactStatus,
   CATEGORIES,
   CATEGORY_LABELS,
   STATUSES,
   STATUS_LABELS,
-} from "./vendors-types";
+} from "./contacts-types";
 
-interface VendorModalProps {
+interface ContactModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (
-    vendor: Omit<Vendor, "id" | "user_id" | "created_at"> & { id?: string }
+    contact: Omit<Contact, "id" | "user_id" | "created_at"> & { id?: string }
   ) => void;
   onDelete: (id: string) => void;
-  vendor?: Vendor;
+  vendor?: Contact;
   loading: boolean;
 }
 
-export function VendorModal({
+export function ContactModal({
   isOpen,
   onClose,
   onSave,
   onDelete,
   vendor,
   loading,
-}: VendorModalProps) {
+}: ContactModalProps) {
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [category, setCategory] = useState<VendorCategory>("other");
-  const [status, setStatus] = useState<VendorStatus>("active");
+  const [category, setCategory] = useState<ContactCategory>("other");
+  const [status, setStatus] = useState<ContactStatus>("active");
   const [notes, setNotes] = useState("");
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -100,7 +100,7 @@ export function VendorModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={vendor ? "Edit Vendor" : "Add Vendor"}
+      title={vendor ? "Edit Contact" : "Add Contact"}
       footer={
         <div className="flex items-center justify-between">
           {vendor && (
@@ -136,7 +136,7 @@ export function VendorModal({
           {/* Vendor Name - 2 cols */}
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Vendor / Business Name <span className="text-red-500">*</span>
+              Contact / Business Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -291,8 +291,8 @@ export function VendorModal({
 
     <ConfirmDialog
       open={deleteConfirm}
-      title="Delete Vendor"
-      description="Are you sure you want to delete this vendor? This cannot be undone."
+      title="Delete Contact"
+      description="Are you sure you want to delete this contact? This cannot be undone."
       onConfirm={() => {
         if (vendor) onDelete(vendor.id);
       }}
