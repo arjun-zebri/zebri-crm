@@ -13,8 +13,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
           mutations: {
             onError: (error: unknown) => {
+              const err = error as Record<string, unknown> | null;
               const message =
-                error instanceof Error ? error.message : String(error);
+                error instanceof Error
+                  ? error.message
+                  : typeof err === "object" && err !== null && "message" in err
+                  ? String(err.message)
+                  : JSON.stringify(error);
+              const code =
+                typeof err === "object" && err !== null && "code" in err
+                  ? String(err.code)
+                  : null;
+              const page =
+                typeof window !== "undefined" ? window.location.pathname : "unknown";
               fetch("/api/alerts/slack", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -30,7 +41,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
                       fields: [
                         {
                           type: "mrkdwn",
-                          text: `*Error:*\n${message}`,
+                          text: `*Error:*\n${message}${code ? ` (${code})` : ""}`,
+                        },
+                        {
+                          type: "mrkdwn",
+                          text: `*Page:*\n${page}`,
                         },
                         {
                           type: "mrkdwn",
