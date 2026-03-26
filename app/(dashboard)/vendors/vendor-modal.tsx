@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Vendor,
   VendorCategory,
@@ -88,23 +89,14 @@ export function VendorModal({
   };
 
   const handleDelete = () => {
-    if (!deleteConfirm) {
-      setDeleteConfirm(true);
-      const timeout = setTimeout(() => {
-        setDeleteConfirm(false);
-      }, 3000);
-      return;
-    }
-
-    if (vendor) {
-      onDelete(vendor.id);
-    }
+    setDeleteConfirm(true);
   };
 
   const inputClass =
     "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition";
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -115,13 +107,9 @@ export function VendorModal({
             <button
               onClick={handleDelete}
               disabled={loading}
-              className={`text-sm px-4 py-2 rounded-xl transition cursor-pointer ${
-                deleteConfirm
-                  ? "bg-red-600 text-white"
-                  : "bg-red-50 text-red-600 hover:bg-red-100"
-              }`}
+              className="text-sm px-4 py-2 rounded-xl transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
             >
-              {deleteConfirm ? "Click again to confirm" : "Delete"}
+              Delete
             </button>
           )}
           <div className="flex gap-3 ml-auto">
@@ -300,5 +288,17 @@ export function VendorModal({
         </div>
       </form>
     </Modal>
+
+    <ConfirmDialog
+      open={deleteConfirm}
+      title="Delete Vendor"
+      description="Are you sure you want to delete this vendor? This cannot be undone."
+      onConfirm={() => {
+        if (vendor) onDelete(vendor.id);
+      }}
+      onCancel={() => setDeleteConfirm(false)}
+      loading={loading}
+    />
+    </>
   );
 }

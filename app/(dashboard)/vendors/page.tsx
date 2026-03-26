@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import { useToast } from '@/components/ui/toast'
 import {
   useVendors,
   useCreateVendor,
@@ -34,6 +35,7 @@ export default function VendorsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingVendor, setEditingVendor] = useState<Vendor | undefined>()
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const { toast } = useToast()
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -83,12 +85,13 @@ export default function VendorsPage() {
     if (data.id && editingVendor) {
       const updated = { ...editingVendor, ...data }
       await updateVendor.mutateAsync(updated)
-      // If the profile panel is open for this vendor, update it with fresh data
       if (selectedVendor?.id === data.id) {
         setSelectedVendor(updated)
       }
+      toast('Vendor updated')
     } else {
       await createVendor.mutateAsync(data)
+      toast('Vendor added')
     }
     setModalOpen(false)
     setEditingVendor(undefined)
@@ -101,6 +104,7 @@ export default function VendorsPage() {
     if (selectedVendor?.id === id) {
       setSelectedVendor(null)
     }
+    toast('Vendor deleted')
   }
 
   return (

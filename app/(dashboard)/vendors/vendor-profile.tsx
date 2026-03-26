@@ -72,6 +72,7 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
           <div className="flex items-center gap-2">
             <a
               href={hasPhone ? `tel:${vendor.phone}` : undefined}
+              title="Call"
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
                   ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
@@ -84,6 +85,7 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
             </a>
             <a
               href={hasEmail ? `mailto:${vendor.email}` : undefined}
+              title="Send email"
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasEmail
                   ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
@@ -102,6 +104,7 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
               }
               target={hasPhone ? "_blank" : undefined}
               rel={hasPhone ? "noopener noreferrer" : undefined}
+              title="Message on WhatsApp"
               className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
                 hasPhone
                   ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
@@ -114,6 +117,7 @@ export function VendorProfile({ vendor, onClose, onEdit }: VendorProfileProps) {
             </a>
             <button
               onClick={() => onEdit(vendor)}
+              title="Edit vendor"
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer ml-auto"
             >
               <Pencil size={14} strokeWidth={1.5} />

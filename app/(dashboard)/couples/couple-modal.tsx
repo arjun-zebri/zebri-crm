@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { Modal } from "@/components/ui/modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Couple, CoupleStatusRecord, LeadSource, LEAD_SOURCES, LEAD_SOURCE_LABELS } from "./couples-types";
 
 interface CoupleModalProps {
@@ -38,7 +39,6 @@ export function CoupleModal({
   const [statusOpen, setStatusOpen] = useState(false);
   const [leadSourceOpen, setLeadSourceOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const deleteTimeoutRef = useState<NodeJS.Timeout | null>(null)[1];
 
   useEffect(() => {
     if (couple) {
@@ -86,17 +86,7 @@ export function CoupleModal({
   };
 
   const handleDelete = () => {
-    if (!deleteConfirm) {
-      setDeleteConfirm(true);
-      const timeout = setTimeout(() => {
-        setDeleteConfirm(false);
-      }, 3000);
-      return;
-    }
-
-    if (couple) {
-      onDelete(couple.id);
-    }
+    setDeleteConfirm(true);
   };
 
   const inputClass =
@@ -106,6 +96,7 @@ export function CoupleModal({
   const selectedLabel = selectedStatus?.name || "Select status";
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -116,13 +107,9 @@ export function CoupleModal({
             <button
               onClick={handleDelete}
               disabled={loading}
-              className={`text-sm px-4 py-2 rounded-xl transition cursor-pointer ${
-                deleteConfirm
-                  ? "bg-red-600 text-white"
-                  : "bg-red-50 text-red-600 hover:bg-red-100"
-              }`}
+              className="text-sm px-4 py-2 rounded-xl transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
             >
-              {deleteConfirm ? "Click again to confirm" : "Delete"}
+              Delete
             </button>
           )}
           <div className="flex gap-3 ml-auto">
@@ -311,5 +298,17 @@ export function CoupleModal({
         </div>
       </form>
     </Modal>
+
+    <ConfirmDialog
+      open={deleteConfirm}
+      title="Delete Couple"
+      description="Are you sure you want to delete this couple? This cannot be undone."
+      onConfirm={() => {
+        if (couple) onDelete(couple.id);
+      }}
+      onCancel={() => setDeleteConfirm(false)}
+      loading={loading}
+    />
+    </>
   );
 }

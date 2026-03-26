@@ -1,7 +1,6 @@
 'use client'
 
-import { Couple, CoupleStatusRecord, getStatusClasses } from './couples-types'
-import { formatDate } from '@/lib/utils'
+import { Couple, CoupleStatusRecord, LEAD_SOURCE_LABELS, LeadSource, getStatusClasses } from './couples-types'
 
 interface CoupleOverviewProps {
   couple: Couple
@@ -12,6 +11,9 @@ export function CoupleOverview({ couple, statuses }: CoupleOverviewProps) {
   const status = statuses.find(s => s.slug === couple.status)
   const statusName = status?.name || couple.status.charAt(0).toUpperCase() + couple.status.slice(1)
   const statusClasses = status ? getStatusClasses(status.color) : getStatusClasses('gray')
+  const leadSourceLabel = couple.lead_source
+    ? LEAD_SOURCE_LABELS[couple.lead_source as LeadSource] ?? couple.lead_source
+    : null
 
   return (
     <div className="space-y-6">
@@ -31,24 +33,18 @@ export function CoupleOverview({ couple, statuses }: CoupleOverviewProps) {
               <a href={`mailto:${couple.email}`} className="text-sm text-gray-900 hover:text-blue-600 transition">{couple.email}</a>
             </div>
           )}
-          {couple.event_date && (
-            <div className="flex items-start justify-between">
-              <span className="text-sm text-gray-500">Event date</span>
-              <span className="text-sm text-gray-900">{formatDate(couple.event_date)}</span>
-            </div>
-          )}
-          {couple.venue && (
-            <div className="flex items-start justify-between">
-              <span className="text-sm text-gray-500">Venue</span>
-              <span className="text-sm text-gray-900">{couple.venue}</span>
-            </div>
-          )}
           <div className="flex items-start justify-between">
             <span className="text-sm text-gray-500">Status</span>
             <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}>
               {statusName}
             </span>
           </div>
+          {leadSourceLabel && (
+            <div className="flex items-start justify-between">
+              <span className="text-sm text-gray-500">Lead source</span>
+              <span className="text-sm text-gray-900">{leadSourceLabel}</span>
+            </div>
+          )}
         </div>
       </div>
 

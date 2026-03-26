@@ -10,12 +10,16 @@ import {
   Users,
   Settings,
   LogOut,
+  Calendar,
+  CheckSquare,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: Home },
   { label: "Couples", href: "/couples", icon: Target },
+  { label: "Calendar", href: "/calendar", icon: Calendar },
+  { label: "Tasks", href: "/tasks", icon: CheckSquare },
   { label: "Vendors", href: "/vendors", icon: Users },
 ];
 

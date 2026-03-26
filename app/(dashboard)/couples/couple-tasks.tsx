@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/ui/toast'
 import { Pencil, Trash2 } from 'lucide-react'
 
 interface CoupleTasksProps {
@@ -21,6 +22,7 @@ interface Task {
 export function CoupleTasks({ coupleId }: CoupleTasksProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [showAddTask, setShowAddTask] = useState(false)
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDueDate, setTaskDueDate] = useState('')
@@ -79,9 +81,11 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-tasks', coupleId] })
+      queryClient.invalidateQueries({ queryKey: ['all-tasks'] })
       setShowAddTask(false)
       setTaskTitle('')
       setTaskDueDate('')
+      toast('Task added')
     },
   })
 
@@ -96,9 +100,11 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-tasks', coupleId] })
+      queryClient.invalidateQueries({ queryKey: ['all-tasks'] })
       setEditingTaskId(null)
       setEditTitle('')
       setEditDueDate('')
+      toast('Task updated')
     },
   })
 
@@ -113,6 +119,8 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-tasks', coupleId] })
+      queryClient.invalidateQueries({ queryKey: ['all-tasks'] })
+      toast('Task deleted')
     },
   })
 

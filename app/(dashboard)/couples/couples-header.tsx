@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, X, Calendar } from 'lucide-react'
+import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react'
 import {
   Couple,
   CoupleStatusRecord,
@@ -219,16 +219,6 @@ export function CouplesHeader({
           }`}
         >
           <LayoutGrid size={15} strokeWidth={1.5} /> Board
-        </button>
-        <button
-          onClick={() => onViewModeChange('calendar')}
-          className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
-            viewMode === 'calendar'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
-          }`}
-        >
-          <Calendar size={15} strokeWidth={1.5} /> Calendar
         </button>
       </div>
     </div>

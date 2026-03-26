@@ -35,7 +35,7 @@ export interface CoupleStatusRecord {
   created_at: string
 }
 
-export type ViewMode = 'list' | 'kanban' | 'calendar'
+export type ViewMode = 'list' | 'kanban'
 
 export const COLOR_PALETTE = ['amber', 'blue', 'purple', 'emerald', 'gray', 'green', 'red', 'orange', 'pink', 'indigo'] as const
 export type StatusColor = typeof COLOR_PALETTE[number]

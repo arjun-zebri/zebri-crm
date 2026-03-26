@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useToast } from "@/components/ui/toast";
 import {
   useCouples,
   useCreateCouple,
@@ -11,7 +12,6 @@ import { useCoupleStatuses } from "./use-couple-statuses";
 import { CouplesHeader } from "./couples-header";
 import { CouplesList } from "./couples-list";
 import { CouplesKanban } from "./couples-kanban";
-import { CouplesCalendar } from "./couples-calendar";
 import { CoupleModal } from "./couple-modal";
 import { CoupleProfile } from "./couple-profile";
 import {
@@ -37,10 +37,11 @@ export default function CouplesPage() {
   const [editingCouple, setEditingCouple] = useState<Couple | undefined>();
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<string | undefined>();
+  const { toast } = useToast();
 
   useEffect(() => {
     const saved = localStorage.getItem("zebri_couples_view");
-    if (saved === "kanban" || saved === "list" || saved === "calendar") {
+    if (saved === "kanban" || saved === "list") {
       setViewMode(saved as ViewMode);
     }
   }, []);
@@ -96,12 +97,13 @@ export default function CouplesPage() {
     if (data.id && editingCouple) {
       const updated = { ...editingCouple, ...data };
       await updateCouple.mutateAsync(updated);
-      // If the profile panel is open for this couple, update it with fresh data
       if (selectedCouple?.id === data.id) {
         setSelectedCouple(updated);
       }
+      toast('Couple updated');
     } else {
       await createCouple.mutateAsync(data);
+      toast('Couple added');
     }
     setModalOpen(false);
     setEditingCouple(undefined);
@@ -114,6 +116,7 @@ export default function CouplesPage() {
     if (selectedCouple?.id === id) {
       setSelectedCouple(null);
     }
+    toast('Couple deleted');
   };
 
   const handleDragEnd = async (
@@ -167,7 +170,7 @@ export default function CouplesPage() {
             onRowClick={(couple) => setSelectedCouple(couple)}
             loading={isLoading}
           />
-        ) : viewMode === "kanban" ? (
+        ) : (
           <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <CouplesKanban
               couples={filteredCouples}
@@ -181,13 +184,6 @@ export default function CouplesPage() {
               }}
             />
           </div>
-        ) : (
-          <CouplesCalendar
-            onSelectCouple={(coupleId) => {
-              const couple = couples.find((c) => c.id === coupleId);
-              if (couple) setSelectedCouple(couple);
-            }}
-          />
         )}
       </div>
 

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
 import { Edit2, Trash2 } from 'lucide-react'
 import { Event } from '../events/events-types'
 import { EventModal } from './event-modal'
@@ -16,6 +17,7 @@ interface CoupleEventsProps {
 export function CoupleEvents({ couple }: CoupleEventsProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [showModal, setShowModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | undefined>()
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -70,10 +72,12 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
     },
     onSuccess: (newEvent) => {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
       if (newEvent) {
         queryClient.invalidateQueries({ queryKey: ['event-vendors', newEvent.id] })
       }
       setShowModal(false)
+      toast('Event added')
     },
   })
 
@@ -117,11 +121,13 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
       if (editingEvent) {
         queryClient.invalidateQueries({ queryKey: ['event-vendors', editingEvent.id] })
       }
       setShowModal(false)
       setEditingEvent(undefined)
+      toast('Event updated')
     },
   })
 
@@ -136,7 +142,9 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
       setDeleteConfirm(null)
+      toast('Event deleted')
     },
   })
 
