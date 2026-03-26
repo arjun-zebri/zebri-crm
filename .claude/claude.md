@@ -43,6 +43,15 @@ When you make changes, update the relevant doc in `.claude/docs/`:
 | Auth flows           | authentication.md                           |
 | Billing / Stripe     | payments.md                                 |
 | Slack alerts         | alerts.md                                   |
+| Tests / selectors    | testing.md                                  |
+
+## Testing Rules
+- All features must work on **desktop and mobile** (Pixel 5 + iPhone 12)
+- Tests live in `tests/e2e/` — one file per feature area
+- When running tests, **fix the app** for every failure; don't just patch the test
+- Use Tailwind responsive prefixes for mobile fixes — never raw CSS media queries
+- Prefer semantic selectors: `getByRole` > `getByLabel` > `getByText` > `data-testid`
+- See `.claude/docs/testing.md` for full conventions
 
 ## Slash Commands Available
 - `/new-page` — scaffold a new page (loads page-specs.md)
@@ -51,6 +60,7 @@ When you make changes, update the relevant doc in `.claude/docs/`:
 - `/fix-ui` — audit/fix for design system compliance
 - `/add-alert` — add a Slack alert (loads alerts.md)
 - `/ship-check` — pre-ship checklist
+- `/test` — run Playwright tests (desktop + mobile) and fix issues found
 
 ## Always-Loaded Context
 @.claude/docs/frontend-design.md

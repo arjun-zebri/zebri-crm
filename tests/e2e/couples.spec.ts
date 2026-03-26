@@ -1,252 +1,212 @@
-import { test, expect } from '@playwright/test';
-import { login } from './helpers';
+import { test, expect } from '@playwright/test'
+import { login, addCouple, deleteCouple, openCoupleProfile, search, uniqueName } from './helpers'
 
 test.describe('Couple Management', () => {
   test.beforeEach(async ({ page }) => {
-    // Login first
-    const email = process.env.TEST_EMAIL || 'test@example.com';
-    const password = process.env.TEST_PASSWORD || 'test-password';
+    await login(page)
+    await page.goto('/couples', { waitUntil: 'networkidle' })
+  })
 
-    await login(page, email, password);
+  // ── 1. Page header ────────────────────────────────────────────────────────
+  test('renders h1 "Couples" with total count and New button', async ({ page }) => {
+    await expect(page.locator('h1:has-text("Couples")')).toBeVisible()
+    await expect(page.locator('span:has-text("total")')).toBeVisible()
+    await expect(page.locator('button:has-text("New")')).toBeVisible()
+  })
 
-    // Navigate directly to couples page (login might redirect to settings/billing)
-    await page.goto('/couples', { waitUntil: 'networkidle' });
+  // ── 2. View tabs ──────────────────────────────────────────────────────────
+  test('view tabs: List, Board, Calendar', async ({ page }) => {
+    await expect(page.locator('button:has-text("List")')).toBeVisible()
+    await expect(page.locator('button:has-text("Board")')).toBeVisible()
+    await expect(page.locator('button:has-text("Calendar")')).toBeVisible()
+  })
 
-    // If we get redirected to settings, that means subscription issue
-    if (page.url().includes('/settings')) {
-      throw new Error('Redirected to settings - subscription might be inactive. Check your test account.');
-    }
-  });
+  // ── 3. List view table columns ────────────────────────────────────────────
+  test('list view shows table with Name/Email/Status columns', async ({ page }) => {
+    // Ensure list view is active
+    await page.locator('button:has-text("List")').click()
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('table th:has-text("Name")')).toBeVisible()
+    await expect(page.locator('table th:has-text("Email")')).toBeVisible()
+    await expect(page.locator('table th:has-text("Status")')).toBeVisible()
+  })
 
-  test('should display couples page with header', async ({ page }) => {
-    // Wait for page to load
-    await page.waitForLoadState('networkidle');
+  // ── 4. Board view ─────────────────────────────────────────────────────────
+  test('Board view renders kanban columns', async ({ page }) => {
+    await page.locator('button:has-text("Board")').click()
+    await page.waitForLoadState('networkidle')
+    // Each kanban column has a bg-gray-50 container
+    const columns = page.locator('.bg-gray-50')
+    await expect(columns.first()).toBeVisible()
+  })
 
-    // Verify we're on couples page
-    await expect(page).toHaveURL(/\/couples/);
+  // ── 5. Calendar view ──────────────────────────────────────────────────────
+  test('Calendar view renders with nav and view toggles', async ({ page }) => {
+    await page.locator('button:has-text("Calendar")').click()
+    await page.waitForLoadState('networkidle')
+    // Navigation chevrons
+    await expect(page.locator('button svg').first()).toBeVisible()
+    // Day/Week/Month buttons
+    await expect(page.locator('button:has-text("Week")')).toBeVisible()
+    await expect(page.locator('button:has-text("Month")')).toBeVisible()
+    await expect(page.locator('button:has-text("Day")')).toBeVisible()
+  })
 
-    // Check for main header elements (use heading role as it's more reliable)
-    const heading = page.locator('h1, h2, [role="heading"]').filter({ hasText: /Couples/i });
-    await expect(heading).toBeVisible({ timeout: 5000 }).catch(() => true);
+  // ── 6. Switch back to List from Calendar ─────────────────────────────────
+  test('switching back to List from Calendar restores table', async ({ page }) => {
+    await page.locator('button:has-text("Calendar")').click()
+    await page.waitForLoadState('networkidle')
+    await page.locator('button:has-text("List")').click()
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('table')).toBeVisible()
+  })
 
-    // Check for toolbar elements
-    const searchInput = page.locator('[placeholder*="Search"], [placeholder*="search"]');
-    await expect(searchInput).toBeVisible({ timeout: 5000 }).catch(() => true);
-  });
+  // ── 7. CRUD: create → verify → edit → delete ─────────────────────────────
+  test('CRUD: create couple, edit notes, then delete', async ({ page }) => {
+    const name = uniqueName('E2E Couple')
+    const updatedNotes = 'Updated notes ' + Date.now()
 
-  test('should display view tabs (List, Kanban, Calendar)', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    // Create
+    await addCouple(page, { name, email: 'e2e@test.com', notes: 'Initial notes' })
 
-    // Check for view tabs
-    const listTab = page.locator('text=List');
-    const kanbanTab = page.locator('text=Kanban');
-    const calendarTab = page.locator('text=Calendar');
+    // Verify row appears
+    await search(page, name)
+    await expect(page.locator(`table tbody tr:has-text("${name}")`)).toBeVisible()
 
-    await expect(listTab).toBeVisible();
-    await expect(kanbanTab).toBeVisible();
-    await expect(calendarTab).toBeVisible();
-  });
+    // Open profile → Edit → change notes → Save
+    await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+    await page.waitForSelector('div.fixed.top-0.right-0 h1')
+    await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+    await page.waitForSelector('h2:has-text("Edit Couple")')
+    await page.locator('textarea').fill(updatedNotes)
+    await page.locator('button:has-text("Save")').click()
+    await page.waitForSelector('h2:has-text("Edit Couple")', { state: 'hidden' })
+    await page.waitForLoadState('networkidle')
 
-  test('should open new couple modal via "New" button', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    // Verify updated notes appear in Overview tab
+    await expect(page.locator(`text=${updatedNotes}`)).toBeVisible()
 
-    // Click the "New" button
-    const newButton = page.locator('button:has-text("New")').first();
-    await newButton.click();
+    // Delete
+    await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+    await page.waitForSelector('h2:has-text("Edit Couple")')
+    await page.locator('button:has-text("Delete")').click()
+    await page.locator('button:has-text("Click again to confirm")').click()
+    await page.waitForSelector('h2:has-text("Edit Couple")', { state: 'hidden' })
+    await page.waitForLoadState('networkidle')
 
-    // Modal should appear with form fields
-    await expect(page.locator('text=Add Couple')).toBeVisible();
-    await expect(page.locator('input[type="text"]').first()).toBeVisible();
-  });
+    // Row should be gone
+    await search(page, name)
+    await expect(page.locator(`table tbody tr:has-text("${name}")`)).toHaveCount(0)
+  })
 
-  test('should display couple form with required fields', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+  // ── 8. Save disabled until Name is filled ─────────────────────────────────
+  test('Save button disabled until Name is filled', async ({ page }) => {
+    await page.locator('button:has-text("New")').first().click()
+    await page.waitForSelector('h2:has-text("Add Couple")')
+    const saveBtn = page.locator('button:has-text("Save")')
+    await expect(saveBtn).toBeDisabled()
+    await page.locator('input[placeholder="Couple\'s name"]').fill('Someone')
+    await expect(saveBtn).toBeEnabled()
+    // Close modal
+    await page.locator('button:has-text("Cancel")').click()
+  })
 
-    // Open new couple modal
-    const newButton = page.locator('button:has-text("New")').first();
-    await newButton.click();
+  // ── 9. Cancel closes modal without saving ────────────────────────────────
+  test('Cancel closes modal without saving', async ({ page }) => {
+    const name = uniqueName('Cancel Test')
+    await page.locator('button:has-text("New")').first().click()
+    await page.waitForSelector('h2:has-text("Add Couple")')
+    await page.locator('input[placeholder="Couple\'s name"]').fill(name)
+    await page.locator('button:has-text("Cancel")').click()
+    await expect(page.locator('h2:has-text("Add Couple")')).not.toBeVisible()
+    // No row with that name
+    await search(page, name)
+    await expect(page.locator(`table tbody tr:has-text("${name}")`)).toHaveCount(0)
+  })
 
-    // Check for form fields
-    await expect(page.locator('text=Name')).toBeVisible();
-    await expect(page.locator('text=Email')).toBeVisible();
-    await expect(page.locator('text=Phone')).toBeVisible();
-    await expect(page.locator('text=Status')).toBeVisible();
-  });
+  // ── 10. Escape closes modal ───────────────────────────────────────────────
+  test('Escape key closes the Add Couple modal', async ({ page }) => {
+    await page.locator('button:has-text("New")').first().click()
+    await page.waitForSelector('h2:has-text("Add Couple")')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('h2:has-text("Add Couple")')).not.toBeVisible()
+  })
 
-  test('should close modal when cancel is clicked', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+  // ── 11. "n" shortcut opens New modal ──────────────────────────────────────
+  test('"n" shortcut opens Add Couple modal', async ({ page }) => {
+    // Make sure no input is focused
+    await page.locator('body').click()
+    await page.keyboard.press('n')
+    await expect(page.locator('h2:has-text("Add Couple")')).toBeVisible()
+    await page.locator('button:has-text("Cancel")').click()
+  })
 
-    // Open modal
-    const newButton = page.locator('button:has-text("New")').first();
-    await newButton.click();
+  // ── 12. "/" shortcut focuses search ──────────────────────────────────────
+  test('"/" shortcut focuses search input', async ({ page }) => {
+    await page.locator('body').click()
+    await page.keyboard.press('/')
+    const searchInput = page.locator('input[placeholder="Search..."]').first()
+    await expect(searchInput).toBeFocused()
+    await page.keyboard.press('Escape')
+  })
 
-    // Click cancel or close button
-    const cancelButton = page.locator('button:has-text("Cancel"), [aria-label="Close"]').first();
-    await cancelButton.click();
+  // ── 13. Search filters table rows ────────────────────────────────────────
+  test('search filters table rows to matching names only', async ({ page }) => {
+    const name = uniqueName('Searchable Couple')
+    await addCouple(page, { name })
 
-    // Modal should be closed
-    await expect(page.locator('text=Add Couple')).not.toBeVisible();
-  });
+    await search(page, name)
+    // Should find exactly the one row we created
+    const rows = page.locator('table tbody tr')
+    await expect(rows).toHaveCount(1)
 
-  test('should search couples by name', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    // Clean up
+    await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+    await page.waitForSelector('div.fixed.top-0.right-0 h1')
+    await deleteCouple(page, name)
+  })
 
-    // Get search input
-    const searchInput = page.locator('[placeholder*="Search"], [placeholder*="search"]').first();
+  // ── 14. Status filter ─────────────────────────────────────────────────────
+  test('status filter opens a dropdown with status options', async ({ page }) => {
+    const filterBtn = page.locator('button').filter({ has: page.locator('svg[class*="lucide-sliders"]') })
+      .or(page.locator('button[class*="SlidersHorizontal"]'))
+    // Use SVG data from layout — it's the SlidersHorizontal button in header
+    // Locate by aria or by svg path; fall back to any button containing svg near "New"
+    const slidersBtn = page.locator('button').nth(2) // search, sort, filter, new
+    // More reliable: click the button right before "New" that renders SlidersHorizontal
+    await page.locator('button:has-text("New")').first()
+      .locator('..').locator('button').nth(-2).click()
+    // Filter dropdown should be open — look for "All" option
+    await expect(page.locator('button:has-text("All")')).toBeVisible()
+  })
 
-    if (await searchInput.isVisible()) {
-      // Type search term
-      await searchInput.fill('John');
+  // ── 15. Clicking row opens profile ───────────────────────────────────────
+  test('clicking a row opens the couple profile slide-over', async ({ page }) => {
+    // Ensure there is at least one row
+    const name = uniqueName('Profile Row Test')
+    await addCouple(page, { name })
+    await search(page, name)
+    await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+    await expect(page.locator('div.fixed.top-0.right-0 h1')).toBeVisible()
+    await expect(page.locator('div.fixed.top-0.right-0')).toContainText(name)
 
-      // Wait for results to update
-      await page.waitForLoadState('networkidle');
+    // Clean up
+    await deleteCouple(page, name)
+  })
 
-      // Verify search was applied (content may be empty if no results)
-      await expect(searchInput).toHaveValue('John');
-    }
-  });
+  // ── 16. Profile closes via X ──────────────────────────────────────────────
+  test('profile closes via the X button', async ({ page }) => {
+    const name = uniqueName('Profile Close Test')
+    await addCouple(page, { name })
+    await search(page, name)
+    await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+    await page.waitForSelector('div.fixed.top-0.right-0 h1')
 
-  test('should switch between list, kanban, and calendar views', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    // X is the first button in the panel header
+    await page.locator('div.fixed.top-0.right-0').locator('button').first().click()
+    await expect(page.locator('div.fixed.top-0.right-0')).not.toBeVisible()
 
-    // Switch to Kanban
-    await page.locator('text=Kanban').click();
-    await page.waitForLoadState('networkidle');
-
-    // Verify kanban view is displayed (look for column-like structure)
-    await expect(page.locator('text=New, contacted, confirmed, paid, complete').or(page.locator('[role="region"]'))).toBeVisible({ timeout: 3000 }).catch(() => true);
-
-    // Switch to Calendar
-    await page.locator('text=Calendar').click();
-    await page.waitForLoadState('networkidle');
-
-    // Verify calendar is displayed (look for day cells or calendar structure)
-    const calendar = page.locator('[role="grid"], .calendar, [class*="calendar"]').first();
-    await expect(calendar).toBeVisible({ timeout: 3000 }).catch(() => true);
-
-    // Switch back to List
-    await page.locator('text=List').click();
-    await page.waitForLoadState('networkidle');
-
-    // Verify table is displayed
-    const table = page.locator('table, [role="table"], [role="grid"]').first();
-    await expect(table).toBeVisible({ timeout: 3000 }).catch(() => true);
-  });
-
-  test('should display sort and filter dropdowns', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    // Look for sort button
-    const sortButton = page.locator('[aria-label*="Sort"], [title*="Sort"], button').filter({ has: page.locator('svg') }).first();
-
-    // Look for filter button
-    const filterButton = page.locator('[aria-label*="Filter"], [title*="Filter"], button').filter({ has: page.locator('svg') }).first();
-
-    // At least one should be visible (exact selector depends on implementation)
-    const toolbar = page.locator('text=Couples').locator('..').first();
-    await expect(toolbar).toBeVisible();
-  });
-
-  test('should open couple profile when clicking a row', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    // Find first couple row in table/list
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible()) {
-      // Click the first row
-      await firstRow.click();
-
-      // Profile slide-over should appear
-      await expect(page.locator('text=Overview, Events, Vendors, Tasks').or(page.locator('text=Overview')).or(page.locator('[role="dialog"]'))).toBeVisible({ timeout: 3000 }).catch(() => true);
-    }
-  });
-
-  test('should display events tab in couple profile', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    // Open couple profile
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible()) {
-      await firstRow.click();
-
-      // Wait for profile to appear
-      await page.waitForLoadState('networkidle');
-
-      // Look for Events tab
-      const eventsTab = page.locator('text=Events');
-      if (await eventsTab.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await eventsTab.click();
-
-        // Check for add event button or empty state
-        await expect(
-          page.locator('text=Add Event, No events yet').or(page.locator('button:has-text("Add Event")'))
-        ).toBeVisible({ timeout: 2000 }).catch(() => true);
-      }
-    }
-  });
-
-  test('should display vendors tab in couple profile', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible()) {
-      await firstRow.click();
-      await page.waitForLoadState('networkidle');
-
-      const vendorsTab = page.locator('text=Vendors');
-      if (await vendorsTab.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await vendorsTab.click();
-
-        // Check for add vendor button or empty state
-        await expect(
-          page.locator('text=Add Vendor, No vendors').or(page.locator('button:has-text("Add Vendor")'))
-        ).toBeVisible({ timeout: 2000 }).catch(() => true);
-      }
-    }
-  });
-
-  test('should display tasks tab in couple profile', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible()) {
-      await firstRow.click();
-      await page.waitForLoadState('networkidle');
-
-      const tasksTab = page.locator('text=Tasks');
-      if (await tasksTab.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await tasksTab.click();
-
-        // Check for add task button or empty state
-        await expect(
-          page.locator('text=Add Task, No tasks').or(page.locator('button:has-text("Add Task")'))
-        ).toBeVisible({ timeout: 2000 }).catch(() => true);
-      }
-    }
-  });
-
-  test('should close couple profile slide-over', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible()) {
-      await firstRow.click();
-      await page.waitForLoadState('networkidle');
-
-      // Click outside slide-over or close button
-      const closeButton = page.locator('[aria-label="Close"], button').filter({ has: page.locator('svg') }).last();
-      await closeButton.click().catch(() => {
-        // If close button not found, click outside
-        page.click('main, body', { force: true });
-      });
-
-      // Slide-over should close
-      await expect(page.locator('text=Overview').or(page.locator('[role="dialog"]'))).not.toBeVisible({ timeout: 2000 }).catch(() => true);
-    }
-  });
-});
+    // Clean up
+    await deleteCouple(page, name)
+  })
+})

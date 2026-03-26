@@ -12,10 +12,7 @@ import { login, logout, addCouple, addVendor } from './helpers';
 test.describe.skip('Authenticated Workflows', () => {
   // Before each test, log in
   test.beforeEach(async ({ page }) => {
-    const email = process.env.TEST_EMAIL || 'test@example.com';
-    const password = process.env.TEST_PASSWORD || 'test-password';
-
-    await login(page, email, password);
+    await login(page);
   });
 
   // After each test, log out
@@ -30,7 +27,6 @@ test.describe.skip('Authenticated Workflows', () => {
       name: 'John & Jane Doe',
       email: 'john@example.com',
       phone: '555-1234',
-      status: 'new',
       notes: 'Met at networking event',
     });
 
@@ -46,8 +42,6 @@ test.describe.skip('Authenticated Workflows', () => {
       contactName: 'Alice Smith',
       phone: '555-5678',
       email: 'alice@photos.com',
-      category: 'Photographer',
-      status: 'active',
       notes: 'Great for candids, flexible with schedule',
     });
 

@@ -1,264 +1,200 @@
-import { test, expect } from '@playwright/test';
-import { login } from './helpers';
+import { test, expect } from '@playwright/test'
+import { login, addVendor, deleteVendor, search, uniqueName } from './helpers'
 
 test.describe('Vendor Management', () => {
   test.beforeEach(async ({ page }) => {
-    // Login first
-    const email = process.env.TEST_EMAIL || 'test@example.com';
-    const password = process.env.TEST_PASSWORD || 'test-password';
+    await login(page)
+    await page.goto('/vendors', { waitUntil: 'networkidle' })
+  })
 
-    await login(page, email, password);
+  // ── 1. Page header ────────────────────────────────────────────────────────
+  test('renders h1 "Vendors" with New button and search', async ({ page }) => {
+    await expect(page.locator('h1:has-text("Vendors")')).toBeVisible()
+    await expect(page.locator('button:has-text("New")')).toBeVisible()
+    await expect(page.locator('input[placeholder="Search..."]')).toBeVisible()
+  })
 
-    // Navigate directly to vendors page (login might redirect to settings/billing)
-    await page.goto('/vendors', { waitUntil: 'networkidle' });
-
-    // If we get redirected to settings, that means subscription issue
-    if (page.url().includes('/settings')) {
-      throw new Error('Redirected to settings - subscription might be inactive. Check your test account.');
+  // ── 2. Table columns ──────────────────────────────────────────────────────
+  test('table has Vendor, Contact, Phone, Email, Category, Status columns', async ({ page }) => {
+    for (const col of ['Vendor', 'Contact', 'Phone', 'Email', 'Category', 'Status']) {
+      await expect(page.locator(`table th:has-text("${col}")`)).toBeVisible()
     }
-  });
+  })
 
-  test('should display vendors page with header', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+  // ── 3. CRUD: create → verify → edit → delete ─────────────────────────────
+  test('CRUD: create vendor, edit notes, then delete', async ({ page }) => {
+    const name = uniqueName('E2E Vendor')
+    const updatedNotes = 'Updated vendor notes ' + Date.now()
 
-    // Verify we're on vendors page
-    await expect(page).toHaveURL(/\/vendors/);
+    // Create
+    await addVendor(page, { name, email: 'vendor@test.com', phone: '+61 400 999 888' })
 
-    // Check for main header (use heading role as it's more reliable)
-    const heading = page.locator('h1, h2, [role="heading"]').filter({ hasText: /Vendors/i });
-    await expect(heading).toBeVisible({ timeout: 5000 }).catch(() => true);
+    // Verify row
+    await search(page, name)
+    await expect(page.locator(`table tbody tr:has-text("${name}")`)).toBeVisible()
 
-    // Check for search input
-    const searchInput = page.locator('[placeholder*="Search"], [placeholder*="search"]');
-    await expect(searchInput).toBeVisible({ timeout: 5000 }).catch(() => true);
-  });
+    // Edit notes
+    await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+    await page.waitForSelector('div.fixed.top-0.right-0 h1')
+    await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+    await page.waitForSelector('h2:has-text("Edit Vendor")')
+    await page.locator('textarea').fill(updatedNotes)
+    await page.locator('button:has-text("Save")').click()
+    await page.waitForSelector('h2:has-text("Edit Vendor")', { state: 'hidden' })
+    await page.waitForLoadState('networkidle')
 
-  test('should display vendor table with columns', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    // Delete
+    await page.locator('div.fixed.top-0.right-0').locator('button:has-text("Edit")').click()
+    await page.waitForSelector('h2:has-text("Edit Vendor")')
+    await page.locator('button:has-text("Delete")').click()
+    await page.locator('button:has-text("Click again to confirm")').click()
+    await page.waitForSelector('h2:has-text("Edit Vendor")', { state: 'hidden' })
+    await page.waitForLoadState('networkidle')
 
-    // Check for table column headers
-    const expectedColumns = ['Vendor', 'Contact', 'Phone', 'Email', 'Category', 'Status'];
+    // Row gone
+    await search(page, name)
+    await expect(page.locator(`table tbody tr:has-text("${name}")`)).toHaveCount(0)
+  })
 
-    for (const column of expectedColumns) {
-      // At least some headers should be visible
-      const header = page.locator(`text=${column}`);
-      if (await header.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await expect(header).toBeVisible();
-      }
-    }
-  });
+  // ── 4. Save disabled until name filled ───────────────────────────────────
+  test('Save disabled until Vendor Name is filled', async ({ page }) => {
+    await page.locator('button:has-text("New")').first().click()
+    await page.waitForSelector('h2:has-text("Add Vendor")')
+    const saveBtn = page.locator('button:has-text("Save")')
+    await expect(saveBtn).toBeDisabled()
+    await page.locator('input[placeholder="e.g., Elegant Venues"]').fill('Some Vendor')
+    await expect(saveBtn).toBeEnabled()
+    await page.locator('button:has-text("Cancel")').click()
+  })
 
-  test('should open new vendor modal via "New" button', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+  // ── 5. Cancel closes modal ────────────────────────────────────────────────
+  test('Cancel closes Add Vendor modal', async ({ page }) => {
+    await page.locator('button:has-text("New")').first().click()
+    await page.waitForSelector('h2:has-text("Add Vendor")')
+    await page.locator('button:has-text("Cancel")').click()
+    await expect(page.locator('h2:has-text("Add Vendor")')).not.toBeVisible()
+  })
 
-    // Click New button
-    const newButton = page.locator('button:has-text("New")').first();
-    await newButton.click();
+  // ── 6. Escape closes modal ────────────────────────────────────────────────
+  test('Escape key closes Add Vendor modal', async ({ page }) => {
+    await page.locator('button:has-text("New")').first().click()
+    await page.waitForSelector('h2:has-text("Add Vendor")')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('h2:has-text("Add Vendor")')).not.toBeVisible()
+  })
 
-    // Modal should appear
-    await expect(page.locator('text=Add Vendor')).toBeVisible();
-  });
+  // ── 7. "n" shortcut ───────────────────────────────────────────────────────
+  test('"n" shortcut opens Add Vendor modal', async ({ page }) => {
+    await page.locator('body').click()
+    await page.keyboard.press('n')
+    await expect(page.locator('h2:has-text("Add Vendor")')).toBeVisible()
+    await page.locator('button:has-text("Cancel")').click()
+  })
 
-  test('should display vendor form fields', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+  // ── 8. "/" shortcut ───────────────────────────────────────────────────────
+  test('"/" shortcut focuses search input', async ({ page }) => {
+    await page.locator('body').click()
+    await page.keyboard.press('/')
+    await expect(page.locator('input[placeholder="Search..."]').first()).toBeFocused()
+    await page.keyboard.press('Escape')
+  })
 
-    // Open new vendor modal
-    const newButton = page.locator('button:has-text("New")').first();
-    await newButton.click();
+  // ── 9. Escape in search clears value ─────────────────────────────────────
+  test('Escape in focused search clears value', async ({ page }) => {
+    const searchInput = page.locator('input[placeholder="Search..."]').first()
+    await searchInput.fill('DJ')
+    await expect(searchInput).toHaveValue('DJ')
+    await searchInput.press('Escape')
+    await expect(searchInput).toHaveValue('')
+  })
 
-    // Check for form fields
-    await expect(page.locator('text=Vendor').or(page.locator('text=Business Name'))).toBeVisible();
-    await expect(page.locator('text=Contact Person')).toBeVisible();
-    await expect(page.locator('text=Phone')).toBeVisible();
-    await expect(page.locator('text=Email')).toBeVisible();
-    await expect(page.locator('text=Category')).toBeVisible();
-    await expect(page.locator('text=Status')).toBeVisible();
-  });
+  // ── 10. Search filters rows ───────────────────────────────────────────────
+  test('search filters table rows to matching names only', async ({ page }) => {
+    const name = uniqueName('Searchable Vendor')
+    await addVendor(page, { name })
 
-  test('should search vendors by name', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await search(page, name)
+    const rows = page.locator('table tbody tr')
+    await expect(rows).toHaveCount(1)
 
-    // Get search input
-    const searchInput = page.locator('[placeholder*="Search"], [placeholder*="search"]').first();
+    // Clean up
+    await deleteVendor(page, name)
+  })
 
-    if (await searchInput.isVisible()) {
-      // Type search term
-      await searchInput.fill('DJ');
+  // ── 11. Category filter ───────────────────────────────────────────────────
+  test('clicking row opens vendor profile panel', async ({ page }) => {
+    const name = uniqueName('Profile Test Vendor')
+    await addVendor(page, { name })
+    await search(page, name)
+    await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+    await expect(page.locator('div.fixed.top-0.right-0 h1')).toBeVisible()
+    await expect(page.locator('div.fixed.top-0.right-0')).toContainText(name)
 
-      // Wait for results to update
-      await page.waitForLoadState('networkidle');
+    // Clean up
+    await page.locator('div.fixed.top-0.right-0').locator('button').first().click()
+    await deleteVendor(page, name)
+  })
 
-      // Verify search was applied
-      await expect(searchInput).toHaveValue('DJ');
-    }
-  });
+  // ── 12. Vendor profile Overview ───────────────────────────────────────────
+  test('vendor profile Overview shows contact details', async ({ page }) => {
+    const name = uniqueName('Overview Vendor')
+    await addVendor(page, { name, email: 'overview@vendor.com', phone: '+61 400 777 666' })
+    await search(page, name)
+    await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+    await page.waitForSelector('div.fixed.top-0.right-0 h1')
 
-  test('should display category filter', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    const panel = page.locator('div.fixed.top-0.right-0')
+    await expect(panel).toContainText('overview@vendor.com')
+    await expect(panel).toContainText('+61 400 777 666')
 
-    // Look for filter button
-    const filterButton = page.locator('[aria-label*="Filter"], [title*="Filter"]').first();
+    // Clean up
+    await panel.locator('button').first().click()
+    await deleteVendor(page, name)
+  })
 
-    if (await filterButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await filterButton.click();
+  // ── 13. Vendor profile close ──────────────────────────────────────────────
+  test('vendor profile closes via X button', async ({ page }) => {
+    const name = uniqueName('Close Vendor Test')
+    await addVendor(page, { name })
+    await search(page, name)
+    await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+    await page.waitForSelector('div.fixed.top-0.right-0 h1')
 
-      // Filter dropdown should appear with category options
-      await expect(page.locator('text=Venue, DJ, Photographer, Florist').or(page.locator('[role="listbox"]'))).toBeVisible({ timeout: 2000 }).catch(() => true);
-    }
-  });
+    await page.locator('div.fixed.top-0.right-0').locator('button').first().click()
+    await expect(page.locator('div.fixed.top-0.right-0')).not.toBeVisible()
 
-  test('should display sort dropdown', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    // Clean up
+    await deleteVendor(page, name)
+  })
 
-    // Look for sort button
-    const sortButton = page.locator('[aria-label*="Sort"], [title*="Sort"]').first();
+  // ── 14. Vendor profile Events tab ────────────────────────────────────────
+  test('vendor profile Events tab renders without crash', async ({ page }) => {
+    const name = uniqueName('Events Tab Vendor')
+    await addVendor(page, { name })
+    await search(page, name)
+    await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+    await page.waitForSelector('div.fixed.top-0.right-0 h1')
 
-    if (await sortButton.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await sortButton.click();
+    const panel = page.locator('div.fixed.top-0.right-0')
+    await panel.locator('button:has-text("Events")').click()
+    await page.waitForLoadState('networkidle')
+    // Should render the tab content without error
+    await expect(panel).toBeVisible()
 
-      // Sort options should appear
-      await expect(page.locator('[role="listbox"], [role="menu"]').first()).toBeVisible({ timeout: 2000 }).catch(() => true);
-    }
-  });
+    // Clean up
+    await panel.locator('button').first().click()
+    await deleteVendor(page, name)
+  })
 
-  test('should open vendor profile when clicking a row', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    // Find first vendor row
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await firstRow.click();
-
-      // Profile slide-over should appear
-      await expect(page.locator('text=Overview').or(page.locator('[role="dialog"]'))).toBeVisible({ timeout: 3000 }).catch(() => true);
-    }
-  });
-
-  test('should display vendor profile with tabs', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await firstRow.click();
-      await page.waitForLoadState('networkidle');
-
-      // Check for tabs
-      const overviewTab = page.locator('text=Overview');
-      const eventsTab = page.locator('text=Events');
-
-      if (await overviewTab.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await expect(overviewTab).toBeVisible();
-      }
-
-      if (await eventsTab.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await expect(eventsTab).toBeVisible();
-      }
-    }
-  });
-
-  test('should display vendor contact details in overview', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await firstRow.click();
-      await page.waitForLoadState('networkidle');
-
-      // Check for contact details
-      const overviewTab = page.locator('text=Overview');
-      if (await overviewTab.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await overviewTab.click();
-
-        // Look for key details
-        await expect(page.locator('text=Phone, Email, Category, Status').or(page.locator('dt, dd'))).toBeVisible({ timeout: 2000 }).catch(() => true);
-      }
-    }
-  });
-
-  test('should display edit button in vendor profile', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await firstRow.click();
-      await page.waitForLoadState('networkidle');
-
-      // Look for edit button
-      const editButton = page.locator('[aria-label*="Edit"], button:has-text("Edit")').first();
-
-      if (await editButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await expect(editButton).toBeVisible();
-      }
-    }
-  });
-
-  test('should close vendor profile slide-over', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    const firstRow = page.locator('table tbody tr, [role="row"]').first();
-
-    if (await firstRow.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await firstRow.click();
-      await page.waitForLoadState('networkidle');
-
-      // Click close button or outside
-      const closeButton = page.locator('[aria-label="Close"], button').filter({ has: page.locator('svg') }).last();
-      await closeButton.click().catch(() => {
-        page.click('main, body', { force: true });
-      });
-
-      // Slide-over should close
-      await expect(page.locator('[role="dialog"], text=Overview').first()).not.toBeVisible({ timeout: 2000 }).catch(() => true);
-    }
-  });
-
-  test('should clear search when escape is pressed', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    const searchInput = page.locator('[placeholder*="Search"], [placeholder*="search"]').first();
-
-    if (await searchInput.isVisible()) {
-      // Type in search
-      await searchInput.fill('DJ');
-      await expect(searchInput).toHaveValue('DJ');
-
-      // Press escape
-      await searchInput.press('Escape');
-
-      // Search should be cleared
-      await expect(searchInput).toHaveValue('');
-    }
-  });
-
-  test('should display empty state when no vendors exist', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    // If vendors table is empty, empty state message should appear
-    const emptyState = page.locator('text=No vendors, Start building your vendor network').first();
-
-    // Check if empty state is visible (if there are no vendors)
-    if (await emptyState.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await expect(emptyState).toBeVisible();
-    }
-  });
-
-  test('should have pagination with Previous/Next buttons', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    // Look for pagination buttons
-    const prevButton = page.locator('button:has-text("Previous"), [aria-label*="Previous"]').first();
-    const nextButton = page.locator('button:has-text("Next"), [aria-label*="Next"]').first();
-
-    // At least look for pagination area
-    const pagination = page.locator('text=Previous, Next').or(prevButton).or(nextButton);
-
-    // Pagination might not be visible if < 10 vendors
-    if (await pagination.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await expect(pagination).toBeVisible();
-    }
-  });
-});
+  // ── 15. Vendor modal has all form fields ──────────────────────────────────
+  test('Add Vendor modal shows all required form fields', async ({ page }) => {
+    await page.locator('button:has-text("New")').first().click()
+    await page.waitForSelector('h2:has-text("Add Vendor")')
+    await expect(page.locator('input[placeholder="e.g., Elegant Venues"]')).toBeVisible()
+    await expect(page.locator('input[placeholder="e.g., John Smith"]')).toBeVisible()
+    await expect(page.locator('input[type="tel"]')).toBeVisible()
+    await expect(page.locator('input[type="email"]')).toBeVisible()
+    await expect(page.locator('textarea')).toBeVisible()
+    await page.locator('button:has-text("Cancel")').click()
+  })
+})
