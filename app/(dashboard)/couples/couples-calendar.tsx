@@ -59,7 +59,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   const { data: statuses } = useCoupleStatuses()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [calendarView, setCalendarView] = useState<CalendarView>('week')
-  const [activeStatuses, setActiveStatuses] = useState<Set<string>>(new Set(statuses.map(s => s.slug)))
+  const [activeStatuses, setActiveStatuses] = useState<Set<string> | null>(null)
   const [miniNavDate, setMiniNavDate] = useState(new Date())
   const [coupleSearch, setCoupleSearch] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -88,7 +88,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
     if (!events) return []
     return events.filter(event => {
       const status = event.couple?.status || 'new'
-      const hasStatus = activeStatuses.has(status)
+      const hasStatus = activeStatuses === null || activeStatuses.has(status)
       const hasSearch = coupleSearch === '' || event.couple?.name?.toLowerCase().includes(coupleSearch.toLowerCase())
       return hasStatus && hasSearch
     })
@@ -114,7 +114,8 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   }
 
   const toggleStatus = (statusSlug: string) => {
-    const newStatuses = new Set(activeStatuses)
+    const base = activeStatuses ?? new Set(statuses.map(s => s.slug))
+    const newStatuses = new Set(base)
     if (newStatuses.has(statusSlug)) {
       newStatuses.delete(statusSlug)
     } else {
@@ -170,7 +171,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   const miniMonthDays = getMonthDays(miniNavDate)
   const daysWithEvents = new Set(
     (events || [])
-      .filter(e => e.couple && activeStatuses.has(e.couple.status || 'new'))
+      .filter(e => e.couple && (activeStatuses === null || activeStatuses.has(e.couple.status || 'new')))
       .map(e => e.date)
   )
 
@@ -269,7 +270,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
               className="flex items-center gap-2.5 text-sm hover:bg-gray-50 rounded-md px-1.5 py-1 transition cursor-pointer"
             >
               <StatusCheckbox
-                checked={activeStatuses.has(status.slug)}
+                checked={activeStatuses === null || activeStatuses.has(status.slug)}
                 color={CHECKBOX_COLOR_MAP[status.color] || 'bg-gray-400'}
               />
               <span className="text-sm text-gray-700">{status.name}</span>
