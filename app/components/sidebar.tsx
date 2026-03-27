@@ -5,9 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
-  Home,
+  LayoutDashboard,
   Target,
-  Users,
+  Contact,
   Settings,
   LogOut,
   Calendar,
@@ -16,11 +16,11 @@ import {
 import type { User } from "@supabase/supabase-js";
 
 const navItems = [
-  { label: "Dashboard", href: "/", icon: Home },
+  { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Couples", href: "/couples", icon: Target },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Tasks", href: "/tasks", icon: CheckSquare },
-  { label: "Contacts", href: "/contacts", icon: Users },
+  { label: "Contacts", href: "/contacts", icon: Contact },
 ];
 
 const bottomItems = [
