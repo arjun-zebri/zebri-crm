@@ -98,6 +98,17 @@ const columns = [
 
 const skeletonWidths = ["w-32", "w-28", "w-24", "w-40", "w-24", "w-16"];
 
+function getPageNumbers(currentPage: number, totalPages: number): number[] {
+  if (totalPages <= 4) return Array.from({ length: totalPages }, (_, i) => i);
+
+  const windowSize = 4;
+  // Highlight stays at button index 3 (last button) — window only shifts when needed
+  let windowStart = Math.max(0, currentPage - 3);
+  windowStart = Math.min(totalPages - windowSize, windowStart);
+
+  return Array.from({ length: windowSize }, (_, i) => windowStart + i);
+}
+
 export function ContactsList({
   vendors,
   onRowClick,
@@ -215,39 +226,62 @@ export function ContactsList({
         <div className="flex items-center gap-3">
           {table.getPageCount() > 1 && (
             <>
-              <button
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
-                title="Previous page"
-              >
-                <ChevronLeft size={16} strokeWidth={1.5} />
-              </button>
+              <div className="flex items-center w-[280px]">
+                <button
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600 shrink-0"
+                  title="Previous page"
+                >
+                  <ChevronLeft size={16} strokeWidth={1.5} />
+                </button>
 
-              <div className="flex items-center gap-1">
-                {Array.from({ length: table.getPageCount() }).map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => table.setPageIndex(i)}
-                    className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
-                      table.getState().pagination.pageIndex === i
-                        ? "bg-gray-900 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+                <div className="flex flex-1 items-center justify-center gap-1">
+                  {getPageNumbers(table.getState().pagination.pageIndex, table.getPageCount()).map((pageNum, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => table.setPageIndex(pageNum)}
+                      className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
+                        table.getState().pagination.pageIndex === pageNum
+                          ? "bg-gray-900 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  ))}
+                  {(() => {
+                    const pages = getPageNumbers(table.getState().pagination.pageIndex, table.getPageCount());
+                    const lastPage = table.getPageCount() - 1;
+                    if (pages[pages.length - 1] >= lastPage) return null;
+                    const adjacent = pages[pages.length - 1] === lastPage - 1;
+                    return (
+                      <>
+                        {!adjacent && <span className="px-1 text-xs text-gray-400">…</span>}
+                        <button
+                          onClick={() => table.setPageIndex(lastPage)}
+                          className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
+                            table.getState().pagination.pageIndex === lastPage
+                              ? "bg-gray-900 text-white"
+                              : "text-gray-600 hover:bg-gray-100"
+                          }`}
+                        >
+                          {lastPage + 1}
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <button
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600 shrink-0"
+                  title="Next page"
+                >
+                  <ChevronRight size={16} strokeWidth={1.5} />
+                </button>
               </div>
-
-              <button
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-                className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
-                title="Next page"
-              >
-                <ChevronRight size={16} strokeWidth={1.5} />
-              </button>
 
               <div className="h-5 w-px bg-gray-200" />
             </>
