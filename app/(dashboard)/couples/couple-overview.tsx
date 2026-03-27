@@ -15,47 +15,69 @@ export function CoupleOverview({ couple, statuses }: CoupleOverviewProps) {
     ? LEAD_SOURCE_LABELS[couple.lead_source as LeadSource] ?? couple.lead_source
     : null
 
+  const fields = [
+    {
+      label: 'Phone',
+      render: couple.phone ? (
+        <a href={`tel:${couple.phone}`} className="text-sm text-gray-900 hover:text-blue-600 transition">
+          {couple.phone}
+        </a>
+      ) : null,
+      value: couple.phone || null,
+    },
+    {
+      label: 'Email',
+      render: couple.email ? (
+        <a href={`mailto:${couple.email}`} className="text-sm text-gray-900 hover:text-blue-600 transition truncate max-w-[60%] text-right">
+          {couple.email}
+        </a>
+      ) : null,
+      value: couple.email || null,
+    },
+    {
+      label: 'Status',
+      render: (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}>
+          {statusName}
+        </span>
+      ),
+      value: 'status',
+    },
+    {
+      label: 'Lead source',
+      render: null,
+      value: leadSourceLabel,
+    },
+  ]
+
   return (
-    <div className="space-y-6">
-      {/* Contact details */}
+    <div className="flex flex-col h-full gap-5">
+      {/* Fields */}
       <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-4">Details</h3>
-        <div className="space-y-3">
-          {couple.phone && (
-            <div className="flex items-start justify-between">
-              <span className="text-sm text-gray-500">Phone</span>
-              <a href={`tel:${couple.phone}`} className="text-sm text-gray-900 hover:text-blue-600 transition">{couple.phone}</a>
-            </div>
-          )}
-          {couple.email && (
-            <div className="flex items-start justify-between">
-              <span className="text-sm text-gray-500">Email</span>
-              <a href={`mailto:${couple.email}`} className="text-sm text-gray-900 hover:text-blue-600 transition">{couple.email}</a>
-            </div>
-          )}
-          <div className="flex items-start justify-between">
-            <span className="text-sm text-gray-500">Status</span>
-            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}>
-              {statusName}
-            </span>
+        {fields.map(({ label, render, value }) => (
+          <div key={label} className="flex items-center justify-between py-2.5 border-b border-gray-50">
+            <span className="text-sm text-gray-400 shrink-0">{label}</span>
+            {render ? (
+              render
+            ) : value ? (
+              <span className="text-sm text-gray-900">{value}</span>
+            ) : (
+              <span className="text-sm text-gray-300">—</span>
+            )}
           </div>
-          {leadSourceLabel && (
-            <div className="flex items-start justify-between">
-              <span className="text-sm text-gray-500">Lead source</span>
-              <span className="text-sm text-gray-900">{leadSourceLabel}</span>
-            </div>
-          )}
-        </div>
+        ))}
       </div>
 
-      {/* Notes */}
-      <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-4">Notes</h3>
-        {couple.notes ? (
-          <p className="text-sm text-gray-700 whitespace-pre-wrap">{couple.notes}</p>
-        ) : (
-          <p className="text-sm text-gray-400 italic">No notes yet.</p>
-        )}
+      {/* Notes — expands to fill remaining height */}
+      <div className="flex flex-col flex-1 min-h-0 pt-2.5">
+        <span className="text-sm text-gray-400 mb-2">Notes</span>
+        <div className="flex-1">
+          {couple.notes ? (
+            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{couple.notes}</p>
+          ) : (
+            <p className="text-sm text-gray-400 italic">No notes yet.</p>
+          )}
+        </div>
       </div>
     </div>
   )

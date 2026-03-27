@@ -33,8 +33,7 @@ export default function CouplesPage() {
   const [statusFilter, setStatusFilter] = useState<string | "all">("all");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingCouple, setEditingCouple] = useState<Couple | undefined>();
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<string | undefined>();
   const { toast } = useToast();
@@ -57,9 +56,8 @@ export default function CouplesPage() {
         const target = e.target as HTMLElement;
         if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
           e.preventDefault();
-          setEditingCouple(undefined);
           setDefaultStatus(undefined);
-          setModalOpen(true);
+          setAddModalOpen(true);
         }
       }
     };
@@ -91,31 +89,28 @@ export default function CouplesPage() {
     });
   }, [couples, search, statusFilter, sortField, sortDirection]);
 
-  const handleSaveCouple = async (
+  const handleAddCouple = async (
     data: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
   ) => {
-    if (data.id && editingCouple) {
-      const updated = { ...editingCouple, ...data };
-      await updateCouple.mutateAsync(updated);
-      if (selectedCouple?.id === data.id) {
-        setSelectedCouple(updated);
-      }
-      toast('Couple updated');
-    } else {
-      await createCouple.mutateAsync(data);
-      toast('Couple added');
-    }
-    setModalOpen(false);
-    setEditingCouple(undefined);
+    await createCouple.mutateAsync(data);
+    toast('Couple added');
+    setAddModalOpen(false);
+  };
+
+  const handleUpdateCouple = async (
+    data: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
+  ) => {
+    const existing = couples.find((c) => c.id === data.id);
+    if (!existing) return;
+    const updated = { ...existing, ...data } as Couple;
+    await updateCouple.mutateAsync(updated);
+    setSelectedCouple(updated);
+    toast('Couple updated');
   };
 
   const handleDeleteCouple = async (id: string) => {
     await deleteCouple.mutateAsync(id);
-    setModalOpen(false);
-    setEditingCouple(undefined);
-    if (selectedCouple?.id === id) {
-      setSelectedCouple(null);
-    }
+    setSelectedCouple(null);
     toast('Couple deleted');
   };
 
@@ -143,9 +138,8 @@ export default function CouplesPage() {
           couples={couples}
           statuses={statuses}
           onAddClick={() => {
-            setEditingCouple(undefined);
             setDefaultStatus(undefined);
-            setModalOpen(true);
+            setAddModalOpen(true);
           }}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
@@ -178,42 +172,30 @@ export default function CouplesPage() {
               onCardClick={(couple) => setSelectedCouple(couple)}
               onDragEnd={handleDragEnd}
               onAddClick={(statusSlug) => {
-                setEditingCouple(undefined);
                 setDefaultStatus(statusSlug);
-                setModalOpen(true);
+                setAddModalOpen(true);
               }}
             />
           </div>
         )}
       </div>
 
-      {/* Profile slide-over (z-40/50) — stays open behind the edit modal */}
       <CoupleProfile
         couple={selectedCouple}
         onClose={() => setSelectedCouple(null)}
-        onEdit={(couple) => {
-          setEditingCouple(couple);
-          setModalOpen(true);
-        }}
+        onSave={handleUpdateCouple}
+        onDelete={handleDeleteCouple}
+        loading={updateCouple.isPending || deleteCouple.isPending}
       />
 
-      {/* Edit/Add modal (z-50/60) — opens on top of everything */}
       <CoupleModal
-        isOpen={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          setEditingCouple(undefined);
-        }}
-        onSave={handleSaveCouple}
-        onDelete={handleDeleteCouple}
-        couple={editingCouple}
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSave={handleAddCouple}
+        onDelete={() => {}}
         statuses={statuses}
         defaultStatus={defaultStatus}
-        loading={
-          createCouple.isPending ||
-          updateCouple.isPending ||
-          deleteCouple.isPending
-        }
+        loading={createCouple.isPending}
       />
     </div>
   );

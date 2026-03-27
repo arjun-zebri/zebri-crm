@@ -61,6 +61,7 @@ export function ContactProfile({
       setNotes(vendor.notes);
     }
     setMode("view");
+    setActiveTab("overview");
     setDeleteConfirm(false);
   }, [vendor]);
 

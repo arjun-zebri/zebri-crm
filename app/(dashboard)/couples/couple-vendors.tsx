@@ -98,7 +98,7 @@ export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
           <p className="text-sm text-gray-500 mb-3">No contacts assigned yet.</p>
           <button
             onClick={() => setShowAddVendor(true)}
-            className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+            className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add Contact
           </button>
