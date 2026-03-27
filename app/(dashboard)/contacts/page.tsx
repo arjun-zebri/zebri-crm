@@ -32,8 +32,7 @@ export default function ContactsPage() {
   const [statusFilter, setStatusFilter] = useState<ContactStatus | null>(null)
   const [sortField, setSortField] = useState<SortField>('created_at')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingContact, setEditingContact] = useState<Contact | undefined>()
+  const [addModalOpen, setAddModalOpen] = useState(false)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const { toast } = useToast()
 
@@ -43,8 +42,7 @@ export default function ContactsPage() {
         const target = e.target as HTMLElement
         if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
           e.preventDefault()
-          setEditingContact(undefined)
-          setModalOpen(true)
+          setAddModalOpen(true)
         }
       }
     }
@@ -79,31 +77,28 @@ export default function ContactsPage() {
     })
   }, [vendors, search, categoryFilter, statusFilter, sortField, sortDirection])
 
+  const handleAddContact = async (
+    data: Omit<Contact, 'id' | 'user_id' | 'created_at'> & { id?: string }
+  ) => {
+    await createContact.mutateAsync(data)
+    toast('Contact added')
+    setAddModalOpen(false)
+  }
+
   const handleSaveContact = async (
     data: Omit<Contact, 'id' | 'user_id' | 'created_at'> & { id?: string }
   ) => {
-    if (data.id && editingContact) {
-      const updated = { ...editingContact, ...data }
-      await updateContact.mutateAsync(updated)
-      if (selectedContact?.id === data.id) {
-        setSelectedContact(updated)
-      }
-      toast('Contact updated')
-    } else {
-      await createContact.mutateAsync(data)
-      toast('Contact added')
-    }
-    setModalOpen(false)
-    setEditingContact(undefined)
+    const existing = vendors.find((v) => v.id === data.id)
+    if (!existing) return
+    const updated = { ...existing, ...data } as Contact
+    await updateContact.mutateAsync(updated)
+    setSelectedContact(updated)
+    toast('Contact updated')
   }
 
   const handleDeleteContact = async (id: string) => {
     await deleteContact.mutateAsync(id)
-    setModalOpen(false)
-    setEditingContact(undefined)
-    if (selectedContact?.id === id) {
-      setSelectedContact(null)
-    }
+    setSelectedContact(null)
     toast('Contact deleted')
   }
 
@@ -112,10 +107,7 @@ export default function ContactsPage() {
       <div className="px-6 pt-6 pb-3 flex-shrink-0">
         <ContactsHeader
           vendors={vendors}
-          onAddClick={() => {
-            setEditingContact(undefined)
-            setModalOpen(true)
-          }}
+          onAddClick={() => setAddModalOpen(true)}
           search={search}
           onSearchChange={setSearch}
           categoryFilter={categoryFilter}
@@ -149,31 +141,20 @@ export default function ContactsPage() {
         />
       </div>
 
-      {/* Profile slide-over (z-40/50) — stays open behind the edit modal */}
       <ContactProfile
         vendor={selectedContact}
         onClose={() => setSelectedContact(null)}
-        onEdit={(contact) => {
-          setEditingContact(contact)
-          setModalOpen(true)
-        }}
-      />
-
-      {/* Edit/Add modal (z-50/60) — opens on top of everything */}
-      <ContactModal
-        isOpen={modalOpen}
-        onClose={() => {
-          setModalOpen(false)
-          setEditingContact(undefined)
-        }}
         onSave={handleSaveContact}
         onDelete={handleDeleteContact}
-        vendor={editingContact}
-        loading={
-          createContact.isPending ||
-          updateContact.isPending ||
-          deleteContact.isPending
-        }
+        loading={updateContact.isPending || deleteContact.isPending}
+      />
+
+      <ContactModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        onSave={handleAddContact}
+        onDelete={() => {}}
+        loading={createContact.isPending}
       />
     </div>
   )
