@@ -14,12 +14,7 @@ import { CouplesList } from "./couples-list";
 import { CouplesKanban } from "./couples-kanban";
 import { CoupleModal } from "./couple-modal";
 import { CoupleProfile } from "./couple-profile";
-import {
-  Couple,
-  ViewMode,
-  SortField,
-  SortDirection,
-} from "./couples-types";
+import { Couple, ViewMode, SortField, SortDirection } from "./couples-types";
 
 export default function CouplesPage() {
   const { data: couples, isLoading } = useCouples();
@@ -93,7 +88,7 @@ export default function CouplesPage() {
     data: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
   ) => {
     await createCouple.mutateAsync(data);
-    toast('Couple added');
+    toast("Couple added");
     setAddModalOpen(false);
   };
 
@@ -105,13 +100,13 @@ export default function CouplesPage() {
     const updated = { ...existing, ...data } as Couple;
     await updateCouple.mutateAsync(updated);
     setSelectedCouple(updated);
-    toast('Couple updated');
+    toast("Couple updated");
   };
 
   const handleDeleteCouple = async (id: string) => {
     await deleteCouple.mutateAsync(id);
     setSelectedCouple(null);
-    toast('Couple deleted');
+    toast("Couple deleted");
   };
 
   const handleDragEnd = async (
@@ -133,7 +128,7 @@ export default function CouplesPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-6 pt-6 pb-3 flex-shrink-0">
+      <div className="px-6 pt-6 pb-2 flex-shrink-0">
         <CouplesHeader
           couples={couples}
           statuses={statuses}
@@ -156,7 +151,11 @@ export default function CouplesPage() {
         />
       </div>
 
-      <div className={`flex-1 min-h-0 overflow-hidden px-6 ${viewMode !== 'list' ? 'pb-14' : ''}`}>
+      <div
+        className={`flex-1 min-h-0 overflow-hidden px-6 ${
+          viewMode !== "list" ? "pb-14" : ""
+        }`}
+      >
         {viewMode === "list" ? (
           <CouplesList
             couples={filteredCouples}
@@ -165,7 +164,7 @@ export default function CouplesPage() {
             loading={isLoading}
           />
         ) : (
-          <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pt-2">
             <CouplesKanban
               couples={filteredCouples}
               statuses={statuses}

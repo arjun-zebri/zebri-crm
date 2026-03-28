@@ -118,7 +118,7 @@ export default function TasksPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-6 pt-6 pb-4 flex-shrink-0">
+      <div className="px-6 pt-6 pb-6 flex-shrink-0">
         <div className="flex items-baseline gap-3 mb-6">
           <h1 className="text-3xl font-semibold text-gray-900">Tasks</h1>
           <span className="text-sm text-gray-400">{todoCounts.todo} outstanding</span>

@@ -102,7 +102,7 @@ export function ContactsHeader({
               placeholder="Search..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="w-36 sm:w-56 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-48 sm:w-72 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
             />
             {search && (
               <button

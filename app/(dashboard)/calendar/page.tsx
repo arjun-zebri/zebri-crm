@@ -56,7 +56,7 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-6 pt-6 pb-3 flex-shrink-0">
+      <div className="px-6 pt-6 pb-6 flex-shrink-0">
         <h1 className="text-3xl font-semibold text-gray-900">Calendar</h1>
       </div>
 

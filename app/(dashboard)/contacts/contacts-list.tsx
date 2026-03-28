@@ -26,44 +26,51 @@ interface ContactsListProps {
 const columnHelper = createColumnHelper<Contact>();
 
 const COL_WIDTHS: Record<string, string> = {
-  name: "22%",
-  contact_name: "18%",
-  phone: "14%",
-  email: "20%",
-  category: "14%",
-  status: "12%",
+  name: "25%",
+  contact_name: "20%",
+  phone: "16%",
+  email: "22%",
+  category: "17%",
 };
 
 const columns = [
   columnHelper.accessor("name", {
     header: "Contact name",
     enableSorting: false,
-    cell: (info) => (
-      <span className="text-sm text-gray-500">{info.getValue()}</span>
-    ),
+    cell: (info) => {
+      const category = info.row.original.category;
+      return (
+        <div>
+          <span className="text-sm text-gray-500 group-hover:text-gray-900">{info.getValue()}</span>
+          <div className="mt-0.5 md:hidden">
+            <Badge variant={category as any}>{CATEGORY_LABELS[category]}</Badge>
+          </div>
+        </div>
+      );
+    },
   }),
   columnHelper.accessor("contact_name", {
     header: "Contact",
     enableSorting: false,
-    meta: { hidden: "hidden lg:table-cell" },
+    meta: { hidden: "hidden md:table-cell" },
     cell: (info) => (
-      <span className="text-sm text-gray-500">{info.getValue()}</span>
+      <span className="text-sm text-gray-500 group-hover:text-gray-900">{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor("phone", {
     header: "Phone",
     enableSorting: false,
-    meta: { hidden: "hidden lg:table-cell" },
+    meta: { hidden: "hidden md:table-cell" },
     cell: (info) => (
-      <span className="text-sm text-gray-500">{info.getValue()}</span>
+      <span className="text-sm text-gray-500 group-hover:text-gray-900">{info.getValue()}</span>
     ),
   }),
   columnHelper.accessor("email", {
     header: "Email",
     enableSorting: false,
-    meta: { hidden: "hidden lg:table-cell" },
+    meta: { hidden: "hidden md:table-cell" },
     cell: (info) => (
-      <span className="text-sm text-gray-500 truncate block">
+      <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
         {info.getValue()}
       </span>
     ),
@@ -71,38 +78,21 @@ const columns = [
   columnHelper.accessor("category", {
     header: "Category",
     enableSorting: false,
-    meta: { hidden: "hidden sm:table-cell" },
+    meta: { hidden: "hidden md:table-cell" },
     cell: (info) => (
       <Badge variant={info.getValue() as any}>
         {CATEGORY_LABELS[info.getValue()]}
       </Badge>
     ),
   }),
-  columnHelper.accessor("status", {
-    header: "Status",
-    enableSorting: false,
-    cell: (info) => (
-      <div className="flex items-center gap-2">
-        <div
-          className={`w-2.5 h-2.5 rounded-full ${
-            info.getValue() === "active" ? "bg-emerald-400" : "bg-gray-300"
-          }`}
-        />
-        <span className="text-sm text-gray-500">
-          {info.getValue() === "active" ? "Active" : "Inactive"}
-        </span>
-      </div>
-    ),
-  }),
 ];
 
-const skeletonWidths = ["w-32", "w-28", "w-24", "w-40", "w-24", "w-16"];
+const skeletonWidths = ["w-32", "w-28", "w-24", "w-40", "w-24"];
 
 function getPageNumbers(currentPage: number, totalPages: number): number[] {
   if (totalPages <= 4) return Array.from({ length: totalPages }, (_, i) => i);
 
   const windowSize = 4;
-  // Highlight stays at button index 3 (last button) — window only shifts when needed
   let windowStart = Math.max(0, currentPage - 3);
   windowStart = Math.min(totalPages - windowSize, windowStart);
 
@@ -116,13 +106,13 @@ export function ContactsList({
 }: ContactsListProps) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 25,
   });
   const [pageSizeOpen, setPageSizeOpen] = useState(false);
   const pageSizeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setPagination({ pageIndex: 0, pageSize: 10 });
+    setPagination({ pageIndex: 0, pageSize: 25 });
   }, [vendors]);
 
   useEffect(() => {
@@ -140,9 +130,7 @@ export function ContactsList({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    state: {
-      pagination,
-    },
+    state: { pagination },
     onPaginationChange: setPagination,
   });
 
@@ -158,16 +146,19 @@ export function ContactsList({
     );
   }
 
+  const pageIndex = table.getState().pagination.pageIndex;
+  const pageCount = table.getPageCount();
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
         <table className="w-full table-fixed min-w-[400px] md:max-w-[1800px]">
-          <thead className="sticky top-0 bg-white z-10">
-            <tr className="border-b border-gray-200">
+          <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
+            <tr>
               {table.getHeaderGroups()[0]?.headers.map((header) => (
                 <th
                   key={header.id}
-                  className={`px-3 md:px-6 py-3 text-left text-sm font-medium text-gray-900 ${(header.column.columnDef.meta as any)?.hidden || ""}`}
+                  className={`px-0 py-3 text-left text-sm font-medium text-gray-900 ${(header.column.columnDef.meta as any)?.hidden || ""}`}
                   style={{ width: COL_WIDTHS[header.id] }}
                 >
                   {header.isPlaceholder
@@ -188,7 +179,7 @@ export function ContactsList({
                     className="animate-pulse border-b border-gray-100 last:border-0"
                   >
                     {columns.map((_, j) => (
-                      <td key={j} className="px-3 md:px-6 py-3.5">
+                      <td key={j} className="px-0 py-4 md:py-3.5">
                         <div
                           className={`h-4 bg-gray-100 rounded-md ${skeletonWidths[j]}`}
                         />
@@ -198,16 +189,19 @@ export function ContactsList({
                 ))
               : table.getRowModel().rows.map((row) => {
                   const v = row.original;
+                  const inactive = v.status === "inactive";
                   return (
                     <tr
                       key={row.id}
                       onClick={() => onRowClick(v)}
-                      className="border-b border-gray-100 last:border-0 cursor-pointer transition hover:bg-gray-50 group"
+                      className={`border-b border-gray-100 last:border-0 cursor-pointer transition group ${
+                        inactive ? "opacity-50" : ""
+                      }`}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <td
                           key={cell.id}
-                          className={`px-3 md:px-6 py-3.5 text-sm overflow-hidden ${(cell.column.columnDef.meta as any)?.hidden || ""}`}
+                          className={`px-0 py-4 md:py-3.5 text-sm overflow-hidden ${(cell.column.columnDef.meta as any)?.hidden || ""}`}
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
@@ -223,8 +217,32 @@ export function ContactsList({
       </div>
 
       <div className="border-t border-gray-200 bg-white px-6 py-3.5 flex justify-end relative">
-        <div className="flex items-center gap-3">
-          {table.getPageCount() > 1 && (
+        {/* Mobile pagination */}
+        {pageCount > 1 && (
+          <div className="flex md:hidden items-center gap-3">
+            <button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
+            >
+              <ChevronLeft size={16} strokeWidth={1.5} />
+            </button>
+            <span className="text-xs text-gray-600">
+              Page {pageIndex + 1} of {pageCount}
+            </span>
+            <button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
+            >
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+        )}
+
+        {/* Desktop pagination */}
+        <div className="hidden md:flex items-center gap-3">
+          {pageCount > 1 && (
             <>
               <div className="flex items-center w-[280px]">
                 <button
@@ -237,12 +255,12 @@ export function ContactsList({
                 </button>
 
                 <div className="flex flex-1 items-center justify-center gap-1">
-                  {getPageNumbers(table.getState().pagination.pageIndex, table.getPageCount()).map((pageNum, idx) => (
+                  {getPageNumbers(pageIndex, pageCount).map((pageNum, idx) => (
                     <button
                       key={idx}
                       onClick={() => table.setPageIndex(pageNum)}
                       className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
-                        table.getState().pagination.pageIndex === pageNum
+                        pageIndex === pageNum
                           ? "bg-gray-900 text-white"
                           : "text-gray-600 hover:bg-gray-100"
                       }`}
@@ -251,8 +269,8 @@ export function ContactsList({
                     </button>
                   ))}
                   {(() => {
-                    const pages = getPageNumbers(table.getState().pagination.pageIndex, table.getPageCount());
-                    const lastPage = table.getPageCount() - 1;
+                    const pages = getPageNumbers(pageIndex, pageCount);
+                    const lastPage = pageCount - 1;
                     if (pages[pages.length - 1] >= lastPage) return null;
                     const adjacent = pages[pages.length - 1] === lastPage - 1;
                     return (
@@ -261,7 +279,7 @@ export function ContactsList({
                         <button
                           onClick={() => table.setPageIndex(lastPage)}
                           className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
-                            table.getState().pagination.pageIndex === lastPage
+                            pageIndex === lastPage
                               ? "bg-gray-900 text-white"
                               : "text-gray-600 hover:bg-gray-100"
                           }`}
@@ -295,12 +313,14 @@ export function ContactsList({
               {table.getState().pagination.pageSize}/page
             </button>
             {pageSizeOpen && (
-              <div className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1"
+              <div
+                className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1"
                 style={{
                   bottom: window.innerHeight - (pageSizeRef.current?.getBoundingClientRect().top || 0) + 8,
                   right: window.innerWidth - (pageSizeRef.current?.getBoundingClientRect().right || 0),
                   width: pageSizeRef.current?.getBoundingClientRect().width,
-                }}>
+                }}
+              >
                 {[10, 25, 50].map((pageSize) => (
                   <button
                     key={pageSize}
@@ -310,8 +330,8 @@ export function ContactsList({
                     }}
                     className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
                       table.getState().pagination.pageSize === pageSize
-                        ? 'bg-gray-50 text-gray-900 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50'
+                        ? "bg-gray-50 text-gray-900 font-medium"
+                        : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     {pageSize}/page

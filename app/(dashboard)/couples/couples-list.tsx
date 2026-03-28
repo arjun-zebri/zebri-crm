@@ -40,7 +40,9 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       header: "Name",
       enableSorting: false,
       cell: (info) => (
-        <span className="text-sm text-gray-500">{info.getValue()}</span>
+        <span className="text-sm text-gray-500 group-hover:text-gray-900">
+          {info.getValue()}
+        </span>
       ),
     }),
     columnHelper.accessor("email", {
@@ -48,7 +50,7 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       enableSorting: false,
       meta: { hidden: "hidden sm:table-cell" },
       cell: (info) => (
-        <span className="text-sm text-gray-500 truncate block">
+        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
           {info.getValue()}
         </span>
       ),
@@ -58,7 +60,9 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       enableSorting: false,
       meta: { hidden: "hidden lg:table-cell" },
       cell: (info) => (
-        <span className="text-sm text-gray-500">{info.getValue()}</span>
+        <span className="text-sm text-gray-500 group-hover:text-gray-900">
+          {info.getValue()}
+        </span>
       ),
     }),
     columnHelper.accessor("event_date", {
@@ -66,7 +70,9 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       enableSorting: false,
       meta: { hidden: "hidden sm:table-cell" },
       cell: (info) => (
-        <span className="text-sm text-gray-500">{formatDate(info.getValue())}</span>
+        <span className="text-sm text-gray-500 group-hover:text-gray-900">
+          {formatDate(info.getValue())}
+        </span>
       ),
     }),
     columnHelper.accessor("venue", {
@@ -74,7 +80,7 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       enableSorting: false,
       meta: { hidden: "hidden lg:table-cell" },
       cell: (info) => (
-        <span className="text-sm text-gray-500 truncate block">
+        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
           {info.getValue()}
         </span>
       ),
@@ -84,11 +90,17 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       enableSorting: false,
       cell: (info) => {
         const statusSlug = info.getValue();
-        const status = statuses.find(s => s.slug === statusSlug);
-        const classes = status ? getStatusClasses(status.color) : getStatusClasses('gray');
-        const statusName = status?.name || statusSlug.charAt(0).toUpperCase() + statusSlug.slice(1);
+        const status = statuses.find((s) => s.slug === statusSlug);
+        const classes = status
+          ? getStatusClasses(status.color)
+          : getStatusClasses("gray");
+        const statusName =
+          status?.name ||
+          statusSlug.charAt(0).toUpperCase() + statusSlug.slice(1);
         return (
-          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${classes.pill}`}>
+          <span
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${classes.pill}`}
+          >
             {statusName}
           </span>
         );
@@ -130,7 +142,10 @@ export function CouplesList({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (pageSizeRef.current && !pageSizeRef.current.contains(e.target as Node)) {
+      if (
+        pageSizeRef.current &&
+        !pageSizeRef.current.contains(e.target as Node)
+      ) {
         setPageSizeOpen(false);
       }
     };
@@ -165,12 +180,14 @@ export function CouplesList({
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
         <table className="w-full table-fixed min-w-[400px] md:max-w-[1800px]">
-          <thead className="sticky top-0 bg-white z-10">
-            <tr className="border-b border-gray-200">
+          <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
+            <tr>
               {table.getHeaderGroups()[0]?.headers.map((header) => (
                 <th
                   key={header.id}
-                  className={`px-3 md:px-6 py-3 text-left text-sm font-medium text-gray-900 ${(header.column.columnDef.meta as any)?.hidden || ""}`}
+                  className={`px-0 py-3.5 text-left text-sm font-medium text-gray-900 ${
+                    (header.column.columnDef.meta as any)?.hidden || ""
+                  }`}
                   style={{ width: COL_WIDTHS[header.id] }}
                 >
                   {header.isPlaceholder
@@ -191,7 +208,7 @@ export function CouplesList({
                     className="animate-pulse border-b border-gray-100 last:border-0"
                   >
                     {columns.map((_, j) => (
-                      <td key={j} className="px-3 md:px-6 py-3.5">
+                      <td key={j} className="px-0 py-3.5">
                         <div
                           className={`h-4 bg-gray-100 rounded-md ${skeletonWidths[j]}`}
                         />
@@ -203,12 +220,14 @@ export function CouplesList({
                   <tr
                     key={row.id}
                     onClick={() => onRowClick(row.original)}
-                    className="border-b border-gray-100 last:border-0 cursor-pointer transition hover:bg-gray-50"
+                    className="border-b border-gray-100 last:border-0 cursor-pointer transition group"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className={`px-3 md:px-6 py-3.5 text-sm overflow-hidden ${(cell.column.columnDef.meta as any)?.hidden || ""}`}
+                        className={`px-0 py-3.5 text-sm overflow-hidden ${
+                          (cell.column.columnDef.meta as any)?.hidden || ""
+                        }`}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -237,33 +256,41 @@ export function CouplesList({
                 </button>
 
                 <div className="flex flex-1 items-center justify-center gap-1">
-                  {getPageNumbers(table.getState().pagination.pageIndex, table.getPageCount()).map((pageNum, idx) => (
+                  {getPageNumbers(
+                    table.getState().pagination.pageIndex,
+                    table.getPageCount()
+                  ).map((pageNum, idx) => (
                     <button
                       key={idx}
                       onClick={() => table.setPageIndex(pageNum)}
                       className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
                         table.getState().pagination.pageIndex === pageNum
-                          ? 'bg-gray-900 text-white'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          ? "bg-gray-900 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
                       }`}
                     >
                       {pageNum + 1}
                     </button>
                   ))}
                   {(() => {
-                    const pages = getPageNumbers(table.getState().pagination.pageIndex, table.getPageCount());
+                    const pages = getPageNumbers(
+                      table.getState().pagination.pageIndex,
+                      table.getPageCount()
+                    );
                     const lastPage = table.getPageCount() - 1;
                     if (pages[pages.length - 1] >= lastPage) return null;
                     const adjacent = pages[pages.length - 1] === lastPage - 1;
                     return (
                       <>
-                        {!adjacent && <span className="px-1 text-xs text-gray-400">…</span>}
+                        {!adjacent && (
+                          <span className="px-1 text-xs text-gray-400">…</span>
+                        )}
                         <button
                           onClick={() => table.setPageIndex(lastPage)}
                           className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
                             table.getState().pagination.pageIndex === lastPage
-                              ? 'bg-gray-900 text-white'
-                              : 'text-gray-600 hover:bg-gray-100'
+                              ? "bg-gray-900 text-white"
+                              : "text-gray-600 hover:bg-gray-100"
                           }`}
                         >
                           {lastPage + 1}
@@ -295,12 +322,19 @@ export function CouplesList({
               {table.getState().pagination.pageSize}/page
             </button>
             {pageSizeOpen && (
-              <div className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1"
+              <div
+                className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1"
                 style={{
-                  bottom: window.innerHeight - (pageSizeRef.current?.getBoundingClientRect().top || 0) + 8,
-                  right: window.innerWidth - (pageSizeRef.current?.getBoundingClientRect().right || 0),
+                  bottom:
+                    window.innerHeight -
+                    (pageSizeRef.current?.getBoundingClientRect().top || 0) +
+                    8,
+                  right:
+                    window.innerWidth -
+                    (pageSizeRef.current?.getBoundingClientRect().right || 0),
                   width: pageSizeRef.current?.getBoundingClientRect().width,
-                }}>
+                }}
+              >
                 {[10, 25, 50].map((pageSize) => (
                   <button
                     key={pageSize}
@@ -310,8 +344,8 @@ export function CouplesList({
                     }}
                     className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
                       table.getState().pagination.pageSize === pageSize
-                        ? 'bg-gray-50 text-gray-900 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50'
+                        ? "bg-gray-50 text-gray-900 font-medium"
+                        : "text-gray-600 hover:bg-gray-50"
                     }`}
                   >
                     {pageSize}/page
