@@ -4,9 +4,7 @@ import { login } from './helpers'
 test.describe('Calendar View', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
-    await page.goto('/couples', { waitUntil: 'networkidle' })
-    await page.locator('button:has-text("Calendar")').click()
-    await page.waitForLoadState('networkidle')
+    await page.goto('/calendar', { waitUntil: 'networkidle' })
   })
 
   // ── 1. Calendar renders with nav + view buttons ───────────────────────────

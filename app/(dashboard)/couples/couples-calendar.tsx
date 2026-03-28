@@ -64,7 +64,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   const [coupleSearch, setCoupleSearch] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const { data: events } = useQuery({
+  const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ['calendar-events'],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser()
@@ -343,14 +343,20 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
 
         {/* Calendar Content */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {calendarView === 'month' && (
-            <MonthView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} statuses={statuses} />
-          )}
-          {calendarView === 'week' && (
-            <WeekView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} statuses={statuses} />
-          )}
-          {calendarView === 'day' && (
-            <DayView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} statuses={statuses} />
+          {eventsLoading ? (
+            <CalendarSkeleton view={calendarView} />
+          ) : (
+            <>
+              {calendarView === 'month' && (
+                <MonthView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} statuses={statuses} />
+              )}
+              {calendarView === 'week' && (
+                <WeekView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} statuses={statuses} />
+              )}
+              {calendarView === 'day' && (
+                <DayView currentDate={currentDate} eventsByDate={eventsByDate} onSelectCouple={onSelectCouple} statuses={statuses} />
+              )}
+            </>
           )}
         </div>
       </div>
@@ -411,6 +417,89 @@ function EventPill({ event, onSelectCouple, statuses }: { event: EventWithCouple
     >
       {event.couple?.name || 'Unnamed'}
     </button>
+  )
+}
+
+/* ─── Calendar Skeleton ────────────────────────────────────── */
+
+function CalendarSkeleton({ view }: { view: CalendarView }) {
+  if (view === 'month') {
+    const monthDays = getMonthDays(new Date())
+    return (
+      <div className="flex flex-col h-full">
+        <div className="grid grid-cols-7 flex-shrink-0 border-b border-gray-200">
+          {WEEKDAYS.map((day) => (
+            <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="flex-1 min-h-0 grid grid-cols-7 auto-rows-fr">
+          {monthDays.map((date, idx) => {
+            const isCurrent = date.getMonth() === new Date().getMonth()
+            return (
+              <div
+                key={idx}
+                className={`border-b border-r border-gray-100 p-1.5 flex flex-col gap-0.5 min-h-[80px] ${
+                  !isCurrent ? 'bg-gray-50/50' : ''
+                }`}
+              >
+                <div className={`text-xs font-medium mb-0.5 ${isCurrent ? 'text-gray-900' : 'text-gray-300'}`}>
+                  {date.getDate()}
+                </div>
+                <div className="h-6 bg-gray-100 rounded animate-pulse" />
+                <div className="h-6 bg-gray-100 rounded animate-pulse" />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  if (view === 'week') {
+    const weekDays = getWeekDays(new Date())
+    return (
+      <div className="grid grid-cols-7 h-full">
+        {weekDays.map((date, idx) => (
+          <div key={idx} className="flex flex-col border-r border-gray-100 last:border-r-0 min-h-0">
+            <div className="px-2 py-3 text-center border-b border-gray-200 flex-shrink-0">
+              <div className="text-xs text-gray-500 font-medium">{WEEKDAYS[date.getDay()]}</div>
+              <div className="text-sm font-semibold mt-0.5 text-gray-900">{date.getDate()}</div>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-1.5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="w-full h-12 bg-gray-100 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Day view
+  return (
+    <div className="flex flex-col h-full p-6">
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <div key={idx} className="relative bg-gray-100 rounded-xl overflow-hidden mb-3 p-5 animate-pulse">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-300" />
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
+              <div className="h-4 bg-gray-200 rounded w-1/2" />
+            </div>
+            <div className="h-6 w-16 bg-gray-200 rounded-full flex-shrink-0" />
+          </div>
+          <div className="h-4 bg-gray-200 rounded w-full mt-3" />
+          <div className="h-4 bg-gray-200 rounded w-2/3 mt-2" />
+          <div className="flex items-center gap-5 mt-4 pt-4">
+            <div className="h-4 bg-gray-200 rounded w-20" />
+            <div className="h-4 bg-gray-200 rounded w-20" />
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }
 

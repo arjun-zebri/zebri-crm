@@ -99,7 +99,9 @@ export default function DashboardPage() {
       <CoupleProfile
         couple={selectedCouple}
         onClose={() => setSelectedCouple(null)}
-        onEdit={() => {}}
+        onSave={() => {}}
+        onDelete={() => {}}
+        loading={false}
         defaultTab={defaultTab}
       />
     </div>

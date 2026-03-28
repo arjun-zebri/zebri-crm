@@ -218,10 +218,9 @@ export default function TasksPage() {
         couple={selectedCouple}
         onClose={() => setSelectedCouple(null)}
         defaultTab="tasks"
-        onEdit={(couple) => {
-          setEditingCouple(couple);
-          setModalOpen(true);
-        }}
+        onSave={() => {}}
+        onDelete={() => {}}
+        loading={false}
       />
 
       <CoupleModal
