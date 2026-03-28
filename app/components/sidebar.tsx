@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard,
@@ -35,6 +36,7 @@ interface SidebarProps {
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [signingOut, setSigningOut] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
@@ -49,6 +51,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     setSigningOut(true);
     const supabase = createClient();
     await supabase.auth.signOut();
+    queryClient.clear();
     router.push("/login");
   };
 
