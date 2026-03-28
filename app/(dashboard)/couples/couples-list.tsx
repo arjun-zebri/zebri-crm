@@ -130,14 +130,14 @@ export function CouplesList({
 }: CouplesListProps) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 25,
   });
   const [pageSizeOpen, setPageSizeOpen] = useState(false);
   const pageSizeRef = useRef<HTMLDivElement>(null);
   const columns = createColumns(statuses);
 
   useEffect(() => {
-    setPagination({ pageIndex: 0, pageSize: 10 });
+    setPagination({ pageIndex: 0, pageSize: 25 });
   }, [couples]);
 
   useEffect(() => {
