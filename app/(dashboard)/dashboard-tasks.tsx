@@ -1,6 +1,7 @@
 'use client'
 
 import { Loader2 } from 'lucide-react'
+import { formatRelativeDate } from '@/lib/utils'
 
 interface DashboardTask {
   id: string
@@ -21,14 +22,7 @@ function isOverdue(dateStr: string | null): boolean {
   if (!dateStr) return false
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  return new Date(dateStr) < today
-}
-
-function formatDueDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-  })
+  return new Date(dateStr + 'T00:00:00') < today
 }
 
 export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTasksProps) {
@@ -57,34 +51,27 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col">
       <h2 className="text-xl font-semibold text-gray-900 mb-4 shrink-0">Outstanding Tasks</h2>
-      <div className="space-y-1 scrollbar-thin flex-1 max-h-60 pr-1">
+      <div className="space-y-1 flex-1 max-h-60 overflow-y-auto pr-1">
         {tasks.map((task) => {
           const overdue = isOverdue(task.due_date)
+          const clickable = !!task.couple
           return (
             <div
               key={task.id}
-              onClick={() => {
-                if (task.couple) {
-                  onCoupleClick(task.couple)
-                }
-              }}
-              className="flex items-center gap-3 py-2 rounded-xl hover:bg-gray-50 transition cursor-pointer text-sm"
+              onClick={() => { if (task.couple) onCoupleClick(task.couple) }}
+              className={`flex items-center gap-3 py-2 transition text-sm ${
+                clickable ? 'cursor-pointer group' : 'cursor-default'
+              }`}
             >
-              <span className="text-gray-900 truncate flex-1">
-                {task.title}
-              </span>
+              <span className={`truncate flex-1 transition ${clickable ? 'text-gray-900 group-hover:text-black group-hover:underline underline-offset-2 decoration-gray-300' : 'text-gray-900'}`}>{task.title}</span>
               {task.couple && (
                 <span className="text-gray-400 text-xs shrink-0 truncate max-w-[120px]">
                   {task.couple.name}
                 </span>
               )}
               {task.due_date && (
-                <span
-                  className={`text-xs shrink-0 ${
-                    overdue ? 'text-red-500 font-medium' : 'text-gray-500'
-                  }`}
-                >
-                  {formatDueDate(task.due_date)}
+                <span className={`text-xs shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                  {formatRelativeDate(task.due_date)}
                 </span>
               )}
             </div>
