@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { Modal } from '@/components/ui/modal'
+import { DatePicker } from '@/components/ui/date-picker'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
 export interface TaskFormData {
@@ -137,12 +138,7 @@ export function TaskModal({
 
           <div>
             <label className="block text-sm text-gray-400 mb-1">Due date</label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className={inputClass}
-            />
+            <DatePicker value={dueDate} onChange={setDueDate} placeholder="Select due date" />
           </div>
 
           {couples !== undefined && (

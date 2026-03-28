@@ -5,6 +5,7 @@ import { ChevronDown, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import * as Popover from '@radix-ui/react-popover'
 import { Modal } from '@/components/ui/modal'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Event, EventStatus, STATUS_LABELS } from '../events/events-types'
 import { CATEGORY_LABELS } from '../contacts/contacts-types'
 import { createClient } from '@/lib/supabase/client'
@@ -182,13 +183,7 @@ export function EventModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Date <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={inputClass}
-              required
-            />
+            <DatePicker value={date} onChange={setDate} placeholder="Select date" />
           </div>
 
           {/* Venue - 2 cols */}
