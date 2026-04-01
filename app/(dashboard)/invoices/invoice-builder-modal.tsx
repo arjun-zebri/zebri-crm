@@ -334,6 +334,7 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
 
   const toggleShare = useMutation({
     mutationFn: async (enable: boolean) => {
+      if (isNewInvoice) throw new Error('Please save the invoice first')
       const update: Record<string, unknown> = { share_token_enabled: enable }
       if (enable && invoice?.status === 'draft') update.status = 'sent'
       const { error } = await supabase.from('invoices').update(update).eq('id', invoiceId!)
@@ -771,7 +772,7 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                     </div>
                     <button
                       onClick={() => toggleShare.mutate(!invoice?.share_token_enabled)}
-                      disabled={toggleShare.isPending || !canEdit}
+                      disabled={toggleShare.isPending || !canEdit || isNewInvoice}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${invoice?.share_token_enabled ? 'bg-green-500' : 'bg-gray-200'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${invoice?.share_token_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
