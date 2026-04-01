@@ -180,7 +180,7 @@ export function DatePicker({ value, onChange, placeholder, className }: DatePick
   const dropdown = mounted && open && dropdownPos ? createPortal(
     <div
       ref={dropdownRef}
-      style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 70 }}
+      style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 200 }}
       className="w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3"
     >
       {/* Month header */}

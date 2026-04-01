@@ -79,7 +79,31 @@ export function useDashboardStats() {
         ? Math.round(((conversionRate - prevConversionRate) / prevConversionRate) * 100)
         : conversionRate > 0 ? 100 : 0;
 
-      // Total revenue: SUM(price) where status='completed' (all time)
+      // Collected revenue: SUM(invoices.subtotal) WHERE status = 'paid'
+      const { data: collectedData } = await supabase
+        .from("invoices")
+        .select("subtotal")
+        .eq("user_id", user.user.id)
+        .eq("status", "paid");
+
+      const collectedRevenue = (collectedData || []).reduce(
+        (sum, i) => sum + (Number(i.subtotal) || 0),
+        0
+      );
+
+      // Invoiced revenue: SUM(invoices.subtotal) WHERE status IN ('sent','overdue')
+      const { data: invoicedData } = await supabase
+        .from("invoices")
+        .select("subtotal")
+        .eq("user_id", user.user.id)
+        .in("status", ["sent", "overdue"]);
+
+      const invoicedRevenue = (invoicedData || []).reduce(
+        (sum, i) => sum + (Number(i.subtotal) || 0),
+        0
+      );
+
+      // Total revenue: SUM(price) where status='completed' (all time) — kept for legacy chart
       const { data: totalRevenueData } = await supabase
         .from("events")
         .select("price")
@@ -153,6 +177,8 @@ export function useDashboardStats() {
         totalRevenue,
         revenuePercentChange,
         revenueDiff,
+        collectedRevenue,
+        invoicedRevenue,
       };
     },
   });
@@ -506,6 +532,43 @@ export function useLeadSources() {
       );
 
       return { counts, prevCounts, total, prevTotal };
+    },
+  });
+}
+
+export interface DashboardInvoice {
+  id: string;
+  invoice_number: string;
+  title: string;
+  subtotal: number;
+  due_date: string | null;
+  status: string;
+  couple: { id: string; name: string } | null;
+}
+
+export function useDashboardInvoices() {
+  const supabase = createClient();
+
+  return useQuery({
+    queryKey: ["dashboardInvoices"],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser();
+      if (userError || !user.user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, title, subtotal, due_date, status, couple:couples(id, name)")
+        .eq("user_id", user.user.id)
+        .in("status", ["sent", "overdue"])
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(10);
+
+      if (error) throw error;
+      const normalized = (data || []).map((i: any) => ({
+        ...i,
+        couple: Array.isArray(i.couple) ? i.couple[0] || null : i.couple,
+      }));
+      return normalized as DashboardInvoice[];
     },
   });
 }

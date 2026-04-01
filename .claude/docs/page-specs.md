@@ -6,7 +6,7 @@ This document defines every page in the CRM.
 
 All pages are fully responsive. Key patterns:
 
-- **Dashboard**: Stats stack to 1-col on mobile → 3-col on sm+. Top grid is 1-col on mobile → 7-col on lg. Bottom grid is 1-col → 2-col md → 3-col lg.
+- **Dashboard**: Stats stack to 1-col on mobile → 3-col on sm+. Top grid is 1-col on mobile → 7-col on lg. Bottom grid is 1-col → 2-col md → 4-col xl.
 - **Couples / Vendors list**: Table scrolls horizontally on mobile. Only name+status columns visible at 375px; more columns revealed at sm/lg breakpoints.
 - **Couples / Vendors slide-over**: Full-width on mobile, 640px on md+. Action button labels hidden on mobile (icons only).
 - **Calendar (Couples)**: Filter sidebar hidden on mobile, opens as overlay drawer via SlidersHorizontal button. View switcher shows single letter (D/W/M) on mobile.
@@ -264,7 +264,7 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 - Status badge
 - Quick actions right-aligned: Call, Email, Edit (opens edit modal)
 
-**Tabs:** Overview, Events, Vendors, Tasks
+**Tabs:** Overview, Events, Vendors, Tasks, Quotes, Invoices
 
 **Overview tab (default):**
 
@@ -291,6 +291,26 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 - Each row: task title, due date, status badge. Checkbox for inline completion.
 - "+ Add Task" button pre-filled with this couple
 - Empty state: "No tasks yet."
+
+**Quotes tab:**
+
+- List of quotes for this couple sorted by created_at desc
+- Each row: quote number (text-gray-500), title, status badge, subtotal (right-aligned), expiry date
+- Status badge colors: gray (draft), blue (sent), emerald (accepted), red (declined), amber (expired)
+- "+ New Quote" button at top right opens quote modal from couple context
+- Click row → opens quote modal for editing
+- Empty state: "No quotes yet."
+
+**Invoices tab:**
+
+- List of invoices for this couple sorted by created_at desc
+- Each row: invoice number (text-gray-500), title, status badge, subtotal (right-aligned), due date
+- Status badge colors: gray (draft), blue (sent), emerald (paid), red (overdue), gray (cancelled)
+- "+ New Invoice" button at top right opens invoice modal from couple context
+- Click row → opens invoice modal for editing
+- Empty state: "No invoices yet."
+
+---
 
 ## Event Profile
 
@@ -419,6 +439,85 @@ Form fields:
 - Notes (textarea, optional)
 
 Note: Event Date and Venue fields are managed exclusively via the Events tab. The couple modal does not expose these fields for editing.
+
+---
+
+# Payments Page
+
+Route: `/payments`
+
+Route group: `(dashboard)`
+
+Purpose: Unified hub for managing quotes and invoices. The MC can view, create, and edit all financial documents (quotes and invoices) in one place with tab-based navigation.
+
+Header: Title "Payments" + two tabs: **Quotes** | **Invoices**. Search bar + "New Quote" / "New Invoice" button (label changes based on active tab).
+
+## Quotes Tab
+
+Table Columns (matching couples/vendors style):
+- Number (quote #, gray text)
+- Title
+- Couple (name)
+- Status (badge: gray=draft, blue=sent, emerald=accepted, red=declined, amber=expired)
+- Total (right-aligned, currency formatted AUD)
+- Expiry Date (right-aligned, formatted date)
+
+**Actions:**
+- Click row → opens QuoteBuilderModal for editing
+- "New Quote" button → opens couple picker dropdown, then QuoteBuilderModal
+- Search bar filters across: title, quote number, couple name, status
+
+**Empty state:** Quote icon + "No quotes yet. Create one from a couple's profile."
+
+## Invoices Tab
+
+Table Columns (matching couples/vendors style):
+- Number (invoice #, gray text)
+- Title
+- Couple (name)
+- Status (badge: gray=draft, blue=sent, emerald=paid, red=overdue, gray=cancelled)
+- Total (right-aligned, currency formatted AUD)
+- Due Date (right-aligned, formatted date, red if overdue)
+
+**Actions:**
+- Click row → opens InvoiceBuilderModal for editing
+- "New Invoice" button → opens couple picker dropdown, then InvoiceBuilderModal
+- Search bar filters across: title, invoice number, couple name, status
+
+**Empty state:** Invoice icon + "No invoices yet. Create one from a couple's profile."
+
+## Modals
+
+Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page.
+
+**QuoteBuilderModal:**
+- Fixed height with scroll on overflow
+- Couple selector dropdown at top (searchable combobox)
+- Item list with add/edit/delete actions
+- Amount field (no spinners)
+- Expiry date (native date input, compact)
+- Notes textarea (rows=4)
+- Tax display: Subtotal + GST (10%) = Total (display-only)
+- Share token toggle (green, bg-green-500) with instant save
+- Save button refreshes quote list
+
+**InvoiceBuilderModal:**
+- Fixed height with scroll on overflow
+- Couple selector dropdown at top (searchable combobox)
+- Quote import option: popover showing accepted/sent quotes for selected couple, copies title + items on selection
+- Item list with add/edit/delete actions
+- Quantity/unit price fields (no spinners)
+- Due date (native date input, compact)
+- Notes textarea (rows=4)
+- Tax display: Subtotal + GST (10%) = Total (display-only)
+- Share token toggle (green, bg-green-500) with instant save
+- Save button refreshes invoice list
+
+## Couple Profile Integration
+
+- Couple Profile "Quotes" tab: Shows couple's quotes, "+ New Quote" button opens modal in couple context
+- Couple Profile "Invoices" tab: Shows couple's invoices, "+ New Invoice" button opens modal in couple context
+- Both tabs can click rows to open modals for editing
 
 ---
 

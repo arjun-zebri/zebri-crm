@@ -11,6 +11,8 @@ interface DashboardStatsProps {
   totalRevenue: number;
   revenuePercentChange: number;
   revenueDiff: number;
+  collectedRevenue?: number;
+  invoicedRevenue?: number;
   isLoading: boolean;
 }
 
@@ -70,8 +72,16 @@ export function DashboardStats({
   totalRevenue,
   revenuePercentChange,
   revenueDiff,
+  collectedRevenue,
+  invoicedRevenue,
   isLoading,
 }: DashboardStatsProps) {
+  // Use collected revenue when available (invoicing feature enabled), fall back to events revenue
+  const hasInvoicing = collectedRevenue !== undefined;
+  const revenueValue = hasInvoicing
+    ? formatAUD(collectedRevenue ?? 0)
+    : formatAUD(totalRevenue);
+
   const cards = [
     {
       label: "Leads",
@@ -79,6 +89,7 @@ export function DashboardStats({
       percent: leadsPercentChange,
       diff: leadsDiff,
       diffFormatter: (v: number) => String(v),
+      extra: null,
     },
     {
       label: "Conversion Rate",
@@ -86,13 +97,17 @@ export function DashboardStats({
       percent: conversionDiff,
       diff: conversionDiff,
       diffFormatter: (v: number) => `${v}%`,
+      extra: null,
     },
     {
-      label: "Revenue",
-      value: formatAUD(totalRevenue),
+      label: hasInvoicing ? "Collected" : "Revenue",
+      value: revenueValue,
       percent: revenuePercentChange,
       diff: revenueDiff,
       diffFormatter: (v: number) => formatDiffAUD(v),
+      extra: hasInvoicing && (invoicedRevenue ?? 0) > 0
+        ? `${formatAUD(invoicedRevenue ?? 0)} invoiced`
+        : null,
     },
   ];
 
@@ -117,14 +132,19 @@ export function DashboardStats({
               />
             </div>
           ) : (
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-semibold text-gray-900">
-                {card.value}
-              </span>
-              {card.diff !== 0 && (
-                <DiffText diff={card.diff} formatter={card.diffFormatter} />
+            <>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-semibold text-gray-900">
+                  {card.value}
+                </span>
+                {card.diff !== 0 && (
+                  <DiffText diff={card.diff} formatter={card.diffFormatter} />
+                )}
+              </div>
+              {card.extra && (
+                <p className="text-xs text-gray-400 mt-1">{card.extra}</p>
               )}
-            </div>
+            </>
           )}
         </div>
       ))}

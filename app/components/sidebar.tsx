@@ -13,6 +13,7 @@ import {
   LogOut,
   Calendar,
   CheckSquare,
+  CreditCard,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -22,6 +23,7 @@ const navItems = [
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Tasks", href: "/tasks", icon: CheckSquare },
   { label: "Contacts", href: "/contacts", icon: Contact },
+  { label: "Payments", href: "/payments", icon: CreditCard },
 ];
 
 const bottomItems = [

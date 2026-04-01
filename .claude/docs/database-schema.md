@@ -168,7 +168,127 @@ timeline_items -> contact (many-to-one, nullable, set null on contact delete)
 
 tasks -> can relate to couple (via tasks.related_couple_id), event (via tasks.related_event_id), or contact (via tasks.related_contact_id)
 
+quotes -> belong to a couple (FK couple_id); have many quote_items (cascade delete)
+
+quote_items -> belong to a quote (FK quote_id, cascade delete)
+
+invoices -> belong to a couple (FK couple_id); optionally linked to an event (FK event_id, set null on delete) and a quote (FK quote_id, set null on delete); have many invoice_items (cascade delete)
+
+invoice_items -> belong to an invoice (FK invoice_id, cascade delete)
+
 All tables -> scoped to user via user_id (RLS)
+
+------------------------------------------------------------------------
+
+# quotes
+
+Quotes and proposals sent to couples before booking confirmation.
+
+Columns:
+
+id (uuid) user_id (uuid, not null) couple_id (uuid, not null, FK to couples.id, on delete cascade)
+
+title (text, not null) — e.g. "Wedding MC Package — Smith Wedding"
+
+quote_number (text, not null) — auto-generated on insert as "QT-001" format (sequential count per user)
+
+status (text, not null, default 'draft')
+
+Status values: draft sent accepted declined expired
+
+subtotal (numeric(10,2), not null, default 0) — sum of quote_items.amount; updated on item save
+
+notes (text, nullable) — terms, inclusions, exclusions
+
+expires_at (date, nullable)
+
+share_token (uuid, not null, default gen_random_uuid()) — unique URL key; generated on row creation
+
+share_token_enabled (boolean, not null, default false) — link inactive until MC explicitly enables it
+
+accepted_at (timestamp with time zone, nullable)
+
+created_at (timestamp)
+
+RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER functions get_public_quote, accept_quote, and decline_quote (see quotes.md).
+
+------------------------------------------------------------------------
+
+# quote_items
+
+Line items for a quote.
+
+Columns:
+
+id (uuid) quote_id (uuid, not null, FK to quotes.id, on delete cascade) user_id (uuid, not null)
+
+description (text, not null) — e.g. "Wedding ceremony MC (2 hrs)"
+
+amount (numeric(10,2), not null)
+
+position (integer, not null) — ordering, multiples of 1000
+
+created_at (timestamp)
+
+------------------------------------------------------------------------
+
+# invoices
+
+Invoices sent to couples for payment.
+
+Columns:
+
+id (uuid) user_id (uuid, not null) couple_id (uuid, not null, FK to couples.id, on delete cascade)
+
+event_id (uuid, nullable, FK to events.id, on delete set null) — links invoice to a specific wedding; used to update events.price when marked paid
+
+quote_id (uuid, nullable, FK to quotes.id, on delete set null) — preserved link if invoice was generated from a quote
+
+invoice_number (text, not null) — auto-generated on insert as "INV-001" format (sequential count per user)
+
+title (text, not null) — e.g. "Wedding MC Services — Smith Wedding"
+
+status (text, not null, default 'draft')
+
+Status values: draft sent paid overdue cancelled
+
+subtotal (numeric(10,2), not null, default 0) — sum of invoice_items.amount; updated on item save
+
+due_date (date, nullable) — defaults to 7 days from creation when generated from a quote
+
+notes (text, nullable) — payment instructions, bank details, reference number request
+
+share_token (uuid, not null, default gen_random_uuid()) — unique URL key; generated on row creation
+
+share_token_enabled (boolean, not null, default false) — link inactive until MC explicitly enables it
+
+paid_at (timestamp with time zone, nullable)
+
+created_at (timestamp)
+
+RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER function get_public_invoice (read-only; no couple-side writes on invoices).
+
+------------------------------------------------------------------------
+
+# invoice_items
+
+Line items for an invoice.
+
+Columns:
+
+id (uuid) invoice_id (uuid, not null, FK to invoices.id, on delete cascade) user_id (uuid, not null)
+
+description (text, not null)
+
+quantity (numeric(8,2), not null, default 1.00)
+
+unit_price (numeric(10,2), not null)
+
+amount (numeric(10,2), not null) — stored as quantity × unit_price; recalculated on save
+
+position (integer, not null) — ordering, multiples of 1000
+
+created_at (timestamp)
 
 ------------------------------------------------------------------------
 

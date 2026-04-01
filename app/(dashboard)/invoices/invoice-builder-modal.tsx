@@ -1,0 +1,848 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/toast'
+import { DatePicker } from '@/components/ui/date-picker'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { X, Copy, Check, Trash2, Plus, ChevronDown, Search } from 'lucide-react'
+import * as Popover from '@radix-ui/react-popover'
+
+interface InvoiceItem {
+  id: string
+  description: string
+  quantity: number
+  unit_price: number
+  amount: number
+  position: number
+}
+
+interface Invoice {
+  id: string
+  title: string
+  invoice_number: string
+  status: string
+  subtotal: number
+  notes: string
+  due_date: string | null
+  paid_at: string | null
+  share_token: string
+  share_token_enabled: boolean
+  couple_id: string
+  couple_name: string
+  event_id: string | null
+}
+
+interface CoupleEvent {
+  id: string
+  date: string
+  venue: string | null
+}
+
+interface Couple {
+  id: string
+  name: string
+}
+
+interface QuoteForImport {
+  id: string
+  title: string
+  status: string
+  couple_id: string
+}
+
+interface InvoiceBuilderModalProps {
+  invoiceId: string | null
+  isOpen: boolean
+  onClose: () => void
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-600',
+  sent: 'bg-blue-50 text-blue-600',
+  paid: 'bg-emerald-50 text-emerald-600',
+  overdue: 'bg-red-50 text-red-600',
+  cancelled: 'bg-gray-100 text-gray-400',
+}
+
+function formatCurrency(n: number) {
+  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
+}
+
+export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuilderModalProps) {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
+
+  const [title, setTitle] = useState('')
+  const [notes, setNotes] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [eventId, setEventId] = useState<string | null>(null)
+  const [items, setItems] = useState<InvoiceItem[]>([])
+  const [copied, setCopied] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [eventOpen, setEventOpen] = useState(false)
+  const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [coupleSearch, setCoupleSearch] = useState('')
+  const [couplePopoverOpen, setCouplePopoverOpen] = useState(false)
+  const [coupleId, setCoupleId] = useState<string | null>(null)
+  const [coupleNameForNew, setcoupleNameForNew] = useState<string>('')
+  const [quoteSearch, setQuoteSearch] = useState('')
+  const [quotePopoverOpen, setQuotePopoverOpen] = useState(false)
+  const [taxRate, setTaxRate] = useState(0)
+
+  const isNewInvoice = invoiceId === 'new'
+
+  const { data: invoice, isLoading } = useQuery({
+    queryKey: ['invoice', invoiceId],
+    enabled: !!invoiceId && !isNewInvoice,
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*, couple:couple_id(name)')
+        .eq('id', invoiceId!)
+        .eq('user_id', user.user.id)
+        .single()
+
+      if (error) throw error
+      return { ...data, couple_name: (data.couple as { name: string })?.name ?? '' } as Invoice
+    },
+  })
+
+  const { data: invoiceItems } = useQuery({
+    queryKey: ['invoice-items', invoiceId],
+    enabled: !!invoiceId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoiceId!)
+        .order('position', { ascending: true })
+      if (error) throw error
+      return (data as InvoiceItem[]) || []
+    },
+  })
+
+  const { data: coupleEvents } = useQuery({
+    queryKey: ['couple-events-for-invoice', invoice?.couple_id],
+    enabled: !!invoice?.couple_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, date, venue')
+        .eq('couple_id', invoice!.couple_id)
+        .order('date', { ascending: true })
+      if (error) throw error
+      return (data as CoupleEvent[]) || []
+    },
+  })
+
+  const { data: couples } = useQuery({
+    queryKey: ['all-couples-for-invoice'],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('couples')
+        .select('id, name')
+        .eq('user_id', user.user.id)
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      return (data as Couple[]) || []
+    },
+  })
+
+  const effectiveCouple_id = isNewInvoice ? coupleId : invoice?.couple_id
+
+  const { data: quotesForImport } = useQuery({
+    queryKey: ['quotes-for-import', effectiveCouple_id],
+    enabled: !!effectiveCouple_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('id, title, status, couple_id, quote_items(description, amount)')
+        .eq('couple_id', effectiveCouple_id!)
+        .in('status', ['draft', 'sent', 'accepted'])
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data as any[]) || []
+    },
+  })
+
+  useEffect(() => {
+    if (isNewInvoice) {
+      setTitle('')
+      setNotes('')
+      setDueDate('')
+      setEventId(null)
+      setCoupleId(null)
+      setcoupleNameForNew('')
+      setDirty(false)
+    } else if (invoice) {
+      setTitle(invoice.title)
+      setNotes(invoice.notes ?? '')
+      setDueDate(invoice.due_date ?? '')
+      setEventId(invoice.event_id)
+      setCoupleId(invoice.couple_id)
+      setDirty(false)
+    }
+  }, [invoice?.id, isNewInvoice])
+
+  useEffect(() => {
+    if (invoiceItems) setItems(invoiceItems)
+  }, [invoiceItems])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setDirty(false)
+      setCopied(false)
+      setCancelConfirm(false)
+    }
+  }, [isOpen])
+
+  const subtotal = items.reduce((sum, item) => sum + Number(item.amount), 0)
+  const tax = subtotal * (taxRate / 100)
+  const total = subtotal + tax
+
+  const updateCouple = useMutation({
+    mutationFn: async (newCoupleId: string) => {
+      if (isNewInvoice) {
+        setCoupleId(newCoupleId)
+        const selectedCouple = couples?.find((c) => c.id === newCoupleId)
+        if (selectedCouple) setcoupleNameForNew(selectedCouple.name)
+      } else {
+        const { error } = await supabase
+          .from('invoices')
+          .update({ couple_id: newCoupleId })
+          .eq('id', invoiceId!)
+        if (error) throw error
+      }
+    },
+    onSuccess: () => {
+      if (!isNewInvoice) {
+        queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+        queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+        queryClient.invalidateQueries({ queryKey: ['quotes-for-import', invoice?.couple_id] })
+      }
+      setCouplePopoverOpen(false)
+    },
+    onError: () => toast('Failed to update couple'),
+  })
+
+  const importFromQuote = (quote: any) => {
+    setTitle(quote.title)
+    const newItems = (quote.quote_items || []).map((qi: any, i: number) => ({
+      id: `new-${Date.now()}-${i}`,
+      description: qi.description,
+      quantity: 1,
+      unit_price: qi.amount,
+      amount: qi.amount,
+      position: (i + 1) * 1000,
+    }))
+    setItems(newItems)
+    setDirty(true)
+    setQuotePopoverOpen(false)
+    setQuoteSearch('')
+    toast('Quote imported')
+  }
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) throw new Error('Not authenticated')
+
+      let finalInvoiceId = invoiceId
+
+      if (isNewInvoice) {
+        if (!coupleId) throw new Error('Please select a couple')
+
+        const { data: numData } = await supabase.rpc('generate_invoice_number', { p_user_id: user.user.id })
+
+        const { data: newInvoice, error: invErr } = await supabase
+          .from('invoices')
+          .insert({
+            user_id: user.user.id,
+            couple_id: coupleId,
+            invoice_number: numData as string,
+            title,
+            notes: notes || null,
+            due_date: dueDate || null,
+            event_id: eventId || null,
+            subtotal,
+            status: 'draft',
+            share_token: crypto.randomUUID(),
+            share_token_enabled: false,
+          })
+          .select('id')
+          .single()
+        if (invErr) throw invErr
+        finalInvoiceId = newInvoice.id
+      } else {
+        const { error: invErr } = await supabase
+          .from('invoices')
+          .update({
+            title,
+            notes: notes || null,
+            due_date: dueDate || null,
+            event_id: eventId || null,
+            subtotal,
+          })
+          .eq('id', invoiceId!)
+        if (invErr) throw invErr
+      }
+
+      await supabase.from('invoice_items').delete().eq('invoice_id', finalInvoiceId!)
+      if (items.length > 0) {
+        const inserts = items.map((item, i) => {
+          const insert: any = {
+            invoice_id: finalInvoiceId!,
+            user_id: user.user!.id,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            amount: item.amount,
+            position: (i + 1) * 1000,
+          }
+          if (!item.id.startsWith('new-')) {
+            insert.id = item.id
+          }
+          return insert
+        })
+        const { error: iErr } = await supabase.from('invoice_items').insert(inserts)
+        if (iErr) throw iErr
+      }
+
+      return finalInvoiceId
+    },
+    onSuccess: (newInvoiceId) => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', newInvoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['invoice-items', newInvoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+      toast('Invoice saved')
+      setDirty(false)
+      onClose()
+    },
+    onError: () => toast('Failed to save invoice'),
+  })
+
+  const toggleShare = useMutation({
+    mutationFn: async (enable: boolean) => {
+      const update: Record<string, unknown> = { share_token_enabled: enable }
+      if (enable && invoice?.status === 'draft') update.status = 'sent'
+      const { error } = await supabase.from('invoices').update(update).eq('id', invoiceId!)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+    },
+    onError: () => toast('Failed to update share link'),
+  })
+
+  const markPaid = useMutation({
+    mutationFn: async () => {
+      if (!invoice) return
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'paid', paid_at: new Date().toISOString() })
+        .eq('id', invoiceId!)
+      if (error) throw error
+      if (invoice.event_id) {
+        await supabase.from('events').update({ price: subtotal }).eq('id', invoice.event_id)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+      if (invoice?.event_id) {
+        queryClient.invalidateQueries({ queryKey: ['couple-events', invoice.couple_id] })
+      }
+      toast('Invoice marked as paid')
+    },
+    onError: () => toast('Failed to mark as paid'),
+  })
+
+  const cancelInvoice = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'cancelled', share_token_enabled: false })
+        .eq('id', invoiceId!)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+      setCancelConfirm(false)
+      toast('Invoice cancelled')
+    },
+    onError: () => toast('Failed to cancel invoice'),
+  })
+
+  const addItem = () => {
+    setItems((prev) => [
+      ...prev,
+      { id: `new-${Date.now()}`, description: '', quantity: 1, unit_price: 0, amount: 0, position: (prev.length + 1) * 1000 },
+    ])
+    setDirty(true)
+  }
+
+  const updateItem = (id: string, field: 'description' | 'quantity' | 'unit_price', value: string | number) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item
+        const updated = { ...item, [field]: value }
+        updated.amount = Number(updated.quantity) * Number(updated.unit_price)
+        return updated
+      })
+    )
+    setDirty(true)
+  }
+
+  const removeItem = (id: string) => {
+    setItems((prev) => prev.filter((item) => item.id !== id))
+    setDirty(true)
+  }
+
+  const copyLink = async () => {
+    if (!invoice) return
+    await navigator.clipboard.writeText(`${window.location.origin}/invoice/${invoice.share_token}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (!isOpen || !invoiceId) return null
+
+  const isOverdue =
+    invoice?.due_date &&
+    new Date(invoice.due_date + 'T00:00:00') < new Date() &&
+    !['paid', 'cancelled'].includes(invoice?.status ?? '')
+  const effectiveStatus = isOverdue ? 'overdue' : (invoice?.status ?? 'draft')
+  const canEdit = !['paid', 'cancelled'].includes(invoice?.status ?? '')
+  const shareUrl = invoice ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invoice/${invoice.share_token}` : ''
+  const selectedEvent = coupleEvents?.find((e) => e.id === eventId)
+
+  const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition'
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[75]" onClick={onClose} />
+
+      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
+        <div
+          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="min-w-0">
+              {isLoading && !isNewInvoice ? (
+                <div className="space-y-1.5">
+                  <div className="h-5 w-48 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-3.5 w-32 bg-gray-100 rounded animate-pulse" />
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {isNewInvoice ? 'New Invoice' : (title || 'Untitled Invoice')}
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                    {invoice?.invoice_number && <span className="text-xs text-gray-400">{invoice.invoice_number}</span>}
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${STATUS_STYLES[effectiveStatus] || STATUS_STYLES.draft}`}>
+                      {effectiveStatus}
+                    </span>
+                    {(invoice?.couple_name || coupleNameForNew) && (
+                      <>
+                        <span className="text-xs text-gray-400">·</span>
+                        <span className="text-xs text-gray-500 truncate">{invoice?.couple_name || coupleNameForNew}</span>
+                      </>
+                    )}
+                    {invoice?.paid_at && (
+                      <span className="text-xs text-gray-400">
+                        · Paid {new Date(invoice.paid_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer shrink-0 ml-3">
+              <X size={20} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          {/* Scrollable body */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}
+              </div>
+            ) : (
+              <>
+                {/* Couple selector */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Couple</label>
+                  <Popover.Root open={couplePopoverOpen} onOpenChange={setCouplePopoverOpen}>
+                    <Popover.Trigger asChild>
+                      <button
+                        type="button"
+                        disabled={!isNewInvoice && !canEdit}
+                        className={`${inputClass} flex items-center justify-between text-left disabled:bg-gray-50 disabled:text-gray-400`}
+                      >
+                        <span className={invoice?.couple_name || coupleNameForNew ? 'text-gray-900' : 'text-gray-400'}>
+                          {invoice?.couple_name || coupleNameForNew || 'Select a couple'}
+                        </span>
+                        <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400 shrink-0 ml-2" />
+                      </button>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Content className="z-[90] bg-white border border-gray-200 rounded-xl shadow-lg w-[var(--radix-popover-trigger-width)] p-0" sideOffset={4}>
+                        <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+                          <Search size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                          <input
+                            autoFocus
+                            type="text"
+                            placeholder="Search couples..."
+                            value={coupleSearch}
+                            onChange={(e) => setCoupleSearch(e.target.value)}
+                            className="flex-1 min-w-0 text-sm focus:outline-none placeholder:text-gray-400"
+                          />
+                        </div>
+                        <div className="max-h-60 overflow-y-auto p-1">
+                          {(couples || [])
+                            .filter((c) => !coupleSearch || c.name.toLowerCase().includes(coupleSearch.toLowerCase()))
+                            .map((couple) => (
+                              <button
+                                key={couple.id}
+                                onClick={() => updateCouple.mutate(couple.id)}
+                                disabled={updateCouple.isPending}
+                                className="w-full text-left px-3 py-2.5 text-sm text-gray-900 hover:bg-gray-50 rounded-lg transition cursor-pointer disabled:opacity-50"
+                              >
+                                {couple.name}
+                              </button>
+                            ))}
+                        </div>
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
+                </div>
+
+                {/* Import from quote */}
+                {quotesForImport && quotesForImport.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Import from quote (optional)</label>
+                    <Popover.Root open={quotePopoverOpen} onOpenChange={setQuotePopoverOpen}>
+                      <Popover.Trigger asChild>
+                        <button
+                          type="button"
+                          disabled={!canEdit}
+                          className={`${inputClass} flex items-center justify-between text-left disabled:bg-gray-50 disabled:text-gray-400`}
+                        >
+                          <span className="text-gray-400">Select a quote...</span>
+                          <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400 shrink-0 ml-2" />
+                        </button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content className="z-[90] bg-white border border-gray-200 rounded-xl shadow-lg w-[var(--radix-popover-trigger-width)] p-0" sideOffset={4}>
+                          <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+                            <Search size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                            <input
+                              autoFocus
+                              type="text"
+                              placeholder="Search quotes..."
+                              value={quoteSearch}
+                              onChange={(e) => setQuoteSearch(e.target.value)}
+                              className="flex-1 min-w-0 text-sm focus:outline-none placeholder:text-gray-400"
+                            />
+                          </div>
+                          <div className="max-h-60 overflow-y-auto p-1">
+                            {(quotesForImport || [])
+                              .filter((q) => !quoteSearch || q.title.toLowerCase().includes(quoteSearch.toLowerCase()))
+                              .map((quote) => (
+                                <button
+                                  key={quote.id}
+                                  onClick={() => importFromQuote(quote)}
+                                  className="w-full text-left px-3 py-2.5 text-sm text-gray-900 hover:bg-gray-50 rounded-lg transition cursor-pointer"
+                                >
+                                  <div className="font-medium">{quote.title}</div>
+                                  <div className="text-xs text-gray-400 capitalize">{quote.status}</div>
+                                </button>
+                              ))}
+                          </div>
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
+                  </div>
+                )}
+
+                {/* Title + Due date */}
+                <div className="flex gap-3">
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Title</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
+                      placeholder="e.g. Wedding MC Services — Smith Wedding"
+                      disabled={!canEdit}
+                      className={`${inputClass} disabled:bg-gray-50 disabled:text-gray-400`}
+                    />
+                  </div>
+                  <div className="w-44 shrink-0">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Due date</label>
+                    {canEdit ? (
+                      <DatePicker
+                        value={dueDate}
+                        onChange={(date) => {
+                          setDueDate(date)
+                          setDirty(true)
+                        }}
+                        placeholder="Select date"
+                      />
+                    ) : (
+                      <p className={`text-sm py-2 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-900'}`}>
+                        {dueDate
+                          ? new Date(dueDate + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : '—'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Event link */}
+                {coupleEvents && coupleEvents.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Link to event (optional)</label>
+                    <Popover.Root open={eventOpen} onOpenChange={setEventOpen}>
+                      <Popover.Trigger asChild>
+                        <button
+                          type="button"
+                          disabled={!canEdit}
+                          className={`${inputClass} flex items-center justify-between text-left disabled:bg-gray-50 disabled:text-gray-400`}
+                        >
+                          <span className={selectedEvent ? 'text-gray-900' : 'text-gray-400'}>
+                            {selectedEvent
+                              ? `${new Date(selectedEvent.date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}${selectedEvent.venue ? ` · ${selectedEvent.venue}` : ''}`
+                              : 'No event linked'}
+                          </span>
+                          <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400 shrink-0 ml-2" />
+                        </button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content
+                          className="z-[90] bg-white border border-gray-200 rounded-xl shadow-lg p-1 w-[var(--radix-popover-trigger-width)]"
+                          sideOffset={4}
+                        >
+                          <button
+                            className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded-lg transition cursor-pointer"
+                            onClick={() => { setEventId(null); setEventOpen(false); setDirty(true) }}
+                          >
+                            No event
+                          </button>
+                          {coupleEvents.map((event) => (
+                            <button
+                              key={event.id}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-900 hover:bg-gray-50 rounded-lg transition cursor-pointer"
+                              onClick={() => { setEventId(event.id); setEventOpen(false); setDirty(true) }}
+                            >
+                              {new Date(event.date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {event.venue && <span className="text-gray-400"> · {event.venue}</span>}
+                            </button>
+                          ))}
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
+                  </div>
+                )}
+
+                {/* Line items */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Line items</label>
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-[1fr_72px_96px_80px_36px] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
+                      <span className="text-xs font-medium text-gray-500">Description</span>
+                      <span className="text-xs font-medium text-gray-500 text-right">Qty</span>
+                      <span className="text-xs font-medium text-gray-500 text-right">Unit price</span>
+                      <span className="text-xs font-medium text-gray-500 text-right">Amount</span>
+                      <span />
+                    </div>
+                    {items.map((item) => (
+                      <div key={item.id} className="grid grid-cols-[1fr_72px_96px_80px_36px] gap-2 px-4 py-2 border-b border-gray-100 items-center">
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                          placeholder="Description"
+                          disabled={!canEdit}
+                          className="text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent disabled:text-gray-400"
+                        />
+                        <input
+                          type="number"
+                          value={item.quantity || ''}
+                          onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                          placeholder="1"
+                          min="0"
+                          step="0.01"
+                          disabled={!canEdit}
+                          className="text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <input
+                          type="number"
+                          value={item.unit_price || ''}
+                          onChange={(e) => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                          disabled={!canEdit}
+                          className="text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-sm text-gray-700 text-right tabular-nums">
+                          {formatCurrency(item.amount)}
+                        </span>
+                        {canEdit && (
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            className="p-1 text-gray-300 hover:text-red-400 transition cursor-pointer justify-self-center"
+                          >
+                            <Trash2 size={14} strokeWidth={1.5} />
+                          </button>
+                        )}
+                        {!canEdit && <span />}
+                      </div>
+                    ))}
+                    {canEdit && (
+                      <div className="px-4 py-2">
+                        <button
+                          onClick={addItem}
+                          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                        >
+                          <Plus size={14} strokeWidth={1.5} /> Add item
+                        </button>
+                      </div>
+                    )}
+                    <div className="space-y-2 px-4 py-3 bg-gray-50 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-600">Subtotal</span>
+                        <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(subtotal)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-600">GST (10%)</span>
+                        <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(tax)}</span>
+                      </div>
+                      <div className="border-t border-gray-200 pt-2 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-gray-900">Total</span>
+                        <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(total)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Notes (optional)</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => { setNotes(e.target.value); setDirty(true) }}
+                    placeholder="Payment instructions, BSB, account number..."
+                    rows={4}
+                    disabled={!canEdit}
+                    className={`${inputClass} resize-none disabled:bg-gray-50 disabled:text-gray-400`}
+                  />
+                </div>
+
+                {/* Share section */}
+                <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Share link</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {invoice?.share_token_enabled ? 'Active — couple can view this invoice' : 'Enable to share with the couple'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => toggleShare.mutate(!invoice?.share_token_enabled)}
+                      disabled={toggleShare.isPending || !canEdit}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${invoice?.share_token_enabled ? 'bg-green-500' : 'bg-gray-200'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${invoice?.share_token_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+
+                  {invoice?.share_token_enabled && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={shareUrl}
+                        className="flex-1 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none truncate"
+                      />
+                      <button
+                        onClick={copyLink}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer shrink-0"
+                      >
+                        {copied ? <><Check size={13} strokeWidth={2} className="text-emerald-500" />Copied</> : <><Copy size={13} strokeWidth={1.5} />Copy</>}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-3 pt-0.5 flex-wrap">
+                    {canEdit && invoice?.status !== 'cancelled' && (
+                      <button
+                        onClick={() => markPaid.mutate()}
+                        disabled={markPaid.isPending}
+                        className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 transition cursor-pointer disabled:opacity-50 font-medium"
+                      >
+                        {markPaid.isPending ? 'Marking...' : 'Mark as Paid'}
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button
+                        onClick={() => setCancelConfirm(true)}
+                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 transition cursor-pointer"
+                      >
+                        Cancel invoice
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          {canEdit && (
+            <div className="shrink-0 border-t border-gray-100 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => save.mutate()}
+                disabled={save.isPending}
+                className={`px-5 py-2 text-sm bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50 ${!dirty && !save.isPending ? 'opacity-40' : ''}`}
+              >
+                {save.isPending ? 'Saving...' : dirty ? 'Save changes' : 'Save'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={cancelConfirm}
+        title="Cancel invoice?"
+        description="This will cancel the invoice and disable the share link. This cannot be undone."
+        confirmLabel="Cancel invoice"
+        onConfirm={() => cancelInvoice.mutate()}
+        onCancel={() => setCancelConfirm(false)}
+      />
+    </>
+  )
+}

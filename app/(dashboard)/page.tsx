@@ -8,6 +8,7 @@ import { DashboardCalendar } from "./dashboard-calendar";
 import { DashboardLeads } from "./dashboard-leads";
 import { DashboardLeadSources } from "./dashboard-lead-sources";
 import { DashboardTasks } from "./dashboard-tasks";
+import { DashboardInvoices } from "./dashboard-invoices";
 import { CoupleProfile } from "./couples/couple-profile";
 import { Couple } from "./couples/couples-types";
 
@@ -15,7 +16,7 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: tasks, isLoading: tasksLoading } = useDashboardTasks();
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
-  const [defaultTab, setDefaultTab] = useState<'overview' | 'events' | 'contacts' | 'tasks'>('overview');
+  const [defaultTab, setDefaultTab] = useState<'overview' | 'events' | 'contacts' | 'tasks' | 'quotes' | 'invoices'>('overview');
 
   const handleEventClick = (coupleData: { id: string; name: string }) => {
     setDefaultTab('overview');
@@ -51,6 +52,23 @@ export default function DashboardPage() {
     });
   };
 
+  const handleInvoiceCoupleClick = (coupleData: { id: string; name: string }) => {
+    setDefaultTab('invoices');
+    setSelectedCouple({
+      id: coupleData.id,
+      name: coupleData.name,
+      user_id: "",
+      email: "",
+      phone: "",
+      event_date: null,
+      venue: "",
+      notes: "",
+      status: "new",
+      lead_source: null,
+      created_at: new Date().toISOString(),
+    });
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
@@ -71,6 +89,8 @@ export default function DashboardPage() {
                 totalRevenue={stats?.totalRevenue || 0}
                 revenuePercentChange={stats?.revenuePercentChange || 0}
                 revenueDiff={stats?.revenueDiff || 0}
+                collectedRevenue={stats?.collectedRevenue}
+                invoicedRevenue={stats?.invoicedRevenue}
                 isLoading={statsLoading}
               />
               <div className="flex-1 min-h-0">
@@ -82,8 +102,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Bottom section: Leads | Lead Sources | Outstanding Tasks */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Bottom section: Leads | Lead Sources | Outstanding Tasks | Outstanding Invoices */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <DashboardLeads />
             <DashboardLeadSources />
             <DashboardTasks
@@ -91,6 +111,7 @@ export default function DashboardPage() {
               isLoading={tasksLoading}
               onCoupleClick={handleTaskCoupleClick}
             />
+            <DashboardInvoices onCoupleClick={handleInvoiceCoupleClick} />
           </div>
         </div>
       </div>

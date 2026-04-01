@@ -17,6 +17,8 @@ import { CoupleOverview } from "./couple-overview";
 import { CoupleEvents } from "./couple-events";
 import { CoupleVendors } from "./couple-vendors";
 import { CoupleTasks } from "./couple-tasks";
+import { CoupleQuotes } from "./couple-quotes";
+import { CoupleInvoices } from "./couple-invoices";
 
 interface CoupleProfileProps {
   couple: Couple | null;
@@ -26,7 +28,7 @@ interface CoupleProfileProps {
   ) => void;
   onDelete: (id: string) => void;
   loading: boolean;
-  defaultTab?: "overview" | "events" | "contacts" | "tasks";
+  defaultTab?: "overview" | "events" | "contacts" | "tasks" | "quotes" | "invoices";
 }
 
 export function CoupleProfile({
@@ -40,7 +42,7 @@ export function CoupleProfile({
   const { data: statuses } = useCoupleStatuses();
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [activeTab, setActiveTab] = useState<
-    "overview" | "events" | "contacts" | "tasks"
+    "overview" | "events" | "contacts" | "tasks" | "quotes" | "invoices"
   >(defaultTab);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
@@ -244,19 +246,21 @@ export function CoupleProfile({
 
           {/* Tabs */}
           <div className="shrink-0 border-t border-b border-gray-100 px-6">
-            <div className="flex gap-6">
+            <div className="flex gap-6 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {(
                 [
                   { key: "overview", label: "Overview" },
                   { key: "events", label: "Events" },
                   { key: "contacts", label: "Contacts" },
                   { key: "tasks", label: "Tasks" },
+                  { key: "quotes", label: "Quotes" },
+                  { key: "invoices", label: "Invoices" },
                 ] as const
               ).map(({ key, label }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
-                  className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer ${
+                  className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer shrink-0 ${
                     activeTab === key
                       ? "border-gray-900 text-gray-900"
                       : "border-transparent text-gray-400 hover:text-gray-600"
@@ -449,6 +453,8 @@ export function CoupleProfile({
             {activeTab === "events" && <CoupleEvents couple={couple} />}
             {activeTab === "contacts" && <CoupleVendors coupleId={couple.id} />}
             {activeTab === "tasks" && <CoupleTasks coupleId={couple.id} />}
+            {activeTab === "quotes" && <CoupleQuotes coupleId={couple.id} coupleName={couple.name} />}
+            {activeTab === "invoices" && <CoupleInvoices coupleId={couple.id} coupleName={couple.name} />}
           </div>
 
           {/* Footer — edit mode only */}
