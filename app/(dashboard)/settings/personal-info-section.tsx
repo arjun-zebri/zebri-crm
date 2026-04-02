@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { useToast } from '@/components/ui/toast'
 
 const businessTypeOptions = [
   { value: 'mc', label: 'MC' },
@@ -34,7 +35,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [businessType, setBusinessType] = useState(initialData.businessType)
   const [businessTypeOpen, setBusinessTypeOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
+  const { toast } = useToast()
 
   const isDirty =
     displayName !== initialData.displayName ||
@@ -49,19 +50,16 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
-    setMessage(null)
 
     const supabase = createClient()
 
-    // Get current user to preserve existing metadata
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      setMessage({ type: 'error', text: 'Unable to load user data.' })
+      toast('Unable to load user data.', 'error')
       setLoading(false)
       return
     }
 
-    // Merge new data with existing metadata
     const existingMetadata = user.user_metadata || {}
     const updatedMetadata = {
       ...existingMetadata,
@@ -74,29 +72,26 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       business_type: businessType,
     }
 
-    // Update metadata
     const { error: metaError } = await supabase.auth.updateUser({
       data: updatedMetadata,
     })
 
     if (metaError) {
-      setMessage({ type: 'error', text: metaError.message })
+      toast(metaError.message, 'error')
       setLoading(false)
       return
     }
 
-    // Update email if changed
     if (emailValue !== email) {
       const { error: emailError } = await supabase.auth.updateUser({ email: emailValue })
       if (emailError) {
-        setMessage({ type: 'error', text: emailError.message })
+        toast(emailError.message, 'error')
         setLoading(false)
         return
       }
-      setMessage({ type: 'info', text: 'Profile updated. A confirmation link will be sent to your new email.' })
+      toast('Profile updated. A confirmation link will be sent to your new email.')
     } else {
-      setMessage({ type: 'success', text: 'Profile updated.' })
-      setTimeout(() => setMessage(null), 3000)
+      toast('Profile updated.')
     }
 
     setLoading(false)
@@ -109,6 +104,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
 
   return (
     <div className="max-w-2xl">
+      <h2 className="text-xl font-semibold text-gray-900 mb-1">Personal info</h2>
+      <p className="text-sm text-gray-500 mb-5">Update your name, contact details, and business information.</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -240,19 +237,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
             {loading ? 'Saving...' : 'Save Changes'}
           </button>
 
-          {isDirty && !message && (
+          {isDirty && (
             <span className="text-sm text-gray-400">Unsaved changes</span>
-          )}
-
-          {message && (
-            <span
-              role="alert"
-              className={`text-sm ${
-                message.type === 'success' ? 'text-green-600' : message.type === 'info' ? 'text-blue-600' : 'text-red-600'
-              }`}
-            >
-              {message.text}
-            </span>
           )}
         </div>
       </form>

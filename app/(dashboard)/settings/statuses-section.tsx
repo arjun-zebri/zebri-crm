@@ -33,6 +33,7 @@ import {
   COLOR_PALETTE,
   getStatusClasses,
 } from "@/app/(dashboard)/couples/couples-types";
+import { useToast } from "@/components/ui/toast";
 
 function StatusRow({
   status,
@@ -147,6 +148,7 @@ export function StatusesSection() {
   const deleteStatus = useDeleteStatus();
   const reorderStatuses = useReorderStatuses();
 
+  const { toast } = useToast();
   const [localStatuses, setLocalStatuses] =
     useState<CoupleStatusRecord[]>(statuses);
   const [hasChanges, setHasChanges] = useState(false);
@@ -154,7 +156,6 @@ export function StatusesSection() {
   const [newStatusName, setNewStatusName] = useState("");
   const [newStatusColor, setNewStatusColor] = useState<string>("blue");
   const [newColorOpen, setNewColorOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -188,13 +189,10 @@ export function StatusesSection() {
   };
 
   const handleSaveChanges = async () => {
-    setError(null);
     setIsSaving(true);
     try {
-      // Save reorder
       await reorderStatuses.mutateAsync(localStatuses);
 
-      // Save individual status updates
       for (const status of localStatuses) {
         const originalStatus = statuses.find((s) => s.id === status.id);
         if (
@@ -207,20 +205,20 @@ export function StatusesSection() {
       }
 
       setHasChanges(false);
+      toast("Statuses saved.");
     } catch (err: any) {
-      setError(err.message || "Failed to save changes");
+      toast(err.message || "Failed to save changes", "error");
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDeleteStatus = async (statusId: string) => {
-    setError(null);
     try {
       await deleteStatus.mutateAsync(statusId);
       setLocalStatuses((prev) => prev.filter((s) => s.id !== statusId));
     } catch (err: any) {
-      setError(err.message || "Failed to delete status");
+      toast(err.message || "Failed to delete status", "error");
     }
   };
 
@@ -228,7 +226,6 @@ export function StatusesSection() {
     e.preventDefault();
     if (!newStatusName.trim()) return;
 
-    setError(null);
     setIsCreating(true);
     try {
       await createStatus.mutateAsync({
@@ -238,8 +235,9 @@ export function StatusesSection() {
       setNewStatusName("");
       setNewStatusColor("blue");
       setIsModalOpen(false);
+      toast("Status created.");
     } catch (err: any) {
-      setError(err.message || "Failed to create status");
+      toast(err.message || "Failed to create status", "error");
     } finally {
       setIsCreating(false);
     }
@@ -277,12 +275,6 @@ export function StatusesSection() {
             </button>
           )}
         </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-300 rounded-lg text-sm text-red-700">
-            {error}
-          </div>
-        )}
 
         <DndContext
           sensors={sensors}
@@ -329,7 +321,6 @@ export function StatusesSection() {
           setIsModalOpen(false);
           setNewStatusName("");
           setNewStatusColor("blue");
-          setError(null);
         }}
         title="Add New Status"
         footer={
@@ -339,7 +330,6 @@ export function StatusesSection() {
                 setIsModalOpen(false);
                 setNewStatusName("");
                 setNewStatusColor("blue");
-                setError(null);
               }}
               disabled={isCreating}
               className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
@@ -357,12 +347,6 @@ export function StatusesSection() {
         }
       >
         <form onSubmit={handleCreateStatus} className="space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-300 rounded-lg text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Status Name <span className="text-red-500">*</span>

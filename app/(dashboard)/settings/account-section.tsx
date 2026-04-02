@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Eye, EyeOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/toast'
+import { Modal } from '@/components/ui/modal'
 
 interface EmailPreferencesData {
   product_updates?: boolean
@@ -33,38 +35,42 @@ function getPasswordStrength(password: string): { label: string; color: string; 
 
 export function AccountSection({ emailPreferences: initialEmailPreferences }: AccountSectionProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  const [emailPreferences, setEmailPreferences] = useState({
+  const savedPrefsRef = useRef({
     productUpdates: initialEmailPreferences?.product_updates ?? true,
     bookingReminders: initialEmailPreferences?.booking_reminders ?? true,
     tips: initialEmailPreferences?.tips ?? false,
   })
+  const [emailPreferences, setEmailPreferences] = useState({ ...savedPrefsRef.current })
   const [savingPreferences, setSavingPreferences] = useState(false)
-  const [preferencesMessage, setPreferencesMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const isPreferencesDirty =
+    emailPreferences.productUpdates !== savedPrefsRef.current.productUpdates ||
+    emailPreferences.bookingReminders !== savedPrefsRef.current.bookingReminders ||
+    emailPreferences.tips !== savedPrefsRef.current.tips
 
   const strength = getPasswordStrength(newPassword)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setMessage(null)
 
     if (newPassword !== confirmPassword) {
-      setMessage({ type: 'error', text: 'Passwords do not match.' })
+      toast('Passwords do not match.', 'error')
       return
     }
 
     if (newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters.' })
+      toast('Password must be at least 6 characters.', 'error')
       return
     }
 
@@ -74,12 +80,11 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
     const { error } = await supabase.auth.updateUser({ password: newPassword })
 
     if (error) {
-      setMessage({ type: 'error', text: error.message })
+      toast(error.message, 'error')
     } else {
-      setMessage({ type: 'success', text: 'Password changed.' })
+      toast('Password changed.')
       setNewPassword('')
       setConfirmPassword('')
-      setTimeout(() => setMessage(null), 3000)
     }
 
     setLoading(false)
@@ -94,20 +99,17 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
   }
 
   const handleSavePreferences = async () => {
-    setPreferencesMessage(null)
     setSavingPreferences(true)
 
     const supabase = createClient()
 
-    // Get current user to preserve existing metadata
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      setPreferencesMessage({ type: 'error', text: 'Unable to load user data.' })
+      toast('Unable to load user data.', 'error')
       setSavingPreferences(false)
       return
     }
 
-    // Merge new preferences with existing metadata
     const existingMetadata = user.user_metadata || {}
     const updatedMetadata = {
       ...existingMetadata,
@@ -118,15 +120,13 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
       },
     }
 
-    const { error } = await supabase.auth.updateUser({
-      data: updatedMetadata,
-    })
+    const { error } = await supabase.auth.updateUser({ data: updatedMetadata })
 
     if (error) {
-      setPreferencesMessage({ type: 'error', text: error.message })
+      toast(error.message, 'error')
     } else {
-      setPreferencesMessage({ type: 'success', text: 'Preferences saved.' })
-      setTimeout(() => setPreferencesMessage(null), 3000)
+      toast('Email preferences saved.')
+      savedPrefsRef.current = { ...emailPreferences }
     }
 
     setSavingPreferences(false)
@@ -139,7 +139,8 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
     <div className="max-w-2xl space-y-10">
       {/* Reset Password */}
       <div>
-        <p className="text-sm text-gray-500 mb-4">Update your password.</p>
+        <h2 className="text-xl font-semibold text-gray-900 mb-1">Change password</h2>
+        <p className="text-sm text-gray-500 mb-5">Update your account password.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -213,17 +214,6 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
             >
               {loading ? 'Changing...' : 'Change Password'}
             </button>
-
-            {message && (
-              <span
-                role="alert"
-                className={`text-sm ${
-                  message.type === 'success' ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {message.text}
-              </span>
-            )}
           </div>
         </form>
       </div>
@@ -264,20 +254,13 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
           <button
             type="button"
             onClick={handleSavePreferences}
-            disabled={savingPreferences}
+            disabled={savingPreferences || !isPreferencesDirty}
             className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
           >
             {savingPreferences ? 'Saving...' : 'Save Preferences'}
           </button>
-          {preferencesMessage && (
-            <span
-              role="alert"
-              className={`text-sm ${
-                preferencesMessage.type === 'success' ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
-              {preferencesMessage.text}
-            </span>
+          {isPreferencesDirty && (
+            <span className="text-sm text-gray-400">Unsaved changes</span>
           )}
         </div>
       </div>
@@ -295,51 +278,47 @@ export function AccountSection({ emailPreferences: initialEmailPreferences }: Ac
         </button>
       </div>
 
-      {/* Delete Account Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => { setShowDeleteModal(false); setDeleteConfirmText('') }}
-          />
-          <div className="relative bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Delete your account?</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              This action is permanent and cannot be undone. All your data will be deleted.
-            </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="delete-confirm">
-                Type <span className="font-semibold">DELETE</span> to confirm
-              </label>
-              <input
-                id="delete-confirm"
-                type="text"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-transparent transition"
-                placeholder="DELETE"
-              />
-            </div>
-            <div className="flex items-center gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText('') }}
-                className="text-sm font-medium text-gray-500 hover:text-gray-700 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
-                onClick={handleDeleteAccount}
-                className="bg-red-600 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-red-700 disabled:opacity-50 transition cursor-pointer"
-              >
-                {deleteLoading ? 'Deleting...' : 'Delete Account'}
-              </button>
-            </div>
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => { setShowDeleteModal(false); setDeleteConfirmText('') }}
+        title="Delete your account?"
+        footer={
+          <div className="flex items-center gap-3 justify-end">
+            <button
+              type="button"
+              onClick={() => { setShowDeleteModal(false); setDeleteConfirmText('') }}
+              className="text-sm font-medium text-gray-500 hover:text-gray-700 transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
+              onClick={handleDeleteAccount}
+              className="bg-red-600 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-red-700 disabled:opacity-50 transition cursor-pointer"
+            >
+              {deleteLoading ? 'Deleting...' : 'Delete Account'}
+            </button>
           </div>
+        }
+      >
+        <p className="text-sm text-gray-500 mb-4">
+          This action is permanent and cannot be undone. All your data will be deleted.
+        </p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="delete-confirm">
+            Type <span className="font-semibold">DELETE</span> to confirm
+          </label>
+          <input
+            id="delete-confirm"
+            type="text"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-transparent transition"
+            placeholder="DELETE"
+          />
         </div>
-      )}
+      </Modal>
     </div>
   )
 }

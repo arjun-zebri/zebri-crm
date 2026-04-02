@@ -101,7 +101,8 @@ function SettingsContent() {
     <div className="p-6">
       <h1 className="text-3xl font-semibold text-gray-900 mb-6">Settings</h1>
 
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 md:hidden" />
         <div className="flex gap-6 border-b border-gray-200 mb-8">
           {tabs.map((tab) => (
             <button

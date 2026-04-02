@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CheckCircle } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 interface PaymentSettingsSectionProps {
   initialBankAccountName: string;
@@ -22,21 +23,26 @@ export function PaymentSettingsSection({
   justConnected,
 }: PaymentSettingsSectionProps) {
   const supabase = createClient();
+  const { toast } = useToast();
 
   const [bankAccountName, setBankAccountName] = useState(initialBankAccountName);
   const [bankBsb, setBankBsb] = useState(initialBankBsb);
   const [bankAccountNumber, setBankAccountNumber] = useState(initialBankAccountNumber);
   const [bankSaving, setBankSaving] = useState(false);
-  const [bankSaved, setBankSaved] = useState(false);
 
   const [disconnecting, setDisconnecting] = useState(false);
 
+  useEffect(() => {
+    if (justConnected) {
+      toast("Stripe connected successfully.");
+    }
+  }, []);
+
   const saveBankDetails = async () => {
     setBankSaving(true);
-    setBankSaved(false);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.auth.updateUser({
+    if (!user) { setBankSaving(false); return; }
+    const { error } = await supabase.auth.updateUser({
       data: {
         ...user.user_metadata,
         bank_account_name: bankAccountName,
@@ -45,8 +51,11 @@ export function PaymentSettingsSection({
       },
     });
     setBankSaving(false);
-    setBankSaved(true);
-    setTimeout(() => setBankSaved(false), 3000);
+    if (error) {
+      toast(error.message, "error");
+    } else {
+      toast("Bank details saved.");
+    }
   };
 
   const disconnectStripe = async () => {
@@ -83,7 +92,7 @@ export function PaymentSettingsSection({
               value={bankAccountName}
               onChange={(e) => setBankAccountName(e.target.value)}
               placeholder="e.g. John Smith Events"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
             />
           </div>
           <div>
@@ -93,7 +102,7 @@ export function PaymentSettingsSection({
               value={bankBsb}
               onChange={(e) => setBankBsb(e.target.value)}
               placeholder="e.g. 062-000"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
             />
           </div>
           <div>
@@ -103,15 +112,15 @@ export function PaymentSettingsSection({
               value={bankAccountNumber}
               onChange={(e) => setBankAccountNumber(e.target.value)}
               placeholder="e.g. 12345678"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition"
             />
           </div>
           <button
             onClick={saveBankDetails}
             disabled={bankSaving}
-            className="px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
           >
-            {bankSaving ? "Saving..." : bankSaved ? "Saved" : "Save bank details"}
+            {bankSaving ? "Saving..." : "Save bank details"}
           </button>
         </div>
       </div>
@@ -144,14 +153,9 @@ export function PaymentSettingsSection({
           </div>
         ) : (
           <div>
-            {justConnected && (
-              <p className="text-sm text-green-600 mb-3">
-                Stripe connected successfully.
-              </p>
-            )}
             <a
               href="/api/stripe/connect"
-              className="inline-flex px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-colors"
+              className="inline-flex px-4 py-2 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition"
             >
               Connect Stripe
             </a>
