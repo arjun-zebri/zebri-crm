@@ -507,11 +507,17 @@ Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page.
 - Quote import option: popover showing accepted/sent quotes for selected couple, copies title + items on selection
 - Item list with add/edit/delete actions
 - Quantity/unit price fields (no spinners)
-- Due date (native date input, compact)
-- Notes textarea (rows=4)
-- Tax display: Subtotal + GST (10%) = Total (display-only)
+- Payment terms dropdown (net_7, net_14, net_30, due_on_receipt, custom). Net terms auto-fill due_date. Due on receipt clears it.
+- Due date (compact DatePicker) — only shown when payment_terms is `custom` or empty
+- Notes textarea (rows=4) — auto-populated from MC's saved bank details on new invoice creation
+- GST toggle: off by default; when on, shows "GST (10%)" row in totals with calculated amount
+- Totals block: Subtotal → GST (if enabled) → Total
+- Payment schedule toggle: when on, reveals deposit % input + deposit due date + final balance due date. Each installment has a "Mark paid" button (replaced by "Paid" badge once paid). When schedule is active, the main "Mark as Paid" button is hidden.
 - Share token toggle (green, bg-green-500) with instant save
+- Stripe "Accept card payments" toggle — only visible if MC has Stripe Connect configured (`user_metadata.stripe_connect_enabled = true`). Hidden when payment schedule is active. If not connected: shows "Connect Stripe" link to `/settings?tab=payments`.
 - Save button refreshes invoice list
+
+Payment schedule sub-component: `invoice-payment-schedule.tsx` (co-located)
 
 ## Couple Profile Integration
 
@@ -697,6 +703,14 @@ See `.claude/payments.md` for the full subscription UI table.
 | past_due        | "Payment failed"                 | Update Payment   |
 | expired         | "Your subscription has expired"  | Subscribe        |
 
+### Payments (`?tab=payments`)
+
+Two sections:
+
+**Bank details** — Account name, BSB, Account number inputs. Save button updates `user_metadata` with `bank_account_name`, `bank_bsb`, `bank_account_number`. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
+
+**Card payments** — "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. Disconnect clears `stripe_connect_account_id` and `stripe_connect_enabled` from `user_metadata`.
+
 ### Packages (`?tab=packages`)
 
 Placeholder empty state. Coming soon.
@@ -704,6 +718,58 @@ Placeholder empty state. Coming soon.
 ### Notifications (`?tab=notifications`)
 
 Placeholder empty state. Coming soon.
+
+---
+
+# Public Invoice Page
+
+Route: `/invoice/[token]`
+
+Route group: Top-level `app/invoice/[token]/` — outside `(dashboard)` and `(auth)`. No auth required.
+
+**Middleware:** `/invoice/` and `/api/stripe/invoice-payment` must be exempt from the paywall — couples are not logged in.
+
+Purpose: Read-only invoice view for the couple. Shows line items, totals, and (optionally) a card payment button.
+
+## Layout
+
+No sidebar. Centered card: `max-w-lg mx-auto`. White background.
+
+## Page States
+
+- `loading` — skeleton
+- `not_found` / `cancelled` — "This invoice is no longer available."
+- `paid` — invoice details + "Payment received" banner (emerald)
+- `active` — full invoice view
+- `overdue` — same as active; due date shown in red
+
+## Page Sections (active/overdue state)
+
+1. **Header** — MC business name (small uppercase), invoice number + title, couple name, issue date
+2. **Line items** — description, qty, unit price, amount (tabular)
+3. **Totals** — Subtotal → GST (tax_rate%) if `tax_rate > 0` → Total
+4. **Payment schedule** — shown if `deposit_percent != null`. Two rows: deposit (with %, amount, due date, "Paid" badge if `deposit_paid_at` set) and final balance (same). Not shown if invoice is paid.
+5. **"Pay with card" button** — shown if `stripe_payment_enabled && stripe_connect_enabled && status !== 'paid' && deposit_percent IS NULL`. Black button, full width. On click: `POST /api/stripe/invoice-payment { invoiceId, shareToken }` → redirect to Stripe Checkout.
+6. **Notes** — payment instructions / bank details section, shown if `notes` is non-empty. Label: "Payment instructions".
+
+## Payment Success Page
+
+Route: `/invoice/payment-success`
+
+No auth required. Shows: "Payment received" heading, short confirmation message, invoice ID from `?invoice=` query param. No redirect — couple can close the tab.
+
+File: `app/invoice/payment-success/page.tsx`
+
+## File Structure
+
+```
+app/invoice/
+  [token]/
+    page.tsx                 — fetches via get_public_invoice RPC, renders all states
+    pay-with-card-button.tsx — client component; POST to /api/stripe/invoice-payment
+  payment-success/
+    page.tsx                 — static confirmation page
+```
 
 ---
 

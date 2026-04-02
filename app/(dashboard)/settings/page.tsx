@@ -9,6 +9,7 @@ import { BillingSection } from "./billing-section";
 import { PackagesSection } from "./packages-section";
 import { NotificationsSection } from "./notifications-section";
 import { StatusesSection } from "./statuses-section";
+import { PaymentSettingsSection } from "./payment-settings-section";
 
 interface EmailPreferencesData {
   product_updates?: boolean;
@@ -29,12 +30,18 @@ interface UserMetadata {
   trial_end?: string;
   subscription_end?: string;
   email_preferences?: EmailPreferencesData;
+  bank_account_name?: string;
+  bank_bsb?: string;
+  bank_account_number?: string;
+  stripe_connect_account_id?: string;
+  stripe_connect_enabled?: boolean;
 }
 
 const tabs = [
   { id: "personal-info", label: "Personal Info" },
   { id: "account", label: "Account" },
   { id: "billing", label: "Plans & Billing" },
+  { id: "payments", label: "Payments" },
   { id: "packages", label: "Packages" },
   { id: "statuses", label: "Statuses" },
   { id: "notifications", label: "Notifications" },
@@ -138,6 +145,16 @@ function SettingsContent() {
           status={metadata?.subscription_status || null}
           trialEnd={metadata?.trial_end || null}
           subscriptionEnd={metadata?.subscription_end || null}
+        />
+      )}
+      {activeTab === "payments" && (
+        <PaymentSettingsSection
+          initialBankAccountName={metadata?.bank_account_name || ""}
+          initialBankBsb={metadata?.bank_bsb || ""}
+          initialBankAccountNumber={metadata?.bank_account_number || ""}
+          stripeConnectAccountId={metadata?.stripe_connect_account_id || null}
+          stripeConnectEnabled={metadata?.stripe_connect_enabled || false}
+          justConnected={searchParams.get("connected") === "true"}
         />
       )}
       {activeTab === "packages" && <PackagesSection />}

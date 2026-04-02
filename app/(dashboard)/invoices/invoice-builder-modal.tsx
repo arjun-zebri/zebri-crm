@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 import { DatePicker } from '@/components/ui/date-picker'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { X, Copy, Check, Trash2, Plus, ChevronDown, Search } from 'lucide-react'
+import { InvoicePaymentSchedule } from './invoice-payment-schedule'
+import { X, Copy, Check, Trash2, Plus, ChevronDown, Search, ExternalLink } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 
 interface InvoiceItem {
@@ -26,6 +27,14 @@ interface Invoice {
   subtotal: number
   notes: string
   due_date: string | null
+  payment_terms: string | null
+  tax_rate: number
+  deposit_percent: number | null
+  deposit_due_date: string | null
+  deposit_paid_at: string | null
+  final_due_date: string | null
+  final_paid_at: string | null
+  stripe_payment_enabled: boolean
   paid_at: string | null
   share_token: string
   share_token_enabled: boolean
@@ -66,8 +75,23 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: 'bg-gray-100 text-gray-400',
 }
 
+const PAYMENT_TERMS_OPTIONS = [
+  { value: '', label: 'No payment terms' },
+  { value: 'due_on_receipt', label: 'Due on receipt' },
+  { value: 'net_7', label: 'Net 7' },
+  { value: 'net_14', label: 'Net 14' },
+  { value: 'net_30', label: 'Net 30' },
+  { value: 'custom', label: 'Custom' },
+]
+
 function formatCurrency(n: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
+}
+
+function addDays(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
 }
 
 export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuilderModalProps) {
@@ -78,6 +102,14 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [paymentTerms, setPaymentTerms] = useState('')
+  const [taxEnabled, setTaxEnabled] = useState(false)
+  const [depositEnabled, setDepositEnabled] = useState(false)
+  const [depositPercent, setDepositPercent] = useState(50)
+  const [depositDueDate, setDepositDueDate] = useState('')
+  const [finalDueDate, setFinalDueDate] = useState('')
+  const [stripePaymentEnabled, setStripePaymentEnabled] = useState(false)
+  const [stripeConnectEnabled, setStripeConnectEnabled] = useState(false)
   const [eventId, setEventId] = useState<string | null>(null)
   const [items, setItems] = useState<InvoiceItem[]>([])
   const [copied, setCopied] = useState(false)
@@ -90,9 +122,10 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
   const [coupleNameForNew, setcoupleNameForNew] = useState<string>('')
   const [quoteSearch, setQuoteSearch] = useState('')
   const [quotePopoverOpen, setQuotePopoverOpen] = useState(false)
-  const [taxRate, setTaxRate] = useState(0)
+  const [termsOpen, setTermsOpen] = useState(false)
 
   const isNewInvoice = invoiceId === 'new'
+  const taxRate = taxEnabled ? 10 : 0
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ['invoice', invoiceId],
@@ -175,22 +208,57 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
     },
   })
 
+  // Load invoice state when editing
   useEffect(() => {
     if (isNewInvoice) {
       setTitle('')
       setNotes('')
       setDueDate('')
+      setPaymentTerms('')
+      setTaxEnabled(false)
+      setDepositEnabled(false)
+      setDepositPercent(50)
+      setDepositDueDate('')
+      setFinalDueDate('')
+      setStripePaymentEnabled(false)
       setEventId(null)
       setCoupleId(null)
       setcoupleNameForNew('')
       setDirty(false)
+      // Auto-populate bank details in Notes for new invoices
+      const loadBankDetails = async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const meta = user.user_metadata
+        const lines: string[] = []
+        if (meta?.bank_account_name) lines.push(`Account name: ${meta.bank_account_name}`)
+        if (meta?.bank_bsb) lines.push(`BSB: ${meta.bank_bsb}`)
+        if (meta?.bank_account_number) lines.push(`Account number: ${meta.bank_account_number}`)
+        if (lines.length > 0) setNotes(lines.join('\n'))
+        setStripeConnectEnabled(!!meta?.stripe_connect_enabled)
+      }
+      loadBankDetails()
     } else if (invoice) {
       setTitle(invoice.title)
       setNotes(invoice.notes ?? '')
       setDueDate(invoice.due_date ?? '')
+      setPaymentTerms(invoice.payment_terms ?? '')
+      setTaxEnabled((invoice.tax_rate ?? 0) > 0)
+      setDepositEnabled(invoice.deposit_percent != null)
+      setDepositPercent(invoice.deposit_percent ?? 50)
+      setDepositDueDate(invoice.deposit_due_date ?? '')
+      setFinalDueDate(invoice.final_due_date ?? '')
+      setStripePaymentEnabled(invoice.stripe_payment_enabled ?? false)
       setEventId(invoice.event_id)
       setCoupleId(invoice.couple_id)
       setDirty(false)
+      // Load stripe connect status
+      const loadStripeConnect = async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        setStripeConnectEnabled(!!user.user_metadata?.stripe_connect_enabled)
+      }
+      loadStripeConnect()
     }
   }, [invoice?.id, isNewInvoice])
 
@@ -206,9 +274,23 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
     }
   }, [isOpen])
 
+  // Auto-set due date when payment terms change
+  const handlePaymentTermsChange = (value: string) => {
+    setPaymentTerms(value)
+    setDirty(true)
+    if (value === 'net_7') setDueDate(addDays(7))
+    else if (value === 'net_14') setDueDate(addDays(14))
+    else if (value === 'net_30') setDueDate(addDays(30))
+    else if (value === 'due_on_receipt') setDueDate('')
+    // 'custom' and '' leave dueDate as-is
+  }
+
   const subtotal = items.reduce((sum, item) => sum + Number(item.amount), 0)
   const tax = subtotal * (taxRate / 100)
   const total = subtotal + tax
+
+  const depositAmount = depositEnabled ? total * (depositPercent / 100) : 0
+  const finalAmount = depositEnabled ? total - depositAmount : 0
 
   const updateCouple = useMutation({
     mutationFn: async (newCoupleId: string) => {
@@ -273,6 +355,11 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
             title,
             notes: notes || null,
             due_date: dueDate || null,
+            payment_terms: paymentTerms || null,
+            tax_rate: taxRate,
+            deposit_percent: depositEnabled ? depositPercent : null,
+            deposit_due_date: depositEnabled && depositDueDate ? depositDueDate : null,
+            final_due_date: depositEnabled && finalDueDate ? finalDueDate : null,
             event_id: eventId || null,
             subtotal,
             status: 'draft',
@@ -290,6 +377,11 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
             title,
             notes: notes || null,
             due_date: dueDate || null,
+            payment_terms: paymentTerms || null,
+            tax_rate: taxRate,
+            deposit_percent: depositEnabled ? depositPercent : null,
+            deposit_due_date: depositEnabled && depositDueDate ? depositDueDate : null,
+            final_due_date: depositEnabled && finalDueDate ? finalDueDate : null,
             event_id: eventId || null,
             subtotal,
           })
@@ -357,7 +449,7 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
         .eq('id', invoiceId!)
       if (error) throw error
       if (invoice.event_id) {
-        await supabase.from('events').update({ price: subtotal }).eq('id', invoice.event_id)
+        await supabase.from('events').update({ price: total }).eq('id', invoice.event_id)
       }
     },
     onSuccess: () => {
@@ -370,6 +462,60 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       toast('Invoice marked as paid')
     },
     onError: () => toast('Failed to mark as paid'),
+  })
+
+  const markDepositPaid = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ deposit_paid_at: new Date().toISOString() })
+        .eq('id', invoiceId!)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      toast('Deposit marked as paid')
+    },
+    onError: () => toast('Failed to mark deposit as paid'),
+  })
+
+  const markFinalPaid = useMutation({
+    mutationFn: async () => {
+      if (!invoice) return
+      const { error } = await supabase
+        .from('invoices')
+        .update({ final_paid_at: new Date().toISOString(), status: 'paid', paid_at: new Date().toISOString() })
+        .eq('id', invoiceId!)
+      if (error) throw error
+      if (invoice.event_id) {
+        await supabase.from('events').update({ price: total }).eq('id', invoice.event_id)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+      if (invoice?.event_id) {
+        queryClient.invalidateQueries({ queryKey: ['couple-events', invoice?.couple_id] })
+      }
+      toast('Final payment marked as paid')
+    },
+    onError: () => toast('Failed to mark final payment as paid'),
+  })
+
+  const toggleStripePayment = useMutation({
+    mutationFn: async (enable: boolean) => {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ stripe_payment_enabled: enable })
+        .eq('id', invoiceId!)
+      if (error) throw error
+    },
+    onSuccess: (_, enable) => {
+      setStripePaymentEnabled(enable)
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+    },
+    onError: () => toast('Failed to update card payments'),
   })
 
   const cancelInvoice = useMutation({
@@ -432,8 +578,11 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
   const canEdit = !['paid', 'cancelled'].includes(invoice?.status ?? '')
   const shareUrl = invoice ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invoice/${invoice.share_token}` : ''
   const selectedEvent = coupleEvents?.find((e) => e.id === eventId)
+  const hasDepositSchedule = depositEnabled && !isNewInvoice && !!invoice
 
   const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition'
+
+  const selectedTermsLabel = PAYMENT_TERMS_OPTIONS.find((o) => o.value === paymentTerms)?.label || 'No payment terms'
 
   return (
     <>
@@ -586,33 +735,68 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                   </div>
                 )}
 
-                {/* Title + Due date */}
+                {/* Title */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Title</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
+                    placeholder="e.g. Wedding MC Services — Smith Wedding"
+                    disabled={!canEdit}
+                    className={`${inputClass} disabled:bg-gray-50 disabled:text-gray-400`}
+                  />
+                </div>
+
+                {/* Payment terms + Due date */}
                 <div className="flex gap-3">
                   <div className="flex-1 min-w-0">
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Title</label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
-                      placeholder="e.g. Wedding MC Services — Smith Wedding"
-                      disabled={!canEdit}
-                      className={`${inputClass} disabled:bg-gray-50 disabled:text-gray-400`}
-                    />
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Payment terms</label>
+                    <Popover.Root open={termsOpen} onOpenChange={setTermsOpen}>
+                      <Popover.Trigger asChild>
+                        <button
+                          type="button"
+                          disabled={!canEdit}
+                          className={`${inputClass} flex items-center justify-between text-left disabled:bg-gray-50 disabled:text-gray-400`}
+                        >
+                          <span className={paymentTerms ? 'text-gray-900' : 'text-gray-400'}>
+                            {selectedTermsLabel}
+                          </span>
+                          <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400 shrink-0 ml-2" />
+                        </button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content className="z-[90] bg-white border border-gray-200 rounded-xl shadow-lg w-[var(--radix-popover-trigger-width)] p-1" sideOffset={4}>
+                          {PAYMENT_TERMS_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              onClick={() => { handlePaymentTermsChange(opt.value); setTermsOpen(false) }}
+                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition cursor-pointer hover:bg-gray-50 ${paymentTerms === opt.value ? 'text-gray-900 font-medium' : 'text-gray-700'}`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
                   </div>
                   <div className="w-44 shrink-0">
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">Due date</label>
-                    {canEdit ? (
+                    {canEdit && paymentTerms !== 'due_on_receipt' ? (
                       <DatePicker
                         value={dueDate}
                         onChange={(date) => {
                           setDueDate(date)
+                          if (paymentTerms !== 'custom') setPaymentTerms('custom')
                           setDirty(true)
                         }}
                         placeholder="Select date"
                       />
                     ) : (
-                      <p className={`text-sm py-2 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-900'}`}>
-                        {dueDate
+                      <p className={`text-sm py-2 ${isOverdue ? 'text-red-500 font-medium' : paymentTerms === 'due_on_receipt' ? 'text-gray-400' : 'text-gray-900'}`}>
+                        {paymentTerms === 'due_on_receipt'
+                          ? 'Due on receipt'
+                          : dueDate
                           ? new Date(dueDate + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
                           : '—'}
                       </p>
@@ -731,13 +915,26 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                         </button>
                       </div>
                     )}
+
+                    {/* Totals */}
                     <div className="space-y-2 px-4 py-3 bg-gray-50 border-t border-gray-200">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-600">Subtotal</span>
                         <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(subtotal)}</span>
                       </div>
+                      {/* GST toggle */}
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-600">GST (10%)</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-600">GST (10%)</span>
+                          {canEdit && (
+                            <button
+                              onClick={() => { setTaxEnabled((v) => !v); setDirty(true) }}
+                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${taxEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
+                            >
+                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${taxEnabled ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+                            </button>
+                          )}
+                        </div>
                         <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(tax)}</span>
                       </div>
                       <div className="border-t border-gray-200 pt-2 flex items-center justify-between">
@@ -760,6 +957,30 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                     className={`${inputClass} resize-none disabled:bg-gray-50 disabled:text-gray-400`}
                   />
                 </div>
+
+                {/* Payment schedule */}
+                {!isNewInvoice && invoice && (
+                  <InvoicePaymentSchedule
+                    invoiceId={invoiceId!}
+                    canEdit={canEdit}
+                    depositEnabled={depositEnabled}
+                    depositPercent={depositPercent}
+                    depositDueDate={depositDueDate}
+                    finalDueDate={finalDueDate}
+                    depositPaidAt={invoice.deposit_paid_at}
+                    finalPaidAt={invoice.final_paid_at}
+                    depositAmount={depositAmount}
+                    finalAmount={finalAmount}
+                    onDepositEnabledChange={(v) => { setDepositEnabled(v); setDirty(true) }}
+                    onDepositPercentChange={(v) => { setDepositPercent(v); setDirty(true) }}
+                    onDepositDueDateChange={(v) => { setDepositDueDate(v); setDirty(true) }}
+                    onFinalDueDateChange={(v) => { setFinalDueDate(v); setDirty(true) }}
+                    onMarkDepositPaid={() => markDepositPaid.mutate()}
+                    onMarkFinalPaid={() => markFinalPaid.mutate()}
+                    markDepositPending={markDepositPaid.isPending}
+                    markFinalPending={markFinalPaid.isPending}
+                  />
+                )}
 
                 {/* Share section */}
                 <div className="border border-gray-200 rounded-xl p-4 space-y-3">
@@ -796,9 +1017,45 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                     </div>
                   )}
 
+                  {/* Stripe card payments toggle */}
+                  {!isNewInvoice && (
+                    <div className="pt-1 border-t border-gray-100">
+                      {stripeConnectEnabled ? (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Accept card payments</p>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {depositEnabled ? 'Not available with a payment schedule' : 'Couples can pay by credit card'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => !depositEnabled && toggleStripePayment.mutate(!stripePaymentEnabled)}
+                            disabled={toggleStripePayment.isPending || !canEdit || depositEnabled}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${stripePaymentEnabled && !depositEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${stripePaymentEnabled && !depositEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Accept card payments</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Connect Stripe to enable card payments</p>
+                          </div>
+                          <a
+                            href="/settings?tab=payments"
+                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition"
+                          >
+                            Set up <ExternalLink size={12} strokeWidth={1.5} />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex items-center gap-3 pt-0.5 flex-wrap">
-                    {canEdit && invoice?.status !== 'cancelled' && (
+                    {canEdit && invoice?.status !== 'cancelled' && !hasDepositSchedule && (
                       <button
                         onClick={() => markPaid.mutate()}
                         disabled={markPaid.isPending}

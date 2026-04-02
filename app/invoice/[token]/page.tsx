@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { PayWithCardButton } from './pay-with-card-button'
+import { CheckCircle } from 'lucide-react'
 
 interface InvoiceItem {
   id: string
@@ -19,12 +21,26 @@ interface PublicInvoice {
   title: string
   status: string
   subtotal: number
+  tax_rate: number
   due_date: string | null
   notes: string | null
   paid_at: string | null
   couple_name: string
   business_name: string | null
+  bank_account_name: string | null
+  bank_bsb: string | null
+  bank_account_number: string | null
   items: InvoiceItem[]
+  // Payment schedule
+  deposit_percent: number | null
+  deposit_due_date: string | null
+  deposit_paid_at: string | null
+  final_due_date: string | null
+  final_paid_at: string | null
+  // Card payments
+  stripe_payment_enabled: boolean
+  stripe_connect_enabled: boolean
+  share_token: string
 }
 
 function formatCurrency(n: number) {
@@ -72,6 +88,18 @@ export default function PublicInvoicePage() {
     load()
   }, [params.token])
 
+  const taxAmount = invoice ? invoice.subtotal * ((invoice.tax_rate || 0) / 100) : 0
+  const total = invoice ? invoice.subtotal + taxAmount : 0
+  const hasSchedule = invoice?.deposit_percent != null
+  const depositAmount = hasSchedule ? total * ((invoice!.deposit_percent!) / 100) : 0
+  const finalAmount = hasSchedule ? total - depositAmount : 0
+  const showCardButton =
+    invoice?.stripe_payment_enabled &&
+    invoice?.stripe_connect_enabled &&
+    !hasSchedule &&
+    pageState !== 'paid' &&
+    pageState !== 'cancelled'
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-lg mx-auto">
@@ -88,7 +116,7 @@ export default function PublicInvoicePage() {
           </div>
         )}
 
-        {/* Not found / disabled / cancelled */}
+        {/* Not found / cancelled */}
         {(pageState === 'not_found' || pageState === 'cancelled') && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
             <p className="text-sm font-medium text-gray-900 mb-1">Invoice unavailable</p>
@@ -114,7 +142,7 @@ export default function PublicInvoicePage() {
               <p className="text-sm text-gray-500">{invoice.couple_name}</p>
               <div className="flex items-center gap-3 mt-3 flex-wrap">
                 <span className="text-xs text-gray-400">{invoice.invoice_number}</span>
-                {invoice.due_date && (
+                {invoice.due_date && !hasSchedule && (
                   <span
                     className={`text-xs font-medium ${
                       pageState === 'overdue' ? 'text-red-500' : 'text-gray-400'
@@ -175,22 +203,129 @@ export default function PublicInvoicePage() {
                 ))
               )}
 
-              {/* Total */}
-              <div className="flex items-center justify-between pt-4">
-                <span className="text-sm font-semibold text-gray-900">Total</span>
-                <span className="text-lg font-semibold text-gray-900 tabular-nums">
-                  {formatCurrency(invoice.subtotal)}
-                </span>
+              {/* Subtotal + GST + Total */}
+              <div className="pt-4 space-y-2">
+                {(invoice.tax_rate || 0) > 0 && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">Subtotal</span>
+                      <span className="text-sm text-gray-700 tabular-nums">{formatCurrency(invoice.subtotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">GST ({invoice.tax_rate}%)</span>
+                      <span className="text-sm text-gray-700 tabular-nums">{formatCurrency(taxAmount)}</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">Total</span>
+                  <span className="text-lg font-semibold text-gray-900 tabular-nums">
+                    {formatCurrency(total)}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Payment notes */}
-            {invoice.notes && (
+            {/* Payment schedule */}
+            {hasSchedule && (
+              <div className="px-8 pb-6">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">
+                  Payment schedule
+                </p>
+                <div className="space-y-2">
+                  {/* Deposit */}
+                  <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                    <div>
+                      <span className="text-sm text-gray-800">
+                        Deposit ({invoice.deposit_percent}%)
+                      </span>
+                      {invoice.deposit_due_date && (
+                        <span className="text-xs text-gray-400 block">
+                          Due {formatDate(invoice.deposit_due_date)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900 tabular-nums">
+                        {formatCurrency(depositAmount)}
+                      </span>
+                      {invoice.deposit_paid_at && (
+                        <span className="flex items-center gap-1 text-xs text-green-600">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Paid
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Final balance */}
+                  <div className="flex items-center justify-between py-2.5">
+                    <div>
+                      <span className="text-sm text-gray-800">
+                        Final balance ({100 - invoice.deposit_percent!}%)
+                      </span>
+                      {invoice.final_due_date && (
+                        <span className="text-xs text-gray-400 block">
+                          Due {formatDate(invoice.final_due_date)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900 tabular-nums">
+                        {formatCurrency(finalAmount)}
+                      </span>
+                      {invoice.final_paid_at && (
+                        <span className="flex items-center gap-1 text-xs text-green-600">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Paid
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payment notes & bank details */}
+            {(invoice.notes || invoice.bank_account_name || invoice.bank_bsb || invoice.bank_account_number) && (
               <div className="px-8 pb-8">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">
                   Payment instructions
                 </p>
-                <p className="text-sm text-gray-600 whitespace-pre-wrap">{invoice.notes}</p>
+                <div className="space-y-3">
+                  {invoice.notes && (
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{invoice.notes}</p>
+                  )}
+                  {(invoice.bank_account_name || invoice.bank_bsb || invoice.bank_account_number) && (
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-sm">
+                      {invoice.bank_account_name && (
+                        <div>
+                          <span className="text-gray-500">Account name:</span>
+                          <span className="text-gray-900 ml-2">{invoice.bank_account_name}</span>
+                        </div>
+                      )}
+                      {invoice.bank_bsb && (
+                        <div>
+                          <span className="text-gray-500">BSB:</span>
+                          <span className="text-gray-900 ml-2 font-mono">{invoice.bank_bsb}</span>
+                        </div>
+                      )}
+                      {invoice.bank_account_number && (
+                        <div>
+                          <span className="text-gray-500">Account:</span>
+                          <span className="text-gray-900 ml-2 font-mono">{invoice.bank_account_number}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Pay with card */}
+            {showCardButton && (
+              <div className="px-8 pb-8">
+                <PayWithCardButton invoiceId={invoice.id} shareToken={invoice.share_token} />
               </div>
             )}
           </div>

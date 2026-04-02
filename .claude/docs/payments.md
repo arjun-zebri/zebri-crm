@@ -1,6 +1,9 @@
 # Zebri Payments
 
-Payments use **Stripe** for subscription billing. The philosophy is: one plan, one price, invisible billing.
+Stripe is used for two distinct purposes:
+
+1. **Subscription billing** — MCs subscribe to Zebri (one plan, monthly)
+2. **Invoice payments** — Couples pay MC invoices by card via Stripe Connect
 
 ---
 
@@ -87,7 +90,7 @@ Used for managing billing, updating payment method, and cancelling.
 
 ---
 
-## API Routes
+## Part 1 — API Routes
 
 ### `POST /api/stripe/checkout`
 
@@ -118,11 +121,11 @@ Handles Stripe webhook events.
 
 ---
 
-## Webhook Events
+## Part 1 — Webhook Events
 
 | Event | Action |
 |---|---|
-| `checkout.session.completed` | Create `stripe_customers` row, set `is_subscribed: true`, `subscription_status: 'trialing'` or `'active'`, store `stripe_customer_id` |
+| `checkout.session.completed` (no `metadata.invoice_id`) | Create `stripe_customers` row, set `is_subscribed: true`, `subscription_status: 'trialing'` or `'active'`, store `stripe_customer_id` |
 | `customer.subscription.updated` | Update `subscription_status`, `subscription_end`, `is_subscribed` based on new status |
 | `customer.subscription.deleted` | Set `subscription_status: 'expired'`, `is_subscribed: false` |
 | `invoice.payment_failed` | Set `subscription_status: 'past_due'` |
@@ -130,7 +133,7 @@ Handles Stripe webhook events.
 
 ---
 
-## stripe_customers Lookup Table
+## Part 1 — stripe_customers Lookup Table
 
 A minimal Supabase table used to resolve which user a Stripe webhook belongs to.
 
@@ -148,7 +151,7 @@ CREATE TABLE stripe_customers (
 
 ---
 
-## Paywall Logic
+## Part 1 — Paywall Logic
 
 Handled in `middleware.ts` (see `authentication.md` for details).
 
@@ -170,7 +173,7 @@ The `/account` page and `/api/stripe/*` routes are always accessible (exempt fro
 
 ---
 
-## Account Page — Subscription UI
+## Part 1 — Account Page — Subscription UI
 
 The subscription section on `/account` shows state-specific messaging:
 
@@ -190,13 +193,159 @@ The subscription section on `/account` shows state-specific messaging:
 | Variable | Visibility | Description |
 |---|---|---|
 | `STRIPE_SECRET_KEY` | Server only | Stripe secret API key |
-| `STRIPE_PUBLISHABLE_KEY` | Public | Stripe publishable key (if needed client-side) |
-| `STRIPE_WEBHOOK_SECRET` | Server only | Webhook signing secret |
+| `STRIPE_WEBHOOK_SECRET` | Server only | Webhook signing secret for platform events (subscriptions) |
+| `STRIPE_CONNECT_WEBHOOK_SECRET` | Server only | Webhook signing secret for Connect events (invoice payments) |
 | `STRIPE_PRICE_ID` | Server only | Price ID for Zebri Pro plan |
 | `STRIPE_BETA_PRICE_ID` | Server only | Price ID for beta user lifetime discount plan |
+| `NEXT_PUBLIC_APP_URL` | Public | App base URL (e.g. `https://app.zebri.com.au`) — used in redirect URLs |
+
+Note: No publishable key is needed for invoice payments — Stripe Checkout is server-side only.
+
+---
+
+## Stripe Client (`lib/stripe.ts`)
+
+```ts
+import Stripe from 'stripe'
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-12-18.acacia',
+})
+```
+
+---
+
+## Part 1 — Subscription Billing (MC → Zebri)
 
 ---
 
 ## Dependencies
 
 - `stripe` (Node.js Stripe SDK)
+
+---
+
+## Part 2 — Invoice Payments (Couple → MC via Stripe Connect)
+
+Couples can pay MC invoices by credit card. Each MC connects their own Stripe Express account — funds flow directly to the MC. Zebri is the platform.
+
+### Stripe Connect Setup
+
+Uses **Stripe Connect Express accounts** (not the legacy OAuth flow). Express is the recommended approach for platforms — Stripe handles identity verification and onboarding UI.
+
+**MC onboarding flow:**
+1. MC clicks "Connect Stripe" in Settings → Payments tab
+2. Frontend hits `GET /api/stripe/connect`
+3. API creates a Stripe Express account: `stripe.accounts.create({ type: 'express' })`
+4. API creates an Account Link: `stripe.accountLinks.create({ account, refresh_url, return_url, type: 'account_onboarding' })`
+   - `return_url` includes `?account_id=${account.id}` so the callback knows which account was connected
+   - `refresh_url` points back to the initiation route to restart if the link expires
+5. MC is redirected to Stripe's hosted onboarding UI
+6. On completion, Stripe redirects to `return_url` → `/api/stripe/connect/callback?account_id=xxx`
+7. Callback reads `account_id` from query params, updates MC's `user_metadata` with `stripe_connect_account_id` and `stripe_connect_enabled: true`
+8. MC is redirected to `/settings?tab=payments&connected=true`
+
+**MC disconnect:**
+- Client-side only. `supabase.auth.updateUser({ data: { stripe_connect_account_id: null, stripe_connect_enabled: false } })`
+
+### Stripe Connect user_metadata fields
+
+| Field | Type | Description |
+|---|---|---|
+| `stripe_connect_account_id` | text | Stripe Express account ID (e.g. `acct_1PxXXX`) |
+| `stripe_connect_enabled` | boolean | `true` once MC has completed Stripe onboarding |
+
+### Invoice payment flow
+
+1. MC enables "Accept card payments" toggle on an invoice (only visible if `stripe_connect_enabled = true`)
+2. Couple opens the public invoice link — sees "Pay with card" button
+3. Couple clicks button → `POST /api/stripe/invoice-payment { invoiceId, shareToken }`
+4. API creates a Stripe Checkout Session on the MC's connected account
+5. Couple is redirected to Stripe Checkout
+6. On payment success, Stripe redirects to `/invoice/payment-success?invoice=[id]`
+7. Stripe fires `checkout.session.completed` webhook → invoice marked as `paid`
+
+**Scope:** Stripe card payment is for the **full invoice total only**. When a payment schedule (deposit + final) is active, the "Pay with card" button is hidden — installment payments are tracked manually by the MC.
+
+### Invoice Payment API routes
+
+#### `GET /api/stripe/connect`
+
+Initiates Stripe Connect onboarding for the authenticated MC.
+
+- Requires authenticated user
+- Creates Stripe Express account
+- Creates Account Link with `return_url` containing `account_id`
+- Redirects to Stripe onboarding URL
+
+#### `GET /api/stripe/connect/callback`
+
+Handles return from Stripe onboarding.
+
+- Reads `account_id` from query string
+- Updates MC's `user_metadata`: `stripe_connect_account_id`, `stripe_connect_enabled: true`
+- Uses Supabase Admin client (service role) to update auth user
+- Redirects to `/settings?tab=payments&connected=true`
+- On error: redirects to `/settings?tab=payments&error=connect_failed`
+
+#### `POST /api/stripe/invoice-payment`
+
+Creates a Stripe Checkout Session for couple to pay an invoice.
+
+Request body: `{ invoiceId: string, shareToken: string }`
+
+- No auth required — called from the public invoice page by an unauthenticated couple
+- Fetches invoice via service role client (bypasses RLS)
+- Validates: `stripe_payment_enabled = true`, status not `paid` or `cancelled`
+- Fetches MC's `stripe_connect_account_id` from user_metadata via Admin client
+- Validates Stripe card payment is appropriate: payment schedule must NOT be active (i.e. `deposit_percent IS NULL`)
+- Computes `amountCents = Math.round((subtotal + subtotal * tax_rate / 100) * 100)`
+- Creates Checkout Session routed to connected account:
+  ```ts
+  stripe.checkout.sessions.create(
+    { mode: 'payment', line_items: [...], metadata: { invoice_id }, success_url, cancel_url },
+    { stripeAccount: connectedAccountId }
+  )
+  ```
+- Returns `{ url: session.url }`
+
+### Connect Webhook events
+
+Connect webhook events arrive with a `stripe-account` header. They use a **separate signing secret** (`STRIPE_CONNECT_WEBHOOK_SECRET`) from platform events.
+
+| Event | Action |
+|---|---|
+| `checkout.session.completed` (with `metadata.invoice_id`) | Mark invoice `paid`, set `paid_at`, set `stripe_payment_intent_id`. If `event_id` linked, update `events.price`. |
+
+### Webhook differentiation
+
+In `app/api/stripe/webhook/route.ts`, detect connect events by checking for the `stripe-account` header:
+
+```ts
+const stripeAccount = request.headers.get('stripe-account')
+const secret = stripeAccount
+  ? process.env.STRIPE_CONNECT_WEBHOOK_SECRET!
+  : process.env.STRIPE_WEBHOOK_SECRET!
+const event = stripe.webhooks.constructEvent(body, sig, secret)
+```
+
+If `metadata.invoice_id` is present on a `checkout.session.completed` event, it's an invoice payment. Otherwise it's a subscription checkout.
+
+### Stripe dashboard configuration
+
+Register **two webhook endpoints**:
+1. Platform webhook → handles subscription events → uses `STRIPE_WEBHOOK_SECRET`
+2. Connect webhook → check "Listen to events on Connected accounts" → handles `checkout.session.completed` → uses `STRIPE_CONNECT_WEBHOOK_SECRET`
+
+Both endpoints can point to the same route handler (`/api/stripe/webhook`).
+
+### Payment success page
+
+Route: `/invoice/payment-success`
+
+No auth required. Shows a simple "Payment received" confirmation with a link back to the invoice. Invoice ID passed via `?invoice=[id]` query param (display only — actual status is confirmed via webhook).
+
+File: `app/invoice/payment-success/page.tsx`
+
+### Middleware
+
+`/api/stripe/invoice-payment` must be exempt from the subscription paywall (couples are not logged in). Add to the exempt routes in `middleware.ts` alongside `/api/stripe/*`.

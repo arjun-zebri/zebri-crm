@@ -7,6 +7,8 @@ const PUBLIC_ROUTES = [
   "/reset-password",
   "/update-password",
   "/api/alerts",
+  "/api/stripe/invoice-payment",
+  "/api/stripe/webhook",
   "/timeline",
   "/quote",
   "/invoice",

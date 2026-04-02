@@ -256,7 +256,25 @@ subtotal (numeric(10,2), not null, default 0) — sum of invoice_items.amount; u
 
 due_date (date, nullable) — defaults to 7 days from creation when generated from a quote
 
-notes (text, nullable) — payment instructions, bank details, reference number request
+payment_terms (text, nullable) — one of: `net_7`, `net_14`, `net_30`, `due_on_receipt`, `custom`. When set to a net term, due_date is auto-calculated. `due_on_receipt` clears due_date. `custom` keeps due_date freely editable.
+
+tax_rate (numeric(5,2), not null, default 0) — GST percentage (e.g. 10 for 10%). 0 means no GST. Currently only 0 and 10 are used.
+
+notes (text, nullable) — payment instructions, bank details, reference number request. Auto-populated from MC's saved bank details when creating a new invoice.
+
+deposit_percent (numeric(5,2), nullable) — deposit as a percentage of total (e.g. 50 for 50%). NULL means no payment schedule is active.
+
+deposit_due_date (date, nullable) — due date for the deposit installment
+
+deposit_paid_at (timestamptz, nullable) — set when the MC manually marks the deposit as paid
+
+final_due_date (date, nullable) — due date for the final balance installment
+
+final_paid_at (timestamptz, nullable) — set when the MC manually marks the final balance as paid; also sets invoice status to `paid`
+
+stripe_payment_enabled (boolean, not null, default false) — when true and MC has Stripe Connect configured, couples see a "Pay with card" button on the public invoice page. Only applicable when no payment schedule is active.
+
+stripe_payment_intent_id (text, nullable) — Stripe payment intent ID, set when a couple pays via Stripe Checkout
 
 share_token (uuid, not null, default gen_random_uuid()) — unique URL key; generated on row creation
 
@@ -266,7 +284,7 @@ paid_at (timestamp with time zone, nullable)
 
 created_at (timestamp)
 
-RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER function get_public_invoice (read-only; no couple-side writes on invoices).
+RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER function get_public_invoice (read-only; no couple-side writes on invoices). The function also returns tax_rate, payment schedule fields, stripe_payment_enabled, and stripe_connect_enabled (from auth.users.raw_user_meta_data).
 
 ------------------------------------------------------------------------
 

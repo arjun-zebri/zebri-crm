@@ -19,18 +19,28 @@ Stored in `user_metadata.account_type`:
 |---|---|---|
 | account_type | text | `admin` or `vendor` |
 | display_name | text | User's full name |
-| business_name | text | MC business name |
+| business_name | text | MC business name (shown on public invoices/quotes) |
 | phone | text | Contact phone number |
 | avatar_url | text | Profile image URL |
+| website | text | MC website URL |
+| instagram_url | text | Instagram profile URL |
+| facebook_url | text | Facebook page URL |
+| business_type | text | `mc` or `celebrant` |
+| email_preferences | object | `{ product_updates: bool, booking_reminders: bool, tips: bool }` |
+| bank_account_name | text | Bank account name for invoice bank details auto-fill |
+| bank_bsb | text | BSB number for invoice bank details auto-fill |
+| bank_account_number | text | Bank account number for invoice bank details auto-fill |
+| stripe_connect_account_id | text | Stripe Express account ID (e.g. `acct_1PxXXX`) — set after Connect onboarding |
+| stripe_connect_enabled | boolean | `true` once MC has completed Stripe Connect onboarding |
 | is_subscribed | boolean | Active subscription flag |
-| stripe_customer_id | text | Stripe customer ID |
+| stripe_customer_id | text | Stripe customer ID (for subscription billing) |
 | subscription_status | text | `trialing`, `active`, `cancelled`, `past_due`, `expired` |
 | subscription_plan | text | Plan identifier (e.g. `zebri_pro`) |
 | trial_end | timestamp | Trial expiry date |
 | subscription_end | timestamp | Subscription expiry date |
 | is_beta_user | boolean | Beta user flag — entitles lifetime discount pricing |
 
-Subscription fields are detailed in `.claude/payments.md`.
+Subscription and Stripe Connect fields are detailed in `.claude/payments.md`.
 
 ---
 
