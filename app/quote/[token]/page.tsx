@@ -17,6 +17,9 @@ interface PublicQuote {
   quote_number: string
   status: string
   subtotal: number
+  tax_rate: number | null
+  discount_type: 'percentage' | 'fixed' | null
+  discount_value: number | null
   notes: string | null
   expires_at: string | null
   accepted_at: string | null
@@ -45,6 +48,7 @@ export default function PublicQuotePage() {
   const [pageState, setPageState] = useState<PageState>('loading')
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState('')
+  const [confirmingAccept, setConfirmingAccept] = useState(false)
 
   const load = async () => {
     const { data, error } = await supabase.rpc('get_public_quote', { token: params.token })
@@ -142,9 +146,12 @@ export default function PublicQuotePage() {
 
             {/* Status banners */}
             {pageState === 'accepted' && (
-              <div className="px-8 py-4 bg-emerald-50 border-b border-emerald-100">
-                <p className="text-sm font-medium text-emerald-700">
+              <div className="px-8 py-5 bg-emerald-50 border-b border-emerald-100">
+                <p className="text-sm font-semibold text-emerald-700 mb-1">
                   Quote accepted{quote.accepted_at ? ` on ${formatDate(quote.accepted_at.split('T')[0])}` : ''}.
+                </p>
+                <p className="text-sm text-emerald-600">
+                  {quote.business_name ? `${quote.business_name} will` : 'Your MC will'} be in touch to confirm the details.
                 </p>
               </div>
             )}
@@ -184,12 +191,51 @@ export default function PublicQuotePage() {
                   ))
                 )}
 
-                {/* Total */}
-                <div className="flex items-center justify-between pt-4">
-                  <span className="text-sm font-semibold text-gray-900">Total</span>
-                  <span className="text-lg font-semibold text-gray-900 tabular-nums">
-                    {formatCurrency(quote.subtotal)}
-                  </span>
+                {/* Totals */}
+                <div className="pt-4 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Subtotal</span>
+                    <span className="text-sm text-gray-700 tabular-nums">{formatCurrency(quote.subtotal)}</span>
+                  </div>
+                  {quote.discount_type && (quote.discount_value ?? 0) > 0 && (() => {
+                    const discountAmt = quote.discount_type === 'percentage'
+                      ? quote.subtotal * (quote.discount_value ?? 0) / 100
+                      : (quote.discount_value ?? 0)
+                    return (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">
+                          Discount{quote.discount_type === 'percentage' ? ` (${quote.discount_value}%)` : ''}
+                        </span>
+                        <span className="text-sm text-red-500 tabular-nums">-{formatCurrency(discountAmt)}</span>
+                      </div>
+                    )
+                  })()}
+                  {(quote.tax_rate ?? 0) > 0 && (() => {
+                    const discountAmt = quote.discount_type && (quote.discount_value ?? 0) > 0
+                      ? (quote.discount_type === 'percentage' ? quote.subtotal * (quote.discount_value ?? 0) / 100 : (quote.discount_value ?? 0))
+                      : 0
+                    const taxableAmount = quote.subtotal - discountAmt
+                    const taxAmt = taxableAmount * ((quote.tax_rate ?? 0) / 100)
+                    return (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">GST ({quote.tax_rate}%)</span>
+                        <span className="text-sm text-gray-700 tabular-nums">{formatCurrency(taxAmt)}</span>
+                      </div>
+                    )
+                  })()}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <span className="text-sm font-semibold text-gray-900">Total</span>
+                    <span className="text-lg font-semibold text-gray-900 tabular-nums">
+                      {(() => {
+                        const discountAmt = quote.discount_type && (quote.discount_value ?? 0) > 0
+                          ? (quote.discount_type === 'percentage' ? quote.subtotal * (quote.discount_value ?? 0) / 100 : (quote.discount_value ?? 0))
+                          : 0
+                        const taxableAmount = quote.subtotal - discountAmt
+                        const tax = taxableAmount * ((quote.tax_rate ?? 0) / 100)
+                        return formatCurrency(taxableAmount + tax)
+                      })()}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -208,22 +254,47 @@ export default function PublicQuotePage() {
                 {actionError && (
                   <p className="text-sm text-red-500 mb-4">{actionError}</p>
                 )}
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleAccept}
-                    disabled={actionLoading}
-                    className="flex-1 py-3 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50"
-                  >
-                    {actionLoading ? 'Processing...' : 'Accept Quote'}
-                  </button>
-                  <button
-                    onClick={handleDecline}
-                    disabled={actionLoading}
-                    className="flex-1 py-3 border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-100 transition cursor-pointer disabled:opacity-50"
-                  >
-                    Decline
-                  </button>
-                </div>
+                {confirmingAccept ? (
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 mb-1">Accept this quote?</p>
+                    <p className="text-xs text-gray-500 mb-4">
+                      By accepting you confirm you have reviewed the details above.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleAccept}
+                        disabled={actionLoading}
+                        className="flex-1 py-3 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition cursor-pointer disabled:opacity-50"
+                      >
+                        {actionLoading ? 'Processing...' : 'Yes, accept'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmingAccept(false)}
+                        disabled={actionLoading}
+                        className="flex-1 py-3 border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-100 transition cursor-pointer disabled:opacity-50"
+                      >
+                        Go back
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setConfirmingAccept(true)}
+                      disabled={actionLoading}
+                      className="flex-1 py-3 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition cursor-pointer disabled:opacity-50"
+                    >
+                      Accept Quote
+                    </button>
+                    <button
+                      onClick={handleDecline}
+                      disabled={actionLoading}
+                      className="flex-1 py-3 border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-100 transition cursor-pointer disabled:opacity-50"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

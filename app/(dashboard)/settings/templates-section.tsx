@@ -2,6 +2,6 @@
 
 import { QuoteTemplateManager } from './quote-template-manager'
 
-export function PackagesSection() {
+export function TemplatesSection() {
   return <QuoteTemplateManager />
 }

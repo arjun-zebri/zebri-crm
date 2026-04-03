@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import { Loader2 } from 'lucide-react'
-import { useLeadSources } from './use-dashboard'
-import { LEAD_SOURCES, LEAD_SOURCE_LABELS } from './couples/couples-types'
+import { Loader2 } from "lucide-react";
+import { useLeadSources } from "./use-dashboard";
+import { LEAD_SOURCES, LEAD_SOURCE_LABELS } from "./couples/couples-types";
 
 export function DashboardLeadSources() {
-  const { data, isLoading } = useLeadSources()
+  const { data, isLoading } = useLeadSources();
 
-  const allSources = [...LEAD_SOURCES, 'unknown' as const]
+  const allSources = [...LEAD_SOURCES, "unknown" as const];
   const allLabels: Record<string, string> = {
     ...LEAD_SOURCE_LABELS,
-    unknown: 'Unknown',
-  }
+    unknown: "Unknown",
+  };
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col max-h-80">
@@ -24,7 +24,10 @@ export function DashboardLeadSources() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-5 h-5 text-gray-400 animate-spin" strokeWidth={1.5} />
+          <Loader2
+            className="w-5 h-5 text-gray-400 animate-spin"
+            strokeWidth={1.5}
+          />
         </div>
       ) : !data || data.total === 0 ? (
         <div className="text-center py-12">
@@ -36,10 +39,11 @@ export function DashboardLeadSources() {
             .filter((source) => (data.counts[source] || 0) > 0)
             .sort((a, b) => (data.counts[b] || 0) - (data.counts[a] || 0))
             .map((source) => {
-              const count = data.counts[source] || 0
-              const prevCount = data.prevCounts[source] || 0
-              const pct = data.total > 0 ? Math.round((count / data.total) * 100) : 0
-              const diff = count - prevCount
+              const count = data.counts[source] || 0;
+              const prevCount = data.prevCounts[source] || 0;
+              const pct =
+                data.total > 0 ? Math.round((count / data.total) * 100) : 0;
+              const diff = count - prevCount;
 
               return (
                 <div key={source} className="flex items-center gap-3">
@@ -58,18 +62,11 @@ export function DashboardLeadSources() {
                   <span className="text-xs text-gray-400 w-10 text-right shrink-0">
                     {pct}%
                   </span>
-                  {diff !== 0 && (
-                    <span className={`text-xs w-8 text-right shrink-0 ${
-                      diff > 0 ? 'text-emerald-600' : 'text-red-500'
-                    }`}>
-                      {diff > 0 ? `+${diff}` : String(diff)}
-                    </span>
-                  )}
                 </div>
-              )
+              );
             })}
         </div>
       )}
     </div>
-  )
+  );
 }

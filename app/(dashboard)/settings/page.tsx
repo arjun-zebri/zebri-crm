@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PersonalInfoSection } from "./personal-info-section";
 import { AccountSection } from "./account-section";
 import { BillingSection } from "./billing-section";
-import { PackagesSection } from "./packages-section";
+import { TemplatesSection } from "./templates-section";
 import { NotificationsSection } from "./notifications-section";
 import { StatusesSection } from "./statuses-section";
 import { PaymentSettingsSection } from "./payment-settings-section";
@@ -42,7 +42,7 @@ const tabs = [
   { id: "account", label: "Account" },
   { id: "billing", label: "Plans & Billing" },
   { id: "payments", label: "Payments" },
-  { id: "packages", label: "Packages" },
+  { id: "templates", label: "Templates" },
   { id: "statuses", label: "Statuses" },
   { id: "notifications", label: "Notifications" },
 ] as const;
@@ -158,7 +158,7 @@ function SettingsContent() {
           justConnected={searchParams.get("connected") === "true"}
         />
       )}
-      {activeTab === "packages" && <PackagesSection />}
+      {activeTab === "templates" && <TemplatesSection />}
       {activeTab === "statuses" && <StatusesSection />}
       {activeTab === "notifications" && <NotificationsSection />}
     </div>

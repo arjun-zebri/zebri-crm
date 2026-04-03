@@ -7,8 +7,12 @@ import { useToast } from '@/components/ui/toast'
 import { DatePicker } from '@/components/ui/date-picker'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { InvoicePaymentSchedule } from './invoice-payment-schedule'
-import { X, Copy, Check, Trash2, Plus, ChevronDown, Search, ExternalLink } from 'lucide-react'
+import { X, Copy, Check, Trash2, Plus, ChevronDown, Search, ExternalLink, GripVertical, Download } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { generateAndPrintPdf } from '@/lib/generate-pdf'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
+import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface InvoiceItem {
   id: string
@@ -29,6 +33,8 @@ interface Invoice {
   due_date: string | null
   payment_terms: string | null
   tax_rate: number
+  discount_type: 'percentage' | 'fixed' | null
+  discount_value: number | null
   deposit_percent: number | null
   deposit_due_date: string | null
   deposit_paid_at: string | null
@@ -94,6 +100,69 @@ function addDays(days: number): string {
   return d.toISOString().split('T')[0]
 }
 
+function SortableInvoiceItem({ item, canEdit, onUpdate, onRemove }: {
+  item: InvoiceItem
+  canEdit: boolean
+  onUpdate: (id: string, field: 'description' | 'quantity' | 'unit_price', value: string | number) => void
+  onRemove: (id: string) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition ? transition.replace('all', 'transform') : undefined,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="grid grid-cols-[24px_1fr_72px_96px_80px_36px] gap-2 px-4 py-2 border-b border-gray-100 last:border-0 items-center">
+      {canEdit ? (
+        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 touch-none">
+          <GripVertical size={14} strokeWidth={1.5} />
+        </button>
+      ) : <span />}
+      <input
+        type="text"
+        value={item.description}
+        onChange={(e) => onUpdate(item.id, 'description', e.target.value)}
+        placeholder="Description"
+        disabled={!canEdit}
+        className="text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent disabled:text-gray-400"
+      />
+      <input
+        type="number"
+        value={item.quantity || ''}
+        onChange={(e) => onUpdate(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+        placeholder="1"
+        min="0"
+        step="0.01"
+        disabled={!canEdit}
+        className="text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      />
+      <div className="relative">
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">$</span>
+        <input
+          type="number"
+          value={item.unit_price || ''}
+          onChange={(e) => onUpdate(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+          placeholder="0.00"
+          min="0"
+          step="0.01"
+          disabled={!canEdit}
+          className="text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 pl-3 w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+      </div>
+      <span className="text-sm text-gray-700 text-right tabular-nums">
+        {new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(item.amount)}
+      </span>
+      {canEdit ? (
+        <button onClick={() => onRemove(item.id)} className="p-1 text-gray-300 hover:text-red-400 transition cursor-pointer justify-self-center">
+          <Trash2 size={14} strokeWidth={1.5} />
+        </button>
+      ) : <span />}
+    </div>
+  )
+}
+
 export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuilderModalProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
@@ -104,6 +173,9 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
   const [dueDate, setDueDate] = useState('')
   const [paymentTerms, setPaymentTerms] = useState('')
   const [taxEnabled, setTaxEnabled] = useState(false)
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage')
+  const [discountValue, setDiscountValue] = useState(0)
+  const [showDiscount, setShowDiscount] = useState(false)
   const [depositEnabled, setDepositEnabled] = useState(false)
   const [depositPercent, setDepositPercent] = useState(50)
   const [depositDueDate, setDepositDueDate] = useState('')
@@ -216,6 +288,9 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       setDueDate('')
       setPaymentTerms('')
       setTaxEnabled(false)
+      setDiscountType('percentage')
+      setDiscountValue(0)
+      setShowDiscount(false)
       setDepositEnabled(false)
       setDepositPercent(50)
       setDepositDueDate('')
@@ -244,6 +319,9 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       setDueDate(invoice.due_date ?? '')
       setPaymentTerms(invoice.payment_terms ?? '')
       setTaxEnabled((invoice.tax_rate ?? 0) > 0)
+      setDiscountType((invoice.discount_type as 'percentage' | 'fixed') ?? 'percentage')
+      setDiscountValue(invoice.discount_value ?? 0)
+      setShowDiscount(!!invoice.discount_type && (invoice.discount_value ?? 0) > 0)
       setDepositEnabled(invoice.deposit_percent != null)
       setDepositPercent(invoice.deposit_percent ?? 50)
       setDepositDueDate(invoice.deposit_due_date ?? '')
@@ -286,8 +364,12 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
   }
 
   const subtotal = items.reduce((sum, item) => sum + Number(item.amount), 0)
-  const tax = subtotal * (taxRate / 100)
-  const total = subtotal + tax
+  const discountAmount = showDiscount && discountValue > 0
+    ? (discountType === 'percentage' ? subtotal * discountValue / 100 : discountValue)
+    : 0
+  const taxableAmount = subtotal - discountAmount
+  const tax = taxableAmount * (taxRate / 100)
+  const total = taxableAmount + tax
 
   const depositAmount = depositEnabled ? total * (depositPercent / 100) : 0
   const finalAmount = depositEnabled ? total - depositAmount : 0
@@ -357,6 +439,8 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
             due_date: dueDate || null,
             payment_terms: paymentTerms || null,
             tax_rate: taxRate,
+            discount_type: showDiscount && discountValue > 0 ? discountType : null,
+            discount_value: showDiscount && discountValue > 0 ? discountValue : null,
             deposit_percent: depositEnabled ? depositPercent : null,
             deposit_due_date: depositEnabled && depositDueDate ? depositDueDate : null,
             final_due_date: depositEnabled && finalDueDate ? finalDueDate : null,
@@ -379,6 +463,8 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
             due_date: dueDate || null,
             payment_terms: paymentTerms || null,
             tax_rate: taxRate,
+            discount_type: showDiscount && discountValue > 0 ? discountType : null,
+            discount_value: showDiscount && discountValue > 0 ? discountValue : null,
             deposit_percent: depositEnabled ? depositPercent : null,
             deposit_due_date: depositEnabled && depositDueDate ? depositDueDate : null,
             final_due_date: depositEnabled && finalDueDate ? finalDueDate : null,
@@ -568,6 +654,36 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const downloadPdf = async () => {
+    if (!invoice) return
+    const { data: { user } } = await supabase.auth.getUser()
+    const meta = user?.user_metadata
+    generateAndPrintPdf({
+      type: 'invoice',
+      documentNumber: invoice.invoice_number,
+      title,
+      status: invoice.status,
+      coupleName: invoice.couple_name,
+      businessName: meta?.business_name as string | undefined,
+      items: items.map((item) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        amount: item.amount,
+      })),
+      subtotal,
+      discountType: showDiscount ? discountType : null,
+      discountValue: showDiscount ? discountValue : null,
+      taxRate,
+      total,
+      notes: notes || null,
+      dueDate: invoice.due_date,
+      bankAccountName: meta?.bank_account_name as string | undefined,
+      bankBsb: meta?.bank_bsb as string | undefined,
+      bankAccountNumber: meta?.bank_account_number as string | undefined,
+    })
+  }
+
   if (!isOpen || !invoiceId) return null
 
   const isOverdue =
@@ -584,6 +700,20 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
 
   const selectedTermsLabel = PAYMENT_TERMS_OPTIONS.find((o) => o.value === paymentTerms)?.label || 'No payment terms'
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setItems((prev) => {
+        const oldIndex = prev.findIndex((i) => i.id === active.id)
+        const newIndex = prev.findIndex((i) => i.id === over.id)
+        return arrayMove(prev, oldIndex, newIndex)
+      })
+      setDirty(true)
+    }
+  }
+
   return (
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[75]" onClick={onClose} />
@@ -594,7 +724,7 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="sticky top-0 z-10 bg-white shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <div className="min-w-0">
               {isLoading && !isNewInvoice ? (
                 <div className="space-y-1.5">
@@ -626,9 +756,28 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                 </>
               )}
             </div>
-            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer shrink-0 ml-3">
-              <X size={20} strokeWidth={1.5} />
-            </button>
+            <div className="flex items-center gap-2 shrink-0 ml-3">
+              {canEdit && invoice?.status !== 'cancelled' && !hasDepositSchedule && (
+                <button
+                  onClick={() => markPaid.mutate()}
+                  disabled={markPaid.isPending}
+                  className="text-xs text-emerald-600 hover:text-emerald-700 transition cursor-pointer disabled:opacity-50 font-medium px-2 py-1"
+                >
+                  {markPaid.isPending ? 'Marking...' : 'Mark as Paid'}
+                </button>
+              )}
+              {canEdit && !isNewInvoice && (
+                <button
+                  onClick={() => setCancelConfirm(true)}
+                  className="text-xs text-gray-400 hover:text-red-500 transition cursor-pointer px-2 py-1"
+                >
+                  Cancel
+                </button>
+              )}
+              <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer">
+                <X size={20} strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
 
           {/* Scrollable body */}
@@ -854,62 +1003,26 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1.5">Line items</label>
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-[1fr_72px_96px_80px_36px] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
+                    <div className="grid grid-cols-[24px_1fr_72px_96px_80px_36px] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
+                      <span />
                       <span className="text-xs font-medium text-gray-500">Description</span>
                       <span className="text-xs font-medium text-gray-500 text-right">Qty</span>
                       <span className="text-xs font-medium text-gray-500 text-right">Unit price</span>
                       <span className="text-xs font-medium text-gray-500 text-right">Amount</span>
                       <span />
                     </div>
-                    {items.map((item) => (
-                      <div key={item.id} className="grid grid-cols-[1fr_72px_96px_80px_36px] gap-2 px-4 py-2 border-b border-gray-100 items-center">
-                        <input
-                          type="text"
-                          value={item.description}
-                          onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                          placeholder="Description"
-                          disabled={!canEdit}
-                          className="text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent disabled:text-gray-400"
-                        />
-                        <input
-                          type="number"
-                          value={item.quantity || ''}
-                          onChange={(e) => updateItem(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                          placeholder="1"
-                          min="0"
-                          step="0.01"
-                          disabled={!canEdit}
-                          className="text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <input
-                          type="number"
-                          value={item.unit_price || ''}
-                          onChange={(e) => updateItem(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
-                          placeholder="0.00"
-                          min="0"
-                          step="0.01"
-                          disabled={!canEdit}
-                          className="text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="text-sm text-gray-700 text-right tabular-nums">
-                          {formatCurrency(item.amount)}
-                        </span>
-                        {canEdit && (
-                          <button
-                            onClick={() => removeItem(item.id)}
-                            className="p-1 text-gray-300 hover:text-red-400 transition cursor-pointer justify-self-center"
-                          >
-                            <Trash2 size={14} strokeWidth={1.5} />
-                          </button>
-                        )}
-                        {!canEdit && <span />}
-                      </div>
-                    ))}
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                      <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                        {items.map((item) => (
+                          <SortableInvoiceItem key={item.id} item={item} canEdit={canEdit} onUpdate={updateItem} onRemove={removeItem} />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
                     {canEdit && (
-                      <div className="px-4 py-2">
+                      <div className="px-4 py-3">
                         <button
                           onClick={addItem}
-                          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                          className="w-full border border-dashed border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-500 transition cursor-pointer flex items-center justify-center gap-1.5"
                         >
                           <Plus size={14} strokeWidth={1.5} /> Add item
                         </button>
@@ -922,6 +1035,58 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                         <span className="text-sm font-medium text-gray-600">Subtotal</span>
                         <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(subtotal)}</span>
                       </div>
+                      {showDiscount ? (
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            {canEdit && (
+                              <div className="flex border border-gray-200 rounded-lg overflow-hidden text-xs shrink-0">
+                                <button
+                                  onClick={() => { setDiscountType('percentage'); setDirty(true) }}
+                                  className={`px-2 py-1 transition cursor-pointer ${discountType === 'percentage' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                                >%</button>
+                                <button
+                                  onClick={() => { setDiscountType('fixed'); setDirty(true) }}
+                                  className={`px-2 py-1 transition cursor-pointer ${discountType === 'fixed' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                                >$</button>
+                              </div>
+                            )}
+                            {canEdit && (
+                              <div className="relative flex-1 max-w-[80px]">
+                                {discountType === 'fixed' && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">$</span>}
+                                <input
+                                  type="number"
+                                  value={discountValue || ''}
+                                  onChange={(e) => { setDiscountValue(parseFloat(e.target.value) || 0); setDirty(true) }}
+                                  placeholder="0"
+                                  min="0"
+                                  step="0.01"
+                                  className={`w-full text-xs border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-green-300 focus:ring-1 focus:ring-green-100 transition tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${discountType === 'fixed' ? 'pl-5 pr-2' : 'px-2'}`}
+                                />
+                                {discountType === 'percentage' && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">%</span>}
+                              </div>
+                            )}
+                            <span className="text-xs text-gray-400">Discount</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-sm font-semibold text-red-500 tabular-nums">-{formatCurrency(discountAmount)}</span>
+                            {canEdit && (
+                              <button
+                                onClick={() => { setShowDiscount(false); setDiscountValue(0); setDirty(true) }}
+                                className="text-gray-300 hover:text-gray-500 transition cursor-pointer"
+                              >
+                                <X size={13} strokeWidth={1.5} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ) : canEdit && (
+                        <button
+                          onClick={() => { setShowDiscount(true); setDirty(true) }}
+                          className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer flex items-center gap-1"
+                        >
+                          <Plus size={12} strokeWidth={1.5} /> Add discount
+                        </button>
+                      )}
                       {/* GST toggle */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1017,6 +1182,15 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                     </div>
                   )}
 
+                  {!isNewInvoice && (
+                    <div className="pt-1">
+                      <button onClick={downloadPdf}
+                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">
+                        <Download size={12} strokeWidth={1.5} /> Download PDF
+                      </button>
+                    </div>
+                  )}
+
                   {/* Stripe card payments toggle */}
                   {!isNewInvoice && (
                     <div className="pt-1 border-t border-gray-100">
@@ -1052,27 +1226,6 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                       )}
                     </div>
                   )}
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-3 pt-0.5 flex-wrap">
-                    {canEdit && invoice?.status !== 'cancelled' && !hasDepositSchedule && (
-                      <button
-                        onClick={() => markPaid.mutate()}
-                        disabled={markPaid.isPending}
-                        className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 transition cursor-pointer disabled:opacity-50 font-medium"
-                      >
-                        {markPaid.isPending ? 'Marking...' : 'Mark as Paid'}
-                      </button>
-                    )}
-                    {canEdit && (
-                      <button
-                        onClick={() => setCancelConfirm(true)}
-                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 transition cursor-pointer"
-                      >
-                        Cancel invoice
-                      </button>
-                    )}
-                  </div>
                 </div>
               </>
             )}

@@ -9,6 +9,8 @@ interface DatePickerProps {
   onChange: (v: string) => void
   placeholder?: string
   className?: string
+  /** Render the calendar inline (in-flow below the trigger, no portal) */
+  inline?: boolean
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -46,21 +48,17 @@ function formatDisplay(s: string): string {
 
 function buildCalendarGrid(year: number, month: number): Date[][] {
   const firstDay = new Date(year, month, 1)
-  // Monday-first offset: Mon=0, Tue=1, ..., Sun=6
   const offset = (firstDay.getDay() + 6) % 7
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
   const cells: Date[] = []
 
-  // Days from previous month
   for (let i = offset - 1; i >= 0; i--) {
     cells.push(new Date(year, month, -i))
   }
-  // Days in current month
   for (let d = 1; d <= daysInMonth; d++) {
     cells.push(new Date(year, month, d))
   }
-  // Days from next month to fill 42 cells
   let nextDay = 1
   while (cells.length < 42) {
     cells.push(new Date(year, month + 1, nextDay++))
@@ -77,7 +75,7 @@ function buildCalendarGrid(year: number, month: number): Date[][] {
 
 const DROPDOWN_HEIGHT = 330
 
-export function DatePicker({ value, onChange, placeholder, className }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className, inline }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
@@ -92,7 +90,6 @@ export function DatePicker({ value, onChange, placeholder, className }: DatePick
     setMounted(true)
   }, [])
 
-  // Initialize view month/year and compute position when opening
   useEffect(() => {
     if (open) {
       const d = value ? parseYMD(value) : null
@@ -100,19 +97,37 @@ export function DatePicker({ value, onChange, placeholder, className }: DatePick
       setViewYear(ref.getFullYear())
       setViewMonth(ref.getMonth())
 
-      if (triggerRef.current) {
+      if (!inline && triggerRef.current) {
         const rect = triggerRef.current.getBoundingClientRect()
         const spaceBelow = window.innerHeight - rect.bottom
         const top = spaceBelow < DROPDOWN_HEIGHT
           ? rect.top - DROPDOWN_HEIGHT - 4
           : rect.bottom + 4
-        setDropdownPos({ top, left: rect.left })
+
+        // Right-align if calendar would overflow viewport right edge
+        const calWidth = 288 // w-72
+        const left = rect.left + calWidth > window.innerWidth - 8
+          ? Math.max(8, rect.right - calWidth)
+          : rect.left
+
+        setDropdownPos({ top, left })
       }
     }
-  }, [open, value])
+  }, [open, value, inline])
 
-  // Outside-click and scroll handling
   useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      const inContainer = containerRef.current?.contains(e.target as Node)
+      if (!inContainer) setOpen(false)
+    }
+    if (inline && open) {
+      document.addEventListener('mousedown', handleMouseDown)
+      return () => document.removeEventListener('mousedown', handleMouseDown)
+    }
+  }, [open, inline])
+
+  useEffect(() => {
+    if (inline) return
     const handleMouseDown = (e: MouseEvent) => {
       const inTrigger = containerRef.current?.contains(e.target as Node)
       const inDropdown = dropdownRef.current?.contains(e.target as Node)
@@ -125,7 +140,11 @@ export function DatePicker({ value, onChange, placeholder, className }: DatePick
         const top = spaceBelow < DROPDOWN_HEIGHT
           ? rect.top - DROPDOWN_HEIGHT - 4
           : rect.bottom + 4
-        setDropdownPos({ top, left: rect.left })
+        const calWidth = 288
+        const left = rect.left + calWidth > window.innerWidth - 8
+          ? Math.max(8, rect.right - calWidth)
+          : rect.left
+        setDropdownPos({ top, left })
       }
     }
 
@@ -137,7 +156,7 @@ export function DatePicker({ value, onChange, placeholder, className }: DatePick
       document.removeEventListener('mousedown', handleMouseDown)
       document.removeEventListener('scroll', handleScroll, { capture: true })
     }
-  }, [open])
+  }, [open, inline])
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
@@ -175,31 +194,23 @@ export function DatePicker({ value, onChange, placeholder, className }: DatePick
     return `${base} text-gray-900 hover:bg-gray-50`
   }
 
-  const triggerClass = `flex items-center justify-between w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition hover:bg-gray-50 cursor-pointer ${className ?? ''}`
+  const triggerClass = `flex items-center justify-between w-full border rounded-xl px-3 py-2 text-sm focus:outline-none transition cursor-pointer ${
+    open && inline
+      ? 'border-green-300 ring-2 ring-green-100 bg-white hover:bg-white'
+      : 'border-gray-200 hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
+  } ${className ?? ''}`
 
-  const dropdown = mounted && open && dropdownPos ? createPortal(
-    <div
-      ref={dropdownRef}
-      style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 200 }}
-      className="w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3"
-    >
+  const calendarBody = (
+    <>
       {/* Month header */}
       <div className="flex items-center justify-between mb-2">
-        <button
-          type="button"
-          onClick={prevMonth}
-          className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer"
-        >
+        <button type="button" onClick={prevMonth} className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer">
           <ChevronLeft className="w-4 h-4 text-gray-600" strokeWidth={1.5} />
         </button>
         <span className="text-sm font-medium text-gray-900">
           {MONTH_NAMES[viewMonth]} {viewYear}
         </span>
-        <button
-          type="button"
-          onClick={nextMonth}
-          className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer"
-        >
+        <button type="button" onClick={nextMonth} className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer">
           <ChevronRight className="w-4 h-4 text-gray-600" strokeWidth={1.5} />
         </button>
       </div>
@@ -214,12 +225,7 @@ export function DatePicker({ value, onChange, placeholder, className }: DatePick
       {/* Day grid */}
       <div className="grid grid-cols-7 gap-y-0.5">
         {grid.flat().map((date, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => handleDayClick(date)}
-            className={getCellClass(date)}
-          >
+          <button key={i} type="button" onClick={() => handleDayClick(date)} className={getCellClass(date)}>
             {date.getDate()}
           </button>
         ))}
@@ -228,15 +234,41 @@ export function DatePicker({ value, onChange, placeholder, className }: DatePick
       {/* Clear */}
       {value && (
         <div className="mt-2 pt-2 border-t border-gray-100 text-center">
-          <button
-            type="button"
-            onClick={handleClear}
-            className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
-          >
+          <button type="button" onClick={handleClear} className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">
             Clear
           </button>
         </div>
       )}
+    </>
+  )
+
+  // ── Inline mode ──────────────────────────────────────────────────────────
+  if (inline) {
+    return (
+      <div ref={containerRef} className="relative">
+        <button ref={triggerRef} type="button" onClick={() => setOpen(o => !o)} className={triggerClass}>
+          <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+            {value ? formatDisplay(value) : (placeholder ?? 'Select date')}
+          </span>
+          <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
+        </button>
+        {open && (
+          <div className="absolute top-full right-0 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20">
+            {calendarBody}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Portal mode (default) ─────────────────────────────────────────────────
+  const dropdown = mounted && open && dropdownPos ? createPortal(
+    <div
+      ref={dropdownRef}
+      style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 200 }}
+      className="w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3"
+    >
+      {calendarBody}
     </div>,
     document.body
   ) : null
