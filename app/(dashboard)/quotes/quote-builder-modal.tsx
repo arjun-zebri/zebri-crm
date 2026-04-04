@@ -522,7 +522,7 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
       {/* Modal */}
       <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
         <div
-          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -561,8 +561,48 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
           {/* Scrollable body */}
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
             {isLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}
+              <div className="space-y-5">
+                {/* Couple */}
+                <div className="space-y-1.5">
+                  <div className="h-3 w-16 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                </div>
+                {/* Title + Expiry */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2 space-y-1.5">
+                    <div className="h-3 w-10 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="h-3 w-20 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                  </div>
+                </div>
+                {/* Line items */}
+                <div className="space-y-1.5">
+                  <div className="h-3 w-16 bg-gray-100 rounded animate-pulse" />
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="h-9 bg-gray-50 border-b border-gray-200" />
+                    {[1, 2, 3].map(i => <div key={i} className="h-11 border-b border-gray-200 bg-white" />)}
+                    <div className="px-4 py-3 space-y-2 bg-gray-50">
+                      <div className="flex justify-between">
+                        <div className="h-3 w-14 bg-gray-100 rounded animate-pulse" />
+                        <div className="h-3 w-16 bg-gray-100 rounded animate-pulse" />
+                      </div>
+                      <div className="flex justify-between">
+                        <div className="h-4 w-10 bg-gray-100 rounded animate-pulse" />
+                        <div className="h-4 w-20 bg-gray-100 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Notes */}
+                <div className="space-y-1.5">
+                  <div className="h-3 w-10 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+                </div>
+                {/* Share section */}
+                <div className="border border-gray-200 rounded-xl p-4 h-20 bg-white" />
               </div>
             ) : (
               <>

@@ -684,6 +684,8 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
     })
   }
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
   if (!isOpen || !invoiceId) return null
 
   const isOverdue =
@@ -699,8 +701,6 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
   const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition'
 
   const selectedTermsLabel = PAYMENT_TERMS_OPTIONS.find((o) => o.value === paymentTerms)?.label || 'No payment terms'
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -720,7 +720,7 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
 
       <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
         <div
-          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -783,8 +783,24 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
           {/* Scrollable body */}
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
             {isLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}
+              <div className="space-y-5">
+                <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                <div className="flex gap-3">
+                  <div className="flex-1 h-10 bg-gray-100 rounded-xl animate-pulse" />
+                  <div className="w-44 h-10 bg-gray-100 rounded-xl animate-pulse" />
+                </div>
+                <div className="border border-gray-100 rounded-xl overflow-hidden">
+                  <div className="h-8 bg-gray-50" />
+                  <div className="h-12 border-b border-gray-100 bg-white" />
+                  <div className="h-12 border-b border-gray-100 bg-white" />
+                  <div className="h-12 border-b border-gray-100 bg-white" />
+                  <div className="h-12 bg-white" />
+                  <div className="h-24 bg-gray-50 border-t border-gray-100" />
+                </div>
+                <div className="h-32 bg-gray-100 rounded-xl animate-pulse" />
+                <div className="h-40 bg-gray-100 rounded-xl animate-pulse" />
+                <div className="border border-gray-100 rounded-xl p-4 h-32 bg-white" />
               </div>
             ) : (
               <>
