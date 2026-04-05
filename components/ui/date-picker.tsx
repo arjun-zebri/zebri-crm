@@ -11,6 +11,7 @@ interface DatePickerProps {
   className?: string
   /** Render the calendar inline (in-flow below the trigger, no portal) */
   inline?: boolean
+  disabled?: boolean
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -75,7 +76,7 @@ function buildCalendarGrid(year: number, month: number): Date[][] {
 
 const DROPDOWN_HEIGHT = 330
 
-export function DatePicker({ value, onChange, placeholder, className, inline }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className, inline, disabled }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
@@ -195,7 +196,9 @@ export function DatePicker({ value, onChange, placeholder, className, inline }: 
   }
 
   const triggerClass = `flex items-center justify-between w-full border rounded-xl px-3 py-2 text-sm focus:outline-none transition cursor-pointer ${
-    open && inline
+    disabled
+      ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+      : open && inline
       ? 'border-green-300 ring-2 ring-green-100 bg-white hover:bg-white'
       : 'border-gray-200 hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
   } ${className ?? ''}`
@@ -246,7 +249,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline }: 
   if (inline) {
     return (
       <div ref={containerRef} className="relative">
-        <button ref={triggerRef} type="button" onClick={() => setOpen(o => !o)} className={triggerClass}>
+        <button ref={triggerRef} type="button" onClick={() => !disabled && setOpen(o => !o)} disabled={disabled} className={triggerClass}>
           <span className={value ? 'text-gray-900' : 'text-gray-400'}>
             {value ? formatDisplay(value) : (placeholder ?? 'Select date')}
           </span>
@@ -278,7 +281,8 @@ export function DatePicker({ value, onChange, placeholder, className, inline }: 
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => !disabled && setOpen(o => !o)}
+        disabled={disabled}
         className={triggerClass}
       >
         <span className={value ? 'text-gray-900' : 'text-gray-400'}>

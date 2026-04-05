@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
+        const subscription = event.data.object as Stripe.Subscription & { current_period_end: number | undefined }
         const userId = subscription.metadata?.supabase_user_id
         if (!userId) break
 
