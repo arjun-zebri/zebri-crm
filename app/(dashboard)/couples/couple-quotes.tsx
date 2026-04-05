@@ -157,21 +157,25 @@ export function CoupleQuotes({ coupleId, coupleName }: CoupleQuotesProps) {
         )}
       </div>
 
-      <QuoteBuilderModal
-        quoteId={activeQuoteId}
-        isOpen={!!activeQuoteId}
-        onClose={() => setActiveQuoteId(null)}
-        onCreateInvoice={(invId) => {
-          setActiveQuoteId(null)
-          setActiveInvoiceId(invId)
-        }}
-      />
+      {!!activeQuoteId && (
+        <QuoteBuilderModal
+          quoteId={activeQuoteId}
+          isOpen
+          onClose={() => setActiveQuoteId(null)}
+          onCreateInvoice={(invId) => {
+            setActiveQuoteId(null)
+            setActiveInvoiceId(invId)
+          }}
+        />
+      )}
 
-      <InvoiceBuilderModal
-        invoiceId={activeInvoiceId}
-        isOpen={!!activeInvoiceId}
-        onClose={() => setActiveInvoiceId(null)}
-      />
+      {!!activeInvoiceId && (
+        <InvoiceBuilderModal
+          invoiceId={activeInvoiceId}
+          isOpen
+          onClose={() => setActiveInvoiceId(null)}
+        />
+      )}
     </>
   )
 }

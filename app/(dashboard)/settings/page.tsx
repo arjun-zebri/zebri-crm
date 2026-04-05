@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PersonalInfoSection } from "./personal-info-section";
+import { BrandingSection } from "./branding-section";
 import { AccountSection } from "./account-section";
 import { BillingSection } from "./billing-section";
 import { TemplatesSection } from "./templates-section";
@@ -35,10 +36,16 @@ interface UserMetadata {
   bank_account_number?: string;
   stripe_connect_account_id?: string;
   stripe_connect_enabled?: boolean;
+  logo_url?: string;
+  brand_color?: string;
+  tagline?: string;
+  abn?: string;
+  show_contact_on_documents?: boolean;
 }
 
 const tabs = [
   { id: "personal-info", label: "Personal Info" },
+  { id: "branding", label: "Branding" },
   { id: "account", label: "Account" },
   { id: "billing", label: "Plans & Billing" },
   { id: "payments", label: "Payments" },
@@ -136,6 +143,22 @@ function SettingsContent() {
             businessType: metadata?.business_type || "",
           }}
           email={email || ""}
+        />
+      )}
+      {activeTab === "branding" && (
+        <BrandingSection
+          initialData={{
+            logoUrl: metadata?.logo_url || "",
+            brandColor: metadata?.brand_color || "#A7F3D0",
+            tagline: metadata?.tagline || "",
+            abn: metadata?.abn || "",
+            showContactOnDocuments: metadata?.show_contact_on_documents || false,
+            businessName: metadata?.business_name || "",
+            phone: metadata?.phone || "",
+            website: metadata?.website || "",
+            instagramUrl: metadata?.instagram_url || "",
+            facebookUrl: metadata?.facebook_url || "",
+          }}
         />
       )}
       {activeTab === "account" && (

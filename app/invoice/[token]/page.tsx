@@ -41,6 +41,16 @@ interface PublicInvoice {
   stripe_payment_enabled: boolean
   stripe_connect_enabled: boolean
   share_token: string
+  // Branding
+  logo_url: string | null
+  brand_color: string
+  tagline: string | null
+  abn: string | null
+  show_contact_on_documents: boolean
+  phone: string | null
+  website: string | null
+  instagram_url: string | null
+  facebook_url: string | null
 }
 
 function formatCurrency(n: number) {
@@ -133,13 +143,25 @@ export default function PublicInvoicePage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {/* Header */}
             <div className="px-8 py-7 border-b border-gray-100">
-              {invoice.business_name && (
+              {invoice.logo_url ? (
+                <img
+                  src={invoice.logo_url}
+                  alt={invoice.business_name || 'Logo'}
+                  className="max-h-12 object-contain mb-3"
+                />
+              ) : invoice.business_name ? (
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">
                   {invoice.business_name}
                 </p>
+              ) : null}
+              {invoice.tagline && (
+                <p className="text-xs text-gray-400 mb-3">{invoice.tagline}</p>
               )}
               <h1 className="text-2xl font-semibold text-gray-900 mb-1">{invoice.title}</h1>
               <p className="text-sm text-gray-500">{invoice.couple_name}</p>
+              {invoice.abn && (
+                <p className="text-xs text-gray-400 mt-1">ABN: {invoice.abn}</p>
+              )}
               <div className="flex items-center gap-3 mt-3 flex-wrap">
                 <span className="text-xs text-gray-400">{invoice.invoice_number}</span>
                 {invoice.due_date && !hasSchedule && (
@@ -322,10 +344,32 @@ export default function PublicInvoicePage() {
               </div>
             )}
 
+            {/* Contact footer */}
+            {invoice.show_contact_on_documents && (invoice.phone || invoice.website || invoice.instagram_url || invoice.facebook_url) && (
+              <div className="px-8 py-6 border-t border-gray-100 flex flex-wrap gap-4 text-xs text-gray-400">
+                {invoice.phone && <span>{invoice.phone}</span>}
+                {invoice.website && (
+                  <a href={invoice.website} target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">
+                    {invoice.website}
+                  </a>
+                )}
+                {invoice.instagram_url && (
+                  <a href={invoice.instagram_url} target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">
+                    Instagram
+                  </a>
+                )}
+                {invoice.facebook_url && (
+                  <a href={invoice.facebook_url} target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">
+                    Facebook
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* Pay with card */}
             {showCardButton && (
               <div className="px-8 pb-8">
-                <PayWithCardButton invoiceId={invoice.id} shareToken={invoice.share_token} />
+                <PayWithCardButton invoiceId={invoice.id} shareToken={invoice.share_token} brandColor={invoice.brand_color || '#000000'} />
               </div>
             )}
           </div>

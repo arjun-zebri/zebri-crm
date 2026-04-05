@@ -173,11 +173,13 @@ export function CoupleInvoices({ coupleId, coupleName }: CoupleInvoicesProps) {
         )}
       </div>
 
-      <InvoiceBuilderModal
-        invoiceId={activeInvoiceId}
-        isOpen={!!activeInvoiceId}
-        onClose={() => setActiveInvoiceId(null)}
-      />
+      {!!activeInvoiceId && (
+        <InvoiceBuilderModal
+          invoiceId={activeInvoiceId}
+          isOpen
+          onClose={() => setActiveInvoiceId(null)}
+        />
+      )}
     </>
   )
 }

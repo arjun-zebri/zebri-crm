@@ -25,6 +25,14 @@ interface PublicQuote {
   accepted_at: string | null
   couple_name: string
   business_name: string | null
+  logo_url: string | null
+  brand_color: string
+  tagline: string | null
+  show_contact_on_documents: boolean
+  phone: string | null
+  website: string | null
+  instagram_url: string | null
+  facebook_url: string | null
   items: QuoteItem[]
 }
 
@@ -127,10 +135,19 @@ export default function PublicQuotePage() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {/* Header */}
             <div className="px-8 py-7 border-b border-gray-100">
-              {quote.business_name && (
+              {quote.logo_url ? (
+                <img
+                  src={quote.logo_url}
+                  alt={quote.business_name || 'Logo'}
+                  className="max-h-12 object-contain mb-3"
+                />
+              ) : quote.business_name ? (
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">
                   {quote.business_name}
                 </p>
+              ) : null}
+              {quote.tagline && (
+                <p className="text-xs text-gray-400 mb-3">{quote.tagline}</p>
               )}
               <h1 className="text-2xl font-semibold text-gray-900 mb-1">{quote.title}</h1>
               <p className="text-sm text-gray-500">{quote.couple_name}</p>
@@ -248,6 +265,28 @@ export default function PublicQuotePage() {
               </div>
             )}
 
+            {/* Contact footer */}
+            {quote.show_contact_on_documents && (quote.phone || quote.website || quote.instagram_url || quote.facebook_url) && (
+              <div className="px-8 py-6 border-t border-gray-100 flex flex-wrap gap-4 text-xs text-gray-400">
+                {quote.phone && <span>{quote.phone}</span>}
+                {quote.website && (
+                  <a href={quote.website} target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">
+                    {quote.website}
+                  </a>
+                )}
+                {quote.instagram_url && (
+                  <a href={quote.instagram_url} target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">
+                    Instagram
+                  </a>
+                )}
+                {quote.facebook_url && (
+                  <a href={quote.facebook_url} target="_blank" rel="noopener noreferrer" className="hover:text-gray-600">
+                    Facebook
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* Action buttons — only on active state */}
             {pageState === 'active' && (
               <div className="px-8 py-6 bg-gray-50 border-t border-gray-100">
@@ -282,7 +321,8 @@ export default function PublicQuotePage() {
                     <button
                       onClick={() => setConfirmingAccept(true)}
                       disabled={actionLoading}
-                      className="flex-1 py-3 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition cursor-pointer disabled:opacity-50"
+                      style={{ backgroundColor: quote.brand_color || '#A7F3D0' }}
+                      className="flex-1 py-3 text-white text-sm font-medium rounded-xl hover:opacity-90 transition cursor-pointer disabled:opacity-50"
                     >
                       Accept Quote
                     </button>

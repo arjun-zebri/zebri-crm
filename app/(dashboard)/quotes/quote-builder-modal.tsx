@@ -240,7 +240,7 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
       setShowDiscount(!!quote.discount_type && (quote.discount_value ?? 0) > 0)
       setDirty(false)
     }
-  }, [quote?.id, isNewQuote])
+  }, [quote?.id, isNewQuote, isOpen])
 
   useEffect(() => {
     if (quoteItems) setItems(quoteItems)
@@ -520,10 +520,9 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[75]" onClick={onClose} />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
         <div
           className="bg-white rounded-2xl shadow-xl w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="sticky top-0 z-10 bg-white shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100">

@@ -10,6 +10,18 @@ The schema is intentionally **simple for the MVP CRM**.
 
 There is no `users` table. User profile and subscription data is stored in Supabase Auth `user_metadata`. See `.claude/authentication.md` for the full schema.
 
+**Branding fields (stored in `user_metadata`):**
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `logo_url` | text | null | Supabase Storage URL for MC logo (`branding/{user_id}/logo`) |
+| `brand_color` | text | `#A7F3D0` | Hex accent color for public quote/invoice pages |
+| `tagline` | text | null | Optional business tagline, max 80 chars |
+| `abn` | text | null | Australian Business Number, displayed on invoice header |
+| `show_contact_on_documents` | boolean | false | Show phone/website/social on public quote and invoice pages |
+
+These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`. See `.claude/docs/branding.md` for full spec.
+
 All CRM tables include a `user_id` column (uuid, not null) referencing `auth.users.id` for row-level security.
 
 ------------------------------------------------------------------------

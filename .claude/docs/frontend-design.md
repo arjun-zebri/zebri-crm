@@ -183,3 +183,16 @@ Tab text: `text-sm`
 Shortcut: Cmd + K
 
 Style similar to Linear / Vercel.
+
+------------------------------------------------------------------------
+
+# Theming on Public Pages
+
+Public quote (`/quote/[token]`) and invoice (`/invoice/[token]`) pages support per-MC accent theming.
+
+- **Accent color:** Use `brand_color` from the MC's `user_metadata` (returned by the public RPC) for primary CTA buttons. Fallback to `#A7F3D0` when not set.
+- **Logo:** When `logo_url` is set, render the logo image (`max-h-12 object-contain`) instead of the `business_name` text header.
+- **Tagline:** Shown below logo/name when `tagline` is set; `text-xs text-gray-400`.
+- **Contact footer:** Rendered when `show_contact_on_documents` is true; phone, website, social links in `text-xs text-gray-400`.
+
+All other styling (background, card, typography) remains the standard Zebri design system. See `.claude/docs/branding.md` for the full spec.

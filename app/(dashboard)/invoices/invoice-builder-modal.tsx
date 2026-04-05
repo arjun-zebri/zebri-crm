@@ -300,19 +300,13 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       setCoupleId(null)
       setcoupleNameForNew('')
       setDirty(false)
-      // Auto-populate bank details in Notes for new invoices
-      const loadBankDetails = async () => {
+      const loadSettings = async () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
         const meta = user.user_metadata
-        const lines: string[] = []
-        if (meta?.bank_account_name) lines.push(`Account name: ${meta.bank_account_name}`)
-        if (meta?.bank_bsb) lines.push(`BSB: ${meta.bank_bsb}`)
-        if (meta?.bank_account_number) lines.push(`Account number: ${meta.bank_account_number}`)
-        if (lines.length > 0) setNotes(lines.join('\n'))
         setStripeConnectEnabled(!!meta?.stripe_connect_enabled)
       }
-      loadBankDetails()
+      loadSettings()
     } else if (invoice) {
       setTitle(invoice.title)
       setNotes(invoice.notes ?? '')
@@ -338,7 +332,7 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       }
       loadStripeConnect()
     }
-  }, [invoice?.id, isNewInvoice])
+  }, [invoice?.id, isNewInvoice, isOpen])
 
   useEffect(() => {
     if (invoiceItems) setItems(invoiceItems)
@@ -718,10 +712,9 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[75]" onClick={onClose} />
 
-      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
         <div
           className="bg-white rounded-2xl shadow-xl w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="sticky top-0 z-10 bg-white shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100">
