@@ -39,7 +39,7 @@ export function EventTimelineShare({
   }
 
   return (
-    <div className="border-t border-gray-100 mt-6 pt-6">
+    <div>
       <div className="flex items-center justify-between mb-1">
         <p className="text-sm font-medium text-gray-900">Share link</p>
         <button
