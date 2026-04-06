@@ -58,6 +58,7 @@ interface QuoteTemplateItem {
 
 interface QuoteBuilderModalProps {
   quoteId: string | null
+  initialCoupleId?: string
   isOpen: boolean
   onClose: () => void
   onCreateInvoice?: (invoiceId: string) => void
@@ -107,7 +108,7 @@ function SortableQuoteItem({ item, onUpdate, onRemove }: { item: QuoteItem; onUp
   )
 }
 
-export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }: QuoteBuilderModalProps) {
+export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, onCreateInvoice }: QuoteBuilderModalProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -129,12 +130,17 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage')
   const [discountValue, setDiscountValue] = useState(0)
   const [showDiscount, setShowDiscount] = useState(false)
+  const [actualQuoteId, setActualQuoteId] = useState<string | null>(null)
+  const [draftSaved, setDraftSaved] = useState(false)
+  const [draftShareToken, setDraftShareToken] = useState<string | null>(null)
+  const [draftShareEnabled, setDraftShareEnabled] = useState(false)
 
   const isNewQuote = quoteId === 'new'
+  const effectiveQuoteId = isNewQuote ? actualQuoteId : quoteId
 
   const { data: quote, isLoading } = useQuery({
-    queryKey: ['quote', quoteId],
-    enabled: !!quoteId && !isNewQuote,
+    queryKey: ['quote', effectiveQuoteId],
+    enabled: !isNewQuote && !!effectiveQuoteId,
     queryFn: async () => {
       const { data: user } = await supabase.auth.getUser()
       if (!user.user) throw new Error('Not authenticated')
@@ -142,7 +148,7 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
       const { data, error } = await supabase
         .from('quotes')
         .select('*, couple:couple_id(name)')
-        .eq('id', quoteId!)
+        .eq('id', effectiveQuoteId!)
         .eq('user_id', user.user.id)
         .single()
 
@@ -152,13 +158,13 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
   })
 
   const { data: quoteItems } = useQuery({
-    queryKey: ['quote-items', quoteId],
-    enabled: !!quoteId,
+    queryKey: ['quote-items', effectiveQuoteId],
+    enabled: !!effectiveQuoteId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quote_items')
         .select('*')
-        .eq('quote_id', quoteId!)
+        .eq('quote_id', effectiveQuoteId!)
         .order('position', { ascending: true })
       if (error) throw error
       return (data as QuoteItem[]) || []
@@ -249,6 +255,13 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
   // Reset state when closed
   useEffect(() => {
     if (!isOpen) {
+      if (isNewQuote && actualQuoteId && !draftSaved) {
+        supabase.from('quotes').delete().eq('id', actualQuoteId)
+      }
+      setActualQuoteId(null)
+      setDraftSaved(false)
+      setDraftShareToken(null)
+      setDraftShareEnabled(false)
       setDirty(false)
       setCopied(false)
     }
@@ -265,21 +278,53 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
 
   const updateCouple = useMutation({
     mutationFn: async (newCoupleId: string) => {
+      const selectedCouple = couples?.find((c) => c.id === newCoupleId)
       if (isNewQuote) {
+        if (!actualQuoteId) {
+          // First couple selection — generate real number and create draft row
+          const id = crypto.randomUUID()
+          const shareToken = crypto.randomUUID()
+          const { data: user } = await supabase.auth.getUser()
+          if (!user.user) throw new Error('Not authenticated')
+          const { data: numData, error: numError } = await supabase.rpc('generate_quote_number', { p_user_id: user.user.id })
+          if (numError) throw numError
+          const { error } = await supabase.from('quotes').insert({
+            id,
+            user_id: user.user.id,
+            couple_id: newCoupleId,
+            quote_number: numData as string,
+            title: '',
+            notes: null,
+            expires_at: null,
+            subtotal: 0,
+            tax_rate: 10,
+            discount_type: null,
+            discount_value: null,
+            status: 'draft',
+            share_token: shareToken,
+            share_token_enabled: false,
+          })
+          if (error) throw error
+          setActualQuoteId(id)
+          setDraftShareToken(shareToken)
+        } else {
+          // Changing couple on existing draft
+          const { error } = await supabase.from('quotes').update({ couple_id: newCoupleId }).eq('id', actualQuoteId)
+          if (error) throw error
+        }
         setCoupleId(newCoupleId)
-        const selectedCouple = couples?.find((c) => c.id === newCoupleId)
         if (selectedCouple) setcoupleNameForNew(selectedCouple.name)
       } else {
         const { error } = await supabase
           .from('quotes')
           .update({ couple_id: newCoupleId })
-          .eq('id', quoteId!)
+          .eq('id', effectiveQuoteId!)
         if (error) throw error
       }
     },
     onSuccess: () => {
       if (!isNewQuote) {
-        queryClient.invalidateQueries({ queryKey: ['quote', quoteId] })
+        queryClient.invalidateQueries({ queryKey: ['quote', effectiveQuoteId] })
         queryClient.invalidateQueries({ queryKey: ['all-quotes'] })
       }
       setCouplePopoverOpen(false)
@@ -287,24 +332,27 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
     onError: () => toast('Failed to update couple'),
   })
 
+  // Auto-create draft when opened from couple profile with known coupleId
+  useEffect(() => {
+    if (isOpen && isNewQuote && initialCoupleId && !actualQuoteId && !coupleId && couples) {
+      updateCouple.mutate(initialCoupleId)
+    }
+  }, [isOpen, isNewQuote, initialCoupleId, actualQuoteId, coupleId, couples])
+
   const save = useMutation({
     mutationFn: async () => {
       const { data: user } = await supabase.auth.getUser()
       if (!user.user) throw new Error('Not authenticated')
 
-      let finalQuoteId = quoteId
+      let finalQuoteId = effectiveQuoteId
 
       if (isNewQuote) {
         if (!coupleId) throw new Error('Please select a couple')
 
-        const { data: numData } = await supabase.rpc('generate_quote_number', { p_user_id: user.user.id })
-
-        const { data: newQuote, error: qErr } = await supabase
+        // Update the draft quote with actual data (quote_number already set at draft creation)
+        const { error: qErr } = await supabase
           .from('quotes')
-          .insert({
-            user_id: user.user.id,
-            couple_id: coupleId,
-            quote_number: numData as string,
+          .update({
             title,
             notes: notes || null,
             expires_at: expiresAt || null,
@@ -312,14 +360,9 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
             tax_rate: taxRate,
             discount_type: showDiscount && discountValue > 0 ? discountType : null,
             discount_value: showDiscount && discountValue > 0 ? discountValue : null,
-            status: 'draft',
-            share_token: crypto.randomUUID(),
-            share_token_enabled: false,
           })
-          .select('id')
-          .single()
+          .eq('id', finalQuoteId!)
         if (qErr) throw qErr
-        finalQuoteId = newQuote.id
       } else {
         const { error: qErr } = await supabase
           .from('quotes')
@@ -332,7 +375,7 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
             discount_type: showDiscount && discountValue > 0 ? discountType : null,
             discount_value: showDiscount && discountValue > 0 ? discountValue : null,
           })
-          .eq('id', quoteId!)
+          .eq('id', effectiveQuoteId!)
         if (qErr) throw qErr
       }
 
@@ -363,6 +406,7 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
       queryClient.invalidateQueries({ queryKey: ['couple-quotes'] })
       queryClient.invalidateQueries({ queryKey: ['all-quotes'] })
       toast('Quote saved')
+      setDraftSaved(true)
       setDirty(false)
       onClose()
     },
@@ -372,28 +416,39 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
   const toggleShare = useMutation({
     mutationFn: async (enable: boolean) => {
       const update: Record<string, unknown> = { share_token_enabled: enable }
-      if (enable && quote?.status === 'draft') update.status = 'sent'
-      const { error } = await supabase.from('quotes').update(update).eq('id', quoteId!)
+      if (enable && !isNewQuote && quote?.status === 'draft') update.status = 'sent'
+      const { error } = await supabase.from('quotes').update(update).eq('id', effectiveQuoteId!)
       if (error) throw error
+      return enable
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quote', quoteId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-quotes'] })
-      queryClient.invalidateQueries({ queryKey: ['all-quotes'] })
+    onSuccess: (enable) => {
+      if (isNewQuote) {
+        setDraftShareEnabled(enable)
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['quote', effectiveQuoteId] })
+        queryClient.invalidateQueries({ queryKey: ['couple-quotes'] })
+        queryClient.invalidateQueries({ queryKey: ['all-quotes'] })
+      }
     },
     onError: () => toast('Failed to update share link'),
   })
 
   const regenerateToken = useMutation({
     mutationFn: async () => {
+      const newToken = crypto.randomUUID()
       const { error } = await supabase
         .from('quotes')
-        .update({ share_token: crypto.randomUUID() })
-        .eq('id', quoteId!)
+        .update({ share_token: newToken })
+        .eq('id', effectiveQuoteId!)
       if (error) throw error
+      return newToken
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quote', quoteId] })
+    onSuccess: (newToken) => {
+      if (isNewQuote) {
+        setDraftShareToken(newToken)
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['quote', effectiveQuoteId] })
+      }
       toast('Share link regenerated')
     },
     onError: () => toast('Failed to regenerate link'),
@@ -478,8 +533,8 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
   }
 
   const copyLink = async () => {
-    if (!quote) return
-    await navigator.clipboard.writeText(`${window.location.origin}/quote/${quote.share_token}`)
+    if (!shareUrl) return
+    await navigator.clipboard.writeText(shareUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -508,7 +563,9 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
 
   if (!isOpen || !quoteId) return null
 
-  const shareUrl = quote ? `${typeof window !== 'undefined' ? window.location.origin : ''}/quote/${quote.share_token}` : ''
+  const activeShareToken = isNewQuote ? draftShareToken : quote?.share_token
+  const activeShareEnabled = isNewQuote ? draftShareEnabled : (quote?.share_token_enabled ?? false)
+  const shareUrl = activeShareToken ? `${typeof window !== 'undefined' ? window.location.origin : ''}/quote/${activeShareToken}` : ''
   const isExpired = quote?.expires_at && new Date(quote.expires_at + 'T00:00:00') < new Date()
   const effectiveStatus = isExpired && quote?.status === 'sent' ? 'expired' : (quote?.status ?? 'draft')
 
@@ -855,19 +912,19 @@ export function QuoteBuilderModal({ quoteId, isOpen, onClose, onCreateInvoice }:
                     <div>
                       <p className="text-sm font-medium text-gray-900">Share link</p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {quote?.share_token_enabled ? 'Active — couple can view and respond' : 'Enable to share with the couple'}
+                        {activeShareEnabled ? 'Active — couple can view and respond' : 'Enable to share with the couple'}
                       </p>
                     </div>
                     <button
-                      onClick={() => toggleShare.mutate(!quote?.share_token_enabled)}
-                      disabled={toggleShare.isPending}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${quote?.share_token_enabled ? 'bg-green-500' : 'bg-gray-200'}`}
+                      onClick={() => toggleShare.mutate(!activeShareEnabled)}
+                      disabled={toggleShare.isPending || !actualQuoteId && isNewQuote}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${activeShareEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
                     >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${quote?.share_token_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${activeShareEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
 
-                  {quote?.share_token_enabled && (
+                  {activeShareEnabled && (
                     <div className="flex items-center gap-2">
                       <input type="text" readOnly value={shareUrl}
                         className="flex-1 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none truncate" />

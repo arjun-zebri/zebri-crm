@@ -176,6 +176,7 @@ export function CoupleInvoices({ coupleId, coupleName }: CoupleInvoicesProps) {
       {!!activeInvoiceId && (
         <InvoiceBuilderModal
           invoiceId={activeInvoiceId}
+          initialCoupleId={coupleId}
           isOpen
           onClose={() => setActiveInvoiceId(null)}
         />

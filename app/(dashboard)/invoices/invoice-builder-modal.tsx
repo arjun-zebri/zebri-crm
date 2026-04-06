@@ -69,6 +69,7 @@ interface QuoteForImport {
 
 interface InvoiceBuilderModalProps {
   invoiceId: string | null
+  initialCoupleId?: string
   isOpen: boolean
   onClose: () => void
 }
@@ -163,7 +164,7 @@ function SortableInvoiceItem({ item, canEdit, onUpdate, onRemove }: {
   )
 }
 
-export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuilderModalProps) {
+export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClose }: InvoiceBuilderModalProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -195,13 +196,18 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
   const [quoteSearch, setQuoteSearch] = useState('')
   const [quotePopoverOpen, setQuotePopoverOpen] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
+  const [actualInvoiceId, setActualInvoiceId] = useState<string | null>(null)
+  const [draftSaved, setDraftSaved] = useState(false)
+  const [draftShareToken, setDraftShareToken] = useState<string | null>(null)
+  const [draftShareEnabled, setDraftShareEnabled] = useState(false)
 
   const isNewInvoice = invoiceId === 'new'
+  const effectiveInvoiceId = isNewInvoice ? actualInvoiceId : invoiceId
   const taxRate = taxEnabled ? 10 : 0
 
   const { data: invoice, isLoading } = useQuery({
-    queryKey: ['invoice', invoiceId],
-    enabled: !!invoiceId && !isNewInvoice,
+    queryKey: ['invoice', effectiveInvoiceId],
+    enabled: !isNewInvoice && !!effectiveInvoiceId,
     queryFn: async () => {
       const { data: user } = await supabase.auth.getUser()
       if (!user.user) throw new Error('Not authenticated')
@@ -209,7 +215,7 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       const { data, error } = await supabase
         .from('invoices')
         .select('*, couple:couple_id(name)')
-        .eq('id', invoiceId!)
+        .eq('id', effectiveInvoiceId!)
         .eq('user_id', user.user.id)
         .single()
 
@@ -219,13 +225,13 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
   })
 
   const { data: invoiceItems } = useQuery({
-    queryKey: ['invoice-items', invoiceId],
-    enabled: !!invoiceId,
+    queryKey: ['invoice-items', effectiveInvoiceId],
+    enabled: !!effectiveInvoiceId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoice_items')
         .select('*')
-        .eq('invoice_id', invoiceId!)
+        .eq('invoice_id', effectiveInvoiceId!)
         .order('position', { ascending: true })
       if (error) throw error
       return (data as InvoiceItem[]) || []
@@ -340,6 +346,13 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
 
   useEffect(() => {
     if (!isOpen) {
+      if (isNewInvoice && actualInvoiceId && !draftSaved) {
+        supabase.from('invoices').delete().eq('id', actualInvoiceId)
+      }
+      setActualInvoiceId(null)
+      setDraftSaved(false)
+      setDraftShareToken(null)
+      setDraftShareEnabled(false)
       setDirty(false)
       setCopied(false)
       setCancelConfirm(false)
@@ -370,21 +383,59 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
 
   const updateCouple = useMutation({
     mutationFn: async (newCoupleId: string) => {
+      const selectedCouple = couples?.find((c) => c.id === newCoupleId)
       if (isNewInvoice) {
+        if (!actualInvoiceId) {
+          // First couple selection — generate real number and create draft row
+          const id = crypto.randomUUID()
+          const shareToken = crypto.randomUUID()
+          const { data: user } = await supabase.auth.getUser()
+          if (!user.user) throw new Error('Not authenticated')
+          const { data: numData, error: numError } = await supabase.rpc('generate_invoice_number', { p_user_id: user.user.id })
+          if (numError) throw numError
+          const { error } = await supabase.from('invoices').insert({
+            id,
+            user_id: user.user.id,
+            couple_id: newCoupleId,
+            invoice_number: numData as string,
+            title: '',
+            notes: null,
+            due_date: null,
+            payment_terms: null,
+            subtotal: 0,
+            tax_rate: 0,
+            discount_type: null,
+            discount_value: null,
+            deposit_percent: null,
+            deposit_due_date: null,
+            final_due_date: null,
+            status: 'draft',
+            share_token: shareToken,
+            share_token_enabled: false,
+            stripe_payment_enabled: false,
+            event_id: null,
+          })
+          if (error) throw error
+          setActualInvoiceId(id)
+          setDraftShareToken(shareToken)
+        } else {
+          // Changing couple on existing draft
+          const { error } = await supabase.from('invoices').update({ couple_id: newCoupleId }).eq('id', actualInvoiceId)
+          if (error) throw error
+        }
         setCoupleId(newCoupleId)
-        const selectedCouple = couples?.find((c) => c.id === newCoupleId)
         if (selectedCouple) setcoupleNameForNew(selectedCouple.name)
       } else {
         const { error } = await supabase
           .from('invoices')
           .update({ couple_id: newCoupleId })
-          .eq('id', invoiceId!)
+          .eq('id', effectiveInvoiceId!)
         if (error) throw error
       }
     },
     onSuccess: () => {
       if (!isNewInvoice) {
-        queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+        queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
         queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
         queryClient.invalidateQueries({ queryKey: ['quotes-for-import', invoice?.couple_id] })
       }
@@ -392,6 +443,13 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
     },
     onError: () => toast('Failed to update couple'),
   })
+
+  // Auto-create draft when opened from couple profile with known coupleId
+  useEffect(() => {
+    if (isOpen && isNewInvoice && initialCoupleId && !actualInvoiceId && !coupleId && couples) {
+      updateCouple.mutate(initialCoupleId)
+    }
+  }, [isOpen, isNewInvoice, initialCoupleId, actualInvoiceId, coupleId, couples])
 
   const importFromQuote = (quote: any) => {
     setTitle(quote.title)
@@ -415,19 +473,15 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       const { data: user } = await supabase.auth.getUser()
       if (!user.user) throw new Error('Not authenticated')
 
-      let finalInvoiceId = invoiceId
+      let finalInvoiceId = effectiveInvoiceId
 
       if (isNewInvoice) {
         if (!coupleId) throw new Error('Please select a couple')
 
-        const { data: numData } = await supabase.rpc('generate_invoice_number', { p_user_id: user.user.id })
-
-        const { data: newInvoice, error: invErr } = await supabase
+        // Update the draft invoice with actual data (invoice_number already set at draft creation)
+        const { error: invErr } = await supabase
           .from('invoices')
-          .insert({
-            user_id: user.user.id,
-            couple_id: coupleId,
-            invoice_number: numData as string,
+          .update({
             title,
             notes: notes || null,
             due_date: dueDate || null,
@@ -440,14 +494,9 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
             final_due_date: depositEnabled && finalDueDate ? finalDueDate : null,
             event_id: eventId || null,
             subtotal,
-            status: 'draft',
-            share_token: crypto.randomUUID(),
-            share_token_enabled: false,
           })
-          .select('id')
-          .single()
+          .eq('id', finalInvoiceId!)
         if (invErr) throw invErr
-        finalInvoiceId = newInvoice.id
       } else {
         const { error: invErr } = await supabase
           .from('invoices')
@@ -465,7 +514,7 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
             event_id: eventId || null,
             subtotal,
           })
-          .eq('id', invoiceId!)
+          .eq('id', effectiveInvoiceId!)
         if (invErr) throw invErr
       }
 
@@ -498,6 +547,7 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
       queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
       toast('Invoice saved')
+      setDraftSaved(true)
       setDirty(false)
       onClose()
     },
@@ -506,16 +556,20 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
 
   const toggleShare = useMutation({
     mutationFn: async (enable: boolean) => {
-      if (isNewInvoice) throw new Error('Please save the invoice first')
       const update: Record<string, unknown> = { share_token_enabled: enable }
-      if (enable && invoice?.status === 'draft') update.status = 'sent'
-      const { error } = await supabase.from('invoices').update(update).eq('id', invoiceId!)
+      if (enable && !isNewInvoice && invoice?.status === 'draft') update.status = 'sent'
+      const { error } = await supabase.from('invoices').update(update).eq('id', effectiveInvoiceId!)
       if (error) throw error
+      return enable
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+    onSuccess: (enable) => {
+      if (isNewInvoice) {
+        setDraftShareEnabled(enable)
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
+        queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
+        queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+      }
     },
     onError: () => toast('Failed to update share link'),
   })
@@ -526,14 +580,14 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       const { error } = await supabase
         .from('invoices')
         .update({ status: 'paid', paid_at: new Date().toISOString() })
-        .eq('id', invoiceId!)
+        .eq('id', effectiveInvoiceId!)
       if (error) throw error
       if (invoice.event_id) {
         await supabase.from('events').update({ price: total }).eq('id', invoice.event_id)
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
       queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
       queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
       if (invoice?.event_id) {
@@ -549,11 +603,11 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       const { error } = await supabase
         .from('invoices')
         .update({ deposit_paid_at: new Date().toISOString() })
-        .eq('id', invoiceId!)
+        .eq('id', effectiveInvoiceId!)
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
       toast('Deposit marked as paid')
     },
     onError: () => toast('Failed to mark deposit as paid'),
@@ -565,14 +619,14 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       const { error } = await supabase
         .from('invoices')
         .update({ final_paid_at: new Date().toISOString(), status: 'paid', paid_at: new Date().toISOString() })
-        .eq('id', invoiceId!)
+        .eq('id', effectiveInvoiceId!)
       if (error) throw error
       if (invoice.event_id) {
         await supabase.from('events').update({ price: total }).eq('id', invoice.event_id)
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
       queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
       queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
       if (invoice?.event_id) {
@@ -588,12 +642,12 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       const { error } = await supabase
         .from('invoices')
         .update({ stripe_payment_enabled: enable })
-        .eq('id', invoiceId!)
+        .eq('id', effectiveInvoiceId!)
       if (error) throw error
     },
     onSuccess: (_, enable) => {
       setStripePaymentEnabled(enable)
-      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
     },
     onError: () => toast('Failed to update card payments'),
   })
@@ -603,11 +657,11 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
       const { error } = await supabase
         .from('invoices')
         .update({ status: 'cancelled', share_token_enabled: false })
-        .eq('id', invoiceId!)
+        .eq('id', effectiveInvoiceId!)
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
       queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
       queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
       setCancelConfirm(false)
@@ -688,7 +742,9 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
     !['paid', 'cancelled'].includes(invoice?.status ?? '')
   const effectiveStatus = isOverdue ? 'overdue' : (invoice?.status ?? 'draft')
   const canEdit = !['paid', 'cancelled'].includes(invoice?.status ?? '')
-  const shareUrl = invoice ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invoice/${invoice.share_token}` : ''
+  const activeShareToken = isNewInvoice ? draftShareToken : invoice?.share_token
+  const activeShareEnabled = isNewInvoice ? draftShareEnabled : (invoice?.share_token_enabled ?? false)
+  const shareUrl = activeShareToken ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invoice/${activeShareToken}` : ''
   const selectedEvent = coupleEvents?.find((e) => e.id === eventId)
   const hasDepositSchedule = depositEnabled && !isNewInvoice && !!invoice
 
@@ -1162,19 +1218,19 @@ export function InvoiceBuilderModal({ invoiceId, isOpen, onClose }: InvoiceBuild
                     <div>
                       <p className="text-sm font-medium text-gray-900">Share link</p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {invoice?.share_token_enabled ? 'Active — couple can view this invoice' : 'Enable to share with the couple'}
+                        {activeShareEnabled ? 'Active — couple can view this invoice' : 'Enable to share with the couple'}
                       </p>
                     </div>
                     <button
-                      onClick={() => toggleShare.mutate(!invoice?.share_token_enabled)}
-                      disabled={toggleShare.isPending || !canEdit || isNewInvoice}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${invoice?.share_token_enabled ? 'bg-green-500' : 'bg-gray-200'}`}
+                      onClick={() => toggleShare.mutate(!activeShareEnabled)}
+                      disabled={toggleShare.isPending || (!isNewInvoice && !canEdit) || (isNewInvoice && !actualInvoiceId)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${activeShareEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
                     >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${invoice?.share_token_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${activeShareEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
 
-                  {invoice?.share_token_enabled && (
+                  {activeShareEnabled && (
                     <div className="flex items-center gap-2">
                       <input
                         type="text"

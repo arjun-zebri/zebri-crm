@@ -160,6 +160,7 @@ export function CoupleQuotes({ coupleId, coupleName }: CoupleQuotesProps) {
       {!!activeQuoteId && (
         <QuoteBuilderModal
           quoteId={activeQuoteId}
+          initialCoupleId={coupleId}
           isOpen
           onClose={() => setActiveQuoteId(null)}
           onCreateInvoice={(invId) => {
