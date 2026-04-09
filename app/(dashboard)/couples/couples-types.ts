@@ -23,6 +23,8 @@ export interface Couple {
   status: string
   lead_source: string | null
   created_at: string
+  portal_token?: string
+  portal_token_enabled?: boolean
 }
 
 export interface CoupleStatusRecord {

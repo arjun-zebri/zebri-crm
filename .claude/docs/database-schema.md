@@ -331,3 +331,93 @@ Columns:
 stripe_customer_id (text, primary key) user_id (uuid, not null, references auth.users.id) created_at (timestamp)
 
 RLS: service role only (no client access).
+
+
+------------------------------------------------------------------------
+
+# Couple Portal (added 2026-04-09)
+
+## couples table additions
+
+portal_token (uuid, not null, default gen_random_uuid()) — unique token for the couple's portal link
+portal_token_enabled (boolean, not null, default false) — link is inactive until MC enables it
+
+## timeline_items table additions
+
+pending_review (boolean, not null, default false) — true for items submitted via couple portal, awaiting MC approval
+
+------------------------------------------------------------------------
+
+# portal_people
+
+Names and pronunciation data submitted by the couple via portal.
+
+Columns:
+id (uuid, primary key)
+couple_id (uuid, not null, FK to couples.id, on delete cascade)
+user_id (uuid, not null) — MC's user_id (set by SECURITY DEFINER RPC)
+category (text, not null) — 'partner' | 'bridal_party' | 'family'
+full_name (text, not null)
+phonetic (text, nullable) — phonetic spelling of name
+role (text, nullable) — e.g. 'Bride', 'Best Man', 'Mother of Bride'
+audio_url (text, nullable) — Supabase Storage URL for audio pronunciation
+position (integer, default 0) — ordering within category
+created_at (timestamptz, default now())
+
+RLS: Standard user_id = auth.uid() for authenticated users. Anon access via SECURITY DEFINER RPCs: save_portal_person, delete_portal_person.
+
+------------------------------------------------------------------------
+
+# portal_songs
+
+Song requests submitted by the couple via portal.
+
+Columns:
+id (uuid, primary key)
+couple_id (uuid, not null, FK to couples.id, on delete cascade)
+user_id (uuid, not null) — MC's user_id
+category (text, not null) — 'entry_partner1' | 'entry_partner2' | 'first_dance' | 'bridal_party_entry' | 'ceremony' | 'reception' | 'avoid'
+title (text, not null)
+artist (text, nullable)
+notes (text, nullable)
+position (integer, default 0)
+created_at (timestamptz, default now())
+
+RLS: Standard user_id = auth.uid(). Anon access via: save_portal_song, delete_portal_song.
+
+------------------------------------------------------------------------
+
+# portal_files
+
+Files uploaded by the couple via portal.
+
+Columns:
+id (uuid, primary key)
+couple_id (uuid, not null, FK to couples.id, on delete cascade)
+user_id (uuid, not null) — MC's user_id
+name (text, not null) — original filename
+file_url (text, not null) — Supabase Storage public URL
+file_size (integer, nullable) — bytes
+created_at (timestamptz, default now())
+
+Storage bucket: portal-files (public read, max 20MB per file)
+Storage bucket: portal-audio (public read, max 10MB per file)
+
+RLS: Standard user_id = auth.uid(). Anon uploads handled via /api/portal/upload route (service role key). Anon deletes via: delete_portal_file RPC.
+
+------------------------------------------------------------------------
+
+## Portal RPC Functions (SECURITY DEFINER, anon-accessible)
+
+get_portal_data(token uuid) — returns couple name + event details + all portal_people + portal_songs + portal_files + timeline_items for first upcoming event
+get_vendor_timeline(token uuid) — returns event date/venue + timeline_items only (no PII)
+save_portal_person(p_token, p_id, p_category, p_full_name, p_phonetic, p_role, p_audio_url, p_position) — upsert
+delete_portal_person(p_token, p_id)
+save_portal_song(p_token, p_id, p_category, p_title, p_artist, p_notes, p_position) — upsert
+delete_portal_song(p_token, p_id)
+save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min) — always inserts with pending_review=true into couple's first upcoming event
+delete_portal_timeline_item(p_token, p_id)
+save_portal_file(p_token, p_id, p_name, p_file_url, p_file_size) — insert
+delete_portal_file(p_token, p_id)
+
+All RPCs validate portal_token_enabled=true before proceeding.

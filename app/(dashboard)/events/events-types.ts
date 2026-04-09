@@ -29,6 +29,7 @@ export interface TimelineItem {
   duration_min: number | null
   contact_id: string | null
   position: number
+  pending_review?: boolean
   created_at: string
   contact?: {
     id: string

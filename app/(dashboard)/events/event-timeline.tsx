@@ -17,7 +17,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 import { TimelineItem } from './events-types'
@@ -50,9 +50,10 @@ function formatTime(time: string | null | undefined): string {
 interface SortableItemRowProps {
   item: TimelineItem
   onEdit: (item: TimelineItem) => void
+  onApprove?: (id: string) => void
 }
 
-function SortableItemRow({ item, onEdit }: SortableItemRowProps) {
+function SortableItemRow({ item, onEdit, onApprove }: SortableItemRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id })
 
@@ -69,6 +70,7 @@ function SortableItemRow({ item, onEdit }: SortableItemRowProps) {
       : null
 
   const hasTimed = !!item.start_time
+  const isPending = !!item.pending_review
 
   return (
     <div ref={setNodeRef} style={style} className="flex items-stretch gap-2 group">
@@ -85,12 +87,14 @@ function SortableItemRow({ item, onEdit }: SortableItemRowProps) {
       {/* Calendar-style event card */}
       <div
         onClick={() => onEdit(item)}
-        className="flex-1 relative overflow-hidden rounded-xl border border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
+        className={`flex-1 relative overflow-hidden rounded-xl border bg-white hover:shadow-sm transition-all cursor-pointer ${
+          isPending ? 'border-amber-200 hover:border-amber-300' : 'border-gray-200 hover:border-gray-300'
+        }`}
       >
         {/* Left accent strip */}
         <div
           className={`absolute left-0 top-0 bottom-0 w-[3px] ${
-            hasTimed ? 'bg-emerald-400' : 'bg-gray-200'
+            isPending ? 'bg-amber-300' : hasTimed ? 'bg-emerald-400' : 'bg-gray-200'
           }`}
         />
 
@@ -104,9 +108,16 @@ function SortableItemRow({ item, onEdit }: SortableItemRowProps) {
             >
               {hasTimed ? formatTime(item.start_time) : 'No time'}
             </span>
-            {item.duration_min && (
-              <span className="text-xs text-gray-400 tabular-nums">{item.duration_min} min</span>
-            )}
+            <div className="flex items-center gap-2">
+              {isPending && (
+                <span className="text-xs bg-amber-50 text-amber-600 border border-amber-100 rounded-full px-2 py-0.5">
+                  Pending
+                </span>
+              )}
+              {item.duration_min && (
+                <span className="text-xs text-gray-400 tabular-nums">{item.duration_min} min</span>
+              )}
+            </div>
           </div>
 
           {/* Title */}
@@ -126,6 +137,17 @@ function SortableItemRow({ item, onEdit }: SortableItemRowProps) {
           )}
         </div>
       </div>
+
+      {/* Approve button for pending items */}
+      {isPending && onApprove && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onApprove(item.id) }}
+          className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-xl px-2.5 hover:bg-emerald-100 transition cursor-pointer shrink-0 self-stretch"
+          title="Approve"
+        >
+          <Check size={12} strokeWidth={2} />
+        </button>
+      )}
     </div>
   )
 }
@@ -290,6 +312,20 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
     },
   })
 
+  const approveItem = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('timeline_items')
+        .update({ pending_review: false })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-timeline', eventId] })
+      toast('Item approved')
+    },
+  })
+
   const reorderItems = useMutation({
     mutationFn: async (reorderedIds: string[]) => {
       const updates = reorderedIds.map((id, index) => ({
@@ -391,7 +427,12 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
             >
               <div className="space-y-2">
                 {items.map((item) => (
-                  <SortableItemRow key={item.id} item={item} onEdit={handleOpenEdit} />
+                  <SortableItemRow
+                    key={item.id}
+                    item={item}
+                    onEdit={handleOpenEdit}
+                    onApprove={(id) => approveItem.mutate(id)}
+                  />
                 ))}
               </div>
             </SortableContext>

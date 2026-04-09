@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Phone, Mail, Pencil, ChevronDown } from "lucide-react";
+import { X, Phone, Mail, Pencil, ChevronDown, Link2, Check, Copy } from "lucide-react";
 import { PiWhatsappLogoLight } from "react-icons/pi";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createClient } from "@/lib/supabase/client";
 import * as Popover from "@radix-ui/react-popover";
 import {
   Couple,
@@ -19,6 +21,7 @@ import { CoupleVendors } from "./couple-vendors";
 import { CoupleTasks } from "./couple-tasks";
 import { CoupleQuotes } from "./couple-quotes";
 import { CoupleInvoices } from "./couple-invoices";
+import { CouplePortalTab } from "./couple-portal-tab";
 
 interface CoupleProfileProps {
   couple: Couple | null;
@@ -28,7 +31,7 @@ interface CoupleProfileProps {
   ) => void;
   onDelete: (id: string) => void;
   loading: boolean;
-  defaultTab?: "overview" | "events" | "contacts" | "tasks" | "quotes" | "invoices";
+  defaultTab?: "overview" | "events" | "contacts" | "tasks" | "quotes" | "invoices" | "portal";
 }
 
 export function CoupleProfile({
@@ -39,12 +42,38 @@ export function CoupleProfile({
   loading,
   defaultTab = "overview",
 }: CoupleProfileProps) {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
   const { data: statuses } = useCoupleStatuses();
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [activeTab, setActiveTab] = useState<
-    "overview" | "events" | "contacts" | "tasks" | "quotes" | "invoices"
+    "overview" | "events" | "contacts" | "tasks" | "quotes" | "invoices" | "portal"
   >(defaultTab);
+  const [portalOpen, setPortalOpen] = useState(false);
+  const [copied, setCopied] = useState<"couple" | "vendor" | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  const togglePortal = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { error } = await supabase
+        .from("couples")
+        .update({ portal_token_enabled: enabled })
+        .eq("id", couple?.id ?? "");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["couples"] });
+    },
+  });
+
+  const copyLink = (type: "couple" | "vendor") => {
+    if (!couple?.portal_token) return;
+    const base = `${window.location.origin}/portal/${couple.portal_token}`;
+    const url = type === "vendor" ? `${base}/vendor` : base;
+    navigator.clipboard.writeText(url);
+    setCopied(type);
+    setTimeout(() => setCopied(null), 2000);
+  };
 
   // Form state
   const [name, setName] = useState("");
@@ -240,6 +269,73 @@ export function CoupleProfile({
                   <PiWhatsappLogoLight size={16} />
                   <span>WhatsApp</span>
                 </a>
+
+                {/* Portal link button */}
+                <Popover.Root open={portalOpen} onOpenChange={setPortalOpen}>
+                  <Popover.Trigger asChild>
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition cursor-pointer ml-auto">
+                      <Link2 size={14} strokeWidth={1.5} />
+                      <span>Portal</span>
+                    </button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content
+                      className="bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-[70] w-72 space-y-3"
+                      sideOffset={6}
+                      align="end"
+                    >
+                      {/* Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Couple portal</p>
+                          <p className="text-xs text-gray-400">
+                            {couple.portal_token_enabled ? "Link is active" : "Link is disabled"}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => togglePortal.mutate(!couple.portal_token_enabled)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                            couple.portal_token_enabled ? "bg-black" : "bg-gray-200"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
+                              couple.portal_token_enabled ? "translate-x-4" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Copy links */}
+                      <div className="space-y-2 pt-1 border-t border-gray-100">
+                        <button
+                          onClick={() => copyLink("couple")}
+                          disabled={!couple.portal_token}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                        >
+                          <span className="text-gray-700">Copy couple link</span>
+                          {copied === "couple" ? (
+                            <Check size={13} strokeWidth={2} className="text-emerald-500" />
+                          ) : (
+                            <Copy size={13} strokeWidth={1.5} className="text-gray-400" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => copyLink("vendor")}
+                          disabled={!couple.portal_token}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                        >
+                          <span className="text-gray-700">Copy vendor link</span>
+                          {copied === "vendor" ? (
+                            <Check size={13} strokeWidth={2} className="text-emerald-500" />
+                          ) : (
+                            <Copy size={13} strokeWidth={1.5} className="text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
               </div>
             )}
           </div>
@@ -255,6 +351,7 @@ export function CoupleProfile({
                   { key: "tasks", label: "Tasks" },
                   { key: "quotes", label: "Quotes" },
                   { key: "invoices", label: "Invoices" },
+                  { key: "portal", label: "Portal" },
                 ] as const
               ).map(({ key, label }) => (
                 <button
@@ -455,6 +552,7 @@ export function CoupleProfile({
             {activeTab === "tasks" && <CoupleTasks coupleId={couple.id} />}
             {activeTab === "quotes" && <CoupleQuotes coupleId={couple.id} coupleName={couple.name} />}
             {activeTab === "invoices" && <CoupleInvoices coupleId={couple.id} coupleName={couple.name} />}
+            {activeTab === "portal" && <CouplePortalTab coupleId={couple.id} />}
           </div>
 
           {/* Footer — edit mode only */}

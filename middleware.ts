@@ -9,9 +9,11 @@ const PUBLIC_ROUTES = [
   "/api/alerts",
   "/api/stripe/invoice-payment",
   "/api/stripe/webhook",
+  "/api/portal",
   "/timeline",
   "/quote",
   "/invoice",
+  "/portal",
 ];
 
 export async function middleware(request: NextRequest) {
