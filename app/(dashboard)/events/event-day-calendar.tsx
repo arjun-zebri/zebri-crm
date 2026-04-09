@@ -243,9 +243,10 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize }: DraggableEve
 
 interface EventDayCalendarProps {
   eventId: string;
+  hideShareLink?: boolean;
 }
 
-export function EventDayCalendar({ eventId }: EventDayCalendarProps) {
+export function EventDayCalendar({ eventId, hideShareLink }: EventDayCalendarProps) {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -689,15 +690,17 @@ export function EventDayCalendar({ eventId }: EventDayCalendarProps) {
         </div>
 
         {/* Share link */}
-        <div className="shrink-0 border-t border-gray-100 py-4">
-          <EventTimelineShare
-            shareToken={shareData?.share_token}
-            shareEnabled={shareData?.share_token_enabled ?? false}
-            onToggle={(enabled) => toggleShare.mutate(enabled)}
-            onRegenerate={() => regenerateToken.mutate()}
-            loading={toggleShare.isPending || regenerateToken.isPending}
-          />
-        </div>
+        {!hideShareLink && (
+          <div className="shrink-0 border-t border-gray-100 py-4">
+            <EventTimelineShare
+              shareToken={shareData?.share_token}
+              shareEnabled={shareData?.share_token_enabled ?? false}
+              onToggle={(enabled) => toggleShare.mutate(enabled)}
+              onRegenerate={() => regenerateToken.mutate()}
+              loading={toggleShare.isPending || regenerateToken.isPending}
+            />
+          </div>
+        )}
       </div>
 
       <EventTimelineModal

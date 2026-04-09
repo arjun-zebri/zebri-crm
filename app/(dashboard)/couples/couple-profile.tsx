@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Phone, Mail, Pencil, ChevronDown, Link2, Check, Copy } from "lucide-react";
+import {
+  X, Phone, Mail, Pencil, ChevronDown, Link2, Check, Copy,
+  LayoutDashboard, CheckSquare, FileText, Receipt,
+  Users, Clock, Music, Paperclip,
+} from "lucide-react";
 import { PiWhatsappLogoLight } from "react-icons/pi";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
@@ -16,12 +20,27 @@ import {
 import { useCoupleStatuses } from "./use-couple-statuses";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CoupleOverview } from "./couple-overview";
-import { CoupleEvents } from "./couple-events";
-import { CoupleVendors } from "./couple-vendors";
 import { CoupleTasks } from "./couple-tasks";
-import { CoupleQuotes } from "./couple-quotes";
-import { CoupleInvoices } from "./couple-invoices";
-import { CouplePortalTab } from "./couple-portal-tab";
+import { CouplePayments } from "./couple-payments";
+import { usePortalData } from "./use-portal-data";
+import { PersonModal, SongModal } from "./portal-modals";
+import { McPortalNames } from "./mc-portal-names";
+import { McPortalSongs } from "./mc-portal-songs";
+import { McPortalFiles } from "./mc-portal-files";
+import { CoupleTimeline } from "./couple-timeline";
+import { McPortalSongCategories } from "./mc-portal-song-categories";
+
+type Section = "overview" | "tasks" | "payments" | "names" | "timeline" | "songs" | "files";
+
+const NAV_ITEMS: { key: Section; label: string; icon: React.ReactNode }[] = [
+  { key: "overview", label: "Overview", icon: <LayoutDashboard size={18} strokeWidth={1.5} /> },
+  { key: "tasks", label: "Tasks", icon: <CheckSquare size={18} strokeWidth={1.5} /> },
+  { key: "payments", label: "Payments", icon: <Receipt size={18} strokeWidth={1.5} /> },
+  { key: "names", label: "Names", icon: <Users size={18} strokeWidth={1.5} /> },
+  { key: "timeline", label: "Timeline", icon: <Clock size={18} strokeWidth={1.5} /> },
+  { key: "songs", label: "Songs", icon: <Music size={18} strokeWidth={1.5} /> },
+  { key: "files", label: "Files", icon: <Paperclip size={18} strokeWidth={1.5} /> },
+];
 
 interface CoupleProfileProps {
   couple: Couple | null;
@@ -31,7 +50,7 @@ interface CoupleProfileProps {
   ) => void;
   onDelete: (id: string) => void;
   loading: boolean;
-  defaultTab?: "overview" | "events" | "contacts" | "tasks" | "quotes" | "invoices" | "portal";
+  defaultTab?: Section;
 }
 
 export function CoupleProfile({
@@ -46,12 +65,12 @@ export function CoupleProfile({
   const queryClient = useQueryClient();
   const { data: statuses } = useCoupleStatuses();
   const [mode, setMode] = useState<"view" | "edit">("view");
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "events" | "contacts" | "tasks" | "quotes" | "invoices" | "portal"
-  >(defaultTab);
+  const [activeSection, setActiveSection] = useState<Section>(defaultTab);
   const [portalOpen, setPortalOpen] = useState(false);
   const [copied, setCopied] = useState<"couple" | "vendor" | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  const portal = usePortalData(couple?.id ?? "");
 
   const togglePortal = useMutation({
     mutationFn: async (enabled: boolean) => {
@@ -86,7 +105,7 @@ export function CoupleProfile({
   const [leadSourceOpen, setLeadSourceOpen] = useState(false);
 
   useEffect(() => {
-    setActiveTab(defaultTab);
+    setActiveSection(defaultTab);
   }, [defaultTab]);
 
   useEffect(() => {
@@ -99,7 +118,7 @@ export function CoupleProfile({
       setNotes(couple.notes);
     }
     setMode("view");
-    setActiveTab(defaultTab);
+    setActiveSection(defaultTab);
     setDeleteConfirm(false);
   }, [couple]);
 
@@ -121,7 +140,6 @@ export function CoupleProfile({
 
   const hasPhone = !!couple.phone;
   const hasEmail = !!couple.email;
-  const initials = couple.name.charAt(0).toUpperCase();
   const currentStatus = statuses.find((s) => s.slug === couple.status);
   const statusName =
     currentStatus?.name ||
@@ -175,384 +193,344 @@ export function CoupleProfile({
       >
         <div
           data-testid="couple-profile-panel"
-          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl h-[640px] max-h-[90vh] flex flex-col overflow-hidden animate-modal-in"
+          className="bg-white rounded-2xl shadow-xl w-[90vw] max-w-[1400px] h-[90vh] flex flex-col overflow-hidden animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="shrink-0 px-6 pt-6 pb-4">
+          {/* Compact header */}
+          <div className="shrink-0 border-b border-gray-100 px-6 py-3.5">
             <div className="flex items-center gap-4">
-              {/* Initials avatar */}
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                <span className="text-base font-semibold text-gray-500">
-                  {initials}
-                </span>
-              </div>
-
-              {/* Name + status */}
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-semibold text-gray-900 truncate">
+              {/* Name + status inline */}
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <h2 className="text-lg font-semibold text-gray-900 truncate">
                   {couple.name}
                 </h2>
                 {mode === "view" && (
-                  <div className="mt-1">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}
-                    >
-                      {statusName}
-                    </span>
-                  </div>
+                  <span
+                    className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}
+                  >
+                    {statusName}
+                  </span>
                 )}
               </div>
 
-              {/* Edit + close */}
-              <div className="flex items-center gap-0.5 shrink-0">
-                {mode === "view" && (
+              {/* Action buttons — view mode */}
+              {mode === "view" && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <a
+                    href={hasPhone ? `tel:${couple.phone}` : undefined}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm border rounded-xl transition ${
+                      hasPhone
+                        ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
+                        : "text-gray-300 border-gray-100 cursor-not-allowed"
+                    }`}
+                    onClick={hasPhone ? undefined : (e) => e.preventDefault()}
+                  >
+                    <Phone size={14} strokeWidth={1.5} />
+                    <span>Call</span>
+                  </a>
+                  <a
+                    href={hasEmail ? `mailto:${couple.email}` : undefined}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm border rounded-xl transition ${
+                      hasEmail
+                        ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
+                        : "text-gray-300 border-gray-100 cursor-not-allowed"
+                    }`}
+                    onClick={hasEmail ? undefined : (e) => e.preventDefault()}
+                  >
+                    <Mail size={14} strokeWidth={1.5} />
+                    <span>Email</span>
+                  </a>
+                  <a
+                    href={
+                      hasPhone
+                        ? `https://wa.me/${couple.phone.replace(/\D/g, "")}`
+                        : undefined
+                    }
+                    target={hasPhone ? "_blank" : undefined}
+                    rel={hasPhone ? "noopener noreferrer" : undefined}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm border rounded-xl transition ${
+                      hasPhone
+                        ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
+                        : "text-gray-300 border-gray-100 cursor-not-allowed"
+                    }`}
+                    onClick={hasPhone ? undefined : (e) => e.preventDefault()}
+                  >
+                    <PiWhatsappLogoLight size={16} />
+                    <span>WhatsApp</span>
+                  </a>
+
+                  {/* Portal link button */}
+                  <Popover.Root open={portalOpen} onOpenChange={setPortalOpen}>
+                    <Popover.Trigger asChild>
+                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition cursor-pointer">
+                        <Link2 size={14} strokeWidth={1.5} />
+                        <span>Portal</span>
+                      </button>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Content
+                        className="bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-[70] w-72 space-y-3"
+                        sideOffset={6}
+                        align="end"
+                      >
+                        {/* Toggle */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Couple portal</p>
+                            <p className="text-xs text-gray-400">
+                              {couple.portal_token_enabled ? "Link is active" : "Link is disabled"}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => togglePortal.mutate(!couple.portal_token_enabled)}
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                              couple.portal_token_enabled ? "bg-black" : "bg-gray-200"
+                            }`}
+                          >
+                            <span
+                              className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
+                                couple.portal_token_enabled ? "translate-x-4" : "translate-x-0"
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        {/* Copy links */}
+                        <div className="space-y-2 pt-1 border-t border-gray-100">
+                          <button
+                            onClick={() => copyLink("couple")}
+                            disabled={!couple.portal_token}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                          >
+                            <span className="text-gray-700">Copy couple link</span>
+                            {copied === "couple" ? (
+                              <Check size={13} strokeWidth={2} className="text-emerald-500" />
+                            ) : (
+                              <Copy size={13} strokeWidth={1.5} className="text-gray-400" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => copyLink("vendor")}
+                            disabled={!couple.portal_token}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                          >
+                            <span className="text-gray-700">Copy vendor link</span>
+                            {copied === "vendor" ? (
+                              <Check size={13} strokeWidth={2} className="text-emerald-500" />
+                            ) : (
+                              <Copy size={13} strokeWidth={1.5} className="text-gray-400" />
+                            )}
+                          </button>
+                        </div>
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
+
                   <button
                     onClick={() => setMode("edit")}
                     title="Edit couple"
-                    className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
                   >
                     <Pencil size={16} strokeWidth={1.5} />
                   </button>
-                )}
-                <button
-                  onClick={onClose}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
-                >
-                  <X size={20} strokeWidth={1.5} />
-                </button>
-              </div>
+                </div>
+              )}
+
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+              >
+                <X size={18} strokeWidth={1.5} />
+              </button>
             </div>
-
-            {/* Action buttons — view mode only */}
-            {mode === "view" && (
-              <div className="flex items-center gap-2 mt-4">
-                <a
-                  href={hasPhone ? `tel:${couple.phone}` : undefined}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
-                    hasPhone
-                      ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
-                      : "text-gray-300 border-gray-100 cursor-not-allowed"
-                  }`}
-                  onClick={hasPhone ? undefined : (e) => e.preventDefault()}
-                >
-                  <Phone size={14} strokeWidth={1.5} />
-                  <span>Call</span>
-                </a>
-                <a
-                  href={hasEmail ? `mailto:${couple.email}` : undefined}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
-                    hasEmail
-                      ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
-                      : "text-gray-300 border-gray-100 cursor-not-allowed"
-                  }`}
-                  onClick={hasEmail ? undefined : (e) => e.preventDefault()}
-                >
-                  <Mail size={14} strokeWidth={1.5} />
-                  <span>Email</span>
-                </a>
-                <a
-                  href={
-                    hasPhone
-                      ? `https://wa.me/${couple.phone.replace(/\D/g, "")}`
-                      : undefined
-                  }
-                  target={hasPhone ? "_blank" : undefined}
-                  rel={hasPhone ? "noopener noreferrer" : undefined}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-xl transition ${
-                    hasPhone
-                      ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
-                      : "text-gray-300 border-gray-100 cursor-not-allowed"
-                  }`}
-                  onClick={hasPhone ? undefined : (e) => e.preventDefault()}
-                >
-                  <PiWhatsappLogoLight size={16} />
-                  <span>WhatsApp</span>
-                </a>
-
-                {/* Portal link button */}
-                <Popover.Root open={portalOpen} onOpenChange={setPortalOpen}>
-                  <Popover.Trigger asChild>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition cursor-pointer ml-auto">
-                      <Link2 size={14} strokeWidth={1.5} />
-                      <span>Portal</span>
-                    </button>
-                  </Popover.Trigger>
-                  <Popover.Portal>
-                    <Popover.Content
-                      className="bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-[70] w-72 space-y-3"
-                      sideOffset={6}
-                      align="end"
-                    >
-                      {/* Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Couple portal</p>
-                          <p className="text-xs text-gray-400">
-                            {couple.portal_token_enabled ? "Link is active" : "Link is disabled"}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => togglePortal.mutate(!couple.portal_token_enabled)}
-                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                            couple.portal_token_enabled ? "bg-black" : "bg-gray-200"
-                          }`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
-                              couple.portal_token_enabled ? "translate-x-4" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Copy links */}
-                      <div className="space-y-2 pt-1 border-t border-gray-100">
-                        <button
-                          onClick={() => copyLink("couple")}
-                          disabled={!couple.portal_token}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
-                        >
-                          <span className="text-gray-700">Copy couple link</span>
-                          {copied === "couple" ? (
-                            <Check size={13} strokeWidth={2} className="text-emerald-500" />
-                          ) : (
-                            <Copy size={13} strokeWidth={1.5} className="text-gray-400" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => copyLink("vendor")}
-                          disabled={!couple.portal_token}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
-                        >
-                          <span className="text-gray-700">Copy vendor link</span>
-                          {copied === "vendor" ? (
-                            <Check size={13} strokeWidth={2} className="text-emerald-500" />
-                          ) : (
-                            <Copy size={13} strokeWidth={1.5} className="text-gray-400" />
-                          )}
-                        </button>
-                      </div>
-                    </Popover.Content>
-                  </Popover.Portal>
-                </Popover.Root>
-              </div>
-            )}
           </div>
 
-          {/* Tabs */}
-          <div className="shrink-0 border-t border-b border-gray-100 px-6">
-            <div className="flex gap-6 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {(
-                [
-                  { key: "overview", label: "Overview" },
-                  { key: "events", label: "Events" },
-                  { key: "contacts", label: "Contacts" },
-                  { key: "tasks", label: "Tasks" },
-                  { key: "quotes", label: "Quotes" },
-                  { key: "invoices", label: "Invoices" },
-                  { key: "portal", label: "Portal" },
-                ] as const
-              ).map(({ key, label }) => (
+          {/* Body: Sidebar + Content */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Sidebar navigation */}
+            <nav className="w-[200px] shrink-0 border-r border-gray-100 overflow-y-auto px-3 py-4 space-y-0.5">
+              {NAV_ITEMS.map((item) => (
                 <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={`py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer shrink-0 ${
-                    activeTab === key
-                      ? "border-gray-900 text-gray-900"
-                      : "border-transparent text-gray-400 hover:text-gray-600"
+                  key={item.key}
+                  onClick={() => setActiveSection(item.key)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition cursor-pointer ${
+                    activeSection === item.key
+                      ? "bg-gray-100 text-gray-900 font-medium"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                   }`}
                 >
-                  {label}
+                  {item.icon}
+                  <span className="truncate">{item.label}</span>
                 </button>
               ))}
-            </div>
-          </div>
+            </nav>
 
-          {/* Content */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 flex flex-col">
-            {activeTab === "overview" && mode === "view" && (
-              <div className="flex-1 flex flex-col min-h-0">
-                <CoupleOverview
-                  couple={couple}
-                  statuses={statuses}
-                />
-              </div>
-            )}
+            {/* Content area */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6 flex flex-col">
+              {activeSection === "overview" && mode === "view" && (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <CoupleOverview couple={couple} statuses={statuses} />
+                </div>
+              )}
 
-            {activeTab === "overview" && mode === "edit" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1">
-                    Name <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Couple's name"
-                    className={inputClass}
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="email@example.com"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+61 400 000 000"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">
-                    Status
-                  </label>
-                  <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
-                    <Popover.Trigger asChild>
-                      <button
-                        type="button"
-                        className={`${inputClass} flex items-center justify-between text-left`}
-                      >
-                        <span>{selectedStatus?.name || "Select status"}</span>
-                        <ChevronDown
-                          size={14}
-                          strokeWidth={1.5}
-                          className="text-gray-400 shrink-0"
-                        />
-                      </button>
-                    </Popover.Trigger>
-                    <Popover.Portal>
-                      <Popover.Content
-                        className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
-                        sideOffset={4}
-                        align="start"
-                      >
-                        {statuses.map((s) => (
-                          <button
-                            key={s.slug}
-                            type="button"
-                            onClick={() => {
-                              setStatus(s.slug);
-                              setStatusOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm transition ${
-                              status === s.slug
-                                ? "bg-gray-100 text-gray-900 font-medium"
-                                : "text-gray-700 hover:bg-gray-50"
-                            }`}
-                          >
-                            {s.name}
-                          </button>
-                        ))}
-                      </Popover.Content>
-                    </Popover.Portal>
-                  </Popover.Root>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">
-                    Lead Source
-                  </label>
-                  <Popover.Root
-                    open={leadSourceOpen}
-                    onOpenChange={setLeadSourceOpen}
-                  >
-                    <Popover.Trigger asChild>
-                      <button
-                        type="button"
-                        className={`${inputClass} flex items-center justify-between text-left`}
-                      >
-                        <span
-                          className={leadSource ? "text-gray-900" : "text-gray-400"}
-                        >
-                          {leadSource
-                            ? LEAD_SOURCE_LABELS[leadSource as LeadSource]
-                            : "Select source"}
-                        </span>
-                        <ChevronDown
-                          size={14}
-                          strokeWidth={1.5}
-                          className="text-gray-400 shrink-0"
-                        />
-                      </button>
-                    </Popover.Trigger>
-                    <Popover.Portal>
-                      <Popover.Content
-                        className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
-                        sideOffset={4}
-                        align="start"
-                      >
+              {activeSection === "overview" && mode === "edit" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm text-gray-400 mb-1">
+                      Name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Couple's name"
+                      className={inputClass}
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="email@example.com"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+61 400 000 000"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Status</label>
+                    <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
+                      <Popover.Trigger asChild>
                         <button
                           type="button"
-                          onClick={() => {
-                            setLeadSource("");
-                            setLeadSourceOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 text-sm transition ${
-                            !leadSource
-                              ? "bg-gray-100 text-gray-900 font-medium"
-                              : "text-gray-700 hover:bg-gray-50"
-                          }`}
+                          className={`${inputClass} flex items-center justify-between text-left`}
                         >
-                          None
+                          <span>{selectedStatus?.name || "Select status"}</span>
+                          <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
                         </button>
-                        {LEAD_SOURCES.map((s) => (
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content
+                          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                          sideOffset={4}
+                          align="start"
+                        >
+                          {statuses.map((s) => (
+                            <button
+                              key={s.slug}
+                              type="button"
+                              onClick={() => { setStatus(s.slug); setStatusOpen(false); }}
+                              className={`w-full text-left px-3 py-2 text-sm transition ${
+                                status === s.slug
+                                  ? "bg-gray-100 text-gray-900 font-medium"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {s.name}
+                            </button>
+                          ))}
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Lead Source</label>
+                    <Popover.Root open={leadSourceOpen} onOpenChange={setLeadSourceOpen}>
+                      <Popover.Trigger asChild>
+                        <button
+                          type="button"
+                          className={`${inputClass} flex items-center justify-between text-left`}
+                        >
+                          <span className={leadSource ? "text-gray-900" : "text-gray-400"}>
+                            {leadSource ? LEAD_SOURCE_LABELS[leadSource as LeadSource] : "Select source"}
+                          </span>
+                          <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                        </button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content
+                          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                          sideOffset={4}
+                          align="start"
+                        >
                           <button
-                            key={s}
                             type="button"
-                            onClick={() => {
-                              setLeadSource(s);
-                              setLeadSourceOpen(false);
-                            }}
+                            onClick={() => { setLeadSource(""); setLeadSourceOpen(false); }}
                             className={`w-full text-left px-3 py-2 text-sm transition ${
-                              leadSource === s
-                                ? "bg-gray-100 text-gray-900 font-medium"
-                                : "text-gray-700 hover:bg-gray-50"
+                              !leadSource ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-700 hover:bg-gray-50"
                             }`}
                           >
-                            {LEAD_SOURCE_LABELS[s]}
+                            None
                           </button>
-                        ))}
-                      </Popover.Content>
-                    </Popover.Portal>
-                  </Popover.Root>
+                          {LEAD_SOURCES.map((s) => (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => { setLeadSource(s); setLeadSourceOpen(false); }}
+                              className={`w-full text-left px-3 py-2 text-sm transition ${
+                                leadSource === s ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {LEAD_SOURCE_LABELS[s]}
+                            </button>
+                          ))}
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm text-gray-400 mb-1">Notes</label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Any additional notes..."
+                      rows={7}
+                      className={`${inputClass} resize-none`}
+                    />
+                  </div>
                 </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Any additional notes..."
-                    rows={7}
-                    className={`${inputClass} resize-none`}
-                  />
-                </div>
-              </div>
-            )}
+              )}
 
-            {activeTab === "events" && <CoupleEvents couple={couple} />}
-            {activeTab === "contacts" && <CoupleVendors coupleId={couple.id} />}
-            {activeTab === "tasks" && <CoupleTasks coupleId={couple.id} />}
-            {activeTab === "quotes" && <CoupleQuotes coupleId={couple.id} coupleName={couple.name} />}
-            {activeTab === "invoices" && <CoupleInvoices coupleId={couple.id} coupleName={couple.name} />}
-            {activeTab === "portal" && <CouplePortalTab coupleId={couple.id} />}
+              {activeSection === "tasks" && <CoupleTasks coupleId={couple.id} />}
+              {activeSection === "payments" && <CouplePayments coupleId={couple.id} coupleName={couple.name} />}
+
+              {activeSection === "names" && (
+                <McPortalNames people={portal.people} onEditPerson={portal.openEditPerson} onAddPerson={portal.openAddPerson} />
+              )}
+              {activeSection === "timeline" && (
+                <CoupleTimeline coupleId={couple.id} />
+              )}
+              {activeSection === "songs" && (
+                <div className="space-y-6">
+                  <McPortalSongCategories coupleId={couple.id} userId="" />
+                  <div className="border-t border-gray-100 pt-6">
+                    <McPortalSongs songs={portal.songs} categories={portal.songCategories.length > 0 ? portal.songCategories : [
+                      { key: 'entry_partner1', label: 'Partner 1 Entry' },
+                      { key: 'entry_partner2', label: 'Partner 2 Entry' },
+                      { key: 'first_dance', label: 'First Dance' },
+                      { key: 'bridal_party_entry', label: 'Bridal Party Entry' },
+                      { key: 'ceremony', label: 'Ceremony' },
+                      { key: 'reception', label: 'Reception' },
+                      { key: 'avoid', label: 'Do Not Play' },
+                    ]} onEditSong={portal.openEditSong} onAddSong={portal.openAddSong} />
+                  </div>
+                </div>
+              )}
+              {activeSection === "files" && (
+                <McPortalFiles files={portal.files} />
+              )}
+            </div>
           </div>
 
           {/* Footer — edit mode only */}
@@ -587,6 +565,27 @@ export function CoupleProfile({
           )}
         </div>
       </div>
+
+      {/* Portal modals */}
+      <PersonModal
+        isOpen={portal.personModal}
+        onClose={() => { portal.setPersonModal(false); portal.setEditingPerson(null); }}
+        onSave={portal.savePerson}
+        onDelete={portal.editingPerson ? portal.deletePerson : undefined}
+        person={portal.editingPerson}
+        roleOptions={portal.personRoles}
+        coupleId={couple.id}
+        saving={portal.personSaving}
+      />
+      <SongModal
+        isOpen={portal.songModal}
+        onClose={() => { portal.setSongModal(false); portal.setEditingSong(null); }}
+        onSave={portal.saveSong}
+        onDelete={portal.editingSong ? portal.deleteSong : undefined}
+        song={portal.editingSong}
+        categoryLabel={portal.songCategoryLabel}
+        saving={portal.songSaving}
+      />
 
       <ConfirmDialog
         open={deleteConfirm}

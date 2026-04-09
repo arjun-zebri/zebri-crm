@@ -36,11 +36,13 @@ function formatTimeDisplay(t: string): string {
   return `${hour12}:${String(m).padStart(2, '0')} ${period}`
 }
 
+// 6:00 AM → 5:45 AM (next day) — covers a full wedding day
 const ALL_TIMES: string[] = []
-for (let h = 0; h < 24; h++) {
-  for (let m = 0; m < 60; m += 15) {
-    ALL_TIMES.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
-  }
+for (let i = 0; i < 96; i++) {
+  const totalMinutes = (6 * 60 + i * 15) % (24 * 60)
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  ALL_TIMES.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
 }
 
 function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {

@@ -1,6 +1,8 @@
 'use client'
 
 import { Couple, CoupleStatusRecord, LEAD_SOURCE_LABELS, LeadSource, getStatusClasses } from './couples-types'
+import { CoupleEvents } from './couple-events'
+import { CoupleVendors } from './couple-vendors'
 
 interface CoupleOverviewProps {
   couple: Couple
@@ -51,7 +53,7 @@ export function CoupleOverview({ couple, statuses }: CoupleOverviewProps) {
   ]
 
   return (
-    <div className="flex flex-col h-full gap-5">
+    <div className="space-y-8">
       {/* Fields */}
       <div>
         {fields.map(({ label, render, value }) => (
@@ -68,16 +70,24 @@ export function CoupleOverview({ couple, statuses }: CoupleOverviewProps) {
         ))}
       </div>
 
-      {/* Notes — expands to fill remaining height */}
-      <div className="flex flex-col flex-1 min-h-0 pt-2.5">
-        <span className="text-sm text-gray-400 mb-2">Notes</span>
-        <div className="flex-1">
-          {couple.notes ? (
-            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{couple.notes}</p>
-          ) : (
-            <p className="text-sm text-gray-400 italic">No notes yet.</p>
-          )}
-        </div>
+      {/* Notes */}
+      <div className="pt-2.5">
+        <span className="text-sm text-gray-400 mb-2 block">Notes</span>
+        {couple.notes ? (
+          <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{couple.notes}</p>
+        ) : (
+          <p className="text-sm text-gray-400 italic">No notes yet.</p>
+        )}
+      </div>
+
+      {/* Events */}
+      <div className="border-t border-gray-100 pt-6">
+        <CoupleEvents couple={couple} />
+      </div>
+
+      {/* Contacts */}
+      <div className="border-t border-gray-100 pt-6">
+        <CoupleVendors coupleId={couple.id} />
       </div>
     </div>
   )

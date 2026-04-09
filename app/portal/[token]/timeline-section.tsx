@@ -28,8 +28,6 @@ function anonSupabase() {
   )
 }
 
-// ─── Time picker (matches event-timeline-modal) ──────────────────────────────
-
 function formatTimeDisplay(t: string): string {
   if (!t) return 'No time'
   const [h, m] = t.split(':').map(Number)
@@ -117,8 +115,6 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
   )
 }
 
-// ─── Time helpers ────────────────────────────────────────────────────────────
-
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
@@ -130,8 +126,6 @@ function addMinutesToTime(t: string, mins: number): string {
   const m = total % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
-
-// ─── Item modal ──────────────────────────────────────────────────────────────
 
 interface ItemModalProps {
   isOpen: boolean
@@ -266,8 +260,6 @@ function ItemModal({ isOpen, onClose, onSave, onDelete, item, loading }: ItemMod
   )
 }
 
-// ─── Sortable item row ───────────────────────────────────────────────────────
-
 interface SortableRowProps {
   item: PortalTimelineItem
   onEdit: (item: PortalTimelineItem) => void
@@ -286,37 +278,55 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
   const approved = !item.pending_review
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-stretch gap-2 group">
-      <button
-        {...attributes}
-        {...listeners}
-        className="flex items-center text-gray-200 hover:text-gray-400 cursor-grab active:cursor-grabbing touch-none transition-colors opacity-0 group-hover:opacity-100 px-0.5"
-        tabIndex={-1}
-      >
-        <GripVertical size={14} strokeWidth={1.5} />
-      </button>
+    <div ref={setNodeRef} style={style} className="flex gap-3 group">
+      {/* Left column: time rail */}
+      <div className="w-16 flex flex-col items-center">
+        {/* Drag handle + time pill */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="flex items-center justify-center text-gray-300 hover:text-gray-400 cursor-grab active:cursor-grabbing transition-colors mb-2"
+          tabIndex={-1}
+          title="Drag to reorder"
+        >
+          <GripVertical size={14} strokeWidth={1.5} />
+        </button>
 
+        {/* Time pill */}
+        <div className={`text-xs font-medium tabular-nums px-2 py-1 rounded-full whitespace-nowrap ${
+          item.start_time
+            ? approved
+              ? 'bg-gray-100 text-gray-700'
+              : 'bg-gray-50 text-gray-500'
+            : 'text-gray-300'
+        }`}>
+          {item.start_time ? formatTimeDisplay(item.start_time) : '—'}
+        </div>
+
+        {/* Connecting line (bottom half) */}
+        <div className="flex-1 w-px bg-gray-100 mt-2" />
+      </div>
+
+      {/* Right column: card */}
       <div
         onClick={() => onEdit(item)}
-        className={`flex-1 relative overflow-hidden rounded-xl border bg-white hover:shadow-sm transition-all cursor-pointer ${
-          approved ? 'border-gray-200 hover:border-gray-300' : 'border-gray-200 hover:border-gray-300'
+        className={`flex-1 relative rounded-xl border bg-white hover:shadow-sm transition-all cursor-pointer mb-3 ${
+          approved ? 'border-gray-200 hover:border-gray-300' : 'border-amber-100 hover:border-amber-200 bg-amber-50'
         }`}
       >
-        <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${approved ? 'bg-gray-900' : 'bg-gray-300'}`} />
-        <div className="pl-5 pr-4 py-3.5 flex items-start gap-3">
-          <span className={`text-sm tabular-nums font-medium shrink-0 pt-0.5 w-16 ${
-            item.start_time ? (approved ? 'text-gray-900' : 'text-gray-400') : 'text-gray-300'
-          }`}>
-            {item.start_time ? formatTimeDisplay(item.start_time) : 'No time'}
-          </span>
+        <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${approved ? 'bg-gray-900' : 'bg-amber-300'}`} />
+        <div className="pl-4 pr-4 py-3 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-base font-medium text-gray-900">{item.title}</p>
+            <p className="text-sm font-semibold text-gray-900">{item.title}</p>
             {item.description && (
-              <p className="text-sm text-gray-500 mt-0.5 truncate">{item.description}</p>
+              <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+            )}
+            {item.duration_min && (
+              <p className="text-xs text-gray-400 mt-1">{item.duration_min} min</p>
             )}
           </div>
           {item.pending_review && (
-            <span className="text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5 shrink-0">
+            <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
               Pending
             </span>
           )}
@@ -326,15 +336,13 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
   )
 }
 
-// ─── Main section ────────────────────────────────────────────────────────────
-
-interface RunSheetSectionProps {
+interface TimelineSectionProps {
   token: string
   initialItems: PortalTimelineItem[]
   hasEvent: boolean
 }
 
-export function RunSheetSection({ token, initialItems, hasEvent }: RunSheetSectionProps) {
+export function TimelineSection({ token, initialItems, hasEvent }: TimelineSectionProps) {
   const [items, setItems] = useState<PortalTimelineItem[]>(initialItems)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<PortalTimelineItem | null>(null)
@@ -416,7 +424,7 @@ export function RunSheetSection({ token, initialItems, hasEvent }: RunSheetSecti
   if (!hasEvent) {
     return (
       <p className="text-sm text-gray-400 py-2">
-        Your MC will set up a run sheet for your event. Check back soon.
+        Your MC will set up a timeline for your event. Check back soon.
       </p>
     )
   }
@@ -428,26 +436,31 @@ export function RunSheetSection({ token, initialItems, hasEvent }: RunSheetSecti
     <div className="space-y-4">
       <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-3.5">
         <p className="text-sm text-gray-500">
-          Moments you add will be reviewed by your MC before going on the official run sheet. Your MC may also add items directly.
+          Moments you add will be reviewed by your MC before going on the official timeline. Your MC may also add items directly.
         </p>
       </div>
 
       {items.length > 0 && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2.5">
-              {mcItems.length > 0 && (
-                <p className="text-sm font-medium text-gray-500">Added by your MC</p>
-              )}
-              {mcItems.map((item) => (
-                <SortableRow key={item.id} item={item} onEdit={handleOpenEdit} />
-              ))}
-              {pendingItems.length > 0 && (
-                <p className="text-sm font-medium text-gray-500 mt-4">Your suggestions</p>
-              )}
-              {pendingItems.map((item) => (
-                <SortableRow key={item.id} item={item} onEdit={handleOpenEdit} />
-              ))}
+            <div className="relative pl-8">
+              {/* Vertical line behind everything */}
+              <div className="absolute left-7 top-0 bottom-0 w-px bg-gray-200" />
+
+              <div className="space-y-2">
+                {mcItems.length > 0 && (
+                  <p className="text-sm font-medium text-gray-500 pl-8">Added by your MC</p>
+                )}
+                {mcItems.map((item) => (
+                  <SortableRow key={item.id} item={item} onEdit={handleOpenEdit} />
+                ))}
+                {pendingItems.length > 0 && (
+                  <p className="text-sm font-medium text-gray-500 pl-8 mt-6">Your suggestions</p>
+                )}
+                {pendingItems.map((item) => (
+                  <SortableRow key={item.id} item={item} onEdit={handleOpenEdit} />
+                ))}
+              </div>
             </div>
           </SortableContext>
         </DndContext>

@@ -16,7 +16,7 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: tasks, isLoading: tasksLoading } = useDashboardTasks();
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
-  const [defaultTab, setDefaultTab] = useState<'overview' | 'events' | 'contacts' | 'tasks' | 'quotes' | 'invoices'>('overview');
+  const [defaultTab, setDefaultTab] = useState<'overview' | 'tasks' | 'payments'>('overview');
 
   const handleEventClick = (coupleData: { id: string; name: string }) => {
     setDefaultTab('overview');
@@ -53,7 +53,7 @@ export default function DashboardPage() {
   };
 
   const handleInvoiceCoupleClick = (coupleData: { id: string; name: string }) => {
-    setDefaultTab('invoices');
+    setDefaultTab('payments');
     setSelectedCouple({
       id: coupleData.id,
       name: coupleData.name,

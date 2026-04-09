@@ -109,17 +109,17 @@ export function FilesSection({ token, initialFiles }: FilesSectionProps) {
 
       {/* File list */}
       {files.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {files.map((file) => (
             <div
               key={file.id}
-              className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 bg-white"
+              className="flex items-center gap-3 border border-gray-200 rounded-xl px-5 py-3.5 bg-white"
             >
               <FileText size={16} strokeWidth={1.5} className="text-gray-400 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-900 truncate">{file.name}</p>
+                <p className="text-base text-gray-900 truncate">{file.name}</p>
                 {file.file_size && (
-                  <p className="text-xs text-gray-400">{formatSize(file.file_size)}</p>
+                  <p className="text-sm text-gray-500">{formatSize(file.file_size)}</p>
                 )}
               </div>
               <a
@@ -129,14 +129,14 @@ export function FilesSection({ token, initialFiles }: FilesSectionProps) {
                 className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer shrink-0"
                 title="Download"
               >
-                <Download size={14} strokeWidth={1.5} />
+                <Download size={16} strokeWidth={1.5} />
               </a>
               <button
                 onClick={() => deleteFile(file.id)}
                 className="p-1.5 text-gray-300 hover:text-red-400 transition cursor-pointer shrink-0"
                 title="Remove"
               >
-                <Trash2 size={14} strokeWidth={1.5} />
+                <Trash2 size={16} strokeWidth={1.5} />
               </button>
             </div>
           ))}

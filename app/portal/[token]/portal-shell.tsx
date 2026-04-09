@@ -1,45 +1,26 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { LayoutDashboard, Users, Users2, Clock, Music, FileText, Receipt } from 'lucide-react'
+import { PortalSectionNav } from '@/app/(dashboard)/couples/portal-section-nav'
+import { OverviewSection } from './overview-section'
 import { NamesSection } from './names-section'
-import { RunSheetSection } from './run-sheet-section'
+import { TimelineSection } from './timeline-section'
+import { ContactsSection } from './contacts-section'
 import { SongsSection } from './songs-section'
+import { PaymentsSection } from './payments-section'
 import { FilesSection } from './files-section'
 import type { PortalData } from './page'
 
-interface SectionCardProps {
-  title: string
-  subtitle: string
-  open: boolean
-  onToggle: () => void
-  children: React.ReactNode
-}
-
-function SectionCard({ title, subtitle, open, onToggle, children }: SectionCardProps) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition cursor-pointer"
-      >
-        <div>
-          <p className="text-sm font-semibold text-gray-900">{title}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
-        </div>
-        {open
-          ? <ChevronUp size={16} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-          : <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-        }
-      </button>
-      {open && (
-        <div className="border-t border-gray-100 px-6 py-5">
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
+const SECTIONS = [
+  { id: 'overview', label: 'Overview', icon: <LayoutDashboard />, subtitle: 'Your details and upcoming events' },
+  { id: 'timeline', label: 'Timeline', icon: <Clock />, subtitle: 'Key moments and timing for your day' },
+  { id: 'contacts', label: 'Contacts', icon: <Users2 />, subtitle: 'Vendor contacts for your wedding' },
+  { id: 'payments', label: 'Payments', icon: <Receipt />, subtitle: 'Quotes and invoices' },
+  { id: 'names', label: 'Names', icon: <Users />, subtitle: 'Help your MC say every name perfectly' },
+  { id: 'songs', label: 'Songs', icon: <Music />, subtitle: 'Music for each part of your ceremony and reception' },
+  { id: 'files', label: 'Files', icon: <FileText />, subtitle: 'Contracts, seating charts, photos — anything your MC needs' },
+]
 
 interface PortalShellProps {
   token: string
@@ -47,52 +28,57 @@ interface PortalShellProps {
 }
 
 export function PortalShell({ token, initialData }: PortalShellProps) {
-  const [openSection, setOpenSection] = useState<string | null>('names')
-
-  const toggle = (section: string) =>
-    setOpenSection((prev) => (prev === section ? null : section))
+  const [activeSection, setActiveSection] = useState('overview')
+  const active = SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0]
 
   return (
-    <div className="pt-6 space-y-3">
-      <SectionCard
-        title="Names & Pronunciations"
-        subtitle="Help your MC say every name perfectly"
-        open={openSection === 'names'}
-        onToggle={() => toggle('names')}
-      >
-        <NamesSection token={token} initialPeople={initialData.people} />
-      </SectionCard>
+    <div className="flex flex-col md:flex-row gap-6 pt-6">
+      <PortalSectionNav
+        sections={SECTIONS.map((s) => ({
+          id: s.id,
+          label: s.label,
+          icon: s.icon,
+          count: s.id === 'overview' ? initialData.events.length
+            : s.id === 'timeline' ? initialData.timeline_items.length
+            : s.id === 'contacts' ? initialData.contacts.length
+            : s.id === 'payments' ? (initialData.payments.quotes.length + initialData.payments.invoices.length)
+            : s.id === 'names' ? initialData.people.length
+            : s.id === 'songs' ? initialData.songs.length
+            : s.id === 'files' ? initialData.files.length
+            : undefined,
+        }))}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+      />
 
-      <SectionCard
-        title="Run Sheet"
-        subtitle="Key moments and timing for your day"
-        open={openSection === 'runsheet'}
-        onToggle={() => toggle('runsheet')}
-      >
-        <RunSheetSection
-          token={token}
-          initialItems={initialData.timeline_items}
-          hasEvent={!!initialData.event}
-        />
-      </SectionCard>
+      <div className="flex-1 min-w-0">
+        <div className="mb-5">
+          <h2 className="text-lg font-semibold text-gray-900">{active.label}</h2>
+          <p className="text-sm text-gray-500 mt-0.5">{active.subtitle}</p>
+        </div>
 
-      <SectionCard
-        title="Song Requests"
-        subtitle="Music for each part of your ceremony and reception"
-        open={openSection === 'songs'}
-        onToggle={() => toggle('songs')}
-      >
-        <SongsSection token={token} initialSongs={initialData.songs} />
-      </SectionCard>
-
-      <SectionCard
-        title="Files & Documents"
-        subtitle="Contracts, seating charts, photos — anything your MC needs"
-        open={openSection === 'files'}
-        onToggle={() => toggle('files')}
-      >
-        <FilesSection token={token} initialFiles={initialData.files} />
-      </SectionCard>
+        {activeSection === 'overview' && (
+          <OverviewSection coupleName={initialData.couple_name} coupleEmail={initialData.couple_email} events={initialData.events} />
+        )}
+        {activeSection === 'timeline' && (
+          <TimelineSection token={token} initialItems={initialData.timeline_items} hasEvent={!!initialData.event} />
+        )}
+        {activeSection === 'contacts' && (
+          <ContactsSection token={token} initialContacts={initialData.contacts} />
+        )}
+        {activeSection === 'payments' && (
+          <PaymentsSection payments={initialData.payments} />
+        )}
+        {activeSection === 'names' && (
+          <NamesSection token={token} initialPeople={initialData.people} />
+        )}
+        {activeSection === 'songs' && (
+          <SongsSection token={token} initialSongs={initialData.songs} initialCategories={initialData.song_categories} />
+        )}
+        {activeSection === 'files' && (
+          <FilesSection token={token} initialFiles={initialData.files} />
+        )}
+      </div>
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { Plus, Trash2, Music, Pencil } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Modal } from '@/components/ui/modal'
-import type { PortalSong } from './page'
+import type { PortalSong, PortalSongCategory } from './page'
 
 function anonSupabase() {
   return createBrowserClient(
@@ -13,7 +13,7 @@ function anonSupabase() {
   )
 }
 
-const SONG_CATEGORIES: { key: string; label: string; description: string }[] = [
+const DEFAULT_SONG_CATEGORIES: { key: string; label: string; description: string }[] = [
   { key: 'entry_partner1', label: 'Partner 1 Entry', description: 'Song playing as Partner 1 enters' },
   { key: 'entry_partner2', label: 'Partner 2 Entry', description: 'Song playing as Partner 2 enters' },
   { key: 'first_dance', label: 'First Dance', description: 'Your first dance as a married couple' },
@@ -152,7 +152,7 @@ function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, sav
 }
 
 interface CategoryGroupProps {
-  category: { key: string; label: string; description: string }
+  category: { key: string; label: string; description: string | null }
   songs: PortalSong[]
   onAdd: () => void
   onEdit: (song: PortalSong) => void
@@ -162,37 +162,37 @@ function CategoryGroup({ category, songs, onAdd, onEdit }: CategoryGroupProps) {
   const categorySongs = songs.filter((s) => s.category === category.key)
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-700">{category.label}</p>
-          <p className="text-xs text-gray-400">{category.description}</p>
+          <p className="text-sm font-medium text-gray-500">{category.label}</p>
+          <p className="text-sm text-gray-400">{category.description}</p>
         </div>
         <button
           onClick={onAdd}
-          className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition cursor-pointer shrink-0"
+          className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1 transition cursor-pointer shrink-0"
         >
-          <Plus size={12} strokeWidth={1.5} />
+          <Plus size={14} strokeWidth={1.5} />
           Add
         </button>
       </div>
 
       {categorySongs.length === 0 ? (
-        <div className="border border-dashed border-gray-200 rounded-xl py-3 flex items-center justify-center gap-1.5">
-          <Music size={13} strokeWidth={1.5} className="text-gray-300" />
-          <span className="text-xs text-gray-300">No songs yet</span>
+        <div className="border border-dashed border-gray-200 rounded-xl py-3.5 flex items-center justify-center gap-1.5">
+          <Music size={14} strokeWidth={1.5} className="text-gray-300" />
+          <span className="text-sm text-gray-300">No songs yet</span>
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           {categorySongs.map((s) => (
             <div
               key={s.id}
-              className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-2.5 bg-white hover:border-gray-300 transition cursor-pointer"
+              className="flex items-center gap-3 border border-gray-200 rounded-xl px-5 py-3.5 bg-white hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer"
               onClick={() => onEdit(s)}
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">{s.title}</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-base font-medium text-gray-900">{s.title}</p>
+                <p className="text-sm text-gray-500">
                   {[s.artist, s.notes].filter(Boolean).join(' · ')}
                 </p>
               </div>
@@ -208,16 +208,18 @@ function CategoryGroup({ category, songs, onAdd, onEdit }: CategoryGroupProps) {
 interface SongsSectionProps {
   token: string
   initialSongs: PortalSong[]
+  initialCategories: PortalSongCategory[]
 }
 
-export function SongsSection({ token, initialSongs }: SongsSectionProps) {
+export function SongsSection({ token, initialSongs, initialCategories }: SongsSectionProps) {
+  const categories = initialCategories.length > 0 ? initialCategories : DEFAULT_SONG_CATEGORIES
   const [songs, setSongs] = useState<PortalSong[]>(initialSongs)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingSong, setEditingSong] = useState<PortalSong | null>(null)
-  const [modalCategory, setModalCategory] = useState(SONG_CATEGORIES[0])
+  const [modalCategory, setModalCategory] = useState(categories[0])
   const [saving, setSaving] = useState(false)
 
-  const openAdd = (category: typeof SONG_CATEGORIES[0]) => {
+  const openAdd = (category: typeof categories[0]) => {
     setEditingSong(null)
     setModalCategory(category)
     setModalOpen(true)
@@ -225,7 +227,7 @@ export function SongsSection({ token, initialSongs }: SongsSectionProps) {
 
   const openEdit = (song: PortalSong) => {
     setEditingSong(song)
-    setModalCategory(SONG_CATEGORIES.find((c) => c.key === song.category) ?? SONG_CATEGORIES[0])
+    setModalCategory(categories.find((c) => c.key === song.category) ?? categories[0])
     setModalOpen(true)
   }
 
@@ -286,7 +288,7 @@ export function SongsSection({ token, initialSongs }: SongsSectionProps) {
 
   return (
     <div className="space-y-6 divide-y divide-gray-100">
-      {SONG_CATEGORIES.map((cat, i) => (
+      {categories.map((cat, i) => (
         <div key={cat.key} className={i > 0 ? 'pt-6' : ''}>
           <CategoryGroup
             category={cat}

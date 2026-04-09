@@ -284,20 +284,20 @@ interface PersonRowProps {
 function PersonRow({ person, onEdit }: PersonRowProps) {
   return (
     <div
-      className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 bg-white hover:border-gray-300 transition cursor-pointer"
+      className="flex items-center gap-3 border border-gray-200 rounded-xl px-5 py-3.5 bg-white hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer"
       onClick={onEdit}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium text-gray-900">{person.full_name || 'Unnamed'}</p>
+          <p className="text-base font-medium text-gray-900">{person.full_name || 'Unnamed'}</p>
           {person.role && (
-            <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+            <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2.5 py-0.5">
               {person.role}
             </span>
           )}
         </div>
         {person.phonetic && (
-          <p className="text-xs text-gray-400 mt-0.5 font-mono">{person.phonetic}</p>
+          <p className="text-sm text-gray-500 mt-0.5 font-mono">{person.phonetic}</p>
         )}
       </div>
       {person.audio_url && (
@@ -406,10 +406,10 @@ export function NamesSection({ token, initialPeople }: NamesSectionProps) {
   const family = people.filter((p) => p.category === 'family')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Partners */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Partners</p>
+      <div className="space-y-2.5">
+        <p className="text-sm font-medium text-gray-500">Partners</p>
         {partners.map((p) => (
           <PersonRow key={p.id} person={p} onEdit={() => openEdit(p, PARTNER_ROLES)} />
         ))}
@@ -423,8 +423,8 @@ export function NamesSection({ token, initialPeople }: NamesSectionProps) {
       </div>
 
       {/* Bridal Party */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Bridal Party</p>
+      <div className="space-y-2.5">
+        <p className="text-sm font-medium text-gray-500">Bridal Party</p>
         {bridalParty.map((p) => (
           <PersonRow key={p.id} person={p} onEdit={() => openEdit(p, BRIDAL_ROLES)} />
         ))}
@@ -438,8 +438,8 @@ export function NamesSection({ token, initialPeople }: NamesSectionProps) {
       </div>
 
       {/* Family */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Family Members</p>
+      <div className="space-y-2.5">
+        <p className="text-sm font-medium text-gray-500">Family Members</p>
         {family.map((p) => (
           <PersonRow key={p.id} person={p} onEdit={() => openEdit(p, FAMILY_ROLES)} />
         ))}

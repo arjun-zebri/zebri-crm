@@ -39,14 +39,65 @@ export interface PortalTimelineItem {
   pending_review: boolean
 }
 
+export interface PortalEvent {
+  id: string
+  date: string
+  venue: string | null
+  status: string
+}
+
+export interface PortalContact {
+  id: string
+  name: string
+  category: string | null
+  email: string | null
+  phone: string | null
+}
+
+export interface PortalQuote {
+  id: string
+  title: string
+  quote_number: string
+  status: string
+  subtotal: number
+  share_token: string | null
+  share_token_enabled: boolean
+}
+
+export interface PortalInvoice {
+  id: string
+  title: string
+  invoice_number: string
+  status: string
+  subtotal: number
+  due_date: string | null
+  share_token: string | null
+  share_token_enabled: boolean
+}
+
+export interface PortalSongCategory {
+  key: string
+  label: string
+  description: string | null
+  position: number
+}
+
 export interface PortalData {
   couple_id: string
   couple_name: string
+  couple_email: string | null
   event: { id: string; date: string; venue: string } | null
+  events: PortalEvent[]
   people: PortalPerson[]
+  contacts: PortalContact[]
   songs: PortalSong[]
+  song_categories: PortalSongCategory[]
   files: PortalFile[]
   timeline_items: PortalTimelineItem[]
+  payments: {
+    quotes: PortalQuote[]
+    invoices: PortalInvoice[]
+  }
 }
 
 function formatEventDate(dateStr: string): string {
@@ -89,7 +140,7 @@ export default async function PortalPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 pb-20">
+      <div className="max-w-4xl mx-auto px-4 pb-20">
 
         {/* Logo */}
         <div className="pt-10 pb-2">
