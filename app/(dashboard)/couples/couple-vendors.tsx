@@ -4,8 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS } from '../contacts/contacts-types'
-import { Badge } from '@/components/ui/badge'
-import { X } from 'lucide-react'
+import { Trash2, Plus } from 'lucide-react'
 import { ContactPicker } from './contact-picker'
 
 interface CoupleVendorsProps {
@@ -92,46 +91,39 @@ export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Header */}
+      <button
+        onClick={() => setShowAddVendor(true)}
+        className="group flex items-center gap-1.5 mb-1 cursor-pointer"
+      >
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">Contacts</h3>
+        <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
+      </button>
+
       {!vendors || vendors.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-sm text-gray-500 mb-3">No contacts assigned yet.</p>
-          <button
-            onClick={() => setShowAddVendor(true)}
-            className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
-          >
-            + Add Contact
-          </button>
-        </div>
+        <p className="text-sm text-gray-300 py-1">No contacts added yet</p>
       ) : (
-        <>
-          <div className="space-y-2">
-            {vendors.map((link) => (
-              <div
-                key={link.id}
-                className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:bg-gray-50"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{link.vendor.name}</p>
-                  <p className="text-xs text-gray-500">{CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}</p>
-                </div>
-                <button
-                  onClick={() => removeVendor.mutate(link.id)}
-                  disabled={removeVendor.isPending}
-                  className="p-1 text-gray-400 hover:text-red-600 transition disabled:opacity-50"
-                >
-                  <X size={16} strokeWidth={1.5} />
-                </button>
+        <div className="space-y-0">
+          {vendors.map((link) => (
+            <div
+              key={link.id}
+              className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2 transition"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-500">{link.vendor.name}</p>
+                <p className="text-xs text-gray-400">{CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}</p>
               </div>
-            ))}
-          </div>
-          <button
-            onClick={() => setShowAddVendor(true)}
-            className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
-          >
-            + Add Contact
-          </button>
-        </>
+              <button
+                onClick={() => removeVendor.mutate(link.id)}
+                disabled={removeVendor.isPending}
+                className="p-1 text-gray-400 hover:text-red-500 transition disabled:opacity-50 opacity-0 group-hover:opacity-100"
+              >
+                <Trash2 size={14} strokeWidth={1.5} />
+              </button>
+            </div>
+          ))}
+        </div>
       )}
 
       {showAddVendor && (

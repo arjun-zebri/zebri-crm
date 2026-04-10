@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
-import { Edit2, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Plus } from 'lucide-react'
 import { Event } from '../events/events-types'
 import { EventModal } from './event-modal'
 import { Couple } from './couples-types'
@@ -207,63 +207,39 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
   return (
     <>
       <div className="space-y-3">
+        {/* Header */}
+        <button
+          onClick={() => {
+            setEditingEvent(undefined)
+            setEditingVendorIds([])
+            setShowModal(true)
+          }}
+          className="group flex items-center gap-1.5 mb-1 cursor-pointer"
+        >
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">Events</h3>
+          <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
+        </button>
+
         {!events || events.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-gray-500 mb-3">No events yet.</p>
-            <button
-              onClick={() => {
-                setEditingEvent(undefined)
-                setEditingVendorIds([])
-                setShowModal(true)
-              }}
-              className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
-            >
-              + Add Event
-            </button>
-          </div>
+          <p className="text-sm text-gray-300 py-1">No events added yet</p>
         ) : (
-          <>
-            <div className="space-y-2">
-              {events.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:bg-gray-50"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{formatDate(event.date)}</p>
-                    {event.venue && (
-                      <p className="text-xs text-gray-500">{event.venue}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleEditEvent(event)}
-                      className="p-1 text-gray-400 hover:text-gray-600 transition cursor-pointer"
-                    >
-                      <Edit2 size={16} strokeWidth={1.5} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteEvent(event.id)}
-                      disabled={loading}
-                      className="p-1 text-gray-400 hover:text-red-600 transition cursor-pointer"
-                    >
-                      <Trash2 size={16} strokeWidth={1.5} />
-                    </button>
-                  </div>
+          <div className="space-y-0">
+            {events.map((event) => (
+              <div
+                key={event.id}
+                onClick={() => handleEditEvent(event)}
+                className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2 transition cursor-pointer"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-500">{formatDate(event.date)}</p>
+                  {event.venue && (
+                    <p className="text-xs text-gray-400">{event.venue}</p>
+                  )}
                 </div>
-              ))}
-            </div>
-            <button
-              onClick={() => {
-                setEditingEvent(undefined)
-                setEditingVendorIds([])
-                setShowModal(true)
-              }}
-              className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
-            >
-              + Add Event
-            </button>
-          </>
+                <Pencil size={11} strokeWidth={1.5} className="text-gray-400 opacity-0 group-hover:opacity-60 shrink-0" />
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -302,7 +278,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
                   <button
                     onClick={() => setDeleteConfirm(null)}
                     disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                    className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-100 transition cursor-pointer disabled:opacity-50"
                   >
                     Cancel
                   </button>

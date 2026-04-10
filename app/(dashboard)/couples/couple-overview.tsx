@@ -1,94 +1,224 @@
-'use client'
+"use client";
 
-import { Couple, CoupleStatusRecord, LEAD_SOURCE_LABELS, LeadSource, getStatusClasses } from './couples-types'
-import { CoupleEvents } from './couple-events'
-import { CoupleVendors } from './couple-vendors'
+import { useState } from "react";
+import { Pencil } from "lucide-react";
+import * as Popover from "@radix-ui/react-popover";
+import {
+  Couple,
+  LEAD_SOURCE_LABELS,
+  LeadSource,
+  LEAD_SOURCES,
+} from "./couples-types";
+import { CoupleEvents } from "./couple-events";
+import { CoupleVendors } from "./couple-vendors";
 
 interface CoupleOverviewProps {
-  couple: Couple
-  statuses: CoupleStatusRecord[]
+  couple: Couple;
+  onSave: (
+    data: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
+  ) => void;
 }
 
-export function CoupleOverview({ couple, statuses }: CoupleOverviewProps) {
-  const status = statuses.find(s => s.slug === couple.status)
-  const statusName = status?.name || couple.status.charAt(0).toUpperCase() + couple.status.slice(1)
-  const statusClasses = status ? getStatusClasses(status.color) : getStatusClasses('gray')
-  const leadSourceLabel = couple.lead_source
-    ? LEAD_SOURCE_LABELS[couple.lead_source as LeadSource] ?? couple.lead_source
-    : null
+export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
+  const [editingField, setEditingField] = useState<
+    "phone" | "email" | "leadSource" | "notes" | null
+  >(null);
+  const [phone, setPhone] = useState(couple.phone);
+  const [email, setEmail] = useState(couple.email);
+  const [leadSource, setLeadSource] = useState(couple.lead_source || "");
+  const [notes, setNotes] = useState(couple.notes);
+  const [leadSourceOpen, setLeadSourceOpen] = useState(false);
 
-  const fields = [
-    {
-      label: 'Phone',
-      render: couple.phone ? (
-        <a href={`tel:${couple.phone}`} className="text-sm text-gray-900 hover:text-blue-600 transition">
-          {couple.phone}
-        </a>
-      ) : null,
-      value: couple.phone || null,
-    },
-    {
-      label: 'Email',
-      render: couple.email ? (
-        <a href={`mailto:${couple.email}`} className="text-sm text-gray-900 hover:text-blue-600 transition truncate max-w-[60%] text-right">
-          {couple.email}
-        </a>
-      ) : null,
-      value: couple.email || null,
-    },
-    {
-      label: 'Status',
-      render: (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}>
-          {statusName}
-        </span>
-      ),
-      value: 'status',
-    },
-    {
-      label: 'Lead source',
-      render: null,
-      value: leadSourceLabel,
-    },
-  ]
+  const leadSourceLabel = leadSource
+    ? LEAD_SOURCE_LABELS[leadSource as LeadSource] ?? leadSource
+    : null;
+
+  const handleSaveField = (field: string, value: string | null) => {
+    setEditingField(null);
+    onSave({
+      id: couple.id,
+      name: couple.name,
+      email: field === "email" ? (value ?? "") : email,
+      phone: field === "phone" ? (value ?? "") : phone,
+      status: couple.status,
+      lead_source: field === "leadSource" ? value : leadSource || null,
+      notes: field === "notes" ? (value ?? "") : notes,
+      event_date: couple.event_date,
+      venue: couple.venue,
+    });
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Fields */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+      {/* Column 1: General Info */}
       <div>
-        {fields.map(({ label, render, value }) => (
-          <div key={label} className="flex items-center justify-between py-2.5 border-b border-gray-50">
-            <span className="text-sm text-gray-400 shrink-0">{label}</span>
-            {render ? (
-              render
-            ) : value ? (
-              <span className="text-sm text-gray-900">{value}</span>
-            ) : (
-              <span className="text-sm text-gray-300">—</span>
-            )}
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">General</h3>
+
+        {/* Phone */}
+        <div className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2">
+          <span className="text-sm text-gray-700 w-28 shrink-0">Phone</span>
+          <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              onFocus={() => setEditingField("phone")}
+              onBlur={() => handleSaveField("phone", phone)}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              placeholder="+61 400 000 000"
+              className="flex-1 text-right bg-transparent outline-none border-none text-sm text-gray-500 placeholder:text-gray-300 cursor-pointer focus:cursor-text"
+            />
+            <Pencil
+              size={11}
+              className={`shrink-0 text-gray-400 transition ${editingField === "phone" ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
+            />
           </div>
-        ))}
+        </div>
+
+        {/* Email */}
+        <div className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2">
+          <span className="text-sm text-gray-700 w-28 shrink-0">Email</span>
+          <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onFocus={() => setEditingField("email")}
+              onBlur={() => handleSaveField("email", email)}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              placeholder="email@example.com"
+              className="flex-1 text-right bg-transparent outline-none border-none text-sm text-gray-500 placeholder:text-gray-300 cursor-pointer focus:cursor-text"
+            />
+            <Pencil
+              size={11}
+              className={`shrink-0 text-gray-400 transition ${editingField === "email" ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
+            />
+          </div>
+        </div>
+
+        {/* Lead Source */}
+        <div
+          className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2 cursor-pointer"
+          onClick={() => {
+            if (editingField !== "leadSource") {
+              setEditingField("leadSource");
+              setLeadSourceOpen(true);
+            }
+          }}
+        >
+          <span className="text-sm text-gray-700 w-28 shrink-0">
+            Lead source
+          </span>
+          {editingField === "leadSource" ? (
+            <Popover.Root
+              open={leadSourceOpen}
+              onOpenChange={(open) => {
+                setLeadSourceOpen(open);
+                if (!open) setEditingField(null);
+              }}
+            >
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="flex-1 flex items-center justify-end gap-1 text-sm bg-transparent outline-none border-none cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className={leadSource ? "text-gray-900" : "text-gray-400"}>
+                    {leadSource
+                      ? LEAD_SOURCE_LABELS[leadSource as LeadSource]
+                      : "Select source"}
+                  </span>
+                  <Pencil size={11} className="opacity-60 shrink-0 text-gray-500" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-48"
+                  sideOffset={4}
+                  align="end"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLeadSource("");
+                      handleSaveField("leadSource", null);
+                      setLeadSourceOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm transition ${
+                      !leadSource
+                        ? "bg-gray-100 text-gray-900 font-medium"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    None
+                  </button>
+                  {LEAD_SOURCES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setLeadSource(s);
+                        handleSaveField("leadSource", s);
+                        setLeadSourceOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                        leadSource === s
+                          ? "bg-gray-100 text-gray-900 font-medium"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {LEAD_SOURCE_LABELS[s]}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          ) : (
+            <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
+              {leadSourceLabel ? (
+                <span className="text-sm text-gray-500">{leadSourceLabel}</span>
+              ) : (
+                <span className="text-sm text-gray-300">—</span>
+              )}
+              <Pencil
+                size={11}
+                className="opacity-0 group-hover:opacity-60 shrink-0 text-gray-400"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Notes */}
+        <div className="group py-3 rounded-xl -mx-2 px-2">
+          <div className="flex items-start justify-between">
+            <span className="text-sm text-gray-700 w-28 shrink-0 pt-0.5">Notes</span>
+            <Pencil
+              size={11}
+              className={`shrink-0 mt-1 text-gray-500 transition ${editingField === "notes" ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
+            />
+          </div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            onFocus={() => setEditingField("notes")}
+            onBlur={() => handleSaveField("notes", notes)}
+            placeholder="Any additional notes..."
+            rows={editingField === "notes" ? 4 : undefined}
+            className="w-full bg-transparent outline-none border-none resize-none mt-1 text-sm text-gray-500 placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed"
+          />
+        </div>
       </div>
 
-      {/* Notes */}
-      <div className="pt-2.5">
-        <span className="text-sm text-gray-400 mb-2 block">Notes</span>
-        {couple.notes ? (
-          <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{couple.notes}</p>
-        ) : (
-          <p className="text-sm text-gray-400 italic">No notes yet.</p>
-        )}
-      </div>
+      {/* Column 2: Events & Contacts */}
+      <div className="space-y-8">
+        <div>
+          <CoupleEvents couple={couple} />
+        </div>
 
-      {/* Events */}
-      <div className="border-t border-gray-100 pt-6">
-        <CoupleEvents couple={couple} />
-      </div>
-
-      {/* Contacts */}
-      <div className="border-t border-gray-100 pt-6">
-        <CoupleVendors coupleId={couple.id} />
+        <div>
+          <CoupleVendors coupleId={couple.id} />
+        </div>
       </div>
     </div>
-  )
+  );
 }

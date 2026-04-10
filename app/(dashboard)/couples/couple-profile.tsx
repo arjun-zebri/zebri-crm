@@ -2,9 +2,22 @@
 
 import { useState, useEffect } from "react";
 import {
-  X, Phone, Mail, Pencil, ChevronDown, Link2, Check, Copy,
-  LayoutDashboard, CheckSquare, FileText, Receipt,
-  Users, Clock, Music, Paperclip,
+  X,
+  Phone,
+  Mail,
+  Trash2,
+  ChevronDown,
+  Link2,
+  Check,
+  Copy,
+  LayoutDashboard,
+  CheckSquare,
+  FileText,
+  Receipt,
+  Users,
+  Clock,
+  Music,
+  Paperclip,
 } from "lucide-react";
 import { PiWhatsappLogoLight } from "react-icons/pi";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,16 +43,43 @@ import { McPortalFiles } from "./mc-portal-files";
 import { CoupleTimeline } from "./couple-timeline";
 import { McPortalSongCategories } from "./mc-portal-song-categories";
 
-type Section = "overview" | "tasks" | "payments" | "names" | "timeline" | "songs" | "files";
+type Section =
+  | "overview"
+  | "tasks"
+  | "payments"
+  | "names"
+  | "timeline"
+  | "songs"
+  | "files";
 
 const NAV_ITEMS: { key: Section; label: string; icon: React.ReactNode }[] = [
-  { key: "overview", label: "Overview", icon: <LayoutDashboard size={18} strokeWidth={1.5} /> },
-  { key: "tasks", label: "Tasks", icon: <CheckSquare size={18} strokeWidth={1.5} /> },
-  { key: "payments", label: "Payments", icon: <Receipt size={18} strokeWidth={1.5} /> },
+  {
+    key: "overview",
+    label: "Overview",
+    icon: <LayoutDashboard size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: "tasks",
+    label: "Tasks",
+    icon: <CheckSquare size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: "payments",
+    label: "Payments",
+    icon: <Receipt size={18} strokeWidth={1.5} />,
+  },
   { key: "names", label: "Names", icon: <Users size={18} strokeWidth={1.5} /> },
-  { key: "timeline", label: "Timeline", icon: <Clock size={18} strokeWidth={1.5} /> },
+  {
+    key: "timeline",
+    label: "Timeline",
+    icon: <Clock size={18} strokeWidth={1.5} />,
+  },
   { key: "songs", label: "Songs", icon: <Music size={18} strokeWidth={1.5} /> },
-  { key: "files", label: "Files", icon: <Paperclip size={18} strokeWidth={1.5} /> },
+  {
+    key: "files",
+    label: "Files",
+    icon: <Paperclip size={18} strokeWidth={1.5} />,
+  },
 ];
 
 interface CoupleProfileProps {
@@ -64,9 +104,12 @@ export function CoupleProfile({
   const supabase = createClient();
   const queryClient = useQueryClient();
   const { data: statuses } = useCoupleStatuses();
-  const [mode, setMode] = useState<"view" | "edit">("view");
   const [activeSection, setActiveSection] = useState<Section>(defaultTab);
   const [portalOpen, setPortalOpen] = useState(false);
+
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
   const [copied, setCopied] = useState<"couple" | "vendor" | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
@@ -94,30 +137,14 @@ export function CoupleProfile({
     setTimeout(() => setCopied(null), 2000);
   };
 
-  // Form state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [status, setStatus] = useState("");
-  const [leadSource, setLeadSource] = useState("");
-  const [notes, setNotes] = useState("");
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [leadSourceOpen, setLeadSourceOpen] = useState(false);
-
   useEffect(() => {
     setActiveSection(defaultTab);
   }, [defaultTab]);
 
   useEffect(() => {
     if (couple) {
-      setName(couple.name);
-      setEmail(couple.email);
-      setPhone(couple.phone);
-      setStatus(couple.status);
-      setLeadSource(couple.lead_source || "");
-      setNotes(couple.notes);
+      setNameInput(couple.name);
     }
-    setMode("view");
     setActiveSection(defaultTab);
     setDeleteConfirm(false);
   }, [couple]);
@@ -148,35 +175,25 @@ export function CoupleProfile({
     ? getStatusClasses(currentStatus.color)
     : getStatusClasses("gray");
 
-  const inputClass =
-    "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition";
-
-  const handleSave = () => {
-    if (!name.trim()) return;
+  const handleSaveName = () => {
+    if (!nameInput.trim()) {
+      setNameInput(couple.name);
+      setEditingName(false);
+      return;
+    }
+    setEditingName(false);
     onSave({
       id: couple.id,
-      name,
-      email,
-      phone,
-      status,
-      lead_source: leadSource || null,
-      notes,
+      name: nameInput,
+      email: couple.email,
+      phone: couple.phone,
+      status: couple.status,
+      lead_source: couple.lead_source,
+      notes: couple.notes,
       event_date: couple.event_date,
       venue: couple.venue,
     });
   };
-
-  const handleCancel = () => {
-    setName(couple.name);
-    setEmail(couple.email);
-    setPhone(couple.phone);
-    setStatus(couple.status);
-    setLeadSource(couple.lead_source || "");
-    setNotes(couple.notes);
-    setMode("view");
-  };
-
-  const selectedStatus = statuses.find((s) => s.slug === status);
 
   return (
     <>
@@ -197,144 +214,231 @@ export function CoupleProfile({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Compact header */}
-          <div className="shrink-0 border-b border-gray-100 px-6 py-3.5">
+          <div className="shrink-0 border-b border-gray-200 px-6 py-3.5">
             <div className="flex items-center gap-4">
               {/* Name + status inline */}
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <h2 className="text-lg font-semibold text-gray-900 truncate">
-                  {couple.name}
-                </h2>
-                {mode === "view" && (
-                  <span
-                    className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${statusClasses.pill}`}
+                {editingName ? (
+                  <input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    onBlur={handleSaveName}
+                    onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-lg font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition"
+                    autoFocus
+                  />
+                ) : (
+                  <button
+                    onClick={() => setEditingName(true)}
+                    className="text-lg font-semibold text-gray-900 truncate hover:text-blue-600 transition cursor-pointer text-left"
                   >
-                    {statusName}
-                  </span>
+                    {couple.name}
+                  </button>
                 )}
-              </div>
-
-              {/* Action buttons — view mode */}
-              {mode === "view" && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <a
-                    href={hasPhone ? `tel:${couple.phone}` : undefined}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm border rounded-xl transition ${
-                      hasPhone
-                        ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
-                        : "text-gray-300 border-gray-100 cursor-not-allowed"
-                    }`}
-                    onClick={hasPhone ? undefined : (e) => e.preventDefault()}
-                  >
-                    <Phone size={14} strokeWidth={1.5} />
-                    <span>Call</span>
-                  </a>
-                  <a
-                    href={hasEmail ? `mailto:${couple.email}` : undefined}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm border rounded-xl transition ${
-                      hasEmail
-                        ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
-                        : "text-gray-300 border-gray-100 cursor-not-allowed"
-                    }`}
-                    onClick={hasEmail ? undefined : (e) => e.preventDefault()}
-                  >
-                    <Mail size={14} strokeWidth={1.5} />
-                    <span>Email</span>
-                  </a>
-                  <a
-                    href={
-                      hasPhone
-                        ? `https://wa.me/${couple.phone.replace(/\D/g, "")}`
-                        : undefined
-                    }
-                    target={hasPhone ? "_blank" : undefined}
-                    rel={hasPhone ? "noopener noreferrer" : undefined}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm border rounded-xl transition ${
-                      hasPhone
-                        ? "text-gray-700 border-gray-200 hover:bg-gray-50 cursor-pointer"
-                        : "text-gray-300 border-gray-100 cursor-not-allowed"
-                    }`}
-                    onClick={hasPhone ? undefined : (e) => e.preventDefault()}
-                  >
-                    <PiWhatsappLogoLight size={16} />
-                    <span>WhatsApp</span>
-                  </a>
-
-                  {/* Portal link button */}
-                  <Popover.Root open={portalOpen} onOpenChange={setPortalOpen}>
-                    <Popover.Trigger asChild>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition cursor-pointer">
-                        <Link2 size={14} strokeWidth={1.5} />
-                        <span>Portal</span>
-                      </button>
-                    </Popover.Trigger>
-                    <Popover.Portal>
-                      <Popover.Content
-                        className="bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-[70] w-72 space-y-3"
-                        sideOffset={6}
-                        align="end"
-                      >
-                        {/* Toggle */}
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">Couple portal</p>
-                            <p className="text-xs text-gray-400">
-                              {couple.portal_token_enabled ? "Link is active" : "Link is disabled"}
-                            </p>
-                          </div>
+                <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
+                  <Popover.Trigger asChild>
+                    <button
+                      className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer transition hover:opacity-80 ${statusClasses.pill}`}
+                    >
+                      {statusName}
+                    </button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content
+                      className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-44"
+                      sideOffset={4}
+                      align="start"
+                    >
+                      {statuses.map((s) => {
+                        const cls = getStatusClasses(s.color);
+                        return (
                           <button
-                            onClick={() => togglePortal.mutate(!couple.portal_token_enabled)}
-                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                              couple.portal_token_enabled ? "bg-black" : "bg-gray-200"
+                            key={s.slug}
+                            onClick={() => {
+                              onSave({
+                                id: couple.id,
+                                name: couple.name,
+                                email: couple.email,
+                                phone: couple.phone,
+                                status: s.slug,
+                                lead_source: couple.lead_source,
+                                notes: couple.notes,
+                                event_date: couple.event_date,
+                                venue: couple.venue,
+                              });
+                              setStatusOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm transition flex items-center gap-2 ${
+                              couple.status === s.slug
+                                ? "bg-gray-100 font-medium text-gray-900"
+                                : "text-gray-700 hover:bg-gray-50"
                             }`}
                           >
                             <span
-                              className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
-                                couple.portal_token_enabled ? "translate-x-4" : "translate-x-0"
-                              }`}
+                              className={`inline-block w-2 h-2 rounded-full ${cls.dot}`}
                             />
+                            {s.name}
                           </button>
-                        </div>
+                        );
+                      })}
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
+              </div>
 
-                        {/* Copy links */}
-                        <div className="space-y-2 pt-1 border-t border-gray-100">
-                          <button
-                            onClick={() => copyLink("couple")}
-                            disabled={!couple.portal_token}
-                            className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
-                          >
-                            <span className="text-gray-700">Copy couple link</span>
-                            {copied === "couple" ? (
-                              <Check size={13} strokeWidth={2} className="text-emerald-500" />
-                            ) : (
-                              <Copy size={13} strokeWidth={1.5} className="text-gray-400" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => copyLink("vendor")}
-                            disabled={!couple.portal_token}
-                            className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
-                          >
-                            <span className="text-gray-700">Copy vendor link</span>
-                            {copied === "vendor" ? (
-                              <Check size={13} strokeWidth={2} className="text-emerald-500" />
-                            ) : (
-                              <Copy size={13} strokeWidth={1.5} className="text-gray-400" />
-                            )}
-                          </button>
-                        </div>
-                      </Popover.Content>
-                    </Popover.Portal>
-                  </Popover.Root>
+              {/* Action buttons */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <a
+                  href={hasPhone ? `tel:${couple.phone}` : undefined}
+                  title="Call"
+                  className={`p-2 ring-1 ring-gray-200 rounded-xl transition ${
+                    hasPhone
+                      ? "text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      : "text-gray-300 cursor-not-allowed"
+                  }`}
+                  onClick={hasPhone ? undefined : (e) => e.preventDefault()}
+                >
+                  <Phone size={14} strokeWidth={1.5} />
+                </a>
+                <a
+                  href={hasEmail ? `mailto:${couple.email}` : undefined}
+                  title="Email"
+                  className={`p-2 ring-1 ring-gray-200 rounded-xl transition ${
+                    hasEmail
+                      ? "text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      : "text-gray-300 cursor-not-allowed"
+                  }`}
+                  onClick={hasEmail ? undefined : (e) => e.preventDefault()}
+                >
+                  <Mail size={14} strokeWidth={1.5} />
+                </a>
+                <a
+                  href={
+                    hasPhone
+                      ? `https://wa.me/${couple.phone.replace(/\D/g, "")}`
+                      : undefined
+                  }
+                  title="WhatsApp"
+                  target={hasPhone ? "_blank" : undefined}
+                  rel={hasPhone ? "noopener noreferrer" : undefined}
+                  className={`p-2 ring-1 ring-gray-200 rounded-xl transition ${
+                    hasPhone
+                      ? "text-gray-700 hover:bg-gray-100 cursor-pointer"
+                      : "text-gray-300 cursor-not-allowed"
+                  }`}
+                  onClick={hasPhone ? undefined : (e) => e.preventDefault()}
+                >
+                  <PiWhatsappLogoLight size={16} />
+                </a>
 
-                  <button
-                    onClick={() => setMode("edit")}
-                    title="Edit couple"
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
-                  >
-                    <Pencil size={16} strokeWidth={1.5} />
-                  </button>
-                </div>
-              )}
+                {/* Portal link button */}
+                <Popover.Root open={portalOpen} onOpenChange={setPortalOpen}>
+                  <Popover.Trigger asChild>
+                    <button
+                      title="Portal"
+                      className="p-2 ring-1 ring-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                    >
+                      <Link2 size={14} strokeWidth={1.5} />
+                    </button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content
+                      className="bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-[70] w-72 space-y-3"
+                      sideOffset={6}
+                      align="end"
+                    >
+                      {/* Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            Couple portal
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {couple.portal_token_enabled
+                              ? "Link is active"
+                              : "Link is disabled"}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() =>
+                            togglePortal.mutate(!couple.portal_token_enabled)
+                          }
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                            couple.portal_token_enabled
+                              ? "bg-black"
+                              : "bg-gray-200"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
+                              couple.portal_token_enabled
+                                ? "translate-x-4"
+                                : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Copy links */}
+                      <div className="space-y-2 pt-1 border-t border-gray-100">
+                        <button
+                          onClick={() => copyLink("couple")}
+                          disabled={!couple.portal_token}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                        >
+                          <span className="text-gray-700">
+                            Copy couple link
+                          </span>
+                          {copied === "couple" ? (
+                            <Check
+                              size={13}
+                              strokeWidth={2}
+                              className="text-emerald-500"
+                            />
+                          ) : (
+                            <Copy
+                              size={13}
+                              strokeWidth={1.5}
+                              className="text-gray-400"
+                            />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => copyLink("vendor")}
+                          disabled={!couple.portal_token}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                        >
+                          <span className="text-gray-700">
+                            Copy vendor link
+                          </span>
+                          {copied === "vendor" ? (
+                            <Check
+                              size={13}
+                              strokeWidth={2}
+                              className="text-emerald-500"
+                            />
+                          ) : (
+                            <Copy
+                              size={13}
+                              strokeWidth={1.5}
+                              className="text-gray-400"
+                            />
+                          )}
+                        </button>
+                      </div>
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
+
+                {/* Delete button */}
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                >
+                  <Trash2 size={16} strokeWidth={1.5} />
+                </button>
+              </div>
 
               <button
                 onClick={onClose}
@@ -348,7 +452,7 @@ export function CoupleProfile({
           {/* Body: Sidebar + Content */}
           <div className="flex-1 flex overflow-hidden">
             {/* Sidebar navigation */}
-            <nav className="w-[200px] shrink-0 border-r border-gray-100 overflow-y-auto px-3 py-4 space-y-0.5">
+            <nav className="w-[200px] shrink-0 border-r border-gray-200 overflow-y-auto px-3 py-4 space-y-0.5">
               {NAV_ITEMS.map((item) => (
                 <button
                   key={item.key}
@@ -356,7 +460,7 @@ export function CoupleProfile({
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition cursor-pointer ${
                     activeSection === item.key
                       ? "bg-gray-100 text-gray-900 font-medium"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   }`}
                 >
                   {item.icon}
@@ -367,146 +471,25 @@ export function CoupleProfile({
 
             {/* Content area */}
             <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6 flex flex-col">
-              {activeSection === "overview" && mode === "view" && (
+              {activeSection === "overview" && (
                 <div className="flex-1 flex flex-col min-h-0">
-                  <CoupleOverview couple={couple} statuses={statuses} />
+                  <CoupleOverview couple={couple} onSave={onSave} />
                 </div>
               )}
 
-              {activeSection === "overview" && mode === "edit" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm text-gray-400 mb-1">
-                      Name <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Couple's name"
-                      className={inputClass}
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Email</label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="email@example.com"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Phone</label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+61 400 000 000"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Status</label>
-                    <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
-                      <Popover.Trigger asChild>
-                        <button
-                          type="button"
-                          className={`${inputClass} flex items-center justify-between text-left`}
-                        >
-                          <span>{selectedStatus?.name || "Select status"}</span>
-                          <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-                        </button>
-                      </Popover.Trigger>
-                      <Popover.Portal>
-                        <Popover.Content
-                          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
-                          sideOffset={4}
-                          align="start"
-                        >
-                          {statuses.map((s) => (
-                            <button
-                              key={s.slug}
-                              type="button"
-                              onClick={() => { setStatus(s.slug); setStatusOpen(false); }}
-                              className={`w-full text-left px-3 py-2 text-sm transition ${
-                                status === s.slug
-                                  ? "bg-gray-100 text-gray-900 font-medium"
-                                  : "text-gray-700 hover:bg-gray-50"
-                              }`}
-                            >
-                              {s.name}
-                            </button>
-                          ))}
-                        </Popover.Content>
-                      </Popover.Portal>
-                    </Popover.Root>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Lead Source</label>
-                    <Popover.Root open={leadSourceOpen} onOpenChange={setLeadSourceOpen}>
-                      <Popover.Trigger asChild>
-                        <button
-                          type="button"
-                          className={`${inputClass} flex items-center justify-between text-left`}
-                        >
-                          <span className={leadSource ? "text-gray-900" : "text-gray-400"}>
-                            {leadSource ? LEAD_SOURCE_LABELS[leadSource as LeadSource] : "Select source"}
-                          </span>
-                          <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-                        </button>
-                      </Popover.Trigger>
-                      <Popover.Portal>
-                        <Popover.Content
-                          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
-                          sideOffset={4}
-                          align="start"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => { setLeadSource(""); setLeadSourceOpen(false); }}
-                            className={`w-full text-left px-3 py-2 text-sm transition ${
-                              !leadSource ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-700 hover:bg-gray-50"
-                            }`}
-                          >
-                            None
-                          </button>
-                          {LEAD_SOURCES.map((s) => (
-                            <button
-                              key={s}
-                              type="button"
-                              onClick={() => { setLeadSource(s); setLeadSourceOpen(false); }}
-                              className={`w-full text-left px-3 py-2 text-sm transition ${
-                                leadSource === s ? "bg-gray-100 text-gray-900 font-medium" : "text-gray-700 hover:bg-gray-50"
-                              }`}
-                            >
-                              {LEAD_SOURCE_LABELS[s]}
-                            </button>
-                          ))}
-                        </Popover.Content>
-                      </Popover.Portal>
-                    </Popover.Root>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm text-gray-400 mb-1">Notes</label>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Any additional notes..."
-                      rows={7}
-                      className={`${inputClass} resize-none`}
-                    />
-                  </div>
-                </div>
+              {activeSection === "tasks" && (
+                <CoupleTasks coupleId={couple.id} />
               )}
-
-              {activeSection === "tasks" && <CoupleTasks coupleId={couple.id} />}
-              {activeSection === "payments" && <CouplePayments coupleId={couple.id} coupleName={couple.name} />}
+              {activeSection === "payments" && (
+                <CouplePayments coupleId={couple.id} coupleName={couple.name} />
+              )}
 
               {activeSection === "names" && (
-                <McPortalNames people={portal.people} onEditPerson={portal.openEditPerson} onAddPerson={portal.openAddPerson} />
+                <McPortalNames
+                  people={portal.people}
+                  onEditPerson={portal.openEditPerson}
+                  onAddPerson={portal.openAddPerson}
+                />
               )}
               {activeSection === "timeline" && (
                 <CoupleTimeline coupleId={couple.id} />
@@ -515,15 +498,33 @@ export function CoupleProfile({
                 <div className="space-y-6">
                   <McPortalSongCategories coupleId={couple.id} userId="" />
                   <div className="border-t border-gray-100 pt-6">
-                    <McPortalSongs songs={portal.songs} categories={portal.songCategories.length > 0 ? portal.songCategories : [
-                      { key: 'entry_partner1', label: 'Partner 1 Entry' },
-                      { key: 'entry_partner2', label: 'Partner 2 Entry' },
-                      { key: 'first_dance', label: 'First Dance' },
-                      { key: 'bridal_party_entry', label: 'Bridal Party Entry' },
-                      { key: 'ceremony', label: 'Ceremony' },
-                      { key: 'reception', label: 'Reception' },
-                      { key: 'avoid', label: 'Do Not Play' },
-                    ]} onEditSong={portal.openEditSong} onAddSong={portal.openAddSong} />
+                    <McPortalSongs
+                      songs={portal.songs}
+                      categories={
+                        portal.songCategories.length > 0
+                          ? portal.songCategories
+                          : [
+                              {
+                                key: "entry_partner1",
+                                label: "Partner 1 Entry",
+                              },
+                              {
+                                key: "entry_partner2",
+                                label: "Partner 2 Entry",
+                              },
+                              { key: "first_dance", label: "First Dance" },
+                              {
+                                key: "bridal_party_entry",
+                                label: "Bridal Party Entry",
+                              },
+                              { key: "ceremony", label: "Ceremony" },
+                              { key: "reception", label: "Reception" },
+                              { key: "avoid", label: "Do Not Play" },
+                            ]
+                      }
+                      onEditSong={portal.openEditSong}
+                      onAddSong={portal.openAddSong}
+                    />
                   </div>
                 </div>
               )}
@@ -532,44 +533,16 @@ export function CoupleProfile({
               )}
             </div>
           </div>
-
-          {/* Footer — edit mode only */}
-          {mode === "edit" && (
-            <div className="shrink-0 border-t border-gray-100 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={() => setDeleteConfirm(true)}
-                  disabled={loading}
-                  className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer disabled:opacity-50"
-                >
-                  Delete
-                </button>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleCancel}
-                    disabled={loading}
-                    className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition cursor-pointer disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={loading || !name.trim()}
-                    className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50"
-                  >
-                    {loading ? "Saving..." : "Save"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Portal modals */}
       <PersonModal
         isOpen={portal.personModal}
-        onClose={() => { portal.setPersonModal(false); portal.setEditingPerson(null); }}
+        onClose={() => {
+          portal.setPersonModal(false);
+          portal.setEditingPerson(null);
+        }}
         onSave={portal.savePerson}
         onDelete={portal.editingPerson ? portal.deletePerson : undefined}
         person={portal.editingPerson}
@@ -579,7 +552,10 @@ export function CoupleProfile({
       />
       <SongModal
         isOpen={portal.songModal}
-        onClose={() => { portal.setSongModal(false); portal.setEditingSong(null); }}
+        onClose={() => {
+          portal.setSongModal(false);
+          portal.setEditingSong(null);
+        }}
         onSave={portal.saveSong}
         onDelete={portal.editingSong ? portal.deleteSong : undefined}
         song={portal.editingSong}

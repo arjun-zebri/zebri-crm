@@ -55,60 +55,69 @@ export function ContactPicker({
     )
   }, [vendors, search, excludeVendorIds])
 
-  if (isLoading) {
-    return (
-      <div className="border border-gray-200 rounded-xl bg-white shadow-sm p-3 space-y-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-10 bg-gray-200 rounded animate-pulse" />
-        ))}
-      </div>
-    )
-  }
-
   return (
-    <div className="border border-gray-200 rounded-xl bg-white shadow-sm p-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <input
-          type="text"
-          placeholder="Search contacts..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200"
-        />
-        <button
-          onClick={onClose}
-          className="p-1 text-gray-400 hover:text-gray-600 transition"
-        >
-          <X size={16} strokeWidth={1.5} />
-        </button>
-      </div>
-
-      {filteredVendors.length === 0 ? (
-        <p className="text-sm text-gray-500 py-4 text-center">
-          {vendors && vendors.length === 0
-            ? 'No contacts available'
-            : 'No contacts found'}
-        </p>
-      ) : (
-        <div className="space-y-1 max-h-64 overflow-y-auto">
-          {filteredVendors.map((vendor) => (
+    <>
+      <div
+        className="fixed inset-0 bg-black/20 z-[60]"
+        onClick={onClose}
+      />
+      <div className="fixed inset-0 z-[70] flex items-center justify-center pointer-events-none">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 pointer-events-auto">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-900">Add Contact</h2>
             <button
-              key={vendor.id}
-              onClick={() => {
-                onAdd(vendor.id)
-                setSearch('')
-              }}
-              disabled={isAdding}
-              className="w-full text-left p-2 rounded-xl hover:bg-gray-50 transition disabled:opacity-50 border border-transparent hover:border-gray-200"
+              onClick={onClose}
+              className="p-1 text-gray-400 hover:text-gray-600 transition cursor-pointer"
             >
-              <p className="text-sm font-medium text-gray-900">{vendor.name}</p>
-              <p className="text-xs text-gray-500">
-                {CATEGORY_LABELS[vendor.category as keyof typeof CATEGORY_LABELS] || vendor.category}
-              </p>
+              <X size={16} strokeWidth={1.5} />
             </button>
-          ))}
+          </div>
+
+          <div className="px-5 py-3">
+            <input
+              type="text"
+              placeholder="Search contacts..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+              className="w-full text-sm text-gray-900 placeholder:text-gray-400 outline-none border-none bg-transparent"
+            />
+          </div>
+
+          <div className="border-t border-gray-100 max-h-64 overflow-y-auto">
+            {isLoading ? (
+              <div className="p-4 space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : filteredVendors.length === 0 ? (
+              <p className="text-sm text-gray-400 py-6 text-center">
+                {vendors && vendors.length === 0 ? 'No contacts available' : 'No contacts found'}
+              </p>
+            ) : (
+              <div className="py-1">
+                {filteredVendors.map((vendor) => (
+                  <button
+                    key={vendor.id}
+                    onClick={() => {
+                      onAdd(vendor.id)
+                      setSearch('')
+                    }}
+                    disabled={isAdding}
+                    className="w-full text-left px-5 py-2.5 hover:bg-gray-50 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    <p className="text-sm font-medium text-gray-900">{vendor.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {CATEGORY_LABELS[vendor.category as keyof typeof CATEGORY_LABELS] || vendor.category}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   )
 }
