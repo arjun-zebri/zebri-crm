@@ -6,7 +6,7 @@ import { X } from 'lucide-react'
 interface ModalProps {
   isOpen: boolean
   onClose: () => void
-  title: string
+  title?: string
   children: React.ReactNode
   footer?: React.ReactNode
 }
@@ -44,11 +44,11 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
           className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+          <div className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}>
+            {title && <h2 className="text-xl font-semibold text-gray-900">{title}</h2>}
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              className={`text-gray-400 hover:text-gray-600 transition cursor-pointer ${!title ? 'ml-auto' : ''}`}
             >
               <X size={20} strokeWidth={1.5} />
             </button>

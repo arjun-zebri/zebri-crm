@@ -56,7 +56,7 @@ function TaskRow({
     <div
       onClick={onClick}
       className={`flex items-center gap-3 px-1 py-2.5 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer rounded-sm ${
-        overdue ? 'border-l-2 border-l-red-300 pl-3' : ''
+        ''
       }`}
     >
       <button
@@ -74,7 +74,7 @@ function TaskRow({
         {task.title}
       </p>
       {task.due_date && (
-        <span className={`text-xs shrink-0 ${overdue ? 'text-red-400 font-medium' : 'text-gray-400'}`}>
+        <span className={`text-xs shrink-0 text-gray-400`}>
           {formatRelativeDate(task.due_date)}
         </span>
       )}

@@ -198,6 +198,8 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize }: DraggableEve
       className={`rounded-xl border select-none transition-shadow ${
         isDragging
           ? "shadow-2xl border-gray-400 ring-2 ring-gray-200 opacity-90"
+          : item.pending_review
+          ? "border-dashed border-amber-300 shadow-sm cursor-grab active:cursor-grabbing opacity-60"
           : "border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 cursor-grab active:cursor-grabbing"
       } bg-white`}
       onClick={(e) => {
@@ -207,7 +209,7 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize }: DraggableEve
       {...attributes}
       {...listeners}
     >
-      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gray-900 rounded-l-xl" />
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl ${item.pending_review ? "bg-amber-400" : "bg-gray-900"}`} />
 
       <div
         className="pl-3.5 pr-2 py-1.5 overflow-hidden"
@@ -244,9 +246,10 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize }: DraggableEve
 interface EventDayCalendarProps {
   eventId: string;
   hideShareLink?: boolean;
+  hideUnscheduled?: boolean;
 }
 
-export function EventDayCalendar({ eventId, hideShareLink }: EventDayCalendarProps) {
+export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled }: EventDayCalendarProps) {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -648,7 +651,7 @@ export function EventDayCalendar({ eventId, hideShareLink }: EventDayCalendarPro
           </div>
 
           {/* Unscheduled items — right column */}
-          {untimedItems.length > 0 && (
+          {!hideUnscheduled && untimedItems.length > 0 && (
             <div className="w-44 flex-shrink-0 overflow-y-auto min-h-0">
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
                 Unscheduled

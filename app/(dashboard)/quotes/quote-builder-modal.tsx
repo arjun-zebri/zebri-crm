@@ -62,6 +62,7 @@ interface QuoteBuilderModalProps {
   isOpen: boolean
   onClose: () => void
   onCreateInvoice?: (invoiceId: string) => void
+  onDelete?: () => void
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -108,7 +109,7 @@ function SortableQuoteItem({ item, onUpdate, onRemove }: { item: QuoteItem; onUp
   )
 }
 
-export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, onCreateInvoice }: QuoteBuilderModalProps) {
+export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, onCreateInvoice, onDelete }: QuoteBuilderModalProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -959,7 +960,13 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 border-t border-gray-100 px-6 py-4 flex justify-end">
+          <div className="shrink-0 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+            {onDelete ? (
+              <button onClick={onDelete}
+                className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">
+                Delete
+              </button>
+            ) : <span />}
             <button onClick={() => save.mutate()} disabled={save.isPending}
               className={`px-5 py-2 text-sm bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50 ${!dirty && !save.isPending ? 'opacity-40' : ''}`}>
               {save.isPending ? 'Saving...' : dirty ? 'Save changes' : 'Save'}

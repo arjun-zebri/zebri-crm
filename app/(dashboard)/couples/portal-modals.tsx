@@ -209,7 +209,7 @@ export function SongModal({
   }, [isOpen, song])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={song ? `Edit \u2014 ${categoryLabel}` : `Add song \u2014 ${categoryLabel}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit">
       <div className="space-y-4">
         <div className="space-y-3">
           <div>

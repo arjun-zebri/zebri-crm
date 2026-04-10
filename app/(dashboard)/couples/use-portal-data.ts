@@ -24,14 +24,6 @@ export interface PortalSong {
   position: number
 }
 
-export interface PortalFile {
-  id: string
-  name: string
-  file_url: string
-  file_size: number | null
-  created_at: string
-}
-
 export interface PortalTimelineItem {
   id: string
   event_id: string
@@ -43,27 +35,6 @@ export interface PortalTimelineItem {
   pending_review: boolean
 }
 
-export interface PortalSongCategory {
-  id: string
-  couple_id: string
-  user_id: string
-  key: string
-  label: string
-  description: string | null
-  position: number
-}
-
-export const SONG_CATEGORY_LABELS: Record<string, string> = {
-  entry_partner1: 'Partner 1 Entry',
-  entry_partner2: 'Partner 2 Entry',
-  first_dance: 'First Dance',
-  bridal_party_entry: 'Bridal Party Entry',
-  ceremony: 'Ceremony',
-  reception: 'Reception',
-  avoid: 'Do Not Play',
-}
-
-export const SONG_CATEGORIES = Object.entries(SONG_CATEGORY_LABELS).map(([key, label]) => ({ key, label }))
 
 export const PARTNER_ROLES = ['Bride', 'Groom', 'Partner']
 export const BRIDAL_ROLES = ['Best Man', 'Maid of Honour', 'Bridesmaid', 'Groomsman', 'Flower Girl', 'Ring Bearer', 'MC', 'Other']
@@ -84,8 +55,8 @@ export function usePortalData(coupleId: string) {
   // Song modal state
   const [songModal, setSongModal] = useState(false)
   const [editingSong, setEditingSong] = useState<PortalSong | null>(null)
-  const [songCategoryKey, setSongCategoryKey] = useState(SONG_CATEGORIES[0].key)
-  const [songCategoryLabel, setSongCategoryLabel] = useState(SONG_CATEGORIES[0].label)
+  const [songCategoryKey, setSongCategoryKey] = useState('')
+  const [songCategoryLabel, setSongCategoryLabel] = useState('')
   const [songSaving, setSongSaving] = useState(false)
 
   // Data fetching
@@ -107,30 +78,12 @@ export function usePortalData(coupleId: string) {
     },
   })
 
-  const { data: files = [], isLoading: isFilesLoading } = useQuery<PortalFile[]>({
-    queryKey: ['portal-files', coupleId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('portal_files').select('*').eq('couple_id', coupleId).order('created_at')
-      if (error) throw error
-      return data || []
-    },
-  })
-
   const { data: pendingItems = [], isLoading: isTimelineLoading } = useQuery<PortalTimelineItem[]>({
     queryKey: ['portal-timeline-pending', coupleId],
     queryFn: async () => {
       const { data: events } = await supabase.from('events').select('id').eq('couple_id', coupleId)
       if (!events?.length) return []
       const { data, error } = await supabase.from('timeline_items').select('*').in('event_id', events.map((e) => e.id)).eq('pending_review', true).order('start_time', { ascending: true, nullsFirst: false })
-      if (error) throw error
-      return data || []
-    },
-  })
-
-  const { data: songCategories = [], isLoading: isSongCategoriesLoading } = useQuery<PortalSongCategory[]>({
-    queryKey: ['portal-song-categories', coupleId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('portal_song_categories').select('*').eq('couple_id', coupleId).order('position')
       if (error) throw error
       return data || []
     },
@@ -245,19 +198,17 @@ export function usePortalData(coupleId: string) {
   const openEditSong = (song: PortalSong) => {
     setEditingSong(song)
     setSongCategoryKey(song.category)
-    setSongCategoryLabel(SONG_CATEGORY_LABELS[song.category] ?? song.category)
+    setSongCategoryLabel(song.category)
     setSongModal(true)
   }
 
-  const isLoading = isPeopleLoading || isSongsLoading || isFilesLoading || isTimelineLoading || isSongCategoriesLoading
+  const isLoading = isPeopleLoading || isSongsLoading || isTimelineLoading
 
   return {
     // Data
     people,
     songs,
-    files,
     pendingItems,
-    songCategories,
     isLoading,
 
     // Person modal

@@ -41,7 +41,6 @@ import { McPortalNames } from "./mc-portal-names";
 import { McPortalSongs } from "./mc-portal-songs";
 import { McPortalFiles } from "./mc-portal-files";
 import { CoupleTimeline } from "./couple-timeline";
-import { McPortalSongCategories } from "./mc-portal-song-categories";
 
 type Section =
   | "overview"
@@ -381,7 +380,7 @@ export function CoupleProfile({
                       </div>
 
                       {/* Copy links */}
-                      <div className="space-y-2 pt-1 border-t border-gray-100">
+                      <div className="space-y-2 pt-4 border-t border-gray-100">
                         <button
                           onClick={() => copyLink("couple")}
                           disabled={!couple.portal_token}
@@ -495,41 +494,14 @@ export function CoupleProfile({
                 <CoupleTimeline coupleId={couple.id} />
               )}
               {activeSection === "songs" && (
-                <div className="space-y-6">
-                  <McPortalSongCategories coupleId={couple.id} userId="" />
-                  <div className="border-t border-gray-100 pt-6">
-                    <McPortalSongs
-                      songs={portal.songs}
-                      categories={
-                        portal.songCategories.length > 0
-                          ? portal.songCategories
-                          : [
-                              {
-                                key: "entry_partner1",
-                                label: "Partner 1 Entry",
-                              },
-                              {
-                                key: "entry_partner2",
-                                label: "Partner 2 Entry",
-                              },
-                              { key: "first_dance", label: "First Dance" },
-                              {
-                                key: "bridal_party_entry",
-                                label: "Bridal Party Entry",
-                              },
-                              { key: "ceremony", label: "Ceremony" },
-                              { key: "reception", label: "Reception" },
-                              { key: "avoid", label: "Do Not Play" },
-                            ]
-                      }
-                      onEditSong={portal.openEditSong}
-                      onAddSong={portal.openAddSong}
-                    />
-                  </div>
-                </div>
+                <McPortalSongs
+                  coupleId={couple.id}
+                  onEditSong={portal.openEditSong}
+                  onAddSong={portal.openAddSong}
+                />
               )}
               {activeSection === "files" && (
-                <McPortalFiles files={portal.files} />
+                <McPortalFiles coupleId={couple.id} />
               )}
             </div>
           </div>

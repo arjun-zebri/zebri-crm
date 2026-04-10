@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
-import { FileText, Receipt } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { FileText, Receipt, Plus } from 'lucide-react'
 import { QuoteBuilderModal } from '../quotes/quote-builder-modal'
 import { InvoiceBuilderModal } from '../invoices/invoice-builder-modal'
 
@@ -53,6 +54,8 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
 
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null)
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null)
+  const [deleteQuoteId, setDeleteQuoteId] = useState<string | null>(null)
+  const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null)
 
   const { data: quotes, isLoading: isQuotesLoading } = useQuery({
     queryKey: ['couple-quotes', coupleId],
@@ -161,45 +164,90 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
     onError: () => toast('Failed to create invoice'),
   })
 
+  const deleteQuote = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('quotes').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-quotes', coupleId] })
+      setDeleteQuoteId(null)
+      setActiveQuoteId(null)
+      toast('Quote deleted')
+    },
+    onError: () => toast('Failed to delete quote'),
+  })
+
+  const deleteInvoice = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('invoices').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices', coupleId] })
+      setDeleteInvoiceId(null)
+      setActiveInvoiceId(null)
+      toast('Invoice deleted')
+    },
+    onError: () => toast('Failed to delete invoice'),
+  })
+
   const isLoading = isQuotesLoading || isInvoicesLoading
   const allQuotes = quotes || []
   const allInvoices = invoices || []
 
+  const quotesTotal = allQuotes.reduce((sum, q) => sum + q.subtotal, 0)
+  const invoicesTotal = allInvoices.reduce((sum, i) => sum + i.subtotal, 0)
+
   if (isLoading) {
     return (
-      <div className="space-y-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
-        ))}
+      <div className="grid grid-cols-2 gap-16">
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+          ))}
+        </div>
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+          ))}
+        </div>
       </div>
     )
   }
 
-  const hasQuotes = allQuotes.length > 0
-  const hasInvoices = allInvoices.length > 0
-
   return (
     <>
-      <div className="space-y-6">
-        {/* Quotes section */}
-        <div>
-          {hasQuotes ? (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Quotes</h3>
-              <div className="space-y-1 mb-3">
+      <div className="flex flex-col flex-1">
+        <div className="grid grid-cols-2 gap-16 flex-1">
+          {/* Quotes column */}
+          <div>
+            <button
+              onClick={() => createQuote.mutate()}
+              disabled={createQuote.isPending}
+              className="group flex items-center gap-1.5 mb-4 cursor-pointer disabled:opacity-50"
+            >
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">
+                Quotes
+              </h3>
+              <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
+            </button>
+
+            {allQuotes.length > 0 ? (
+              <div className="space-y-1">
                 {allQuotes.map((quote) => (
                   <button
                     key={quote.id}
                     onClick={() => setActiveQuoteId(quote.id)}
-                    className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
+                    className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
                   >
-                    <FileText size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                    <FileText size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-900 truncate">{quote.title}</p>
                       <p className="text-xs text-gray-400">{quote.quote_number}</p>
                     </div>
                     <span
-                      className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
+                      className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full capitalize ${
                         STATUS_STYLES[quote.status] || STATUS_STYLES.draft
                       }`}
                     >
@@ -211,37 +259,26 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                   </button>
                 ))}
               </div>
-              <button
-                onClick={() => createQuote.mutate()}
-                disabled={createQuote.isPending}
-                className="text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
-              >
-                {createQuote.isPending ? 'Creating...' : '+ New Quote'}
-              </button>
-            </div>
-          ) : (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-400 mb-3">No quotes yet.</p>
-              <button
-                onClick={() => createQuote.mutate()}
-                disabled={createQuote.isPending}
-                className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-white transition cursor-pointer disabled:opacity-50"
-              >
-                {createQuote.isPending ? 'Creating...' : '+ New Quote'}
-              </button>
-            </div>
-          )}
-        </div>
+            ) : (
+              <p className="text-sm text-gray-300 py-1">No quotes yet</p>
+            )}
+          </div>
 
-        {/* Divider */}
-        {hasQuotes && hasInvoices && <div className="border-t border-gray-100" />}
+          {/* Invoices column */}
+          <div>
+            <button
+              onClick={() => createInvoice.mutate()}
+              disabled={createInvoice.isPending}
+              className="group flex items-center gap-1.5 mb-4 cursor-pointer disabled:opacity-50"
+            >
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">
+                Invoices
+              </h3>
+              <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
+            </button>
 
-        {/* Invoices section */}
-        <div>
-          {hasInvoices ? (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Invoices</h3>
-              <div className="space-y-1 mb-3">
+            {allInvoices.length > 0 ? (
+              <div className="space-y-1">
                 {allInvoices.map((invoice) => {
                   const isOverdue =
                     invoice.due_date &&
@@ -255,15 +292,15 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                     <button
                       key={invoice.id}
                       onClick={() => setActiveInvoiceId(invoice.id)}
-                      className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
+                      className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
                     >
-                      <Receipt size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                      <Receipt size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-900 truncate">{invoice.title}</p>
                         <p className="text-xs text-gray-400">{invoice.invoice_number}</p>
                       </div>
                       <span
-                        className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
+                        className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full capitalize ${
                           STATUS_STYLES[invoice.status] || STATUS_STYLES.draft
                         }`}
                       >
@@ -279,26 +316,22 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                   )
                 })}
               </div>
-              <button
-                onClick={() => createInvoice.mutate()}
-                disabled={createInvoice.isPending}
-                className="text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
-              >
-                {createInvoice.isPending ? 'Creating...' : '+ New Invoice'}
-              </button>
-            </div>
-          ) : (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-400 mb-3">No invoices yet.</p>
-              <button
-                onClick={() => createInvoice.mutate()}
-                disabled={createInvoice.isPending}
-                className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-white transition cursor-pointer disabled:opacity-50"
-              >
-                {createInvoice.isPending ? 'Creating...' : '+ New Invoice'}
-              </button>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-gray-300 py-1">No invoices yet</p>
+            )}
+          </div>
+        </div>
+
+        {/* Totals row */}
+        <div className="mt-auto grid grid-cols-2 gap-16">
+          <div className="flex items-center justify-between px-2 pt-6 border-t border-gray-100">
+            <span className="text-xs text-gray-400">Quoted</span>
+            <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(quotesTotal)}</span>
+          </div>
+          <div className="flex items-center justify-between px-2 pt-6 border-t border-gray-100">
+            <span className="text-xs text-gray-400">Invoiced</span>
+            <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(invoicesTotal)}</span>
+          </div>
         </div>
       </div>
 
@@ -312,6 +345,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
             setActiveQuoteId(null)
             setActiveInvoiceId(invId)
           }}
+          onDelete={() => setDeleteQuoteId(activeQuoteId)}
         />
       )}
 
@@ -320,8 +354,27 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           invoiceId={activeInvoiceId}
           isOpen
           onClose={() => setActiveInvoiceId(null)}
+          onDelete={() => setDeleteInvoiceId(activeInvoiceId)}
         />
       )}
+
+      <ConfirmDialog
+        open={!!deleteQuoteId}
+        title="Delete Quote"
+        description="Are you sure you want to delete this quote? This cannot be undone."
+        onConfirm={() => deleteQuoteId && deleteQuote.mutate(deleteQuoteId)}
+        onCancel={() => setDeleteQuoteId(null)}
+        loading={deleteQuote.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deleteInvoiceId}
+        title="Delete Invoice"
+        description="Are you sure you want to delete this invoice? This cannot be undone."
+        onConfirm={() => deleteInvoiceId && deleteInvoice.mutate(deleteInvoiceId)}
+        onCancel={() => setDeleteInvoiceId(null)}
+        loading={deleteInvoice.isPending}
+      />
     </>
   )
 }

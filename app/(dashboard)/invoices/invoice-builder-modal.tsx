@@ -72,6 +72,7 @@ interface InvoiceBuilderModalProps {
   initialCoupleId?: string
   isOpen: boolean
   onClose: () => void
+  onDelete?: () => void
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -164,7 +165,7 @@ function SortableInvoiceItem({ item, canEdit, onUpdate, onRemove }: {
   )
 }
 
-export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClose }: InvoiceBuilderModalProps) {
+export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClose, onDelete }: InvoiceBuilderModalProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -1298,7 +1299,13 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
 
           {/* Footer */}
           {canEdit && (
-            <div className="shrink-0 border-t border-gray-100 px-6 py-4 flex justify-end">
+            <div className="shrink-0 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+              {onDelete ? (
+                <button onClick={onDelete}
+                  className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">
+                  Delete
+                </button>
+              ) : <span />}
               <button
                 onClick={() => save.mutate()}
                 disabled={save.isPending}

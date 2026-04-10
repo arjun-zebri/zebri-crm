@@ -45,7 +45,7 @@ for (let i = 0; i < 96; i++) {
   ALL_TIMES.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
 }
 
-function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -122,12 +122,12 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
 
 // ─── Time helpers ────────────────────────────────────────────────────────────
 
-function timeToMinutes(t: string): number {
+export function timeToMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number)
   return h * 60 + m
 }
 
-function addMinutesToTime(t: string, mins: number): string {
+export function addMinutesToTime(t: string, mins: number): string {
   const total = Math.max(0, Math.min(23 * 60 + 45, timeToMinutes(t) + mins))
   const h = Math.floor(total / 60)
   const m = total % 60
