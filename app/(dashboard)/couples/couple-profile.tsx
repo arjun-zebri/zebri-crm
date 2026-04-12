@@ -22,6 +22,7 @@ import {
 import { PiWhatsappLogoLight } from "react-icons/pi";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/toast";
 import * as Popover from "@radix-ui/react-popover";
 import {
   Couple,
@@ -102,6 +103,7 @@ export function CoupleProfile({
 }: CoupleProfileProps) {
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: statuses } = useCoupleStatuses();
   const [activeSection, setActiveSection] = useState<Section>(defaultTab);
   const [portalOpen, setPortalOpen] = useState(false);
@@ -125,6 +127,7 @@ export function CoupleProfile({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["couples"] });
     },
+    onError: () => toast('Failed to update portal settings'),
   });
 
   const copyLink = (type: "couple" | "vendor") => {
@@ -432,6 +435,7 @@ export function CoupleProfile({
 
                 {/* Delete button */}
                 <button
+                  data-testid="delete-couple-btn"
                   onClick={() => setDeleteConfirm(true)}
                   className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-lg transition cursor-pointer"
                 >
@@ -486,6 +490,7 @@ export function CoupleProfile({
               {activeSection === "names" && (
                 <McPortalNames
                   people={portal.people}
+                  isLoading={portal.isPeopleLoading}
                   onEditPerson={portal.openEditPerson}
                   onAddPerson={portal.openAddPerson}
                 />

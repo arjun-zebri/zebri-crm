@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Pencil } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import {
@@ -23,6 +23,11 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
   const [editingField, setEditingField] = useState<
     "phone" | "email" | "leadSource" | "notes" | null
   >(null);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [contactsLoading, setContactsLoading] = useState(true);
+  const isLoading = eventsLoading || contactsLoading;
+  const handleEventsLoading = useCallback((v: boolean) => setEventsLoading(v), []);
+  const handleContactsLoading = useCallback((v: boolean) => setContactsLoading(v), []);
   const [phone, setPhone] = useState(couple.phone);
   const [email, setEmail] = useState(couple.email);
   const [leadSource, setLeadSource] = useState(couple.lead_source || "");
@@ -49,7 +54,35 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+    <>
+      {/* Skeleton — shown while events or contacts are loading */}
+      {isLoading && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 animate-pulse">
+          <div className="space-y-4">
+            <div className="h-3 w-16 bg-gray-100 rounded-full" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between py-3">
+                <div className="h-3 w-20 bg-gray-100 rounded-full" />
+                <div className="h-3 w-32 bg-gray-100 rounded-full" />
+              </div>
+            ))}
+            <div className="h-16 bg-gray-100 rounded-xl mt-2" />
+          </div>
+          <div className="space-y-8">
+            <div>
+              <div className="h-3 w-16 bg-gray-100 rounded-full mb-4" />
+              {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-xl mb-2" />)}
+            </div>
+            <div>
+              <div className="h-3 w-20 bg-gray-100 rounded-full mb-4" />
+              {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-xl mb-2" />)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Real content — always mounted so queries fire; hidden via CSS while loading */}
+      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-16 ${isLoading ? 'hidden' : ''}`}>
       {/* Column 1: General Info */}
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">General</h3>
@@ -212,13 +245,14 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       {/* Column 2: Events & Contacts */}
       <div className="space-y-8">
         <div>
-          <CoupleEvents couple={couple} />
+          <CoupleEvents couple={couple} onLoadingChange={handleEventsLoading} />
         </div>
 
         <div>
-          <CoupleVendors coupleId={couple.id} />
+          <CoupleVendors coupleId={couple.id} onLoadingChange={handleContactsLoading} />
         </div>
       </div>
     </div>
+  </>
   );
 }

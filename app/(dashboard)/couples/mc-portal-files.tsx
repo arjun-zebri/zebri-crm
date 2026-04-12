@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { FileText, Download, Trash2, Plus, Loader2 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/ui/toast'
 
 interface PortalFile {
   id: string
@@ -84,9 +85,13 @@ function FileCard({ file, onDelete }: { file: PortalFile; onDelete: (id: string)
   )
 }
 
+const MAX_FILE_SIZE = 20 * 1024 * 1024
+const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+
 export function McPortalFiles({ coupleId }: { coupleId: string }) {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -104,25 +109,33 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
   })
 
   const uploadFile = async (file: File) => {
+    if (file.size > MAX_FILE_SIZE) { toast('File must be under 20MB'); return }
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) { toast('File type not supported. Use PDF, JPG, PNG, or WebP.'); return }
+
     setUploading(true)
-    const { data: user } = await supabase.auth.getUser()
-    if (!user.user) { setUploading(false); return }
+    try {
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) return
 
-    const path = `${coupleId}/${Date.now()}-${file.name}`
-    const { data: storageData, error: storageError } = await supabase.storage
-      .from('portal-files')
-      .upload(path, file, { upsert: false })
+      const path = `${coupleId}/${Date.now()}-${file.name}`
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('portal-files')
+        .upload(path, file, { upsert: false })
 
-    if (!storageError && storageData) {
+      if (storageError) throw storageError
+
       const { data: urlData } = supabase.storage.from('portal-files').getPublicUrl(storageData.path)
-      await supabase.from('portal_files').insert({
+      const { error: dbError } = await supabase.from('portal_files').insert({
         couple_id: coupleId,
         user_id: user.user.id,
         name: file.name,
         file_url: urlData.publicUrl,
         file_size: file.size,
       })
+      if (dbError) throw dbError
       queryClient.invalidateQueries({ queryKey: ['portal-files', coupleId] })
+    } catch {
+      toast('Failed to upload file')
     }
     setUploading(false)
   }
@@ -130,24 +143,25 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
   const deleteFile = async (id: string) => {
     const file = files.find((f) => f.id === id)
     if (!file) return
-    const storagePath = storagePathFromUrl(file.file_url)
-    await supabase.from('portal_files').delete().eq('id', id)
-    if (storagePath) await supabase.storage.from('portal-files').remove([storagePath])
-    queryClient.invalidateQueries({ queryKey: ['portal-files', coupleId] })
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2].map((i) => <div key={i} className="h-[80px] w-[200px] bg-gray-100 rounded-xl animate-pulse" />)}
-      </div>
-    )
+    try {
+      const storagePath = storagePathFromUrl(file.file_url)
+      const { error } = await supabase.from('portal_files').delete().eq('id', id)
+      if (error) throw error
+      if (storagePath) await supabase.storage.from('portal-files').remove([storagePath])
+      queryClient.invalidateQueries({ queryKey: ['portal-files', coupleId] })
+    } catch {
+      toast('Failed to remove file')
+    }
   }
 
   return (
     <div className="space-y-6">
-      {files.length === 0 ? (
-        <p className="text-sm text-gray-300 py-1">No files uploaded yet</p>
+      {isLoading ? (
+        <div className="flex flex-wrap gap-2">
+          {[1, 2].map((i) => <div key={i} className="h-[80px] w-[200px] bg-gray-100 rounded-xl animate-pulse" />)}
+        </div>
+      ) : files.length === 0 ? (
+        <p className="text-sm text-gray-400 py-1">No files uploaded yet.</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {files.map((file) => (

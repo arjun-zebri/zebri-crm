@@ -167,7 +167,7 @@ export function CoupleTimeline({ coupleId }: CoupleTimelineProps) {
   const activeEventId = selectedEventId ?? events[0]?.id ?? null
 
   // Shared cache key with EventDayCalendar — no extra network call
-  const { data: items = [] } = useQuery({
+  const { data: items = [], isLoading: itemsLoading } = useQuery({
     queryKey: ['event-timeline', activeEventId],
     enabled: !!activeEventId,
     queryFn: async () => {
@@ -179,7 +179,7 @@ export function CoupleTimeline({ coupleId }: CoupleTimelineProps) {
     },
   })
 
-  const { data: eventContacts = [] } = useQuery({
+  const { data: eventContacts = [], isLoading: contactsLoading } = useQuery({
     queryKey: ['event-contacts', activeEventId],
     enabled: !!activeEventId,
     queryFn: async () => {
@@ -208,106 +208,126 @@ export function CoupleTimeline({ coupleId }: CoupleTimelineProps) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['event-timeline', activeEventId] }),
   })
 
+  const isLoading = eventsLoading || (!!activeEventId && (itemsLoading || contactsLoading))
+  const activeEvent = events.find((e) => e.id === activeEventId) ?? events[0]
   const unscheduledItems = items.filter((i) => !i.start_time && !i.pending_review)
   const reviewItems = items.filter((i) => i.pending_review)
 
-  if (eventsLoading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}
-      </div>
-    )
-  }
-
-  if (events.length === 0) {
+  if (!isLoading && events.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-sm text-gray-500">No events yet</p>
+        <p className="text-sm text-gray-400">No events yet.</p>
         <p className="text-sm text-gray-400 mt-1">Add an event to start building a timeline.</p>
       </div>
     )
   }
 
-  const activeEvent = events.find((e) => e.id === activeEventId) ?? events[0]
-
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-4">
-      {/* Custom event dropdown */}
-      <Popover.Root open={dropdownOpen} onOpenChange={setDropdownOpen}>
-        <Popover.Trigger asChild>
-          <button type="button" className="self-start inline-flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-200">
-            <span className="text-gray-700">{formatDate(activeEvent.date)}{activeEvent.venue ? `, ${activeEvent.venue}` : ''}</span>
-            {events.length > 1 && <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />}
-          </button>
-        </Popover.Trigger>
-        {events.length > 1 && (
-          <Popover.Portal>
-            <Popover.Content className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-64" sideOffset={4} align="start">
-              {events.map((event) => (
-                <button key={event.id} type="button"
-                  onClick={() => { setSelectedEventId(event.id); setDropdownOpen(false) }}
-                  className={`w-full text-left px-3 py-2 text-sm transition flex items-center justify-between ${event.id === activeEventId ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
-                >
-                  <span>{formatDate(event.date)}{event.venue ? `, ${event.venue}` : ''}</span>
-                  {event.id === activeEventId && <Check size={13} className="text-gray-500" />}
-                </button>
-              ))}
-            </Popover.Content>
-          </Popover.Portal>
-        )}
-      </Popover.Root>
 
-      {/* 3/5 + 2/5 layout */}
-      {activeEventId && (
-        <div className="flex gap-6 flex-1 min-h-0">
-          {/* Left: timeline calendar */}
-          <div className="flex-[3] min-w-0">
-            <EventDayCalendar eventId={activeEventId} hideShareLink hideUnscheduled />
+      {/* Skeleton — shown while any query is pending */}
+      {isLoading && (
+        <div className="flex gap-6 flex-1 animate-pulse">
+          {/* Left: calendar area */}
+          <div className="flex-[3] space-y-2">
+            <div className="h-8 w-44 bg-gray-100 rounded-xl mb-4" />
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="h-10 bg-gray-100 rounded-xl" />
+            ))}
           </div>
-
-          {/* Right: unscheduled + to review */}
-          <div className="w-[260px] flex-shrink-0 flex flex-col gap-8 overflow-y-auto pt-1">
-            {/* Unscheduled */}
+          {/* Right: Unscheduled + To Review */}
+          <div className="w-[260px] flex-shrink-0 flex flex-col gap-8 pt-1">
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Unscheduled</h3>
-              {unscheduledItems.length === 0 ? (
-                <p className="text-sm text-gray-300">None</p>
-              ) : (
-                <div className="space-y-2">
-                  {unscheduledItems.map((item) => (
-                    <div key={item.id} onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
-                      className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-gray-200 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer"
-                    >
-                      <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
-                      {item.contact && <p className="text-xs text-gray-400 truncate">{item.contact.name}</p>}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="h-3 w-20 bg-gray-100 rounded-full mb-4" />
+              {[1, 2].map((i) => <div key={i} className="h-12 bg-gray-100 rounded-xl mb-2" />)}
             </div>
-
-            {/* To Review */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">To Review</h3>
-              {reviewItems.length === 0 ? (
-                <p className="text-sm text-gray-300">No suggestions yet</p>
-              ) : (
-                <div className="space-y-2">
-                  {reviewItems.map((item) => (
-                    <div key={item.id} onClick={() => { setReviewingItem(item); setReviewModalOpen(true) }}
-                      className="px-3 py-2.5 border border-amber-200 border-l-2 border-l-amber-400 rounded-xl hover:bg-amber-50/50 transition cursor-pointer"
-                    >
-                      <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
-                      {item.start_time && <p className="text-xs text-gray-400 mt-0.5">{formatTime(item.start_time)}</p>}
-                      {item.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{item.description}</p>}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="h-3 w-16 bg-gray-100 rounded-full mb-4" />
+              <div className="h-12 bg-gray-100 rounded-xl" />
             </div>
           </div>
         </div>
       )}
+
+      {/* Real content — always mounted so queries fire; hidden via CSS while loading */}
+      <div className={`flex flex-col flex-1 min-h-0 gap-4 ${isLoading ? 'hidden' : ''}`}>
+        {/* Custom event dropdown */}
+        <Popover.Root open={dropdownOpen} onOpenChange={setDropdownOpen}>
+          <Popover.Trigger asChild>
+            <button type="button" className="self-start inline-flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-200">
+              <span className="text-gray-700">{activeEvent ? `${formatDate(activeEvent.date)}${activeEvent.venue ? `, ${activeEvent.venue}` : ''}` : ''}</span>
+              {events.length > 1 && <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />}
+            </button>
+          </Popover.Trigger>
+          {events.length > 1 && (
+            <Popover.Portal>
+              <Popover.Content className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-64" sideOffset={4} align="start">
+                {events.map((event) => (
+                  <button key={event.id} type="button"
+                    onClick={() => { setSelectedEventId(event.id); setDropdownOpen(false) }}
+                    className={`w-full text-left px-3 py-2 text-sm transition flex items-center justify-between ${event.id === activeEventId ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    <span>{formatDate(event.date)}{event.venue ? `, ${event.venue}` : ''}</span>
+                    {event.id === activeEventId && <Check size={13} className="text-gray-500" />}
+                  </button>
+                ))}
+              </Popover.Content>
+            </Popover.Portal>
+          )}
+        </Popover.Root>
+
+        {/* 3/5 + 2/5 layout */}
+        {activeEventId && (
+          <div className="flex gap-6 flex-1 min-h-0">
+            {/* Left: timeline calendar */}
+            <div className="flex-[3] min-w-0">
+              <EventDayCalendar eventId={activeEventId} hideShareLink hideUnscheduled />
+            </div>
+
+            {/* Right: unscheduled + to review */}
+            <div className="w-[260px] flex-shrink-0 flex flex-col gap-8 overflow-y-auto pt-1">
+              {/* Unscheduled */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Unscheduled</h3>
+                {unscheduledItems.length === 0 ? (
+                  <p className="text-sm text-gray-300">None</p>
+                ) : (
+                  <div className="space-y-2">
+                    {unscheduledItems.map((item) => (
+                      <div key={item.id} onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
+                        className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-gray-200 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer"
+                      >
+                        <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
+                        {item.contact && <p className="text-xs text-gray-400 truncate">{item.contact.name}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* To Review */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">To Review</h3>
+                {reviewItems.length === 0 ? (
+                  <p className="text-sm text-gray-300">No suggestions yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {reviewItems.map((item) => (
+                      <div key={item.id} onClick={() => { setReviewingItem(item); setReviewModalOpen(true) }}
+                        className="px-3 py-2.5 border border-amber-200 border-l-2 border-l-amber-400 rounded-xl hover:bg-amber-50/50 transition cursor-pointer"
+                      >
+                        <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
+                        {item.start_time && <p className="text-xs text-gray-400 mt-0.5">{formatTime(item.start_time)}</p>}
+                        {item.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{item.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Unscheduled edit modal */}
       <EventTimelineModal

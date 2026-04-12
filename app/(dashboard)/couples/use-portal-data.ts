@@ -99,79 +99,96 @@ export function usePortalData(coupleId: string) {
       queryClient.invalidateQueries({ queryKey: ['portal-timeline-pending', coupleId] })
       toast('Item approved')
     },
+    onError: () => toast('Failed to approve item'),
   })
 
   const savePerson = useCallback(async (data: Partial<PortalPerson>) => {
     setPersonSaving(true)
-    const { data: user } = await supabase.auth.getUser()
-    if (!user.user) return
+    try {
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) return
 
-    if (editingPerson) {
-      const merged = { ...editingPerson, ...data }
-      await supabase.from('portal_people').update({
-        full_name: merged.full_name, phonetic: merged.phonetic, role: merged.role, audio_url: merged.audio_url,
-      }).eq('id', merged.id)
-    } else {
-      const categoryPeople = people.filter((p) => p.category === personCategory)
-      await supabase.from('portal_people').insert({
-        couple_id: coupleId, user_id: user.user.id, category: personCategory,
-        full_name: data.full_name ?? '', phonetic: data.phonetic ?? null, role: data.role ?? null,
-        audio_url: data.audio_url ?? null, position: categoryPeople.length * 1000,
-      })
+      if (editingPerson) {
+        const merged = { ...editingPerson, ...data }
+        await supabase.from('portal_people').update({
+          full_name: merged.full_name, phonetic: merged.phonetic, role: merged.role, audio_url: merged.audio_url,
+        }).eq('id', merged.id)
+      } else {
+        const categoryPeople = people.filter((p) => p.category === personCategory)
+        await supabase.from('portal_people').insert({
+          couple_id: coupleId, user_id: user.user.id, category: personCategory,
+          full_name: data.full_name ?? '', phonetic: data.phonetic ?? null, role: data.role ?? null,
+          audio_url: data.audio_url ?? null, position: categoryPeople.length * 1000,
+        })
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['portal-people', coupleId] })
+      toast(editingPerson ? 'Person updated' : 'Person added')
+      setPersonModal(false)
+      setEditingPerson(null)
+    } catch {
+      toast('Failed to save person')
     }
-
-    queryClient.invalidateQueries({ queryKey: ['portal-people', coupleId] })
     setPersonSaving(false)
-    setPersonModal(false)
-    setEditingPerson(null)
-    toast(editingPerson ? 'Person updated' : 'Person added')
   }, [editingPerson, personCategory, people, coupleId, supabase, queryClient, toast])
 
   const deletePerson = useCallback(async () => {
     if (!editingPerson) return
     setPersonSaving(true)
-    await supabase.from('portal_people').delete().eq('id', editingPerson.id)
-    queryClient.invalidateQueries({ queryKey: ['portal-people', coupleId] })
+    try {
+      await supabase.from('portal_people').delete().eq('id', editingPerson.id)
+      queryClient.invalidateQueries({ queryKey: ['portal-people', coupleId] })
+      toast('Person removed')
+      setPersonModal(false)
+      setEditingPerson(null)
+    } catch {
+      toast('Failed to remove person')
+    }
     setPersonSaving(false)
-    setPersonModal(false)
-    setEditingPerson(null)
-    toast('Person removed')
   }, [editingPerson, coupleId, supabase, queryClient, toast])
 
   const saveSong = useCallback(async (data: Partial<PortalSong>) => {
     setSongSaving(true)
-    const { data: user } = await supabase.auth.getUser()
-    if (!user.user) return
+    try {
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) return
 
-    if (editingSong) {
-      await supabase.from('portal_songs').update({
-        title: data.title ?? editingSong.title, artist: data.artist ?? null, notes: data.notes ?? null,
-      }).eq('id', editingSong.id)
-    } else {
-      const categorySongs = songs.filter((s) => s.category === songCategoryKey)
-      await supabase.from('portal_songs').insert({
-        couple_id: coupleId, user_id: user.user.id, category: songCategoryKey,
-        title: data.title ?? '', artist: data.artist ?? null, notes: data.notes ?? null,
-        position: categorySongs.length * 1000,
-      })
+      if (editingSong) {
+        await supabase.from('portal_songs').update({
+          title: data.title ?? editingSong.title, artist: data.artist ?? null, notes: data.notes ?? null,
+        }).eq('id', editingSong.id)
+      } else {
+        const categorySongs = songs.filter((s) => s.category === songCategoryKey)
+        await supabase.from('portal_songs').insert({
+          couple_id: coupleId, user_id: user.user.id, category: songCategoryKey,
+          title: data.title ?? '', artist: data.artist ?? null, notes: data.notes ?? null,
+          position: categorySongs.length * 1000,
+        })
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['portal-songs', coupleId] })
+      toast(editingSong ? 'Song updated' : 'Song added')
+      setSongModal(false)
+      setEditingSong(null)
+    } catch {
+      toast('Failed to save song')
     }
-
-    queryClient.invalidateQueries({ queryKey: ['portal-songs', coupleId] })
     setSongSaving(false)
-    setSongModal(false)
-    setEditingSong(null)
-    toast(editingSong ? 'Song updated' : 'Song added')
   }, [editingSong, songCategoryKey, songs, coupleId, supabase, queryClient, toast])
 
   const deleteSong = useCallback(async () => {
     if (!editingSong) return
     setSongSaving(true)
-    await supabase.from('portal_songs').delete().eq('id', editingSong.id)
-    queryClient.invalidateQueries({ queryKey: ['portal-songs', coupleId] })
+    try {
+      await supabase.from('portal_songs').delete().eq('id', editingSong.id)
+      queryClient.invalidateQueries({ queryKey: ['portal-songs', coupleId] })
+      toast('Song removed')
+      setSongModal(false)
+      setEditingSong(null)
+    } catch {
+      toast('Failed to remove song')
+    }
     setSongSaving(false)
-    setSongModal(false)
-    setEditingSong(null)
-    toast('Song removed')
   }, [editingSong, coupleId, supabase, queryClient, toast])
 
   const openAddPerson = (category: string, roles: string[]) => {
@@ -210,6 +227,7 @@ export function usePortalData(coupleId: string) {
     songs,
     pendingItems,
     isLoading,
+    isPeopleLoading,
 
     // Person modal
     personModal,

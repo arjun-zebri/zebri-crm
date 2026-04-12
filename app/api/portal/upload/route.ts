@@ -33,6 +33,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 
+  const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/webm', 'audio/ogg']
+  const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic']
+  const MIME_TO_EXT: Record<string, string> = {
+    'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/wav': 'wav', 'audio/webm': 'webm', 'audio/ogg': 'ogg',
+    'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic',
+  }
+
+  const allowed = type === 'audio' ? ALLOWED_AUDIO_TYPES : ALLOWED_FILE_TYPES
+  if (!allowed.includes(file.type)) {
+    return NextResponse.json({ error: 'File type not allowed' }, { status: 400 })
+  }
+
   const bucket = type === 'audio' ? 'portal-audio' : 'portal-files'
   const maxSize = type === 'audio' ? 10 * 1024 * 1024 : 20 * 1024 * 1024
 
@@ -41,7 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `File must be under ${mb}MB` }, { status: 400 })
   }
 
-  const ext = file.name.split('.').pop() ?? 'bin'
+  const ext = MIME_TO_EXT[file.type] ?? 'bin'
   const fileId = crypto.randomUUID()
   const path = `${token}/${fileId}.${ext}`
 

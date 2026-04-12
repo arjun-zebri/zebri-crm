@@ -1,14 +1,16 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS } from '../contacts/contacts-types'
 import { Trash2, Plus } from 'lucide-react'
 import { ContactPicker } from './contact-picker'
+import { useToast } from '@/components/ui/toast'
 
 interface CoupleVendorsProps {
   coupleId: string
+  onLoadingChange?: (loading: boolean) => void
 }
 
 interface ContactLink {
@@ -22,9 +24,10 @@ interface ContactLink {
   }
 }
 
-export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
+export function CoupleVendors({ coupleId, onLoadingChange }: CoupleVendorsProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [showAddVendor, setShowAddVendor] = useState(false)
 
   const { data: vendors, isLoading } = useQuery({
@@ -45,6 +48,8 @@ export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
     },
   })
 
+  useEffect(() => { onLoadingChange?.(isLoading) }, [isLoading])
+
   const removeVendor = useMutation({
     mutationFn: async (contactLinkId: string) => {
       const { error } = await supabase
@@ -57,6 +62,7 @@ export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })
     },
+    onError: () => toast('Failed to remove contact'),
   })
 
   const addVendor = useMutation({
@@ -78,17 +84,8 @@ export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
       queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })
       setShowAddVendor(false)
     },
+    onError: () => toast('Failed to add contact'),
   })
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-gray-200 rounded animate-pulse" />
-        ))}
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-3">
@@ -101,8 +98,14 @@ export function CoupleVendors({ coupleId }: CoupleVendorsProps) {
         <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
       </button>
 
-      {!vendors || vendors.length === 0 ? (
-        <p className="text-sm text-gray-300 py-1">No contacts added yet</p>
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : !vendors || vendors.length === 0 ? (
+        <p className="text-sm text-gray-400 py-1">No contacts yet.</p>
       ) : (
         <div className="space-y-0">
           {vendors.map((link) => (

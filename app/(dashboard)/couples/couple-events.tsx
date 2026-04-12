@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -12,15 +12,15 @@ import { Couple } from './couples-types'
 
 interface CoupleEventsProps {
   couple: Couple
+  onLoadingChange?: (loading: boolean) => void
 }
 
-export function CoupleEvents({ couple }: CoupleEventsProps) {
+export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const [showModal, setShowModal] = useState(false)
   const [editingEvent, setEditingEvent] = useState<Event | undefined>()
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [editingVendorIds, setEditingVendorIds] = useState<string[]>([])
 
   const { data: events, isLoading } = useQuery({
@@ -40,6 +40,8 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
       return (data || []) as Event[]
     },
   })
+
+  useEffect(() => { onLoadingChange?.(isLoading) }, [isLoading])
 
   const createEvent = useMutation({
     mutationFn: async (eventData: Omit<Event, 'id' | 'user_id' | 'created_at'> & { vendorIds?: string[] }) => {
@@ -79,6 +81,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
       setShowModal(false)
       toast('Event added')
     },
+    onError: () => toast('Failed to add event'),
   })
 
   const updateEvent = useMutation({
@@ -129,6 +132,7 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
       setEditingEvent(undefined)
       toast('Event updated')
     },
+    onError: () => toast('Failed to update event'),
   })
 
   const deleteEvent = useMutation({
@@ -143,9 +147,9 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
-      setDeleteConfirm(null)
       toast('Event deleted')
     },
+    onError: () => toast('Failed to delete event'),
   })
 
   const handleSaveEvent = async (eventData: Omit<Event, 'id' | 'user_id' | 'created_at'> & { id?: string; vendorIds?: string[] }) => {
@@ -153,16 +157,6 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
       await updateEvent.mutateAsync({ ...editingEvent, ...eventData } as Event & { vendorIds?: string[] })
     } else {
       await createEvent.mutateAsync(eventData)
-    }
-  }
-
-  const handleDeleteEvent = (eventId: string) => {
-    setDeleteConfirm(eventId)
-  }
-
-  const handleConfirmDeleteEvent = () => {
-    if (deleteConfirm) {
-      deleteEvent.mutate(deleteConfirm)
     }
   }
 
@@ -192,16 +186,6 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
     setShowModal(true)
   }
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-gray-200 rounded animate-pulse" />
-        ))}
-      </div>
-    )
-  }
-
   const loading = createEvent.isPending || updateEvent.isPending || deleteEvent.isPending
 
   return (
@@ -220,8 +204,14 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
           <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
         </button>
 
-        {!events || events.length === 0 ? (
-          <p className="text-sm text-gray-300 py-1">No events added yet</p>
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : !events || events.length === 0 ? (
+          <p className="text-sm text-gray-400 py-1">No events yet.</p>
         ) : (
           <div className="space-y-0">
             {events.map((event) => (
@@ -258,43 +248,6 @@ export function CoupleEvents({ couple }: CoupleEventsProps) {
         initialVendorIds={editingVendorIds}
       />
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirm && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/20 z-[70]"
-            onClick={() => setDeleteConfirm(null)}
-          />
-          <div className="fixed inset-0 z-[80] flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
-              <div className="px-6 py-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Delete Event
-                </h3>
-                <p className="text-sm text-gray-600 mb-6">
-                  Are you sure you want to delete this event? This action cannot be undone.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setDeleteConfirm(null)}
-                    disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-100 transition cursor-pointer disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConfirmDeleteEvent}
-                    disabled={loading}
-                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-xl hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
-                  >
-                    {loading ? 'Deleting...' : 'Delete'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </>
   )
 }

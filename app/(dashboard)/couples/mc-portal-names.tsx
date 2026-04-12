@@ -14,6 +14,7 @@ interface PortalPerson {
 
 interface McPortalNamesProps {
   people: PortalPerson[]
+  isLoading?: boolean
   onEditPerson: (person: PortalPerson, roles: string[]) => void
   onAddPerson: (category: string, roles: string[]) => void
 }
@@ -34,12 +35,13 @@ const RIGHT_COLUMNS = [
 ]
 
 function CategorySection({
-  label, category, roles, people, onEditPerson, onAddPerson,
+  label, category, roles, people, isLoading, onEditPerson, onAddPerson,
 }: {
   label: string
   category: string
   roles: string[]
   people: PortalPerson[]
+  isLoading?: boolean
   onEditPerson: (person: PortalPerson, roles: string[]) => void
   onAddPerson: (category: string, roles: string[]) => void
 }) {
@@ -54,8 +56,14 @@ function CategorySection({
         <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
       </button>
       <div className="mt-4 space-y-2.5">
-        {items.length === 0 ? (
-          <p className="text-sm text-gray-300 py-2">None added</p>
+        {isLoading ? (
+          <>
+            {[1, 2].map((i) => (
+              <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+            ))}
+          </>
+        ) : items.length === 0 ? (
+          <p className="text-sm text-gray-400 py-2">No people added yet.</p>
         ) : (
           items.map((person) => (
             <div
@@ -90,7 +98,7 @@ function CategorySection({
   )
 }
 
-export function McPortalNames({ people, onEditPerson, onAddPerson }: McPortalNamesProps) {
+export function McPortalNames({ people, isLoading, onEditPerson, onAddPerson }: McPortalNamesProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
       {/* Left: Couple + Bridal Party */}
@@ -102,6 +110,7 @@ export function McPortalNames({ people, onEditPerson, onAddPerson }: McPortalNam
             category={category}
             roles={roles}
             people={people}
+            isLoading={isLoading}
             onEditPerson={onEditPerson}
             onAddPerson={onAddPerson}
           />
@@ -117,6 +126,7 @@ export function McPortalNames({ people, onEditPerson, onAddPerson }: McPortalNam
             category={category}
             roles={roles}
             people={people}
+            isLoading={isLoading}
             onEditPerson={onEditPerson}
             onAddPerson={onAddPerson}
           />

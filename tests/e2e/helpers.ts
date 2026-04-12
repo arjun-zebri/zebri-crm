@@ -70,7 +70,7 @@ export async function addCouple(
 export async function openCoupleProfile(page: Page, name: string) {
   await search(page, name)
   await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-  await page.waitForSelector('[data-testid="couple-profile-panel"] h1')
+  await page.waitForSelector('[data-testid="couple-profile-panel"]')
 }
 
 export async function closeProfile(page: Page) {
@@ -80,17 +80,16 @@ export async function closeProfile(page: Page) {
 
 export async function deleteCouple(page: Page, name: string) {
   await openCoupleProfile(page, name)
-  await page.locator('[data-testid="couple-profile-panel"]').locator('button:has-text("Edit")').click()
-  await page.waitForSelector('h2:has-text("Edit Couple")')
-  await page.locator('button:has-text("Delete")').click()
-  await page.locator('button:has-text("Click again to confirm")').click()
-  await page.waitForSelector('h2:has-text("Edit Couple")', { state: 'hidden' })
+  await page.locator('[data-testid="delete-couple-btn"]').click()
+  // ConfirmDialog appears — click the Delete confirm button
+  await page.locator('button:has-text("Delete")').last().click()
+  await page.waitForSelector('[data-testid="couple-profile-panel"]', { state: 'hidden' })
   await page.waitForLoadState('networkidle')
 }
 
 export async function navigateToProfileTab(
   page: Page,
-  tab: 'Overview' | 'Events' | 'Contacts' | 'Tasks'
+  tab: 'Overview' | 'Tasks' | 'Payments' | 'Names' | 'Timeline' | 'Songs' | 'Files'
 ) {
   await page.locator('[data-testid="couple-profile-panel"]').locator(`button:has-text("${tab}")`).click()
   await page.waitForLoadState('networkidle')

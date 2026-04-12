@@ -192,29 +192,11 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
     onError: () => toast('Failed to delete invoice'),
   })
 
-  const isLoading = isQuotesLoading || isInvoicesLoading
   const allQuotes = quotes || []
   const allInvoices = invoices || []
 
   const quotesTotal = allQuotes.reduce((sum, q) => sum + q.subtotal, 0)
   const invoicesTotal = allInvoices.reduce((sum, i) => sum + i.subtotal, 0)
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 gap-16">
-        <div className="space-y-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
-          ))}
-        </div>
-        <div className="space-y-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
-          ))}
-        </div>
-      </div>
-    )
-  }
 
   return (
     <>
@@ -233,7 +215,13 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
               <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
             </button>
 
-            {allQuotes.length > 0 ? (
+            {isQuotesLoading ? (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : allQuotes.length > 0 ? (
               <div className="space-y-1">
                 {allQuotes.map((quote) => (
                   <button
@@ -260,7 +248,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-300 py-1">No quotes yet</p>
+              <p className="text-sm text-gray-400 py-1">No quotes yet.</p>
             )}
           </div>
 
@@ -277,7 +265,13 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
               <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
             </button>
 
-            {allInvoices.length > 0 ? (
+            {isInvoicesLoading ? (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : allInvoices.length > 0 ? (
               <div className="space-y-1">
                 {allInvoices.map((invoice) => {
                   const isOverdue =
@@ -317,7 +311,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-gray-300 py-1">No invoices yet</p>
+              <p className="text-sm text-gray-400 py-1">No invoices yet.</p>
             )}
           </div>
         </div>
