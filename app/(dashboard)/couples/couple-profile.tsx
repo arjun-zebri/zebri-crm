@@ -18,6 +18,7 @@ import {
   Clock,
   Music,
   Paperclip,
+  Activity,
 } from "lucide-react";
 import { PiWhatsappLogoLight } from "react-icons/pi";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -42,9 +43,11 @@ import { McPortalNames } from "./mc-portal-names";
 import { McPortalSongs } from "./mc-portal-songs";
 import { McPortalFiles } from "./mc-portal-files";
 import { CoupleTimeline } from "./couple-timeline";
+import { CouplePulse } from "./couple-pulse";
 
 type Section =
   | "overview"
+  | "pulse"
   | "tasks"
   | "payments"
   | "names"
@@ -57,6 +60,11 @@ const NAV_ITEMS: { key: Section; label: string; icon: React.ReactNode }[] = [
     key: "overview",
     label: "Overview",
     icon: <LayoutDashboard size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: "pulse",
+    label: "Pulse",
+    icon: <Activity size={18} strokeWidth={1.5} />,
   },
   {
     key: "tasks",
@@ -478,6 +486,10 @@ export function CoupleProfile({
                 <div className="flex-1 flex flex-col min-h-0">
                   <CoupleOverview couple={couple} onSave={onSave} />
                 </div>
+              )}
+
+              {activeSection === "pulse" && (
+                <CouplePulse couple={couple} />
               )}
 
               {activeSection === "tasks" && (
