@@ -2,15 +2,12 @@
 
 import { useState, useEffect } from "react";
 import {
-  AlertTriangle,
   ArrowUpRight,
   CheckCircle2,
   Info,
   Lightbulb,
-  MessageSquare,
   TrendingUp,
   XCircle,
-  Zap,
 } from "lucide-react";
 import { Couple } from "./couples-types";
 
@@ -151,19 +148,13 @@ export function CouplePulse({ couple }: CouplePulseProps) {
         <div className="space-y-8">
           {/* Conversation Summary */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4 flex items-center gap-2">
-              <MessageSquare size={14} strokeWidth={1.5} />
-              Conversation Summary
-            </h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Conversation Summary</h3>
             <p className="text-sm text-gray-700 leading-relaxed">{SAMPLE.summary}</p>
           </div>
 
           {/* Key Intelligence */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4 flex items-center gap-2">
-              <Zap size={14} strokeWidth={1.5} className="text-gray-900" />
-              Key Intelligence
-            </h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Key Intelligence</h3>
             <div className="space-y-2.5">
               {SAMPLE.positiveSignals.map((s) => (
                 <div key={s} className="flex items-start gap-2.5">
@@ -176,10 +167,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
 
           {/* Risk Factors */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4 flex items-center gap-2">
-              <AlertTriangle size={14} strokeWidth={1.5} className="text-gray-900" />
-              Risk factors
-            </h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Risk factors</h3>
             <div className="space-y-2.5">
               {SAMPLE.riskFactors.map((s) => (
                 <div key={s} className="flex items-start gap-2.5">
