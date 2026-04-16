@@ -46,6 +46,15 @@ function formatDate(dateStr: string) {
   })
 }
 
+function getBrandTextColor(hex: string): string {
+  const c = hex.replace('#', '')
+  const r = parseInt(c.slice(0, 2), 16) / 255
+  const g = parseInt(c.slice(2, 4), 16) / 255
+  const b = parseInt(c.slice(4, 6), 16) / 255
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return luminance > 0.4 ? '#111827' : '#ffffff'
+}
+
 type PageState = 'loading' | 'not_found' | 'active' | 'expired' | 'accepted' | 'declined'
 
 export default function PublicQuotePage() {
@@ -303,7 +312,11 @@ export default function PublicQuotePage() {
                       <button
                         onClick={handleAccept}
                         disabled={actionLoading}
-                        className="flex-1 py-3 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition cursor-pointer disabled:opacity-50"
+                        style={{
+                          backgroundColor: quote.brand_color || '#111827',
+                          color: getBrandTextColor(quote.brand_color || '#111827'),
+                        }}
+                        className="flex-1 py-3 text-sm font-medium rounded-xl hover:opacity-90 transition cursor-pointer disabled:opacity-50"
                       >
                         {actionLoading ? 'Processing...' : 'Yes, accept'}
                       </button>
@@ -321,8 +334,11 @@ export default function PublicQuotePage() {
                     <button
                       onClick={() => setConfirmingAccept(true)}
                       disabled={actionLoading}
-                      style={{ backgroundColor: quote.brand_color || '#A7F3D0' }}
-                      className="flex-1 py-3 text-white text-sm font-medium rounded-xl hover:opacity-90 transition cursor-pointer disabled:opacity-50"
+                      style={{
+                        backgroundColor: quote.brand_color || '#111827',
+                        color: getBrandTextColor(quote.brand_color || '#111827'),
+                      }}
+                      className="flex-1 py-3 text-sm font-medium rounded-xl hover:opacity-90 transition cursor-pointer disabled:opacity-50"
                     >
                       Accept Quote
                     </button>

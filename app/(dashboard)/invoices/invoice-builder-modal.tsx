@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/toast'
 import { DatePicker } from '@/components/ui/date-picker'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { InvoicePaymentSchedule } from './invoice-payment-schedule'
-import { X, Copy, Check, Trash2, Plus, ChevronDown, Search, ExternalLink, GripVertical, Download } from 'lucide-react'
+import { X, Copy, Check, Trash2, Plus, ChevronDown, Search, ExternalLink, GripVertical, Download, Mail } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { generateAndPrintPdf } from '@/lib/generate-pdf'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
@@ -44,6 +44,7 @@ interface Invoice {
   paid_at: string | null
   share_token: string
   share_token_enabled: boolean
+  email_sent_at: string | null
   couple_id: string
   couple_name: string
   event_id: string | null
@@ -636,6 +637,25 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
       toast('Final payment marked as paid')
     },
     onError: () => toast('Failed to mark final payment as paid'),
+  })
+
+  const sendEmail = useMutation({
+    mutationFn: async () => {
+      if (!effectiveInvoiceId) throw new Error('Save the invoice first')
+      const res = await fetch('/api/email/send-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: effectiveInvoiceId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send email')
+      return data
+    },
+    onSuccess: () => {
+      toast('Email sent to couple')
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
+    },
+    onError: (err) => toast(err instanceof Error ? err.message : 'Failed to send email'),
   })
 
   const toggleStripePayment = useMutation({
@@ -1248,14 +1268,23 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                     </div>
                   )}
 
-                  {!isNewInvoice && (
-                    <div className="pt-1">
+                  <div className="pt-1 flex items-center gap-3">
+                    <button
+                      onClick={() => sendEmail.mutate()}
+                      disabled={sendEmail.isPending || !effectiveInvoiceId}
+                      title={!effectiveInvoiceId ? 'Save the invoice first' : undefined}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
+                    >
+                      <Mail size={12} strokeWidth={1.5} />
+                      {sendEmail.isPending ? 'Sending...' : invoice?.email_sent_at ? 'Resend email' : 'Send to client'}
+                    </button>
+                    {!isNewInvoice && (
                       <button onClick={downloadPdf}
                         className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">
                         <Download size={12} strokeWidth={1.5} /> Download PDF
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Stripe card payments toggle */}
                   {!isNewInvoice && (

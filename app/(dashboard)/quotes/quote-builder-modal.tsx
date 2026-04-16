@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 import { DatePicker } from '@/components/ui/date-picker'
-import { X, Copy, Check, RefreshCw, Trash2, Plus, Search, ChevronDown, GripVertical, Download } from 'lucide-react'
+import { X, Copy, Check, RefreshCw, Trash2, Plus, Search, ChevronDown, GripVertical, Download, Mail } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { generateAndPrintPdf } from '@/lib/generate-pdf'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
@@ -30,6 +30,7 @@ interface Quote {
   share_token: string
   share_token_enabled: boolean
   accepted_at: string | null
+  email_sent_at: string | null
   couple_id: string
   couple_name: string
   discount_type: 'percentage' | 'fixed' | null
@@ -453,6 +454,25 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
       toast('Share link regenerated')
     },
     onError: () => toast('Failed to regenerate link'),
+  })
+
+  const sendEmail = useMutation({
+    mutationFn: async () => {
+      if (!effectiveQuoteId) throw new Error('Save the quote first')
+      const res = await fetch('/api/email/send-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteId: effectiveQuoteId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send email')
+      return data
+    },
+    onSuccess: () => {
+      toast('Email sent to couple')
+      queryClient.invalidateQueries({ queryKey: ['quote', effectiveQuoteId] })
+    },
+    onError: (err) => toast(err instanceof Error ? err.message : 'Failed to send email'),
   })
 
   const createInvoice = useMutation({
@@ -937,6 +957,15 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                   )}
 
                   <div className="flex items-center gap-3 pt-0.5">
+                    <button
+                      onClick={() => sendEmail.mutate()}
+                      disabled={sendEmail.isPending || !effectiveQuoteId}
+                      title={!effectiveQuoteId ? 'Save the quote first' : undefined}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
+                    >
+                      <Mail size={12} strokeWidth={1.5} />
+                      {sendEmail.isPending ? 'Sending...' : quote?.email_sent_at ? 'Resend email' : 'Send to client'}
+                    </button>
                     <button onClick={() => regenerateToken.mutate()} disabled={regenerateToken.isPending}
                       className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50">
                       <RefreshCw size={12} strokeWidth={1.5} /> Regenerate link
