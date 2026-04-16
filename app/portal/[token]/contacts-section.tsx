@@ -128,7 +128,7 @@ export function ContactsSection({ token, initialContacts }: ContactsSectionProps
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Contact name"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
               />
             </div>
 
@@ -139,7 +139,7 @@ export function ContactsSection({ token, initialContacts }: ContactsSectionProps
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
               >
                 <option value="">Select category</option>
                 {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
@@ -157,7 +157,7 @@ export function ContactsSection({ token, initialContacts }: ContactsSectionProps
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="email@example.com"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
               />
             </div>
 
@@ -168,7 +168,7 @@ export function ContactsSection({ token, initialContacts }: ContactsSectionProps
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="+61 400 000 000"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
               />
             </div>
 

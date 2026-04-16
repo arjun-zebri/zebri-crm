@@ -149,7 +149,7 @@ export function DashboardRevenueChart() {
                 <Area
                   type="monotone"
                   dataKey={dataKey}
-                  stroke="#111111"
+                  stroke="#A7F3D0"
                   strokeWidth={2}
                   fill="url(#chartGradient)"
                 />

@@ -49,7 +49,7 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
 
   if (!hasQuotes && !hasInvoices) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+      <div className="border border-gray-200 rounded-xl p-6 text-center">
         <p className="text-sm text-gray-600">No quotes or invoices yet. Your MC will send them here.</p>
       </div>
     )

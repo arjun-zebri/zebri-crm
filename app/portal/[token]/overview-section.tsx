@@ -80,7 +80,7 @@ export function OverviewSection({ coupleName, coupleEmail, events }: OverviewSec
           </div>
         </div>
       ) : (
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+        <div className="border border-gray-200 rounded-xl p-6 text-center">
           <p className="text-sm text-gray-600">No events yet. Check back when your MC adds an event.</p>
         </div>
       )}

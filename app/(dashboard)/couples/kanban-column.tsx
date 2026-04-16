@@ -37,7 +37,7 @@ export function KanbanColumn({
   };
 
   return (
-    <div className="w-64 shrink-0 bg-gray-50 rounded-xl p-3">
+    <div className="w-64 shrink-0 rounded-xl p-3">
       <div className="flex items-center gap-2 mb-2">
         <span
           className={`text-xs font-medium px-2 py-0.5 rounded-md ${classes.pill}`}

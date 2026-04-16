@@ -434,7 +434,7 @@ export function TimelineSection({ token, initialItems, hasEvent }: TimelineSecti
 
   return (
     <div className="space-y-4">
-      <div className="bg-gray-50 border border-gray-200 rounded-xl px-5 py-3.5">
+      <div className="border border-gray-200 rounded-xl px-5 py-3.5">
         <p className="text-sm text-gray-500">
           Moments you add will be reviewed by your MC before going on the official timeline. Your MC may also add items directly.
         </p>

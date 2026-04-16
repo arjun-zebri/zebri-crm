@@ -37,15 +37,17 @@ export function CouplesKanban({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-5 pb-4 items-start">
-        {statuses.map((status) => (
-          <MemoKanbanColumn
-            key={status.id}
-            status={status}
-            couples={couples.filter((c) => c.status === status.slug)}
-            onCardClick={onCardClick}
-            onAddClick={onAddClick}
-          />
+      <div className="flex pb-4 items-start">
+        {statuses.map((status, index) => (
+          <div key={status.id} className="flex items-start">
+            {index > 0 && <div className="w-px bg-gray-100 self-stretch mx-1" />}
+            <MemoKanbanColumn
+              status={status}
+              couples={couples.filter((c) => c.status === status.slug)}
+              onCardClick={onCardClick}
+              onAddClick={onAddClick}
+            />
+          </div>
         ))}
       </div>
     </DragDropContext>

@@ -31,7 +31,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
   const [phone, setPhone] = useState(couple.phone);
   const [email, setEmail] = useState(couple.email);
   const [leadSource, setLeadSource] = useState(couple.lead_source || "");
-  const [notes, setNotes] = useState(couple.notes);
+  const [notes, setNotes] = useState(couple.notes ?? "");
   const [leadSourceOpen, setLeadSourceOpen] = useState(false);
 
   const leadSourceLabel = leadSource
