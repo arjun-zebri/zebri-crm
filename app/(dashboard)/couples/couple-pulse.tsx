@@ -79,6 +79,16 @@ export function CouplePulse({ couple }: CouplePulseProps) {
 
   return (
     <div className="space-y-8">
+      {/* Coming soon banner */}
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 ring-1 ring-gray-200">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-gray-900 text-white text-xs font-medium tracking-wide shrink-0">
+          Coming soon
+        </span>
+        <p className="text-sm text-gray-500">
+          Pulse will analyse your conversations and surface booking insights automatically.
+        </p>
+      </div>
+    <div className="space-y-8 opacity-40 select-none pointer-events-none overflow-hidden">
       {/* Hero: score ring + metadata */}
       <div className="pb-6 border-b border-gray-100 space-y-5">
         <div className="flex items-center gap-5 sm:gap-8">
@@ -212,6 +222,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
           </div>
         ))}
       </div>
+    </div>
     </div>
   );
 }
