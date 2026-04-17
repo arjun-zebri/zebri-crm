@@ -18,5 +18,9 @@ export function formatRelativeDate(due_date: string): string {
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Tomorrow'
   if (diffDays > 1 && diffDays <= 6) return due.toLocaleDateString('en-GB', { weekday: 'short' })
-  return due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  if (diffDays > 6) return due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  if (diffDays === -1) return 'Yesterday'
+  if (diffDays >= -6) return `${Math.abs(diffDays)} days ago`
+  if (diffDays >= -13) return '1 week ago'
+  return `${Math.floor(Math.abs(diffDays) / 7)} weeks ago`
 }

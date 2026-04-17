@@ -8,7 +8,8 @@ All pages are fully responsive. Key patterns:
 
 - **Dashboard**: Stats stack to 1-col on mobile → 3-col on sm+. Top grid is 1-col on mobile → 7-col on lg. Bottom grid is 1-col → 2-col md → 4-col xl.
 - **Couples / Vendors list**: Table scrolls horizontally on mobile. Only name+status columns visible at 375px; more columns revealed at sm/lg breakpoints.
-- **Couples / Vendors slide-over**: Full-width on mobile, 640px on md+. Action button labels hidden on mobile (icons only).
+- **Couple Profile modal**: Centered modal with `p-3` gap on all edges on mobile. Horizontal scrollable tab strip replaces vertical sidebar nav. All header actions consolidated into `⋯` Popover dropdown.
+- **Vendor Profile slide-over**: Full-width on mobile, 640px on md+.
 - **Calendar (Couples)**: Filter sidebar hidden on mobile, opens as overlay drawer via SlidersHorizontal button. View switcher shows single letter (D/W/M) on mobile.
 - **Headers (Couples/Vendors)**: Search input narrows to w-36 on mobile (w-56 on sm+). New button has larger touch target on mobile.
 
@@ -255,60 +256,47 @@ Calendar style: Month view showing all couples' event dates.
 
 ## Couple Profile
 
-Opens as a slide-over panel from the right (640px width), not a full page navigation. Keeps the couple list visible in the background for context.
+Opens as a centered full-screen modal (not a slide-over). Overlay covers the full viewport.
+
+**Modal layout:**
+- Wrapper: `fixed inset-0 flex items-center justify-center p-3 sm:p-4` — 12px gap on all edges on mobile, 16px on desktop
+- Modal box: `w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] rounded-2xl`
+- Body: vertical flex on mobile (tab strip on top), horizontal flex on desktop (sidebar nav on left)
 
 **Profile header:**
+- Couple name (`text-xl font-semibold`) + status badge
+- All actions in a single `⋯` (MoreHorizontal) Popover dropdown: Call, Email, WhatsApp, Portal toggle + copy links, Delete couple
+- Close button (×) right of `⋯`
 
-- Couple name (text-xl font-semibold)
-- Email, Phone below (text-sm text-gray-500)
-- Status badge
-- Quick actions right-aligned: Call, Email, Edit (opens edit modal)
+**Navigation:**
+- Mobile: horizontal scrollable tab strip (`overflow-x-auto`) below header — icon + label per tab, `whitespace-nowrap`
+- Desktop: vertical 200px sidebar on left — same tabs as icon + label rows
 
-**Tabs:** Overview, Events, Vendors, Tasks, Quotes, Invoices
+**Tabs:** Overview, Payments, Timeline, Names (MC Portal Names), Songs, Files, Pulse
 
 **Overview tab (default):**
+- Two-column grid on `lg+` (`grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16`), stacks to 1-col on mobile
+- Left: General info (Phone, Email, Lead Source inline editable fields) + Notes textarea (4 rows default, 6 rows when focused)
+- Right: Events list + Vendors/Contacts list
 
-- Key details: Email, Phone, Status
-- Notes section: rendered text. If empty: "No notes yet." in italic gray. Edit button opens edit modal.
+**Payments tab:**
+- Two-column grid (`grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-16`): Quotes | Invoices
+- Invoice due date hidden on mobile (`hidden sm:inline`) to prevent row overflow
+- Totals row: `grid-cols-1 sm:grid-cols-2`
 
-**Events tab:**
+**Timeline tab:**
+- Event dropdown at top; calendar + sidebar stacked on mobile (`flex-col sm:flex-row`)
+- Right sidebar (Unscheduled + To Review) goes full-width on mobile (`w-full sm:w-[260px]`)
+- Bottom padding on sidebar: `pb-6 sm:pb-2` to ensure scroll space
 
-- List of events (weddings) for this couple
-- Each row: event date (formatted), venue, status badge.
-- "+ Add Event" button to create a new event for this couple
-- Empty state: "No events yet."
-- Events belong to a couple (one couple can have multiple events)
+**Names tab (MC Portal):**
+- Two-column grid (`grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16`) for Couple+Bridal Party | Family+Others
 
-**Vendors tab:**
-
-- List of vendors assigned to this couple
-- Each row: vendor name, category, status. Can remove vendor from here.
-- "+ Add Vendor" button to attach vendors to this couple
-
-**Tasks tab:**
-
-- List of tasks related to this couple
-- Each row: task title, due date, status badge. Checkbox for inline completion.
-- "+ Add Task" button pre-filled with this couple
-- Empty state: "No tasks yet."
-
-**Quotes tab:**
-
-- List of quotes for this couple sorted by created_at desc
-- Each row: quote number (text-gray-500), title, status badge, subtotal (right-aligned), expiry date
-- Status badge colors: gray (draft), blue (sent), emerald (accepted), red (declined), amber (expired)
-- "+ New Quote" button at top right opens quote modal from couple context
-- Click row → opens quote modal for editing
-- Empty state: "No quotes yet."
-
-**Invoices tab:**
-
-- List of invoices for this couple sorted by created_at desc
-- Each row: invoice number (text-gray-500), title, status badge, subtotal (right-aligned), due date
-- Status badge colors: gray (draft), blue (sent), emerald (paid), red (overdue), gray (cancelled)
-- "+ New Invoice" button at top right opens invoice modal from couple context
-- Click row → opens invoice modal for editing
-- Empty state: "No invoices yet."
+**Pulse tab:**
+- Hero: ring + metadata in a `flex` row; score breakdown below as `grid-cols-2 sm:grid-cols-4`
+- Ring SVG: `w-28 h-28 sm:w-36 sm:h-36`
+- Summary/Intelligence | Recommended Action: `grid-cols-1 sm:grid-cols-2`
+- Activity strip: `grid-cols-2 sm:grid-cols-4`
 
 ---
 

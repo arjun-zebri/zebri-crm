@@ -49,16 +49,22 @@ function groupTasks(tasks: Task[]) {
   return { overdue, today: todayTasks, upcoming, noDate, done };
 }
 
+type ActiveFilter = "overdue" | "today" | "upcoming" | "noDate" | null;
+
 function ProgressSummary({
   overdue,
   today,
   upcoming,
   noDate,
+  activeFilter,
+  setActiveFilter,
 }: {
   overdue: number;
   today: number;
   upcoming: number;
   noDate: number;
+  activeFilter: ActiveFilter;
+  setActiveFilter: (f: ActiveFilter) => void;
 }) {
   const total = overdue + today + upcoming + noDate;
 
@@ -71,23 +77,26 @@ function ProgressSummary({
     );
   }
 
-  const items: { label: string; dot: string; textClass?: string }[] = [
-    ...(overdue > 0 ? [{ label: `${overdue} overdue`, dot: "bg-red-400", textClass: "text-red-500" }] : []),
-    ...(today > 0 ? [{ label: `${today} today`, dot: "bg-emerald-400" }] : []),
-    ...(upcoming > 0 ? [{ label: `${upcoming} upcoming`, dot: "bg-gray-300" }] : []),
-    ...(noDate > 0 ? [{ label: `${noDate} no date`, dot: "bg-gray-200" }] : []),
+  const chips: { key: ActiveFilter; label: string; dot: string; activeClass: string; inactiveClass: string }[] = [
+    ...(overdue > 0 ? [{ key: "overdue" as ActiveFilter, label: `${overdue} overdue`, dot: "bg-red-400", activeClass: "bg-red-100 text-red-600", inactiveClass: "bg-gray-100 text-gray-500" }] : []),
+    ...(today > 0 ? [{ key: "today" as ActiveFilter, label: `${today} today`, dot: "bg-emerald-400", activeClass: "bg-emerald-100 text-emerald-700", inactiveClass: "bg-gray-100 text-gray-500" }] : []),
+    ...(upcoming > 0 ? [{ key: "upcoming" as ActiveFilter, label: `${upcoming} upcoming`, dot: "bg-gray-300", activeClass: "bg-gray-200 text-gray-700", inactiveClass: "bg-gray-100 text-gray-500" }] : []),
+    ...(noDate > 0 ? [{ key: "noDate" as ActiveFilter, label: `${noDate} no date`, dot: "bg-gray-200", activeClass: "bg-gray-200 text-gray-700", inactiveClass: "bg-gray-100 text-gray-500" }] : []),
   ];
 
   return (
-    <div className="px-6 pb-4 flex items-center gap-2 text-sm text-gray-400 flex-wrap">
-      {items.map((item, i) => (
-        <Fragment key={item.label}>
-          {i > 0 && <span className="text-gray-200">·</span>}
-          <span className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${item.dot}`} />
-            <span className={item.textClass}>{item.label}</span>
-          </span>
-        </Fragment>
+    <div className="px-6 pb-4 flex items-center gap-2 flex-wrap">
+      {chips.map((chip) => (
+        <button
+          key={chip.key}
+          onClick={() => setActiveFilter(activeFilter === chip.key ? null : chip.key)}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
+            activeFilter === chip.key ? chip.activeClass : chip.inactiveClass
+          }`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${chip.dot}`} />
+          {chip.label}
+        </button>
       ))}
     </div>
   );
@@ -113,8 +122,8 @@ function TasksFilterBar({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="relative w-40">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="relative flex-1 min-w-0 sm:flex-none sm:w-64">
           <Search
             size={12}
             strokeWidth={1.5}
@@ -125,7 +134,7 @@ function TasksFilterBar({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search..."
-            className="w-full border border-gray-200 rounded-lg pl-7 pr-6 py-1.5 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-1 focus:ring-green-100 transition"
+            className="w-full border border-gray-200 rounded-lg pl-7 pr-6 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-1 focus:ring-green-100 transition"
           />
           {searchQuery && (
             <button
@@ -140,14 +149,14 @@ function TasksFilterBar({
         {couples.length > 0 && (
           <Popover.Root open={coupleOpen} onOpenChange={setCoupleOpen}>
             <Popover.Trigger asChild>
-              <button className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer">
-                <span className="truncate max-w-24">{selectedCouple ? selectedCouple.name : "Couples"}</span>
+              <button className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer">
+                <span className="truncate max-w-40">{selectedCouple ? selectedCouple.name : "Couples"}</span>
                 <ChevronDown size={10} strokeWidth={1.5} className="text-gray-400 shrink-0" />
               </button>
             </Popover.Trigger>
             <Popover.Portal>
               <Popover.Content
-                className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-48 max-h-48 overflow-y-auto"
+                className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-64 max-h-48 overflow-y-auto"
                 sideOffset={4}
                 align="end"
               >
@@ -269,11 +278,11 @@ function TaskRow({
   return (
     <div
       onClick={onClick}
-      className="flex items-start gap-3 px-1 py-2.5 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer rounded-sm"
+      className="flex items-center gap-3 px-1 py-2.5 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer rounded-sm"
     >
       <button
         onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        className="shrink-0 text-gray-300 hover:text-gray-500 transition cursor-pointer mt-0.5"
+        className="shrink-0 -m-2 p-2 text-gray-300 hover:text-gray-500 transition cursor-pointer"
         title={task.status === "done" ? "Mark as outstanding" : "Mark as done"}
       >
         {task.status === "done" ? (
@@ -337,16 +346,9 @@ function SectionGroup({
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-2 px-1">
-        <p className={`text-xs font-medium uppercase tracking-wider ${overdue ? "text-red-400" : "text-gray-400"}`}>
-          {label}
+        <p className={`text-xs font-semibold uppercase tracking-wider ${overdue ? "text-red-500" : "text-gray-900"}`}>
+          {label} · {tasks.length}
         </p>
-        <span
-          className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
-            overdue ? "bg-red-50 text-red-400" : "bg-gray-100 text-gray-400"
-          }`}
-        >
-          {tasks.length}
-        </span>
       </div>
       {tasks.map((task) => (
         <TaskRow
@@ -381,6 +383,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCoupleId, setFilterCoupleId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>(null);
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["all-tasks"],
@@ -524,9 +527,9 @@ export default function TasksPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-6 pt-6 pb-3 flex-shrink-0 flex items-center justify-between gap-4">
+      <div className="px-6 pt-6 pb-3 flex-shrink-0 flex flex-col md:flex-row md:items-center gap-3">
         <h1 className="text-3xl font-semibold text-gray-900">Tasks</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 md:flex-1 md:justify-end">
           <TasksFilterBar
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -537,7 +540,7 @@ export default function TasksPage() {
           />
           <button
             onClick={() => openTaskModal()}
-            className="text-sm px-3 py-1.5 rounded-xl bg-black text-white hover:bg-neutral-800 transition cursor-pointer shrink-0"
+            className="hidden md:flex text-sm px-3 py-1.5 rounded-xl bg-black text-white hover:bg-neutral-800 transition cursor-pointer shrink-0"
           >
             + New Task
           </button>
@@ -550,6 +553,8 @@ export default function TasksPage() {
           today={groups.today.length}
           upcoming={groups.upcoming.length}
           noDate={groups.noDate.length}
+          activeFilter={activeFilter}
+          setActiveFilter={setActiveFilter}
         />
       )}
 
@@ -574,31 +579,39 @@ export default function TasksPage() {
               </div>
             ) : (
               <>
-                <SectionGroup
-                  label="Overdue"
-                  tasks={groups.overdue}
-                  overdue
-                  {...sharedGroupProps}
-                  onAddTask={undefined}
-                />
-                <SectionGroup
-                  label="Today"
-                  tasks={groups.today}
-                  sectionKey="today"
-                  {...sharedGroupProps}
-                />
-                <SectionGroup
-                  label="Upcoming"
-                  tasks={groups.upcoming}
-                  sectionKey="upcoming"
-                  {...sharedGroupProps}
-                />
-                <SectionGroup
-                  label="No Date"
-                  tasks={groups.noDate}
-                  sectionKey="noDate"
-                  {...sharedGroupProps}
-                />
+                {(!activeFilter || activeFilter === "overdue") && (
+                  <SectionGroup
+                    label="Overdue"
+                    tasks={groups.overdue}
+                    overdue
+                    {...sharedGroupProps}
+                    onAddTask={undefined}
+                  />
+                )}
+                {(!activeFilter || activeFilter === "today") && (
+                  <SectionGroup
+                    label="Today"
+                    tasks={groups.today}
+                    sectionKey="today"
+                    {...sharedGroupProps}
+                  />
+                )}
+                {(!activeFilter || activeFilter === "upcoming") && (
+                  <SectionGroup
+                    label="Upcoming"
+                    tasks={groups.upcoming}
+                    sectionKey="upcoming"
+                    {...sharedGroupProps}
+                  />
+                )}
+                {(!activeFilter || activeFilter === "noDate") && (
+                  <SectionGroup
+                    label="No Date"
+                    tasks={groups.noDate}
+                    sectionKey="noDate"
+                    {...sharedGroupProps}
+                  />
+                )}
               </>
             )}
 
@@ -628,6 +641,14 @@ export default function TasksPage() {
           </>
         )}
       </div>
+
+      <button
+        onClick={() => openTaskModal()}
+        className="md:hidden fixed bottom-20 right-4 z-20 bg-black text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-neutral-800 transition cursor-pointer"
+        aria-label="New Task"
+      >
+        <Plus size={22} strokeWidth={2} />
+      </button>
 
       <TaskModal
         isOpen={taskModalOpen}

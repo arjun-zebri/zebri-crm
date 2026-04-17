@@ -67,10 +67,12 @@ Breakpoints follow Tailwind defaults: `sm` = 640px, `md` = 768px, `lg` = 1024px.
 - Desktop (`md+`): fixed 68px icon-only sidebar, expands to 240px on hover
 - Mobile top bar: fixed h-14 bar with hamburger, centered logo, z-30
 
-**Slide-over panels** (CoupleProfile, VendorProfile):
-- Mobile: `w-full` (full screen)
-- Desktop (`md+`): `w-[640px]`
-- Action button labels hidden on mobile (icons only via `hidden sm:inline`)
+**Couple Profile modal:**
+- Wrapper: `fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4` — `p-3` creates visible gaps on all edges on mobile
+- Modal box: `w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] rounded-2xl` — full-bleed with gaps on mobile, bounded on desktop
+- Navigation: horizontal scrollable tab strip (`overflow-x-auto`, `min-w-max`) on mobile (`sm:hidden`); vertical 200px sidebar on desktop (`hidden sm:block`)
+- Header actions: consolidated into a single `⋯` (MoreHorizontal) Popover dropdown — all actions (Call, Email, WhatsApp, Portal, Delete) inside it
+- **VendorProfile** (slide-over): Mobile `w-full`, Desktop `w-[640px]`
 
 **Tables:**
 - Wrapper: `overflow-x-auto`; table: `min-w-[400px]`
@@ -154,6 +156,26 @@ Example: period selector shows `6m` on mobile, `6 months` on desktop.
 Primary: bg-black text-white rounded-xl px-4 py-2 hover:bg-neutral-800 cursor-pointer
 
 Secondary: bg-neutral-100 text-neutral-900 rounded-xl cursor-pointer
+
+## Mobile FAB (Floating Action Button)
+
+Use a FAB for the primary CTA on mobile when the page header is too narrow to show the full button:
+
+```tsx
+{/* Header button — desktop only */}
+<button className="hidden md:flex text-sm px-3 py-1.5 rounded-xl bg-black text-white ...">
+  + New Thing
+</button>
+
+{/* FAB — mobile only, fixed bottom-right above nav bar */}
+<button className="md:hidden fixed bottom-20 right-4 z-20 bg-black text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg ...">
+  <Plus size={22} strokeWidth={2} />
+</button>
+```
+
+- `bottom-20` clears the mobile nav bar (h-14 = 56px, plus buffer)
+- `right-4` = 16px from screen edge
+- Circle shape (`rounded-full w-12 h-12`) — standard mobile FAB convention
 
 ------------------------------------------------------------------------
 
