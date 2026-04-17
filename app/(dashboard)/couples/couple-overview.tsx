@@ -58,7 +58,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
     <>
       {/* Skeleton — shown while events or contacts are loading */}
       {isLoading && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 animate-pulse">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 animate-pulse">
           <div className="space-y-4">
             <div className="h-3 w-16 bg-gray-100 rounded-full" />
             {[1, 2, 3].map((i) => (
@@ -83,7 +83,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       )}
 
       {/* Real content — always mounted so queries fire; hidden via CSS while loading */}
-      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-16 ${isLoading ? 'hidden' : ''}`}>
+      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 ${isLoading ? 'hidden' : ''}`}>
       {/* Column 1: General Info */}
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">General</h3>
@@ -237,7 +237,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             onFocus={() => setEditingField("notes")}
             onBlur={() => handleSaveField("notes", notes)}
             placeholder="Any additional notes..."
-            rows={editingField === "notes" ? 4 : undefined}
+            rows={editingField === "notes" ? 6 : 4}
             className="w-full bg-transparent outline-none border-none resize-none mt-1 text-sm text-gray-500 placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed"
           />
         </div>

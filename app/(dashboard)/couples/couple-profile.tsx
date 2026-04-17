@@ -6,8 +6,6 @@ import {
   Phone,
   Mail,
   Trash2,
-  ChevronDown,
-  Link2,
   Check,
   Copy,
   LayoutDashboard,
@@ -19,6 +17,7 @@ import {
   Music,
   Paperclip,
   Activity,
+  MoreHorizontal,
 } from "lucide-react";
 import { PiWhatsappLogoLight } from "react-icons/pi";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -114,9 +113,8 @@ export function CoupleProfile({
   const { toast } = useToast();
   const { data: statuses } = useCoupleStatuses();
   const [activeSection, setActiveSection] = useState<Section>(defaultTab);
-  const [portalOpen, setPortalOpen] = useState(false);
-
   const [statusOpen, setStatusOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [copied, setCopied] = useState<"couple" | "vendor" | null>(null);
@@ -216,19 +214,19 @@ export function CoupleProfile({
 
       {/* Modal */}
       <div
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+        className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4"
         onClick={onClose}
       >
         <div
           data-testid="couple-profile-panel"
-          className="bg-white rounded-2xl shadow-xl w-[90vw] max-w-[1400px] h-[90vh] flex flex-col overflow-hidden animate-modal-in"
+          className="bg-white rounded-2xl shadow-xl w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Compact header */}
-          <div className="shrink-0 border-b border-gray-200 px-6 py-3.5">
-            <div className="flex items-center gap-4">
+          <div className="shrink-0 border-b border-gray-200 px-4 sm:px-6 py-3">
+            <div className="flex items-center gap-2 sm:gap-4">
               {/* Name + status inline */}
-              <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 {editingName ? (
                   <input
                     type="text"
@@ -299,173 +297,134 @@ export function CoupleProfile({
                 </Popover.Root>
               </div>
 
-              {/* Action buttons */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <a
-                  href={hasPhone ? `tel:${couple.phone}` : undefined}
-                  title="Call"
-                  className={`p-2 ring-1 ring-gray-200 rounded-xl transition ${
-                    hasPhone
-                      ? "text-gray-700 hover:bg-gray-100 cursor-pointer"
-                      : "text-gray-300 cursor-not-allowed"
-                  }`}
-                  onClick={hasPhone ? undefined : (e) => e.preventDefault()}
-                >
-                  <Phone size={14} strokeWidth={1.5} />
-                </a>
-                <a
-                  href={hasEmail ? `mailto:${couple.email}` : undefined}
-                  title="Email"
-                  className={`p-2 ring-1 ring-gray-200 rounded-xl transition ${
-                    hasEmail
-                      ? "text-gray-700 hover:bg-gray-100 cursor-pointer"
-                      : "text-gray-300 cursor-not-allowed"
-                  }`}
-                  onClick={hasEmail ? undefined : (e) => e.preventDefault()}
-                >
-                  <Mail size={14} strokeWidth={1.5} />
-                </a>
-                <a
-                  href={
-                    hasPhone
-                      ? `https://wa.me/${couple.phone.replace(/\D/g, "")}`
-                      : undefined
-                  }
-                  title="WhatsApp"
-                  target={hasPhone ? "_blank" : undefined}
-                  rel={hasPhone ? "noopener noreferrer" : undefined}
-                  className={`p-2 ring-1 ring-gray-200 rounded-xl transition ${
-                    hasPhone
-                      ? "text-gray-700 hover:bg-gray-100 cursor-pointer"
-                      : "text-gray-300 cursor-not-allowed"
-                  }`}
-                  onClick={hasPhone ? undefined : (e) => e.preventDefault()}
-                >
-                  <PiWhatsappLogoLight size={16} />
-                </a>
+              {/* Actions dropdown */}
+              <Popover.Root open={actionsOpen} onOpenChange={setActionsOpen}>
+                <Popover.Trigger asChild>
+                  <button
+                    title="Actions"
+                    className="shrink-0 p-1.5 sm:p-2 ring-1 ring-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                  >
+                    <MoreHorizontal size={16} strokeWidth={1.5} />
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="bg-white border border-gray-200 rounded-xl shadow-lg z-[70] w-52 py-1.5"
+                    sideOffset={6}
+                    align="end"
+                  >
+                    {/* Contact actions */}
+                    <a
+                      href={hasPhone ? `tel:${couple.phone}` : undefined}
+                      onClick={(e) => { if (!hasPhone) e.preventDefault(); else setActionsOpen(false); }}
+                      className={`flex items-center gap-2.5 px-3 py-2 text-sm transition ${hasPhone ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
+                    >
+                      <Phone size={14} strokeWidth={1.5} />
+                      Call
+                    </a>
+                    <a
+                      href={hasEmail ? `mailto:${couple.email}` : undefined}
+                      onClick={(e) => { if (!hasEmail) e.preventDefault(); else setActionsOpen(false); }}
+                      className={`flex items-center gap-2.5 px-3 py-2 text-sm transition ${hasEmail ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
+                    >
+                      <Mail size={14} strokeWidth={1.5} />
+                      Email
+                    </a>
+                    <a
+                      href={hasPhone ? `https://wa.me/${couple.phone.replace(/\D/g, "")}` : undefined}
+                      target={hasPhone ? "_blank" : undefined}
+                      rel={hasPhone ? "noopener noreferrer" : undefined}
+                      onClick={(e) => { if (!hasPhone) e.preventDefault(); else setActionsOpen(false); }}
+                      className={`flex items-center gap-2.5 px-3 py-2 text-sm transition ${hasPhone ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
+                    >
+                      <PiWhatsappLogoLight size={15} />
+                      WhatsApp
+                    </a>
 
-                {/* Portal link button */}
-                <Popover.Root open={portalOpen} onOpenChange={setPortalOpen}>
-                  <Popover.Trigger asChild>
-                    <button
-                      title="Portal"
-                      className="p-2 ring-1 ring-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 transition cursor-pointer"
-                    >
-                      <Link2 size={14} strokeWidth={1.5} />
-                    </button>
-                  </Popover.Trigger>
-                  <Popover.Portal>
-                    <Popover.Content
-                      className="bg-white border border-gray-200 rounded-xl shadow-lg p-4 z-[70] w-72 space-y-3"
-                      sideOffset={6}
-                      align="end"
-                    >
-                      {/* Toggle */}
-                      <div className="flex items-center justify-between">
+                    {/* Portal section */}
+                    <div className="border-t border-gray-100 mt-1 pt-1">
+                      <div className="flex items-center justify-between px-3 py-2">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            Couple portal
-                          </p>
+                          <p className="text-sm text-gray-700">Portal</p>
                           <p className="text-xs text-gray-400">
-                            {couple.portal_token_enabled
-                              ? "Link is active"
-                              : "Link is disabled"}
+                            {couple.portal_token_enabled ? "Active" : "Disabled"}
                           </p>
                         </div>
                         <button
-                          onClick={() =>
-                            togglePortal.mutate(!couple.portal_token_enabled)
-                          }
-                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                            couple.portal_token_enabled
-                              ? "bg-black"
-                              : "bg-gray-200"
-                          }`}
+                          onClick={() => togglePortal.mutate(!couple.portal_token_enabled)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${couple.portal_token_enabled ? "bg-black" : "bg-gray-200"}`}
                         >
                           <span
-                            className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
-                              couple.portal_token_enabled
-                                ? "translate-x-4"
-                                : "translate-x-0"
-                            }`}
+                            className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${couple.portal_token_enabled ? "translate-x-4" : "translate-x-0"}`}
                           />
                         </button>
                       </div>
+                      <button
+                        onClick={() => copyLink("couple")}
+                        disabled={!couple.portal_token}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                      >
+                        <span>Copy couple link</span>
+                        {copied === "couple" ? <Check size={12} strokeWidth={2} className="text-emerald-500" /> : <Copy size={12} strokeWidth={1.5} className="text-gray-400" />}
+                      </button>
+                      <button
+                        onClick={() => copyLink("vendor")}
+                        disabled={!couple.portal_token}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                      >
+                        <span>Copy vendor link</span>
+                        {copied === "vendor" ? <Check size={12} strokeWidth={2} className="text-emerald-500" /> : <Copy size={12} strokeWidth={1.5} className="text-gray-400" />}
+                      </button>
+                    </div>
 
-                      {/* Copy links */}
-                      <div className="space-y-2 pt-4 border-t border-gray-100">
-                        <button
-                          onClick={() => copyLink("couple")}
-                          disabled={!couple.portal_token}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
-                        >
-                          <span className="text-gray-700">
-                            Copy couple link
-                          </span>
-                          {copied === "couple" ? (
-                            <Check
-                              size={13}
-                              strokeWidth={2}
-                              className="text-emerald-500"
-                            />
-                          ) : (
-                            <Copy
-                              size={13}
-                              strokeWidth={1.5}
-                              className="text-gray-400"
-                            />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => copyLink("vendor")}
-                          disabled={!couple.portal_token}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
-                        >
-                          <span className="text-gray-700">
-                            Copy vendor link
-                          </span>
-                          {copied === "vendor" ? (
-                            <Check
-                              size={13}
-                              strokeWidth={2}
-                              className="text-emerald-500"
-                            />
-                          ) : (
-                            <Copy
-                              size={13}
-                              strokeWidth={1.5}
-                              className="text-gray-400"
-                            />
-                          )}
-                        </button>
-                      </div>
-                    </Popover.Content>
-                  </Popover.Portal>
-                </Popover.Root>
-
-                {/* Delete button */}
-                <button
-                  data-testid="delete-couple-btn"
-                  onClick={() => setDeleteConfirm(true)}
-                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded-lg transition cursor-pointer"
-                >
-                  <Trash2 size={16} strokeWidth={1.5} />
-                </button>
-              </div>
+                    {/* Delete */}
+                    <div className="border-t border-gray-100 mt-1 pt-1">
+                      <button
+                        data-testid="delete-couple-btn"
+                        onClick={() => { setDeleteConfirm(true); setActionsOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition cursor-pointer"
+                      >
+                        <Trash2 size={14} strokeWidth={1.5} />
+                        Delete couple
+                      </button>
+                    </div>
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
 
               <button
                 onClick={onClose}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                className="shrink-0 p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
               >
                 <X size={18} strokeWidth={1.5} />
               </button>
             </div>
           </div>
 
-          {/* Body: Sidebar + Content */}
-          <div className="flex-1 flex overflow-hidden">
-            {/* Sidebar navigation */}
-            <nav className="w-[200px] shrink-0 border-r border-gray-200 overflow-y-auto px-3 py-4 space-y-0.5">
+          {/* Body: Nav + Content */}
+          <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
+            {/* Mobile: horizontal scrollable tab bar */}
+            <div className="sm:hidden shrink-0 border-b border-gray-200 overflow-x-auto">
+              <div className="flex px-2 py-2 gap-1 min-w-max">
+                {NAV_ITEMS.map((item) => (
+                  <button
+                    key={item.key}
+                    onClick={() => setActiveSection(item.key)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs whitespace-nowrap transition cursor-pointer ${
+                      activeSection === item.key
+                        ? "bg-gray-100 text-gray-900 font-medium"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop: sidebar navigation */}
+            <nav className="hidden sm:block w-[200px] shrink-0 border-r border-gray-200 overflow-y-auto px-3 py-4 space-y-0.5">
               {NAV_ITEMS.map((item) => (
                 <button
                   key={item.key}
@@ -483,7 +442,7 @@ export function CoupleProfile({
             </nav>
 
             {/* Content area */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6 flex flex-col">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col">
               {activeSection === "overview" && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <CoupleOverview couple={couple} onSave={onSave} />

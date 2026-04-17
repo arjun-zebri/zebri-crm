@@ -201,7 +201,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
   return (
     <>
       <div className="flex flex-col flex-1">
-        <div className="grid grid-cols-2 gap-16 flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-16 flex-1">
           {/* Quotes column */}
           <div>
             <button
@@ -300,7 +300,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                       >
                         {invoice.status}
                       </span>
-                      <span className={`shrink-0 text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                      <span className={`hidden sm:inline shrink-0 text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
                         {dueDateFormatted}
                       </span>
                       <span className="shrink-0 text-sm text-gray-700 font-medium tabular-nums">
@@ -317,7 +317,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
         </div>
 
         {/* Totals row */}
-        <div className="mt-auto grid grid-cols-2 gap-16">
+        <div className="mt-auto grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-16">
           <div className="flex items-center justify-between px-2 pt-6 border-t border-gray-100">
             <span className="text-xs text-gray-400">Quoted</span>
             <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(quotesTotal)}</span>

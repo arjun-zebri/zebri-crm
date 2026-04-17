@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   Info,
   Lightbulb,
-  TrendingUp,
   XCircle,
 } from "lucide-react";
 import { Couple } from "./couples-types";
@@ -80,11 +79,12 @@ export function CouplePulse({ couple }: CouplePulseProps) {
 
   return (
     <div className="space-y-8">
-      {/* Hero: Score ring + metadata + breakdown */}
-      <div className="pb-8 border-b border-gray-100">
-        <div className="flex items-center gap-8">
-          <div className="relative w-36 h-36 shrink-0">
-            <svg viewBox="0 0 96 96" className="w-36 h-36 -rotate-90">
+      {/* Hero: score ring + metadata */}
+      <div className="pb-6 border-b border-gray-100 space-y-5">
+        <div className="flex items-center gap-5 sm:gap-8">
+          {/* Ring */}
+          <div className="relative w-28 h-28 sm:w-36 sm:h-36 shrink-0">
+            <svg viewBox="0 0 96 96" className="w-28 h-28 sm:w-36 sm:h-36 -rotate-90">
               <circle cx="48" cy="48" r="40" fill="none" stroke="#f3f4f6" strokeWidth="5" />
               <circle
                 cx="48" cy="48" r="40" fill="none" stroke="#10b981" strokeWidth="5"
@@ -93,16 +93,17 @@ export function CouplePulse({ couple }: CouplePulseProps) {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-light text-gray-900 leading-none tabular-nums">{SAMPLE.score}</span>
+              <span className="text-3xl sm:text-4xl font-light text-gray-900 leading-none tabular-nums">{SAMPLE.score}</span>
               <span className={`text-xs font-medium mt-1.5 ${desc.color}`}>{desc.text}</span>
             </div>
           </div>
+
+          {/* Metadata */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 flex items-center gap-2">
-              <TrendingUp size={14} strokeWidth={1.5} />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900">
               Opportunity Score
             </h3>
-            <p className="text-sm text-gray-400 mt-1 mb-4">Overall assessment of booking likelihood</p>
+            <p className="text-sm text-gray-400 mt-1 mb-3">Overall assessment of booking likelihood</p>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-gray-200 text-gray-600">
                 {SAMPLE.bookingProbability}% booking probability
@@ -115,44 +116,41 @@ export function CouplePulse({ couple }: CouplePulseProps) {
               </span>
             </div>
           </div>
+        </div>
 
-          {/* Score Breakdown - 2x2 grid right of hero */}
-          <div className="shrink-0 grid grid-cols-2 gap-2.5">
-            {SAMPLE.subScores.map((s) => {
-              const c = scoreColor(s.value);
-              return (
-                <div key={s.label} className="relative ring-1 ring-gray-200 rounded-xl p-4 w-44">
-                  {/* Info icon — top left */}
-                  <div className="absolute top-3 left-3 group">
-                    <Info size={14} strokeWidth={1.75} className="text-gray-300 cursor-default" />
-                    <div className="pointer-events-none absolute top-0 right-full mr-2 w-64 rounded-xl border border-black bg-white px-3 py-2.5 text-xs text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10 shadow-sm leading-relaxed">
-                      {s.description}
-                    </div>
-                  </div>
-                  <div className="pt-4 flex items-end justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-900">{s.label}</span>
-                    <span className={`text-2xl font-light tabular-nums leading-none ${c.text}`}>{s.value}</span>
-                  </div>
-                  <div className="h-1 rounded-full bg-gray-100">
-                    <div className={`h-full rounded-full ${c.bar}`} style={{ width: `${s.value}%` }} />
+        {/* Score breakdown — 2 cols on mobile, 4 on sm+ */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {SAMPLE.subScores.map((s) => {
+            const c = scoreColor(s.value);
+            return (
+              <div key={s.label} className="relative ring-1 ring-gray-200 rounded-xl p-3 sm:p-4">
+                <div className="absolute top-2.5 left-2.5 group">
+                  <Info size={13} strokeWidth={1.75} className="text-gray-300 cursor-default" />
+                  <div className="pointer-events-none absolute top-0 left-full ml-2 w-56 rounded-xl border border-black bg-white px-3 py-2.5 text-xs text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10 shadow-sm leading-relaxed">
+                    {s.description}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                <div className="pt-4 flex items-end justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-900">{s.label}</span>
+                  <span className={`text-xl sm:text-2xl font-light tabular-nums leading-none ${c.text}`}>{s.value}</span>
+                </div>
+                <div className="h-1 rounded-full bg-gray-100">
+                  <div className={`h-full rounded-full ${c.bar}`} style={{ width: `${s.value}%` }} />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Two columns: Left (Summary + Intelligence) | Right (Recommended Action) */}
-      <div className="grid grid-cols-2 gap-10 items-start">
+      {/* Summary + Intelligence | Recommended Action */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10 items-start">
         <div className="space-y-8">
-          {/* Conversation Summary */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Conversation Summary</h3>
             <p className="text-sm text-gray-700 leading-relaxed">{SAMPLE.summary}</p>
           </div>
 
-          {/* Key Intelligence */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Key Intelligence</h3>
             <div className="space-y-2.5">
@@ -165,7 +163,6 @@ export function CouplePulse({ couple }: CouplePulseProps) {
             </div>
           </div>
 
-          {/* Risk Factors */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Risk factors</h3>
             <div className="space-y-2.5">
@@ -179,7 +176,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
           </div>
         </div>
 
-        {/* Right: Recommended Action */}
+        {/* Recommended Action */}
         <div className="ring-1 ring-gray-200 rounded-2xl p-5">
           <span className="inline-block px-2 py-0.5 bg-gray-900 text-white text-xs font-medium rounded-full mb-3">Recommended</span>
           <h4 className="text-sm font-semibold text-gray-900 mb-1.5 flex items-center gap-2">
@@ -206,8 +203,8 @@ export function CouplePulse({ couple }: CouplePulseProps) {
         </div>
       </div>
 
-      {/* Activity signals */}
-      <div className="border-t border-gray-100 pt-6 grid grid-cols-4 gap-6">
+      {/* Activity signals — 2 cols on mobile, 4 on sm+ */}
+      <div className="border-t border-gray-100 pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
         {SAMPLE.activity.map((a) => (
           <div key={a.label}>
             <p className="text-xl font-light text-gray-900 tabular-nums leading-none">{a.value}</p>

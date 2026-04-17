@@ -227,7 +227,7 @@ export function CoupleTimeline({ coupleId }: CoupleTimelineProps) {
 
       {/* Skeleton — shown while any query is pending */}
       {isLoading && (
-        <div className="flex gap-6 flex-1 animate-pulse">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 flex-1 animate-pulse">
           {/* Left: calendar area */}
           <div className="flex-[3] space-y-2">
             <div className="h-8 w-44 bg-gray-100 rounded-xl mb-4" />
@@ -236,7 +236,7 @@ export function CoupleTimeline({ coupleId }: CoupleTimelineProps) {
             ))}
           </div>
           {/* Right: Unscheduled + To Review */}
-          <div className="w-[260px] flex-shrink-0 flex flex-col gap-8 pt-1">
+          <div className="w-full sm:w-[260px] flex-shrink-0 flex flex-col gap-8 pt-1">
             <div>
               <div className="h-3 w-20 bg-gray-100 rounded-full mb-4" />
               {[1, 2].map((i) => <div key={i} className="h-12 bg-gray-100 rounded-xl mb-2" />)}
@@ -278,14 +278,14 @@ export function CoupleTimeline({ coupleId }: CoupleTimelineProps) {
 
         {/* 3/5 + 2/5 layout */}
         {activeEventId && (
-          <div className="flex gap-6 flex-1 min-h-0">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 flex-1 min-h-0">
             {/* Left: timeline calendar */}
             <div className="flex-[3] min-w-0">
               <EventDayCalendar eventId={activeEventId} hideShareLink hideUnscheduled />
             </div>
 
             {/* Right: unscheduled + to review */}
-            <div className="w-[260px] flex-shrink-0 flex flex-col gap-8 overflow-y-auto pt-1">
+            <div className="w-full sm:w-[260px] flex-shrink-0 flex flex-col gap-8 overflow-y-auto pt-1 pb-6 sm:pb-2">
               {/* Unscheduled */}
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Unscheduled</h3>

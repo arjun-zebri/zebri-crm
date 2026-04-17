@@ -100,7 +100,7 @@ function CategorySection({
 
 export function McPortalNames({ people, isLoading, onEditPerson, onAddPerson }: McPortalNamesProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
       {/* Left: Couple + Bridal Party */}
       <div className="space-y-8">
         {LEFT_COLUMNS.map(({ label, category, roles }) => (
