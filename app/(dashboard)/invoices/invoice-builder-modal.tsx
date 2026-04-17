@@ -625,17 +625,11 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
         .update({ status: 'paid', paid_at: new Date().toISOString() })
         .eq('id', effectiveInvoiceId!)
       if (error) throw error
-      if (invoice.event_id) {
-        await supabase.from('events').update({ price: total }).eq('id', invoice.event_id)
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
       queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
       queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-      if (invoice?.event_id) {
-        queryClient.invalidateQueries({ queryKey: ['couple-events', invoice.couple_id] })
-      }
       toast('Invoice marked as paid')
     },
     onError: () => toast('Failed to mark as paid'),

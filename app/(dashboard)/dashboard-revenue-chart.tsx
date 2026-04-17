@@ -135,7 +135,7 @@ export function DashboardRevenueChart() {
           </div>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.chartData as any[]}>
+              <AreaChart data={data.chartData as any[]} margin={{ bottom: 20 }}>
                 <defs>
                   <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#A7F3D0" stopOpacity={0.8} />
@@ -146,7 +146,7 @@ export function DashboardRevenueChart() {
                   dataKey="month"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#9CA3AF' }}
+                  tick={{ fontSize: 11, fill: '#9CA3AF', dy: 8 }}
                   interval={1}
                 />
                 <YAxis
@@ -170,7 +170,9 @@ export function DashboardRevenueChart() {
                     borderRadius: '12px',
                     border: '1px solid #E5E7EB',
                     fontSize: '14px',
+                    color: '#111827',
                   }}
+                  itemStyle={{ color: '#111827' }}
                 />
                 <Area
                   type="monotone"

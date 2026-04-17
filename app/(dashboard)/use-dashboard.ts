@@ -103,45 +103,30 @@ export function useDashboardStats() {
         0
       );
 
-      // Total revenue: SUM(price) where status='completed' (all time) — kept for legacy chart
-      const { data: totalRevenueData } = await supabase
-        .from("events")
-        .select("price")
-        .eq("user_id", user.user.id)
-        .eq("status", "completed")
-        .not("price", "is", null);
-
-      const totalRevenue = (totalRevenueData || []).reduce(
-        (sum, e) => sum + (Number(e.price) || 0),
-        0
-      );
-
-      // Revenue from events completed this month
+      // Revenue from invoices paid this month
       const { data: revenueThisMonthData } = await supabase
-        .from("events")
-        .select("price")
+        .from("invoices")
+        .select("subtotal")
         .eq("user_id", user.user.id)
-        .eq("status", "completed")
-        .gte("date", thisMonthStartStr)
-        .not("price", "is", null);
+        .eq("status", "paid")
+        .gte("paid_at", thisMonthStartStr);
 
       const revenueThisMonth = (revenueThisMonthData || []).reduce(
-        (sum, e) => sum + (Number(e.price) || 0),
+        (sum, i) => sum + (Number(i.subtotal) || 0),
         0
       );
 
-      // Revenue from events completed last month
+      // Revenue from invoices paid last month
       const { data: revenueLastMonthData } = await supabase
-        .from("events")
-        .select("price")
+        .from("invoices")
+        .select("subtotal")
         .eq("user_id", user.user.id)
-        .eq("status", "completed")
-        .gte("date", lastMonthStartStr)
-        .lt("date", thisMonthStartStr)
-        .not("price", "is", null);
+        .eq("status", "paid")
+        .gte("paid_at", lastMonthStartStr)
+        .lt("paid_at", thisMonthStartStr);
 
       const revenueLastMonth = (revenueLastMonthData || []).reduce(
-        (sum, e) => sum + (Number(e.price) || 0),
+        (sum, i) => sum + (Number(i.subtotal) || 0),
         0
       );
 
@@ -174,7 +159,7 @@ export function useDashboardStats() {
         leadsDiff,
         conversionRate,
         conversionDiff,
-        totalRevenue,
+        totalRevenue: collectedRevenue,
         revenuePercentChange,
         revenueDiff,
         collectedRevenue,
@@ -218,12 +203,12 @@ export function useRevenueChart(period: ChartPeriod) {
       const startStr = startDate.toISOString().split("T")[0];
 
       const { data, error } = await supabase
-        .from("events")
-        .select("date, price")
+        .from("invoices")
+        .select("paid_at, subtotal")
         .eq("user_id", user.user.id)
-        .eq("status", "completed")
-        .gte("date", startStr)
-        .not("price", "is", null);
+        .eq("status", "paid")
+        .gte("paid_at", startStr)
+        .not("paid_at", "is", null);
 
       if (error) throw error;
 
@@ -244,16 +229,16 @@ export function useRevenueChart(period: ChartPeriod) {
         monthMap.set(key, 0);
       }
 
-      // Sum prices per month
-      for (const event of data || []) {
-        const d = new Date(event.date);
+      // Sum invoice subtotals per month
+      for (const invoice of data || []) {
+        const d = new Date(invoice.paid_at!);
         const key = d.toLocaleDateString("en-US", {
           month: "short",
           year: "2-digit",
         });
         monthMap.set(
           key,
-          (monthMap.get(key) || 0) + (Number(event.price) || 0)
+          (monthMap.get(key) || 0) + (Number(invoice.subtotal) || 0)
         );
       }
 
@@ -276,16 +261,16 @@ export function useRevenueChart(period: ChartPeriod) {
       const prevEndStr = startDate.toISOString().split("T")[0];
 
       const { data: prevData } = await supabase
-        .from("events")
-        .select("price")
+        .from("invoices")
+        .select("subtotal")
         .eq("user_id", user.user.id)
-        .eq("status", "completed")
-        .gte("date", prevStartStr)
-        .lt("date", prevEndStr)
-        .not("price", "is", null);
+        .eq("status", "paid")
+        .gte("paid_at", prevStartStr)
+        .lt("paid_at", prevEndStr)
+        .not("paid_at", "is", null);
 
       const prevTotal = (prevData || []).reduce(
-        (sum, e) => sum + (Number(e.price) || 0),
+        (sum, i) => sum + (Number(i.subtotal) || 0),
         0
       );
 
@@ -557,7 +542,7 @@ export function useDashboardInvoices() {
 
       const { data, error } = await supabase
         .from("invoices")
-        .select("id, invoice_number, title, subtotal, due_date, status, couple:couples(id, name)")
+        .select("id, invoice_number, title, subtotal, due_date, status, couple:couple_id(id, name)")
         .eq("user_id", user.user.id)
         .in("status", ["sent", "overdue"])
         .order("due_date", { ascending: true, nullsFirst: false })
