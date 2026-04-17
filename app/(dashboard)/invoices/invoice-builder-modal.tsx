@@ -230,6 +230,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage')
   const [discountValue, setDiscountValue] = useState(0)
   const [showDiscount, setShowDiscount] = useState(false)
+  const [depositEnabled, setDepositEnabled] = useState(false)
   const [depositPercent, setDepositPercent] = useState(50)
   const [depositDueDate, setDepositDueDate] = useState('')
   const [finalDueDate, setFinalDueDate] = useState('')
