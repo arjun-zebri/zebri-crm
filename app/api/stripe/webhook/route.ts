@@ -26,43 +26,62 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // --- Connect events: invoice payments ---
-  if (stripeAccount && event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session
-    const invoiceId = session.metadata?.invoice_id
-    if (!invoiceId) return NextResponse.json({ received: true })
-
-    const now = new Date().toISOString()
-
-    // Mark invoice as paid
-    await adminClient
-      .from('invoices')
-      .update({ status: 'paid', paid_at: now })
-      .eq('id', invoiceId)
-
-    // Sync events.price — find the couple_id from the invoice, then update linked events
-    const { data: invoice } = await adminClient
-      .from('invoices')
-      .select('couple_id, subtotal, tax_rate')
-      .eq('id', invoiceId)
-      .single()
-
-    if (invoice) {
-      const total = invoice.subtotal + invoice.subtotal * ((invoice.tax_rate || 0) / 100)
-      await adminClient
-        .from('events')
-        .update({ price: total })
-        .eq('couple_id', invoice.couple_id)
-    }
-
-    return NextResponse.json({ received: true })
-  }
-
-  // --- Platform events: subscriptions ---
+  // --- Platform events ---
   if (!stripeAccount) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
+
+        // Invoice payments (destination charges) — identified by invoice_id metadata
+        if (session.metadata?.invoice_id) {
+          const invoiceId = session.metadata.invoice_id
+          const paymentType = session.metadata?.payment_type ?? 'full'
+          const now = new Date().toISOString()
+
+          if (paymentType === 'deposit') {
+            const { error } = await adminClient
+              .from('invoices')
+              .update({ deposit_paid_at: now, status: 'deposit_paid' })
+              .eq('id', invoiceId)
+            if (error) console.error('[Webhook] deposit update failed', error)
+          } else if (paymentType === 'final') {
+            const { error } = await adminClient
+              .from('invoices')
+              .update({ final_paid_at: now, paid_at: now, status: 'paid' })
+              .eq('id', invoiceId)
+            if (error) console.error('[Webhook] final update failed', error)
+
+            const { data: invoice } = await adminClient
+              .from('invoices')
+              .select('couple_id, subtotal, tax_rate')
+              .eq('id', invoiceId)
+              .single()
+
+            if (invoice) {
+              const total = invoice.subtotal + invoice.subtotal * ((invoice.tax_rate || 0) / 100)
+              await adminClient.from('events').update({ price: total }).eq('couple_id', invoice.couple_id)
+            }
+          } else {
+            await adminClient
+              .from('invoices')
+              .update({ status: 'paid', paid_at: now })
+              .eq('id', invoiceId)
+
+            const { data: invoice } = await adminClient
+              .from('invoices')
+              .select('couple_id, subtotal, tax_rate')
+              .eq('id', invoiceId)
+              .single()
+
+            if (invoice) {
+              const total = invoice.subtotal + invoice.subtotal * ((invoice.tax_rate || 0) / 100)
+              await adminClient.from('events').update({ price: total }).eq('couple_id', invoice.couple_id)
+            }
+          }
+          break
+        }
+
+        // Subscription payments
         if (session.mode !== 'subscription') break
 
         const customerId = session.customer as string

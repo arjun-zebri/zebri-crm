@@ -103,12 +103,10 @@ export default function PublicInvoicePage() {
   const hasSchedule = invoice?.deposit_percent != null
   const depositAmount = hasSchedule ? total * ((invoice!.deposit_percent!) / 100) : 0
   const finalAmount = hasSchedule ? total - depositAmount : 0
-  const showCardButton =
-    invoice?.stripe_payment_enabled &&
-    invoice?.stripe_connect_enabled &&
-    !hasSchedule &&
-    pageState !== 'paid' &&
-    pageState !== 'cancelled'
+  const stripeReady = invoice?.stripe_payment_enabled && invoice?.stripe_connect_enabled
+  const showFullButton    = stripeReady && !hasSchedule && pageState !== 'paid' && pageState !== 'cancelled'
+  const showDepositButton = stripeReady && hasSchedule && !invoice?.deposit_paid_at && pageState !== 'paid' && pageState !== 'cancelled'
+  const showFinalButton   = stripeReady && hasSchedule && !!invoice?.deposit_paid_at && !invoice?.final_paid_at && pageState !== 'cancelled'
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -256,53 +254,79 @@ export default function PublicInvoicePage() {
                 </p>
                 <div className="space-y-2">
                   {/* Deposit */}
-                  <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
-                    <div>
-                      <span className="text-sm text-gray-800">
-                        Deposit ({invoice.deposit_percent}%)
-                      </span>
-                      {invoice.deposit_due_date && (
-                        <span className="text-xs text-gray-400 block">
-                          Due {formatDate(invoice.deposit_due_date)}
+                  <div className="py-2.5 border-b border-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-sm text-gray-800">
+                          Deposit ({invoice.deposit_percent}%)
                         </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900 tabular-nums">
-                        {formatCurrency(depositAmount)}
-                      </span>
-                      {invoice.deposit_paid_at && (
-                        <span className="flex items-center gap-1 text-xs text-green-600">
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          Paid
+                        {invoice.deposit_due_date && (
+                          <span className="text-xs text-gray-400 block">
+                            Due {formatDate(invoice.deposit_due_date)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900 tabular-nums">
+                          {formatCurrency(depositAmount)}
                         </span>
-                      )}
+                        {invoice.deposit_paid_at && (
+                          <span className="flex items-center gap-1 text-xs text-green-600">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Paid
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {showDepositButton && (
+                      <div className="mt-2">
+                        <PayWithCardButton
+                          invoiceId={invoice.id}
+                          shareToken={invoice.share_token}
+                          brandColor={invoice.brand_color}
+                          paymentType="deposit"
+                          label="Pay deposit"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Final balance */}
-                  <div className="flex items-center justify-between py-2.5">
-                    <div>
-                      <span className="text-sm text-gray-800">
-                        Final balance ({100 - invoice.deposit_percent!}%)
-                      </span>
-                      {invoice.final_due_date && (
-                        <span className="text-xs text-gray-400 block">
-                          Due {formatDate(invoice.final_due_date)}
+                  <div className="py-2.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-sm text-gray-800">
+                          Final balance ({100 - invoice.deposit_percent!}%)
                         </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900 tabular-nums">
-                        {formatCurrency(finalAmount)}
-                      </span>
-                      {invoice.final_paid_at && (
-                        <span className="flex items-center gap-1 text-xs text-green-600">
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          Paid
+                        {invoice.final_due_date && (
+                          <span className="text-xs text-gray-400 block">
+                            Due {formatDate(invoice.final_due_date)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900 tabular-nums">
+                          {formatCurrency(finalAmount)}
                         </span>
-                      )}
+                        {invoice.final_paid_at && (
+                          <span className="flex items-center gap-1 text-xs text-green-600">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Paid
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {showFinalButton && (
+                      <div className="mt-2">
+                        <PayWithCardButton
+                          invoiceId={invoice.id}
+                          shareToken={invoice.share_token}
+                          brandColor={invoice.brand_color}
+                          paymentType="final"
+                          label="Pay balance"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -366,8 +390,8 @@ export default function PublicInvoicePage() {
               </div>
             )}
 
-            {/* Pay with card */}
-            {showCardButton && (
+            {/* Pay with card (full — no schedule) */}
+            {showFullButton && (
               <div className="px-8 pb-8">
                 <PayWithCardButton invoiceId={invoice.id} shareToken={invoice.share_token} brandColor={invoice.brand_color || '#000000'} />
               </div>

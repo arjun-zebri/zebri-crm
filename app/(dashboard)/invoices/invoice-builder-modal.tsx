@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/toast'
 import { DatePicker } from '@/components/ui/date-picker'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { InvoicePaymentSchedule } from './invoice-payment-schedule'
-import { X, Copy, Check, Trash2, Plus, ChevronDown, Search, ExternalLink, GripVertical, Download, Mail } from 'lucide-react'
+import { X, Copy, Check, Trash2, Plus, ChevronDown, Search, ExternalLink, GripVertical, Download, Mail, Loader2 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { generateAndPrintPdf } from '@/lib/generate-pdf'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
@@ -79,9 +79,19 @@ interface InvoiceBuilderModalProps {
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-600',
   sent: 'bg-blue-50 text-blue-600',
+  deposit_paid: 'bg-amber-50 text-amber-600',
   paid: 'bg-emerald-50 text-emerald-600',
   overdue: 'bg-red-50 text-red-600',
   cancelled: 'bg-gray-100 text-gray-400',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  sent: 'Sent',
+  deposit_paid: 'Deposit Paid',
+  paid: 'Paid',
+  overdue: 'Overdue',
+  cancelled: 'Cancelled',
 }
 
 const PAYMENT_TERMS_OPTIONS = [
@@ -220,7 +230,6 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage')
   const [discountValue, setDiscountValue] = useState(0)
   const [showDiscount, setShowDiscount] = useState(false)
-  const [depositEnabled, setDepositEnabled] = useState(false)
   const [depositPercent, setDepositPercent] = useState(50)
   const [depositDueDate, setDepositDueDate] = useState('')
   const [finalDueDate, setFinalDueDate] = useState('')
@@ -232,6 +241,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
   const [dirty, setDirty] = useState(false)
   const [eventOpen, setEventOpen] = useState(false)
   const [cancelConfirm, setCancelConfirm] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [coupleSearch, setCoupleSearch] = useState('')
   const [couplePopoverOpen, setCouplePopoverOpen] = useState(false)
   const [coupleId, setCoupleId] = useState<string | null>(null)
@@ -365,7 +375,6 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
       setDiscountType((invoice.discount_type as 'percentage' | 'fixed') ?? 'percentage')
       setDiscountValue(invoice.discount_value ?? 0)
       setShowDiscount(!!invoice.discount_type && (invoice.discount_value ?? 0) > 0)
-      setDepositEnabled(invoice.deposit_percent != null)
       setDepositPercent(invoice.deposit_percent ?? 50)
       setDepositDueDate(invoice.deposit_due_date ?? '')
       setFinalDueDate(invoice.final_due_date ?? '')
@@ -421,8 +430,8 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
   const tax = taxableAmount * (taxRate / 100)
   const total = taxableAmount + tax
 
-  const depositAmount = depositEnabled ? total * (depositPercent / 100) : 0
-  const finalAmount = depositEnabled ? total - depositAmount : 0
+  const depositAmount = total * (depositPercent / 100)
+  const finalAmount = total - depositAmount
 
   const updateCouple = useMutation({
     mutationFn: async (newCoupleId: string) => {
@@ -532,9 +541,9 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
             tax_rate: taxRate,
             discount_type: showDiscount && discountValue > 0 ? discountType : null,
             discount_value: showDiscount && discountValue > 0 ? discountValue : null,
-            deposit_percent: depositEnabled ? depositPercent : null,
-            deposit_due_date: depositEnabled && depositDueDate ? depositDueDate : null,
-            final_due_date: depositEnabled && finalDueDate ? finalDueDate : null,
+            deposit_percent: depositPercent,
+            deposit_due_date: depositDueDate || null,
+            final_due_date: finalDueDate || null,
             event_id: eventId || null,
             subtotal,
           })
@@ -551,9 +560,9 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
             tax_rate: taxRate,
             discount_type: showDiscount && discountValue > 0 ? discountType : null,
             discount_value: showDiscount && discountValue > 0 ? discountValue : null,
-            deposit_percent: depositEnabled ? depositPercent : null,
-            deposit_due_date: depositEnabled && depositDueDate ? depositDueDate : null,
-            final_due_date: depositEnabled && finalDueDate ? finalDueDate : null,
+            deposit_percent: depositPercent,
+            deposit_due_date: depositDueDate || null,
+            final_due_date: finalDueDate || null,
             event_id: eventId || null,
             subtotal,
           })
@@ -592,7 +601,6 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
       toast('Invoice saved')
       setDraftSaved(true)
       setDirty(false)
-      onClose()
     },
     onError: () => toast('Failed to save invoice'),
   })
@@ -635,16 +643,36 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
     onError: () => toast('Failed to mark as paid'),
   })
 
-  const markDepositPaid = useMutation({
+  const revertPaid = useMutation({
     mutationFn: async () => {
+      if (!invoice) return
       const { error } = await supabase
         .from('invoices')
-        .update({ deposit_paid_at: new Date().toISOString() })
+        .update({ status: 'sent', paid_at: null, final_paid_at: null })
         .eq('id', effectiveInvoiceId!)
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+      toast('Invoice reverted to sent')
+    },
+    onError: () => toast('Failed to revert invoice'),
+  })
+
+  const markDepositPaid = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ deposit_paid_at: new Date().toISOString(), status: 'deposit_paid' })
+        .eq('id', effectiveInvoiceId!)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
       toast('Deposit marked as paid')
     },
     onError: () => toast('Failed to mark deposit as paid'),
@@ -726,6 +754,23 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
     onError: () => toast('Failed to cancel invoice'),
   })
 
+  const deleteInvoice = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', effectiveInvoiceId!)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
+      toast('Invoice deleted')
+      onClose()
+    },
+    onError: () => toast('Failed to delete invoice'),
+  })
+
   const addItem = () => {
     setItems((prev) => [
       ...prev,
@@ -802,7 +847,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
   const activeShareEnabled = isNewInvoice ? draftShareEnabled : (invoice?.share_token_enabled ?? false)
   const shareUrl = activeShareToken ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invoice/${activeShareToken}` : ''
   const selectedEvent = coupleEvents?.find((e) => e.id === eventId)
-  const hasDepositSchedule = depositEnabled && !isNewInvoice && !!invoice
+  const hasDepositSchedule = !isNewInvoice && !!invoice
 
   const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition'
 
@@ -843,8 +888,8 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                   </p>
                   <div className="flex items-center gap-2 flex-wrap mt-1">
                     {invoice?.invoice_number && <span className="text-xs text-gray-400">{invoice.invoice_number}</span>}
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${STATUS_STYLES[effectiveStatus] || STATUS_STYLES.draft}`}>
-                      {effectiveStatus}
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${STATUS_STYLES[effectiveStatus] || STATUS_STYLES.draft}`}>
+                      {STATUS_LABELS[effectiveStatus] || effectiveStatus}
                     </span>
                     {(invoice?.couple_name || coupleNameForNew) && (
                       <>
@@ -869,6 +914,15 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                   className="text-xs text-emerald-600 hover:text-emerald-700 transition cursor-pointer disabled:opacity-50 font-medium px-2 py-1"
                 >
                   {markPaid.isPending ? 'Marking...' : 'Mark as Paid'}
+                </button>
+              )}
+              {invoice?.status === 'paid' && (
+                <button
+                  onClick={() => revertPaid.mutate()}
+                  disabled={revertPaid.isPending}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50 px-2 py-1"
+                >
+                  {revertPaid.isPending ? 'Reverting...' : 'Revert to Sent'}
                 </button>
               )}
               {canEdit && !isNewInvoice && (
@@ -1140,18 +1194,18 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                       </SortableContext>
                     </DndContext>
                     {canEdit && (
-                      <div className="px-4 py-3">
+                      <div className="px-4 py-2.5 border-b border-gray-100">
                         <button
                           onClick={addItem}
-                          className="w-full border border-dashed border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-500 transition cursor-pointer flex items-center justify-center gap-1.5"
+                          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
                         >
-                          <Plus size={14} strokeWidth={1.5} /> Add item
+                          <Plus size={14} strokeWidth={1.5} /> Add line item
                         </button>
                       </div>
                     )}
 
                     {/* Totals */}
-                    <div className="space-y-2 px-4 py-3 bg-gray-50 border-t border-gray-200">
+                    <div className="space-y-2 px-4 py-3 border-t border-gray-200">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-600">Subtotal</span>
                         <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(subtotal)}</span>
@@ -1249,7 +1303,6 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                   <InvoicePaymentSchedule
                     invoiceId={invoiceId!}
                     canEdit={canEdit}
-                    depositEnabled={depositEnabled}
                     depositPercent={depositPercent}
                     depositDueDate={depositDueDate}
                     finalDueDate={finalDueDate}
@@ -1257,7 +1310,6 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                     finalPaidAt={invoice.final_paid_at}
                     depositAmount={depositAmount}
                     finalAmount={finalAmount}
-                    onDepositEnabledChange={(v) => { setDepositEnabled(v); setDirty(true) }}
                     onDepositPercentChange={(v) => { setDepositPercent(v); setDirty(true) }}
                     onDepositDueDateChange={(v) => { setDepositDueDate(v); setDirty(true) }}
                     onFinalDueDateChange={(v) => { setFinalDueDate(v); setDirty(true) }}
@@ -1268,18 +1320,19 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                   />
                 )}
 
-                {/* Share section */}
+                {/* Send to couple */}
                 <div className="border border-gray-200 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Share link</p>
+                      <p className="text-sm font-medium text-gray-900">Send to couple</p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {activeShareEnabled ? 'Active — couple can view this invoice' : 'Enable to share with the couple'}
+                        {activeShareEnabled ? 'Link active — couple can view this invoice' : 'Enable a shareable link for the couple'}
                       </p>
                     </div>
                     <button
-                      onClick={() => toggleShare.mutate(!activeShareEnabled)}
-                      disabled={toggleShare.isPending || (!isNewInvoice && !canEdit) || (isNewInvoice && !actualInvoiceId)}
+                      onClick={() => !dirty && toggleShare.mutate(!activeShareEnabled)}
+                      disabled={toggleShare.isPending || dirty || (!isNewInvoice && !canEdit) || (isNewInvoice && !actualInvoiceId)}
+                      title={dirty ? 'Save your changes first' : undefined}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${activeShareEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${activeShareEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -1298,28 +1351,32 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                         onClick={copyLink}
                         className="flex items-center gap-1.5 px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer shrink-0"
                       >
-                        {copied ? <><Check size={13} strokeWidth={2} className="text-emerald-500" />Copied</> : <><Copy size={13} strokeWidth={1.5} />Copy</>}
+                        {copied ? <><Check size={13} strokeWidth={2} className="text-emerald-500" /> Copied</> : <><Copy size={13} strokeWidth={1.5} /> Copy</>}
                       </button>
                     </div>
                   )}
 
-                  <div className="pt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <button
                       onClick={() => sendEmail.mutate()}
-                      disabled={sendEmail.isPending || !effectiveInvoiceId}
-                      title={!effectiveInvoiceId ? 'Save the invoice first' : undefined}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
+                      disabled={sendEmail.isPending || !effectiveInvoiceId || dirty}
+                      title={dirty ? 'Save your changes first' : undefined}
+                      className="flex items-center justify-center gap-1.5 min-w-[7.5rem] px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
                     >
-                      <Mail size={12} strokeWidth={1.5} />
-                      {sendEmail.isPending ? 'Sending...' : invoice?.email_sent_at ? 'Resend email' : 'Send to client'}
+                      <Mail size={13} strokeWidth={1.5} />
+                      {sendEmail.isPending ? 'Sending...' : invoice?.email_sent_at ? 'Resend email' : 'Send email'}
                     </button>
                     {!isNewInvoice && (
                       <button onClick={downloadPdf}
-                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">
-                        <Download size={12} strokeWidth={1.5} /> Download PDF
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer">
+                        <Download size={13} strokeWidth={1.5} /> Download PDF
                       </button>
                     )}
                   </div>
+
+                  {dirty && (
+                    <p className="text-xs text-amber-600">Save your changes before sharing or sending.</p>
+                  )}
 
                   {/* Stripe card payments toggle */}
                   {!isNewInvoice && (
@@ -1329,15 +1386,15 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                           <div>
                             <p className="text-sm font-medium text-gray-900">Accept card payments</p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {depositEnabled ? 'Not available with a payment schedule' : 'Couples can pay by credit card'}
+                              Couples can pay each installment by card
                             </p>
                           </div>
                           <button
-                            onClick={() => !depositEnabled && toggleStripePayment.mutate(!stripePaymentEnabled)}
-                            disabled={toggleStripePayment.isPending || !canEdit || depositEnabled}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${stripePaymentEnabled && !depositEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
+                            onClick={() => toggleStripePayment.mutate(!stripePaymentEnabled)}
+                            disabled={toggleStripePayment.isPending || !canEdit}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${stripePaymentEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
                           >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${stripePaymentEnabled && !depositEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${stripePaymentEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                           </button>
                         </div>
                       ) : (
@@ -1362,21 +1419,25 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
           </div>
 
           {/* Footer */}
-          {canEdit && (
+          {(!isNewInvoice || canEdit) && (
             <div className="shrink-0 border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-              {onDelete ? (
-                <button onClick={onDelete}
-                  className="w-full sm:w-auto text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">
+              {!isNewInvoice ? (
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  className="w-full sm:w-auto text-xs px-3 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
+                >
                   Delete
                 </button>
               ) : <span />}
-              <button
-                onClick={() => save.mutate()}
-                disabled={save.isPending}
-                className={`w-full sm:w-auto px-5 py-2 text-sm bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50 ${!dirty && !save.isPending ? 'opacity-40' : ''}`}
-              >
-                {save.isPending ? 'Saving...' : dirty ? 'Save changes' : 'Save'}
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => save.mutate()}
+                  disabled={save.isPending}
+                  className={`self-end sm:self-auto flex items-center justify-center gap-1.5 w-auto min-w-[7rem] px-3 py-2 text-xs bg-black text-white rounded-xl transition cursor-pointer disabled:opacity-50 ${dirty ? 'hover:bg-neutral-800' : 'opacity-30 pointer-events-none'}`}
+                >
+                  {save.isPending ? <><Loader2 size={12} className="animate-spin" /> Saving...</> : 'Save changes'}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1389,6 +1450,15 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
         confirmLabel="Cancel invoice"
         onConfirm={() => cancelInvoice.mutate()}
         onCancel={() => setCancelConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirm}
+        title="Delete invoice?"
+        description="This will permanently delete the invoice and cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => deleteInvoice.mutate()}
+        onCancel={() => setDeleteConfirm(false)}
       />
     </>
   )

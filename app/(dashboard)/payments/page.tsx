@@ -39,9 +39,19 @@ const QUOTE_STATUS_STYLES: Record<string, string> = {
 const INVOICE_STATUS_STYLES: Record<string, string> = {
   draft: "bg-gray-100 text-gray-600",
   sent: "bg-blue-50 text-blue-600",
+  deposit_paid: "bg-amber-50 text-amber-600",
   paid: "bg-emerald-50 text-emerald-600",
   overdue: "bg-red-50 text-red-600",
   cancelled: "bg-gray-100 text-gray-400",
+};
+
+const INVOICE_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  sent: "Sent",
+  deposit_paid: "Deposit Paid",
+  paid: "Paid",
+  overdue: "Overdue",
+  cancelled: "Cancelled",
 };
 
 function formatCurrency(amount: number) {
@@ -358,11 +368,11 @@ export default function PaymentsPage() {
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-xs font-medium text-gray-400 shrink-0">{invoice.invoice_number}</span>
                             <span
-                              className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize shrink-0 ${
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
                                 INVOICE_STATUS_STYLES[invoice.effectiveStatus] || INVOICE_STATUS_STYLES.draft
                               }`}
                             >
-                              {invoice.effectiveStatus}
+                              {INVOICE_STATUS_LABELS[invoice.effectiveStatus] || invoice.effectiveStatus}
                             </span>
                           </div>
                           <span className="text-sm font-medium text-gray-900 tabular-nums shrink-0">
@@ -396,11 +406,11 @@ export default function PaymentsPage() {
                         </div>
                         <div className="px-4 py-3.5">
                           <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
                               INVOICE_STATUS_STYLES[invoice.effectiveStatus] || INVOICE_STATUS_STYLES.draft
                             }`}
                           >
-                            {invoice.effectiveStatus}
+                            {INVOICE_STATUS_LABELS[invoice.effectiveStatus] || invoice.effectiveStatus}
                           </span>
                         </div>
                         <div className="px-4 py-3.5 text-sm text-gray-700 font-medium tabular-nums text-right">

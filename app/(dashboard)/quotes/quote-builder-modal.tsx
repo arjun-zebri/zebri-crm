@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DatePicker } from '@/components/ui/date-picker'
-import { X, Copy, Check, RefreshCw, Trash2, Plus, Search, ChevronDown, GripVertical, Download, Mail } from 'lucide-react'
+import { X, Copy, Check, RefreshCw, Trash2, Plus, Search, ChevronDown, GripVertical, Download, Mail, FileText, Loader2 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { generateAndPrintPdf } from '@/lib/generate-pdf'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
@@ -410,7 +411,6 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
       toast('Quote saved')
       setDraftSaved(true)
       setDirty(false)
-      onClose()
     },
     onError: () => toast('Failed to save quote'),
   })
@@ -454,6 +454,22 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
       toast('Share link regenerated')
     },
     onError: () => toast('Failed to regenerate link'),
+  })
+
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+
+  const deleteQuote = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from('quotes').delete().eq('id', effectiveQuoteId!)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-quotes'] })
+      queryClient.invalidateQueries({ queryKey: ['couple-quotes'] })
+      toast('Quote deleted')
+      onClose()
+    },
+    onError: () => toast('Failed to delete quote'),
   })
 
   const sendEmail = useMutation({
@@ -759,7 +775,7 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                       <Popover.Trigger asChild>
                         <button
                           type="button"
-                          className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition cursor-pointer"
                         >
                           Apply template <ChevronDown size={11} strokeWidth={1.5} />
                         </button>
@@ -840,12 +856,12 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                         ))}
                       </SortableContext>
                     </DndContext>
-                    <div className="px-4 py-3">
+                    <div className="px-4 py-2.5 border-b border-gray-100">
                       <button
                         onClick={addItem}
-                        className="w-full border border-dashed border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-500 transition cursor-pointer flex items-center justify-center gap-1.5"
+                        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
                       >
-                        <Plus size={14} strokeWidth={1.5} /> Add item
+                        <Plus size={14} strokeWidth={1.5} /> Add line item
                       </button>
                     </div>
                     <div className="space-y-2 px-4 py-3 border-t border-gray-200">
@@ -927,18 +943,19 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                     className={`${inputClass} resize-none`} />
                 </div>
 
-                {/* Share section */}
+                {/* Send to couple */}
                 <div className="border border-gray-200 rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Share link</p>
+                      <p className="text-sm font-medium text-gray-900">Send to couple</p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {activeShareEnabled ? 'Active — couple can view and respond' : 'Enable to share with the couple'}
+                        {activeShareEnabled ? 'Link active — couple can view and respond' : 'Enable a shareable link for the couple'}
                       </p>
                     </div>
                     <button
-                      onClick={() => toggleShare.mutate(!activeShareEnabled)}
-                      disabled={toggleShare.isPending || !actualQuoteId && isNewQuote}
+                      onClick={() => !dirty && toggleShare.mutate(!activeShareEnabled)}
+                      disabled={toggleShare.isPending || dirty || (!actualQuoteId && isNewQuote)}
+                      title={dirty ? 'Save your changes first' : undefined}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${activeShareEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${activeShareEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -951,58 +968,80 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                         className="flex-1 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none truncate" />
                       <button onClick={copyLink}
                         className="flex items-center gap-1.5 px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer shrink-0">
-                        {copied ? <><Check size={13} strokeWidth={2} className="text-emerald-500" />Copied</> : <><Copy size={13} strokeWidth={1.5} />Copy</>}
+                        {copied ? <><Check size={13} strokeWidth={2} className="text-emerald-500" /> Copied</> : <><Copy size={13} strokeWidth={1.5} /> Copy</>}
                       </button>
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-0.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <button
                       onClick={() => sendEmail.mutate()}
-                      disabled={sendEmail.isPending || !effectiveQuoteId}
-                      title={!effectiveQuoteId ? 'Save the quote first' : undefined}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
+                      disabled={sendEmail.isPending || !effectiveQuoteId || dirty}
+                      title={dirty ? 'Save your changes first' : undefined}
+                      className="flex items-center justify-center gap-1.5 min-w-[7.5rem] px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
                     >
-                      <Mail size={12} strokeWidth={1.5} />
-                      {sendEmail.isPending ? 'Sending...' : quote?.email_sent_at ? 'Resend email' : 'Send to client'}
-                    </button>
-                    <button onClick={() => regenerateToken.mutate()} disabled={regenerateToken.isPending}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50">
-                      <RefreshCw size={12} strokeWidth={1.5} /> Regenerate link
+                      <Mail size={13} strokeWidth={1.5} />
+                      {sendEmail.isPending ? 'Sending...' : quote?.email_sent_at ? 'Resend email' : 'Send email'}
                     </button>
                     {!isNewQuote && (
                       <button onClick={downloadPdf}
-                        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">
-                        <Download size={12} strokeWidth={1.5} /> Download PDF
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer">
+                        <Download size={13} strokeWidth={1.5} /> Download PDF
                       </button>
                     )}
-                    {quote?.status === 'accepted' && onCreateInvoice && (
-                      <button onClick={() => createInvoice.mutate()} disabled={createInvoice.isPending}
-                        className="w-full sm:w-auto sm:ml-auto text-sm px-4 py-2 sm:py-1.5 bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50">
-                        {createInvoice.isPending ? 'Creating...' : 'Create Invoice →'}
-                      </button>
-                    )}
+                    <button onClick={() => regenerateToken.mutate()} disabled={regenerateToken.isPending}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50 sm:ml-auto">
+                      <RefreshCw size={12} strokeWidth={1.5} /> Regenerate link
+                    </button>
                   </div>
+
+                  {dirty && (
+                    <p className="text-xs text-amber-600">Save your changes before sharing or sending.</p>
+                  )}
                 </div>
+
+                {/* Create Invoice — only when accepted */}
+                {quote?.status === 'accepted' && onCreateInvoice && (
+                  <div className="border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Quote accepted</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Ready to convert to an invoice</p>
+                    </div>
+                    <button onClick={() => createInvoice.mutate()} disabled={createInvoice.isPending}
+                      className="shrink-0 flex items-center gap-1.5 min-w-[8rem] px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-50">
+                      <FileText size={13} strokeWidth={1.5} />
+                      {createInvoice.isPending ? 'Creating...' : 'Create Invoice'}
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
 
           {/* Footer */}
           <div className="shrink-0 border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-            {onDelete ? (
-              <button onClick={onDelete}
-                className="w-full sm:w-auto text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">
+            {!isNewQuote ? (
+              <button onClick={() => setDeleteConfirm(true)}
+                className="w-full sm:w-auto text-xs px-3 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">
                 Delete
               </button>
             ) : <span />}
             <button onClick={() => save.mutate()} disabled={save.isPending}
-              className={`w-full sm:w-auto px-5 py-2 text-sm bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50 ${!dirty && !save.isPending ? 'opacity-40' : ''}`}>
-              {save.isPending ? 'Saving...' : dirty ? 'Save changes' : 'Save'}
+              className={`self-end sm:self-auto flex items-center justify-center gap-1.5 w-auto min-w-[7rem] px-3 py-2 text-xs bg-black text-white rounded-xl transition cursor-pointer disabled:opacity-50 ${dirty ? 'hover:bg-neutral-800' : 'opacity-30 pointer-events-none'}`}>
+              {save.isPending ? <><Loader2 size={12} className="animate-spin" /> Saving...</> : 'Save changes'}
             </button>
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteConfirm}
+        title="Delete quote?"
+        description="This will permanently delete the quote and cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => deleteQuote.mutate()}
+        onCancel={() => setDeleteConfirm(false)}
+      />
     </>
   )
 }
