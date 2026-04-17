@@ -86,18 +86,22 @@ function SettingsContent() {
 
   if (loading) {
     return (
-      <div>
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-100 rounded w-24 mb-8" />
-          <div className="flex gap-6 border-b border-gray-200 mb-8">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-4 bg-gray-100 rounded w-20 mb-3" />
-            ))}
-          </div>
-          <div className="space-y-4 max-w-2xl">
-            <div className="h-9 bg-gray-50 rounded w-full" />
-            <div className="h-9 bg-gray-50 rounded w-full" />
-            <div className="h-9 bg-gray-50 rounded w-full" />
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
+          <div className="h-8 bg-gray-100 rounded w-24 animate-pulse" />
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="px-4 md:px-6 animate-pulse">
+            <div className="flex gap-6 border-b border-gray-200 mb-8">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-4 bg-gray-100 rounded w-20 mb-3" />
+              ))}
+            </div>
+            <div className="space-y-4 max-w-2xl">
+              <div className="h-9 bg-gray-50 rounded w-full" />
+              <div className="h-9 bg-gray-50 rounded w-full" />
+              <div className="h-9 bg-gray-50 rounded w-full" />
+            </div>
           </div>
         </div>
       </div>
@@ -105,31 +109,38 @@ function SettingsContent() {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-semibold text-gray-900 mb-6">Settings</h1>
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Settings</h1>
+      </div>
 
-      <div className="relative overflow-x-auto">
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 md:hidden" />
-        <div className="flex gap-6 border-b border-gray-200 mb-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              aria-current={activeTab === tab.id ? "page" : undefined}
-              className={`pb-3 text-sm whitespace-nowrap transition-colors relative ${
-                activeTab === tab.id
-                  ? "text-gray-900 font-medium"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900" />
-              )}
-            </button>
-          ))}
+      <div className="px-4 md:px-6 flex-shrink-0">
+        <div className="relative overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 md:hidden" />
+          <div className="flex gap-6 border-b border-gray-200 mb-0">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                aria-current={activeTab === tab.id ? "page" : undefined}
+                className={`pb-3 text-sm whitespace-nowrap transition-colors relative ${
+                  activeTab === tab.id
+                    ? "text-gray-900 font-medium"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900" />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="px-4 md:px-6 pt-6 pb-6">
 
       {activeTab === "personal-info" && (
         <PersonalInfoSection
@@ -184,6 +195,8 @@ function SettingsContent() {
       {activeTab === "templates" && <TemplatesSection />}
       {activeTab === "statuses" && <StatusesSection />}
       {activeTab === "notifications" && <NotificationsSection />}
+        </div>
+      </div>
     </div>
   );
 }
