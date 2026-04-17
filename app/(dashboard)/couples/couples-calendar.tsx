@@ -66,25 +66,15 @@ const MONTHS_SHORT = [
 
 type CalendarView = "month" | "week" | "day";
 
-const ACCENT_BORDER_MAP: Record<string, string> = {
-  amber: "border-l-amber-400",
-  blue: "border-l-blue-400",
-  purple: "border-l-purple-400",
-  emerald: "border-l-emerald-400",
-  gray: "border-l-gray-300",
-  green: "border-l-green-400",
-  red: "border-l-red-400",
-  orange: "border-l-orange-400",
-  pink: "border-l-pink-400",
-  indigo: "border-l-indigo-400",
-};
 
 function ViewDropdown({
   view,
   onChange,
+  options = ["day", "week", "month"] as CalendarView[],
 }: {
   view: CalendarView;
   onChange: (view: CalendarView) => void;
+  options?: CalendarView[];
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -110,7 +100,7 @@ function ViewDropdown({
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[110px]">
-          {(["day", "week", "month"] as const).map((v) => (
+          {options.map((v) => (
             <button
               key={v}
               onClick={() => {
@@ -207,6 +197,20 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
   );
   const [miniNavDate, setMiniNavDate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+      if (calendarView === "week") setCalendarView("day");
+    }
+  }, [isMobile]);
 
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ["calendar-events"],
@@ -471,6 +475,32 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
           </div>
         </div>
 
+        {/* Status filters — mobile only */}
+        <div className="md:hidden border-t border-gray-200 pt-4">
+          <h3 className="text-xs font-medium text-gray-500 mb-2">Filter by status</h3>
+          <div className="flex flex-col gap-1">
+            {statuses.map((status) => {
+              const checked = activeStatuses === null || activeStatuses.has(status.slug);
+              return (
+                <button
+                  key={status.slug}
+                  onClick={() => toggleStatus(status.slug)}
+                  className="flex items-center gap-3 px-1 py-1.5 rounded-lg text-gray-900 hover:bg-gray-50 transition cursor-pointer text-left"
+                >
+                  <div
+                    className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                      checked ? "border-gray-900 bg-gray-900" : "border-gray-300 bg-white"
+                    }`}
+                  >
+                    {checked && <Check size={10} strokeWidth={2.5} className="text-white" />}
+                  </div>
+                  <span className="text-sm">{status.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Day Events Timeline */}
         <div className="flex-1 min-h-0 flex flex-col border-t border-gray-200 pt-4">
           <h3 className="text-xs font-medium text-gray-500 mb-2">
@@ -482,18 +512,13 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
               <div className="text-xs text-gray-400 py-4">No events</div>
             ) : (
               (eventsByDate[formatDateKey(currentDate)] || []).map((event) => {
-                const statusSlug = event.couple?.status || "new";
-                const status = statuses.find((s) => s.slug === statusSlug);
-                const accentBorder = status
-                  ? ACCENT_BORDER_MAP[status.color] || "border-l-gray-300"
-                  : "border-l-gray-300";
                 return (
                   <button
                     key={event.id}
                     onClick={() =>
                       event.couple && onSelectCouple(event.couple.id)
                     }
-                    className={`text-left w-full px-2.5 py-2 rounded-lg bg-white border border-l-2 transition hover:shadow-sm cursor-pointer border-gray-200 ${accentBorder}`}
+                    className="text-left w-full px-2.5 py-2 rounded-lg bg-white border border-gray-200 transition hover:shadow-sm cursor-pointer"
                   >
                     <div className="text-xs font-semibold truncate text-gray-900">
                       {event.couple?.name || "Unnamed"}
@@ -513,7 +538,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
       </div>
 
       {/* Main Calendar Area */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden pl-8">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden pl-0 md:pl-8">
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between mb-5 pb-4 border-b border-gray-200">
           {/* Left: Filter toggle (mobile) + Nav */}
@@ -542,7 +567,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
             </button>
             <h2
               data-testid="calendar-header"
-              className="text-sm font-semibold text-gray-900 min-w-32 sm:min-w-44 text-center select-none"
+              className="text-sm font-semibold text-gray-900 min-w-0 sm:min-w-32 md:min-w-44 text-center select-none truncate max-w-[180px] sm:max-w-none"
             >
               {getHeaderLabel()}
             </h2>
@@ -557,12 +582,18 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
 
           {/* Right: Dropdowns */}
           <div className="flex items-center gap-2">
-            <StatusDropdown
-              statuses={statuses}
-              activeStatuses={activeStatuses}
-              onToggle={toggleStatus}
+            <div className="hidden md:block">
+              <StatusDropdown
+                statuses={statuses}
+                activeStatuses={activeStatuses}
+                onToggle={toggleStatus}
+              />
+            </div>
+            <ViewDropdown
+              view={calendarView}
+              onChange={setCalendarView}
+              options={isMobile ? ["day", "month"] : ["day", "week", "month"]}
             />
-            <ViewDropdown view={calendarView} onChange={setCalendarView} />
           </div>
         </div>
 
@@ -577,6 +608,10 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                   currentDate={currentDate}
                   eventsByDate={eventsByDate}
                   onSelectCouple={onSelectCouple}
+                  onDayClick={(date) => {
+                    setCurrentDate(date);
+                    if (isMobile) setCalendarView("day");
+                  }}
                   statuses={statuses}
                 />
               )}
@@ -649,21 +684,15 @@ function isTodayFn(date: Date): boolean {
 function EventPill({
   event,
   onSelectCouple,
-  statuses,
 }: {
   event: EventWithCouple;
   onSelectCouple: (id: string) => void;
   statuses: CoupleStatusRecord[];
 }) {
-  const statusSlug = event.couple?.status || "new";
-  const status = statuses.find((s) => s.slug === statusSlug);
-  const accentBorder = status
-    ? ACCENT_BORDER_MAP[status.color] || "border-l-gray-300"
-    : "border-l-gray-300";
   return (
     <button
       onClick={() => event.couple && onSelectCouple(event.couple.id)}
-      className={`text-left w-full px-2.5 py-1.5 rounded-md text-xs font-medium truncate bg-white border border-l-2 transition hover:shadow-sm cursor-pointer border-gray-200 ${accentBorder}`}
+      className="text-left w-full px-2.5 py-1.5 rounded-md text-xs font-medium truncate bg-white border border-gray-200 transition hover:shadow-sm cursor-pointer"
     >
       {event.couple?.name || "Unnamed"}
     </button>
@@ -779,11 +808,13 @@ function MonthView({
   currentDate,
   eventsByDate,
   onSelectCouple,
+  onDayClick,
   statuses,
 }: {
   currentDate: Date;
   eventsByDate: Record<string, EventWithCouple[]>;
   onSelectCouple: (coupleId: string) => void;
+  onDayClick: (date: Date) => void;
   statuses: CoupleStatusRecord[];
 }) {
   const monthDays = getMonthDays(currentDate);
@@ -791,13 +822,14 @@ function MonthView({
   return (
     <div className="flex flex-col h-full">
       <div className="grid grid-cols-7 flex-shrink-0 border-b border-gray-200">
-        {WEEKDAYS.map((day) => (
+        {WEEKDAYS.map((day, i) => (
           <div
             key={day}
             data-testid={`weekday-${day}`}
             className="text-center text-xs font-medium text-gray-500 py-3"
           >
-            {day}
+            <span className="hidden md:inline">{day}</span>
+            <span className="md:hidden">{WEEKDAYS_SHORT[i]}</span>
           </div>
         ))}
       </div>
@@ -814,7 +846,8 @@ function MonthView({
           return (
             <div
               key={idx}
-              className={`border-b border-r border-gray-100 p-2 flex flex-col gap-0.5 min-h-[100px] ${
+              onClick={() => onDayClick(date)}
+              className={`border-b border-r border-gray-100 p-1.5 md:p-2 flex flex-col gap-0.5 min-h-[60px] md:min-h-[100px] md:cursor-default cursor-pointer ${
                 !isCurrent ? "bg-gray-50/50" : ""
               }`}
             >
@@ -833,19 +866,38 @@ function MonthView({
                   {date.getDate()}
                 </span>
               </div>
-              {dayEvents.slice(0, 3).map((event) => (
-                <EventPill
-                  key={event.id}
-                  event={event}
-                  onSelectCouple={onSelectCouple}
-                  statuses={statuses}
-                />
-              ))}
-              {dayEvents.length > 3 && (
-                <div className="text-xs text-gray-400 px-1">
-                  +{dayEvents.length - 3} more
+
+              {/* Mobile: dot indicators */}
+              {dayEvents.length > 0 && (
+                <div className="flex md:hidden gap-0.5 flex-wrap mt-0.5">
+                  {dayEvents.slice(0, 3).map((event) => (
+                    <div
+                      key={event.id}
+                      className="w-1.5 h-1.5 rounded-full bg-gray-400"
+                    />
+                  ))}
+                  {dayEvents.length > 3 && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                  )}
                 </div>
               )}
+
+              {/* Desktop: event pills */}
+              <div className="hidden md:flex flex-col gap-0.5">
+                {dayEvents.slice(0, 3).map((event) => (
+                  <EventPill
+                    key={event.id}
+                    event={event}
+                    onSelectCouple={onSelectCouple}
+                    statuses={statuses}
+                  />
+                ))}
+                {dayEvents.length > 3 && (
+                  <div className="text-xs text-gray-400 px-1">
+                    +{dayEvents.length - 3} more
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -907,11 +959,6 @@ function WeekView({
                 </div>
               ) : (
                 dayEvents.map((event) => {
-                  const statusSlug = event.couple?.status || "new";
-                  const status = statuses.find((s) => s.slug === statusSlug);
-                  const accentBorder = status
-                    ? ACCENT_BORDER_MAP[status.color] || "border-l-gray-300"
-                    : "border-l-gray-300";
                   const vendorCount = event.event_contacts?.length || 0;
                   const taskCount = event.tasks?.length || 0;
                   const hasFooter = vendorCount > 0 || taskCount > 0;
@@ -921,7 +968,7 @@ function WeekView({
                       onClick={() =>
                         event.couple && onSelectCouple(event.couple.id)
                       }
-                      className={`text-left w-full px-2.5 py-2 rounded-lg bg-white border border-l-2 transition hover:shadow-md cursor-pointer border-gray-200 ${accentBorder}`}
+                      className="text-left w-full px-2.5 py-2 rounded-lg bg-white border border-gray-200 transition hover:shadow-md cursor-pointer"
                     >
                       <div className="text-xs font-semibold truncate text-gray-900">
                         {event.couple?.name || "Unnamed"}
@@ -962,18 +1009,6 @@ function WeekView({
 
 /* ─── Day View ─────────────────────────────────────────── */
 
-const ACCENT_BAR_COLOR_MAP: Record<string, string> = {
-  amber: "bg-amber-400",
-  blue: "bg-blue-400",
-  purple: "bg-purple-400",
-  emerald: "bg-emerald-400",
-  gray: "bg-gray-400",
-  green: "bg-green-400",
-  red: "bg-red-400",
-  orange: "bg-orange-400",
-  pink: "bg-pink-400",
-  indigo: "bg-indigo-400",
-};
 
 function DayView({
   currentDate,
@@ -997,15 +1032,12 @@ function DayView({
           <p className="text-sm text-gray-400">No events on this day</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3 p-6">
+        <div className="flex flex-col gap-3 py-4">
           {dayEvents.map((event) => {
             const coupleStatusSlug = event.couple?.status || "new";
             const coupleStatus = statuses.find(
               (s) => s.slug === coupleStatusSlug
             );
-            const accentColor = coupleStatus
-              ? ACCENT_BAR_COLOR_MAP[coupleStatus.color]
-              : ACCENT_BAR_COLOR_MAP.gray;
             const classes = coupleStatus
               ? getStatusClasses(coupleStatus.color)
               : getStatusClasses("gray");
@@ -1020,13 +1052,8 @@ function DayView({
               <div
                 key={event.id}
                 onClick={() => event.couple && onSelectCouple(event.couple.id)}
-                className="relative bg-white border border-gray-200 rounded-xl overflow-hidden transition hover:shadow-md cursor-pointer"
+                className="bg-white border border-gray-200 rounded-xl transition hover:shadow-md cursor-pointer"
               >
-                {/* Left accent bar */}
-                <div
-                  className={`absolute left-0 top-0 bottom-0 w-1 ${accentColor}`}
-                />
-
                 <div className="px-4 py-4">
                   {/* Top row: name + status badge */}
                   <div className="flex items-start justify-between gap-4">
@@ -1059,23 +1086,29 @@ function DayView({
                     </p>
                   )}
 
-                  {/* Footer: counts */}
-                  <div className="flex items-center gap-5 mt-4 pt-4 border-t border-gray-100 text-xs">
-                    <span className="flex items-center gap-1.5 text-gray-500">
-                      <Users size={14} strokeWidth={1.5} />
-                      <span className="font-medium">{vendorCount}</span>
-                      <span className="text-gray-400">
-                        contact{vendorCount !== 1 ? "s" : ""}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-1.5 text-gray-500">
-                      <CheckSquare size={14} strokeWidth={1.5} />
-                      <span className="font-medium">{taskCount}</span>
-                      <span className="text-gray-400">
-                        task{taskCount !== 1 ? "s" : ""}
-                      </span>
-                    </span>
-                  </div>
+                  {/* Footer: counts — only shown when non-zero */}
+                  {(vendorCount > 0 || taskCount > 0) && (
+                    <div className="flex items-center gap-5 mt-4 pt-4 border-t border-gray-100 text-xs">
+                      {vendorCount > 0 && (
+                        <span className="flex items-center gap-1.5 text-gray-500">
+                          <Users size={14} strokeWidth={1.5} />
+                          <span className="font-medium">{vendorCount}</span>
+                          <span className="text-gray-400">
+                            contact{vendorCount !== 1 ? "s" : ""}
+                          </span>
+                        </span>
+                      )}
+                      {taskCount > 0 && (
+                        <span className="flex items-center gap-1.5 text-gray-500">
+                          <CheckSquare size={14} strokeWidth={1.5} />
+                          <span className="font-medium">{taskCount}</span>
+                          <span className="text-gray-400">
+                            task{taskCount !== 1 ? "s" : ""}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

@@ -46,11 +46,11 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-6 pt-6 pb-6 shrink-0">
+      <div className="px-4 pt-4 pb-4 md:px-6 md:pt-6 md:pb-6 shrink-0">
         <h1 className="text-3xl font-semibold text-gray-900">Calendar</h1>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
+      <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4 md:px-6 md:pb-6">
         <CouplesCalendar onSelectCouple={handleSelectCouple} />
       </div>
 
