@@ -29,7 +29,7 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Outstanding Tasks</h2>
+        <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">Outstanding Tasks</h2>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-5 h-5 text-gray-400 animate-spin" strokeWidth={1.5} />
         </div>
@@ -40,7 +40,7 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
   if (tasks.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Outstanding Tasks</h2>
+        <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">Outstanding Tasks</h2>
         <div className="text-center py-12">
           <p className="text-gray-500 text-sm">All caught up.</p>
         </div>
@@ -50,7 +50,7 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4 shrink-0">Outstanding Tasks</h2>
+      <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4 shrink-0">Outstanding Tasks</h2>
       <div className="space-y-1 flex-1 max-h-60 overflow-y-auto pr-1">
         {tasks.map((task) => {
           const overdue = isOverdue(task.due_date)
@@ -59,16 +59,18 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
             <div
               key={task.id}
               onClick={() => { if (task.couple) onCoupleClick(task.couple) }}
-              className={`flex items-center gap-3 py-2 transition text-sm ${
+              className={`flex items-center gap-2 py-2 transition ${
                 clickable ? 'cursor-pointer group' : 'cursor-default'
               }`}
             >
-              <span className={`truncate flex-1 transition ${clickable ? 'text-gray-900 group-hover:text-black group-hover:underline underline-offset-2 decoration-gray-300' : 'text-gray-900'}`}>{task.title}</span>
-              {task.couple && (
-                <span className="text-gray-400 text-xs shrink-0 truncate max-w-[120px]">
-                  {task.couple.name}
-                </span>
-              )}
+              <div className="flex-1 min-w-0">
+                <span className={`truncate block text-xs sm:text-sm transition ${clickable ? 'text-gray-900 group-hover:text-black group-hover:underline underline-offset-2 decoration-gray-300' : 'text-gray-900'}`}>{task.title}</span>
+                {task.couple && (
+                  <span className="text-gray-400 text-xs truncate block">
+                    {task.couple.name}
+                  </span>
+                )}
+              </div>
               {task.due_date && (
                 <span className={`text-xs shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
                   {formatRelativeDate(task.due_date)}

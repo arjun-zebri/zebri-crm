@@ -31,7 +31,7 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Outstanding Invoices</h2>
+        <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">Outstanding Invoices</h2>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-5 h-5 text-gray-400 animate-spin" strokeWidth={1.5} />
         </div>
@@ -42,7 +42,7 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
   if (!invoices || invoices.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Outstanding Invoices</h2>
+        <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4">Outstanding Invoices</h2>
         <div className="text-center py-12">
           <p className="text-gray-500 text-sm">No outstanding invoices.</p>
         </div>

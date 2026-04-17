@@ -76,9 +76,9 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col h-full">
+    <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col lg:h-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">Calendar</h2>
+        <h2 className="text-base sm:text-xl font-semibold text-gray-900">Calendar</h2>
         {/* Month nav */}
         <div className="flex items-center justify-end gap-1">
           <button
@@ -108,8 +108,8 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
         </div>
       ) : (
         <>
-          {/* Day headers */}
-          <div className="grid grid-cols-7 w-full justify-between">
+          {/* Day headers — hidden on mobile */}
+          <div className="hidden sm:grid grid-cols-7 w-full justify-between">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div
                 key={d}
@@ -120,8 +120,8 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
             ))}
           </div>
 
-          {/* Day grid */}
-          <div className="grid grid-cols-7 w-full">
+          {/* Day grid — hidden on mobile */}
+          <div className="hidden sm:grid grid-cols-7 w-full">
             {cells.map((day, i) => {
               if (day === null) {
                 return <div key={i} className="h-7" />;
@@ -143,7 +143,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
           </div>
 
           {/* All month events */}
-          <div className="mt-4 h-58 min-h-0 overflow-y-auto scrollbar-thin pr-1">
+          <div className="mt-4 flex-1 min-h-0 overflow-y-auto lg:max-h-none scrollbar-thin pr-1">
             {events && events.length > 0 ? (
               <div className="space-y-2">
                 {events.map((event) => {

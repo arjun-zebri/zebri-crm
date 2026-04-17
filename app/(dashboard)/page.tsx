@@ -72,7 +72,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
-        <h1 className="text-3xl font-semibold text-gray-900">Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Dashboard</h1>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -97,13 +97,13 @@ export default function DashboardPage() {
                 <DashboardRevenueChart />
               </div>
             </div>
-            <div className="lg:col-span-2 lg:h-full h-[420px]">
+            <div className="lg:col-span-2 lg:h-full">
               <DashboardCalendar onEventClick={handleEventClick} />
             </div>
           </div>
 
           {/* Bottom section: Leads | Lead Sources | Outstanding Tasks | Outstanding Invoices */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
             <DashboardLeads />
             <DashboardLeadSources />
             <DashboardTasks

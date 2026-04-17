@@ -16,7 +16,7 @@ export function DashboardLeadSources() {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col max-h-80">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">Lead Sources</h2>
+        <h2 className="text-base sm:text-xl font-semibold text-gray-900">Lead Sources</h2>
         {data && (
           <span className="text-sm text-gray-500">{data.total} total</span>
         )}
@@ -47,7 +47,7 @@ export function DashboardLeadSources() {
 
               return (
                 <div key={source} className="flex items-center gap-3">
-                  <span className="text-sm text-gray-700 w-28 shrink-0">
+                  <span className="text-xs sm:text-sm text-gray-700 w-28 shrink-0">
                     {allLabels[source]}
                   </span>
                   <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -56,7 +56,7 @@ export function DashboardLeadSources() {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <span className="text-sm font-medium text-gray-900 w-6 text-right shrink-0">
+                  <span className="text-xs sm:text-sm font-medium text-gray-900 w-6 text-right shrink-0">
                     {count}
                   </span>
                   <span className="text-xs text-gray-400 w-10 text-right shrink-0">

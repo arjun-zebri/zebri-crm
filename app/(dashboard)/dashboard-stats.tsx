@@ -116,7 +116,7 @@ export function DashboardStats({
       {cards.map((card) => (
         <div
           key={card.label}
-          className="bg-white rounded-xl border border-gray-200 p-6"
+          className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6"
         >
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -134,7 +134,7 @@ export function DashboardStats({
           ) : (
             <>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-semibold text-gray-900">
+                <span className="text-xl sm:text-2xl font-semibold text-gray-900">
                   {card.value}
                 </span>
                 {card.diff !== 0 && (
