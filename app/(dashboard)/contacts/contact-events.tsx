@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate } from "@/lib/utils";
-import { X, Search, Trash2, Edit2 } from "lucide-react";
+import { X, Search, Trash2, Edit2, Plus, Check } from "lucide-react";
 import { EventModal } from "../couples/event-modal";
 import { Event } from "../events/events-types";
 
@@ -381,14 +381,16 @@ export function ContactEvents({ vendorId }: ContactEventsProps) {
             <div className="flex gap-2 justify-center">
               <button
                 onClick={() => setShowLinkModal(true)}
-                className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+                className="text-sm text-gray-600 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
               >
+                <Plus size={14} strokeWidth={1.5} />
                 Link Event
               </button>
               <button
                 onClick={() => setShowCoupleSelector(true)}
-                className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+                className="text-sm text-gray-600 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
               >
+                <Plus size={14} strokeWidth={1.5} />
                 Create Event
               </button>
             </div>
@@ -438,14 +440,16 @@ export function ContactEvents({ vendorId }: ContactEventsProps) {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowLinkModal(true)}
-                className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+                className="text-sm text-gray-600 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
               >
+                <Plus size={14} strokeWidth={1.5} />
                 Link Event
               </button>
               <button
                 onClick={() => setShowCoupleSelector(true)}
-                className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+                className="text-sm text-gray-600 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
               >
+                <Plus size={14} strokeWidth={1.5} />
                 Create Event
               </button>
             </div>
@@ -489,7 +493,7 @@ export function ContactEvents({ vendorId }: ContactEventsProps) {
                     placeholder="Search couple or venue..."
                     value={eventSearch}
                     onChange={(e) => setEventSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100"
                   />
                 </div>
               </div>
@@ -513,26 +517,28 @@ export function ContactEvents({ vendorId }: ContactEventsProps) {
                     No events found.
                   </p>
                 ) : (
-                  <div className="space-y-2">
+                  <div>
                     {filteredEvents.map((event) => (
                       <button
                         key={event.id}
                         onClick={() => setSelectedEventId(event.id)}
-                        className={`w-full text-left p-3 border rounded-xl transition cursor-pointer ${
+                        className={`flex items-center justify-between w-full text-left px-2 py-2.5 border-b border-gray-100 transition cursor-pointer ${
                           selectedEventId === event.id
-                            ? "border-gray-900 bg-gray-50"
-                            : "border-gray-200 hover:bg-gray-50"
+                            ? "bg-gray-100"
+                            : "hover:bg-gray-50"
                         }`}
                       >
-                        <div className="text-sm font-medium text-gray-900">
-                          {event.couple?.name || "Unknown"}
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {event.couple?.name || "Unknown"}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {event.venue} · {formatDate(event.date)}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {event.venue}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {formatDate(event.date)}
-                        </div>
+                        {selectedEventId === event.id && (
+                          <Check size={14} strokeWidth={2} className="text-gray-700 shrink-0" />
+                        )}
                       </button>
                     ))}
                   </div>
@@ -540,7 +546,7 @@ export function ContactEvents({ vendorId }: ContactEventsProps) {
               </div>
 
               {availableEvents && availableEvents.length > 0 && (
-                <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex gap-2">
+                <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200 rounded-b-2xl flex gap-2">
                   <button
                     onClick={() => {
                       setShowLinkModal(false);
@@ -600,7 +606,7 @@ export function ContactEvents({ vendorId }: ContactEventsProps) {
                     placeholder="Search couples..."
                     value={coupleSearch}
                     onChange={(e) => setCoupleSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100"
                   />
                 </div>
               </div>

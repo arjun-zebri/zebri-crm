@@ -87,36 +87,42 @@ export function ContactsHeader({
 
   return (
     <div>
-      <div className="flex items-center justify-between flex-wrap gap-y-2">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-3xl font-semibold text-gray-900">Contacts</h1>
+      <div className="flex items-center flex-wrap gap-x-1 gap-y-3">
+        {/* Title */}
+        <div className="flex items-baseline gap-3 flex-none sm:order-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Contacts</h1>
           <span className="text-sm text-gray-400">{vendors.length} total</span>
         </div>
 
-        <div className="flex items-center gap-1">
-          <div className="relative mr-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-48 sm:w-72 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
-            />
-            {search && (
-              <button
-                onClick={() => {
-                  onSearchChange('')
-                  searchInputRef.current?.focus()
-                }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-              >
-                <X size={14} strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
+        {/* Desktop spacer */}
+        <div className="hidden sm:block sm:flex-1 sm:order-2" />
 
+        {/* Search — wraps to full-width row on mobile */}
+        <div className="relative order-last w-full sm:order-3 sm:w-auto sm:mr-1">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" strokeWidth={1.5} />
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full sm:w-64 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
+          />
+          {search && (
+            <button
+              onClick={() => {
+                onSearchChange('')
+                searchInputRef.current?.focus()
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+            >
+              <X size={14} strokeWidth={1.5} />
+            </button>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1 ml-auto sm:ml-0 sm:order-4">
           <div className="relative" ref={sortRef}>
             <button
               onClick={() => setSortOpen(!sortOpen)}
@@ -159,7 +165,6 @@ export function ContactsHeader({
             </button>
             {filtersOpen && (
               <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-48 py-1">
-                {/* Category section */}
                 <button
                   onClick={() => {
                     onFilterChange(null)
@@ -191,10 +196,8 @@ export function ContactsHeader({
                   </button>
                 ))}
 
-                {/* Divider */}
                 <div className="border-t border-gray-200 my-1" />
 
-                {/* Status section */}
                 {STATUSES.map((status) => (
                   <button
                     key={status}
@@ -217,7 +220,7 @@ export function ContactsHeader({
 
           <button
             onClick={onAddClick}
-            className="flex items-center gap-1 px-3 py-2 md:py-1.5 text-sm font-medium text-white bg-black rounded-xl hover:bg-neutral-800 transition ml-1 cursor-pointer"
+            className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-black rounded-xl hover:bg-neutral-800 transition cursor-pointer ml-1"
           >
             <Plus size={14} strokeWidth={1.5} />
             New

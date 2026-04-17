@@ -1,4 +1,5 @@
 interface BadgeProps {
+  className?: string;
   variant:
     | "default"
     | "new"
@@ -75,11 +76,11 @@ const variantStyles: Record<
   cancelled: { bg: "bg-red-50", text: "text-red-700", dot: "bg-red-400" },
 };
 
-export function Badge({ variant = "default", children }: BadgeProps) {
+export function Badge({ variant = "default", children, className }: BadgeProps) {
   const style = variantStyles[variant];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text}${className ? ` ${className}` : ""}`}
     >
       {/* <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} /> */}
       {children}

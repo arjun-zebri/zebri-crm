@@ -297,12 +297,13 @@ export function CoupleProfile({
                 </Popover.Root>
               </div>
 
-              {/* Actions dropdown */}
+              {/* Actions dropdown — mobile only */}
+              <div className="sm:hidden">
               <Popover.Root open={actionsOpen} onOpenChange={setActionsOpen}>
                 <Popover.Trigger asChild>
                   <button
                     title="Actions"
-                    className="shrink-0 p-1.5 sm:p-2 ring-1 ring-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                    className="shrink-0 p-1.5 ring-1 ring-gray-200 rounded-xl text-gray-700 hover:bg-gray-100 transition cursor-pointer"
                   >
                     <MoreHorizontal size={16} strokeWidth={1.5} />
                   </button>
@@ -391,10 +392,52 @@ export function CoupleProfile({
                   </Popover.Content>
                 </Popover.Portal>
               </Popover.Root>
+              </div>
 
+              {/* Desktop: all controls in one row */}
+              <div className="hidden sm:flex items-center">
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                >
+                  <Trash2 size={16} strokeWidth={1.5} />
+                </button>
+                <div className="w-px h-4 bg-gray-200 mx-2" />
+                <div className="flex items-center gap-0.5">
+                  <a
+                    href={hasPhone ? `tel:${couple.phone}` : undefined}
+                    className={`p-1.5 rounded-lg transition ${hasPhone ? "text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer" : "text-gray-200 cursor-not-allowed pointer-events-none"}`}
+                  >
+                    <Phone size={16} strokeWidth={1.5} />
+                  </a>
+                  <a
+                    href={hasEmail ? `mailto:${couple.email}` : undefined}
+                    className={`p-1.5 rounded-lg transition ${hasEmail ? "text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer" : "text-gray-200 cursor-not-allowed pointer-events-none"}`}
+                  >
+                    <Mail size={16} strokeWidth={1.5} />
+                  </a>
+                  <a
+                    href={hasPhone ? `https://wa.me/${couple.phone.replace(/\D/g, "")}` : undefined}
+                    target={hasPhone ? "_blank" : undefined}
+                    rel={hasPhone ? "noopener noreferrer" : undefined}
+                    className={`p-1.5 rounded-lg transition ${hasPhone ? "text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer" : "text-gray-200 cursor-not-allowed pointer-events-none"}`}
+                  >
+                    <PiWhatsappLogoLight size={17} />
+                  </a>
+                </div>
+                <div className="w-px h-4 bg-gray-200 mx-2" />
+                <button
+                  onClick={onClose}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                >
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </div>
+
+              {/* Mobile: close button */}
               <button
                 onClick={onClose}
-                className="shrink-0 p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                className="sm:hidden shrink-0 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
               >
                 <X size={18} strokeWidth={1.5} />
               </button>

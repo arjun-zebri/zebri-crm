@@ -37,17 +37,9 @@ const columns = [
   columnHelper.accessor("name", {
     header: "Contact name",
     enableSorting: false,
-    cell: (info) => {
-      const category = info.row.original.category;
-      return (
-        <div>
-          <span className="text-sm text-gray-500 group-hover:text-gray-900">{info.getValue()}</span>
-          <div className="mt-0.5 md:hidden">
-            <Badge variant={category as any}>{CATEGORY_LABELS[category]}</Badge>
-          </div>
-        </div>
-      );
-    },
+    cell: (info) => (
+      <span className="text-sm text-gray-500 group-hover:text-gray-900">{info.getValue()}</span>
+    ),
   }),
   columnHelper.accessor("contact_name", {
     header: "Contact",
@@ -152,13 +144,57 @@ export function ContactsList({
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
-        <table className="w-full table-fixed min-w-[400px] md:max-w-[1800px]">
+        {/* ── Mobile card list ── */}
+        <div className="sm:hidden pb-24">
+          {loading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
+                >
+                  <div className="flex-1 pr-3">
+                    <div className="h-4 bg-gray-100 rounded-md w-36 mb-1.5" />
+                    <div className="h-3 bg-gray-100 rounded-md w-24" />
+                  </div>
+                  <div className="h-5 bg-gray-100 rounded-full w-16" />
+                </div>
+              ))
+            : table.getRowModel().rows.map((row) => {
+                const contact = row.original;
+                return (
+                  <div
+                    key={row.id}
+                    onClick={() => onRowClick(contact)}
+                    className={`flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0 cursor-pointer active:bg-gray-50 transition ${
+                      contact.status === "inactive" ? "opacity-50" : ""
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 pr-3">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {contact.name}
+                      </p>
+                      {contact.contact_name && (
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">
+                          {contact.contact_name}
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant={contact.category as any} className="flex-none mt-0.5">
+                      {CATEGORY_LABELS[contact.category]}
+                    </Badge>
+                  </div>
+                );
+              })}
+        </div>
+
+        {/* ── Desktop table ── */}
+        <table className="hidden sm:table w-full table-fixed min-w-[400px] md:max-w-[1800px]">
           <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
             <tr>
               {table.getHeaderGroups()[0]?.headers.map((header) => (
                 <th
                   key={header.id}
-                  className={`px-0 py-3 text-left text-sm font-medium text-gray-900 ${(header.column.columnDef.meta as any)?.hidden || ""}`}
+                  className={`px-0 py-3.5 text-left text-sm font-medium text-gray-900 ${(header.column.columnDef.meta as any)?.hidden || ""}`}
                   style={{ width: COL_WIDTHS[header.id] }}
                 >
                   {header.isPlaceholder
@@ -179,7 +215,7 @@ export function ContactsList({
                     className="animate-pulse border-b border-gray-100 last:border-0"
                   >
                     {columns.map((_, j) => (
-                      <td key={j} className="px-0 py-4 md:py-3.5">
+                      <td key={j} className="px-0 py-3.5">
                         <div
                           className={`h-4 bg-gray-100 rounded-md ${skeletonWidths[j]}`}
                         />
@@ -201,7 +237,7 @@ export function ContactsList({
                       {row.getVisibleCells().map((cell) => (
                         <td
                           key={cell.id}
-                          className={`px-0 py-4 md:py-3.5 text-sm overflow-hidden ${(cell.column.columnDef.meta as any)?.hidden || ""}`}
+                          className={`px-0 py-3.5 text-sm overflow-hidden ${(cell.column.columnDef.meta as any)?.hidden || ""}`}
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
@@ -216,32 +252,34 @@ export function ContactsList({
         </table>
       </div>
 
-      <div className="border-t border-gray-200 bg-white px-6 py-3.5 flex justify-end relative">
-        {/* Mobile pagination */}
-        {pageCount > 1 && (
-          <div className="flex md:hidden items-center gap-3">
+      {/* ── Mobile pagination — simple prev/next ── */}
+      {pageCount > 1 && (
+        <div className="sm:hidden border-t border-gray-200 bg-white py-3 flex items-center justify-between">
+          <span className="text-sm text-gray-500">
+            Page {pageIndex + 1} of {pageCount}
+          </span>
+          <div className="flex items-center gap-1">
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
+              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
             >
               <ChevronLeft size={16} strokeWidth={1.5} />
             </button>
-            <span className="text-xs text-gray-600">
-              Page {pageIndex + 1} of {pageCount}
-            </span>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600"
+              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
             >
               <ChevronRight size={16} strokeWidth={1.5} />
             </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Desktop pagination */}
-        <div className="hidden md:flex items-center gap-3">
+      {/* ── Desktop pagination ── */}
+      <div className="hidden sm:flex border-t border-gray-200 bg-white px-6 py-3.5 justify-end relative">
+        <div className="flex items-center gap-3">
           {pageCount > 1 && (
             <>
               <div className="flex items-center w-[280px]">

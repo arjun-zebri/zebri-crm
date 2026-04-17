@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
+import { Plus } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
 import {
   useContacts,
@@ -156,6 +157,16 @@ export default function ContactsPage() {
         onDelete={() => {}}
         loading={createContact.isPending}
       />
+
+      {/* Mobile FAB — hidden when profile panel is open */}
+      {!selectedContact && (
+        <button
+          onClick={() => setAddModalOpen(true)}
+          className="sm:hidden fixed bottom-6 right-6 z-40 w-11 h-11 bg-black text-white rounded-full shadow-xl flex items-center justify-center hover:bg-neutral-800 active:scale-95 transition cursor-pointer"
+        >
+          <Plus size={18} strokeWidth={1.5} />
+        </button>
+      )}
     </div>
   )
 }

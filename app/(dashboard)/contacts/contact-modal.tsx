@@ -93,7 +93,7 @@ export function ContactModal({
   };
 
   const inputClass =
-    "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition";
+    "w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 transition";
 
   return (
     <>
@@ -132,10 +132,9 @@ export function ContactModal({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Vendor Name - 2 cols */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">
               Contact / Business Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -148,37 +147,8 @@ export function ContactModal({
             />
           </div>
 
-          {/* Contact Person */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contact Person
-            </label>
-            <input
-              type="text"
-              value={contactName}
-              onChange={(e) => setContactName(e.target.value)}
-              placeholder="e.g., John Smith"
-              className={inputClass}
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 (555) 000-0000"
-              className={inputClass}
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm text-gray-400 mb-1">
               Email
             </label>
             <input
@@ -190,101 +160,130 @@ export function ContactModal({
             />
           </div>
 
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">
+              Phone
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+61 400 000 000"
+              className={inputClass}
+            />
+          </div>
+
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm text-gray-400 mb-1">
               Category
             </label>
             <Popover.Root open={categoryOpen} onOpenChange={setCategoryOpen}>
               <Popover.Trigger asChild>
                 <button
                   type="button"
-                  className={inputClass + " flex items-center justify-between"}
+                  className={`${inputClass} flex items-center justify-between text-left`}
                 >
                   {CATEGORY_LABELS[category]}
-                  <ChevronDown size={16} className="text-gray-400" strokeWidth={1.5} />
+                  <ChevronDown size={14} className="text-gray-400 shrink-0" strokeWidth={1.5} />
                 </button>
               </Popover.Trigger>
-              <Popover.Content
-                className="z-50 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-1"
-                side="bottom"
-                align="start"
-              >
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => {
-                      setCategory(cat);
-                      setCategoryOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition ${
-                      category === cat
-                        ? "bg-green-50 text-green-700 font-medium"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {CATEGORY_LABELS[cat]}
-                  </button>
-                ))}
-              </Popover.Content>
+              <Popover.Portal>
+                <Popover.Content
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  sideOffset={4}
+                  align="start"
+                >
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setCategory(cat);
+                        setCategoryOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                        category === cat
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {CATEGORY_LABELS[cat]}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
             </Popover.Root>
           </div>
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm text-gray-400 mb-1">
               Status
             </label>
             <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
               <Popover.Trigger asChild>
                 <button
                   type="button"
-                  className={inputClass + " flex items-center justify-between"}
+                  className={`${inputClass} flex items-center justify-between text-left`}
                 >
                   {STATUS_LABELS[status]}
-                  <ChevronDown size={16} className="text-gray-400" strokeWidth={1.5} />
+                  <ChevronDown size={14} className="text-gray-400 shrink-0" strokeWidth={1.5} />
                 </button>
               </Popover.Trigger>
-              <Popover.Content
-                className="z-50 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-1"
-                side="bottom"
-                align="start"
-              >
-                {STATUSES.map((stat) => (
-                  <button
-                    key={stat}
-                    type="button"
-                    onClick={() => {
-                      setStatus(stat);
-                      setStatusOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition ${
-                      status === stat
-                        ? "bg-green-50 text-green-700 font-medium"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {STATUS_LABELS[stat]}
-                  </button>
-                ))}
-              </Popover.Content>
+              <Popover.Portal>
+                <Popover.Content
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  sideOffset={4}
+                  align="start"
+                >
+                  {STATUSES.map((stat) => (
+                    <button
+                      key={stat}
+                      type="button"
+                      onClick={() => {
+                        setStatus(stat);
+                        setStatusOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm transition ${
+                        status === stat
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {STATUS_LABELS[stat]}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
             </Popover.Root>
           </div>
 
-          {/* Notes - 2 cols */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">
+              Contact Person
             </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Working notes, preferences, things to remember..."
-              rows={8}
-              className={`${inputClass} resize-none`}
+            <input
+              type="text"
+              value={contactName}
+              onChange={(e) => setContactName(e.target.value)}
+              placeholder="e.g., John Smith"
+              className={inputClass}
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">
+            Notes
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Working notes, preferences, things to remember..."
+            rows={8}
+            className={`${inputClass} resize-none`}
+          />
         </div>
       </form>
     </Modal>

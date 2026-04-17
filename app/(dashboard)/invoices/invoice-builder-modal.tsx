@@ -117,20 +117,61 @@ function SortableInvoiceItem({ item, canEdit, onUpdate, onRemove }: {
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="grid grid-cols-[24px_1fr_72px_96px_80px_36px] gap-2 px-4 py-2 border-b border-gray-100 last:border-0 items-center">
-      {canEdit ? (
-        <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 touch-none">
-          <GripVertical size={14} strokeWidth={1.5} />
-        </button>
-      ) : <span />}
-      <input
-        type="text"
-        value={item.description}
-        onChange={(e) => onUpdate(item.id, 'description', e.target.value)}
-        placeholder="Description"
-        disabled={!canEdit}
-        className="text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent disabled:text-gray-400"
-      />
+    <div ref={setNodeRef} style={style} className="flex flex-col sm:grid sm:grid-cols-[24px_1fr_72px_96px_80px_36px] gap-1 sm:gap-2 px-4 py-2.5 sm:py-2 border-b border-gray-100 last:border-0 sm:items-center">
+      {/* Mobile row 1: description + amount preview + delete */}
+      <div className="flex items-center gap-2 sm:contents">
+        {canEdit ? (
+          <button {...attributes} {...listeners} className="hidden sm:flex cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 touch-none">
+            <GripVertical size={14} strokeWidth={1.5} />
+          </button>
+        ) : <span className="hidden sm:inline" />}
+        <input
+          type="text"
+          value={item.description}
+          onChange={(e) => onUpdate(item.id, 'description', e.target.value)}
+          placeholder="Description"
+          disabled={!canEdit}
+          className="flex-1 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent disabled:text-gray-400"
+        />
+        <span className="sm:hidden text-sm text-gray-700 tabular-nums shrink-0">
+          {formatCurrency(item.amount)}
+        </span>
+        {canEdit ? (
+          <button onClick={() => onRemove(item.id)} className="sm:hidden p-1 text-gray-300 hover:text-red-400 transition cursor-pointer">
+            <Trash2 size={14} strokeWidth={1.5} />
+          </button>
+        ) : null}
+      </div>
+
+      {/* Mobile row 2: qty × unit price */}
+      <div className="sm:hidden flex items-center gap-2">
+        <input
+          type="number"
+          value={item.quantity || ''}
+          onChange={(e) => onUpdate(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+          placeholder="1"
+          min="0"
+          step="0.01"
+          disabled={!canEdit}
+          className="w-12 text-right text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <span className="text-xs text-gray-400">×</span>
+        <div className="relative flex-1">
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">$</span>
+          <input
+            type="number"
+            value={item.unit_price || ''}
+            onChange={(e) => onUpdate(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
+            placeholder="0.00"
+            min="0"
+            step="0.01"
+            disabled={!canEdit}
+            className="w-full pl-3 text-right text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        </div>
+      </div>
+
+      {/* Desktop-only: qty, unit price, amount, delete */}
       <input
         type="number"
         value={item.quantity || ''}
@@ -139,9 +180,9 @@ function SortableInvoiceItem({ item, canEdit, onUpdate, onRemove }: {
         min="0"
         step="0.01"
         disabled={!canEdit}
-        className="text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="hidden sm:block text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
-      <div className="relative">
+      <div className="relative hidden sm:block">
         <span className="absolute left-0 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">$</span>
         <input
           type="number"
@@ -154,14 +195,14 @@ function SortableInvoiceItem({ item, canEdit, onUpdate, onRemove }: {
           className="text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 pl-3 w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
       </div>
-      <span className="text-sm text-gray-700 text-right tabular-nums">
-        {new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(item.amount)}
+      <span className="hidden sm:inline text-sm text-gray-700 text-right tabular-nums">
+        {formatCurrency(item.amount)}
       </span>
       {canEdit ? (
-        <button onClick={() => onRemove(item.id)} className="p-1 text-gray-300 hover:text-red-400 transition cursor-pointer justify-self-center">
+        <button onClick={() => onRemove(item.id)} className="hidden sm:flex p-1 text-gray-300 hover:text-red-400 transition cursor-pointer justify-self-center">
           <Trash2 size={14} strokeWidth={1.5} />
         </button>
-      ) : <span />}
+      ) : <span className="hidden sm:inline" />}
     </div>
   )
 }
@@ -791,10 +832,10 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
 
       <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
         <div
-          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
+          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         >
           {/* Header */}
-          <div className="sticky top-0 z-10 bg-white shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="sticky top-0 z-10 bg-white shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
             <div className="min-w-0">
               {isLoading && !isNewInvoice ? (
                 <div className="space-y-1.5">
@@ -851,7 +892,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-5">
             {isLoading ? (
               <div className="space-y-5">
                 <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
@@ -984,7 +1025,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                 </div>
 
                 {/* Payment terms + Due date */}
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 min-w-0">
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">Payment terms</label>
                     <Popover.Root open={termsOpen} onOpenChange={setTermsOpen}>
@@ -1015,7 +1056,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                       </Popover.Portal>
                     </Popover.Root>
                   </div>
-                  <div className="w-44 shrink-0">
+                  <div className="sm:w-44 sm:shrink-0">
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">Due date</label>
                     {canEdit && paymentTerms !== 'due_on_receipt' ? (
                       <DatePicker
@@ -1089,13 +1130,13 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1.5">Line items</label>
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-[24px_1fr_72px_96px_80px_36px] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
-                      <span />
+                    <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[24px_1fr_72px_96px_80px_36px] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
+                      <span className="hidden sm:inline" />
                       <span className="text-xs font-medium text-gray-500">Description</span>
-                      <span className="text-xs font-medium text-gray-500 text-right">Qty</span>
-                      <span className="text-xs font-medium text-gray-500 text-right">Unit price</span>
+                      <span className="hidden sm:inline text-xs font-medium text-gray-500 text-right">Qty</span>
+                      <span className="hidden sm:inline text-xs font-medium text-gray-500 text-right">Unit price</span>
                       <span className="text-xs font-medium text-gray-500 text-right">Amount</span>
-                      <span />
+                      <span className="hidden sm:inline" />
                     </div>
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                       <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
@@ -1268,7 +1309,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                     </div>
                   )}
 
-                  <div className="pt-1 flex items-center gap-3">
+                  <div className="pt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
                     <button
                       onClick={() => sendEmail.mutate()}
                       disabled={sendEmail.isPending || !effectiveInvoiceId}
@@ -1328,17 +1369,17 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
 
           {/* Footer */}
           {canEdit && (
-            <div className="shrink-0 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+            <div className="shrink-0 border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
               {onDelete ? (
                 <button onClick={onDelete}
-                  className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">
+                  className="w-full sm:w-auto text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">
                   Delete
                 </button>
               ) : <span />}
               <button
                 onClick={() => save.mutate()}
                 disabled={save.isPending}
-                className={`px-5 py-2 text-sm bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50 ${!dirty && !save.isPending ? 'opacity-40' : ''}`}
+                className={`w-full sm:w-auto px-5 py-2 text-sm bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50 ${!dirty && !save.isPending ? 'opacity-40' : ''}`}
               >
                 {save.isPending ? 'Saving...' : dirty ? 'Save changes' : 'Save'}
               </button>

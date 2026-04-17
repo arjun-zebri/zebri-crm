@@ -91,7 +91,7 @@ export function CoupleModal({
   };
 
   const inputClass =
-    "w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition";
+    "w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 transition";
 
   const selectedStatus = statuses.find(s => s.slug === status);
   const selectedLabel = selectedStatus?.name || "Select status";
@@ -133,8 +133,8 @@ export function CoupleModal({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
+        <div className="flex flex-col gap-4">
+          <div>
             <label className="block text-sm text-gray-400 mb-1">
               Name <span className="text-red-500">*</span>
             </label>

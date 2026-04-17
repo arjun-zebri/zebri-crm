@@ -88,7 +88,7 @@ export function CouplesHeader({
       <div className="flex items-center flex-wrap gap-x-1 gap-y-3">
         {/* Title */}
         <div className="flex items-baseline gap-3 flex-none sm:order-1">
-          <h1 className="text-3xl font-semibold text-gray-900">Couples</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Couples</h1>
           <span className="text-sm text-gray-400">{couples.length} total</span>
         </div>
 
@@ -104,7 +104,7 @@ export function CouplesHeader({
             placeholder="Search..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full sm:w-36 md:w-56 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
+            className="w-full sm:w-64 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
           />
           {search && (
             <button

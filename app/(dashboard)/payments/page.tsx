@@ -134,53 +134,71 @@ export default function PaymentsPage() {
 
   const isLoading = activeTab === "quotes" ? quotesLoading : invoicesLoading;
 
+  const mobileTotal =
+    activeTab === "quotes"
+      ? filteredQuotes.reduce((sum, q) => sum + q.subtotal, 0)
+      : filteredInvoices.reduce((sum, inv) => sum + inv.subtotal, 0);
+
+  const mobileCount =
+    activeTab === "quotes" ? filteredQuotes.length : filteredInvoices.length;
+
+  const handleNew = () => {
+    if (activeTab === "quotes") setActiveQuoteId("new");
+    else setActiveInvoiceId("new");
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-6 pt-6 pb-2 flex-shrink-0">
-        <div className="flex items-center justify-between flex-wrap gap-y-2 mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900">Payments</h1>
-          <div className="flex items-center gap-1">
-            <div className="relative mr-1">
-              <Search
-                size={15}
-                strokeWidth={1.5}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={activeTab === "quotes" ? quoteSearch : invoiceSearch}
-                onChange={(e) =>
-                  activeTab === "quotes"
-                    ? setQuoteSearch(e.target.value)
-                    : setInvoiceSearch(e.target.value)
-                }
-                className="w-36 sm:w-56 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
-              />
-              {(activeTab === "quotes" ? quoteSearch : invoiceSearch) && (
-                <button
-                  onClick={() => {
-                    if (activeTab === "quotes") {
-                      setQuoteSearch("");
-                    } else {
-                      setInvoiceSearch("");
-                    }
-                  }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                >
-                  <X size={14} strokeWidth={1.5} />
-                </button>
-              )}
-            </div>
+      <div className="px-4 sm:px-6 pt-6 pb-2 flex-shrink-0">
+        {/* Header — matches couples/contacts pattern */}
+        <div className="flex items-center flex-wrap gap-x-1 gap-y-3 mb-6">
+          {/* Title */}
+          <div className="flex items-baseline gap-3 flex-none sm:order-1">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Payments</h1>
+            <span className="text-sm text-gray-400">{mobileCount} total</span>
+          </div>
+
+          {/* Desktop spacer */}
+          <div className="hidden sm:block sm:flex-1 sm:order-2" />
+
+          {/* Search — full-width below on mobile */}
+          <div className="relative order-last w-full sm:order-3 sm:w-auto sm:mr-1">
+            <Search size={15} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={activeTab === "quotes" ? quoteSearch : invoiceSearch}
+              onChange={(e) =>
+                activeTab === "quotes"
+                  ? setQuoteSearch(e.target.value)
+                  : setInvoiceSearch(e.target.value)
+              }
+              className="w-full sm:w-64 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
+            />
+            {(activeTab === "quotes" ? quoteSearch : invoiceSearch) && (
+              <button
+                onClick={() => {
+                  if (activeTab === "quotes") setQuoteSearch("");
+                  else setInvoiceSearch("");
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X size={14} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+
+          {/* New button */}
+          <div className="flex items-center ml-auto sm:ml-0 sm:order-4">
             <button
-              onClick={() => {
-                if (activeTab === "quotes") {
-                  setActiveQuoteId("new");
-                } else {
-                  setActiveInvoiceId("new");
-                }
-              }}
-              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-black rounded-xl hover:bg-neutral-800 transition ml-1 cursor-pointer"
+              onClick={handleNew}
+              className="sm:hidden p-1 text-gray-600 hover:text-gray-900 active:scale-95 transition cursor-pointer"
+            >
+              <Plus size={20} strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={handleNew}
+              className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-black rounded-xl hover:bg-neutral-800 transition ml-1 cursor-pointer"
             >
               <Plus size={14} strokeWidth={1.5} />
               New
@@ -214,52 +232,31 @@ export default function PaymentsPage() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="px-6 pb-6">
-          {/* Table */}
+        <div className="px-4 sm:px-6 pb-28">
           <div>
             {activeTab === "quotes" ? (
               <>
-                <div className="grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0 sticky top-0 bg-white [box-shadow:0_1px_0_rgb(229,231,235)]">
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                    Number
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                    Title
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                    Couple
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                    Status
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">
-                    Total
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">
-                    Date
-                  </div>
+                {/* Desktop table header */}
+                <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0 sticky top-0 bg-white [box-shadow:0_1px_0_rgb(229,231,235)]">
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Number</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Title</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Couple</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Status</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Total</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Date</div>
                 </div>
 
                 {isLoading ? (
                   <div className="p-4 space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="h-10 bg-gray-100 rounded animate-pulse"
-                      />
+                      <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
                     ))}
                   </div>
                 ) : filteredQuotes.length === 0 ? (
                   <div className="py-16 text-center">
-                    <FileText
-                      size={32}
-                      strokeWidth={1}
-                      className="text-gray-200 mx-auto mb-3"
-                    />
+                    <FileText size={32} strokeWidth={1} className="text-gray-200 mx-auto mb-3" />
                     <p className="text-sm text-gray-400">
-                      {quoteSearch
-                        ? "No quotes match your search."
-                        : "No quotes yet. Create one to get started."}
+                      {quoteSearch ? "No quotes match your search." : "No quotes yet. Create one to get started."}
                     </p>
                   </div>
                 ) : (
@@ -267,38 +264,57 @@ export default function PaymentsPage() {
                     <button
                       key={quote.id}
                       onClick={() => setActiveQuoteId(quote.id)}
-                      className="w-full grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0 border-b border-gray-100 hover:bg-gray-50 transition text-left last:border-b-0 cursor-pointer group"
+                      className="w-full text-left border-b border-gray-100 hover:bg-gray-50 transition last:border-b-0 cursor-pointer group"
                     >
-                      <div className="px-4 py-3.5 text-sm font-medium text-gray-500 group-hover:text-gray-900 whitespace-nowrap">
-                        {quote.quote_number}
+                      {/* Mobile card */}
+                      <div className="sm:hidden px-2 py-3">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs font-medium text-gray-400 shrink-0">{quote.quote_number}</span>
+                            <span
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize shrink-0 ${
+                                QUOTE_STATUS_STYLES[quote.status] || QUOTE_STATUS_STYLES.draft
+                              }`}
+                            >
+                              {quote.status}
+                            </span>
+                          </div>
+                          <span className="text-sm font-medium text-gray-900 tabular-nums shrink-0">
+                            {formatCurrency(quote.subtotal)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="text-sm text-gray-900 truncate">{quote.title}</span>
+                          <span className="text-gray-300 shrink-0">·</span>
+                          <span className="text-sm text-gray-500 truncate shrink-0 max-w-[120px]">{quote.couple.name}</span>
+                        </div>
                       </div>
-                      <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
-                        {quote.title}
-                      </div>
-                      <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
-                        {quote.couple.name}
-                      </div>
-                      <div className="px-4 py-3.5">
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
-                            QUOTE_STATUS_STYLES[quote.status] ||
-                            QUOTE_STATUS_STYLES.draft
-                          }`}
-                        >
-                          {quote.status}
-                        </span>
-                      </div>
-                      <div className="px-4 py-3.5 text-sm text-gray-700 font-medium tabular-nums text-right">
-                        {formatCurrency(quote.subtotal)}
-                      </div>
-                      <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-700 text-right whitespace-nowrap">
-                        {new Date(quote.created_at).toLocaleDateString(
-                          "en-AU",
-                          {
-                            day: "numeric",
-                            month: "short",
-                          }
-                        )}
+                      {/* Desktop row */}
+                      <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0">
+                        <div className="px-4 py-3.5 text-sm font-medium text-gray-500 group-hover:text-gray-900 whitespace-nowrap">
+                          {quote.quote_number}
+                        </div>
+                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
+                          {quote.title}
+                        </div>
+                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
+                          {quote.couple.name}
+                        </div>
+                        <div className="px-4 py-3.5">
+                          <span
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
+                              QUOTE_STATUS_STYLES[quote.status] || QUOTE_STATUS_STYLES.draft
+                            }`}
+                          >
+                            {quote.status}
+                          </span>
+                        </div>
+                        <div className="px-4 py-3.5 text-sm text-gray-700 font-medium tabular-nums text-right">
+                          {formatCurrency(quote.subtotal)}
+                        </div>
+                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-700 text-right whitespace-nowrap">
+                          {new Date(quote.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                        </div>
                       </div>
                     </button>
                   ))
@@ -306,47 +322,27 @@ export default function PaymentsPage() {
               </>
             ) : (
               <>
-                <div className="grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0 sticky top-0 bg-white [box-shadow:0_1px_0_rgb(229,231,235)]">
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                    Number
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                    Title
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                    Couple
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">
-                    Status
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">
-                    Total
-                  </div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">
-                    Due
-                  </div>
+                {/* Desktop table header */}
+                <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0 sticky top-0 bg-white [box-shadow:0_1px_0_rgb(229,231,235)]">
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Number</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Title</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Couple</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Status</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Total</div>
+                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Due</div>
                 </div>
 
                 {isLoading ? (
                   <div className="p-4 space-y-3">
                     {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="h-10 bg-gray-100 rounded animate-pulse"
-                      />
+                      <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
                     ))}
                   </div>
                 ) : filteredInvoices.length === 0 ? (
                   <div className="py-16 text-center">
-                    <Receipt
-                      size={32}
-                      strokeWidth={1}
-                      className="text-gray-200 mx-auto mb-3"
-                    />
+                    <Receipt size={32} strokeWidth={1} className="text-gray-200 mx-auto mb-3" />
                     <p className="text-sm text-gray-400">
-                      {invoiceSearch
-                        ? "No invoices match your search."
-                        : "No invoices yet. Create one to get started."}
+                      {invoiceSearch ? "No invoices match your search." : "No invoices yet. Create one to get started."}
                     </p>
                   </div>
                 ) : (
@@ -354,45 +350,71 @@ export default function PaymentsPage() {
                     <button
                       key={invoice.id}
                       onClick={() => setActiveInvoiceId(invoice.id)}
-                      className="w-full grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0 border-b border-gray-100 hover:bg-gray-50 transition text-left last:border-b-0 cursor-pointer group"
+                      className="w-full text-left border-b border-gray-100 hover:bg-gray-50 transition last:border-b-0 cursor-pointer group"
                     >
-                      <div className="px-4 py-3.5 text-sm font-medium text-gray-500 group-hover:text-gray-900 whitespace-nowrap">
-                        {invoice.invoice_number}
+                      {/* Mobile card */}
+                      <div className="sm:hidden px-2 py-3">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs font-medium text-gray-400 shrink-0">{invoice.invoice_number}</span>
+                            <span
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize shrink-0 ${
+                                INVOICE_STATUS_STYLES[invoice.effectiveStatus] || INVOICE_STATUS_STYLES.draft
+                              }`}
+                            >
+                              {invoice.effectiveStatus}
+                            </span>
+                          </div>
+                          <span className="text-sm font-medium text-gray-900 tabular-nums shrink-0">
+                            {formatCurrency(invoice.subtotal)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="text-sm text-gray-900 truncate">{invoice.title}</span>
+                          <span className="text-gray-300 shrink-0">·</span>
+                          <span className="text-sm text-gray-500 truncate shrink-0 max-w-[120px]">{invoice.couple.name}</span>
+                          {invoice.due_date && (
+                            <>
+                              <span className="text-gray-300 shrink-0">·</span>
+                              <span className={`text-xs shrink-0 ${invoice.isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
+                                {new Date(invoice.due_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
-                        {invoice.title}
-                      </div>
-                      <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
-                        {invoice.couple.name}
-                      </div>
-                      <div className="px-4 py-3.5">
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
-                            INVOICE_STATUS_STYLES[invoice.effectiveStatus] ||
-                            INVOICE_STATUS_STYLES.draft
+                      {/* Desktop row */}
+                      <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0">
+                        <div className="px-4 py-3.5 text-sm font-medium text-gray-500 group-hover:text-gray-900 whitespace-nowrap">
+                          {invoice.invoice_number}
+                        </div>
+                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
+                          {invoice.title}
+                        </div>
+                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
+                          {invoice.couple.name}
+                        </div>
+                        <div className="px-4 py-3.5">
+                          <span
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
+                              INVOICE_STATUS_STYLES[invoice.effectiveStatus] || INVOICE_STATUS_STYLES.draft
+                            }`}
+                          >
+                            {invoice.effectiveStatus}
+                          </span>
+                        </div>
+                        <div className="px-4 py-3.5 text-sm text-gray-700 font-medium tabular-nums text-right">
+                          {formatCurrency(invoice.subtotal)}
+                        </div>
+                        <div
+                          className={`px-4 py-3.5 text-sm text-right whitespace-nowrap ${
+                            invoice.isOverdue ? "text-red-500 font-medium" : "text-gray-500 group-hover:text-gray-700"
                           }`}
                         >
-                          {invoice.effectiveStatus}
-                        </span>
-                      </div>
-                      <div className="px-4 py-3.5 text-sm text-gray-700 font-medium tabular-nums text-right">
-                        {formatCurrency(invoice.subtotal)}
-                      </div>
-                      <div
-                        className={`px-4 py-3.5 text-sm text-right whitespace-nowrap ${
-                          invoice.isOverdue
-                            ? "text-red-500 font-medium"
-                            : "text-gray-500 group-hover:text-gray-700"
-                        }`}
-                      >
-                        {invoice.due_date
-                          ? new Date(
-                              invoice.due_date + "T00:00:00"
-                            ).toLocaleDateString("en-AU", {
-                              day: "numeric",
-                              month: "short",
-                            })
-                          : "—"}
+                          {invoice.due_date
+                            ? new Date(invoice.due_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })
+                            : "—"}
+                        </div>
                       </div>
                     </button>
                   ))
@@ -400,8 +422,16 @@ export default function PaymentsPage() {
               </>
             )}
           </div>
+
         </div>
       </div>
+
+      {/* Total footer */}
+      <div className="fixed bottom-0 left-0 md:left-[68px] right-0 z-30 bg-white border-t border-gray-100 px-6 py-5 flex items-center justify-between">
+        <p className="text-sm text-gray-400">{mobileCount} {activeTab === "quotes" ? (mobileCount === 1 ? "quote" : "quotes") : (mobileCount === 1 ? "invoice" : "invoices")}</p>
+        <p className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(mobileTotal)}</p>
+      </div>
+
 
       {!!activeQuoteId && (
         <QuoteBuilderModal

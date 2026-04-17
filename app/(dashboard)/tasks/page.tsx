@@ -90,11 +90,11 @@ function ProgressSummary({
         <button
           key={chip.key}
           onClick={() => setActiveFilter(activeFilter === chip.key ? null : chip.key)}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
-            activeFilter === chip.key ? chip.activeClass : chip.inactiveClass
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+            activeFilter === chip.key ? "bg-gray-900 text-white" : chip.inactiveClass
           }`}
         >
-          <span className={`w-1.5 h-1.5 rounded-full ${chip.dot}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${activeFilter === chip.key ? "bg-white" : chip.dot}`} />
           {chip.label}
         </button>
       ))}
@@ -122,7 +122,7 @@ function TasksFilterBar({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="flex items-center gap-2 flex-1 md:flex-none min-w-0">
         <div className="relative flex-1 min-w-0 sm:flex-none sm:w-64">
           <Search
             size={12}
@@ -528,7 +528,7 @@ export default function TasksPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-6 pt-6 pb-3 flex-shrink-0 flex flex-col md:flex-row md:items-center gap-3">
-        <h1 className="text-3xl font-semibold text-gray-900">Tasks</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Tasks</h1>
         <div className="flex items-center gap-2 md:flex-1 md:justify-end">
           <TasksFilterBar
             searchQuery={searchQuery}

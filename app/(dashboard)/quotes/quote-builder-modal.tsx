@@ -87,8 +87,8 @@ function SortableQuoteItem({ item, onUpdate, onRemove }: { item: QuoteItem; onUp
   }
 
   return (
-    <div ref={setNodeRef} style={style} className="grid grid-cols-[24px_1fr_110px_36px] gap-3 px-4 py-2 border-b border-gray-100 items-center">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 touch-none">
+    <div ref={setNodeRef} style={style} className="grid grid-cols-[1fr_100px_32px] sm:grid-cols-[24px_1fr_110px_36px] gap-2 sm:gap-3 px-4 py-2 border-b border-gray-100 items-center">
+      <button {...attributes} {...listeners} className="hidden sm:flex cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 touch-none">
         <GripVertical size={14} strokeWidth={1.5} />
       </button>
       <input type="text" value={item.description}
@@ -600,10 +600,10 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
       {/* Modal */}
       <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
         <div
-          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden"
+          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
         >
           {/* Header */}
-          <div className="sticky top-0 z-10 bg-white shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="sticky top-0 z-10 bg-white shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
             <div className="min-w-0">
               {isLoading && !isNewQuote ? (
                 <div className="space-y-1.5">
@@ -636,7 +636,7 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-5">
             {isLoading ? (
               <div className="space-y-5">
                 {/* Couple */}
@@ -731,8 +731,8 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                 </div>
 
                 {/* Title + Expiry */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="col-span-2">
+                <div className="flex flex-col sm:grid sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">Title</label>
                     <input type="text" value={title} onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
                       placeholder="e.g. Wedding MC Package" className={inputClass} />
@@ -827,8 +827,8 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                     </Popover.Root>
                   </div>
                   <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-[24px_1fr_110px_36px] gap-3 px-4 py-2 bg-gray-50 border-b border-gray-200">
-                      <span />
+                    <div className="grid grid-cols-[1fr_100px_32px] sm:grid-cols-[24px_1fr_110px_36px] gap-2 sm:gap-3 px-4 py-2 bg-gray-50 border-b border-gray-200">
+                      <span className="hidden sm:inline" />
                       <span className="text-xs font-medium text-gray-500">Description</span>
                       <span className="text-xs font-medium text-gray-500 text-right">Amount</span>
                       <span />
@@ -956,7 +956,7 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 pt-0.5">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-0.5">
                     <button
                       onClick={() => sendEmail.mutate()}
                       disabled={sendEmail.isPending || !effectiveQuoteId}
@@ -978,7 +978,7 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                     )}
                     {quote?.status === 'accepted' && onCreateInvoice && (
                       <button onClick={() => createInvoice.mutate()} disabled={createInvoice.isPending}
-                        className="ml-auto text-sm px-4 py-1.5 bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50">
+                        className="w-full sm:w-auto sm:ml-auto text-sm px-4 py-2 sm:py-1.5 bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50">
                         {createInvoice.isPending ? 'Creating...' : 'Create Invoice →'}
                       </button>
                     )}
@@ -989,15 +989,15 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+          <div className="shrink-0 border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
             {onDelete ? (
               <button onClick={onDelete}
-                className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">
+                className="w-full sm:w-auto text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer">
                 Delete
               </button>
             ) : <span />}
             <button onClick={() => save.mutate()} disabled={save.isPending}
-              className={`px-5 py-2 text-sm bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50 ${!dirty && !save.isPending ? 'opacity-40' : ''}`}>
+              className={`w-full sm:w-auto px-5 py-2 text-sm bg-black text-white rounded-xl hover:bg-neutral-800 transition cursor-pointer disabled:opacity-50 ${!dirty && !save.isPending ? 'opacity-40' : ''}`}>
               {save.isPending ? 'Saving...' : dirty ? 'Save changes' : 'Save'}
             </button>
           </div>
