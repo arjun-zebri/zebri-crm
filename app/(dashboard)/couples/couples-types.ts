@@ -22,6 +22,7 @@ export interface Couple {
   notes: string
   status: string
   lead_source: string | null
+  kanban_position: number
   created_at: string
   portal_token?: string
   portal_token_enabled?: boolean

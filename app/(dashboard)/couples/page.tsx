@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { Plus } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import {
   useCouples,
@@ -61,8 +62,8 @@ export default function CouplesPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const filteredCouples = useMemo(() => {
-    const filtered = couples.filter((couple) => {
+  const baseFiltered = useMemo(() => {
+    return couples.filter((couple) => {
       const matchesSearch =
         search === "" ||
         couple.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -73,8 +74,10 @@ export default function CouplesPage() {
 
       return matchesSearch && matchesStatus;
     });
+  }, [couples, search, statusFilter]);
 
-    return filtered.sort((a, b) => {
+  const filteredCouples = useMemo(() => {
+    return [...baseFiltered].sort((a, b) => {
       const dir = sortDirection === "asc" ? 1 : -1;
       const valA = a[sortField] ?? "";
       const valB = b[sortField] ?? "";
@@ -82,12 +85,23 @@ export default function CouplesPage() {
       if (valA > valB) return 1 * dir;
       return 0;
     });
-  }, [couples, search, statusFilter, sortField, sortDirection]);
+  }, [baseFiltered, sortField, sortDirection]);
+
+  const kanbanCouples = useMemo(() => {
+    return [...baseFiltered].sort(
+      (a, b) => (a.kanban_position ?? 0) - (b.kanban_position ?? 0)
+    );
+  }, [baseFiltered]);
 
   const handleAddCouple = async (
     data: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
   ) => {
-    await createCouple.mutateAsync(data);
+    const positionsInStatus = couples
+      .filter((c) => c.status === data.status)
+      .map((c) => c.kanban_position ?? 0);
+    const nextPosition =
+      positionsInStatus.length > 0 ? Math.max(...positionsInStatus) + 1 : 0;
+    await createCouple.mutateAsync({ ...data, kanban_position: nextPosition });
     toast("Couple added");
     setAddModalOpen(false);
   };
@@ -112,17 +126,39 @@ export default function CouplesPage() {
   const handleDragEnd = async (
     source: string,
     destination: string,
+    destinationIndex: number,
     coupleId: string
   ) => {
-    if (source === destination) return;
-
     const couple = couples.find((c) => c.id === coupleId);
     if (!couple) return;
 
-    // destination is the slug from the status
+    const destColumn = couples
+      .filter((c) => c.status === destination && c.id !== coupleId)
+      .sort((a, b) => (a.kanban_position ?? 0) - (b.kanban_position ?? 0));
+
+    let newPosition: number;
+    if (destColumn.length === 0) {
+      newPosition = 0;
+    } else if (destinationIndex <= 0) {
+      newPosition = (destColumn[0].kanban_position ?? 0) - 1;
+    } else if (destinationIndex >= destColumn.length) {
+      newPosition = (destColumn[destColumn.length - 1].kanban_position ?? 0) + 1;
+    } else {
+      const prev = destColumn[destinationIndex - 1].kanban_position ?? 0;
+      const next = destColumn[destinationIndex].kanban_position ?? 0;
+      newPosition = (prev + next) / 2;
+    }
+
+    if (
+      source === destination &&
+      couple.kanban_position === newPosition
+    )
+      return;
+
     await updateCouple.mutateAsync({
       ...couple,
       status: destination,
+      kanban_position: newPosition,
     });
   };
 
@@ -166,7 +202,7 @@ export default function CouplesPage() {
         ) : (
           <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pt-2">
             <CouplesKanban
-              couples={filteredCouples}
+              couples={kanbanCouples}
               statuses={statuses}
               onCardClick={(couple) => setSelectedCouple(couple)}
               onDragEnd={handleDragEnd}
@@ -196,6 +232,19 @@ export default function CouplesPage() {
         defaultStatus={defaultStatus}
         loading={createCouple.isPending}
       />
+
+      {/* Mobile FAB — hidden when profile panel is open */}
+      {!selectedCouple && (
+        <button
+          onClick={() => {
+            setDefaultStatus(undefined);
+            setAddModalOpen(true);
+          }}
+          className="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 bg-black text-white rounded-full shadow-xl flex items-center justify-center hover:bg-neutral-800 active:scale-95 transition cursor-pointer"
+        >
+          <Plus size={22} strokeWidth={1.5} />
+        </button>
+      )}
     </div>
   );
 }

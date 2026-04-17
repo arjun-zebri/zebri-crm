@@ -115,7 +115,6 @@ function getPageNumbers(currentPage: number, totalPages: number): number[] {
   if (totalPages <= 4) return Array.from({ length: totalPages }, (_, i) => i);
 
   const windowSize = 4;
-  // Highlight stays at button index 3 (last button) — window only shifts when needed
   let windowStart = Math.max(0, currentPage - 3);
   windowStart = Math.min(totalPages - windowSize, windowStart);
 
@@ -179,7 +178,66 @@ export function CouplesList({
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
-        <table className="w-full table-fixed min-w-[400px] md:max-w-[1800px]">
+        {/* ── Mobile card list ── */}
+        <div className="sm:hidden pb-24">
+          {loading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
+                >
+                  <div className="flex-1 pr-3">
+                    <div className="h-4 bg-gray-100 rounded-md w-36 mb-1.5" />
+                    <div className="h-3 bg-gray-100 rounded-md w-24" />
+                  </div>
+                  <div className="h-5 bg-gray-100 rounded-full w-16" />
+                </div>
+              ))
+            : table.getRowModel().rows.map((row) => {
+                const couple = row.original;
+                const status = statuses.find((s) => s.slug === couple.status);
+                const classes = status
+                  ? getStatusClasses(status.color)
+                  : getStatusClasses("gray");
+                const statusName =
+                  status?.name ||
+                  couple.status.charAt(0).toUpperCase() +
+                    couple.status.slice(1);
+                const secondary = [
+                  couple.event_date && formatDate(couple.event_date),
+                  couple.venue,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+
+                return (
+                  <div
+                    key={row.id}
+                    onClick={() => onRowClick(couple)}
+                    className="flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0 cursor-pointer active:bg-gray-50 transition"
+                  >
+                    <div className="min-w-0 flex-1 pr-3">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {couple.name}
+                      </p>
+                      {secondary && (
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">
+                          {secondary}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${classes.pill}`}
+                    >
+                      {statusName}
+                    </span>
+                  </div>
+                );
+              })}
+        </div>
+
+        {/* ── Desktop table ── */}
+        <table className="hidden sm:table w-full table-fixed min-w-[400px] md:max-w-[1800px]">
           <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
             <tr>
               {table.getHeaderGroups()[0]?.headers.map((header) => (
@@ -241,7 +299,34 @@ export function CouplesList({
         </table>
       </div>
 
-      <div className="border-t border-gray-200 bg-white px-6 py-3.5 flex justify-end relative">
+      {/* ── Mobile pagination — simple prev/next ── */}
+      {table.getPageCount() > 1 && (
+        <div className="sm:hidden border-t border-gray-200 bg-white py-3 flex items-center justify-between">
+          <span className="text-sm text-gray-500">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount()}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
+            >
+              <ChevronLeft size={16} strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
+            >
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Desktop pagination ── */}
+      <div className="hidden sm:flex border-t border-gray-200 bg-white px-6 py-3.5 justify-end relative">
         <div className="flex items-center gap-3">
           {table.getPageCount() > 1 && (
             <>

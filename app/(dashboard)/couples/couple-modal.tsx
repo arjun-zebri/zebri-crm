@@ -79,6 +79,7 @@ export function CoupleModal({
       venue: couple?.venue ?? "",
       status: status as any,
       lead_source: leadSource || null,
+      kanban_position: couple?.kanban_position ?? 0,
       notes,
     });
 

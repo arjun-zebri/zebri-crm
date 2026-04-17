@@ -70,7 +70,7 @@ export function useUpdateCouple() {
       return data[0] as Couple
     },
     onMutate: async (couple: Couple) => {
-      await queryClient.cancelQueries({ queryKey: ['couples'] })
+      queryClient.cancelQueries({ queryKey: ['couples'] })
       const previousCouples = queryClient.getQueryData<Couple[]>(['couples'])
 
       queryClient.setQueryData<Couple[]>(['couples'], (old) => {

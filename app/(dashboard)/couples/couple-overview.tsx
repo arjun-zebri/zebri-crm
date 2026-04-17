@@ -47,6 +47,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       phone: field === "phone" ? (value ?? "") : phone,
       status: couple.status,
       lead_source: field === "leadSource" ? value : leadSource || null,
+      kanban_position: couple.kanban_position,
       notes: field === "notes" ? (value ?? "") : notes,
       event_date: couple.event_date,
       venue: couple.venue,
