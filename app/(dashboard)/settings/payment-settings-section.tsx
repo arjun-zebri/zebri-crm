@@ -82,7 +82,7 @@ export function PaymentSettingsSection({
       <div>
         <h2 className="text-xl font-semibold text-gray-900 mb-1">Bank details</h2>
         <p className="text-sm text-gray-500 mb-5">
-          Auto-filled into invoice Notes when you create a new invoice.
+          Auto-filled into invoice notes when you create a new invoice.
         </p>
         <div className="space-y-4">
           <div>

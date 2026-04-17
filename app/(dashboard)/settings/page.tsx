@@ -50,7 +50,7 @@ const tabs = [
   { id: "branding", label: "Branding" },
   { id: "account", label: "Account" },
   { id: "billing", label: "Plans & Billing" },
-  { id: "payments", label: "Payments" },
+  { id: "payments", label: "Receive Payments" },
   { id: "templates", label: "Templates" },
   { id: "statuses", label: "Statuses" },
   { id: "notifications", label: "Notifications" },
@@ -113,7 +113,9 @@ function SettingsContent() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
+          Settings
+        </h1>
       </div>
 
       <div className="px-4 md:px-6 flex-shrink-0">
@@ -143,62 +145,64 @@ function SettingsContent() {
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-4 md:px-6 pt-6 pb-6">
-
-      {activeTab === "personal-info" && (
-        <PersonalInfoSection
-          initialData={{
-            displayName: metadata?.display_name || "",
-            businessName: metadata?.business_name || "",
-            phone: metadata?.phone || "",
-            website: metadata?.website || "",
-            instagramUrl: metadata?.instagram_url || "",
-            facebookUrl: metadata?.facebook_url || "",
-            businessType: metadata?.business_type || "",
-          }}
-          email={email || ""}
-        />
-      )}
-      {activeTab === "branding" && (
-        <BrandingSection
-          initialData={{
-            logoUrl: metadata?.logo_url || "",
-            brandColor: metadata?.brand_color || "#A7F3D0",
-            tagline: metadata?.tagline || "",
-            abn: metadata?.abn || "",
-            showContactOnDocuments: metadata?.show_contact_on_documents || false,
-            businessName: metadata?.business_name || "",
-            phone: metadata?.phone || "",
-            website: metadata?.website || "",
-            instagramUrl: metadata?.instagram_url || "",
-            facebookUrl: metadata?.facebook_url || "",
-          }}
-        />
-      )}
-      {activeTab === "account" && (
-        <AccountSection emailPreferences={metadata?.email_preferences} />
-      )}
-      {activeTab === "billing" && (
-        <BillingSection
-          status={metadata?.subscription_status || null}
-          trialEnd={metadata?.trial_end || null}
-          subscriptionEnd={metadata?.subscription_end || null}
-          subscriptionPlan={metadata?.subscription_plan || null}
-          hasStripeCustomer={!!metadata?.stripe_customer_id}
-        />
-      )}
-      {activeTab === "payments" && (
-        <PaymentSettingsSection
-          initialBankAccountName={metadata?.bank_account_name || ""}
-          initialBankBsb={metadata?.bank_bsb || ""}
-          initialBankAccountNumber={metadata?.bank_account_number || ""}
-          stripeConnectAccountId={metadata?.stripe_connect_account_id || null}
-          stripeConnectEnabled={metadata?.stripe_connect_enabled || false}
-          justConnected={searchParams.get("connected") === "true"}
-        />
-      )}
-      {activeTab === "templates" && <TemplatesSection />}
-      {activeTab === "statuses" && <StatusesSection />}
-      {activeTab === "notifications" && <NotificationsSection />}
+          {activeTab === "personal-info" && (
+            <PersonalInfoSection
+              initialData={{
+                displayName: metadata?.display_name || "",
+                businessName: metadata?.business_name || "",
+                phone: metadata?.phone || "",
+                website: metadata?.website || "",
+                instagramUrl: metadata?.instagram_url || "",
+                facebookUrl: metadata?.facebook_url || "",
+                businessType: metadata?.business_type || "",
+              }}
+              email={email || ""}
+            />
+          )}
+          {activeTab === "branding" && (
+            <BrandingSection
+              initialData={{
+                logoUrl: metadata?.logo_url || "",
+                brandColor: metadata?.brand_color || "#A7F3D0",
+                tagline: metadata?.tagline || "",
+                abn: metadata?.abn || "",
+                showContactOnDocuments:
+                  metadata?.show_contact_on_documents || false,
+                businessName: metadata?.business_name || "",
+                phone: metadata?.phone || "",
+                website: metadata?.website || "",
+                instagramUrl: metadata?.instagram_url || "",
+                facebookUrl: metadata?.facebook_url || "",
+              }}
+            />
+          )}
+          {activeTab === "account" && (
+            <AccountSection emailPreferences={metadata?.email_preferences} />
+          )}
+          {activeTab === "billing" && (
+            <BillingSection
+              status={metadata?.subscription_status || null}
+              trialEnd={metadata?.trial_end || null}
+              subscriptionEnd={metadata?.subscription_end || null}
+              subscriptionPlan={metadata?.subscription_plan || null}
+              hasStripeCustomer={!!metadata?.stripe_customer_id}
+            />
+          )}
+          {activeTab === "payments" && (
+            <PaymentSettingsSection
+              initialBankAccountName={metadata?.bank_account_name || ""}
+              initialBankBsb={metadata?.bank_bsb || ""}
+              initialBankAccountNumber={metadata?.bank_account_number || ""}
+              stripeConnectAccountId={
+                metadata?.stripe_connect_account_id || null
+              }
+              stripeConnectEnabled={metadata?.stripe_connect_enabled || false}
+              justConnected={searchParams.get("connected") === "true"}
+            />
+          )}
+          {activeTab === "templates" && <TemplatesSection />}
+          {activeTab === "statuses" && <StatusesSection />}
+          {activeTab === "notifications" && <NotificationsSection />}
         </div>
       </div>
     </div>
