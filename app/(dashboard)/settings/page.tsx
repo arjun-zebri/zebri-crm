@@ -28,6 +28,8 @@ interface UserMetadata {
   facebook_url?: string;
   business_type?: string;
   subscription_status?: string;
+  subscription_plan?: string;
+  stripe_customer_id?: string;
   trial_end?: string;
   subscription_end?: string;
   email_preferences?: EmailPreferencesData;
@@ -180,6 +182,8 @@ function SettingsContent() {
           status={metadata?.subscription_status || null}
           trialEnd={metadata?.trial_end || null}
           subscriptionEnd={metadata?.subscription_end || null}
+          subscriptionPlan={metadata?.subscription_plan || null}
+          hasStripeCustomer={!!metadata?.stripe_customer_id}
         />
       )}
       {activeTab === "payments" && (

@@ -16,14 +16,15 @@ Stripe is used for two distinct purposes:
 
 ---
 
-## Plan
+## Plans
 
-| | |
-|---|---|
-| Name | Zebri Pro |
-| Billing | Monthly |
-| Trial | 14-day free trial |
-| Free tier | None — after trial, subscription is required |
+| Plan | Price | Description |
+|---|---|---|
+| Starter | Free | Up to 5 couples, core CRM features |
+| Pro | $49/mo | Unlimited couples + Couple portal, Song selection, Timeline Builder |
+| Max | $89/mo | Everything in Pro + Pulse, Event Mode, Team members, Account manager (some Soon) |
+
+All paid plans include a 14-day free trial. No credit card required to start trial.
 
 ---
 
@@ -195,7 +196,8 @@ The subscription section on `/account` shows state-specific messaging:
 | `STRIPE_SECRET_KEY` | Server only | Stripe secret API key |
 | `STRIPE_WEBHOOK_SECRET` | Server only | Webhook signing secret for platform events (subscriptions) |
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | Server only | Webhook signing secret for Connect events (invoice payments) |
-| `STRIPE_PRICE_ID` | Server only | Price ID for Zebri Pro plan |
+| `STRIPE_PRO_PRICE_ID` | Server only | Price ID for Zebri Pro plan ($49/mo) |
+| `STRIPE_MAX_PRICE_ID` | Server only | Price ID for Zebri Max plan ($89/mo) |
 | `STRIPE_BETA_PRICE_ID` | Server only | Price ID for beta user lifetime discount plan |
 | `NEXT_PUBLIC_APP_URL` | Public | App base URL (e.g. `https://app.zebri.com.au`) — used in redirect URLs |
 

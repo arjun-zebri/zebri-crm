@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             subscription_status: subscription.status,
+            subscription_plan: subscription.metadata?.plan ?? null,
             trial_end: subscription.trial_end
               ? new Date(subscription.trial_end * 1000).toISOString()
               : null,
