@@ -95,7 +95,6 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
         .update({
           date: rest.date,
           venue: rest.venue,
-          price: rest.price,
           status: rest.status,
           timeline_notes: rest.timeline_notes,
         })

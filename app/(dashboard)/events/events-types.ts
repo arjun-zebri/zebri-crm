@@ -7,7 +7,6 @@ export interface Event {
   date: string
   venue: string
   timeline_notes: string
-  price: number | null
   status: EventStatus
   share_token?: string | null
   share_token_enabled?: boolean
