@@ -76,7 +76,7 @@ export default async function VendorPage({
           <h1 className="text-2xl font-semibold text-gray-900 mb-1">Run Sheet</h1>
           <p className="text-sm text-gray-500">
             {formatEventDate(event.date)}
-            {event.venue ? ` · ${event.venue}` : ''}
+            {event.venue ? ` · ${event.venue.replace(/\s*[—–]\s*/g, ', ')}` : ''}
           </p>
         </div>
 
@@ -122,7 +122,7 @@ export default async function VendorPage({
         {/* Footer note */}
         <div className="border-t border-gray-100 mt-12 pt-6">
           <p className="text-xs text-gray-400">
-            Items marked "Provisional" are awaiting MC confirmation. This run sheet may be updated — check back for the latest version.
+            Items marked "Provisional" are awaiting MC confirmation. This run sheet may be updated. Check back for the latest version.
           </p>
         </div>
 

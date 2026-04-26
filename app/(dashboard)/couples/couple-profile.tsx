@@ -8,9 +8,11 @@ import {
   Trash2,
   Check,
   Copy,
+  Link,
   LayoutDashboard,
   CheckSquare,
   FileText,
+  FileSignature,
   Receipt,
   Users,
   Clock,
@@ -36,6 +38,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CoupleOverview } from "./couple-overview";
 import { CoupleTasks } from "./couple-tasks";
 import { CouplePayments } from "./couple-payments";
+import { CoupleContracts } from "./couple-contracts";
+import { hasContractsAccess } from "@/lib/subscription";
 import { usePortalData } from "./use-portal-data";
 import { PersonModal, SongModal } from "./portal-modals";
 import { McPortalNames } from "./mc-portal-names";
@@ -49,6 +53,7 @@ type Section =
   | "pulse"
   | "tasks"
   | "payments"
+  | "contracts"
   | "names"
   | "timeline"
   | "songs"
@@ -74,6 +79,11 @@ const NAV_ITEMS: { key: Section; label: string; icon: React.ReactNode }[] = [
     key: "payments",
     label: "Payments",
     icon: <Receipt size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: "contracts",
+    label: "Contracts",
+    icon: <FileSignature size={18} strokeWidth={1.5} />,
   },
   { key: "names", label: "Names", icon: <Users size={18} strokeWidth={1.5} /> },
   {
@@ -112,6 +122,15 @@ export function CoupleProfile({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: statuses } = useCoupleStatuses();
+  const [contractsEnabled, setContractsEnabled] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!cancelled) setContractsEnabled(hasContractsAccess(data.user?.user_metadata));
+    });
+    return () => { cancelled = true };
+  }, [supabase]);
+  const navItems = contractsEnabled ? NAV_ITEMS : NAV_ITEMS.filter((i) => i.key !== 'contracts');
   const [activeSection, setActiveSection] = useState<Section>(defaultTab);
   const [statusOpen, setStatusOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -403,6 +422,14 @@ export function CoupleProfile({
                   <Trash2 size={16} strokeWidth={1.5} />
                 </button>
                 <div className="w-px h-4 bg-gray-200 mx-2" />
+                <button
+                  onClick={() => copyLink("couple")}
+                  title="Copy portal link"
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                >
+                  {copied === "couple" ? <Check size={16} strokeWidth={1.5} className="text-green-500" /> : <Link size={16} strokeWidth={1.5} />}
+                </button>
+                <div className="w-px h-4 bg-gray-200 mx-2" />
                 <div className="flex items-center gap-0.5">
                   <a
                     href={hasPhone ? `tel:${couple.phone}` : undefined}
@@ -449,7 +476,7 @@ export function CoupleProfile({
             {/* Mobile: horizontal scrollable tab bar */}
             <div className="sm:hidden shrink-0 border-b border-gray-200 overflow-x-auto">
               <div className="flex px-2 py-2 gap-1 min-w-max">
-                {NAV_ITEMS.map((item) => (
+                {navItems.map((item) => (
                   <button
                     key={item.key}
                     onClick={() => setActiveSection(item.key)}
@@ -468,7 +495,7 @@ export function CoupleProfile({
 
             {/* Desktop: sidebar navigation */}
             <nav className="hidden sm:block w-[200px] shrink-0 border-r border-gray-200 overflow-y-auto px-3 py-4 space-y-0.5">
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <button
                   key={item.key}
                   onClick={() => setActiveSection(item.key)}
@@ -501,6 +528,9 @@ export function CoupleProfile({
               )}
               {activeSection === "payments" && (
                 <CouplePayments coupleId={couple.id} coupleName={couple.name} />
+              )}
+              {activeSection === "contracts" && (
+                <CoupleContracts coupleId={couple.id} coupleName={couple.name} />
               )}
 
               {activeSection === "names" && (

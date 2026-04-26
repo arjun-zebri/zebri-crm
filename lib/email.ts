@@ -117,6 +117,150 @@ export async function sendQuoteEmail(opts: {
   return { ok: true };
 }
 
+function contractHtml(opts: {
+  coupleName: string;
+  contractNumber: string;
+  contractTitle: string;
+  expiresAt: string | null;
+  shareUrl: string;
+  mcBusinessName: string;
+}): string {
+  const {
+    coupleName,
+    contractNumber,
+    contractTitle,
+    expiresAt,
+    shareUrl,
+    mcBusinessName,
+  } = opts;
+  const expiryLine = expiresAt
+    ? `<p style="margin:0 0 32px;font-size:14px;color:#374151;">Please sign by <strong>${expiresAt}</strong>.</p>`
+    : "";
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <tr><td style="padding:40px 40px 32px;">
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Contract ${contractNumber}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${contractTitle}</h1>
+          ${expiryLine}
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            Hi ${coupleName},<br><br>
+            ${mcBusinessName} has sent you a contract to review and sign.
+          </p>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Review &amp; Sign Contract</a>
+            </td></tr>
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
+          </p>
+        </td></tr>
+        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
+          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function contractReminderHtml(opts: {
+  coupleName: string;
+  contractNumber: string;
+  contractTitle: string;
+  expiresAt: string | null;
+  shareUrl: string;
+  mcBusinessName: string;
+}): string {
+  const {
+    coupleName,
+    contractNumber,
+    contractTitle,
+    expiresAt,
+    shareUrl,
+    mcBusinessName,
+  } = opts;
+  const expiryLine = expiresAt
+    ? `<p style="margin:0 0 32px;font-size:14px;color:#b45309;">Reminder: this contract expires on <strong>${expiresAt}</strong>.</p>`
+    : "";
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <tr><td style="padding:40px 40px 32px;">
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Friendly reminder · Contract ${contractNumber}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${contractTitle}</h1>
+          ${expiryLine}
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            Hi ${coupleName},<br><br>
+            Just a gentle nudge — your contract from ${mcBusinessName} is still waiting for your signature.
+          </p>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Review &amp; Sign</a>
+            </td></tr>
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
+          </p>
+        </td></tr>
+        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
+          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${mcBusinessName} via Zebri</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function sendContractEmail(opts: {
+  coupleEmail: string;
+  coupleName: string;
+  contractNumber: string;
+  contractTitle: string;
+  expiresAt: string | null;
+  shareUrl: string;
+  mcBusinessName: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: opts.coupleEmail,
+    subject: `Contract from ${opts.mcBusinessName} — ${opts.contractNumber}`,
+    html: contractHtml(opts),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function sendContractReminderEmail(opts: {
+  coupleEmail: string;
+  coupleName: string;
+  contractNumber: string;
+  contractTitle: string;
+  expiresAt: string | null;
+  shareUrl: string;
+  mcBusinessName: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to: opts.coupleEmail,
+    subject: `Reminder: please sign your contract — ${opts.contractNumber}`,
+    html: contractReminderHtml(opts),
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 export async function sendInvoiceEmail(opts: {
   coupleEmail: string;
   coupleName: string;

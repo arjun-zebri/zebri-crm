@@ -10,7 +10,7 @@ Feel: minimal, fast, calm, modern. Never enterprise.
 - Libraries: tanstack-table, react-query, lucide-react, dnd-kit
 
 ## MVP Scope — Build ONLY
-Authentication | Couples (with events) | Contacts | Tasks | Payments
+Authentication | Couples (with events) | Contacts | Tasks | Payments | Contracts (e-sign)
 
 ## DO NOT build
 Analytics | Automation | AI features | Messaging | Marketplace

@@ -75,6 +75,17 @@ export interface PortalInvoice {
   share_token_enabled: boolean
 }
 
+export interface PortalContract {
+  id: string
+  title: string
+  contract_number: string
+  status: string
+  share_token: string | null
+  share_token_enabled: boolean
+  email_sent_at: string | null
+  signed_at: string | null
+}
+
 export interface PortalSongCategory {
   key: string
   label: string
@@ -98,6 +109,7 @@ export interface PortalData {
     quotes: PortalQuote[]
     invoices: PortalInvoice[]
   }
+  contracts: PortalContract[]
 }
 
 function formatEventDate(dateStr: string): string {
@@ -155,11 +167,11 @@ export default async function PortalPage({
           {portal.event && (
             <p className="text-sm text-gray-500">
               {formatEventDate(portal.event.date)}
-              {portal.event.venue ? ` · ${portal.event.venue}` : ''}
+              {portal.event.venue ? ` · ${portal.event.venue.replace(/\s*[—–]\s*/g, ', ')}` : ''}
             </p>
           )}
           <p className="mt-3 text-sm text-gray-500">
-            Fill in your details below. Everything saves automatically — you can come back anytime.
+            Fill in your details below. Everything saves automatically. You can come back anytime.
           </p>
         </div>
 

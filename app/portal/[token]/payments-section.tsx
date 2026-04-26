@@ -32,7 +32,7 @@ function formatAUD(value: number): string {
   return new Intl.NumberFormat('en-AU', {
     style: 'currency',
     currency: 'AUD',
-  }).format(value / 100)
+  }).format(value)
 }
 
 function isOverdue(dueDate: string | null): boolean {

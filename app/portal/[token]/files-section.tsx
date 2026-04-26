@@ -102,7 +102,7 @@ export function FilesSection({ token, initialFiles }: FilesSectionProps) {
           <div className="flex flex-col items-center gap-2">
             <Upload size={20} strokeWidth={1.5} className="text-gray-400" />
             <p className="text-sm text-gray-500">Drop a file here or click to upload</p>
-            <p className="text-xs text-gray-400">PDF, Word, images — up to 20MB</p>
+            <p className="text-xs text-gray-400">PDF, Word, images. Up to 20MB.</p>
           </div>
         )}
       </label>

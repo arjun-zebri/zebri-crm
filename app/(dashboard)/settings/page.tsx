@@ -43,6 +43,7 @@ interface UserMetadata {
   tagline?: string;
   abn?: string;
   show_contact_on_documents?: boolean;
+  mc_signature_name?: string;
 }
 
 const tabs = [
@@ -155,6 +156,7 @@ function SettingsContent() {
                 instagramUrl: metadata?.instagram_url || "",
                 facebookUrl: metadata?.facebook_url || "",
                 businessType: metadata?.business_type || "",
+                mcSignatureName: metadata?.mc_signature_name || "",
               }}
               email={email || ""}
             />

@@ -20,6 +20,7 @@ interface PersonalInfoSectionProps {
     instagramUrl: string
     facebookUrl: string
     businessType: string
+    mcSignatureName: string
   }
   email: string
 }
@@ -34,6 +35,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [facebookUrl, setFacebookUrl] = useState(initialData.facebookUrl)
   const [businessType, setBusinessType] = useState(initialData.businessType)
   const [businessTypeOpen, setBusinessTypeOpen] = useState(false)
+  const [mcSignatureName, setMcSignatureName] = useState(initialData.mcSignatureName)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
@@ -45,7 +47,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     website !== initialData.website ||
     instagramUrl !== initialData.instagramUrl ||
     facebookUrl !== initialData.facebookUrl ||
-    businessType !== initialData.businessType
+    businessType !== initialData.businessType ||
+    mcSignatureName !== initialData.mcSignatureName
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -70,6 +73,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       instagram_url: instagramUrl,
       facebook_url: facebookUrl,
       business_type: businessType,
+      mc_signature_name: mcSignatureName,
     }
 
     const { error: metaError } = await supabase.auth.updateUser({
@@ -225,6 +229,28 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               className={inputClass}
               placeholder="https://facebook.com/yourpage"
             />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Signature name</label>
+            <input
+              type="text"
+              value={mcSignatureName}
+              onChange={(e) => setMcSignatureName(e.target.value)}
+              className={inputClass}
+              placeholder="Your full legal name"
+            />
+            <p className="text-xs text-gray-400 mt-1.5">
+              Used as your typed signature on contracts you send.
+            </p>
+            {mcSignatureName && (
+              <div className="mt-2 border border-gray-100 bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-500 mb-1">Preview</p>
+                <p className="text-2xl text-gray-900" style={{ fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
+                  {mcSignatureName}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

@@ -28,6 +28,9 @@ The Slack webhook URL is server-only and never exposed to the client (`SLACK_WEB
 | **Stripe new sub** | `app/api/stripe/webhook/route.ts` (future) | :credit_card: | Email, subscription ID, amount |
 | **Stripe payment failed** | Stripe webhook (future) | :x: | Email, amount, reason |
 | **Stripe subscription cancelled** | Stripe webhook (future) | :wave: | Email, cancellation date |
+| **Contract sent** | `app/api/email/send-contract/route.ts` | :memo: | Couple, title, number |
+| **Contract signed** | `app/api/contract/sign/route.ts` | :lower_left_fountain_pen: | Signer name |
+| **Contract declined** | `app/api/contract/decline/route.ts` | :x: | Reason (if given) |
 
 ---
 

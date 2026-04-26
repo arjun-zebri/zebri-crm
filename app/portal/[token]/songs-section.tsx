@@ -58,7 +58,7 @@ function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, sav
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={song ? `Edit — ${categoryLabel}` : `Add song — ${categoryLabel}`}
+      title={song ? `Edit: ${categoryLabel}` : `Add song: ${categoryLabel}`}
     >
       <div className="space-y-4">
         <div className="space-y-3">
