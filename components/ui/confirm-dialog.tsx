@@ -26,10 +26,11 @@ export function ConfirmDialog({
   return (
     <>
       <div
+        role="dialog"
         className="fixed inset-0 bg-black/20 z-[70]"
-        onClick={onCancel}
+        onClick={(e) => { e.stopPropagation(); onCancel(); }}
       />
-      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+      <div role="dialog" className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
         <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full">
           <div className="px-6 py-6">
             <h3 className="text-base font-semibold text-gray-900 mb-2">{title}</h3>

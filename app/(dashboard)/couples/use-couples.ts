@@ -105,3 +105,78 @@ export function useDeleteCouple() {
     },
   })
 }
+
+export function useBulkMoveCouples() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async (
+      updates: Array<{ id: string; status: string; kanban_position: number }>
+    ) => {
+      const results = await Promise.all(
+        updates.map((u) =>
+          supabase
+            .from('couples')
+            .update({ status: u.status, kanban_position: u.kanban_position })
+            .eq('id', u.id)
+        )
+      )
+      const failed = results.find((r) => r.error)
+      if (failed?.error) throw failed.error
+    },
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ['couples'] })
+      const previousCouples = queryClient.getQueryData<Couple[]>(['couples'])
+      const updateMap = new Map(updates.map((u) => [u.id, u]))
+      queryClient.setQueryData<Couple[]>(['couples'], (old) => {
+        if (!old) return old
+        return old.map((c) => {
+          const u = updateMap.get(c.id)
+          return u
+            ? { ...c, status: u.status, kanban_position: u.kanban_position }
+            : c
+        })
+      })
+      return { previousCouples }
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previousCouples) {
+        queryClient.setQueryData(['couples'], context.previousCouples)
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couples'] })
+    },
+  })
+}
+
+export function useBulkUpdateCouplesStatus() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
+      const { error } = await supabase.from('couples').update({ status }).in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couples'] })
+    },
+  })
+}
+
+export function useBulkDeleteCouples() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('couples').delete().in('id', ids)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couples'] })
+    },
+  })
+}

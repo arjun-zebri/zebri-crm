@@ -8,9 +8,9 @@ import {
   PaginationState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Users, ChevronLeft, ChevronRight } from "lucide-react";
-import { useRef } from "react";
 import { Couple, CoupleStatusRecord, getStatusClasses } from "./couples-types";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
@@ -20,17 +20,20 @@ interface CouplesListProps {
   statuses: CoupleStatusRecord[];
   onRowClick: (couple: Couple) => void;
   loading: boolean;
+  selectedIds: Set<string>;
+  onSelectionChange: (ids: Set<string>) => void;
 }
 
 const columnHelper = createColumnHelper<Couple>();
 
 // Column width percentages (total = 100%)
 const COL_WIDTHS: Record<string, string> = {
-  name: "22%",
-  email: "24%",
-  phone: "14%",
+  select: "4%",
+  name: "21%",
+  email: "23%",
+  phone: "13%",
   event_date: "12%",
-  venue: "18%",
+  venue: "17%",
   status: "10%",
 };
 
@@ -126,6 +129,8 @@ export function CouplesList({
   statuses,
   onRowClick,
   loading,
+  selectedIds,
+  onSelectionChange,
 }: CouplesListProps) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -133,6 +138,13 @@ export function CouplesList({
   });
   const [pageSizeOpen, setPageSizeOpen] = useState(false);
   const pageSizeRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+  const justDraggedRef = useRef(false);
+  const lastClickedIdxRef = useRef(-1);
+  const [dragRect, setDragRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const dragRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const columns = createColumns(statuses);
 
   useEffect(() => {
@@ -151,6 +163,72 @@ export function CouplesList({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        isDraggingRef.current = true;
+        document.body.style.userSelect = 'none';
+        const newRect = {
+          x: Math.min(e.clientX, dragStartRef.current.x),
+          y: Math.min(e.clientY, dragStartRef.current.y),
+          w: Math.abs(dx),
+          h: Math.abs(dy),
+        };
+        dragRectRef.current = newRect;
+        setDragRect(newRect);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingRef.current && dragRectRef.current) {
+        const r = dragRectRef.current;
+        const rows = containerRef.current?.querySelectorAll<HTMLElement>('tr[data-couple-id]');
+        if (rows) {
+          const newSelected = new Set(selectedIds);
+          rows.forEach((row) => {
+            const rowRect = row.getBoundingClientRect();
+            if (
+              rowRect.left < r.x + r.w &&
+              rowRect.right > r.x &&
+              rowRect.top < r.y + r.h &&
+              rowRect.bottom > r.y
+            ) {
+              const coupleId = row.getAttribute('data-couple-id');
+              if (coupleId) newSelected.add(coupleId);
+            }
+          });
+          onSelectionChange(newSelected);
+        }
+        justDraggedRef.current = true;
+        setTimeout(() => (justDraggedRef.current = false), 100);
+
+        // Swallow the click that fires after the drag — otherwise the page
+        // wrapper's background click handler clears the selection we just made.
+        const suppressNextClick = (e: MouseEvent) => {
+          e.stopImmediatePropagation();
+          window.removeEventListener('click', suppressNextClick, true);
+        };
+        window.addEventListener('click', suppressNextClick, true);
+        setTimeout(() => window.removeEventListener('click', suppressNextClick, true), 250);
+      }
+      dragStartRef.current = null;
+      isDraggingRef.current = false;
+      dragRectRef.current = null;
+      document.body.style.userSelect = '';
+      setDragRect(null);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [selectedIds, onSelectionChange]);
 
   const table = useReactTable({
     data: couples,
@@ -175,9 +253,67 @@ export function CouplesList({
     );
   }
 
+  const currentPageIds = table.getRowModel().rows.map(r => r.original.id);
+  const allPageSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedIds.has(id));
+  const somePageSelected = currentPageIds.some(id => selectedIds.has(id));
+
+  const handleSelectAll = () => {
+    if (allPageSelected) {
+      const newSelected = new Set(selectedIds);
+      currentPageIds.forEach(id => newSelected.delete(id));
+      onSelectionChange(newSelected);
+    } else {
+      const newSelected = new Set(selectedIds);
+      currentPageIds.forEach(id => newSelected.add(id));
+      onSelectionChange(newSelected);
+    }
+  };
+
+  const handleToggleRow = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    onSelectionChange(newSelected);
+  };
+
+  const handleRowClick = (couple: Couple, idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (justDraggedRef.current) return;
+
+    if (e.shiftKey) {
+      e.preventDefault();
+      const start = lastClickedIdxRef.current >= 0 ? Math.min(lastClickedIdxRef.current, idx) : idx;
+      const end = lastClickedIdxRef.current >= 0 ? Math.max(lastClickedIdxRef.current, idx) : idx;
+      const rows = table.getRowModel().rows;
+      const newSelected = new Set(selectedIds);
+      for (let i = start; i <= end; i++) {
+        newSelected.add(rows[i].original.id);
+      }
+      onSelectionChange(newSelected);
+      lastClickedIdxRef.current = idx;
+      return;
+    }
+
+    if (selectedIds.size > 0) {
+      handleToggleRow(couple.id, e);
+      lastClickedIdxRef.current = idx;
+    } else {
+      onRowClick(couple);
+      lastClickedIdxRef.current = idx;
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto" ref={containerRef} onMouseDown={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'BUTTON') return;
+        dragStartRef.current = { x: e.clientX, y: e.clientY };
+      }}>
         {/* ── Mobile card list ── */}
         <div className="sm:hidden pb-24">
           {loading
@@ -237,9 +373,25 @@ export function CouplesList({
         </div>
 
         {/* ── Desktop table ── */}
-        <table className="hidden sm:table w-full table-fixed min-w-[400px] md:max-w-[1800px]">
+        <table className="hidden sm:table w-full table-fixed border-separate border-spacing-0 min-w-[400px] md:max-w-[1800px] select-none">
           <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
             <tr>
+              <th
+                data-couple-checkbox
+                className="py-3.5 pl-3 text-left text-sm font-medium text-gray-900"
+                style={{ width: COL_WIDTHS.select }}
+              >
+                <input
+                  type="checkbox"
+                  ref={(el) => {
+                    if (el) el.indeterminate = somePageSelected && !allPageSelected;
+                  }}
+                  checked={allPageSelected}
+                  onChange={handleSelectAll}
+                  onClick={(e) => e.stopPropagation()}
+                  className="accent-black cursor-pointer"
+                />
+              </th>
               {table.getHeaderGroups()[0]?.headers.map((header) => (
                 <th
                   key={header.id}
@@ -261,12 +413,9 @@ export function CouplesList({
           <tbody>
             {loading
               ? Array.from({ length: 5 }).map((_, i) => (
-                  <tr
-                    key={i}
-                    className="animate-pulse border-b border-gray-100 last:border-0"
-                  >
+                  <tr key={i} className="animate-pulse">
                     {columns.map((_, j) => (
-                      <td key={j} className="px-0 py-3.5">
+                      <td key={j} className="px-0 py-3.5 border-b border-gray-100">
                         <div
                           className={`h-4 bg-gray-100 rounded-md ${skeletonWidths[j]}`}
                         />
@@ -274,27 +423,45 @@ export function CouplesList({
                     ))}
                   </tr>
                 ))
-              : table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    onClick={() => onRowClick(row.original)}
-                    className="border-b border-gray-100 last:border-0 cursor-pointer transition group"
-                  >
-                    {row.getVisibleCells().map((cell) => (
+              : table.getRowModel().rows.map((row, idx) => {
+                  const isSelected = selectedIds.has(row.original.id);
+                  const isLastRow = idx === table.getRowModel().rows.length - 1;
+                  const borderClass = isLastRow ? '' : 'border-b border-gray-100';
+                  return (
+                    <tr
+                      key={row.id}
+                      data-couple-id={row.original.id}
+                      onClick={(e) => handleRowClick(row.original, idx, e)}
+                      className={`cursor-pointer transition group ${isSelected ? 'bg-gray-50' : ''}`}
+                    >
                       <td
-                        key={cell.id}
-                        className={`px-0 py-3.5 text-sm overflow-hidden ${
-                          (cell.column.columnDef.meta as any)?.hidden || ""
-                        }`}
+                        className={`py-3.5 pl-3 text-sm ${borderClass}`}
+                        style={{ width: COL_WIDTHS.select }}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleToggleRow(row.original.id, e as any)}
+                          className="accent-black cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                        />
                       </td>
-                    ))}
-                  </tr>
-                ))}
+                      {row.getVisibleCells().map((cell, cellIdx, allCells) => {
+                        const isLastCell = cellIdx === allCells.length - 1;
+                        return (
+                          <td
+                            key={cell.id}
+                            className={`px-0 py-3.5 text-sm overflow-hidden ${borderClass} ${
+                              (cell.column.columnDef.meta as any)?.hidden || ""
+                            } ${isLastCell ? 'pr-3' : ''}`}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
           </tbody>
         </table>
       </div>
@@ -440,6 +607,25 @@ export function CouplesList({
             )}
           </div>
         </div>
+
+        {dragRect &&
+          createPortal(
+            <div
+              style={{
+                position: 'fixed',
+                left: dragRect.x,
+                top: dragRect.y,
+                width: dragRect.w,
+                height: dragRect.h,
+                background: 'rgba(0,0,0,0.06)',
+                border: '1px solid rgba(0,0,0,0.2)',
+                borderRadius: 3,
+                pointerEvents: 'none',
+                zIndex: 9999,
+              }}
+            />,
+            document.body
+          )}
       </div>
     </div>
   );

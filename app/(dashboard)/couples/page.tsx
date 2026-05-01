@@ -8,6 +8,9 @@ import {
   useCreateCouple,
   useUpdateCouple,
   useDeleteCouple,
+  useBulkMoveCouples,
+  useBulkUpdateCouplesStatus,
+  useBulkDeleteCouples,
 } from "./use-couples";
 import { useCoupleStatuses } from "./use-couple-statuses";
 import { CouplesHeader } from "./couples-header";
@@ -15,6 +18,8 @@ import { CouplesList } from "./couples-list";
 import { CouplesKanban } from "./couples-kanban";
 import { CoupleModal } from "./couple-modal";
 import { CoupleProfile } from "./couple-profile";
+import { BulkActionBar } from "./bulk-action-bar";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Couple, ViewMode, SortField, SortDirection } from "./couples-types";
 
 export default function CouplesPage() {
@@ -23,6 +28,9 @@ export default function CouplesPage() {
   const createCouple = useCreateCouple();
   const updateCouple = useUpdateCouple();
   const deleteCouple = useDeleteCouple();
+  const bulkMoveCouples = useBulkMoveCouples();
+  const bulkUpdateStatus = useBulkUpdateCouplesStatus();
+  const bulkDeleteCouples = useBulkDeleteCouples();
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [search, setSearch] = useState("");
@@ -32,6 +40,8 @@ export default function CouplesPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<string | undefined>();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -44,10 +54,15 @@ export default function CouplesPage() {
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem("zebri_couples_view", mode);
+    setSelectedIds(new Set());
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedIds.size > 0) {
+        setSelectedIds(new Set());
+        return;
+      }
       if (e.key === "n" && !e.ctrlKey && !e.metaKey) {
         const target = e.target as HTMLElement;
         if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
@@ -60,7 +75,22 @@ export default function CouplesPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [selectedIds]);
+
+  const handleBackgroundClick = (e: React.MouseEvent) => {
+    if (selectedIds.size === 0) return;
+    const target = e.target as HTMLElement;
+    if (
+      target.closest("[data-couple-id]") ||
+      target.closest("[data-bulk-action-bar]") ||
+      target.closest("[data-couple-checkbox]") ||
+      target.closest("[role='dialog']") ||
+      target.closest("[data-modal]")
+    ) {
+      return;
+    }
+    setSelectedIds(new Set());
+  };
 
   const baseFiltered = useMemo(() => {
     return couples.filter((couple) => {
@@ -127,43 +157,118 @@ export default function CouplesPage() {
     source: string,
     destination: string,
     destinationIndex: number,
-    coupleId: string
+    coupleId: string,
+    selectedAtStart: Set<string>
   ) => {
     const couple = couples.find((c) => c.id === coupleId);
     if (!couple) return;
 
+    const isMultiDrag = selectedAtStart.has(coupleId) && selectedAtStart.size > 1;
+    const movingIds = isMultiDrag ? new Set(selectedAtStart) : new Set([coupleId]);
+
+    const draggedCouples = couples.filter((c) => movingIds.has(c.id));
+    const orderedDragged = [...draggedCouples].sort((a, b) => {
+      const aStatusIdx = statuses.findIndex((s) => s.slug === a.status);
+      const bStatusIdx = statuses.findIndex((s) => s.slug === b.status);
+      if (aStatusIdx !== bStatusIdx) return aStatusIdx - bStatusIdx;
+      return (a.kanban_position ?? 0) - (b.kanban_position ?? 0);
+    });
+
     const destColumn = couples
-      .filter((c) => c.status === destination && c.id !== coupleId)
+      .filter((c) => c.status === destination && !movingIds.has(c.id))
       .sort((a, b) => (a.kanban_position ?? 0) - (b.kanban_position ?? 0));
 
-    let newPosition: number;
+    const count = orderedDragged.length;
+    let basePosition: number;
+    let stepSize: number;
     if (destColumn.length === 0) {
-      newPosition = 0;
+      basePosition = 0;
+      stepSize = 1;
     } else if (destinationIndex <= 0) {
-      newPosition = (destColumn[0].kanban_position ?? 0) - 1;
+      const firstPos = destColumn[0].kanban_position ?? 0;
+      basePosition = firstPos - count;
+      stepSize = 1;
     } else if (destinationIndex >= destColumn.length) {
-      newPosition = (destColumn[destColumn.length - 1].kanban_position ?? 0) + 1;
+      const lastPos = destColumn[destColumn.length - 1].kanban_position ?? 0;
+      basePosition = lastPos + 1;
+      stepSize = 1;
     } else {
       const prev = destColumn[destinationIndex - 1].kanban_position ?? 0;
       const next = destColumn[destinationIndex].kanban_position ?? 0;
-      newPosition = (prev + next) / 2;
+      stepSize = (next - prev) / (count + 1);
+      basePosition = prev + stepSize;
     }
 
     if (
+      !isMultiDrag &&
       source === destination &&
-      couple.kanban_position === newPosition
-    )
+      couple.kanban_position === basePosition
+    ) {
       return;
+    }
 
-    await updateCouple.mutateAsync({
-      ...couple,
+    const updates = orderedDragged.map((c, idx) => ({
+      id: c.id,
       status: destination,
-      kanban_position: newPosition,
-    });
+      kanban_position: basePosition + idx * stepSize,
+    }));
+
+    if (isMultiDrag) {
+      await bulkMoveCouples.mutateAsync(updates);
+      setSelectedIds(new Set());
+      toast(`${count} couples moved`);
+    } else {
+      await updateCouple.mutateAsync({
+        ...couple,
+        status: destination,
+        kanban_position: basePosition,
+      });
+    }
+  };
+
+  const handleBulkStatusChange = async (status: string) => {
+    await bulkUpdateStatus.mutateAsync({ ids: [...selectedIds], status });
+    setSelectedIds(new Set());
+    toast("Status updated");
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    await bulkDeleteCouples.mutateAsync([...selectedIds]);
+    setSelectedIds(new Set());
+    setBulkDeleteOpen(false);
+    toast(`${count} couples deleted`);
+  };
+
+  const handleExportCSV = () => {
+    const selected = couples.filter((c) => selectedIds.has(c.id));
+    const headers = ["Name", "Email", "Phone", "Event Date", "Venue", "Status"];
+    const rows = selected.map((c) => [
+      c.name,
+      c.email || "",
+      c.phone || "",
+      c.event_date || "",
+      c.venue || "",
+      c.status,
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) =>
+        row
+          .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "couples.csv";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden" onClick={handleBackgroundClick}>
       <div className="px-6 pt-6 pb-2 flex-shrink-0">
         <CouplesHeader
           couples={couples}
@@ -198,6 +303,8 @@ export default function CouplesPage() {
             statuses={statuses}
             onRowClick={(couple) => setSelectedCouple(couple)}
             loading={isLoading}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         ) : (
           <div className="overflow-x-auto overflow-y-auto h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pt-2">
@@ -210,6 +317,8 @@ export default function CouplesPage() {
                 setDefaultStatus(statusSlug);
                 setAddModalOpen(true);
               }}
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
             />
           </div>
         )}
@@ -245,6 +354,25 @@ export default function CouplesPage() {
           <Plus size={18} strokeWidth={1.5} />
         </button>
       )}
+
+      <BulkActionBar
+        selectedCount={selectedIds.size}
+        statuses={statuses}
+        loading={bulkUpdateStatus.isPending || bulkDeleteCouples.isPending}
+        onClearSelection={() => setSelectedIds(new Set())}
+        onBulkStatusChange={handleBulkStatusChange}
+        onDeleteClick={() => setBulkDeleteOpen(true)}
+        onExportCSV={handleExportCSV}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title={`Delete ${selectedIds.size} ${selectedIds.size === 1 ? "couple" : "couples"}?`}
+        description="This action cannot be undone."
+        loading={bulkDeleteCouples.isPending}
+        onCancel={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+      />
     </div>
   );
 }

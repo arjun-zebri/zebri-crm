@@ -13,15 +13,19 @@ import { KanbanCard } from "./kanban-card";
 interface KanbanColumnProps {
   status: CoupleStatusRecord;
   couples: Couple[];
-  onCardClick: (couple: Couple) => void;
+  onCardInteract: (couple: Couple, e: React.MouseEvent) => void;
   onAddClick?: (statusSlug: string) => void;
+  selectedIds: Set<string>;
+  activeDrag: { draggableId: string; movingIds: Set<string>; movingCouples: Couple[] } | null;
 }
 
 export function KanbanColumn({
   status,
   couples,
-  onCardClick,
+  onCardInteract,
   onAddClick,
+  selectedIds,
+  activeDrag,
 }: KanbanColumnProps) {
   const classes = getStatusClasses(status.color);
   const [collapsed, setCollapsed] = useState(false);
@@ -65,7 +69,9 @@ export function KanbanColumn({
                   key={couple.id}
                   couple={couple}
                   index={index}
-                  onClick={() => onCardClick(couple)}
+                  isSelected={selectedIds.has(couple.id)}
+                  onClick={(e) => onCardInteract(couple, e)}
+                  activeDrag={activeDrag}
                 />
               ))}
               {provided.placeholder}
