@@ -20,8 +20,15 @@ const PUBLIC_ROUTES = [
   "/contract",
 ];
 
+function withCookies(source: NextResponse, target: NextResponse): NextResponse {
+  source.cookies.getAll().forEach((cookie) => {
+    target.cookies.set(cookie);
+  });
+  return target;
+}
+
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next();
+  let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,10 +39,13 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            response.cookies.set(name, value, options);
-          });
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
         },
       },
     }
@@ -64,7 +74,10 @@ export async function middleware(request: NextRequest) {
 
   // If no user and not a public route, redirect to login
   if (!user && !isPublicRoute) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return withCookies(
+      response,
+      NextResponse.redirect(new URL("/login", request.url))
+    );
   }
 
   // If user exists and on a public route (auth pages), allow access
@@ -76,7 +89,10 @@ export async function middleware(request: NextRequest) {
   // Gate /admin to admins only
   if (user && pathname.startsWith("/admin")) {
     if (user.user_metadata?.account_type !== "admin") {
-      return NextResponse.redirect(new URL("/", request.url));
+      return withCookies(
+        response,
+        NextResponse.redirect(new URL("/", request.url))
+      );
     }
   }
 
@@ -110,7 +126,10 @@ export async function middleware(request: NextRequest) {
       (subscriptionStatus === "cancelled" && subscriptionEndTime > now);
 
     if (!hasAccess) {
-      return NextResponse.redirect(new URL("/settings?tab=billing", request.url));
+      return withCookies(
+        response,
+        NextResponse.redirect(new URL("/settings?tab=billing", request.url))
+      );
     }
   }
 

@@ -1,43 +1,31 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { exitShadow } from "@/app/admin/actions";
 
-export function ShadowBanner() {
-  const [targetUser, setTargetUser] = useState<{
-    name: string;
-    email: string;
-  } | null>(null);
+export async function ShadowBanner() {
+  const cookieStore = await cookies();
+  const isShadowing = cookieStore.get("zebri_is_shadowing")?.value === "1";
 
-  useEffect(() => {
-    const isShadowing = document.cookie
-      .split("; ")
-      .some((c) => c.startsWith("zebri_is_shadowing=1"));
+  if (!isShadowing) return null;
 
-    if (!isShadowing) return;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setTargetUser({
-          name:
-            data.user.user_metadata?.display_name ||
-            data.user.email?.split("@")[0] ||
-            "User",
-          email: data.user.email || "",
-        });
-      }
-    });
-  }, []);
+  if (!user) return null;
 
-  if (!targetUser) return null;
+  const name =
+    (user.user_metadata?.display_name as string) ||
+    user.email?.split("@")[0] ||
+    "User";
+  const email = user.email || "";
 
   return (
     <div className="bg-amber-50 border-b border-amber-200 px-4 h-10 flex items-center justify-between text-sm flex-shrink-0">
       <span className="text-amber-800 font-medium">
-        Shadow Mode &middot; Viewing as {targetUser.name}{" "}
-        <span className="font-normal text-amber-700">({targetUser.email})</span>
+        Shadow Mode &middot; Viewing as {name}{" "}
+        <span className="font-normal text-amber-700">({email})</span>
       </span>
       <form action={exitShadow}>
         <button
