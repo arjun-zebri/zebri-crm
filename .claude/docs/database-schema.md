@@ -340,7 +340,7 @@ RLS: service role only (no client access).
 ## couples table additions
 
 portal_token (uuid, not null, default gen_random_uuid()) — unique token for the couple's portal link
-portal_token_enabled (boolean, not null, default false) — link is inactive until MC enables it
+portal_token_enabled (boolean, not null, default true) — always active by default; MCs can rotate the token to invalidate old links
 
 ## timeline_items table additions
 

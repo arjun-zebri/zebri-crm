@@ -9,6 +9,7 @@ import {
   Check,
   Copy,
   Link,
+  RefreshCw,
   LayoutDashboard,
   CheckSquare,
   FileText,
@@ -137,22 +138,26 @@ export function CoupleProfile({
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
   const [copied, setCopied] = useState<"couple" | "vendor" | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [rotateConfirm, setRotateConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const portal = usePortalData(couple?.id ?? "");
 
-  const togglePortal = useMutation({
-    mutationFn: async (enabled: boolean) => {
+  const rotateToken = useMutation({
+    mutationFn: async () => {
+      const newToken = crypto.randomUUID();
       const { error } = await supabase
         .from("couples")
-        .update({ portal_token_enabled: enabled })
+        .update({ portal_token: newToken })
         .eq("id", couple?.id ?? "");
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["couples"] });
+      toast('New links generated. Old links are now invalid.');
     },
-    onError: () => toast('Failed to update portal settings'),
+    onError: () => toast('Failed to rotate links'),
   });
 
   const copyLink = (type: "couple" | "vendor") => {
@@ -337,63 +342,52 @@ export function CoupleProfile({
                     <a
                       href={hasPhone ? `tel:${couple.phone}` : undefined}
                       onClick={(e) => { if (!hasPhone) e.preventDefault(); else setActionsOpen(false); }}
-                      className={`flex items-center gap-2.5 px-3 py-2 text-sm transition ${hasPhone ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
+                      className={`flex items-center justify-between px-3 py-2 text-sm transition ${hasPhone ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
                     >
-                      <Phone size={14} strokeWidth={1.5} />
                       Call
+                      <Phone size={14} strokeWidth={1.5} />
                     </a>
                     <a
                       href={hasEmail ? `mailto:${couple.email}` : undefined}
                       onClick={(e) => { if (!hasEmail) e.preventDefault(); else setActionsOpen(false); }}
-                      className={`flex items-center gap-2.5 px-3 py-2 text-sm transition ${hasEmail ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
+                      className={`flex items-center justify-between px-3 py-2 text-sm transition ${hasEmail ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
                     >
-                      <Mail size={14} strokeWidth={1.5} />
                       Email
+                      <Mail size={14} strokeWidth={1.5} />
                     </a>
                     <a
                       href={hasPhone ? `https://wa.me/${couple.phone.replace(/\D/g, "")}` : undefined}
                       target={hasPhone ? "_blank" : undefined}
                       rel={hasPhone ? "noopener noreferrer" : undefined}
                       onClick={(e) => { if (!hasPhone) e.preventDefault(); else setActionsOpen(false); }}
-                      className={`flex items-center gap-2.5 px-3 py-2 text-sm transition ${hasPhone ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
+                      className={`flex items-center justify-between px-3 py-2 text-sm transition ${hasPhone ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
                     >
-                      <PiWhatsappLogoLight size={15} />
                       WhatsApp
+                      <PiWhatsappLogoLight size={15} />
                     </a>
 
                     {/* Portal section */}
                     <div className="border-t border-gray-100 mt-1 pt-1">
-                      <div className="flex items-center justify-between px-3 py-2">
-                        <div>
-                          <p className="text-sm text-gray-700">Portal</p>
-                          <p className="text-xs text-gray-400">
-                            {couple.portal_token_enabled ? "Active" : "Disabled"}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => togglePortal.mutate(!couple.portal_token_enabled)}
-                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${couple.portal_token_enabled ? "bg-black" : "bg-gray-200"}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${couple.portal_token_enabled ? "translate-x-4" : "translate-x-0"}`}
-                          />
-                        </button>
-                      </div>
                       <button
-                        onClick={() => copyLink("couple")}
-                        disabled={!couple.portal_token}
-                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                        onClick={() => { copyLink("couple"); setTimeout(() => setActionsOpen(false), 900); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer"
                       >
-                        <span>Copy couple link</span>
-                        {copied === "couple" ? <Check size={12} strokeWidth={2} className="text-emerald-500" /> : <Copy size={12} strokeWidth={1.5} className="text-gray-400" />}
+                        <span>Couple portal link</span>
+                        {copied === "couple" ? <Check size={12} strokeWidth={2} className="text-emerald-500" /> : <Copy size={12} strokeWidth={1.5} />}
                       </button>
                       <button
-                        onClick={() => copyLink("vendor")}
-                        disabled={!couple.portal_token}
-                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
+                        onClick={() => { copyLink("vendor"); setTimeout(() => setActionsOpen(false), 900); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer"
                       >
-                        <span>Copy vendor link</span>
-                        {copied === "vendor" ? <Check size={12} strokeWidth={2} className="text-emerald-500" /> : <Copy size={12} strokeWidth={1.5} className="text-gray-400" />}
+                        <span>Vendor link</span>
+                        {copied === "vendor" ? <Check size={12} strokeWidth={2} className="text-emerald-500" /> : <Copy size={12} strokeWidth={1.5} />}
+                      </button>
+                      <button
+                        onClick={() => { setRotateConfirm(true); setActionsOpen(false); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 transition cursor-pointer"
+                      >
+                        Rotate links
+                        <RefreshCw size={13} strokeWidth={1.5} />
                       </button>
                     </div>
 
@@ -402,10 +396,10 @@ export function CoupleProfile({
                       <button
                         data-testid="delete-couple-btn"
                         onClick={() => { setDeleteConfirm(true); setActionsOpen(false); }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition cursor-pointer"
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition cursor-pointer"
                       >
-                        <Trash2 size={14} strokeWidth={1.5} />
                         Delete couple
+                        <Trash2 size={14} strokeWidth={1.5} />
                       </button>
                     </div>
                   </Popover.Content>
@@ -422,13 +416,48 @@ export function CoupleProfile({
                   <Trash2 size={16} strokeWidth={1.5} />
                 </button>
                 <div className="w-px h-4 bg-gray-200 mx-2" />
-                <button
-                  onClick={() => copyLink("couple")}
-                  title="Copy portal link"
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-                >
-                  {copied === "couple" ? <Check size={16} strokeWidth={1.5} className="text-green-500" /> : <Link size={16} strokeWidth={1.5} />}
-                </button>
+                <Popover.Root open={linkOpen} onOpenChange={setLinkOpen}>
+                  <Popover.Trigger asChild>
+                    <button
+                      title="Portal links"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                    >
+                      <Link size={16} strokeWidth={1.5} />
+                    </button>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Content
+                      side="bottom"
+                      align="end"
+                      sideOffset={6}
+                      className="z-[80] w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
+                    >
+                      <button
+                        onClick={() => { copyLink("couple"); setTimeout(() => setLinkOpen(false), 900); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                      >
+                        <span>Couple portal link</span>
+                        {copied === "couple" ? <Check size={13} strokeWidth={2} className="text-emerald-500" /> : <Copy size={13} strokeWidth={1.5} />}
+                      </button>
+                      <button
+                        onClick={() => { copyLink("vendor"); setTimeout(() => setLinkOpen(false), 900); }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                      >
+                        <span>Vendor link</span>
+                        {copied === "vendor" ? <Check size={13} strokeWidth={2} className="text-emerald-500" /> : <Copy size={13} strokeWidth={1.5} />}
+                      </button>
+                      <div className="border-t border-gray-100 mt-1 pt-1">
+                        <button
+                          onClick={() => { setRotateConfirm(true); setLinkOpen(false); }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-gray-500 hover:bg-gray-50 transition cursor-pointer"
+                        >
+                          Rotate links
+                          <RefreshCw size={13} strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
                 <div className="w-px h-4 bg-gray-200 mx-2" />
                 <div className="flex items-center gap-0.5">
                   <a
@@ -584,6 +613,20 @@ export function CoupleProfile({
         song={portal.editingSong}
         categoryLabel={portal.songCategoryLabel}
         saving={portal.songSaving}
+      />
+
+      <ConfirmDialog
+        open={rotateConfirm}
+        title="Rotate links"
+        description="This will generate new portal links. Anyone with the old links will lose access. Continue?"
+        onConfirm={() => {
+          rotateToken.mutate();
+          setRotateConfirm(false);
+        }}
+        onCancel={() => setRotateConfirm(false)}
+        loading={rotateToken.isPending}
+        confirmLabel="Rotate"
+        loadingLabel="Rotating..."
       />
 
       <ConfirmDialog
