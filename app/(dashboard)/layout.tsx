@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 import Link from "next/link";
 import { Sidebar } from "@/app/components/sidebar";
+import { ShadowBanner } from "@/app/components/shadow-banner";
 
 export default function DashboardLayout({
   children,
@@ -28,8 +29,11 @@ export default function DashboardLayout({
       </div>
 
       <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
-      <main className="md:ml-[68px] h-screen overflow-hidden pt-14 md:pt-0">
-        {children}
+      <main className="md:ml-[68px] h-screen overflow-hidden pt-14 md:pt-0 flex flex-col">
+        <ShadowBanner />
+        <div className="flex-1 overflow-hidden min-h-0">
+          {children}
+        </div>
       </main>
     </>
   );

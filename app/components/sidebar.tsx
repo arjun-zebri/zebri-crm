@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { clearShadowCookies } from "@/app/admin/actions";
 import {
   LayoutDashboard,
   Target,
@@ -14,6 +15,7 @@ import {
   Calendar,
   CheckSquare,
   CreditCard,
+  Shield,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -51,6 +53,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   const handleSignOut = async () => {
     setSigningOut(true);
+    await clearShadowCookies();
     const supabase = createClient();
     await supabase.auth.signOut();
     queryClient.clear();
@@ -117,7 +120,12 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
         <div className="px-3 pb-4">
           <div className="border-t border-gray-200 pt-3 space-y-2">
-            {bottomItems.map((item) => {
+            {[
+              ...bottomItems,
+              ...(user?.user_metadata?.account_type === "admin"
+                ? [{ label: "Admin", href: "/admin", icon: Shield }]
+                : []),
+            ].map((item) => {
               const isActive = pathname.startsWith(item.href);
               const Icon = item.icon;
 

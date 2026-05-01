@@ -50,6 +50,18 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
+  // Clear stale shadow cookies if the current user is the shadow admin
+  // (they re-authenticated as themselves without exiting shadow mode)
+  if (user) {
+    const shadowAdminId = request.cookies.get("zebri_shadow_admin_id")?.value;
+    if (shadowAdminId && shadowAdminId === user.id) {
+      response.cookies.delete("zebri_shadow_admin_id");
+      response.cookies.delete("zebri_is_shadowing");
+      request.cookies.delete("zebri_shadow_admin_id");
+      request.cookies.delete("zebri_is_shadowing");
+    }
+  }
+
   // If no user and not a public route, redirect to login
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -61,12 +73,22 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // If user exists and on protected route, check subscription paywall
-  // Skip paywall check for /settings, /api/stripe/*, and /api/alerts/*
+  // Gate /admin to admins only
+  if (user && pathname.startsWith("/admin")) {
+    if (user.user_metadata?.account_type !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
+  // If user exists and on protected route, check subscription paywall.
+  // Skip for: /settings, /admin, /api/stripe/*, /api/alerts/*, and any shadow mode session.
+  const isShadowing = request.cookies.get("zebri_shadow_admin_id")?.value;
   if (
     user &&
     !isPublicRoute &&
+    !isShadowing &&
     !pathname.startsWith("/settings") &&
+    !pathname.startsWith("/admin") &&
     !pathname.startsWith("/api/stripe") &&
     !pathname.startsWith("/api/alerts")
   ) {

@@ -11,6 +11,8 @@ Stored in `user_metadata.account_type`:
 - **admin** — platform operator (future use)
 - **vendor** — wedding MC (default for self-registration)
 
+Admins can use [Shadow Mode](./shadow-mode.md) to view and act on behalf of any user.
+
 ---
 
 ## user_metadata Schema
