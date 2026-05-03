@@ -73,7 +73,7 @@ export function EventModal({
       setDate(event.date)
       setVenue(event.venue)
       setStatus(event.status)
-      setNotes(event.timeline_notes)
+      setNotes(event.timeline_notes ?? '')
     } else {
       resetForm()
     }

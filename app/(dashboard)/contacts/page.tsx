@@ -54,13 +54,14 @@ export default function ContactsPage() {
 
   const filteredContacts = useMemo(() => {
     const filtered = vendors.filter((contact) => {
+      const q = search.toLowerCase()
       const matchesSearch =
         search === '' ||
-        contact.name.toLowerCase().includes(search.toLowerCase()) ||
-        contact.contact_name.toLowerCase().includes(search.toLowerCase()) ||
-        contact.email.toLowerCase().includes(search.toLowerCase()) ||
-        contact.phone.toLowerCase().includes(search.toLowerCase()) ||
-        CATEGORY_LABELS[contact.category].toLowerCase().includes(search.toLowerCase())
+        contact.name.toLowerCase().includes(q) ||
+        (contact.contact_name ?? '').toLowerCase().includes(q) ||
+        (contact.email ?? '').toLowerCase().includes(q) ||
+        (contact.phone ?? '').toLowerCase().includes(q) ||
+        (CATEGORY_LABELS[contact.category] ?? '').toLowerCase().includes(q)
 
       const matchesCategory = categoryFilter === null || contact.category === categoryFilter
       const matchesStatus = statusFilter === null || contact.status === statusFilter

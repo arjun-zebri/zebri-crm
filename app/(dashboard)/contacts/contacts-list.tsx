@@ -40,11 +40,16 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
     );
   }
 
+  const knownCategories = new Set<string>(CATEGORIES)
   const groups = CATEGORIES
     .map((category) => ({
       category,
       label: CATEGORY_LABELS[category],
-      contacts: vendors.filter((c) => c.category === category),
+      contacts: vendors.filter((c) =>
+        category === 'other'
+          ? c.category === 'other' || !knownCategories.has(c.category)
+          : c.category === category
+      ),
     }))
     .filter((g) => g.contacts.length > 0);
 

@@ -4,12 +4,15 @@ import { PortalShell } from './portal-shell'
 
 export interface PortalPerson {
   id: string
-  category: 'partner' | 'bridal_party' | 'family'
+  category: 'partner' | 'bridal_party' | 'family' | 'other'
   full_name: string
   phonetic: string | null
   role: string | null
   audio_url: string | null
   position: number
+  notes: string | null
+  email: string | null
+  phone: string | null
 }
 
 export interface PortalSong {

@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Plus, Mail, Phone, Mic, Square, Play, Trash2, Loader2, Pencil } from 'lucide-react'
+import { Plus, Mail, Phone, Mic, Square, Play, Trash2, Loader2, Pencil, ChevronDown } from 'lucide-react'
+import * as Popover from '@radix-ui/react-popover'
 import { createClient } from '@/lib/supabase/client'
 import { Modal } from '@/components/ui/modal'
 import type { PortalContact, PortalPerson } from './page'
-import { CATEGORY_LABELS } from '@/app/(dashboard)/contacts/contacts-types'
+import { CATEGORY_LABELS, CATEGORIES } from '@/app/(dashboard)/contacts/contacts-types'
 
 const PARTNER_ROLES = ['Bride', 'Groom', 'Partner']
 const BRIDAL_ROLES = [
@@ -16,6 +17,7 @@ const FAMILY_ROLES = [
   'Mother of Bride', 'Father of Bride', 'Mother of Groom', 'Father of Groom',
   'Grandparent', 'Sibling', 'Other',
 ]
+const OTHER_ROLES = ['Officiant', 'Celebrant', 'Photographer', 'Videographer', 'Performer', 'Speaker', 'Guest', 'Other']
 
 const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition'
 
@@ -81,6 +83,19 @@ function AudioRecorder({
     )
   }
 
+  if (recording) {
+    return (
+      <button
+        type="button"
+        onClick={stopRecording}
+        className="flex items-center gap-1 text-xs text-red-600 border border-red-200 bg-red-50 rounded-lg px-2.5 py-1.5 hover:bg-red-100 transition cursor-pointer animate-pulse"
+      >
+        <Square size={12} strokeWidth={2} />
+        Stop recording
+      </button>
+    )
+  }
+
   if (audioUrl) {
     return (
       <div className="flex items-center gap-2">
@@ -102,19 +117,6 @@ function AudioRecorder({
           <Mic size={13} strokeWidth={1.5} />
         </button>
       </div>
-    )
-  }
-
-  if (recording) {
-    return (
-      <button
-        type="button"
-        onClick={stopRecording}
-        className="flex items-center gap-1 text-xs text-red-600 border border-red-200 bg-red-50 rounded-lg px-2.5 py-1.5 hover:bg-red-100 transition cursor-pointer animate-pulse"
-      >
-        <Square size={12} strokeWidth={2} />
-        Stop recording
-      </button>
     )
   }
 
@@ -148,7 +150,11 @@ function PersonModal({ isOpen, onClose, onSave, onDelete, person, roleOptions, t
   const [role, setRole] = useState(person?.role ?? '')
   const [phonetic, setPhonetic] = useState(person?.phonetic ?? '')
   const [audioUrl, setAudioUrl] = useState(person?.audio_url ?? null)
+  const [notes, setNotes] = useState(person?.notes ?? '')
+  const [email, setEmail] = useState(person?.email ?? '')
+  const [phone, setPhone] = useState(person?.phone ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [roleOpen, setRoleOpen] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -156,6 +162,9 @@ function PersonModal({ isOpen, onClose, onSave, onDelete, person, roleOptions, t
       setRole(person?.role ?? '')
       setPhonetic(person?.phonetic ?? '')
       setAudioUrl(person?.audio_url ?? null)
+      setNotes(person?.notes ?? '')
+      setEmail(person?.email ?? '')
+      setPhone(person?.phone ?? '')
       setConfirmDelete(false)
     }
   }, [isOpen, person])
@@ -177,12 +186,49 @@ function PersonModal({ isOpen, onClose, onSave, onDelete, person, roleOptions, t
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Role</label>
-            <select value={role} onChange={(e) => setRole(e.target.value)} className={inputClass}>
-              <option value="">No role</option>
-              {roleOptions.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+            <Popover.Root open={roleOpen} onOpenChange={setRoleOpen}>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2 text-sm hover:border-gray-300 transition cursor-pointer"
+                >
+                  <span className={role ? 'text-gray-900' : 'text-gray-400'}>
+                    {role || 'No role'}
+                  </span>
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
+                  style={{ width: 'var(--radix-popover-trigger-width)' }}
+                  sideOffset={4}
+                  align="start"
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setRole(''); setRoleOpen(false) }}
+                    className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
+                      !role ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    No role
+                  </button>
+                  {roleOptions.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => { setRole(r); setRoleOpen(false) }}
+                      className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
+                        role === r ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Phonetic spelling</label>
@@ -201,6 +247,24 @@ function PersonModal({ isOpen, onClose, onSave, onDelete, person, roleOptions, t
               personId={person?.id ?? 'new'}
               token={token}
               onRecorded={setAudioUrl}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Phone</label>
+            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+61 400 000 000" className={inputClass} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any notes for the MC..."
+              rows={5}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition resize-none"
             />
           </div>
         </div>
@@ -248,7 +312,7 @@ function PersonModal({ isOpen, onClose, onSave, onDelete, person, roleOptions, t
             </button>
             <button
               type="button"
-              onClick={() => onSave({ full_name: fullName, role: role || null, phonetic: phonetic || null, audio_url: audioUrl })}
+              onClick={() => onSave({ full_name: fullName, role: role || null, phonetic: phonetic || null, audio_url: audioUrl, notes: notes || null, email: email || null, phone: phone || null })}
               disabled={saving || !fullName.trim()}
               className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50"
             >
@@ -305,25 +369,23 @@ interface PeopleGroupProps {
   label: string
   people: PortalPerson[]
   roleOptions: string[]
-  addLabel: string
   onAdd: () => void
   onEdit: (person: PortalPerson) => void
 }
 
-function PeopleGroup({ label, people, addLabel, onAdd, onEdit }: PeopleGroupProps) {
+function PeopleGroup({ label, people, onAdd, onEdit }: PeopleGroupProps) {
   return (
     <div className="space-y-2.5">
-      <p className="text-sm font-medium text-gray-500">{label}</p>
+      <button
+        onClick={onAdd}
+        className="flex items-center gap-1.5 group cursor-pointer"
+      >
+        <p className="text-sm font-medium text-gray-500 group-hover:text-gray-700 transition">{label}</p>
+        <Plus size={13} strokeWidth={1.5} className="text-gray-400 group-hover:text-gray-600 transition" />
+      </button>
       {people.map((p) => (
         <PersonRow key={p.id} person={p} onEdit={() => onEdit(p)} />
       ))}
-      <button
-        onClick={onAdd}
-        className="w-full text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl py-3 hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer flex items-center justify-center gap-1.5"
-      >
-        <Plus size={14} strokeWidth={1.5} />
-        {addLabel}
-      </button>
     </div>
   )
 }
@@ -349,10 +411,11 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
 
   // Vendor contacts state
   const [contacts, setContacts] = useState<PortalContact[]>(initialContacts)
-  const [showVendorForm, setShowVendorForm] = useState(false)
+  const [vendorModalOpen, setVendorModalOpen] = useState(false)
   const [vendorLoading, setVendorLoading] = useState(false)
   const [vendorForm, setVendorForm] = useState({ name: '', category: '', email: '', phone: '' })
   const [vendorError, setVendorError] = useState<string | null>(null)
+  const [categoryOpen, setCategoryOpen] = useState(false)
 
   // People handlers
   const openAdd = (category: PortalPerson['category'], roleOptions: string[]) => {
@@ -383,6 +446,9 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         p_role: merged.role ?? null,
         p_audio_url: merged.audio_url ?? null,
         p_position: merged.position,
+        p_notes: merged.notes ?? null,
+        p_email: merged.email ?? null,
+        p_phone: merged.phone ?? null,
       })
     } else {
       const newId = crypto.randomUUID()
@@ -394,6 +460,9 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         role: data.role ?? null,
         audio_url: data.audio_url ?? null,
         position: people.filter((p) => p.category === modalCategory).length * 1000,
+        notes: data.notes ?? null,
+        email: data.email ?? null,
+        phone: data.phone ?? null,
       }
       setPeople((prev) => [...prev, newPerson])
       await supabase.rpc('save_portal_person', {
@@ -405,6 +474,9 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         p_role: newPerson.role,
         p_audio_url: newPerson.audio_url,
         p_position: newPerson.position,
+        p_notes: newPerson.notes,
+        p_email: newPerson.email,
+        p_phone: newPerson.phone,
       })
     }
     setSaving(false)
@@ -452,7 +524,7 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         phone: vendorForm.phone.trim() || null,
       }])
       setVendorForm({ name: '', category: '', email: '', phone: '' })
-      setShowVendorForm(false)
+      setVendorModalOpen(false)
     } catch (err) {
       setVendorError(err instanceof Error ? err.message : 'Failed to add contact')
     } finally {
@@ -463,15 +535,16 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
   const partners = people.filter((p) => p.category === 'partner')
   const bridalParty = people.filter((p) => p.category === 'bridal_party')
   const family = people.filter((p) => p.category === 'family')
+  const other = people.filter((p) => p.category === 'other')
 
   return (
     <div className="space-y-8">
       {/* Partners */}
       <PeopleGroup
-        label="Partners"
+        label="Couple"
         people={partners}
         roleOptions={PARTNER_ROLES}
-        addLabel={partners.length === 0 ? 'Add partner' : 'Add another partner'}
+
         onAdd={() => openAdd('partner', PARTNER_ROLES)}
         onEdit={(p) => openEdit(p, PARTNER_ROLES)}
       />
@@ -481,7 +554,7 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         label="Bridal Party"
         people={bridalParty}
         roleOptions={BRIDAL_ROLES}
-        addLabel="Add bridal party member"
+
         onAdd={() => openAdd('bridal_party', BRIDAL_ROLES)}
         onEdit={(p) => openEdit(p, BRIDAL_ROLES)}
       />
@@ -491,14 +564,30 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         label="Family Members"
         people={family}
         roleOptions={FAMILY_ROLES}
-        addLabel="Add family member"
+
         onAdd={() => openAdd('family', FAMILY_ROLES)}
         onEdit={(p) => openEdit(p, FAMILY_ROLES)}
       />
 
+      {/* Other */}
+      <PeopleGroup
+        label="Other"
+        people={other}
+        roleOptions={OTHER_ROLES}
+
+        onAdd={() => openAdd('other', OTHER_ROLES)}
+        onEdit={(p) => openEdit(p, OTHER_ROLES)}
+      />
+
       {/* Vendors */}
-      <div className="space-y-3">
-        <p className="text-sm font-medium text-gray-500">Vendors</p>
+      <div className="space-y-2.5">
+        <button
+          onClick={() => { setVendorForm({ name: '', category: '', email: '', phone: '' }); setVendorError(null); setVendorModalOpen(true) }}
+          className="flex items-center gap-1.5 group cursor-pointer"
+        >
+          <p className="text-sm font-medium text-gray-500 group-hover:text-gray-700 transition">Vendors</p>
+          <Plus size={13} strokeWidth={1.5} className="text-gray-400 group-hover:text-gray-600 transition" />
+        </button>
 
         {contacts.length > 0 && (
           <div className="space-y-3">
@@ -534,82 +623,6 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
             ))}
           </div>
         )}
-
-        <button
-          onClick={() => setShowVendorForm(!showVendorForm)}
-          className="w-full text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl py-3 hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer flex items-center justify-center gap-1.5"
-        >
-          <Plus size={14} strokeWidth={1.5} />
-          Add vendor contact
-        </button>
-
-        {showVendorForm && (
-          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-            {vendorError && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{vendorError}</div>}
-            <div>
-              <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">
-                Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="text"
-                value={vendorForm.name}
-                onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })}
-                placeholder="Business or contact name"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">
-                Category <span className="text-red-400">*</span>
-              </label>
-              <select
-                value={vendorForm.category}
-                onChange={(e) => setVendorForm({ ...vendorForm, category: e.target.value })}
-                className={inputClass}
-              >
-                <option value="">Select category</option>
-                {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">Email</label>
-              <input
-                type="email"
-                value={vendorForm.email}
-                onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
-                placeholder="email@example.com"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">Phone</label>
-              <input
-                type="tel"
-                value={vendorForm.phone}
-                onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
-                placeholder="+61 400 000 000"
-                className={inputClass}
-              />
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={() => { setShowVendorForm(false); setVendorError(null) }}
-                className="flex-1 text-sm px-3 py-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddVendor}
-                disabled={vendorLoading}
-                className="flex-1 text-sm px-3 py-2 rounded-lg bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50"
-              >
-                {vendorLoading ? 'Adding...' : 'Add'}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       <PersonModal
@@ -622,6 +635,99 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         token={token}
         saving={saving}
       />
+
+      <Modal isOpen={vendorModalOpen} onClose={() => setVendorModalOpen(false)} title="Add vendor contact">
+        <div className="space-y-3">
+          {vendorError && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{vendorError}</div>}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Name <span className="text-red-400">*</span></label>
+            <input
+              type="text"
+              value={vendorForm.name}
+              onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })}
+              placeholder="Business or contact name"
+              autoFocus
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Category <span className="text-red-400">*</span></label>
+            <Popover.Root open={categoryOpen} onOpenChange={setCategoryOpen}>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2 text-sm hover:border-gray-300 transition cursor-pointer"
+                >
+                  <span className={vendorForm.category ? 'text-gray-900' : 'text-gray-400'}>
+                    {vendorForm.category ? CATEGORY_LABELS[vendorForm.category as keyof typeof CATEGORY_LABELS] : 'Select category'}
+                  </span>
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
+                  style={{ width: 'var(--radix-popover-trigger-width)' }}
+                  sideOffset={4}
+                  align="start"
+                >
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => { setVendorForm({ ...vendorForm, category: cat }); setCategoryOpen(false) }}
+                      className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
+                        vendorForm.category === cat
+                          ? 'bg-gray-100 text-gray-900 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {CATEGORY_LABELS[cat]}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Email</label>
+            <input
+              type="email"
+              value={vendorForm.email}
+              onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
+              placeholder="email@example.com"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Phone</label>
+            <input
+              type="tel"
+              value={vendorForm.phone}
+              onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
+              placeholder="+61 400 000 000"
+              className={inputClass}
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setVendorModalOpen(false)}
+              className="text-sm text-gray-500 px-3 py-1.5 hover:text-gray-700 transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAddVendor}
+              disabled={vendorLoading}
+              className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50"
+            >
+              {vendorLoading ? 'Adding...' : 'Add'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

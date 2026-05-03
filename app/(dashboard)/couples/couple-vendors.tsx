@@ -26,7 +26,7 @@ interface ContactLink {
 
 interface PortalPerson {
   id: string
-  category: 'partner' | 'bridal_party' | 'family'
+  category: 'partner' | 'bridal_party' | 'family' | 'other'
   full_name: string
   role: string | null
 }
@@ -35,6 +35,7 @@ const CATEGORY_GROUP_LABELS: Record<string, string> = {
   partner: 'Partners',
   bridal_party: 'Bridal Party',
   family: 'Family',
+  other: 'Other',
 }
 
 export function CoupleVendors({ coupleId, onLoadingChange }: CoupleVendorsProps) {
@@ -116,7 +117,7 @@ export function CoupleVendors({ coupleId, onLoadingChange }: CoupleVendorsProps)
     onError: () => toast('Failed to add contact'),
   })
 
-  const groupedPeople = (['partner', 'bridal_party', 'family'] as const).map((cat) => ({
+  const groupedPeople = (['partner', 'bridal_party', 'family', 'other'] as const).map((cat) => ({
     category: cat,
     label: CATEGORY_GROUP_LABELS[cat],
     members: (people ?? []).filter((p) => p.category === cat),
