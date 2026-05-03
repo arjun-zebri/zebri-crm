@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { ChevronDown, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import * as Popover from '@radix-ui/react-popover'
@@ -27,6 +27,12 @@ interface VendorOption {
   category: string
 }
 
+interface PlaceSuggestion {
+  placeId: string
+  mainText: string
+  secondaryText: string
+}
+
 const EVENT_STATUSES: EventStatus[] = ['upcoming', 'completed', 'cancelled']
 
 export function EventModal({
@@ -42,7 +48,15 @@ export function EventModal({
   const supabase = createClient()
   const [date, setDate] = useState('')
   const [venue, setVenue] = useState('')
-  const [status, setStatus] = useState<EventStatus>('upcoming')
+  const [venuePhone, setVenuePhone] = useState<string | null>(null)
+  const [venueWebsite, setVenueWebsite] = useState<string | null>(null)
+  const [venueLat, setVenueLat] = useState<number | null>(null)
+  const [venueLng, setVenueLng] = useState<number | null>(null)
+  const [venueSuggestions, setVenueSuggestions] = useState<PlaceSuggestion[]>([])
+  const [venueDropdownOpen, setVenueDropdownOpen] = useState(false)
+  const venueDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const status_state = useState<EventStatus>('upcoming')
+  const [status, setStatus] = status_state
   const [notes, setNotes] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -72,6 +86,10 @@ export function EventModal({
     if (event) {
       setDate(event.date)
       setVenue(event.venue)
+      setVenuePhone(event.venue_phone ?? null)
+      setVenueWebsite(event.venue_website ?? null)
+      setVenueLat(event.venue_lat ?? null)
+      setVenueLng(event.venue_lng ?? null)
       setStatus(event.status)
       setNotes(event.timeline_notes ?? '')
     } else {
@@ -80,15 +98,79 @@ export function EventModal({
     setSelectedVendorIds(initialVendorIds || [])
     setShowDeleteModal(false)
     setVendorSearch('')
+    setVenueSuggestions([])
+    setVenueDropdownOpen(false)
   }, [event, isOpen, initialVendorIds])
 
   const resetForm = () => {
     setDate('')
     setVenue('')
+    setVenuePhone(null)
+    setVenueWebsite(null)
+    setVenueLat(null)
+    setVenueLng(null)
     setStatus('upcoming')
     setNotes('')
     setSelectedVendorIds([])
     setVendorSearch('')
+    setVenueSuggestions([])
+    setVenueDropdownOpen(false)
+  }
+
+  const handleVenueChange = (value: string) => {
+    setVenue(value)
+    // Clear place details when user types manually
+    setVenuePhone(null)
+    setVenueWebsite(null)
+    setVenueLat(null)
+    setVenueLng(null)
+
+    if (venueDebounceRef.current) clearTimeout(venueDebounceRef.current)
+
+    if (value.trim().length < 2) {
+      setVenueSuggestions([])
+      setVenueDropdownOpen(false)
+      return
+    }
+
+    venueDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/places/autocomplete?input=${encodeURIComponent(value)}`)
+        const data = await res.json()
+        const suggestions: PlaceSuggestion[] = (data.suggestions || []).map((s: {
+          placePrediction: {
+            placeId: string
+            structuredFormat: { mainText: { text: string }; secondaryText: { text: string } }
+          }
+        }) => ({
+          placeId: s.placePrediction.placeId,
+          mainText: s.placePrediction.structuredFormat.mainText.text,
+          secondaryText: s.placePrediction.structuredFormat.secondaryText?.text ?? '',
+        }))
+        setVenueSuggestions(suggestions)
+        setVenueDropdownOpen(suggestions.length > 0)
+      } catch {
+        setVenueSuggestions([])
+        setVenueDropdownOpen(false)
+      }
+    }, 300)
+  }
+
+  const handleVenueSelect = async (suggestion: PlaceSuggestion) => {
+    setVenue(suggestion.mainText)
+    setVenueSuggestions([])
+    setVenueDropdownOpen(false)
+
+    try {
+      const res = await fetch(`/api/places/details?place_id=${suggestion.placeId}`)
+      const data = await res.json()
+      setVenuePhone(data.nationalPhoneNumber ?? null)
+      setVenueWebsite(data.websiteUri ?? null)
+      setVenueLat(data.location?.latitude ?? null)
+      setVenueLng(data.location?.longitude ?? null)
+    } catch {
+      // Silently skip — venue name is set, details are just a bonus
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -100,6 +182,10 @@ export function EventModal({
       couple_id: coupleId,
       date,
       venue,
+      venue_phone: venuePhone,
+      venue_website: venueWebsite,
+      venue_lat: venueLat,
+      venue_lng: venueLng,
       status,
       timeline_notes: notes,
       vendorIds: selectedVendorIds,
@@ -187,13 +273,51 @@ export function EventModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Venue
             </label>
-            <input
-              type="text"
-              value={venue}
-              onChange={(e) => setVenue(e.target.value)}
-              placeholder="e.g., Grand Hotel Ballroom"
-              className={inputClass}
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={venue}
+                onChange={(e) => handleVenueChange(e.target.value)}
+                onBlur={() => setTimeout(() => setVenueDropdownOpen(false), 150)}
+                placeholder="e.g., Grand Hotel Ballroom"
+                className={inputClass}
+                autoComplete="off"
+              />
+              {venueDropdownOpen && venueSuggestions.length > 0 && (
+                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
+                  {venueSuggestions.map((s) => (
+                    <button
+                      key={s.placeId}
+                      type="button"
+                      onMouseDown={() => handleVenueSelect(s)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 transition"
+                    >
+                      <p className="text-sm font-medium text-gray-900">{s.mainText}</p>
+                      {s.secondaryText && (
+                        <p className="text-xs text-gray-500">{s.secondaryText}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {(venuePhone || venueWebsite) && (
+              <div className="mt-1.5 flex flex-wrap gap-3">
+                {venuePhone && (
+                  <span className="text-xs text-gray-500">{venuePhone}</span>
+                )}
+                {venueWebsite && (
+                  <a
+                    href={venueWebsite}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-gray-500 hover:text-gray-700 underline truncate max-w-[200px]"
+                  >
+                    {venueWebsite.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Status - 2 cols */}

@@ -70,6 +70,35 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
         await supabase.from('event_contacts').insert(contactLinks)
       }
 
+      // Auto-insert sunset timeline item if we have coordinates
+      if (newEvent && rest.venue_lat && rest.venue_lng && rest.date) {
+        try {
+          const sunsetRes = await fetch(
+            `https://api.sunrise-sunset.org/json?lat=${rest.venue_lat}&lng=${rest.venue_lng}&date=${rest.date}&formatted=0`
+          )
+          const sunsetData = await sunsetRes.json()
+          if (sunsetData.status === 'OK' && sunsetData.results?.sunset) {
+            const sunsetDate = new Date(sunsetData.results.sunset)
+            const localTime = sunsetDate.toLocaleTimeString('en-AU', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            })
+            await supabase.from('timeline_items').insert({
+              event_id: newEvent.id,
+              user_id: user.user.id,
+              title: 'Sunset',
+              start_time: localTime,
+              position: 1000,
+              pending_review: false,
+            })
+          }
+        } catch {
+          // Silently skip — sunset is a bonus, not critical
+        }
+      }
+
       return newEvent
     },
     onSuccess: (newEvent) => {
@@ -77,6 +106,7 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
       if (newEvent) {
         queryClient.invalidateQueries({ queryKey: ['event-contacts', newEvent.id] })
+        queryClient.invalidateQueries({ queryKey: ['timeline-items', newEvent.id] })
       }
       setShowModal(false)
       toast('Event added')
@@ -95,6 +125,10 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
         .update({
           date: rest.date,
           venue: rest.venue,
+          venue_phone: rest.venue_phone,
+          venue_website: rest.venue_website,
+          venue_lat: rest.venue_lat,
+          venue_lng: rest.venue_lng,
           status: rest.status,
           timeline_notes: rest.timeline_notes,
         })

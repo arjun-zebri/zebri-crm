@@ -6,6 +6,10 @@ export interface Event {
   couple_id: string
   date: string
   venue: string
+  venue_phone?: string | null
+  venue_website?: string | null
+  venue_lat?: number | null
+  venue_lng?: number | null
   timeline_notes: string
   status: EventStatus
   share_token?: string | null
