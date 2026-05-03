@@ -143,7 +143,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
           </div>
 
           {/* All month events */}
-          <div className="mt-4 flex-1 min-h-0 overflow-y-auto lg:max-h-none scrollbar-thin pr-1">
+          <div className="mt-4 flex-1 min-h-0 overflow-y-auto lg:max-h-none scrollbar-hover pr-1">
             {events && events.length > 0 ? (
               <div className="space-y-2">
                 {events.map((event) => {

@@ -1,10 +1,14 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useLeadsManagement } from "./use-dashboard";
+import { useLeadsManagement, DashboardPeriod } from "./use-dashboard";
 
-export function DashboardLeads() {
-  const { data, isLoading } = useLeadsManagement();
+interface DashboardLeadsProps {
+  period: DashboardPeriod;
+}
+
+export function DashboardLeads({ period }: DashboardLeadsProps) {
+  const { data, isLoading } = useLeadsManagement(period);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col max-h-80">

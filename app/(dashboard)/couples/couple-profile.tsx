@@ -43,7 +43,7 @@ import { CoupleContracts } from "./couple-contracts";
 import { hasContractsAccess } from "@/lib/subscription";
 import { usePortalData } from "./use-portal-data";
 import { PersonModal, SongModal } from "./portal-modals";
-import { McPortalNames } from "./mc-portal-names";
+import { McPortalContacts } from "./mc-portal-contacts";
 import { McPortalSongs } from "./mc-portal-songs";
 import { McPortalFiles } from "./mc-portal-files";
 import { CoupleTimeline } from "./couple-timeline";
@@ -53,12 +53,12 @@ type Section =
   | "overview"
   | "pulse"
   | "tasks"
-  | "payments"
-  | "contracts"
-  | "names"
+  | "contacts"
   | "timeline"
   | "songs"
-  | "files";
+  | "files"
+  | "payments"
+  | "contracts";
 
 const NAV_ITEMS: { key: Section; label: string; icon: React.ReactNode }[] = [
   {
@@ -76,17 +76,7 @@ const NAV_ITEMS: { key: Section; label: string; icon: React.ReactNode }[] = [
     label: "Tasks",
     icon: <CheckSquare size={18} strokeWidth={1.5} />,
   },
-  {
-    key: "payments",
-    label: "Payments",
-    icon: <Receipt size={18} strokeWidth={1.5} />,
-  },
-  {
-    key: "contracts",
-    label: "Contracts",
-    icon: <FileSignature size={18} strokeWidth={1.5} />,
-  },
-  { key: "names", label: "Names", icon: <Users size={18} strokeWidth={1.5} /> },
+  { key: "contacts", label: "Contacts", icon: <Users size={18} strokeWidth={1.5} /> },
   {
     key: "timeline",
     label: "Timeline",
@@ -97,6 +87,16 @@ const NAV_ITEMS: { key: Section; label: string; icon: React.ReactNode }[] = [
     key: "files",
     label: "Files",
     icon: <Paperclip size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: "payments",
+    label: "Payments",
+    icon: <Receipt size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: "contracts",
+    label: "Contracts",
+    icon: <FileSignature size={18} strokeWidth={1.5} />,
   },
 ];
 
@@ -541,7 +541,7 @@ export function CoupleProfile({
             </nav>
 
             {/* Content area */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-8 pt-2 sm:pt-3 pb-4 sm:pb-6 flex flex-col">
               {activeSection === "overview" && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <CoupleOverview couple={couple} onSave={onSave} />
@@ -562,10 +562,11 @@ export function CoupleProfile({
                 <CoupleContracts coupleId={couple.id} coupleName={couple.name} />
               )}
 
-              {activeSection === "names" && (
-                <McPortalNames
+              {activeSection === "contacts" && (
+                <McPortalContacts
                   people={portal.people}
-                  isLoading={portal.isPeopleLoading}
+                  isPeopleLoading={portal.isPeopleLoading}
+                  coupleId={couple.id}
                   onEditPerson={portal.openEditPerson}
                   onAddPerson={portal.openAddPerson}
                 />
@@ -601,6 +602,7 @@ export function CoupleProfile({
         roleOptions={portal.personRoles}
         coupleId={couple.id}
         saving={portal.personSaving}
+        categoryLabel={portal.personCategoryLabel}
       />
       <SongModal
         isOpen={portal.songModal}

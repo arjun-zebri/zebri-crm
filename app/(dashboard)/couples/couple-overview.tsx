@@ -10,7 +10,6 @@ import {
   LEAD_SOURCES,
 } from "./couples-types";
 import { CoupleEvents } from "./couple-events";
-import { CoupleVendors } from "./couple-vendors";
 
 interface CoupleOverviewProps {
   couple: Couple;
@@ -24,10 +23,8 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
     "phone" | "email" | "leadSource" | "notes" | null
   >(null);
   const [eventsLoading, setEventsLoading] = useState(true);
-  const [contactsLoading, setContactsLoading] = useState(true);
-  const isLoading = eventsLoading || contactsLoading;
+  const isLoading = eventsLoading;
   const handleEventsLoading = useCallback((v: boolean) => setEventsLoading(v), []);
-  const handleContactsLoading = useCallback((v: boolean) => setContactsLoading(v), []);
   const [phone, setPhone] = useState(couple.phone);
   const [email, setEmail] = useState(couple.email);
   const [leadSource, setLeadSource] = useState(couple.lead_source || "");
@@ -69,15 +66,9 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             ))}
             <div className="h-16 bg-gray-100 rounded-xl mt-2" />
           </div>
-          <div className="space-y-8">
-            <div>
-              <div className="h-3 w-16 bg-gray-100 rounded-full mb-4" />
-              {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-xl mb-2" />)}
-            </div>
-            <div>
-              <div className="h-3 w-20 bg-gray-100 rounded-full mb-4" />
-              {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-xl mb-2" />)}
-            </div>
+          <div>
+            <div className="h-3 w-16 bg-gray-100 rounded-full mb-4" />
+            {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded-xl mb-2" />)}
           </div>
         </div>
       )}
@@ -243,15 +234,9 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
         </div>
       </div>
 
-      {/* Column 2: Events & Contacts */}
-      <div className="space-y-8">
-        <div>
-          <CoupleEvents couple={couple} onLoadingChange={handleEventsLoading} />
-        </div>
-
-        <div>
-          <CoupleVendors coupleId={couple.id} onLoadingChange={handleContactsLoading} />
-        </div>
+      {/* Column 2: Events */}
+      <div>
+        <CoupleEvents couple={couple} onLoadingChange={handleEventsLoading} />
       </div>
     </div>
   </>

@@ -12,6 +12,7 @@ export interface PortalPerson {
   phonetic: string | null
   role: string | null
   audio_url: string | null
+  notes: string | null
   position: number
 }
 
@@ -45,10 +46,18 @@ export function usePortalData(coupleId: string) {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
+  const CATEGORY_DISPLAY: Record<string, string> = {
+    partner: 'couple',
+    bridal_party: 'bridal party',
+    family: 'family',
+    other: 'other',
+  }
+
   // Person modal state
   const [personModal, setPersonModal] = useState(false)
   const [editingPerson, setEditingPerson] = useState<PortalPerson | null>(null)
   const [personCategory, setPersonCategory] = useState<string>('partner')
+  const [personCategoryLabel, setPersonCategoryLabel] = useState<string>('')
   const [personRoles, setPersonRoles] = useState<string[]>(PARTNER_ROLES)
   const [personSaving, setPersonSaving] = useState(false)
 
@@ -111,14 +120,15 @@ export function usePortalData(coupleId: string) {
       if (editingPerson) {
         const merged = { ...editingPerson, ...data }
         await supabase.from('portal_people').update({
-          full_name: merged.full_name, phonetic: merged.phonetic, role: merged.role, audio_url: merged.audio_url,
+          full_name: merged.full_name, phonetic: merged.phonetic, role: merged.role,
+          audio_url: merged.audio_url, notes: merged.notes ?? null,
         }).eq('id', merged.id)
       } else {
         const categoryPeople = people.filter((p) => p.category === personCategory)
         await supabase.from('portal_people').insert({
           couple_id: coupleId, user_id: user.user.id, category: personCategory,
           full_name: data.full_name ?? '', phonetic: data.phonetic ?? null, role: data.role ?? null,
-          audio_url: data.audio_url ?? null, position: categoryPeople.length * 1000,
+          audio_url: data.audio_url ?? null, notes: data.notes ?? null, position: categoryPeople.length * 1000,
         })
       }
 
@@ -194,6 +204,7 @@ export function usePortalData(coupleId: string) {
   const openAddPerson = (category: string, roles: string[]) => {
     setEditingPerson(null)
     setPersonCategory(category)
+    setPersonCategoryLabel(CATEGORY_DISPLAY[category] || category)
     setPersonRoles(roles)
     setPersonModal(true)
   }
@@ -201,6 +212,7 @@ export function usePortalData(coupleId: string) {
   const openEditPerson = (person: PortalPerson, roles: string[]) => {
     setEditingPerson(person)
     setPersonCategory(person.category)
+    setPersonCategoryLabel(CATEGORY_DISPLAY[person.category] || person.category)
     setPersonRoles(roles)
     setPersonModal(true)
   }
@@ -235,6 +247,7 @@ export function usePortalData(coupleId: string) {
     editingPerson,
     setEditingPerson,
     personRoles,
+    personCategoryLabel,
     personSaving,
     savePerson,
     deletePerson,

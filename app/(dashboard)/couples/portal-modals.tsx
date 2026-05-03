@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Mic, Square, Play, Loader2, Trash2 } from 'lucide-react'
+import { Mic, Square, Play, Loader2, Trash2, ChevronDown } from 'lucide-react'
+import * as Popover from '@radix-ui/react-popover'
 import { createClient } from '@/lib/supabase/client'
 import { Modal } from '@/components/ui/modal'
 import type { PortalPerson, PortalSong } from './use-portal-data'
@@ -14,11 +15,13 @@ export function AudioRecorder({
   personId,
   coupleId,
   onRecorded,
+  onDelete,
 }: {
   audioUrl: string | null
   personId: string
   coupleId: string
   onRecorded: (url: string) => void
+  onDelete?: () => void
 }) {
   const [recording, setRecording] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -78,9 +81,14 @@ export function AudioRecorder({
           <Play size={12} strokeWidth={2} />
           Play
         </button>
-        <button type="button" onClick={startRecording} className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer" title="Re-record">
+        <button type="button" onClick={startRecording} className="p-1 text-gray-400 hover:text-gray-600 transition cursor-pointer" title="Re-record">
           <Mic size={13} strokeWidth={1.5} />
         </button>
+        {onDelete && (
+          <button type="button" onClick={onDelete} className="p-1 text-gray-400 hover:text-red-400 transition cursor-pointer" title="Delete recording">
+            <Trash2 size={13} strokeWidth={1.5} />
+          </button>
+        )}
       </div>
     )
   }
@@ -104,7 +112,7 @@ export function AudioRecorder({
 
 // ── Person modal ────────────────────────────────────────────────────────────
 export function PersonModal({
-  isOpen, onClose, onSave, onDelete, person, roleOptions, coupleId, saving,
+  isOpen, onClose, onSave, onDelete, person, roleOptions, coupleId, saving, categoryLabel,
 }: {
   isOpen: boolean
   onClose: () => void
@@ -114,12 +122,15 @@ export function PersonModal({
   roleOptions: string[]
   coupleId: string
   saving: boolean
+  categoryLabel?: string
 }) {
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState('')
   const [phonetic, setPhonetic] = useState('')
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [notes, setNotes] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [roleOpen, setRoleOpen] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -127,24 +138,64 @@ export function PersonModal({
       setRole(person?.role ?? '')
       setPhonetic(person?.phonetic ?? '')
       setAudioUrl(person?.audio_url ?? null)
+      setNotes(person?.notes ?? '')
       setConfirmDelete(false)
     }
   }, [isOpen, person])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={person ? 'Edit person' : 'Add person'}>
+    <Modal isOpen={isOpen} onClose={onClose} size="sm" title={person ? 'Edit person' : categoryLabel ? `Add to ${categoryLabel}` : 'Add person'}>
       <div className="space-y-4">
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Full name</label>
             <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Siobhan Murphy" className={inputClass} autoFocus />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Role</label>
-            <select value={role} onChange={(e) => setRole(e.target.value)} className={inputClass}>
-              <option value="">No role</option>
-              {roleOptions.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
+            <Popover.Root open={roleOpen} onOpenChange={setRoleOpen}>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2 text-sm hover:border-gray-300 transition cursor-pointer"
+                >
+                  <span className={role ? 'text-gray-900' : 'text-gray-400'}>
+                    {role || 'No role'}
+                  </span>
+                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
+                  style={{ width: 'var(--radix-popover-trigger-width)' }}
+                  sideOffset={4}
+                  align="start"
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setRole(''); setRoleOpen(false) }}
+                    className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
+                      !role ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    No role
+                  </button>
+                  {roleOptions.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => { setRole(r); setRoleOpen(false) }}
+                      className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
+                        role === r ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Phonetic spelling</label>
@@ -152,7 +203,17 @@ export function PersonModal({
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1.5">Pronunciation recording</label>
-            <AudioRecorder audioUrl={audioUrl} personId={person?.id ?? 'new'} coupleId={coupleId} onRecorded={setAudioUrl} />
+            <AudioRecorder audioUrl={audioUrl} personId={person?.id ?? 'new'} coupleId={coupleId} onRecorded={setAudioUrl} onDelete={() => setAudioUrl(null)} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any notes for the MC..."
+              rows={6}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition resize-none"
+            />
           </div>
         </div>
         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
@@ -171,8 +232,8 @@ export function PersonModal({
             )
           ) : <div />}
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onClose} className="text-sm text-gray-500 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">Cancel</button>
-            <button type="button" onClick={() => onSave({ full_name: fullName, role: role || null, phonetic: phonetic || null, audio_url: audioUrl })} disabled={saving || !fullName.trim()} className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50">
+            <button type="button" onClick={onClose} className="text-sm text-gray-500 px-3 py-1.5 hover:text-gray-700 transition cursor-pointer">Cancel</button>
+            <button type="button" onClick={() => onSave({ full_name: fullName, role: role || null, phonetic: phonetic || null, audio_url: audioUrl, notes: notes || null })} disabled={saving || !fullName.trim()} className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50">
               {saving ? 'Saving...' : 'Save'}
             </button>
           </div>

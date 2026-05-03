@@ -53,7 +53,7 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col">
       <h2 className="text-xl font-semibold text-gray-900 mb-4 shrink-0">Outstanding Invoices</h2>
-      <div className="space-y-1 flex-1 max-h-60 overflow-y-auto pr-1">
+      <div className="space-y-1 flex-1 max-h-60 overflow-y-auto scrollbar-hover pr-1">
         {invoices.map((invoice) => {
           const overdue = isOverdue(invoice.due_date)
           const clickable = !!invoice.couple

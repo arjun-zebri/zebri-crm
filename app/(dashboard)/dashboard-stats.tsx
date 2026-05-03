@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { DashboardPeriod } from "./use-dashboard";
 
 interface DashboardStatsProps {
   totalLeads: number;
@@ -14,6 +15,7 @@ interface DashboardStatsProps {
   collectedRevenue?: number;
   invoicedRevenue?: number;
   isLoading: boolean;
+  period: DashboardPeriod;
 }
 
 const formatAUD = (value: number) =>
@@ -31,7 +33,7 @@ const formatDiffAUD = (value: number) =>
     maximumFractionDigits: 0,
   }).format(Math.abs(value));
 
-function StatBadge({ percent }: { percent: number }) {
+function StatBadge({ percent, unit = "%" }: { percent: number; unit?: string }) {
   if (percent === 0) return null;
   const isPositive = percent > 0;
   return (
@@ -41,7 +43,8 @@ function StatBadge({ percent }: { percent: number }) {
       }`}
     >
       {isPositive ? "+" : ""}
-      {percent}%
+      {percent}
+      {unit}
     </span>
   );
 }
@@ -49,16 +52,26 @@ function StatBadge({ percent }: { percent: number }) {
 function DiffText({
   diff,
   formatter,
+  period,
 }: {
   diff: number;
   formatter: (v: number) => string;
+  period: DashboardPeriod;
 }) {
   if (diff === 0) return null;
   const isPositive = diff > 0;
+
+  const periodLabels: Record<DashboardPeriod, string> = {
+    week: "last week",
+    month: "last month",
+    quarter: "last quarter",
+    year: "last year",
+  };
+
   return (
     <span className="text-xs text-gray-500">
       {isPositive ? "+" : "-"}
-      {formatter(Math.abs(diff))} vs last month
+      {formatter(Math.abs(diff))} vs {periodLabels[period]}
     </span>
   );
 }
@@ -75,6 +88,7 @@ export function DashboardStats({
   collectedRevenue,
   invoicedRevenue,
   isLoading,
+  period,
 }: DashboardStatsProps) {
   // Use collected revenue when available (invoicing feature enabled), fall back to events revenue
   const hasInvoicing = collectedRevenue !== undefined;
@@ -85,8 +99,9 @@ export function DashboardStats({
   const cards = [
     {
       label: "Leads",
-      value: totalLeads === 0 ? "—" : String(totalLeads),
+      value: String(totalLeads),
       percent: leadsPercentChange,
+      percentUnit: "%",
       diff: leadsDiff,
       diffFormatter: (v: number) => String(v),
       extra: null,
@@ -95,6 +110,7 @@ export function DashboardStats({
       label: "Conversion Rate",
       value: `${conversionRate}%`,
       percent: conversionDiff,
+      percentUnit: "%",
       diff: conversionDiff,
       diffFormatter: (v: number) => `${v}%`,
       extra: null,
@@ -103,6 +119,7 @@ export function DashboardStats({
       label: hasInvoicing ? "Collected" : "Revenue",
       value: revenueValue,
       percent: revenuePercentChange,
+      percentUnit: "%",
       diff: revenueDiff,
       diffFormatter: (v: number) => formatDiffAUD(v),
       extra: hasInvoicing && (invoicedRevenue ?? 0) > 0
@@ -122,7 +139,7 @@ export function DashboardStats({
             <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
               {card.label}
             </span>
-            {!isLoading && <StatBadge percent={card.percent} />}
+            {!isLoading && <StatBadge percent={card.percent} unit={card.percentUnit} />}
           </div>
           {isLoading ? (
             <div className="flex items-center justify-center py-4">
@@ -138,7 +155,7 @@ export function DashboardStats({
                   {card.value}
                 </span>
                 {card.diff !== 0 && (
-                  <DiffText diff={card.diff} formatter={card.diffFormatter} />
+                  <DiffText diff={card.diff} formatter={card.diffFormatter} period={period} />
                 )}
               </div>
               {card.extra && (

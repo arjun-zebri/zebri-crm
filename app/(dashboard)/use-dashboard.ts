@@ -9,182 +9,311 @@ import {
 } from "./couples/couples-types";
 import { CoupleStatusRecord } from "./couples/couples-types";
 
-export function useDashboardStats() {
+export type DashboardPeriod = "week" | "month" | "quarter" | "year";
+
+// Rolling window for stat cards — avoids start-of-period cliff drops
+function getRollingWindow(period: DashboardPeriod) {
+  const now = new Date();
+  const daysMap: Record<DashboardPeriod, number> = { week: 7, month: 30, quarter: 90, year: 365 };
+  const ms = daysMap[period] * 24 * 60 * 60 * 1000;
+  const currentStart = new Date(now.getTime() - ms).toISOString();
+  const previousStart = new Date(now.getTime() - 2 * ms).toISOString();
+  return { currentStart, previousStart, previousEnd: currentStart };
+}
+
+// Calendar-aligned window for charts — anchors to real week/month/quarter/year boundaries
+function getPeriodWindow(period: DashboardPeriod) {
+  const now = new Date();
+
+  switch (period) {
+    case "week": {
+      const dayOfWeek = now.getDay();
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const currentStart = new Date(now);
+      currentStart.setDate(now.getDate() - daysFromMonday);
+      currentStart.setHours(0, 0, 0, 0);
+      const previousStart = new Date(currentStart);
+      previousStart.setDate(previousStart.getDate() - 7);
+      return {
+        currentStart: currentStart.toISOString(),
+        previousStart: previousStart.toISOString(),
+        previousEnd: currentStart.toISOString(),
+      };
+    }
+    case "month": {
+      const currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const daysElapsed = now.getDate() - 1;
+      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      const previousEnd = new Date(prevMonthStart);
+      previousEnd.setDate(previousEnd.getDate() + daysElapsed + 1);
+      return {
+        currentStart: currentStart.toISOString(),
+        previousStart: prevMonthStart.toISOString(),
+        previousEnd: (previousEnd > prevMonthEnd ? prevMonthEnd : previousEnd).toISOString(),
+      };
+    }
+    case "quarter": {
+      const qMonth = Math.floor(now.getMonth() / 3) * 3;
+      const currentStart = new Date(now.getFullYear(), qMonth, 1);
+      const daysElapsed = Math.floor((now.getTime() - currentStart.getTime()) / 86400000);
+      const prevQStart = new Date(now.getFullYear(), qMonth - 3, 1);
+      const previousEnd = new Date(prevQStart);
+      previousEnd.setDate(previousEnd.getDate() + daysElapsed + 1);
+      return {
+        currentStart: currentStart.toISOString(),
+        previousStart: prevQStart.toISOString(),
+        previousEnd: previousEnd.toISOString(),
+      };
+    }
+    case "year": {
+      const currentStart = new Date(now.getFullYear(), 0, 1);
+      const daysElapsed = Math.floor((now.getTime() - currentStart.getTime()) / 86400000);
+      const prevYearStart = new Date(now.getFullYear() - 1, 0, 1);
+      const previousEnd = new Date(prevYearStart);
+      previousEnd.setDate(previousEnd.getDate() + daysElapsed + 1);
+      return {
+        currentStart: currentStart.toISOString(),
+        previousStart: prevYearStart.toISOString(),
+        previousEnd: previousEnd.toISOString(),
+      };
+    }
+  }
+}
+
+export function useDashboardStats(period: DashboardPeriod = "month") {
   const supabase = createClient();
 
   return useQuery({
-    queryKey: ["dashboardStats"],
+    queryKey: ["dashboardStats", period],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error("Not authenticated");
 
-      const now = new Date();
-      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const thisMonthStartStr = thisMonthStart.toISOString().split("T")[0];
-      const lastMonthStartStr = lastMonthStart.toISOString().split("T")[0];
+      const { currentStart, previousStart, previousEnd } = getRollingWindow(period);
 
-      // Total leads (all couples)
-      const { count: totalLeads } = await supabase
-        .from("couples")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.user.id);
-
-      // Leads added this month
-      const { count: leadsThisMonth } = await supabase
+      // Leads added in current period
+      const { count: leadsThisPeriod } = await supabase
         .from("couples")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.user.id)
-        .gte("created_at", thisMonthStartStr);
+        .gte("created_at", currentStart);
 
-      // Leads added last month
-      const { count: leadsLastMonth } = await supabase
+      // Leads added in previous period
+      const { count: leadsLastPeriod } = await supabase
         .from("couples")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.user.id)
-        .gte("created_at", lastMonthStartStr)
-        .lt("created_at", thisMonthStartStr);
+        .gte("created_at", previousStart)
+        .lt("created_at", previousEnd);
 
-      const leadsDiff = (leadsThisMonth || 0) - (leadsLastMonth || 0);
+      const leadsDiff = (leadsThisPeriod || 0) - (leadsLastPeriod || 0);
 
-      // Conversion rate: confirmed+paid+complete / leads added this month
-      const { count: convertedThisMonth } = await supabase
+      // Conversion: of leads added this period, how many have a converted status NOW
+      const { count: convertedThisPeriod } = await supabase
         .from("couples")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.user.id)
         .in("status", ["confirmed", "paid", "complete"])
-        .gte("created_at", thisMonthStartStr);
+        .gte("created_at", currentStart);
+
+      const { count: convertedLastPeriod } = await supabase
+        .from("couples")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.user.id)
+        .in("status", ["confirmed", "paid", "complete"])
+        .gte("created_at", previousStart)
+        .lt("created_at", previousEnd);
 
       const conversionRate =
-        leadsThisMonth && leadsThisMonth > 0
-          ? Math.round(((convertedThisMonth || 0) / leadsThisMonth) * 100)
+        (leadsThisPeriod || 0) > 0
+          ? Math.round(((convertedThisPeriod || 0) / (leadsThisPeriod || 1)) * 100)
           : 0;
-
-      // Previous month conversion rate (leads added last month)
-      const { count: convertedLastMonth } = await supabase
-        .from("couples")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.user.id)
-        .in("status", ["confirmed", "paid", "complete"])
-        .gte("created_at", lastMonthStartStr)
-        .lt("created_at", thisMonthStartStr);
 
       const prevConversionRate =
-        leadsLastMonth && leadsLastMonth > 0
-          ? Math.round(((convertedLastMonth || 0) / leadsLastMonth) * 100)
+        (leadsLastPeriod || 0) > 0
+          ? Math.round(((convertedLastPeriod || 0) / (leadsLastPeriod || 1)) * 100)
           : 0;
 
-      // Percentage change in conversion rate
-      const conversionDiff = prevConversionRate > 0
-        ? Math.round(((conversionRate - prevConversionRate) / prevConversionRate) * 100)
-        : conversionRate > 0 ? 100 : 0;
+      const conversionDiff = conversionRate - prevConversionRate;
 
-      // Collected revenue: SUM(invoices.subtotal) WHERE status = 'paid'
+      // Revenue collected (paid_at) in current period
+      const { data: revenueThisData } = await supabase
+        .from("invoices")
+        .select("subtotal")
+        .eq("user_id", user.user.id)
+        .eq("status", "paid")
+        .gte("paid_at", currentStart)
+        .not("paid_at", "is", null);
+
+      const revenueThisPeriod = (revenueThisData || []).reduce(
+        (s, i) => s + (Number(i.subtotal) || 0),
+        0
+      );
+
+      const { data: revenueLastData } = await supabase
+        .from("invoices")
+        .select("subtotal")
+        .eq("user_id", user.user.id)
+        .eq("status", "paid")
+        .gte("paid_at", previousStart)
+        .lt("paid_at", previousEnd)
+        .not("paid_at", "is", null);
+
+      const revenueLastPeriod = (revenueLastData || []).reduce(
+        (s, i) => s + (Number(i.subtotal) || 0),
+        0
+      );
+
+      // % changes — handle zero-previous gracefully
+      const leadsPercentChange =
+        (leadsLastPeriod || 0) > 0
+          ? Math.round(
+              (((leadsThisPeriod || 0) - (leadsLastPeriod || 0)) /
+                (leadsLastPeriod || 1)) *
+                100
+            )
+          : (leadsThisPeriod || 0) > 0
+          ? 100
+          : 0;
+
+      const revenueDiff = revenueThisPeriod - revenueLastPeriod;
+      const revenuePercentChange =
+        revenueLastPeriod > 0
+          ? Math.round(((revenueDiff / revenueLastPeriod) * 100))
+          : revenueThisPeriod > 0
+          ? 100
+          : 0;
+
+      // Also fetch total all-time collected + invoiced for the collected card subtitle
       const { data: collectedData } = await supabase
         .from("invoices")
         .select("subtotal")
         .eq("user_id", user.user.id)
         .eq("status", "paid");
-
       const collectedRevenue = (collectedData || []).reduce(
-        (sum, i) => sum + (Number(i.subtotal) || 0),
+        (s, i) => s + (Number(i.subtotal) || 0),
         0
       );
 
-      // Invoiced revenue: SUM(invoices.subtotal) WHERE status IN ('sent','overdue')
       const { data: invoicedData } = await supabase
         .from("invoices")
         .select("subtotal")
         .eq("user_id", user.user.id)
         .in("status", ["sent", "overdue"]);
-
       const invoicedRevenue = (invoicedData || []).reduce(
-        (sum, i) => sum + (Number(i.subtotal) || 0),
+        (s, i) => s + (Number(i.subtotal) || 0),
         0
       );
-
-      // Revenue from invoices paid this month
-      const { data: revenueThisMonthData } = await supabase
-        .from("invoices")
-        .select("subtotal")
-        .eq("user_id", user.user.id)
-        .eq("status", "paid")
-        .gte("paid_at", thisMonthStartStr);
-
-      const revenueThisMonth = (revenueThisMonthData || []).reduce(
-        (sum, i) => sum + (Number(i.subtotal) || 0),
-        0
-      );
-
-      // Revenue from invoices paid last month
-      const { data: revenueLastMonthData } = await supabase
-        .from("invoices")
-        .select("subtotal")
-        .eq("user_id", user.user.id)
-        .eq("status", "paid")
-        .gte("paid_at", lastMonthStartStr)
-        .lt("paid_at", thisMonthStartStr);
-
-      const revenueLastMonth = (revenueLastMonthData || []).reduce(
-        (sum, i) => sum + (Number(i.subtotal) || 0),
-        0
-      );
-
-      const revenueDiff = revenueThisMonth - revenueLastMonth;
-
-      // Percentage changes
-      const leadsPercentChange =
-        (leadsLastMonth || 0) > 0
-          ? Math.round(
-              (((leadsThisMonth || 0) - (leadsLastMonth || 0)) /
-                (leadsLastMonth || 1)) *
-                100
-            )
-          : (leadsThisMonth || 0) > 0
-          ? 100
-          : 0;
-
-      const revenuePercentChange =
-        revenueLastMonth > 0
-          ? Math.round(
-              ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100
-            )
-          : revenueThisMonth > 0
-          ? 100
-          : 0;
 
       return {
-        totalLeads: totalLeads || 0,
+        totalLeads: leadsThisPeriod || 0,
         leadsPercentChange,
         leadsDiff,
         conversionRate,
         conversionDiff,
-        totalRevenue: collectedRevenue,
+        totalRevenue: revenueThisPeriod,
         revenuePercentChange,
         revenueDiff,
-        collectedRevenue,
+        collectedRevenue: revenueThisPeriod,
         invoicedRevenue,
       };
     },
   });
 }
 
-export type ChartPeriod = "1m" | "3m" | "6m" | "1Y";
+// Returns chart config for trend views:
+// Weekly  → last 7 days (day by day)
+// Monthly → last 12 months (month by month)
+// Quarterly → last 6 quarters (quarter by quarter)
+// Yearly  → last 5 years (year by year)
+function getChartConfig(period: DashboardPeriod): {
+  chartStart: Date;
+  format: (d: Date) => string;
+  initKeys: () => string[];
+} {
+  const now = new Date();
 
-function getPeriodMonths(period: ChartPeriod): number {
   switch (period) {
-    case "1m":
-      return 1;
-    case "3m":
-      return 3;
-    case "6m":
-      return 6;
-    case "1Y":
-      return 12;
+    case "week": {
+      // Last 8 weeks, week by week (Monday-anchored)
+      const dayOfWeek = now.getDay();
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const currentMonday = new Date(now);
+      currentMonday.setDate(now.getDate() - daysFromMonday);
+      currentMonday.setHours(0, 0, 0, 0);
+      const chartStart = new Date(currentMonday);
+      chartStart.setDate(chartStart.getDate() - 7 * 7);
+      const getMonday = (d: Date) => {
+        const day = d.getDay();
+        const mon = new Date(d);
+        mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+        mon.setHours(0, 0, 0, 0);
+        return mon;
+      };
+      const fmt = (d: Date) =>
+        getMonday(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      return {
+        chartStart,
+        format: fmt,
+        initKeys: () =>
+          Array.from({ length: 8 }, (_, i) => {
+            const d = new Date(chartStart);
+            d.setDate(d.getDate() + i * 7);
+            return fmt(d);
+          }),
+      };
+    }
+    case "month": {
+      const chartStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+      const fmt = (d: Date) =>
+        new Date(d.getFullYear(), d.getMonth(), 1).toLocaleDateString("en-US", {
+          month: "short",
+          year: "2-digit",
+        });
+      return {
+        chartStart,
+        format: fmt,
+        initKeys: () =>
+          Array.from({ length: 12 }, (_, i) =>
+            fmt(new Date(chartStart.getFullYear(), chartStart.getMonth() + i, 1))
+          ),
+      };
+    }
+    case "quarter": {
+      const qMonth = Math.floor(now.getMonth() / 3) * 3;
+      const chartStart = new Date(now.getFullYear(), qMonth - 15, 1);
+      const fmtQ = (d: Date) => {
+        const q = Math.floor(d.getMonth() / 3) + 1;
+        return `Q${q} '${String(d.getFullYear()).slice(2)}`;
+      };
+      return {
+        chartStart,
+        format: (d) =>
+          fmtQ(new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1)),
+        initKeys: () =>
+          Array.from({ length: 6 }, (_, i) =>
+            fmtQ(
+              new Date(chartStart.getFullYear(), chartStart.getMonth() + i * 3, 1)
+            )
+          ),
+      };
+    }
+    case "year": {
+      const chartStart = new Date(now.getFullYear() - 4, 0, 1);
+      return {
+        chartStart,
+        format: (d) => String(d.getFullYear()),
+        initKeys: () =>
+          Array.from({ length: 5 }, (_, i) =>
+            String(chartStart.getFullYear() + i)
+          ),
+      };
+    }
   }
 }
 
-export function useRevenueChart(period: ChartPeriod) {
+export function useRevenueChart(period: DashboardPeriod = "month") {
   const supabase = createClient();
 
   return useQuery({
@@ -193,86 +322,52 @@ export function useRevenueChart(period: ChartPeriod) {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error("Not authenticated");
 
-      const months = getPeriodMonths(period);
-      const now = new Date();
-      const startDate = new Date(
-        now.getFullYear(),
-        now.getMonth() - months + 1,
-        1
-      );
-      const startStr = startDate.toISOString().split("T")[0];
+      const { chartStart, format, initKeys } = getChartConfig(period);
 
       const { data, error } = await supabase
         .from("invoices")
         .select("paid_at, subtotal")
         .eq("user_id", user.user.id)
         .eq("status", "paid")
-        .gte("paid_at", startStr)
+        .gte("paid_at", chartStart.toISOString())
         .not("paid_at", "is", null);
 
       if (error) throw error;
 
-      // Group by month
-      const monthMap = new Map<string, number>();
-
-      // Initialize all months in range
-      for (let i = 0; i < months; i++) {
-        const d = new Date(
-          startDate.getFullYear(),
-          startDate.getMonth() + i,
-          1
-        );
-        const key = d.toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        });
-        monthMap.set(key, 0);
-      }
-
-      // Sum invoice subtotals per month
+      const groupMap = new Map<string, number>();
+      for (const key of initKeys()) groupMap.set(key, 0);
       for (const invoice of data || []) {
-        const d = new Date(invoice.paid_at!);
-        const key = d.toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        });
-        monthMap.set(
-          key,
-          (monthMap.get(key) || 0) + (Number(invoice.subtotal) || 0)
-        );
+        const key = format(new Date(invoice.paid_at!));
+        if (groupMap.has(key))
+          groupMap.set(key, (groupMap.get(key) || 0) + (Number(invoice.subtotal) || 0));
       }
 
-      const chartData = Array.from(monthMap.entries()).map(
-        ([month, revenue]) => ({
-          month,
-          revenue,
-        })
-      );
+      const chartData = Array.from(groupMap.entries()).map(([label, revenue]) => ({
+        label,
+        revenue,
+      }));
 
-      const total = chartData.reduce((sum, d) => sum + d.revenue, 0);
+      // Header stat uses rolling window so it never cliff-drops at period start
+      const { currentStart, previousStart, previousEnd } = getRollingWindow(period);
 
-      // Calculate % change vs previous period
-      const prevStartDate = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth() - months,
-        1
-      );
-      const prevStartStr = prevStartDate.toISOString().split("T")[0];
-      const prevEndStr = startDate.toISOString().split("T")[0];
+      const { data: curData } = await supabase
+        .from("invoices")
+        .select("subtotal")
+        .eq("user_id", user.user.id)
+        .eq("status", "paid")
+        .gte("paid_at", currentStart)
+        .not("paid_at", "is", null);
+      const total = (curData || []).reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
 
       const { data: prevData } = await supabase
         .from("invoices")
         .select("subtotal")
         .eq("user_id", user.user.id)
         .eq("status", "paid")
-        .gte("paid_at", prevStartStr)
-        .lt("paid_at", prevEndStr)
+        .gte("paid_at", previousStart)
+        .lt("paid_at", previousEnd)
         .not("paid_at", "is", null);
-
-      const prevTotal = (prevData || []).reduce(
-        (sum, i) => sum + (Number(i.subtotal) || 0),
-        0
-      );
+      const prevTotal = (prevData || []).reduce((s, i) => s + (Number(i.subtotal) || 0), 0);
 
       const percentChange =
         prevTotal > 0
@@ -286,7 +381,7 @@ export function useRevenueChart(period: ChartPeriod) {
   });
 }
 
-export function useLeadsChart(period: ChartPeriod) {
+export function useLeadsChart(period: DashboardPeriod = "month") {
   const supabase = createClient();
 
   return useQuery({
@@ -295,71 +390,45 @@ export function useLeadsChart(period: ChartPeriod) {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error("Not authenticated");
 
-      const months = getPeriodMonths(period);
-      const now = new Date();
-      const startDate = new Date(
-        now.getFullYear(),
-        now.getMonth() - months + 1,
-        1
-      );
-      const startStr = startDate.toISOString();
+      const { chartStart, format, initKeys } = getChartConfig(period);
 
       const { data, error } = await supabase
         .from("couples")
         .select("created_at")
         .eq("user_id", user.user.id)
-        .gte("created_at", startStr);
+        .gte("created_at", chartStart.toISOString());
 
       if (error) throw error;
 
-      // Group by month
-      const monthMap = new Map<string, number>();
-      for (let i = 0; i < months; i++) {
-        const d = new Date(
-          startDate.getFullYear(),
-          startDate.getMonth() + i,
-          1
-        );
-        const key = d.toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        });
-        monthMap.set(key, 0);
-      }
-
+      const groupMap = new Map<string, number>();
+      for (const key of initKeys()) groupMap.set(key, 0);
       for (const couple of data || []) {
-        const d = new Date(couple.created_at);
-        const key = d.toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        });
-        monthMap.set(key, (monthMap.get(key) || 0) + 1);
+        const key = format(new Date(couple.created_at));
+        if (groupMap.has(key)) groupMap.set(key, (groupMap.get(key) || 0) + 1);
       }
 
-      const chartData = Array.from(monthMap.entries()).map(
-        ([month, leads]) => ({
-          month,
-          leads,
-        })
-      );
+      const chartData = Array.from(groupMap.entries()).map(([label, leads]) => ({
+        label,
+        leads,
+      }));
 
-      const total = chartData.reduce((sum, d) => sum + d.leads, 0);
+      // Header stat uses rolling window
+      const { currentStart, previousStart, previousEnd } = getRollingWindow(period);
 
-      // Previous period
-      const prevStartDate = new Date(
-        startDate.getFullYear(),
-        startDate.getMonth() - months,
-        1
-      );
-      const prevStartStr = prevStartDate.toISOString();
+      const { count: curTotal } = await supabase
+        .from("couples")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.user.id)
+        .gte("created_at", currentStart);
 
       const { count: prevTotal } = await supabase
         .from("couples")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.user.id)
-        .gte("created_at", prevStartStr)
-        .lt("created_at", startStr);
+        .gte("created_at", previousStart)
+        .lt("created_at", previousEnd);
 
+      const total = curTotal || 0;
       const percentChange =
         (prevTotal || 0) > 0
           ? Math.round(((total - (prevTotal || 0)) / (prevTotal || 1)) * 100)
@@ -400,18 +469,16 @@ export function useCalendarEvents(year: number, month: number) {
   });
 }
 
-export function useLeadsManagement() {
+export function useLeadsManagement(period: DashboardPeriod = "month") {
   const supabase = createClient();
 
   return useQuery({
-    queryKey: ["leadsManagement"],
+    queryKey: ["leadsManagement", period],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error("Not authenticated");
 
-      const now = new Date();
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const oneWeekAgoStr = oneWeekAgo.toISOString();
+      const { currentStart } = getPeriodWindow(period);
 
       // Fetch user's statuses
       const { data: statusesData, error: statusesError } = await supabase
@@ -435,13 +502,13 @@ export function useLeadsManagement() {
 
         counts[status.slug] = count || 0;
 
-        // Count for prior week (couples that existed before one week ago)
+        // Count for prior period (couples that existed before current period)
         const { count: prevCount } = await supabase
           .from("couples")
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.user.id)
           .eq("status", status.slug)
-          .lt("created_at", oneWeekAgoStr);
+          .lt("created_at", currentStart);
 
         prevCounts[status.slug] = prevCount || 0;
       }
@@ -457,18 +524,16 @@ export function useLeadsManagement() {
   });
 }
 
-export function useLeadSources() {
+export function useLeadSources(period: DashboardPeriod = "month") {
   const supabase = createClient();
 
   return useQuery({
-    queryKey: ["leadSources"],
+    queryKey: ["leadSources", period],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error("Not authenticated");
 
-      const now = new Date();
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const oneWeekAgoStr = oneWeekAgo.toISOString();
+      const { currentStart } = getPeriodWindow(period);
 
       const counts: Record<string, number> = {};
       const prevCounts: Record<string, number> = {};
@@ -487,7 +552,7 @@ export function useLeadSources() {
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.user.id)
           .eq("lead_source", source)
-          .lt("created_at", oneWeekAgoStr);
+          .lt("created_at", currentStart);
 
         prevCounts[source] = prevCount || 0;
       }
@@ -506,7 +571,7 @@ export function useLeadSources() {
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.user.id)
         .is("lead_source", null)
-        .lt("created_at", oneWeekAgoStr);
+        .lt("created_at", currentStart);
 
       prevCounts["unknown"] = prevNoSource || 0;
 

@@ -9,9 +9,10 @@ interface ModalProps {
   title?: string
   children: React.ReactNode
   footer?: React.ReactNode
+  size?: 'sm' | 'md'
 }
 
-export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
         onClick={onClose}
       >
         <div
-          className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-modal-in"
+          className={`bg-white rounded-2xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-modal-in ${size === 'sm' ? 'max-w-sm' : 'max-w-lg'}`}
           onClick={(e) => e.stopPropagation()}
         >
           <div className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}>

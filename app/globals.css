@@ -135,3 +135,32 @@
   border-radius: 9999px;
   min-height: 20px;
 }
+
+/* Subtle scrollbar — hidden by default, fades in on hover */
+.scrollbar-hover {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 200ms ease;
+}
+.scrollbar-hover:hover {
+  scrollbar-color: #E5E7EB transparent;
+}
+.scrollbar-hover::-webkit-scrollbar {
+  width: 4px;
+  -webkit-appearance: none;
+}
+.scrollbar-hover::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-hover::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 9999px;
+  min-height: 20px;
+  transition: background-color 200ms ease;
+}
+.scrollbar-hover:hover::-webkit-scrollbar-thumb {
+  background-color: #E5E7EB;
+}
+.scrollbar-hover:hover::-webkit-scrollbar-thumb:hover {
+  background-color: #D1D5DB;
+}

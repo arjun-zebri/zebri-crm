@@ -3,27 +3,35 @@
 import { useState, useRef, useEffect } from 'react'
 import { Loader2, ChevronDown } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { useRevenueChart, useLeadsChart, ChartPeriod } from './use-dashboard'
-
-const PERIODS: { value: ChartPeriod; label: string; shortLabel: string }[] = [
-  { value: '1m', label: '1 month',  shortLabel: '1m' },
-  { value: '3m', label: '3 months', shortLabel: '3m' },
-  { value: '6m', label: '6 months', shortLabel: '6m' },
-  { value: '1Y', label: '1 year',   shortLabel: '1y' },
-]
+import { useRevenueChart, useLeadsChart, DashboardPeriod } from './use-dashboard'
 
 type ChartMode = 'revenue' | 'leads'
 
 const formatAUD = (value: number) =>
   new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(value)
 
-export function DashboardRevenueChart() {
-  const [period, setPeriod] = useState<ChartPeriod>('6m')
+const periodLabels: Record<DashboardPeriod, string> = {
+  week: 'Weekly',
+  month: 'Monthly',
+  quarter: 'Quarterly',
+  year: 'Yearly',
+}
+
+const previousPeriodLabels: Record<DashboardPeriod, string> = {
+  week: 'last week',
+  month: 'last month',
+  quarter: 'last quarter',
+  year: 'last year',
+}
+
+interface DashboardRevenueChartProps {
+  period: DashboardPeriod;
+}
+
+export function DashboardRevenueChart({ period }: DashboardRevenueChartProps) {
   const [mode, setMode] = useState<ChartMode>('revenue')
   const [modeOpen, setModeOpen] = useState(false)
-  const [periodOpen, setPeriodOpen] = useState(false)
   const modeRef = useRef<HTMLDivElement>(null)
-  const periodRef = useRef<HTMLDivElement>(null)
 
   const { data: revenueData, isLoading: revenueLoading } = useRevenueChart(period)
   const { data: leadsData, isLoading: leadsLoading } = useLeadsChart(period)
@@ -36,9 +44,6 @@ export function DashboardRevenueChart() {
       if (modeRef.current && !modeRef.current.contains(e.target as Node)) {
         setModeOpen(false)
       }
-      if (periodRef.current && !periodRef.current.contains(e.target as Node)) {
-        setPeriodOpen(false)
-      }
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -46,7 +51,6 @@ export function DashboardRevenueChart() {
 
   const dataKey = mode === 'revenue' ? 'revenue' : 'leads'
   const label = mode === 'revenue' ? 'Revenue' : 'Leads'
-  const currentPeriod = PERIODS.find(p => p.value === period)
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 h-[260px] sm:h-[340px] lg:h-full flex flex-col">
@@ -54,7 +58,7 @@ export function DashboardRevenueChart() {
         {/* Mode dropdown */}
         <div className="relative" ref={modeRef}>
           <button
-            onClick={() => { setModeOpen(!modeOpen); setPeriodOpen(false) }}
+            onClick={() => { setModeOpen(!modeOpen) }}
             className="flex items-center gap-1 text-base sm:text-xl font-semibold text-gray-900 cursor-pointer hover:text-gray-700 transition"
           >
             {label}
@@ -78,32 +82,6 @@ export function DashboardRevenueChart() {
           )}
         </div>
 
-        {/* Period dropdown */}
-        <div className="relative" ref={periodRef}>
-          <button
-            onClick={() => { setPeriodOpen(!periodOpen); setModeOpen(false) }}
-            className="flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer"
-          >
-            <span className="sm:hidden">{currentPeriod?.shortLabel ?? period}</span>
-            <span className="hidden sm:inline">{currentPeriod?.label ?? period}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400" strokeWidth={1.5} />
-          </button>
-          {periodOpen && (
-            <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
-              {PERIODS.map((p, i) => (
-                <button
-                  key={p.value}
-                  onClick={() => { setPeriod(p.value); setPeriodOpen(false) }}
-                  className={`block w-full text-left px-3 py-2 text-xs sm:text-sm cursor-pointer hover:bg-gray-50 transition ${
-                    i === 0 ? 'rounded-t-lg' : i === PERIODS.length - 1 ? 'rounded-b-lg' : ''
-                  } ${period === p.value ? 'font-medium text-gray-900' : 'text-gray-600'}`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {isLoading ? (
@@ -131,7 +109,7 @@ export function DashboardRevenueChart() {
                 {data.percentChange > 0 ? '+' : ''}{data.percentChange}%
               </span>
             )}
-            <span className="text-xs text-gray-500 whitespace-nowrap">vs previous period</span>
+            <span className="text-xs text-gray-500 whitespace-nowrap">vs {previousPeriodLabels[period]}</span>
           </div>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -143,11 +121,12 @@ export function DashboardRevenueChart() {
                   </linearGradient>
                 </defs>
                 <XAxis
-                  dataKey="month"
+                  dataKey="label"
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: '#9CA3AF', dy: 8 }}
-                  interval={1}
+                  interval={data.chartData.length > 8 ? 1 : 0}
+                  padding={{ right: 16 }}
                 />
                 <YAxis
                   axisLine={false}

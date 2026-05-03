@@ -65,7 +65,6 @@ Breakpoints follow Tailwind defaults: `sm` = 640px, `md` = 768px, `lg` = 1024px.
 **Sidebar:**
 - Mobile (`< md`): hidden by default, opens as a 280px drawer from the left via hamburger button in top bar
 - Desktop (`md+`): fixed 68px icon-only sidebar, expands to 240px on hover
-- Mobile top bar: fixed h-14 bar with hamburger, centered logo, z-30
 
 **Couple Profile modal:**
 - Wrapper: `fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4` — `p-3` creates visible gaps on all edges on mobile
@@ -176,6 +175,60 @@ Use a FAB for the primary CTA on mobile when the page header is too narrow to sh
 - `bottom-20` clears the mobile nav bar (h-14 = 56px, plus buffer)
 - `right-4` = 16px from screen edge
 - Circle shape (`rounded-full w-12 h-12`) — standard mobile FAB convention
+
+------------------------------------------------------------------------
+
+# Dropdowns — Custom Only
+
+**Never use native `<select>` elements anywhere in Zebri.** All dropdowns must be custom-built using a `<div>`/`<button>` + popover pattern.
+
+This applies to every context: filter pills, form fields, period selectors, sort pickers, status selectors — everything.
+
+## Compact pill dropdown (filters / toolbar)
+
+Used for small inline selectors like the dashboard period picker:
+
+```tsx
+const [open, setOpen] = useState(false)
+const ref = useRef<HTMLDivElement>(null)
+
+useEffect(() => {
+  const handler = (e: MouseEvent) => {
+    if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+  }
+  document.addEventListener('mousedown', handler)
+  return () => document.removeEventListener('mousedown', handler)
+}, [])
+
+<div className="relative" ref={ref}>
+  <button
+    onClick={() => setOpen(!open)}
+    className="flex items-center gap-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-lg transition cursor-pointer"
+  >
+    {currentLabel}
+    <ChevronDown className="w-3.5 h-3.5 text-gray-400" strokeWidth={1.5} />
+  </button>
+  {open && (
+    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[130px]">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => { onChange(opt.value); setOpen(false) }}
+          className={`block w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 transition first:rounded-t-lg last:rounded-b-lg ${
+            value === opt.value ? 'font-medium text-gray-900' : 'text-gray-600'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )}
+</div>
+```
+
+## Form field dropdown (modals / forms)
+
+For dropdowns inside modals or forms, see the **Select (Custom)** entry in `component-library.md`.
 
 ------------------------------------------------------------------------
 

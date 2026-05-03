@@ -1,75 +1,506 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Mail, Phone } from 'lucide-react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { Plus, Mail, Phone, Mic, Square, Play, Trash2, Loader2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { PortalContact } from './page'
+import { Modal } from '@/components/ui/modal'
+import type { PortalContact, PortalPerson } from './page'
 import { CATEGORY_LABELS } from '@/app/(dashboard)/contacts/contacts-types'
+
+const PARTNER_ROLES = ['Bride', 'Groom', 'Partner']
+const BRIDAL_ROLES = [
+  'Best Man', 'Maid of Honour', 'Bridesmaid', 'Groomsman',
+  'Flower Girl', 'Ring Bearer', 'MC', 'Other',
+]
+const FAMILY_ROLES = [
+  'Mother of Bride', 'Father of Bride', 'Mother of Groom', 'Father of Groom',
+  'Grandparent', 'Sibling', 'Other',
+]
+
+const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition'
+
+// ── Audio recorder ────────────────────────────────────────────────────────────
+
+function AudioRecorder({
+  audioUrl,
+  personId,
+  token,
+  onRecorded,
+}: {
+  audioUrl: string | null
+  personId: string
+  token: string
+  onRecorded: (url: string) => void
+}) {
+  const [recording, setRecording] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      mediaRecorderRef.current = mr
+      chunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop())
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        setUploading(true)
+        const fd = new FormData()
+        fd.append('file', blob, 'pronunciation.webm')
+        const res = await fetch(`/api/portal/upload?token=${token}&type=audio`, {
+          method: 'POST',
+          body: fd,
+        })
+        if (res.ok) {
+          const { url } = await res.json()
+          onRecorded(url)
+        }
+        setUploading(false)
+      }
+      mr.start()
+      setRecording(true)
+    } catch {
+      // user denied mic
+    }
+  }
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop()
+    setRecording(false)
+  }
+
+  if (uploading) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+        <Loader2 size={13} className="animate-spin" />
+        Uploading…
+      </div>
+    )
+  }
+
+  if (audioUrl) {
+    return (
+      <div className="flex items-center gap-2">
+        <audio src={audioUrl} className="hidden" id={`audio-modal-${personId}`} />
+        <button
+          type="button"
+          onClick={() => (document.getElementById(`audio-modal-${personId}`) as HTMLAudioElement)?.play()}
+          className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100 transition cursor-pointer"
+        >
+          <Play size={12} strokeWidth={2} />
+          Play
+        </button>
+        <button
+          type="button"
+          onClick={startRecording}
+          className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
+          title="Re-record"
+        >
+          <Mic size={13} strokeWidth={1.5} />
+        </button>
+      </div>
+    )
+  }
+
+  if (recording) {
+    return (
+      <button
+        type="button"
+        onClick={stopRecording}
+        className="flex items-center gap-1 text-xs text-red-600 border border-red-200 bg-red-50 rounded-lg px-2.5 py-1.5 hover:bg-red-100 transition cursor-pointer animate-pulse"
+      >
+        <Square size={12} strokeWidth={2} />
+        Stop recording
+      </button>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={startRecording}
+      className="flex items-center gap-1 text-xs text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-100 transition cursor-pointer"
+    >
+      <Mic size={12} strokeWidth={1.5} />
+      Record pronunciation
+    </button>
+  )
+}
+
+// ── Person modal ──────────────────────────────────────────────────────────────
+
+interface PersonModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSave: (data: Partial<PortalPerson>) => Promise<void>
+  onDelete?: () => Promise<void>
+  person: PortalPerson | null
+  roleOptions: string[]
+  token: string
+  saving: boolean
+}
+
+function PersonModal({ isOpen, onClose, onSave, onDelete, person, roleOptions, token, saving }: PersonModalProps) {
+  const [fullName, setFullName] = useState(person?.full_name ?? '')
+  const [role, setRole] = useState(person?.role ?? '')
+  const [phonetic, setPhonetic] = useState(person?.phonetic ?? '')
+  const [audioUrl, setAudioUrl] = useState(person?.audio_url ?? null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      setFullName(person?.full_name ?? '')
+      setRole(person?.role ?? '')
+      setPhonetic(person?.phonetic ?? '')
+      setAudioUrl(person?.audio_url ?? null)
+      setConfirmDelete(false)
+    }
+  }, [isOpen, person])
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={person ? 'Edit person' : 'Add person'}>
+      <div className="space-y-4">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Full name</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="e.g. Siobhan Murphy"
+              className={inputClass}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Role</label>
+            <select value={role} onChange={(e) => setRole(e.target.value)} className={inputClass}>
+              <option value="">No role</option>
+              {roleOptions.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Phonetic spelling</label>
+            <input
+              type="text"
+              value={phonetic}
+              onChange={(e) => setPhonetic(e.target.value)}
+              placeholder="e.g. SEER-sha"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5">Pronunciation recording</label>
+            <AudioRecorder
+              audioUrl={audioUrl}
+              personId={person?.id ?? 'new'}
+              token={token}
+              onRecorded={setAudioUrl}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+          {person && onDelete ? (
+            confirmDelete ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">Remove this person?</span>
+                <button
+                  type="button"
+                  onClick={async () => { await onDelete(); setConfirmDelete(false) }}
+                  className="text-xs text-red-500 hover:text-red-600 transition cursor-pointer"
+                >
+                  Yes, remove
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 transition cursor-pointer"
+              >
+                <Trash2 size={13} strokeWidth={1.5} />
+                Remove
+              </button>
+            )
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-sm text-gray-500 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave({ full_name: fullName, role: role || null, phonetic: phonetic || null, audio_url: audioUrl })}
+              disabled={saving || !fullName.trim()}
+              className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+// ── Person row ────────────────────────────────────────────────────────────────
+
+function PersonRow({ person, onEdit }: { person: PortalPerson; onEdit: () => void }) {
+  return (
+    <div
+      className="flex items-center gap-3 border border-gray-200 rounded-xl px-5 py-3.5 bg-white hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer"
+      onClick={onEdit}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-base font-medium text-gray-900">{person.full_name || 'Unnamed'}</p>
+          {person.role && (
+            <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2.5 py-0.5">
+              {person.role}
+            </span>
+          )}
+        </div>
+        {person.phonetic && (
+          <p className="text-sm text-gray-500 mt-0.5 font-mono">{person.phonetic}</p>
+        )}
+      </div>
+      {person.audio_url && (
+        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+          <audio src={person.audio_url} className="hidden" id={`audio-row-${person.id}`} />
+          <button
+            onClick={() => (document.getElementById(`audio-row-${person.id}`) as HTMLAudioElement)?.play()}
+            className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100 transition cursor-pointer"
+          >
+            <Play size={12} strokeWidth={2} />
+            Listen
+          </button>
+        </div>
+      )}
+      <Pencil size={13} strokeWidth={1.5} className="text-gray-300 shrink-0" />
+    </div>
+  )
+}
+
+// ── People group ──────────────────────────────────────────────────────────────
+
+interface PeopleGroupProps {
+  label: string
+  people: PortalPerson[]
+  roleOptions: string[]
+  addLabel: string
+  onAdd: () => void
+  onEdit: (person: PortalPerson) => void
+}
+
+function PeopleGroup({ label, people, addLabel, onAdd, onEdit }: PeopleGroupProps) {
+  return (
+    <div className="space-y-2.5">
+      <p className="text-sm font-medium text-gray-500">{label}</p>
+      {people.map((p) => (
+        <PersonRow key={p.id} person={p} onEdit={() => onEdit(p)} />
+      ))}
+      <button
+        onClick={onAdd}
+        className="w-full text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl py-3 hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer flex items-center justify-center gap-1.5"
+      >
+        <Plus size={14} strokeWidth={1.5} />
+        {addLabel}
+      </button>
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 interface ContactsSectionProps {
   token: string
   initialContacts: PortalContact[]
+  initialPeople: PortalPerson[]
 }
 
-export function ContactsSection({ token, initialContacts }: ContactsSectionProps) {
+export function ContactsSection({ token, initialContacts, initialPeople }: ContactsSectionProps) {
   const supabase = createClient()
+
+  // Wedding party state
+  const [people, setPeople] = useState<PortalPerson[]>(initialPeople)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingPerson, setEditingPerson] = useState<PortalPerson | null>(null)
+  const [modalCategory, setModalCategory] = useState<PortalPerson['category']>('partner')
+  const [modalRoleOptions, setModalRoleOptions] = useState<string[]>(PARTNER_ROLES)
+  const [saving, setSaving] = useState(false)
+
+  // Vendor contacts state
   const [contacts, setContacts] = useState<PortalContact[]>(initialContacts)
-  const [showForm, setShowForm] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [formData, setFormData] = useState({ name: '', category: '', email: '', phone: '' })
-  const [error, setError] = useState<string | null>(null)
+  const [showVendorForm, setShowVendorForm] = useState(false)
+  const [vendorLoading, setVendorLoading] = useState(false)
+  const [vendorForm, setVendorForm] = useState({ name: '', category: '', email: '', phone: '' })
+  const [vendorError, setVendorError] = useState<string | null>(null)
 
-  const handleSubmit = async () => {
-    if (!formData.name.trim()) {
-      setError('Name is required')
-      return
-    }
-    if (!formData.category) {
-      setError('Category is required')
-      return
-    }
+  // People handlers
+  const openAdd = (category: PortalPerson['category'], roleOptions: string[]) => {
+    setEditingPerson(null)
+    setModalCategory(category)
+    setModalRoleOptions(roleOptions)
+    setModalOpen(true)
+  }
 
-    setLoading(true)
-    setError(null)
+  const openEdit = (person: PortalPerson, roleOptions: string[]) => {
+    setEditingPerson(person)
+    setModalCategory(person.category)
+    setModalRoleOptions(roleOptions)
+    setModalOpen(true)
+  }
 
-    try {
-      const { data, error: rpcError } = await supabase.rpc('save_portal_contact', {
+  const handleSavePerson = useCallback(async (data: Partial<PortalPerson>) => {
+    setSaving(true)
+    if (editingPerson) {
+      const merged = { ...editingPerson, ...data }
+      setPeople((prev) => prev.map((p) => (p.id === merged.id ? merged : p)))
+      await supabase.rpc('save_portal_person', {
         p_token: token,
-        p_name: formData.name.trim(),
-        p_email: formData.email.trim() || null,
-        p_phone: formData.phone.trim() || null,
-        p_category: formData.category,
+        p_id: merged.id,
+        p_category: merged.category,
+        p_full_name: merged.full_name,
+        p_phonetic: merged.phonetic ?? null,
+        p_role: merged.role ?? null,
+        p_audio_url: merged.audio_url ?? null,
+        p_position: merged.position,
+      })
+    } else {
+      const newId = crypto.randomUUID()
+      const newPerson: PortalPerson = {
+        id: newId,
+        category: modalCategory,
+        full_name: data.full_name ?? '',
+        phonetic: data.phonetic ?? null,
+        role: data.role ?? null,
+        audio_url: data.audio_url ?? null,
+        position: people.filter((p) => p.category === modalCategory).length * 1000,
+      }
+      setPeople((prev) => [...prev, newPerson])
+      await supabase.rpc('save_portal_person', {
+        p_token: token,
+        p_id: newId,
+        p_category: modalCategory,
+        p_full_name: newPerson.full_name,
+        p_phonetic: newPerson.phonetic,
+        p_role: newPerson.role,
+        p_audio_url: newPerson.audio_url,
+        p_position: newPerson.position,
+      })
+    }
+    setSaving(false)
+    setModalOpen(false)
+    setEditingPerson(null)
+  }, [editingPerson, modalCategory, people, supabase, token])
+
+  const handleDeletePerson = useCallback(async () => {
+    if (!editingPerson) return
+    setSaving(true)
+    setPeople((prev) => prev.filter((p) => p.id !== editingPerson.id))
+    await supabase.rpc('delete_portal_person', { p_token: token, p_id: editingPerson.id })
+    setSaving(false)
+    setModalOpen(false)
+    setEditingPerson(null)
+  }, [editingPerson, supabase, token])
+
+  // Vendor handlers
+  const handleAddVendor = async () => {
+    if (!vendorForm.name.trim()) {
+      setVendorError('Name is required')
+      return
+    }
+    if (!vendorForm.category) {
+      setVendorError('Category is required')
+      return
+    }
+    setVendorLoading(true)
+    setVendorError(null)
+    try {
+      const { data, error } = await supabase.rpc('save_portal_contact', {
+        p_token: token,
+        p_name: vendorForm.name.trim(),
+        p_email: vendorForm.email.trim() || null,
+        p_phone: vendorForm.phone.trim() || null,
+        p_category: vendorForm.category,
         p_notes: '',
       })
-
-      if (rpcError) throw rpcError
-
-      // Optimistically add to local state
-      setContacts([
-        ...contacts,
-        {
-          id: data || '',
-          name: formData.name.trim(),
-          category: formData.category,
-          email: formData.email.trim() || null,
-          phone: formData.phone.trim() || null,
-        },
-      ])
-
-      setFormData({ name: '', category: '', email: '', phone: '' })
-      setShowForm(false)
+      if (error) throw error
+      setContacts([...contacts, {
+        id: data || '',
+        name: vendorForm.name.trim(),
+        category: vendorForm.category,
+        email: vendorForm.email.trim() || null,
+        phone: vendorForm.phone.trim() || null,
+      }])
+      setVendorForm({ name: '', category: '', email: '', phone: '' })
+      setShowVendorForm(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add contact')
+      setVendorError(err instanceof Error ? err.message : 'Failed to add contact')
     } finally {
-      setLoading(false)
+      setVendorLoading(false)
     }
   }
 
+  const partners = people.filter((p) => p.category === 'partner')
+  const bridalParty = people.filter((p) => p.category === 'bridal_party')
+  const family = people.filter((p) => p.category === 'family')
+
   return (
-    <div className="space-y-6">
-      {contacts.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-3">Vendor contacts</h3>
+    <div className="space-y-8">
+      {/* Partners */}
+      <PeopleGroup
+        label="Partners"
+        people={partners}
+        roleOptions={PARTNER_ROLES}
+        addLabel={partners.length === 0 ? 'Add partner' : 'Add another partner'}
+        onAdd={() => openAdd('partner', PARTNER_ROLES)}
+        onEdit={(p) => openEdit(p, PARTNER_ROLES)}
+      />
+
+      {/* Bridal Party */}
+      <PeopleGroup
+        label="Bridal Party"
+        people={bridalParty}
+        roleOptions={BRIDAL_ROLES}
+        addLabel="Add bridal party member"
+        onAdd={() => openAdd('bridal_party', BRIDAL_ROLES)}
+        onEdit={(p) => openEdit(p, BRIDAL_ROLES)}
+      />
+
+      {/* Family */}
+      <PeopleGroup
+        label="Family Members"
+        people={family}
+        roleOptions={FAMILY_ROLES}
+        addLabel="Add family member"
+        onAdd={() => openAdd('family', FAMILY_ROLES)}
+        onEdit={(p) => openEdit(p, FAMILY_ROLES)}
+      />
+
+      {/* Vendors */}
+      <div className="space-y-3">
+        <p className="text-sm font-medium text-gray-500">Vendors</p>
+
+        {contacts.length > 0 && (
           <div className="space-y-3">
             {contacts.map((contact) => (
               <div key={contact.id} className="bg-white border border-gray-200 rounded-xl p-4">
@@ -102,94 +533,95 @@ export function ContactsSection({ token, initialContacts }: ContactsSectionProps
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Add contact form */}
-      <div>
         <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-50 transition w-full justify-center"
+          onClick={() => setShowVendorForm(!showVendorForm)}
+          className="w-full text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl py-3 hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer flex items-center justify-center gap-1.5"
         >
-          <Plus size={16} />
-          Add contact
+          <Plus size={14} strokeWidth={1.5} />
+          Add vendor contact
         </button>
 
-        {showForm && (
-          <div className="mt-4 bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-            {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</div>}
-
+        {showVendorForm && (
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            {vendorError && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{vendorError}</div>}
             <div>
               <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">
                 Name <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Contact name"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                value={vendorForm.name}
+                onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })}
+                placeholder="Business or contact name"
+                className={inputClass}
               />
             </div>
-
             <div>
               <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">
                 Category <span className="text-red-400">*</span>
               </label>
               <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                value={vendorForm.category}
+                onChange={(e) => setVendorForm({ ...vendorForm, category: e.target.value })}
+                className={inputClass}
               >
                 <option value="">Select category</option>
                 {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
+                  <option key={key} value={key}>{label}</option>
                 ))}
               </select>
             </div>
-
             <div>
               <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">Email</label>
               <input
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                value={vendorForm.email}
+                onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
                 placeholder="email@example.com"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                className={inputClass}
               />
             </div>
-
             <div>
               <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">Phone</label>
               <input
                 type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                value={vendorForm.phone}
+                onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
                 placeholder="+61 400 000 000"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+                className={inputClass}
               />
             </div>
-
             <div className="flex gap-2 pt-2">
               <button
-                onClick={() => setShowForm(false)}
+                onClick={() => { setShowVendorForm(false); setVendorError(null) }}
                 className="flex-1 text-sm px-3 py-2 rounded-lg bg-gray-100 text-gray-900 hover:bg-gray-200 transition"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSubmit}
-                disabled={loading}
+                onClick={handleAddVendor}
+                disabled={vendorLoading}
                 className="flex-1 text-sm px-3 py-2 rounded-lg bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50"
               >
-                {loading ? 'Adding...' : 'Add'}
+                {vendorLoading ? 'Adding...' : 'Add'}
               </button>
             </div>
           </div>
         )}
       </div>
+
+      <PersonModal
+        isOpen={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingPerson(null) }}
+        onSave={handleSavePerson}
+        onDelete={editingPerson ? handleDeletePerson : undefined}
+        person={editingPerson}
+        roleOptions={modalRoleOptions}
+        token={token}
+        saving={saving}
+      />
     </div>
   )
 }

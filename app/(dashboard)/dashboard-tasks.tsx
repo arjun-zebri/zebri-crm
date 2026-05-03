@@ -51,7 +51,7 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col">
       <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4 shrink-0">Outstanding Tasks</h2>
-      <div className="space-y-1 flex-1 max-h-60 overflow-y-auto pr-1">
+      <div className="space-y-1 flex-1 max-h-60 overflow-y-auto scrollbar-hover pr-1">
         {tasks.map((task) => {
           const overdue = isOverdue(task.due_date)
           const clickable = !!task.couple

@@ -1,11 +1,15 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useLeadSources } from "./use-dashboard";
+import { useLeadSources, DashboardPeriod } from "./use-dashboard";
 import { LEAD_SOURCES, LEAD_SOURCE_LABELS } from "./couples/couples-types";
 
-export function DashboardLeadSources() {
-  const { data, isLoading } = useLeadSources();
+interface DashboardLeadSourcesProps {
+  period: DashboardPeriod;
+}
+
+export function DashboardLeadSources({ period }: DashboardLeadSourcesProps) {
+  const { data, isLoading } = useLeadSources(period);
 
   const allSources = [...LEAD_SOURCES, "unknown" as const];
   const allLabels: Record<string, string> = {
