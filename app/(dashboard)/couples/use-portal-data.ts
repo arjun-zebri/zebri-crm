@@ -71,6 +71,7 @@ export function usePortalData(coupleId: string) {
   // Data fetching
   const { data: people = [], isLoading: isPeopleLoading } = useQuery<PortalPerson[]>({
     queryKey: ['portal-people', coupleId],
+    enabled: !!coupleId,
     queryFn: async () => {
       const { data, error } = await supabase.from('portal_people').select('*').eq('couple_id', coupleId).order('category').order('position')
       if (error) throw error
@@ -80,6 +81,7 @@ export function usePortalData(coupleId: string) {
 
   const { data: songs = [], isLoading: isSongsLoading } = useQuery<PortalSong[]>({
     queryKey: ['portal-songs', coupleId],
+    enabled: !!coupleId,
     queryFn: async () => {
       const { data, error } = await supabase.from('portal_songs').select('*').eq('couple_id', coupleId).order('category').order('position')
       if (error) throw error
@@ -89,6 +91,7 @@ export function usePortalData(coupleId: string) {
 
   const { data: pendingItems = [], isLoading: isTimelineLoading } = useQuery<PortalTimelineItem[]>({
     queryKey: ['portal-timeline-pending', coupleId],
+    enabled: !!coupleId,
     queryFn: async () => {
       const { data: events } = await supabase.from('events').select('id').eq('couple_id', coupleId)
       if (!events?.length) return []
