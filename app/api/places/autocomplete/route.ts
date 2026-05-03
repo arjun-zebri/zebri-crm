@@ -10,7 +10,11 @@ export async function GET(req: NextRequest) {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY!,
     },
-    body: JSON.stringify({ input, includedPrimaryTypes: ['establishment'] }),
+    body: JSON.stringify({
+      input,
+      includedPrimaryTypes: ['establishment'],
+      includedRegionCodes: ['au'],
+    }),
   })
 
   const data = await res.json()

@@ -51,6 +51,20 @@ export default function CouplesPage() {
     }
   }, []);
 
+  // Open a couple from a deep link (?openCouple=<id>) — syncs URL → React state
+  useEffect(() => {
+    if (!couples.length || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const openId = params.get("openCouple");
+    if (!openId) return;
+    const match = couples.find((c) => c.id === openId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (match) setSelectedCouple(match);
+    params.delete("openCouple");
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `/couples?${qs}` : "/couples");
+  }, [couples]);
+
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem("zebri_couples_view", mode);

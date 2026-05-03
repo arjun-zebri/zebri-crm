@@ -1,28 +1,23 @@
 'use client'
 
 import { useState } from 'react'
-import { Play, Pencil, Plus, Trash2, ExternalLink } from 'lucide-react'
+import { Play, Pencil, Plus, Trash2 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { CATEGORY_LABELS } from '../contacts/contacts-types'
+import { CATEGORY_LABELS, Contact } from '../contacts/contacts-types'
 import { ContactPicker } from './contact-picker'
+import { ContactModal } from '../contacts/contact-modal'
 import { useToast } from '@/components/ui/toast'
 import type { PortalPerson } from './use-portal-data'
 import { PARTNER_ROLES, BRIDAL_ROLES, FAMILY_ROLES } from './use-portal-data'
-import Link from 'next/link'
 
 const OTHER_ROLES = ['Officiant', 'Celebrant', 'Photographer', 'Videographer', 'Performer', 'Speaker', 'Guest', 'Other']
 
 interface ContactLink {
   id: string
   contact_id: string
-  vendor: {
-    id: string
-    name: string
-    category: string
-    status: string
-  }
+  vendor: Contact
 }
 
 const PEOPLE_CATEGORIES = [
@@ -39,7 +34,6 @@ const AVATAR_COLORS: Record<string, string> = {
   bridal_party: 'bg-violet-50 text-violet-600',
   family: 'bg-amber-50 text-amber-600',
   other: 'bg-gray-100 text-gray-500',
-  vendor: 'bg-sky-50 text-sky-600',
 }
 
 interface McPortalContactsProps {
@@ -70,6 +64,7 @@ export function McPortalContacts({
   const { toast } = useToast()
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [showContactPicker, setShowContactPicker] = useState(false)
+  const [editingContact, setEditingContact] = useState<Contact | undefined>()
 
   const { data: vendors, isLoading: vendorsLoading } = useQuery({
     queryKey: ['couple-contacts', coupleId],
@@ -78,7 +73,7 @@ export function McPortalContacts({
       if (userError || !user.user) throw new Error('Not authenticated')
       const { data, error } = await supabase
         .from('couple_contacts')
-        .select('id, contact_id, vendor:contact_id(id, name, category, status)')
+        .select('id, contact_id, vendor:contact_id(id, name, contact_name, category, status, phone, email, notes)')
         .eq('couple_id', coupleId)
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false })
@@ -112,15 +107,43 @@ export function McPortalContacts({
     onError: () => toast('Failed to add vendor'),
   })
 
+  const updateContact = useMutation({
+    mutationFn: async (contact: Omit<Contact, 'user_id' | 'created_at'> & { id: string }) => {
+      const { id, ...rest } = contact
+      const { error } = await supabase.from('contacts').update(rest).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })
+      queryClient.invalidateQueries({ queryKey: ['all-contacts'] })
+      setEditingContact(undefined)
+      toast('Contact updated')
+    },
+    onError: () => toast('Failed to update contact'),
+  })
+
+  const deleteContact = useMutation({
+    mutationFn: async (contactId: string) => {
+      const { error } = await supabase.from('contacts').delete().eq('id', contactId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })
+      queryClient.invalidateQueries({ queryKey: ['all-contacts'] })
+      setEditingContact(undefined)
+      toast('Contact deleted')
+    },
+    onError: () => toast('Failed to delete contact'),
+  })
+
   const isLoading = isPeopleLoading || vendorsLoading
   const hasVendors = (vendors?.length ?? 0) > 0
-
-  // Only the categories that have members, in display order
   const visibleCategories = PEOPLE_CATEGORIES.filter(({ category }) =>
     people.some((p) => p.category === category)
   )
   const hasPeople = visibleCategories.length > 0
   const isEmpty = !isLoading && !hasPeople && !hasVendors
+  const modalLoading = updateContact.isPending || deleteContact.isPending
 
   return (
     <div className="pt-3">
@@ -208,10 +231,7 @@ export function McPortalContacts({
                         )}
                       </div>
                       {person.audio_url && (
-                        <div
-                          className="shrink-0"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                           <audio src={person.audio_url} id={`mc-audio-${person.id}`} className="hidden" />
                           <button
                             onClick={() => (document.getElementById(`mc-audio-${person.id}`) as HTMLAudioElement)?.play()}
@@ -222,11 +242,7 @@ export function McPortalContacts({
                           </button>
                         </div>
                       )}
-                      <Pencil
-                        size={12}
-                        strokeWidth={1.5}
-                        className="text-gray-300 shrink-0 opacity-0 group-hover:opacity-100 transition"
-                      />
+                      <Pencil size={12} strokeWidth={1.5} className="text-gray-300 shrink-0 opacity-0 group-hover:opacity-100 transition" />
                     </div>
                   ))}
                 </div>
@@ -244,27 +260,17 @@ export function McPortalContacts({
                 {vendors!.map((link) => (
                   <div
                     key={link.id}
-                    className="group flex items-center gap-3 min-h-[40px] py-1.5 -mx-2 px-2 rounded-lg hover:bg-gray-50 transition"
+                    onClick={() => setEditingContact(link.vendor)}
+                    className="group flex items-center py-2.5 -mx-2 px-2 rounded-lg hover:bg-gray-50 transition cursor-pointer"
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0 select-none ${AVATAR_COLORS.vendor}`}>
-                      {link.vendor.name ? initials(link.vendor.name) : '?'}
-                    </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-900">{link.vendor.name}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}
                       </p>
                     </div>
-                    <Link
-                      href="/contacts"
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-1.5 text-gray-300 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition shrink-0"
-                      title="View in contacts"
-                    >
-                      <ExternalLink size={12} strokeWidth={1.5} />
-                    </Link>
                     <button
-                      onClick={() => removeVendor.mutate(link.id)}
+                      onClick={(e) => { e.stopPropagation(); removeVendor.mutate(link.id) }}
                       disabled={removeVendor.isPending}
                       className="p-1.5 text-gray-300 hover:text-red-400 transition disabled:opacity-50 opacity-0 group-hover:opacity-100 cursor-pointer shrink-0"
                     >
@@ -286,6 +292,18 @@ export function McPortalContacts({
           isAdding={addVendor.isPending}
         />
       )}
+
+      <ContactModal
+        isOpen={!!editingContact}
+        onClose={() => setEditingContact(undefined)}
+        nested
+        onSave={(contact) => {
+          if (contact.id) updateContact.mutate(contact as Contact)
+        }}
+        onDelete={(id) => deleteContact.mutate(id)}
+        vendor={editingContact}
+        loading={modalLoading}
+      />
     </div>
   )
 }

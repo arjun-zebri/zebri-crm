@@ -4,8 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS } from '../contacts/contacts-types'
+import { Contact } from '../contacts/contacts-types'
 import { Trash2, Plus } from 'lucide-react'
 import { ContactPicker } from './contact-picker'
+import { ContactModal } from '../contacts/contact-modal'
 import { useToast } from '@/components/ui/toast'
 
 interface CoupleVendorsProps {
@@ -16,12 +18,7 @@ interface CoupleVendorsProps {
 interface ContactLink {
   id: string
   contact_id: string
-  vendor: {
-    id: string
-    name: string
-    category: string
-    status: string
-  }
+  vendor: Contact
 }
 
 interface PortalPerson {
@@ -43,6 +40,7 @@ export function CoupleVendors({ coupleId, onLoadingChange }: CoupleVendorsProps)
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const [showAddVendor, setShowAddVendor] = useState(false)
+  const [editingContact, setEditingContact] = useState<Contact | undefined>()
 
   const { data: vendors, isLoading: vendorsLoading } = useQuery({
     queryKey: ['couple-contacts', coupleId],
@@ -52,7 +50,7 @@ export function CoupleVendors({ coupleId, onLoadingChange }: CoupleVendorsProps)
 
       const { data, error } = await supabase
         .from('couple_contacts')
-        .select('id, contact_id, vendor:contact_id(id, name, category, status)')
+        .select('id, contact_id, vendor:contact_id(id, name, contact_name, category, status, phone, email, notes)')
         .eq('couple_id', coupleId)
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false })
@@ -117,11 +115,50 @@ export function CoupleVendors({ coupleId, onLoadingChange }: CoupleVendorsProps)
     onError: () => toast('Failed to add contact'),
   })
 
+  const updateContact = useMutation({
+    mutationFn: async (contact: Omit<Contact, 'user_id' | 'created_at'> & { id: string }) => {
+      const { id, ...rest } = contact
+      const { error } = await supabase
+        .from('contacts')
+        .update(rest)
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })
+      queryClient.invalidateQueries({ queryKey: ['all-contacts'] })
+      setEditingContact(undefined)
+      toast('Contact updated')
+    },
+    onError: () => toast('Failed to update contact'),
+  })
+
+  const deleteContact = useMutation({
+    mutationFn: async (contactId: string) => {
+      const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .eq('id', contactId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })
+      queryClient.invalidateQueries({ queryKey: ['all-contacts'] })
+      setEditingContact(undefined)
+      toast('Contact deleted')
+    },
+    onError: () => toast('Failed to delete contact'),
+  })
+
   const groupedPeople = (['partner', 'bridal_party', 'family', 'other'] as const).map((cat) => ({
     category: cat,
     label: CATEGORY_GROUP_LABELS[cat],
     members: (people ?? []).filter((p) => p.category === cat),
   })).filter((g) => g.members.length > 0)
+
+  const modalLoading = updateContact.isPending || deleteContact.isPending
 
   return (
     <div className="space-y-4">
@@ -178,14 +215,15 @@ export function CoupleVendors({ coupleId, onLoadingChange }: CoupleVendorsProps)
             {vendors.map((link) => (
               <div
                 key={link.id}
-                className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2 transition"
+                onClick={() => setEditingContact(link.vendor)}
+                className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2 hover:bg-gray-50 transition cursor-pointer"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-500">{link.vendor.name}</p>
+                  <p className="text-sm text-gray-700">{link.vendor.name}</p>
                   <p className="text-xs text-gray-400">{CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}</p>
                 </div>
                 <button
-                  onClick={() => removeVendor.mutate(link.id)}
+                  onClick={(e) => { e.stopPropagation(); removeVendor.mutate(link.id) }}
                   disabled={removeVendor.isPending}
                   className="p-1 text-gray-400 hover:text-red-500 transition disabled:opacity-50 opacity-0 group-hover:opacity-100"
                 >
@@ -205,6 +243,19 @@ export function CoupleVendors({ coupleId, onLoadingChange }: CoupleVendorsProps)
           isAdding={addVendor.isPending}
         />
       )}
+
+      <ContactModal
+        isOpen={!!editingContact}
+        onClose={() => setEditingContact(undefined)}
+        onSave={(contact) => {
+          if (contact.id) {
+            updateContact.mutate(contact as Contact)
+          }
+        }}
+        onDelete={(id) => deleteContact.mutate(id)}
+        vendor={editingContact}
+        loading={modalLoading}
+      />
     </div>
   )
 }

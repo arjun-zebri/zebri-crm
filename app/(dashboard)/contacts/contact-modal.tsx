@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Phone, Mail, Trash2 } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -24,11 +24,13 @@ interface ContactModalProps {
   onDelete: (id: string) => void;
   vendor?: Contact;
   loading: boolean;
+  nested?: boolean;
 }
 
 export function ContactModal({
   isOpen,
   onClose,
+  nested,
   onSave,
   onDelete,
   vendor,
@@ -95,42 +97,66 @@ export function ContactModal({
   const inputClass =
     "w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 transition";
 
+  const headerActions = vendor ? (
+    <>
+      {vendor.phone && (
+        <a
+          href={`tel:${vendor.phone}`}
+          className="p-1.5 text-gray-400 hover:text-gray-700 transition"
+          title={vendor.phone}
+        >
+          <Phone size={16} strokeWidth={1.5} />
+        </a>
+      )}
+      {vendor.email && (
+        <a
+          href={`mailto:${vendor.email}`}
+          className="p-1.5 text-gray-400 hover:text-gray-700 transition"
+          title={vendor.email}
+        >
+          <Mail size={16} strokeWidth={1.5} />
+        </a>
+      )}
+      <div className="w-px h-4 bg-gray-200 mx-1" />
+      <button
+        onClick={handleDelete}
+        disabled={loading}
+        className="p-1.5 text-gray-400 hover:text-red-500 transition disabled:opacity-50 cursor-pointer"
+        title="Delete contact"
+      >
+        <Trash2 size={16} strokeWidth={1.5} />
+      </button>
+    </>
+  ) : undefined
+
   return (
     <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={vendor ? "Edit Contact" : "Add Contact"}
+      title={vendor ? vendor.name : "Add Contact"}
+      headerActions={headerActions}
+      nested={nested}
       footer={
-        <div className="flex items-center justify-between">
-          {vendor && (
-            <button
-              onClick={handleDelete}
-              disabled={loading}
-              className="text-sm px-4 py-2 rounded-xl transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
-            >
-              Delete
-            </button>
-          )}
-          <div className="flex gap-3 ml-auto">
-            <button
-              onClick={onClose}
-              disabled={loading}
-              className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading || !name.trim()}
-              className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? "Saving..." : "Save"}
-            </button>
-          </div>
+        <div className="flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || !name.trim()}
+            className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? "Saving..." : "Save"}
+          </button>
         </div>
       }
     >
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-4">
           <div>

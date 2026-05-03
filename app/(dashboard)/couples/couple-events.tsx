@@ -39,6 +39,7 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
       if (error) throw error
       return (data || []) as Event[]
     },
+    placeholderData: (prev) => prev,
   })
 
   useEffect(() => { onLoadingChange?.(isLoading) }, [isLoading])
@@ -60,9 +61,59 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
       if (error) throw error
       const newEvent = data?.[0] as Event
 
-      // Link contacts if any selected
-      if (vendorIds && vendorIds.length > 0 && newEvent) {
-        const contactLinks = vendorIds.map((contactId) => ({
+      // Auto-create venue as a contact and link to event if it came from Places
+      const extraContactIds: string[] = []
+      if (newEvent && rest.venue && rest.venue_lat && rest.venue_lng) {
+        try {
+          const { data: existing } = await supabase
+            .from('contacts')
+            .select('id')
+            .eq('user_id', user.user.id)
+            .eq('category', 'venue')
+            .ilike('name', rest.venue)
+            .limit(1)
+
+          let venueContactId: string | null = null
+
+          if (!existing || existing.length === 0) {
+            const { data: created } = await supabase
+              .from('contacts')
+              .insert({
+                user_id: user.user.id,
+                name: rest.venue,
+                category: 'venue',
+                phone: rest.venue_phone ?? '',
+                email: '',
+                contact_name: '',
+                notes: rest.venue_website ?? '',
+                status: 'active',
+              })
+              .select('id')
+              .single()
+            venueContactId = created?.id ?? null
+          } else {
+            venueContactId = existing[0].id
+          }
+
+          if (venueContactId) {
+            extraContactIds.push(venueContactId)
+            // Also link to the couple
+            await supabase
+              .from('couple_contacts')
+              .upsert(
+                { couple_id: couple.id, contact_id: venueContactId, user_id: user.user.id },
+                { onConflict: 'couple_id,contact_id', ignoreDuplicates: true }
+              )
+          }
+        } catch {
+          // Silently skip — contact creation is best-effort
+        }
+      }
+
+      // Link contacts if any selected (manual + auto-created venue)
+      const allContactIds = [...(vendorIds ?? []), ...extraContactIds.filter(id => !(vendorIds ?? []).includes(id))]
+      if (allContactIds.length > 0 && newEvent) {
+        const contactLinks = allContactIds.map((contactId) => ({
           event_id: newEvent.id,
           contact_id: contactId,
           user_id: user.user.id,
@@ -90,6 +141,7 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
               user_id: user.user.id,
               title: 'Sunset',
               start_time: localTime,
+              duration_min: 30,
               position: 1000,
               pending_review: false,
             })
@@ -104,6 +156,8 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
     onSuccess: (newEvent) => {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
+      queryClient.invalidateQueries({ queryKey: ['all-contacts'] })
+      queryClient.invalidateQueries({ queryKey: ['couple-contacts', couple.id] })
       if (newEvent) {
         queryClient.invalidateQueries({ queryKey: ['event-contacts', newEvent.id] })
         queryClient.invalidateQueries({ queryKey: ['timeline-items', newEvent.id] })

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Phone, Mail, MoreHorizontal, Trash2, LayoutDashboard, Calendar } from "lucide-react";
+import { X, Phone, Mail, MoreHorizontal, Trash2 } from "lucide-react";
 import { PiWhatsappLogoLight } from "react-icons/pi";
 import * as Popover from "@radix-ui/react-popover";
 import {
@@ -10,7 +10,6 @@ import {
   STATUS_LABELS,
 } from "./contacts-types";
 import { ContactOverview } from "./contact-overview";
-import { ContactEvents } from "./contact-events";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ContactProfileProps {
@@ -30,12 +29,10 @@ export function ContactProfile({
   onDelete,
   loading,
 }: ContactProfileProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "events">("overview");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
 
   useEffect(() => {
-    setActiveTab("overview");
     setDeleteConfirm(false);
   }, [vendor]);
 
@@ -73,7 +70,7 @@ export function ContactProfile({
       >
         <div
           data-testid="contact-profile-panel"
-          className="bg-white rounded-2xl shadow-xl w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
+          className="bg-white rounded-2xl shadow-xl w-full sm:max-w-2xl h-full sm:h-[90vh] flex flex-col overflow-hidden animate-modal-in"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Compact header */}
@@ -90,7 +87,9 @@ export function ContactProfile({
                 <div className="flex items-center gap-1.5 shrink-0">
                   <div
                     className={`w-1.5 h-1.5 rounded-full ${
-                      vendor.status === "active" ? "bg-emerald-400" : "bg-gray-300"
+                      vendor.status === "active"
+                        ? "bg-emerald-400"
+                        : "bg-gray-300"
                     }`}
                   />
                   <span className="text-xs text-gray-400">
@@ -116,35 +115,44 @@ export function ContactProfile({
                       sideOffset={6}
                       align="end"
                     >
-                      <a
-                        href={hasPhone ? `tel:${vendor.phone}` : undefined}
-                        onClick={(e) => { if (!hasPhone) e.preventDefault(); else setActionsOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-sm transition ${hasPhone ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
-                      >
-                        <Phone size={14} strokeWidth={1.5} />
-                        Call
-                      </a>
-                      <a
-                        href={hasEmail ? `mailto:${vendor.email}` : undefined}
-                        onClick={(e) => { if (!hasEmail) e.preventDefault(); else setActionsOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-sm transition ${hasEmail ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
-                      >
-                        <Mail size={14} strokeWidth={1.5} />
-                        Email
-                      </a>
-                      <a
-                        href={hasPhone ? `https://wa.me/${vendor.phone.replace(/\D/g, "")}` : undefined}
-                        target={hasPhone ? "_blank" : undefined}
-                        rel={hasPhone ? "noopener noreferrer" : undefined}
-                        onClick={(e) => { if (!hasPhone) e.preventDefault(); else setActionsOpen(false); }}
-                        className={`flex items-center gap-2.5 px-3 py-2 text-sm transition ${hasPhone ? "text-gray-700 hover:bg-gray-50 cursor-pointer" : "text-gray-300 cursor-not-allowed"}`}
-                      >
-                        <PiWhatsappLogoLight size={15} />
-                        WhatsApp
-                      </a>
+                      {hasPhone && (
+                        <a
+                          href={`tel:${vendor.phone}`}
+                          onClick={() => setActionsOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition"
+                        >
+                          <Phone size={14} strokeWidth={1.5} />
+                          Call
+                        </a>
+                      )}
+                      {hasEmail && (
+                        <a
+                          href={`mailto:${vendor.email}`}
+                          onClick={() => setActionsOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition"
+                        >
+                          <Mail size={14} strokeWidth={1.5} />
+                          Email
+                        </a>
+                      )}
+                      {hasPhone && (
+                        <a
+                          href={`https://wa.me/${vendor.phone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => setActionsOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer transition"
+                        >
+                          <PiWhatsappLogoLight size={15} />
+                          WhatsApp
+                        </a>
+                      )}
                       <div className="border-t border-gray-100 mt-1 pt-1">
                         <button
-                          onClick={() => { setDeleteConfirm(true); setActionsOpen(false); }}
+                          onClick={() => {
+                            setDeleteConfirm(true);
+                            setActionsOpen(false);
+                          }}
                           className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition cursor-pointer"
                         >
                           <Trash2 size={14} strokeWidth={1.5} />
@@ -170,29 +178,42 @@ export function ContactProfile({
                 >
                   <Trash2 size={16} strokeWidth={1.5} />
                 </button>
-                <div className="w-px h-4 bg-gray-200 mx-2" />
-                <div className="flex items-center gap-0.5">
-                  <a
-                    href={hasPhone ? `tel:${vendor.phone}` : undefined}
-                    className={`p-1.5 rounded-lg transition ${hasPhone ? "text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer" : "text-gray-200 cursor-not-allowed pointer-events-none"}`}
-                  >
-                    <Phone size={16} strokeWidth={1.5} />
-                  </a>
-                  <a
-                    href={hasEmail ? `mailto:${vendor.email}` : undefined}
-                    className={`p-1.5 rounded-lg transition ${hasEmail ? "text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer" : "text-gray-200 cursor-not-allowed pointer-events-none"}`}
-                  >
-                    <Mail size={16} strokeWidth={1.5} />
-                  </a>
-                  <a
-                    href={hasPhone ? `https://wa.me/${vendor.phone.replace(/\D/g, "")}` : undefined}
-                    target={hasPhone ? "_blank" : undefined}
-                    rel={hasPhone ? "noopener noreferrer" : undefined}
-                    className={`p-1.5 rounded-lg transition ${hasPhone ? "text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer" : "text-gray-200 cursor-not-allowed pointer-events-none"}`}
-                  >
-                    <PiWhatsappLogoLight size={17} />
-                  </a>
-                </div>
+                {(hasPhone || hasEmail) && (
+                  <>
+                    <div className="w-px h-4 bg-gray-200 mx-2" />
+                    <div className="flex items-center gap-0.5">
+                      {hasPhone && (
+                        <a
+                          href={`tel:${vendor.phone}`}
+                          title={`Call ${vendor.phone}`}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                        >
+                          <Phone size={16} strokeWidth={1.5} />
+                        </a>
+                      )}
+                      {hasEmail && (
+                        <a
+                          href={`mailto:${vendor.email}`}
+                          title={`Email ${vendor.email}`}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                        >
+                          <Mail size={16} strokeWidth={1.5} />
+                        </a>
+                      )}
+                      {hasPhone && (
+                        <a
+                          href={`https://wa.me/${vendor.phone.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="WhatsApp"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                        >
+                          <PiWhatsappLogoLight size={17} />
+                        </a>
+                      )}
+                    </div>
+                  </>
+                )}
                 <div className="w-px h-4 bg-gray-200 mx-2" />
                 <button
                   onClick={onClose}
@@ -204,61 +225,9 @@ export function ContactProfile({
             </div>
           </div>
 
-          {/* Body: Nav + Content */}
-          <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
-            {/* Mobile: horizontal scrollable pill tabs */}
-            <div className="sm:hidden shrink-0 border-b border-gray-200 overflow-x-auto">
-              <div className="flex px-2 py-2 gap-1 min-w-max">
-                {[
-                  { key: "overview" as const, label: "Overview", icon: <LayoutDashboard size={14} strokeWidth={1.5} /> },
-                  { key: "events" as const, label: "Events", icon: <Calendar size={14} strokeWidth={1.5} /> },
-                ].map((item) => (
-                  <button
-                    key={item.key}
-                    onClick={() => setActiveTab(item.key)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs whitespace-nowrap transition cursor-pointer ${
-                      activeTab === item.key
-                        ? "bg-gray-100 text-gray-900 font-medium"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Desktop: sidebar navigation */}
-            <nav className="hidden sm:block w-[200px] shrink-0 border-r border-gray-200 overflow-y-auto px-3 py-4 space-y-0.5">
-              {[
-                { key: "overview" as const, label: "Overview", icon: <LayoutDashboard size={18} strokeWidth={1.5} /> },
-                { key: "events" as const, label: "Events", icon: <Calendar size={18} strokeWidth={1.5} /> },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => setActiveTab(item.key)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition cursor-pointer ${
-                    activeTab === item.key
-                      ? "bg-gray-100 text-gray-900 font-medium"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  {item.icon}
-                  <span className="truncate">{item.label}</span>
-                </button>
-              ))}
-            </nav>
-
-            {/* Content area */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6 flex flex-col">
-              {activeTab === "overview" && (
-                <div className="flex-1 flex flex-col min-h-0">
-                  <ContactOverview vendor={vendor} onSave={onSave} />
-                </div>
-              )}
-              {activeTab === "events" && <ContactEvents vendorId={vendor.id} />}
-            </div>
+          {/* Body */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6">
+            <ContactOverview vendor={vendor} onSave={onSave} onClose={onClose} />
           </div>
         </div>
       </div>

@@ -167,19 +167,17 @@ test.describe('Contact Management', () => {
     await deleteContact(page, name)
   })
 
-  // ── 14. Contact profile Events tab ────────────────────────────────────────
-  test('contact profile Events tab renders without crash', async ({ page }) => {
-    const name = uniqueName('Events Tab Contact')
+  // ── 14. Contact profile "Used by" section renders ────────────────────────
+  test('contact profile shows Used by section on Overview', async ({ page }) => {
+    const name = uniqueName('Used By Contact')
     await addContact(page, { name })
     await search(page, name)
     await page.locator(`table tbody tr:has-text("${name}")`).first().click()
-    await page.waitForSelector('[data-testid="contact-profile-panel"] h1')
+    await page.waitForSelector('[data-testid="contact-profile-panel"]')
 
     const panel = page.locator('[data-testid="contact-profile-panel"]')
-    await panel.locator('button:has-text("Events")').click()
+    await expect(panel.locator('text=Used by')).toBeVisible()
     await page.waitForLoadState('networkidle')
-    // Should render the tab content without error
-    await expect(panel).toBeVisible()
 
     // Clean up
     await panel.locator('button').first().click()

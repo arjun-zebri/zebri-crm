@@ -144,7 +144,7 @@ export function PersonModal({
   }, [isOpen, person])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm" title={person ? 'Edit person' : categoryLabel ? `Add to ${categoryLabel}` : 'Add person'}>
+    <Modal isOpen={isOpen} onClose={onClose} size="sm" nested title={person ? 'Edit person' : categoryLabel ? `Add to ${categoryLabel}` : 'Add person'}>
       <div className="space-y-4">
         <div className="space-y-2">
           <div>
@@ -270,7 +270,7 @@ export function SongModal({
   }, [isOpen, song])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit">
+    <Modal isOpen={isOpen} onClose={onClose} nested title="Edit">
       <div className="space-y-4">
         <div className="space-y-3">
           <div>

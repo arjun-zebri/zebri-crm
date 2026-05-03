@@ -91,7 +91,6 @@ export function ContactsHeader({
         {/* Title */}
         <div className="flex items-baseline gap-3 flex-none sm:order-1">
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Contacts</h1>
-          <span className="text-sm text-gray-400">{vendors.length} total</span>
         </div>
 
         {/* Desktop spacer */}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { ChevronDown, X } from 'lucide-react'
+import { ChevronDown, X, Phone, Globe } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import * as Popover from '@radix-ui/react-popover'
 import { Modal } from '@/components/ui/modal'
@@ -190,8 +190,6 @@ export function EventModal({
       timeline_notes: notes,
       vendorIds: selectedVendorIds,
     })
-
-    resetForm()
   }
 
   const handleDeleteClick = () => {
@@ -302,19 +300,25 @@ export function EventModal({
               )}
             </div>
             {(venuePhone || venueWebsite) && (
-              <div className="mt-1.5 flex flex-wrap gap-3">
+              <div className="mt-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 flex flex-col gap-1.5">
                 {venuePhone && (
-                  <span className="text-xs text-gray-500">{venuePhone}</span>
+                  <div className="flex items-center gap-2">
+                    <Phone size={11} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                    <span className="text-xs text-gray-600">{venuePhone}</span>
+                  </div>
                 )}
                 {venueWebsite && (
-                  <a
-                    href={venueWebsite}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-gray-500 hover:text-gray-700 underline truncate max-w-[200px]"
-                  >
-                    {venueWebsite.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                  </a>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Globe size={11} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                    <a
+                      href={venueWebsite}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-600 hover:text-gray-900 underline truncate"
+                    >
+                      {venueWebsite.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                    </a>
+                  </div>
                 )}
               </div>
             )}
