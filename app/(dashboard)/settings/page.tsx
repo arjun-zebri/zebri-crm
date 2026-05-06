@@ -11,6 +11,7 @@ import { TemplatesSection } from "./templates-section";
 import { NotificationsSection } from "./notifications-section";
 import { StatusesSection } from "./statuses-section";
 import { PaymentSettingsSection } from "./payment-settings-section";
+import { PortalSection } from "./portal-section";
 
 interface EmailPreferencesData {
   product_updates?: boolean;
@@ -44,6 +45,14 @@ interface UserMetadata {
   abn?: string;
   show_contact_on_documents?: boolean;
   mc_signature_name?: string;
+  portal_sections?: {
+    timeline?: boolean
+    contacts?: boolean
+    payments?: boolean
+    contracts?: boolean
+    songs?: boolean
+    files?: boolean
+  }
 }
 
 const tabs = [
@@ -55,6 +64,7 @@ const tabs = [
   { id: "templates", label: "Templates" },
   { id: "statuses", label: "Statuses" },
   { id: "notifications", label: "Notifications" },
+  { id: "portal", label: "Portal" },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -120,9 +130,8 @@ function SettingsContent() {
       </div>
 
       <div className="px-4 md:px-6 flex-shrink-0">
-        <div className="relative overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-white to-transparent z-10 md:hidden" />
-          <div className="flex gap-6 border-b border-gray-200 mb-0">
+        <div className="relative overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-b border-gray-200">
+          <div className="flex gap-6 mb-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -205,6 +214,18 @@ function SettingsContent() {
           {activeTab === "templates" && <TemplatesSection />}
           {activeTab === "statuses" && <StatusesSection />}
           {activeTab === "notifications" && <NotificationsSection />}
+          {activeTab === "portal" && (
+            <PortalSection
+              initialSettings={metadata?.portal_sections ? {
+                timeline: metadata.portal_sections.timeline ?? true,
+                contacts: metadata.portal_sections.contacts ?? true,
+                payments: metadata.portal_sections.payments ?? true,
+                contracts: metadata.portal_sections.contracts ?? true,
+                songs: metadata.portal_sections.songs ?? true,
+                files: metadata.portal_sections.files ?? true,
+              } : null}
+            />
+          )}
         </div>
       </div>
     </div>

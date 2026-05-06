@@ -12,7 +12,7 @@ import { PaymentsSection } from './payments-section'
 import { FilesSection } from './files-section'
 import type { PortalData } from './page'
 
-const SECTIONS = [
+const ALL_SECTIONS = [
   { id: 'overview', label: 'Overview', icon: <LayoutDashboard />, subtitle: 'Your details and upcoming events' },
   { id: 'timeline', label: 'Timeline', icon: <Clock />, subtitle: 'Key moments and timing for your day' },
   { id: 'contacts', label: 'Contacts', icon: <Users2 />, subtitle: 'Your wedding party and vendor contacts' },
@@ -28,6 +28,11 @@ interface PortalShellProps {
 }
 
 export function PortalShell({ token, initialData }: PortalShellProps) {
+  const enabledSections = initialData.enabled_sections
+  const SECTIONS = enabledSections === null || enabledSections === undefined
+    ? ALL_SECTIONS
+    : ALL_SECTIONS.filter(s => s.id === 'overview' || enabledSections.includes(s.id))
+
   const [activeSection, setActiveSection] = useState('overview')
   const active = SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0]
 

@@ -113,6 +113,7 @@ export interface PortalData {
     invoices: PortalInvoice[]
   }
   contracts: PortalContract[]
+  enabled_sections: string[] | null
 }
 
 function formatEventDate(dateStr: string): string {
