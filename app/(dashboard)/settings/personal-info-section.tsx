@@ -9,7 +9,14 @@ import { useToast } from '@/components/ui/toast'
 const businessTypeOptions = [
   { value: 'mc', label: 'MC' },
   { value: 'celebrant', label: 'Celebrant' },
+  { value: 'dj', label: 'DJ' },
 ]
+
+function parseBusinessTypes(value: string | string[]): string[] {
+  if (Array.isArray(value)) return value
+  if (!value) return []
+  return [value]
+}
 
 interface PersonalInfoSectionProps {
   initialData: {
@@ -19,7 +26,7 @@ interface PersonalInfoSectionProps {
     website: string
     instagramUrl: string
     facebookUrl: string
-    businessType: string
+    businessType: string | string[]
     mcSignatureName: string
   }
   email: string
@@ -33,12 +40,13 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [phone, setPhone] = useState(initialData.phone)
   const [instagramUrl, setInstagramUrl] = useState(initialData.instagramUrl)
   const [facebookUrl, setFacebookUrl] = useState(initialData.facebookUrl)
-  const [businessType, setBusinessType] = useState(initialData.businessType)
+  const [businessTypes, setBusinessTypes] = useState<string[]>(parseBusinessTypes(initialData.businessType))
   const [businessTypeOpen, setBusinessTypeOpen] = useState(false)
   const [mcSignatureName, setMcSignatureName] = useState(initialData.mcSignatureName)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
+  const initialBusinessTypes = parseBusinessTypes(initialData.businessType)
   const isDirty =
     displayName !== initialData.displayName ||
     emailValue !== email ||
@@ -47,7 +55,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     website !== initialData.website ||
     instagramUrl !== initialData.instagramUrl ||
     facebookUrl !== initialData.facebookUrl ||
-    businessType !== initialData.businessType ||
+    JSON.stringify([...businessTypes].sort()) !== JSON.stringify([...initialBusinessTypes].sort()) ||
     mcSignatureName !== initialData.mcSignatureName
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -72,7 +80,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       website,
       instagram_url: instagramUrl,
       facebook_url: facebookUrl,
-      business_type: businessType,
+      business_type: businessTypes,
       mc_signature_name: mcSignatureName,
     }
 
@@ -104,7 +112,10 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const inputClass =
     'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
 
-  const selectedLabel = businessTypeOptions.find((o) => o.value === businessType)?.label
+  const selectedLabel = businessTypeOptions
+    .filter((o) => businessTypes.includes(o.value))
+    .map((o) => o.label)
+    .join(', ')
 
   return (
     <div className="max-w-2xl">
@@ -154,7 +165,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
                   className={`${inputClass} flex items-center justify-between text-left cursor-pointer`}
                 >
                   <span className={selectedLabel ? 'text-gray-900' : 'text-gray-400'}>
-                    {selectedLabel || 'Select type'}
+                    {selectedLabel || 'Select types'}
                   </span>
                   <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
                 </button>
@@ -165,23 +176,32 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
                   sideOffset={4}
                   align="start"
                 >
-                  {businessTypeOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => {
-                        setBusinessType(option.value)
-                        setBusinessTypeOpen(false)
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm transition cursor-pointer ${
-                        businessType === option.value
-                          ? 'bg-green-50 text-green-700'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+                  {businessTypeOptions.map((option) => {
+                    const checked = businessTypes.includes(option.value)
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setBusinessTypes((prev) =>
+                            checked ? prev.filter((v) => v !== option.value) : [...prev, option.value]
+                          )
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 ${
+                          checked ? 'bg-green-50 text-green-700' : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${checked ? 'bg-green-600 border-green-600' : 'border-gray-300'}`}>
+                          {checked && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                              <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </span>
+                        {option.label}
+                      </button>
+                    )
+                  })}
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>

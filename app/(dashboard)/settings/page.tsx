@@ -26,7 +26,7 @@ interface UserMetadata {
   website?: string;
   instagram_url?: string;
   facebook_url?: string;
-  business_type?: string;
+  business_type?: string | string[];
   subscription_status?: string;
   subscription_plan?: string;
   stripe_customer_id?: string;
