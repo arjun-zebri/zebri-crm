@@ -430,6 +430,94 @@ Note: Event Date and Venue fields are managed exclusively via the Events tab. Th
 
 ---
 
+# Tasks Page
+
+Route: `/tasks`
+
+Notion-style database table for cross-entity task management. Tasks scoped per-couple or per-event are also rendered as embedded sections inside the couple and event profiles using the same `TaskRow` + `TaskSidePanel` primitives, so a redesign here automatically propagates everywhere tasks appear.
+
+## Page header
+
+- Green-circle check icon + page title `Tasks` (text-2xl sm:text-3xl font-semibold)
+- Subtitle: "Stay organized with tasks, your way."
+- Right-aligned `+ New task` primary button on desktop; mobile uses a floating "+" FAB above the bottom nav.
+
+## Toolbar
+
+- Search input (matches title + description)
+- `+ Filter` button → property picker → value picker → adds an inline filter chip. Clickable chips re-open the value picker; the chip's `X` removes that filter.
+- `+ Sort` button works the same way; sort direction toggles by clicking the chip.
+- Filterable properties: Status, Priority, Task type, Couple. Sortable: Due date, Status, Priority, Task name.
+- **Group by** dropdown on the right: Status (default) · Date · Couple · Priority · Custom · None. Selection persists in `localStorage` under key `tasks-group-by`.
+
+## Properties (columns)
+
+Each task row is a grid: gutter | Task name | Status | Due date | Priority | Task type. Cells inline-edit by click — no need to open the side panel:
+
+- **Task name** — click to enter inline text edit; Enter saves, Esc cancels.
+- **Status** — pill picker. Values: `todo`/Not started (gray) · `in_progress`/In progress (blue) · `done`/Done (emerald).
+- **Due date** — date picker popover. Overdue dates render in red.
+- **Priority** — pill picker. `high` (red) · `medium` (amber) · `low` (emerald). Optional.
+- **Task type** — autocomplete popover with create-on-the-fly. Free-form text (`tasks.task_type`); colour assigned deterministically from a 6-colour palette by hashing the value.
+
+The first row of each section renders a column-header strip (`Aa Task name · Status · Due date · Priority · Task type`).
+
+## Hover affordances
+
+- The row gutter shows a hover-revealed checkbox for multi-select (always visible once any task is selected).
+- The title cell shows a hover-revealed `Open` button (with `Maximize2` icon) on the right edge → opens the `TaskSidePanel`.
+- A drag handle appears in the gutter on hover (desktop only).
+- Clicking anywhere else in the row enters that cell's inline edit mode — clicking the row does NOT open the panel.
+
+## Group-by modes
+
+All modes render as collapsible Notion-style section pills: chevron + coloured header pill + count + hover actions (`Palette` colour, `MoreHorizontal` rename/delete for custom groups, `+` add task).
+
+- **Status (default):** Sections per status value (Not started / In progress / Done). Drag a task to a different section to update its `status`.
+- **Date:** Overdue (red) / Today / Upcoming / No date.
+- **Couple:** One section per couple plus Unassigned. Drag updates `related_couple_id`.
+- **Priority:** Sections per priority value plus No priority. Drag updates `priority`.
+- **Custom:** Sections per `task_groups` row plus Ungrouped. Group headers are rename-on-click; recolour via Palette icon; delete via menu. `+ New group` affordance at the bottom.
+- **None:** Flat list ordered by `position`.
+
+In all modes, drag-to-reorder within a section updates `position`.
+
+## Multi-select & bulk actions
+
+- Shift-clicking a row's checkbox extends the selection from the last clicked row to the current one.
+- When ≥ 1 task is selected, a floating `BulkActionsBar` slides up from bottom-centre: count · `Done` · `Date` · `Group` (custom mode only) · `Delete` · clear.
+- `Esc` clears the selection.
+
+## Side panel (peek view)
+
+Triggered by the hover `Open` button on the row. Width 640px on desktop, 760px at `lg` breakpoint, full-screen sheet on mobile. Layout mirrors Notion's peek:
+
+- Large editable title (no border; auto-saves on blur)
+- Property table — Status, Due date, Priority, Task type, Group (if any), Couple — each as a clickable cell, same components as the table inline cells.
+- Notes textarea (auto-saves on blur)
+- Footer: `Delete task` (red).
+- Header: prev / next arrows walk through the visible task list. Esc / backdrop / X close.
+
+## File structure
+
+```
+app/(dashboard)/tasks/
+  page.tsx              — orchestrator: queries, mutations, group-by dispatch, dnd-kit wiring
+  task-types.ts         — Status / Priority enums + pill colour tables + taskTypeColor() hash
+  task-cells.tsx        — inline-edit cells: TitleCell, StatusCell, DueDateCell, PriorityCell, TaskTypeCell
+  task-row.tsx          — table row layout (gutter + cells), hover Open button, multi-select
+  task-side-panel.tsx   — wide peek panel reusing the same property cells
+  group-by-toggle.tsx   — toolbar dropdown
+  group-section.tsx     — collapsible section header + ColumnHeader strip
+  filter-bar.tsx        — Notion-style filter + sort chip bar
+  bulk-actions-bar.tsx  — floating multi-select bar
+  use-task-groups.ts    — react-query hooks for task_groups CRUD
+```
+
+Shared UI: `components/ui/side-panel.tsx`, `components/ui/row-actions-menu.tsx`.
+
+---
+
 # Payments Page
 
 Route: `/payments`

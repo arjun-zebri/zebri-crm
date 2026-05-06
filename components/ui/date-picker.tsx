@@ -11,6 +11,8 @@ interface DatePickerProps {
   className?: string
   /** Render the calendar inline (in-flow below the trigger, no portal) */
   inline?: boolean
+  /** Render only the calendar body without trigger or portal */
+  calendarOnly?: boolean
   disabled?: boolean
 }
 
@@ -76,7 +78,7 @@ function buildCalendarGrid(year: number, month: number): Date[][] {
 
 const DROPDOWN_HEIGHT = 330
 
-export function DatePicker({ value, onChange, placeholder, className, inline, disabled }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
@@ -244,6 +246,11 @@ export function DatePicker({ value, onChange, placeholder, className, inline, di
       )}
     </>
   )
+
+  // ── Calendar-only mode ───────────────────────────────────────────────────
+  if (calendarOnly) {
+    return <div>{calendarBody}</div>
+  }
 
   // ── Inline mode ──────────────────────────────────────────────────────────
   if (inline) {

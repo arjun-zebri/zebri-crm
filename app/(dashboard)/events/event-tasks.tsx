@@ -1,183 +1,75 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { formatRelativeDate } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
-import { CheckSquare, Circle } from 'lucide-react'
-import { TaskModal, TaskFormData } from '@/app/(dashboard)/tasks/task-modal'
+import { Plus } from 'lucide-react'
+import { TaskRow, TaskRowTask } from '@/app/(dashboard)/tasks/task-row'
+import { TaskSidePanel, TaskFieldUpdate } from '@/app/(dashboard)/tasks/task-side-panel'
+import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section'
+import { TaskPriority, STATUS_ORDER } from '@/app/(dashboard)/tasks/task-types'
 
 interface EventTasksProps {
   eventId: string
 }
 
-interface Task {
-  id: string
-  title: string
-  due_date: string | null
-  description?: string | null
-  status: 'todo' | 'in_progress' | 'done'
-}
-
-function groupTasks(tasks: Task[]) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const overdue: Task[] = []
-  const todayTasks: Task[] = []
-  const upcoming: Task[] = []
-  const done: Task[] = []
-
-  for (const task of tasks) {
-    if (task.status === 'done') { done.push(task); continue }
-    if (!task.due_date) { upcoming.push(task); continue }
-    const due = new Date(task.due_date + 'T00:00:00')
-    due.setHours(0, 0, 0, 0)
-    const diff = due.getTime() - today.getTime()
-    if (diff < 0) overdue.push(task)
-    else if (diff === 0) todayTasks.push(task)
-    else upcoming.push(task)
-  }
-  return { overdue, today: todayTasks, upcoming, done }
-}
-
-function TaskRow({
-  task,
-  onToggle,
-  onClick,
-  overdue = false,
-}: {
-  task: Task
-  onToggle: () => void
-  onClick: () => void
-  overdue?: boolean
-}) {
-  return (
-    <div
-      onClick={onClick}
-      className={`flex items-center gap-3 px-1 py-2.5 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer rounded-sm ${
-        overdue ? 'border-l-2 border-l-red-300 pl-3' : ''
-      }`}
-    >
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggle() }}
-        className="shrink-0 text-gray-300 hover:text-gray-600 transition cursor-pointer"
-        title={task.status === 'done' ? 'Mark as outstanding' : 'Mark as done'}
-      >
-        {task.status === 'done' ? (
-          <CheckSquare size={15} strokeWidth={1.5} className="text-emerald-400" />
-        ) : (
-          <Circle size={15} strokeWidth={1.5} />
-        )}
-      </button>
-      <p className={`flex-1 text-sm min-w-0 truncate ${task.status === 'done' ? 'text-gray-300 line-through' : 'text-gray-800'}`}>
-        {task.title}
-      </p>
-      {task.due_date && (
-        <span className={`text-xs shrink-0 ${overdue ? 'text-red-400 font-medium' : 'text-gray-400'}`}>
-          {formatRelativeDate(task.due_date)}
-        </span>
-      )}
-    </div>
-  )
-}
-
-function SectionGroup({
-  label,
-  tasks,
-  onToggle,
-  onTaskClick,
-  overdue = false,
-}: {
-  label: string
-  tasks: Task[]
-  onToggle: (id: string, status: string) => void
-  onTaskClick: (task: Task) => void
-  overdue?: boolean
-}) {
-  if (tasks.length === 0) return null
-  return (
-    <div className="mb-4">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1 px-1">{label}</p>
-      {tasks.map((task) => (
-        <TaskRow
-          key={task.id}
-          task={task}
-          onToggle={() => onToggle(task.id, task.status)}
-          onClick={() => onTaskClick(task)}
-          overdue={overdue}
-        />
-      ))}
-    </div>
-  )
+interface Task extends TaskRowTask {
+  position: number
 }
 
 export function EventTasks({ eventId }: EventTasksProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  const [taskModalOpen, setTaskModalOpen] = useState(false)
-  const [editingTask, setEditingTask] = useState<Task | undefined>()
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['event-tasks', eventId],
     queryFn: async () => {
       const { data: user, error: userError } = await supabase.auth.getUser()
       if (userError || !user.user) throw new Error('Not authenticated')
-
       const { data, error } = await supabase
         .from('tasks')
-        .select('id, title, due_date, description, status')
+        .select(
+          'id, title, due_date, description, status, related_couple_id, group_id, position, priority, task_type'
+        )
         .eq('related_event_id', eventId)
         .eq('user_id', user.user.id)
         .order('due_date', { ascending: true, nullsFirst: false })
-
       if (error) throw error
       return (data as Task[]) || []
     },
   })
 
-  const toggleTask = useMutation({
-    mutationFn: async ({ id, currentStatus }: { id: string; currentStatus: string }) => {
-      const newStatus = currentStatus === 'done' ? 'todo' : 'done'
-      const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', id)
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['event-tasks', eventId] })
+    queryClient.invalidateQueries({ queryKey: ['all-tasks'] })
+  }
+
+  const patchTask = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: TaskFieldUpdate }) => {
+      const { error } = await supabase.from('tasks').update(patch).eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: invalidate,
+  })
+
+  const insertTask = useMutation({
+    mutationFn: async (input: { title: string }) => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+      const { error } = await supabase.from('tasks').insert({
+        title: input.title,
+        status: 'todo',
+        user_id: user.user.id,
+        related_event_id: eventId,
+      })
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event-tasks', eventId] })
-      queryClient.invalidateQueries({ queryKey: ['all-tasks'] })
-    },
-  })
-
-  const saveTask = useMutation({
-    mutationFn: async (data: TaskFormData) => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-
-      if (data.id) {
-        const { error } = await supabase
-          .from('tasks')
-          .update({ title: data.title, due_date: data.due_date, description: data.description })
-          .eq('id', data.id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('tasks').insert({
-          title: data.title,
-          due_date: data.due_date,
-          description: data.description,
-          status: 'todo',
-          user_id: user.user.id,
-          related_event_id: eventId,
-        })
-        if (error) throw error
-      }
-    },
-    onSuccess: (_, data) => {
-      queryClient.invalidateQueries({ queryKey: ['event-tasks', eventId] })
-      queryClient.invalidateQueries({ queryKey: ['all-tasks'] })
-      toast(data.id ? 'Task updated' : 'Task added')
-      setTaskModalOpen(false)
-      setEditingTask(undefined)
+      invalidate()
+      toast('Task added')
     },
   })
 
@@ -187,18 +79,27 @@ export function EventTasks({ eventId }: EventTasksProps) {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event-tasks', eventId] })
-      queryClient.invalidateQueries({ queryKey: ['all-tasks'] })
+      invalidate()
       toast('Task deleted')
-      setTaskModalOpen(false)
-      setEditingTask(undefined)
     },
   })
 
-  const openModal = (task?: Task) => {
-    setEditingTask(task)
-    setTaskModalOpen(true)
-  }
+  const knownTypes = useMemo(() => {
+    const set = new Set<string>()
+    for (const t of tasks || []) if (t.task_type) set.add(t.task_type)
+    return [...set].sort()
+  }, [tasks])
+
+  const knownStatuses = useMemo(() => {
+    const custom = new Set<string>()
+    const base = new Set(STATUS_ORDER as string[])
+    for (const t of tasks ?? []) {
+      if (t.status && !base.has(t.status)) custom.add(t.status)
+    }
+    return [...(STATUS_ORDER as string[]), ...custom]
+  }, [tasks])
+
+  const editingTask = (tasks || []).find((t) => t.id === editingTaskId)
 
   if (isLoading) {
     return (
@@ -210,16 +111,15 @@ export function EventTasks({ eventId }: EventTasksProps) {
     )
   }
 
-  const allTasks = tasks || []
-  const groups = groupTasks(allTasks)
+  const all = tasks || []
 
   return (
     <>
-      {allTasks.length === 0 ? (
+      {all.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-sm text-gray-400 mb-3">No tasks yet.</p>
           <button
-            onClick={() => openModal()}
+            onClick={() => insertTask.mutate({ title: 'Untitled task' })}
             className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add task
@@ -227,47 +127,51 @@ export function EventTasks({ eventId }: EventTasksProps) {
         </div>
       ) : (
         <div>
-          <SectionGroup
-            label="Overdue"
-            tasks={groups.overdue}
-            onToggle={(id, status) => toggleTask.mutate({ id, currentStatus: status })}
-            onTaskClick={openModal}
-            overdue
-          />
-          <SectionGroup
-            label="Today"
-            tasks={groups.today}
-            onToggle={(id, status) => toggleTask.mutate({ id, currentStatus: status })}
-            onTaskClick={openModal}
-          />
-          <SectionGroup
-            label="Upcoming"
-            tasks={groups.upcoming}
-            onToggle={(id, status) => toggleTask.mutate({ id, currentStatus: status })}
-            onTaskClick={openModal}
-          />
-          <SectionGroup
-            label="Done"
-            tasks={groups.done}
-            onToggle={(id, status) => toggleTask.mutate({ id, currentStatus: status })}
-            onTaskClick={openModal}
-          />
+          <ColumnHeader columns={['status', 'due_date', 'priority', 'task_type']} />
+          {all.map((t) => (
+            <TaskRow
+              key={t.id}
+              task={t}
+              knownTypes={knownTypes}
+              knownStatuses={knownStatuses}
+              showCouple={false}
+              onCommitTitle={(title) => patchTask.mutate({ id: t.id, patch: { title } })}
+              onChangeStatus={(status) =>
+                patchTask.mutate({ id: t.id, patch: { status } })
+              }
+              onChangeDueDate={(due_date) =>
+                patchTask.mutate({ id: t.id, patch: { due_date } })
+              }
+              onChangePriority={(priority: TaskPriority | null) =>
+                patchTask.mutate({ id: t.id, patch: { priority } })
+              }
+              onChangeTaskType={(task_type) =>
+                patchTask.mutate({ id: t.id, patch: { task_type } })
+              }
+              onOpen={() => setEditingTaskId(t.id)}
+            />
+          ))}
           <button
-            onClick={() => openModal()}
-            className="mt-2 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
+            onClick={() => insertTask.mutate({ title: 'Untitled task' })}
+            className="w-full flex items-center gap-2 px-2 py-2 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
           >
-            + Add task
+            <Plus size={13} strokeWidth={1.5} />
+            New task
           </button>
         </div>
       )}
 
-      <TaskModal
-        isOpen={taskModalOpen}
-        onClose={() => { setTaskModalOpen(false); setEditingTask(undefined) }}
-        onSave={(data) => saveTask.mutate(data)}
-        onDelete={(id) => deleteTask.mutate(id)}
+      <TaskSidePanel
+        isOpen={!!editingTask}
+        onClose={() => setEditingTaskId(null)}
         task={editingTask}
-        loading={saveTask.isPending || deleteTask.isPending}
+        knownTypes={knownTypes}
+        knownStatuses={knownStatuses}
+        onPatch={(id, patch) => patchTask.mutate({ id, patch })}
+        onDelete={(id) => {
+          deleteTask.mutate(id)
+          setEditingTaskId(null)
+        }}
       />
     </>
   )

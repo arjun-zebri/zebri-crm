@@ -133,10 +133,29 @@ Columns:
 
 id (uuid) title (text) description (text) due_date (date) status (text)
 user_id (uuid) related_event_id (uuid) related_couple_id (uuid) related_contact_id (uuid, nullable, FK to contacts.id)
+group_id (uuid, nullable, FK to task_groups.id, set null on group delete)
+position (integer, not null, default 0) — ordering within a custom group / flat list
+priority (text, nullable) — values: low | medium | high
+task_type (text, nullable) — free-form tag (e.g. "Music", "Logistics"); colour assigned deterministically from a 6-colour palette via name hash
 
-Status values: todo in_progress done
+Status values: todo in_progress done (displayed as "Not started" / "In progress" / "Done")
 
 created_at (timestamp)
+
+------------------------------------------------------------------------
+
+# task_groups
+
+User-defined sections for organising tasks (custom Group-by mode on the tasks page).
+
+Columns:
+
+id (uuid) user_id (uuid, not null, FK to auth.users)
+name (text, not null) color (text, not null, default 'gray') — gray | green | blue | amber | red | purple
+position (integer, not null, default 0) — ordering of groups
+created_at (timestamp)
+
+RLS: Standard user_id = auth.uid() policy for full CRUD.
 
 ------------------------------------------------------------------------
 
@@ -178,7 +197,9 @@ events -> have timeline_items (one-to-many, cascade delete)
 
 timeline_items -> contact (many-to-one, nullable, set null on contact delete)
 
-tasks -> can relate to couple (via tasks.related_couple_id), event (via tasks.related_event_id), or contact (via tasks.related_contact_id)
+tasks -> can relate to couple (via tasks.related_couple_id), event (via tasks.related_event_id), or contact (via tasks.related_contact_id); optionally belong to a custom task_group (FK group_id, set null on group delete)
+
+task_groups -> have many tasks (one-to-many, set null on delete)
 
 quotes -> belong to a couple (FK couple_id); have many quote_items (cascade delete)
 
