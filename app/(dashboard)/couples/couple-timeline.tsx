@@ -104,9 +104,10 @@ function DraggableSidebarCard({ id, children, className, onClick }: {
 
 interface CoupleTimelineProps {
   coupleId: string
+  coupleName?: string
 }
 
-export function CoupleTimeline({ coupleId }: CoupleTimelineProps) {
+export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -275,6 +276,11 @@ export function CoupleTimeline({ coupleId }: CoupleTimelineProps) {
 
   const isLoading = eventsLoading || (!!activeEventId && (itemsLoading || contactsLoading))
   const activeEvent = events.find((e) => e.id === activeEventId) ?? events[0]
+  const exportFilename = [
+    coupleName,
+    activeEvent?.date,
+    'timeline',
+  ].filter(Boolean).join(' - ')
   const unscheduledItems = items.filter((i) => !i.start_time && !i.pending_review)
   const reviewItems = items.filter((i) => i.pending_review)
 
@@ -393,7 +399,7 @@ export function CoupleTimeline({ coupleId }: CoupleTimelineProps) {
             <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 flex-1 min-h-0">
               {/* Left: timeline calendar */}
               <div className="flex-[3] min-w-0">
-                <EventDayCalendar eventId={activeEventId} hideShareLink hideUnscheduled skipDndContext showItemStatus />
+                <EventDayCalendar eventId={activeEventId} hideShareLink hideUnscheduled skipDndContext showItemStatus exportFilename={exportFilename} />
               </div>
 
               {/* Right: unscheduled + to review */}

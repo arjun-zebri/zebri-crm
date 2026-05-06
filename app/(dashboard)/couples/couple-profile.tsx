@@ -573,7 +573,7 @@ export function CoupleProfile({
                 />
               )}
               {activeSection === "timeline" && (
-                <CoupleTimeline coupleId={couple.id} />
+                <CoupleTimeline coupleId={couple.id} coupleName={couple.name} />
               )}
               {activeSection === "songs" && (
                 <McPortalSongs

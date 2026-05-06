@@ -12,6 +12,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import { TimelineItem } from "./events-types";
@@ -326,9 +327,10 @@ interface EventDayCalendarProps {
   hideUnscheduled?: boolean;
   skipDndContext?: boolean;
   showItemStatus?: boolean;
+  exportFilename?: string;
 }
 
-export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skipDndContext, showItemStatus }: EventDayCalendarProps) {
+export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skipDndContext, showItemStatus, exportFilename }: EventDayCalendarProps) {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -615,6 +617,29 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
   const mutating =
     addItem.isPending || updateItem.isPending || deleteItem.isPending;
 
+  const exportCsv = useCallback(() => {
+    const rows = [...items]
+      .sort((a, b) => {
+        if (!a.start_time && !b.start_time) return 0;
+        if (!a.start_time) return 1;
+        if (!b.start_time) return -1;
+        return timeToGridMinutes(a.start_time) - timeToGridMinutes(b.start_time);
+      })
+      .map((item) => {
+        const duration = item.duration_min ? `${item.duration_min} min` : '';
+        const escape = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
+        return [escape(item.start_time ?? ''), escape(item.title), escape(duration), escape(item.description ?? ''), escape(item.contact?.name ?? '')].join(',');
+      });
+    const csv = ['Time,Title,Duration,Notes,Contact', ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${exportFilename || 'timeline'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [items]);
+
   // ── Render ──
 
   if (isLoading) {
@@ -635,16 +660,27 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
           <p className="text-xs text-gray-400">
             Click anywhere on the grid to add an item, or drag to reschedule.
           </p>
-          <button
-            onClick={() => {
-              setEditingItem(null);
-              setClickTime("");
-              setShowModal(true);
-            }}
-            className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer flex-shrink-0 ml-4"
-          >
-            + Add item
-          </button>
+          <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+            {items.length > 0 && (
+              <button
+                onClick={exportCsv}
+                className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Download size={12} strokeWidth={1.5} />
+                Export
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setEditingItem(null);
+                setClickTime("");
+                setShowModal(true);
+              }}
+              className="text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+            >
+              + Add item
+            </button>
+          </div>
         </div>
 
         {/* Grid + unscheduled side by side */}
