@@ -16,6 +16,8 @@ import {
   CheckSquare,
   CreditCard,
   Shield,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -35,9 +37,11 @@ const bottomItems = [
 interface SidebarProps {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  isExpanded: boolean;
+  onToggle: () => void;
 }
 
-export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
+export function Sidebar({ mobileOpen, onMobileClose, isExpanded, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -74,10 +78,12 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       />
 
       <aside
-        className={`group/sidebar fixed top-0 left-0 h-screen w-[280px] md:w-[68px] md:hover:w-60 border-r border-gray-200 bg-white flex flex-col transition-all duration-300 ease-in-out z-50 overflow-hidden ${
+        className={`fixed top-0 left-0 h-screen w-[280px] ${isExpanded ? "md:w-60" : "md:w-[68px]"} border-r border-gray-200 bg-white flex flex-col transition-all duration-300 ease-in-out z-50 overflow-visible ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0`}
       >
+        {/* Inner clip wrapper keeps text from overflowing when collapsed */}
+        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <Link
           href="/"
           onClick={onMobileClose}
@@ -110,7 +116,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 }`}
               >
                 <Icon size={22} strokeWidth={1.5} className="flex-shrink-0" />
-                <span className="opacity-100 md:opacity-0 md:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-[14px]">
+                <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[14px]`}>
                   {item.label}
                 </span>
               </Link>
@@ -141,7 +147,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                   }`}
                 >
                   <Icon size={22} strokeWidth={1.5} className="flex-shrink-0" />
-                  <span className="opacity-100 md:opacity-0 md:group-hover/sidebar:opacity-100 transition-opacity duration-300 text-[14px]">
+                  <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[14px]`}>
                     {item.label}
                   </span>
                 </Link>
@@ -150,14 +156,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
             {user && (
               <div className="flex items-center px-[10px] py-2.5 rounded-xl">
-                <div className="opacity-100 md:opacity-0 md:group-hover/sidebar:opacity-100 transition-opacity duration-300 min-w-0 flex-1">
+                <div className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 min-w-0 flex-1`}>
                   <div className="text-[14px] font-medium truncate">{displayName}</div>
                   <div className="text-[12px] text-gray-600 truncate">{email}</div>
                 </div>
                 <button
                   onClick={handleSignOut}
                   disabled={signingOut}
-                  className="flex-shrink-0 text-gray-500 hover:text-gray-900 transition disabled:opacity-50 cursor-pointer ml-3 md:ml-auto md:group-hover/sidebar:ml-3"
+                  className={`flex-shrink-0 text-gray-500 hover:text-gray-900 transition disabled:opacity-50 cursor-pointer ${isExpanded ? "ml-3" : "md:ml-auto ml-3"}`}
                 >
                   <LogOut size={22} strokeWidth={1.5} />
                 </button>
@@ -165,6 +171,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             )}
           </div>
         </div>
+        </div>{/* end inner clip wrapper */}
+
+        <button
+          onClick={onToggle}
+          className="hidden md:flex absolute top-1/2 -translate-y-1/2 -right-3.5 z-10 items-center justify-center w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-400 hover:text-gray-700 shadow-sm transition"
+        >
+          {isExpanded ? <ChevronLeft size={14} strokeWidth={2} /> : <ChevronRight size={14} strokeWidth={2} />}
+        </button>
       </aside>
     </>
   );
