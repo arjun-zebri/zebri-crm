@@ -36,6 +36,7 @@ import {
 } from "./couples-types";
 import { useCoupleStatuses } from "./use-couple-statuses";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { getOpenModalDepth } from "@/components/ui/modal";
 import { CoupleOverview } from "./couple-overview";
 import { CoupleTasks } from "./couple-tasks";
 import { CouplePayments } from "./couple-payments";
@@ -183,7 +184,7 @@ export function CoupleProfile({
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && getOpenModalDepth() === 0) onClose();
     };
     if (couple) {
       document.addEventListener("keydown", handleEscape);

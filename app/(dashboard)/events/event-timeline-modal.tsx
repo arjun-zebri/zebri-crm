@@ -24,6 +24,7 @@ interface EventTimelineModalProps {
   initialTime?: string
   eventContacts: EventContact[]
   loading: boolean
+  showStatus?: boolean
 }
 
 // ─── Custom time picker ──────────────────────────────────────────────────────
@@ -145,6 +146,7 @@ export function EventTimelineModal({
   initialTime = '',
   eventContacts,
   loading,
+  showStatus,
 }: EventTimelineModalProps) {
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -152,6 +154,7 @@ export function EventTimelineModal({
   const [description, setDescription] = useState('')
   const [contactId, setContactId] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [statusSelection, setStatusSelection] = useState<'timeline' | 'unscheduled' | 'review'>('timeline')
 
   useEffect(() => {
     if (isOpen) {
@@ -167,6 +170,7 @@ export function EventTimelineModal({
       setDescription(item?.description ?? '')
       setContactId(item?.contact_id ?? '')
       setDeleteConfirm(false)
+      setStatusSelection(item?.pending_review ? 'review' : item?.start_time ? 'timeline' : 'unscheduled')
     }
   }, [item, isOpen])
 
@@ -181,18 +185,30 @@ export function EventTimelineModal({
     setStartTime(val)
   }
 
+  const handleStatusChange = (s: 'timeline' | 'unscheduled' | 'review') => {
+    setStatusSelection(s)
+    if (s === 'unscheduled') {
+      setStartTime('')
+      setEndTime('')
+    }
+  }
+
   const handleSave = () => {
     if (!title.trim()) return
-    const durationMin = startTime && endTime
-      ? Math.max(15, timeToMinutes(endTime) - timeToMinutes(startTime))
+    const isUnscheduledStatus = showStatus && statusSelection === 'unscheduled'
+    const effectiveStart = isUnscheduledStatus ? '' : startTime
+    const effectiveEnd = isUnscheduledStatus ? '' : endTime
+    const durationMin = effectiveStart && effectiveEnd
+      ? Math.max(15, timeToMinutes(effectiveEnd) - timeToMinutes(effectiveStart))
       : null
     onSave({
-      start_time: startTime || null,
+      start_time: effectiveStart || null,
       title: title.trim(),
       description: description.trim() || null,
       duration_min: durationMin,
       contact_id: contactId || null,
       position: item?.position ?? 1000,
+      ...(showStatus ? { pending_review: statusSelection === 'review' } : {}),
     })
   }
 
@@ -246,7 +262,31 @@ export function EventTimelineModal({
       }
     >
       <div className="space-y-4">
-        <div className="flex items-end gap-3">
+        {showStatus && item && (
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Status</label>
+            <div className="flex border border-gray-200 rounded-xl overflow-hidden">
+              {(['timeline', 'unscheduled', 'review'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => handleStatusChange(s)}
+                  className={`flex-1 text-xs py-2 transition cursor-pointer ${
+                    statusSelection === s
+                      ? s === 'review'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {s === 'timeline' ? 'Timeline' : s === 'unscheduled' ? 'Unscheduled' : 'To Review'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className={`flex items-end gap-3 ${showStatus && statusSelection === 'unscheduled' ? 'opacity-40 pointer-events-none' : ''}`}>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5">From</label>
             <TimePicker value={startTime} onChange={handleStartChange} />

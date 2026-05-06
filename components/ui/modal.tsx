@@ -3,6 +3,15 @@
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 
+// Tracks how many Modal instances are currently open so only the topmost
+// one responds to Escape — prevents nested modals from closing their parent.
+let _openModalDepth = 0
+
+/** Returns the number of Modal instances currently open. Use this in custom
+ *  overlays that manage their own Escape handler to skip closing when a nested
+ *  Modal is on top. */
+export function getOpenModalDepth() { return _openModalDepth }
+
 interface ModalProps {
   isOpen: boolean
   onClose: () => void
@@ -18,16 +27,18 @@ export function Modal({ isOpen, onClose, title, children, footer, headerActions,
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
+    if (!isOpen) return
+    _openModalDepth++
+    const myDepth = _openModalDepth
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && _openModalDepth === myDepth) onClose()
     }
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape)
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.removeEventListener('keydown', handleEscape)
-        document.body.style.overflow = 'unset'
-      }
+    document.addEventListener('keydown', handleEscape)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      _openModalDepth--
+      if (_openModalDepth === 0) document.body.style.overflow = 'unset'
     }
   }, [isOpen, onClose])
 

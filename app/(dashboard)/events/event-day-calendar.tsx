@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   useDraggable,
+  useDroppable,
+  useDndMonitor,
   DragEndEvent,
   PointerSensor,
   useSensor,
@@ -17,7 +19,7 @@ import { CATEGORY_LABELS } from "../contacts/contacts-types";
 import { EventTimelineModal } from "./event-timeline-modal";
 import { EventTimelineShare } from "./event-timeline-share";
 
-const HOUR_HEIGHT = 80; // px per hour
+const HOUR_HEIGHT = 120; // px per hour
 const MIN_PX = HOUR_HEIGHT / 60;
 const SNAP_MIN = 15;
 const GRID_OFFSET = 6 * 60; // grid starts at 6am (360 min from midnight)
@@ -114,9 +116,10 @@ interface DraggableEventProps {
   totalCols: number;
   onEdit: (item: TimelineItem) => void;
   onResize: (id: string, newDuration: number) => void;
+  hasOverlay?: boolean;
 }
 
-function DraggableEvent({ item, col, totalCols, onEdit, onResize }: DraggableEventProps) {
+function DraggableEvent({ item, col, totalCols, onEdit, onResize, hasOverlay }: DraggableEventProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: item.id,
@@ -197,7 +200,7 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize }: DraggableEve
       }}
       className={`rounded-xl border select-none transition-shadow ${
         isDragging
-          ? "shadow-2xl border-gray-400 ring-2 ring-gray-200 opacity-90"
+          ? hasOverlay ? "opacity-0" : "shadow-2xl border-gray-400 ring-2 ring-gray-200 opacity-90"
           : item.pending_review
           ? "border-dashed border-amber-300 shadow-sm cursor-grab active:cursor-grabbing opacity-60"
           : "border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300 cursor-grab active:cursor-grabbing"
@@ -227,6 +230,9 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize }: DraggableEve
         {heightPx > 65 && (
           <p className="text-xs text-gray-400 mt-0.5">{liveDuration} min</p>
         )}
+        {heightPx > 85 && item.description && (
+          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{item.description}</p>
+        )}
       </div>
 
       {/* Resize handle */}
@@ -241,19 +247,92 @@ function DraggableEvent({ item, col, totalCols, onEdit, onResize }: DraggableEve
   );
 }
 
+// ─── Conditional DndContext wrapper ──────────────────────────────────────────
+
+function MaybeDndContext({ skip, sensors, onDragStart, onDragEnd, children }: {
+  skip?: boolean;
+  sensors: ReturnType<typeof useSensors>;
+  onDragStart: () => void;
+  onDragEnd: (e: DragEndEvent) => void;
+  children: ReactNode;
+}) {
+  if (skip) return <>{children}</>;
+  return (
+    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+      {children}
+    </DndContext>
+  );
+}
+
+// ─── Calendar DnD monitor (used when DndContext lives in a parent) ────────────
+
+interface CalendarDndMonitorProps {
+  items: TimelineItem[];
+  onReposition: (id: string, newTime: string) => void;
+  onSchedule: (id: string, newTime: string) => void;
+  isDraggingRef: { current: boolean };
+  scrollContainerRef: { readonly current: HTMLDivElement | null };
+}
+
+function CalendarDndMonitor({ items, onReposition, onSchedule, isDraggingRef, scrollContainerRef }: CalendarDndMonitorProps) {
+  useDndMonitor({
+    onDragStart() { isDraggingRef.current = true; },
+    onDragCancel() { isDraggingRef.current = false; },
+    onDragEnd(event) {
+      isDraggingRef.current = false;
+      const { active, over, delta } = event;
+
+      // Sidebar card dropped onto the calendar grid — schedule it at drop position
+      if (over?.id === 'calendar-grid') {
+        const item = items.find((i) => i.id === active.id);
+        if (!item) return;
+        const translated = active.rect.current.translated;
+        if (!translated) return;
+        const dropY = Math.max(0, translated.top - over.rect.top);
+        const newTime = gridMinutesToTime(dropY / MIN_PX);
+        onSchedule(item.id, newTime);
+        return;
+      }
+
+      if (over !== null) return; // parent DndContext handles section drops
+      const item = items.find((i) => i.id === active.id);
+      if (!item?.start_time) return;
+
+      const minutesDelta = delta.y / MIN_PX;
+      const newTime = gridMinutesToTime(timeToGridMinutes(item.start_time) + minutesDelta);
+      if (newTime === item.start_time) return;
+      onReposition(item.id, newTime);
+
+      if (scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const itemTopPx = timeToGridMinutes(newTime) * MIN_PX;
+        const itemBottomPx = itemTopPx + (item.duration_min ?? 60) * MIN_PX;
+        if (itemTopPx < container.scrollTop) {
+          container.scrollTop = Math.max(0, itemTopPx - 20);
+        } else if (itemBottomPx > container.scrollTop + container.clientHeight) {
+          container.scrollTop = Math.max(0, itemBottomPx - container.clientHeight + 20);
+        }
+      }
+    },
+  });
+  return null;
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 interface EventDayCalendarProps {
   eventId: string;
   hideShareLink?: boolean;
   hideUnscheduled?: boolean;
+  skipDndContext?: boolean;
+  showItemStatus?: boolean;
 }
 
-export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled }: EventDayCalendarProps) {
+export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skipDndContext, showItemStatus }: EventDayCalendarProps) {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const gridRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
 
@@ -264,6 +343,11 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled }: Ev
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
+
+  const { setNodeRef: setCalendarDropRef } = useDroppable({
+    id: 'calendar-grid',
+    disabled: !skipDndContext,
+  });
 
   // Grid starts at 6am — scroll to top on mount
   useEffect(() => {
@@ -352,8 +436,8 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled }: Ev
     },
   });
 
-  const timedItems = items.filter((i) => i.start_time);
-  const untimedItems = items.filter((i) => !i.start_time);
+  const timedItems = items.filter((i) => i.start_time && !i.pending_review);
+  const untimedItems = items.filter((i) => !i.start_time && !i.pending_review);
 
   // ── Mutations ──
 
@@ -566,18 +650,39 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled }: Ev
         {/* Grid + unscheduled side by side */}
         <div className="flex gap-3 flex-1 min-h-0">
           {/* Scrollable grid container */}
+          {skipDndContext && (
+            <CalendarDndMonitor
+              items={items}
+              onReposition={(id, newTime) => {
+                queryClient.setQueryData(
+                  ["event-timeline", eventId],
+                  (old: TimelineItem[] = []) =>
+                    old.map((i) => (i.id === id ? { ...i, start_time: newTime } : i))
+                );
+                updateItem.mutate({ id, start_time: newTime });
+              }}
+              onSchedule={(id, newTime) => {
+                queryClient.setQueryData(
+                  ["event-timeline", eventId],
+                  (old: TimelineItem[] = []) =>
+                    old.map((i) => i.id === id ? { ...i, start_time: newTime, pending_review: false } : i)
+                );
+                updateItem.mutate({ id, start_time: newTime, pending_review: false });
+              }}
+              isDraggingRef={isDraggingRef}
+              scrollContainerRef={scrollContainerRef}
+            />
+          )}
           <div
             ref={scrollContainerRef}
             className="flex-1 min-h-0 overflow-y-auto border border-gray-200 rounded-xl bg-white min-w-0"
           >
-            <DndContext
+            <MaybeDndContext
+              skip={skipDndContext}
               sensors={sensors}
-              onDragStart={() => {
-                isDraggingRef.current = true;
-              }}
+              onDragStart={() => { isDraggingRef.current = true; }}
               onDragEnd={handleDragEnd}
             >
-              {/* Padding wrapper — no position:relative so absolute event coords are unaffected */}
               <div className="pt-4 pb-6">
                 <div className="flex select-none">
                   {/* Hour labels */}
@@ -600,7 +705,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled }: Ev
 
                   {/* Grid + events */}
                   <div
-                    ref={gridRef}
+                    ref={(el) => { gridRef.current = el; setCalendarDropRef(el); }}
                     className="flex-1 relative border-l border-gray-200 cursor-crosshair"
                     style={{ height: TOTAL_HEIGHT }}
                     onClick={handleGridClick}
@@ -640,6 +745,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled }: Ev
                               setShowModal(true);
                             }}
                             onResize={handleResize}
+                            hasOverlay={skipDndContext}
                           />
                         );
                       });
@@ -647,7 +753,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled }: Ev
                   </div>
                 </div>
               </div>
-            </DndContext>
+            </MaybeDndContext>
           </div>
 
           {/* Unscheduled items — right column */}
@@ -721,6 +827,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled }: Ev
         initialTime={clickTime}
         eventContacts={eventContacts}
         loading={mutating}
+        showStatus={showItemStatus}
       />
     </>
   );
