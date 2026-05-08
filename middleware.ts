@@ -108,24 +108,12 @@ export async function middleware(request: NextRequest) {
     !pathname.startsWith("/api/stripe") &&
     !pathname.startsWith("/api/alerts")
   ) {
-    const metadata = user.user_metadata || {};
-
-    const subscriptionStatus = metadata.subscription_status;
-    const trialEnd = metadata.trial_end;
-    const subscriptionEnd = metadata.subscription_end;
-
-    const now = new Date().getTime();
-    const trialEndTime = trialEnd ? new Date(trialEnd).getTime() : 0;
-    const subscriptionEndTime = subscriptionEnd
-      ? new Date(subscriptionEnd).getTime()
-      : 0;
-
-    const hasAccess =
-      (subscriptionStatus === "trialing" && trialEndTime > now) ||
-      subscriptionStatus === "active" ||
-      (subscriptionStatus === "cancelled" && subscriptionEndTime > now);
-
-    if (!hasAccess) {
+    // Starter (free) is a real long-term state. Everyone gets in except
+    // users with a failed recurring charge — they need to update their
+    // payment method. Feature limits (e.g. 5-couple cap on Starter) are
+    // enforced at the data layer, not here.
+    const subscriptionStatus = (user.user_metadata || {}).subscription_status;
+    if (subscriptionStatus === "past_due") {
       return withCookies(
         response,
         NextResponse.redirect(new URL("/settings?tab=billing", request.url))

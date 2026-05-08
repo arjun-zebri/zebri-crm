@@ -14,13 +14,20 @@ export async function POST(request: NextRequest) {
 
     const { plan } = await request.json() as { plan: 'pro' | 'max' }
 
-    const priceId =
-      plan === 'max'
+    const isBeta = user.user_metadata?.is_beta_user === true
+    const priceId = isBeta
+      ? process.env.STRIPE_BETA_PRICE_ID
+      : plan === 'max'
         ? process.env.STRIPE_MAX_PRICE_ID
         : process.env.STRIPE_PRO_PRICE_ID
 
     if (!priceId) {
-      console.error(`Missing env var: ${plan === 'max' ? 'STRIPE_MAX_PRICE_ID' : 'STRIPE_PRO_PRICE_ID'}`)
+      const missing = isBeta
+        ? 'STRIPE_BETA_PRICE_ID'
+        : plan === 'max'
+          ? 'STRIPE_MAX_PRICE_ID'
+          : 'STRIPE_PRO_PRICE_ID'
+      console.error(`Missing env var: ${missing}`)
       return NextResponse.json({ error: 'Plan not configured' }, { status: 500 })
     }
 
@@ -28,18 +35,28 @@ export async function POST(request: NextRequest) {
 
     // Resolve or create the Stripe customer up-front so the
     // stripe_customers lookup row exists before any webhook fires.
+    const adminClient = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     let customerId = user.user_metadata?.stripe_customer_id as string | undefined
+    if (!customerId) {
+      // Reuse any existing lookup row (e.g. from an abandoned checkout) so
+      // we never create more than one Stripe customer per user.
+      const { data: existing } = await adminClient
+        .from('stripe_customers')
+        .select('stripe_customer_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      customerId = (existing?.stripe_customer_id as string | undefined) ?? undefined
+    }
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: { supabase_user_id: user.id },
       })
       customerId = customer.id
-
-      const adminClient = createAdminClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
       await adminClient
         .from('stripe_customers')
         .upsert(
@@ -48,12 +65,34 @@ export async function POST(request: NextRequest) {
         )
     }
 
+    // Persist on the auth user so the next checkout attempt (e.g. if the
+    // user abandons Stripe Checkout) doesn't create another customer.
+    if (user.user_metadata?.stripe_customer_id !== customerId) {
+      await adminClient.auth.admin.updateUserById(user.id, {
+        user_metadata: {
+          ...(user.user_metadata ?? {}),
+          stripe_customer_id: customerId,
+        },
+      })
+    }
+
+    // Honor any remaining trial from signup so the user doesn't get a
+    // fresh 14 days on top of what they already have. If their signup
+    // trial has already expired, no Stripe trial is granted.
+    const existingTrialEnd = user.user_metadata?.trial_end as string | undefined
+    let trialDays: number | undefined = 14
+    if (existingTrialEnd) {
+      const remainingMs = new Date(existingTrialEnd).getTime() - Date.now()
+      const remainingDays = Math.ceil(remainingMs / 86_400_000)
+      trialDays = remainingDays > 0 ? remainingDays : undefined
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        trial_period_days: 14,
+        ...(trialDays ? { trial_period_days: trialDays } : {}),
         metadata: {
           supabase_user_id: user.id,
           plan,

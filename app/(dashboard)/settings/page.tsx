@@ -33,6 +33,9 @@ interface UserMetadata {
   stripe_customer_id?: string;
   trial_end?: string;
   subscription_end?: string;
+  cancel_at_period_end?: boolean;
+  is_subscribed?: boolean;
+  is_comped?: boolean;
   email_preferences?: EmailPreferencesData;
   bank_account_name?: string;
   bank_bsb?: string;
@@ -197,6 +200,9 @@ function SettingsContent() {
               subscriptionEnd={metadata?.subscription_end || null}
               subscriptionPlan={metadata?.subscription_plan || null}
               hasStripeCustomer={!!metadata?.stripe_customer_id}
+              cancelAtPeriodEnd={!!metadata?.cancel_at_period_end}
+              isSubscribed={!!metadata?.is_subscribed}
+              isComped={!!metadata?.is_comped}
             />
           )}
           {activeTab === "payments" && (

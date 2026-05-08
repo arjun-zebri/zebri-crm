@@ -29,37 +29,50 @@ export interface AdminUser {
   stripe_subscription_id: string | null;
   trial_end: string | null;
   subscription_end: string | null;
+  cancel_at_period_end: boolean;
   is_subscribed: boolean;
   is_beta_user: boolean;
+  is_comped: boolean;
   created_at: string;
   last_sign_in_at: string | null;
 }
 
 export async function listUsersWithSubscription(): Promise<AdminUser[]> {
   const admin = adminClient();
-  const { data, error } = await admin.auth.admin.listUsers({ perPage: 1000 });
-  if (error) throw error;
-
-  return (data.users ?? []).map((u) => {
-    const m = u.user_metadata ?? {};
-    return {
-      id: u.id,
-      email: u.email ?? "",
-      display_name: (m.display_name as string) ?? "",
-      business_name: (m.business_name as string) ?? "",
-      account_type: ((m.account_type as string) ?? "vendor") as "vendor" | "admin",
-      subscription_status: (m.subscription_status as SubscriptionStatus) ?? null,
-      subscription_plan: (m.subscription_plan as "pro" | "max" | null) ?? null,
-      stripe_customer_id: (m.stripe_customer_id as string) ?? null,
-      stripe_subscription_id: (m.stripe_subscription_id as string) ?? null,
-      trial_end: (m.trial_end as string) ?? null,
-      subscription_end: (m.subscription_end as string) ?? null,
-      is_subscribed: Boolean(m.is_subscribed),
-      is_beta_user: Boolean(m.is_beta_user),
-      created_at: u.created_at,
-      last_sign_in_at: u.last_sign_in_at ?? null,
-    };
-  });
+  const all: AdminUser[] = [];
+  // Paginate beyond the 1000-row API cap so MRR / counts don't silently
+  // truncate as the platform grows.
+  let page = 1;
+  for (;;) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    const users = data.users ?? [];
+    for (const u of users) {
+      const m = u.user_metadata ?? {};
+      all.push({
+        id: u.id,
+        email: u.email ?? "",
+        display_name: (m.display_name as string) ?? "",
+        business_name: (m.business_name as string) ?? "",
+        account_type: ((m.account_type as string) ?? "vendor") as "vendor" | "admin",
+        subscription_status: (m.subscription_status as SubscriptionStatus) ?? null,
+        subscription_plan: (m.subscription_plan as "pro" | "max" | null) ?? null,
+        stripe_customer_id: (m.stripe_customer_id as string) ?? null,
+        stripe_subscription_id: (m.stripe_subscription_id as string) ?? null,
+        trial_end: (m.trial_end as string) ?? null,
+        subscription_end: (m.subscription_end as string) ?? null,
+        cancel_at_period_end: Boolean(m.cancel_at_period_end),
+        is_subscribed: Boolean(m.is_subscribed),
+        is_beta_user: Boolean(m.is_beta_user),
+        is_comped: Boolean(m.is_comped),
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at ?? null,
+      });
+    }
+    if (users.length < 1000) break;
+    page++;
+  }
+  return all;
 }
 
 export interface UserAnalytics {
@@ -130,8 +143,11 @@ export async function getGlobalStats(): Promise<GlobalStats> {
   };
   const planDistribution = { starter: 0, pro: 0, max: 0 };
 
-  let usersWhoEverTrialed = 0;
-  let usersWhoConverted = 0;
+  // Trial → paid conversion is meaningful only over completed trials.
+  // Denominator: users whose trial_end is in the past. Numerator: subset
+  // who became real paying customers (have a Stripe subscription on file).
+  let trialsCompleted = 0;
+  let trialsConverted = 0;
 
   const now = Date.now();
   const week = now - 7 * 24 * 60 * 60 * 1000;
@@ -149,16 +165,22 @@ export async function getGlobalStats(): Promise<GlobalStats> {
       else if (u.subscription_plan === "max") planDistribution.max++;
       else planDistribution.starter++;
 
-      if (u.subscription_plan && PLAN_PRICE[u.subscription_plan]) {
+      // MRR counts only real paying customers — exclude comped accounts
+      // and beta users (lifetime discount price, not the standard plan price).
+      const isPaying = !u.is_comped && !u.is_beta_user && !!u.stripe_subscription_id;
+      if (isPaying && u.subscription_plan && PLAN_PRICE[u.subscription_plan]) {
         health.mrr += PLAN_PRICE[u.subscription_plan];
       }
     } else {
       planDistribution.starter++;
     }
 
-    if (u.trial_end) usersWhoEverTrialed++;
-    if (u.trial_end && u.stripe_customer_id && u.subscription_status === "active") {
-      usersWhoConverted++;
+    if (u.trial_end) {
+      const trialEndedMs = new Date(u.trial_end).getTime();
+      if (trialEndedMs < now) {
+        trialsCompleted++;
+        if (u.stripe_subscription_id) trialsConverted++;
+      }
     }
 
     const created = new Date(u.created_at).getTime();
@@ -180,7 +202,7 @@ export async function getGlobalStats(): Promise<GlobalStats> {
       signupsThisWeek,
       signupsThisMonth,
       allTime: users.length,
-      trialToPaidRate: usersWhoEverTrialed > 0 ? usersWhoConverted / usersWhoEverTrialed : 0,
+      trialToPaidRate: trialsCompleted > 0 ? trialsConverted / trialsCompleted : 0,
     },
     activity: {
       couples: couples.count ?? 0,

@@ -61,6 +61,17 @@ export async function extendTrial(userId: string, newTrialEndISO: string) {
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
   const currentStatus = existing.user?.user_metadata?.subscription_status as string | undefined;
+  const subId = existing.user?.user_metadata?.stripe_subscription_id as string | undefined;
+
+  // Push the new trial_end to Stripe first so it drives the schedule.
+  // Otherwise Stripe charges the card on the original trial end date and
+  // the next webhook overwrites our metadata extension.
+  if (subId) {
+    const trialEndUnix = Math.floor(new Date(newTrialEndISO).getTime() / 1000);
+    await stripe.subscriptions.update(subId, { trial_end: trialEndUnix });
+    // Webhook will sync trial_end + status back, but patch eagerly so the
+    // admin UI updates immediately.
+  }
 
   const patch: Record<string, unknown> = { trial_end: newTrialEndISO };
   if (currentStatus === "expired" || currentStatus === "cancelled" || !currentStatus) {
@@ -73,11 +84,31 @@ export async function extendTrial(userId: string, newTrialEndISO: string) {
 
 export async function compUser(userId: string, plan: "pro" | "max") {
   await assertAdmin();
+  const admin = createAdminClient();
+  const { data: existing } = await admin.auth.admin.getUserById(userId);
+  const subId = existing.user?.user_metadata?.stripe_subscription_id as string | undefined;
+
+  // Cancel any live Stripe subscription so the user isn't double-billed
+  // while we mark them as comped.
+  if (subId) {
+    try {
+      await stripe.subscriptions.cancel(subId);
+    } catch (e) {
+      console.error("[compUser] failed to cancel Stripe subscription", e);
+    }
+  }
+
+  // Use a dedicated is_comped flag — never set is_beta_user, which would
+  // route the user to STRIPE_BETA_PRICE_ID (lifetime discount) on any
+  // future self-subscribe.
   await patchUserMetadata(userId, {
     subscription_status: "active",
     is_subscribed: true,
     subscription_plan: plan,
-    is_beta_user: true,
+    is_comped: true,
+    stripe_subscription_id: null,
+    cancel_at_period_end: false,
+    subscription_end: null,
   });
   revalidatePath("/admin");
 }
@@ -148,6 +179,28 @@ export async function deleteUser(userId: string) {
   if (adminUser.id === userId) throw new Error("Cannot delete yourself");
 
   const admin = createAdminClient();
+  const { data: existing } = await admin.auth.admin.getUserById(userId);
+  const customerId = existing.user?.user_metadata?.stripe_customer_id as string | undefined;
+  const subId = existing.user?.user_metadata?.stripe_subscription_id as string | undefined;
+
+  // Stop billing in Stripe before tearing down the auth user. Cascade on
+  // stripe_customers FK will remove our lookup row, so any later webhooks
+  // for this customer would otherwise be unresolvable.
+  if (subId) {
+    try {
+      await stripe.subscriptions.cancel(subId);
+    } catch (e) {
+      console.error("[deleteUser] stripe sub cancel failed", e);
+    }
+  }
+  if (customerId) {
+    try {
+      await stripe.customers.del(customerId);
+    } catch (e) {
+      console.error("[deleteUser] stripe customer del failed", e);
+    }
+  }
+
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) throw error;
   revalidatePath("/admin");

@@ -28,6 +28,13 @@ export function useCouples() {
   return { ...query, data: query.data || [] }
 }
 
+export class StarterLimitError extends Error {
+  constructor() {
+    super("You've hit the 5-couple limit on Starter. Upgrade to Pro or Max for unlimited couples.")
+    this.name = 'StarterLimitError'
+  }
+}
+
 export function useCreateCouple() {
   const queryClient = useQueryClient()
   const supabase = createClient()
@@ -45,7 +52,12 @@ export function useCreateCouple() {
         })
         .select()
 
-      if (error) throw error
+      if (error) {
+        if (error.message?.includes('STARTER_COUPLE_LIMIT')) {
+          throw new StarterLimitError()
+        }
+        throw error
+      }
       return data[0] as Couple
     },
     onSuccess: () => {

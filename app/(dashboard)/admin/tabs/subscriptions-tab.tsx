@@ -26,6 +26,8 @@ function formatDate(iso: string | null) {
 
 function mrrFor(user: AdminUser) {
   if (user.subscription_status !== "active" || !user.subscription_plan) return 0;
+  // Comped and beta users don't pay the standard plan price.
+  if (user.is_comped || user.is_beta_user || !user.stripe_subscription_id) return 0;
   return PLAN_PRICE[user.subscription_plan] ?? 0;
 }
 

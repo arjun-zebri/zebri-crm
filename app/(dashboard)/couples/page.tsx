@@ -12,6 +12,7 @@ import {
   useBulkMoveCouples,
   useBulkUpdateCouplesStatus,
   useBulkDeleteCouples,
+  StarterLimitError,
 } from "./use-couples";
 import { useCoupleStatuses } from "./use-couple-statuses";
 import { CouplesHeader } from "./couples-header";
@@ -150,9 +151,18 @@ function CouplesPageContent() {
       .map((c) => c.kanban_position ?? 0);
     const nextPosition =
       positionsInStatus.length > 0 ? Math.max(...positionsInStatus) + 1 : 0;
-    await createCouple.mutateAsync({ ...data, kanban_position: nextPosition });
-    toast("Couple added");
-    setAddModalOpen(false);
+    try {
+      await createCouple.mutateAsync({ ...data, kanban_position: nextPosition });
+      toast("Couple added");
+      setAddModalOpen(false);
+    } catch (e) {
+      if (e instanceof StarterLimitError) {
+        toast(e.message, "error");
+        router.push("/settings?tab=billing");
+        return;
+      }
+      toast(e instanceof Error ? e.message : "Failed to add couple", "error");
+    }
   };
 
   const handleUpdateCouple = async (

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Check, X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Check, X, Loader2, AlertCircle, CheckCircle2, ExternalLink, Download } from 'lucide-react'
 import { useToast } from '@/components/ui/toast'
 
 interface BillingSectionProps {
@@ -11,6 +11,9 @@ interface BillingSectionProps {
   subscriptionEnd: string | null
   subscriptionPlan: string | null
   hasStripeCustomer: boolean
+  cancelAtPeriodEnd: boolean
+  isSubscribed: boolean
+  isComped: boolean
 }
 
 type PlanId = 'starter' | 'pro' | 'max'
@@ -114,11 +117,149 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+function formatUnixDate(unix: number) {
+  return new Date(unix * 1000).toLocaleDateString('en-AU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+interface BillingInvoice {
+  id: string
+  number: string | null
+  status: string | null
+  amount: number
+  created: number
+  hostedUrl: string | null
+  pdfUrl: string | null
+}
+
+interface BillingUpcoming {
+  amount: number
+  nextChargeAt: number
+}
+
+function BillingHistory() {
+  const [invoices, setInvoices] = useState<BillingInvoice[] | null>(null)
+  const [upcoming, setUpcoming] = useState<BillingUpcoming | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/stripe/billing-history')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return
+        if (data.error) {
+          setError(true)
+          return
+        }
+        setInvoices(data.invoices ?? [])
+        setUpcoming(data.upcoming ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="border border-gray-200 rounded-xl p-4">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Loader2 size={14} className="animate-spin" strokeWidth={1.5} />
+          Loading billing history…
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !invoices) return null
+
+  return (
+    <div className="space-y-3">
+      {upcoming && (
+        <div className="border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between">
+          <p className="text-sm text-gray-700">
+            Next charge:{' '}
+            <span className="font-medium">${(upcoming.amount / 100).toFixed(2)}</span>
+            {upcoming.nextChargeAt > 0 && (
+              <> on <span className="font-medium">{formatUnixDate(upcoming.nextChargeAt)}</span></>
+            )}
+          </p>
+        </div>
+      )}
+
+      {invoices.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-900 mb-3">Billing history</h3>
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-4 py-2.5 font-medium text-gray-500">Date</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-gray-500">Amount</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-gray-500">Status</th>
+                  <th className="px-4 py-2.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="border-b border-gray-100 last:border-0">
+                    <td className="px-4 py-2.5 text-gray-700">{formatUnixDate(inv.created)}</td>
+                    <td className="px-4 py-2.5 text-gray-700">
+                      ${(inv.amount / 100).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-600 capitalize">{inv.status ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <div className="inline-flex items-center gap-3">
+                        {inv.hostedUrl && (
+                          <a
+                            href={inv.hostedUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900"
+                          >
+                            View <ExternalLink size={11} strokeWidth={1.5} />
+                          </a>
+                        )}
+                        {inv.pdfUrl && (
+                          <a
+                            href={inv.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900"
+                          >
+                            PDF <Download size={11} strokeWidth={1.5} />
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StatusBanner({
   status,
   trialEnd,
   subscriptionEnd,
   subscriptionPlan,
+  cancelAtPeriodEnd,
+  isComped,
   onManageBilling,
   redirecting,
 }: {
@@ -126,10 +267,47 @@ function StatusBanner({
   trialEnd: string | null
   subscriptionEnd: string | null
   subscriptionPlan: string | null
+  cancelAtPeriodEnd: boolean
+  isComped: boolean
   onManageBilling: () => void
   redirecting: boolean
 }) {
   const planLabel = subscriptionPlan === 'max' ? 'Max' : 'Pro'
+
+  if (isComped && status === 'active') {
+    return (
+      <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3">
+        <CheckCircle2 size={16} strokeWidth={1.5} className="text-green-500 shrink-0" />
+        <p className="text-sm text-gray-700">
+          You&apos;re on a comped <span className="font-medium">Zebri {planLabel}</span> account.
+        </p>
+      </div>
+    )
+  }
+
+  if (status === 'active' && cancelAtPeriodEnd) {
+    return (
+      <div className="flex items-center justify-between gap-4 border border-amber-200 bg-amber-50 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-3">
+          <AlertCircle size={16} strokeWidth={1.5} className="text-amber-500 shrink-0" />
+          <p className="text-sm text-gray-700">
+            Cancellation scheduled
+            {subscriptionEnd && (
+              <>, access ends <span className="font-medium">{formatDate(subscriptionEnd)}</span></>
+            )}
+          </p>
+        </div>
+        <button
+          onClick={onManageBilling}
+          disabled={redirecting}
+          className="cursor-pointer text-sm font-medium text-gray-900 hover:text-gray-600 transition shrink-0 inline-flex items-center gap-1.5 disabled:opacity-50"
+        >
+          {redirecting ? <Loader2 size={13} strokeWidth={1.5} className="animate-spin" /> : null}
+          Resubscribe
+        </button>
+      </div>
+    )
+  }
 
   if (status === 'trialing') {
     return (
@@ -329,15 +507,29 @@ function PlanCard({
   )
 }
 
-export function BillingSection({ status, trialEnd, subscriptionEnd, subscriptionPlan, hasStripeCustomer }: BillingSectionProps) {
+export function BillingSection({
+  status,
+  trialEnd,
+  subscriptionEnd,
+  subscriptionPlan,
+  hasStripeCustomer,
+  cancelAtPeriodEnd,
+  isSubscribed: isSubscribedFlag,
+  isComped,
+}: BillingSectionProps) {
   const [redirectingPlan, setRedirectingPlan] = useState<PlanId | null>(null)
   const [redirectingPortal, setRedirectingPortal] = useState(false)
   const { toast } = useToast()
   const searchParams = useSearchParams()
   const justSubscribed = searchParams.get('checkout') === 'success'
 
-  // Only treat as subscribed if Stripe has actually created a customer — guards against stale metadata
-  const isSubscribed = hasStripeCustomer && (status === 'trialing' || status === 'active')
+  // Treat as subscribed if Stripe has a customer OR the user is comped
+  // (active without a Stripe customer). A scheduled cancellation no longer
+  // counts as fully subscribed for plan-card purposes — surface "Resubscribe".
+  const isSubscribed =
+    (hasStripeCustomer && (status === 'trialing' || status === 'active')) ||
+    (isComped && isSubscribedFlag && status === 'active')
+  const treatAsCancelled = cancelAtPeriodEnd
 
   const handleSubscribe = async (planId: PlanId) => {
     setRedirectingPlan(planId)
@@ -390,16 +582,20 @@ export function BillingSection({ status, trialEnd, subscriptionEnd, subscription
         </div>
       )}
 
-      {hasStripeCustomer && status && ['trialing', 'active', 'cancelled', 'past_due'].includes(status) && (
+      {(hasStripeCustomer || isComped) && status && ['trialing', 'active', 'cancelled', 'past_due'].includes(status) && (
         <StatusBanner
           status={status}
           trialEnd={trialEnd}
           subscriptionEnd={subscriptionEnd}
           subscriptionPlan={subscriptionPlan}
+          cancelAtPeriodEnd={cancelAtPeriodEnd}
+          isComped={isComped}
           onManageBilling={handleManageBilling}
           redirecting={redirectingPortal}
         />
       )}
+
+      {hasStripeCustomer && <BillingHistory />}
 
       <div>
         <h3 className="text-sm font-medium text-gray-900 mb-4">Plans</h3>
@@ -410,7 +606,7 @@ export function BillingSection({ status, trialEnd, subscriptionEnd, subscription
               plan={plan}
               isCurrentPlan={
                 (plan.id === 'starter' && !isSubscribed) ||
-                (isSubscribed && plan.id === (subscriptionPlan ?? 'pro'))
+                (isSubscribed && !treatAsCancelled && plan.id === (subscriptionPlan ?? 'pro'))
               }
               isSubscribed={isSubscribed}
               onSubscribe={handleSubscribe}
