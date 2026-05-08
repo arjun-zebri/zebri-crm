@@ -113,6 +113,66 @@ export async function compUser(userId: string, plan: "pro" | "max") {
   revalidatePath("/admin");
 }
 
+// Reconcile a user who is paying through Stripe but whose metadata never
+// got linked (e.g. webhook never fired, manual subscription created in
+// Stripe Dashboard, legacy account from before the lookup table existed).
+// Pulls the live state from Stripe and writes everything back to the user.
+export async function linkStripeCustomer(userId: string, stripeCustomerId: string) {
+  await assertAdmin();
+  const trimmed = stripeCustomerId.trim();
+  if (!/^cus_[A-Za-z0-9]+$/.test(trimmed)) {
+    throw new Error("Stripe customer ID should start with 'cus_'");
+  }
+  const admin = createAdminClient();
+
+  // Verify the customer exists.
+  const customer = await stripe.customers.retrieve(trimmed);
+  if (customer.deleted) throw new Error("Stripe customer is deleted");
+
+  // Find the most recent non-cancelled subscription. Stripe lists newest first.
+  const subs = await stripe.subscriptions.list({ customer: trimmed, status: "all", limit: 5 });
+  const sub = subs.data.find((s) =>
+    ["active", "trialing", "past_due", "unpaid"].includes(s.status)
+  ) ?? subs.data[0];
+
+  // Match the price ID to one of our plans.
+  const priceId = sub?.items.data[0]?.price.id;
+  let plan: "pro" | "max" | null = null;
+  if (priceId === process.env.STRIPE_MAX_PRICE_ID) plan = "max";
+  else if (priceId === process.env.STRIPE_PRO_PRICE_ID) plan = "pro";
+  else if (priceId === process.env.STRIPE_BETA_PRICE_ID) plan = "pro";
+
+  // Maintain the lookup table so future webhooks for this customer resolve.
+  await admin
+    .from("stripe_customers")
+    .upsert(
+      { stripe_customer_id: trimmed, user_id: userId },
+      { onConflict: "stripe_customer_id" }
+    );
+
+  const subWithEnd = sub as (typeof sub) & { current_period_end?: number };
+  await patchUserMetadata(userId, {
+    stripe_customer_id: trimmed,
+    stripe_subscription_id: sub?.id ?? null,
+    subscription_status: sub?.status ?? "active",
+    subscription_plan: plan,
+    is_subscribed: sub ? ["active", "trialing"].includes(sub.status) : true,
+    trial_end: sub?.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+    cancel_at_period_end: !!sub?.cancel_at_period_end,
+    subscription_end:
+      sub?.cancel_at_period_end && subWithEnd.current_period_end
+        ? new Date(subWithEnd.current_period_end * 1000).toISOString()
+        : null,
+  });
+
+  revalidatePath("/admin");
+  return {
+    subscriptionId: sub?.id ?? null,
+    status: sub?.status ?? null,
+    plan,
+  };
+}
+
 export async function cancelAtPeriodEnd(userId: string) {
   await assertAdmin();
   const admin = createAdminClient();

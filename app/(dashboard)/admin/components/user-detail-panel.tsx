@@ -17,6 +17,7 @@ import {
   sendPasswordReset,
   deleteUser,
   fetchUserAnalytics,
+  linkStripeCustomer,
 } from "@/app/admin/actions";
 
 const statusVariant: Record<SubscriptionStatus, "paid" | "contacted" | "cancelled" | "default"> = {
@@ -92,6 +93,7 @@ function PanelBody({
   const [compPlan, setCompPlan] = useState<"pro" | "max">(
     (user.subscription_plan as "pro" | "max") ?? "pro"
   );
+  const [linkCustomerId, setLinkCustomerId] = useState("");
 
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -201,6 +203,25 @@ function PanelBody({
       onRefresh();
     } catch (e) {
       toast(e instanceof Error ? e.message : "Failed to delete user", "error");
+    }
+  };
+
+  const handleLinkStripe = async () => {
+    if (!linkCustomerId.trim()) {
+      toast("Paste the Stripe customer ID", "error");
+      return;
+    }
+    try {
+      const result = await linkStripeCustomer(user.id, linkCustomerId);
+      toast(
+        result.subscriptionId
+          ? `Linked: ${result.plan ?? "?"} (${result.status ?? "?"})`
+          : "Customer linked, no subscription found",
+      );
+      setLinkCustomerId("");
+      onRefresh();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Failed to link Stripe customer", "error");
     }
   };
 
@@ -340,6 +361,22 @@ function PanelBody({
             {!user.stripe_subscription_id && (
               <span className="text-xs text-gray-400">No Stripe subscription</span>
             )}
+          </ActionRow>
+
+          <ActionRow label="Link Stripe customer">
+            <input
+              type="text"
+              value={linkCustomerId}
+              onChange={(e) => setLinkCustomerId(e.target.value)}
+              placeholder="cus_..."
+              className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm w-44 font-mono"
+            />
+            <button
+              onClick={handleLinkStripe}
+              className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-700 cursor-pointer"
+            >
+              Link
+            </button>
           </ActionRow>
 
           <ActionRow label="Refund last invoice">
