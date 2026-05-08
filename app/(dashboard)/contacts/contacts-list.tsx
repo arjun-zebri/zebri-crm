@@ -1,12 +1,11 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { Store, ChevronRight } from "lucide-react";
+import { Store, ChevronRight, User, Mail, Phone } from "lucide-react";
 import { Contact, CATEGORIES, CATEGORY_LABELS } from "./contacts-types";
 
 const INACTIVE_KEY = "__inactive__";
 
-// Mirrors couples-list.tsx column-width approach. Sums to 100%.
 const COL_WIDTHS = {
   name: "32%",
   contact: "20%",
@@ -24,6 +23,49 @@ interface Group {
   key: string;
   label: string;
   contacts: Contact[];
+}
+
+function ColumnHeaderRow() {
+  return (
+    <tr>
+      <th
+        className="px-0 py-1.5 text-left text-xs font-normal text-gray-400 border-b border-gray-200"
+        style={{ width: COL_WIDTHS.name }}
+      >
+        <span className="flex items-center gap-1.5">
+          <span className="text-[11px]">Aa</span>
+          Name
+        </span>
+      </th>
+      <th
+        className="px-0 py-1.5 text-left text-xs font-normal text-gray-400 border-b border-gray-200"
+        style={{ width: COL_WIDTHS.contact }}
+      >
+        <span className="flex items-center gap-1.5">
+          <User size={12} strokeWidth={1.5} />
+          Contact
+        </span>
+      </th>
+      <th
+        className="px-0 py-1.5 text-left text-xs font-normal text-gray-400 border-b border-gray-200 hidden md:table-cell"
+        style={{ width: COL_WIDTHS.email }}
+      >
+        <span className="flex items-center gap-1.5">
+          <Mail size={12} strokeWidth={1.5} />
+          Email
+        </span>
+      </th>
+      <th
+        className="px-0 py-1.5 text-left text-xs font-normal text-gray-400 border-b border-gray-200 hidden lg:table-cell"
+        style={{ width: COL_WIDTHS.phone }}
+      >
+        <span className="flex items-center gap-1.5">
+          <Phone size={12} strokeWidth={1.5} />
+          Phone
+        </span>
+      </th>
+    </tr>
+  );
 }
 
 export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps) {
@@ -145,40 +187,12 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
 
         {/* ── Desktop table ── */}
         <table className="hidden sm:table w-full table-fixed border-separate border-spacing-0 min-w-[400px] md:max-w-[1800px]">
-          <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
-            <tr>
-              <th
-                className="px-0 py-3.5 text-left text-sm font-medium text-gray-900"
-                style={{ width: COL_WIDTHS.name }}
-              >
-                Name
-              </th>
-              <th
-                className="px-0 py-3.5 text-left text-sm font-medium text-gray-900"
-                style={{ width: COL_WIDTHS.contact }}
-              >
-                Contact
-              </th>
-              <th
-                className="px-0 py-3.5 text-left text-sm font-medium text-gray-900 hidden md:table-cell"
-                style={{ width: COL_WIDTHS.email }}
-              >
-                Email
-              </th>
-              <th
-                className="px-0 py-3.5 text-left text-sm font-medium text-gray-900 hidden lg:table-cell"
-                style={{ width: COL_WIDTHS.phone }}
-              >
-                Phone
-              </th>
-            </tr>
-          </thead>
           <tbody>
             {loading
               ? Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     {[0, 1, 2, 3].map((j) => (
-                      <td key={j} className="px-0 py-3.5 border-b border-gray-100">
+                      <td key={j} className="px-0 py-2 border-b border-gray-100">
                         <div className="h-4 bg-gray-100 rounded-md w-32" />
                       </td>
                     ))}
@@ -188,13 +202,14 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                   const isCollapsed = !!collapsed[group.key];
                   return (
                     <Fragment key={group.key}>
+                      {/* Group toggle row */}
                       <tr
                         onClick={() => toggle(group.key)}
                         className="cursor-pointer group/h"
                       >
                         <td
                           colSpan={4}
-                          className="px-0 pt-6 pb-2 border-b border-gray-100"
+                          className="px-0 pt-6 pb-2"
                         >
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-semibold text-gray-900">
@@ -213,6 +228,10 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                           </div>
                         </td>
                       </tr>
+
+                      {/* Column header row — repeats under each group label */}
+                      <ColumnHeaderRow />
+
                       {!isCollapsed &&
                         group.contacts.map((contact) => (
                           <tr
@@ -220,10 +239,10 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                             data-testid="contact-row"
                             data-contact-name={contact.name}
                             onClick={() => onRowClick(contact)}
-                            className="cursor-pointer transition group"
+                            className="cursor-pointer transition group hover:bg-gray-50/60"
                           >
                             <td
-                              className="px-0 py-3.5 text-sm overflow-hidden border-b border-gray-100"
+                              className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100"
                               style={{ width: COL_WIDTHS.name }}
                             >
                               <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
@@ -231,7 +250,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                               </span>
                             </td>
                             <td
-                              className="px-0 py-3.5 text-sm overflow-hidden border-b border-gray-100"
+                              className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100"
                               style={{ width: COL_WIDTHS.contact }}
                             >
                               <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
@@ -239,7 +258,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                               </span>
                             </td>
                             <td
-                              className="px-0 py-3.5 text-sm overflow-hidden border-b border-gray-100 hidden md:table-cell"
+                              className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100 hidden md:table-cell"
                               style={{ width: COL_WIDTHS.email }}
                             >
                               <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
@@ -247,7 +266,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                               </span>
                             </td>
                             <td
-                              className="px-0 py-3.5 text-sm overflow-hidden border-b border-gray-100 hidden lg:table-cell"
+                              className="px-0 py-2 text-sm overflow-hidden border-b border-gray-100 hidden lg:table-cell"
                               style={{ width: COL_WIDTHS.phone }}
                             >
                               <span className="text-sm text-gray-500 group-hover:text-gray-900">
