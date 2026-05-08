@@ -1,13 +1,24 @@
-import { listUsers } from "@/app/admin/actions";
-import { UsersTable } from "./users-table";
+import {
+  listUsersWithSubscription,
+  getGlobalStats,
+} from "@/lib/admin-analytics";
+import { AdminTabs } from "./admin-tabs";
 
 export default async function AdminPage() {
-  const users = await listUsers();
+  const [users, stats] = await Promise.all([
+    listUsersWithSubscription(),
+    getGlobalStats(),
+  ]);
 
   return (
-    <div className="p-6 md:p-8 h-full overflow-y-auto">
-      <h1 className="text-3xl font-semibold mb-8">Admin</h1>
-      <UsersTable users={users} />
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
+          Admin
+        </h1>
+      </div>
+
+      <AdminTabs users={users} stats={stats} />
     </div>
   );
 }

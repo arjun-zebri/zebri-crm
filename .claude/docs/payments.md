@@ -146,9 +146,10 @@ CREATE TABLE stripe_customers (
 );
 ```
 
-- Created when `checkout.session.completed` fires
-- Queried by webhook handler to find the `user_id` for a given `stripe_customer_id`
-- RLS: service role only (no client access)
+- Inserted up-front in `/api/stripe/checkout` when the Stripe customer is created (so the lookup row exists before any webhook fires).
+- Webhook handler (`checkout.session.completed`) also upserts as a safety net.
+- Queried by webhook handlers as a fallback when Stripe event metadata is missing `supabase_user_id` — covers `customer.subscription.updated/deleted`, `invoice.payment_failed`, `invoice.payment_succeeded`.
+- RLS: service role only (no client access).
 
 ---
 

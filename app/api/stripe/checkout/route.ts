@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe'
 
@@ -25,9 +26,31 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
+    // Resolve or create the Stripe customer up-front so the
+    // stripe_customers lookup row exists before any webhook fires.
+    let customerId = user.user_metadata?.stripe_customer_id as string | undefined
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: { supabase_user_id: user.id },
+      })
+      customerId = customer.id
+
+      const adminClient = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      await adminClient
+        .from('stripe_customers')
+        .upsert(
+          { stripe_customer_id: customerId, user_id: user.id },
+          { onConflict: 'stripe_customer_id' }
+        )
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      customer_email: user.email,
+      customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
         trial_period_days: 14,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { stripe } from '@/lib/stripe'
+import { sendSlackAlert } from '@/lib/slack'
 import Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
@@ -26,6 +27,19 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  // Resolves a Supabase user_id from a Stripe customer ID via the
+  // stripe_customers lookup table. Used as a fallback when Stripe event
+  // metadata does not include supabase_user_id.
+  async function resolveUserId(customerId: string | null | undefined): Promise<string | null> {
+    if (!customerId) return null
+    const { data } = await adminClient
+      .from('stripe_customers')
+      .select('user_id')
+      .eq('stripe_customer_id', customerId)
+      .maybeSingle()
+    return (data?.user_id as string | undefined) ?? null
+  }
+
   // --- Platform events ---
   if (!stripeAccount) {
     switch (event.type) {
@@ -37,6 +51,7 @@ export async function POST(request: NextRequest) {
           const invoiceId = session.metadata.invoice_id
           const paymentType = session.metadata?.payment_type ?? 'full'
           const now = new Date().toISOString()
+          const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : null
 
           if (paymentType === 'deposit') {
             const { error } = await adminClient
@@ -47,7 +62,12 @@ export async function POST(request: NextRequest) {
           } else if (paymentType === 'final') {
             const { error } = await adminClient
               .from('invoices')
-              .update({ final_paid_at: now, paid_at: now, status: 'paid' })
+              .update({
+                final_paid_at: now,
+                paid_at: now,
+                status: 'paid',
+                stripe_payment_intent_id: paymentIntentId,
+              })
               .eq('id', invoiceId)
             if (error) console.error('[Webhook] final update failed', error)
 
@@ -64,7 +84,11 @@ export async function POST(request: NextRequest) {
           } else {
             await adminClient
               .from('invoices')
-              .update({ status: 'paid', paid_at: now })
+              .update({
+                status: 'paid',
+                paid_at: now,
+                stripe_payment_intent_id: paymentIntentId,
+              })
               .eq('id', invoiceId)
 
             const { data: invoice } = await adminClient
@@ -88,8 +112,22 @@ export async function POST(request: NextRequest) {
         const subscriptionId = session.subscription as string
 
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-        const userId = subscription.metadata?.supabase_user_id
-        if (!userId) break
+        const userId = subscription.metadata?.supabase_user_id ?? (await resolveUserId(customerId))
+        if (!userId) {
+          console.warn(
+            `[Webhook] checkout.session.completed: no userId resolved (customerId=${customerId}, subscriptionId=${subscriptionId})`
+          )
+          break
+        }
+
+        // Maintain stripe_customers lookup so future webhooks for this
+        // customer can resolve the user even if metadata is missing.
+        await adminClient
+          .from('stripe_customers')
+          .upsert(
+            { stripe_customer_id: customerId, user_id: userId },
+            { onConflict: 'stripe_customer_id' }
+          )
 
         await adminClient.auth.admin.updateUserById(userId, {
           user_metadata: {
@@ -97,6 +135,7 @@ export async function POST(request: NextRequest) {
             stripe_subscription_id: subscriptionId,
             subscription_status: subscription.status,
             subscription_plan: subscription.metadata?.plan ?? null,
+            is_subscribed: ['active', 'trialing'].includes(subscription.status),
             trial_end: subscription.trial_end
               ? new Date(subscription.trial_end * 1000).toISOString()
               : null,
@@ -107,25 +146,91 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription & { current_period_end: number | undefined }
-        const userId = subscription.metadata?.supabase_user_id
-        if (!userId) break
+        const subscription = event.data.object as Stripe.Subscription & {
+          current_period_end: number | undefined
+        }
+        const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
+        const userId = subscription.metadata?.supabase_user_id ?? (await resolveUserId(customerId))
+        if (!userId) {
+          console.warn(
+            `[Webhook] ${event.type}: no userId resolved (customerId=${customerId}, subscriptionId=${subscription.id})`
+          )
+          break
+        }
 
+        const isDeleted = event.type === 'customer.subscription.deleted'
         const subscriptionEnd =
-          event.type === 'customer.subscription.deleted' && subscription.current_period_end
+          isDeleted && subscription.current_period_end
             ? new Date(subscription.current_period_end * 1000).toISOString()
             : null
 
+        const nextStatus = isDeleted ? 'cancelled' : subscription.status
+        const isSubscribed = !isDeleted && ['active', 'trialing'].includes(subscription.status)
+
         await adminClient.auth.admin.updateUserById(userId, {
           user_metadata: {
-            subscription_status:
-              event.type === 'customer.subscription.deleted' ? 'cancelled' : subscription.status,
+            subscription_status: nextStatus,
+            is_subscribed: isSubscribed,
             subscription_end: subscriptionEnd,
             trial_end: subscription.trial_end
               ? new Date(subscription.trial_end * 1000).toISOString()
               : null,
           },
         })
+        break
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice & { customer: string | Stripe.Customer | null }
+        const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id
+        const userId = invoice.metadata?.supabase_user_id ?? (await resolveUserId(customerId))
+        if (!userId) {
+          console.warn(`[Webhook] invoice.payment_failed: no userId resolved (customerId=${customerId}, invoiceId=${invoice.id})`)
+          break
+        }
+
+        await adminClient.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            subscription_status: 'past_due',
+          },
+        })
+
+        await sendSlackAlert({
+          text: `:warning: Subscription payment failed for user ${userId}`,
+          blocks: [
+            {
+              type: 'section',
+              fields: [
+                { type: 'mrkdwn', text: `*User:*\n${userId}` },
+                { type: 'mrkdwn', text: `*Invoice:*\n${invoice.id}` },
+                { type: 'mrkdwn', text: `*Amount:*\n$${(invoice.amount_due / 100).toFixed(2)}` },
+              ],
+            },
+          ],
+        })
+        break
+      }
+
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice & { customer: string | Stripe.Customer | null }
+        const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id
+        const userId = invoice.metadata?.supabase_user_id ?? (await resolveUserId(customerId))
+        if (!userId) {
+          console.warn(`[Webhook] invoice.payment_succeeded: no userId resolved (customerId=${customerId}, invoiceId=${invoice.id})`)
+          break
+        }
+
+        // Only flip back from past_due → active. Other transitions
+        // (trialing → active etc.) come through customer.subscription.updated.
+        const { data: { user: existing } } = await adminClient.auth.admin.getUserById(userId)
+        if (existing?.user_metadata?.subscription_status === 'past_due') {
+          await adminClient.auth.admin.updateUserById(userId, {
+            user_metadata: {
+              subscription_status: 'active',
+              is_subscribed: true,
+            },
+          })
+        }
         break
       }
     }
