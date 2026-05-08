@@ -414,6 +414,9 @@ export function CouplesList({
             {loading
               ? Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
+                    <td className="py-3.5 pl-3 border-b border-gray-100" style={{ width: COL_WIDTHS.select }}>
+                      <div className="h-4 w-4 bg-gray-100 rounded" />
+                    </td>
                     {columns.map((_, j) => (
                       <td key={j} className="px-0 py-3.5 border-b border-gray-100">
                         <div

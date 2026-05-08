@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -22,7 +23,12 @@ import { BulkActionBar } from "./bulk-action-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Couple, ViewMode, SortField, SortDirection } from "./couples-types";
 
-export default function CouplesPage() {
+function CouplesPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const viewParam = searchParams.get("view");
+  const viewMode: ViewMode = viewParam === "list" ? "list" : "kanban";
+
   const { data: couples, isLoading } = useCouples();
   const { data: statuses } = useCoupleStatuses();
   const createCouple = useCreateCouple();
@@ -31,8 +37,6 @@ export default function CouplesPage() {
   const bulkMoveCouples = useBulkMoveCouples();
   const bulkUpdateStatus = useBulkUpdateCouplesStatus();
   const bulkDeleteCouples = useBulkDeleteCouples();
-
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | "all">("all");
   const [sortField, setSortField] = useState<SortField>("created_at");
@@ -44,12 +48,12 @@ export default function CouplesPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const { toast } = useToast();
 
+  // Redirect bare /couples to /couples?view=board
   useEffect(() => {
-    const saved = localStorage.getItem("zebri_couples_view");
-    if (saved === "kanban" || saved === "list") {
-      setViewMode(saved as ViewMode);
+    if (!viewParam) {
+      router.replace("/couples?view=board");
     }
-  }, []);
+  }, [viewParam, router]);
 
   // Open a couple from a deep link (?openCouple=<id>) — syncs URL → React state
   useEffect(() => {
@@ -66,8 +70,9 @@ export default function CouplesPage() {
   }, [couples]);
 
   const handleViewModeChange = (mode: ViewMode) => {
-    setViewMode(mode);
-    localStorage.setItem("zebri_couples_view", mode);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", mode === "kanban" ? "board" : mode);
+    router.replace(`/couples?${params.toString()}`);
     setSelectedIds(new Set());
   };
 
@@ -333,6 +338,7 @@ export default function CouplesPage() {
               }}
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
+              loading={isLoading}
             />
           </div>
         )}
@@ -388,5 +394,13 @@ export default function CouplesPage() {
         onConfirm={handleBulkDelete}
       />
     </div>
+  );
+}
+
+export default function CouplesPage() {
+  return (
+    <Suspense>
+      <CouplesPageContent />
+    </Suspense>
   );
 }

@@ -23,7 +23,7 @@ import type { User } from "@supabase/supabase-js";
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Couples", href: "/couples", icon: Target },
+  { label: "Couples", href: "/couples?view=board", icon: Target },
   { label: "Calendar", href: "/calendar", icon: Calendar },
   { label: "Tasks", href: "/tasks", icon: CheckSquare },
   { label: "Contacts", href: "/contacts", icon: Contact },
