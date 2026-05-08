@@ -662,7 +662,7 @@ export default function TasksPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden bg-white">
       {/* Page header */}
-      <div className="px-6 sm:px-8 pt-6 pb-3 flex-shrink-0">
+      <div className="px-6 sm:px-[3.75rem] pt-6 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-semibold text-gray-900">Tasks</h1>
           <button
@@ -722,7 +722,7 @@ export default function TasksPage() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 pb-24">
+      <div className="flex-1 min-h-0 overflow-y-auto pl-6 pr-6 sm:pr-[3.75rem] pb-24">
         {isLoading ? (
           <div className="space-y-2 mt-3">
             {[1, 2, 3, 4, 5].map((i) => (

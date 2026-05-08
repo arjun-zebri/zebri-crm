@@ -295,7 +295,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-4 sm:px-6 pt-6 pb-2 flex-shrink-0">
+      <div className="px-6 sm:px-[3.75rem] pt-6 pb-2 flex-shrink-0">
         {/* Header — matches couples/contacts pattern */}
         <div className="flex items-center flex-wrap gap-x-1 gap-y-3 mb-6">
           {/* Title */}
@@ -434,7 +434,7 @@ export default function PaymentsPage() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="px-4 sm:px-6 pb-28">
+        <div className="px-6 sm:px-[3.75rem] pb-28">
           <div>
             {activeTab === "contracts" ? (
               <>

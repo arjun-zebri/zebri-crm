@@ -10,9 +10,17 @@ import {
 } from "@tanstack/react-table";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Users, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Users,
+  ChevronLeft,
+  ChevronRight,
+  Mail,
+  Phone,
+  Calendar,
+  MapPin,
+  ListChecks,
+} from "lucide-react";
 import { Couple, CoupleStatusRecord, getStatusClasses } from "./couples-types";
-import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 
 interface CouplesListProps {
@@ -28,8 +36,7 @@ const columnHelper = createColumnHelper<Couple>();
 
 // Column width percentages (total = 100%)
 const COL_WIDTHS: Record<string, string> = {
-  select: "4%",
-  name: "21%",
+  name: "25%",
   email: "23%",
   phone: "13%",
   event_date: "12%",
@@ -37,19 +44,45 @@ const COL_WIDTHS: Record<string, string> = {
   status: "10%",
 };
 
+function HeaderLabel({
+  icon,
+  label,
+  textOnly,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  textOnly?: string;
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {textOnly ? (
+        <span className="text-[11px]">{textOnly}</span>
+      ) : (
+        icon
+      )}
+      {label}
+    </span>
+  );
+}
+
 function createColumns(statuses: CoupleStatusRecord[]) {
   return [
     columnHelper.accessor("name", {
-      header: "Name",
+      header: () => <HeaderLabel textOnly="Aa" label="Name" />,
       enableSorting: false,
       cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900">
+        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
           {info.getValue()}
         </span>
       ),
     }),
     columnHelper.accessor("email", {
-      header: "Email",
+      header: () => (
+        <HeaderLabel
+          icon={<Mail size={12} strokeWidth={1.5} />}
+          label="Email"
+        />
+      ),
       enableSorting: false,
       meta: { hidden: "hidden sm:table-cell" },
       cell: (info) => (
@@ -59,7 +92,12 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       ),
     }),
     columnHelper.accessor("phone", {
-      header: "Phone",
+      header: () => (
+        <HeaderLabel
+          icon={<Phone size={12} strokeWidth={1.5} />}
+          label="Phone"
+        />
+      ),
       enableSorting: false,
       meta: { hidden: "hidden lg:table-cell" },
       cell: (info) => (
@@ -69,7 +107,12 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       ),
     }),
     columnHelper.accessor("event_date", {
-      header: "Event date",
+      header: () => (
+        <HeaderLabel
+          icon={<Calendar size={12} strokeWidth={1.5} />}
+          label="Event date"
+        />
+      ),
       enableSorting: false,
       meta: { hidden: "hidden sm:table-cell" },
       cell: (info) => (
@@ -79,7 +122,12 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       ),
     }),
     columnHelper.accessor("venue", {
-      header: "Venue",
+      header: () => (
+        <HeaderLabel
+          icon={<MapPin size={12} strokeWidth={1.5} />}
+          label="Venue"
+        />
+      ),
       enableSorting: false,
       meta: { hidden: "hidden lg:table-cell" },
       cell: (info) => (
@@ -89,7 +137,12 @@ function createColumns(statuses: CoupleStatusRecord[]) {
       ),
     }),
     columnHelper.accessor("status", {
-      header: "Status",
+      header: () => (
+        <HeaderLabel
+          icon={<ListChecks size={12} strokeWidth={1.5} />}
+          label="Status"
+        />
+      ),
       enableSorting: false,
       cell: (info) => {
         const statusSlug = info.getValue();
@@ -375,31 +428,39 @@ export function CouplesList({
         {/* ── Desktop table ── */}
         <table className="hidden sm:table w-full table-fixed border-separate border-spacing-0 min-w-[400px] md:max-w-[1800px] select-none">
           <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
-            <tr>
-              <th
-                data-couple-checkbox
-                className="py-3.5 pl-3 text-left text-sm font-medium text-gray-900"
-                style={{ width: COL_WIDTHS.select }}
-              >
-                <input
-                  type="checkbox"
-                  ref={(el) => {
-                    if (el) el.indeterminate = somePageSelected && !allPageSelected;
-                  }}
-                  checked={allPageSelected}
-                  onChange={handleSelectAll}
-                  onClick={(e) => e.stopPropagation()}
-                  className="accent-black cursor-pointer"
-                />
-              </th>
-              {table.getHeaderGroups()[0]?.headers.map((header) => (
+            <tr className="group/header">
+              {table.getHeaderGroups()[0]?.headers.map((header, idx) => (
                 <th
                   key={header.id}
-                  className={`px-0 py-3.5 text-left text-sm font-medium text-gray-900 ${
-                    (header.column.columnDef.meta as any)?.hidden || ""
-                  }`}
+                  data-couple-checkbox={idx === 0 ? true : undefined}
+                  className={`pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400 ${
+                    idx === 0 ? "relative" : ""
+                  } ${(header.column.columnDef.meta as any)?.hidden || ""}`}
                   style={{ width: COL_WIDTHS[header.id] }}
                 >
+                  {idx === 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectAll();
+                      }}
+                      className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
+                        allPageSelected || somePageSelected
+                          ? "bg-emerald-500 border-emerald-500 opacity-100"
+                          : "border-gray-300 hover:border-gray-500 opacity-0 group-hover/header:opacity-100"
+                      }`}
+                      aria-label={
+                        allPageSelected ? "Deselect all" : "Select all"
+                      }
+                    >
+                      {allPageSelected ? (
+                        <CheckMark />
+                      ) : somePageSelected ? (
+                        <DashMark />
+                      ) : null}
+                    </button>
+                  )}
                   {header.isPlaceholder
                     ? null
                     : flexRender(
@@ -414,11 +475,8 @@ export function CouplesList({
             {loading
               ? Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="py-3.5 pl-3 border-b border-gray-100" style={{ width: COL_WIDTHS.select }}>
-                      <div className="h-4 w-4 bg-gray-100 rounded" />
-                    </td>
                     {columns.map((_, j) => (
-                      <td key={j} className="px-0 py-3.5 border-b border-gray-100">
+                      <td key={j} className="pl-0 pr-2 py-2 border-b border-gray-100">
                         <div
                           className={`h-4 bg-gray-100 rounded-md ${skeletonWidths[j]}`}
                         />
@@ -435,29 +493,39 @@ export function CouplesList({
                       key={row.id}
                       data-couple-id={row.original.id}
                       onClick={(e) => handleRowClick(row.original, idx, e)}
-                      className={`cursor-pointer transition group ${isSelected ? 'bg-gray-50' : ''}`}
+                      className={`cursor-pointer transition group ${isSelected ? 'bg-emerald-50/40' : 'hover:bg-gray-50/60'}`}
                     >
-                      <td
-                        className={`py-3.5 pl-3 text-sm ${borderClass}`}
-                        style={{ width: COL_WIDTHS.select }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => handleToggleRow(row.original.id, e as any)}
-                          className="accent-black cursor-pointer"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </td>
                       {row.getVisibleCells().map((cell, cellIdx, allCells) => {
                         const isLastCell = cellIdx === allCells.length - 1;
+                        const isFirstCell = cellIdx === 0;
                         return (
                           <td
                             key={cell.id}
-                            className={`px-0 py-3.5 text-sm overflow-hidden ${borderClass} ${
-                              (cell.column.columnDef.meta as any)?.hidden || ""
-                            } ${isLastCell ? 'pr-3' : ''}`}
+                            className={`pl-0 pr-2 py-2 text-sm ${borderClass} ${
+                              isFirstCell ? "relative" : "overflow-hidden"
+                            } ${(cell.column.columnDef.meta as any)?.hidden || ""} ${isLastCell ? 'pr-3' : ''}`}
                           >
+                            {isFirstCell && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleRow(row.original.id, e);
+                                }}
+                                className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
+                                  isSelected
+                                    ? "bg-emerald-500 border-emerald-500 opacity-100"
+                                    : `border-gray-300 hover:border-gray-500 ${
+                                        selectedIds.size > 0
+                                          ? "opacity-100"
+                                          : "opacity-0 group-hover:opacity-100"
+                                      }`
+                                }`}
+                                aria-label={isSelected ? "Deselect couple" : "Select couple"}
+                              >
+                                {isSelected && <CheckMark />}
+                              </button>
+                            )}
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </td>
                         );
@@ -631,5 +699,44 @@ export function CouplesList({
           )}
       </div>
     </div>
+  );
+}
+
+function CheckMark() {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2 5.2L4 7.2L8 3"
+        stroke="white"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function DashMark() {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2.5 5H7.5"
+        stroke="white"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

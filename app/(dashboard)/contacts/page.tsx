@@ -106,7 +106,7 @@ export default function ContactsPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-6 pt-6 pb-6 flex-shrink-0">
+      <div className="px-6 sm:px-[3.75rem] pt-6 pb-6 flex-shrink-0">
         <ContactsHeader
           vendors={vendors}
           onAddClick={() => setAddModalOpen(true)}
@@ -135,7 +135,7 @@ export default function ContactsPage() {
         />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-hidden px-6">
+      <div className="flex-1 min-h-0 overflow-hidden px-6 sm:px-[3.75rem]">
         <ContactsList
           vendors={filteredContacts}
           onRowClick={(contact) => setSelectedContact(contact)}

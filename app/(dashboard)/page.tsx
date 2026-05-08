@@ -95,7 +95,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
+      <div className="px-6 md:px-[3.75rem] pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Dashboard</h1>
           <div className="relative" ref={periodRef}>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hover">
-        <div className="px-4 md:px-6 pb-4 md:pb-6 space-y-6">
+        <div className="px-6 md:px-[3.75rem] pb-4 md:pb-6 space-y-6">
           {/* Top section: Stats + Revenue (left) | Calendar (right) */}
           <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 lg:h-[560px]">
             <div className="lg:col-span-5 flex flex-col gap-6 lg:h-full">

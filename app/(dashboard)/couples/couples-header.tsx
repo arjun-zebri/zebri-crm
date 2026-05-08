@@ -81,30 +81,46 @@ export function CouplesHeader({
     couples.filter((c) => c.status === slug).length
 
   const hasActiveFilter = statusFilter !== 'all'
+  const activeFilterLabel =
+    statuses.find((s) => s.slug === statusFilter)?.name ?? statusFilter
+  const activeSortLabel =
+    SORT_OPTIONS.find(
+      (o) => o.field === sortField && o.direction === sortDirection
+    )?.label ?? ''
 
   return (
     <div>
-      {/* Title + controls — flex-wrap so search drops to its own row on mobile */}
-      <div className="flex items-center flex-wrap gap-x-1 gap-y-3">
-        {/* Title */}
-        <div className="flex items-baseline gap-3 flex-none sm:order-1">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Couples</h1>
+      {/* Title row */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-3xl font-semibold text-gray-900">Couples</h1>
           <span className="text-sm text-gray-400">{couples.length} total</span>
         </div>
+        <button
+          onClick={onAddClick}
+          className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
+          aria-label="New couple"
+        >
+          <Plus size={16} strokeWidth={2} />
+        </button>
+      </div>
 
-        {/* Spacer — desktop only, pushes search + actions to the right */}
-        <div className="hidden sm:block sm:flex-1 sm:order-2" />
-
-        {/* Search — wraps to own full-width row on mobile, inline on desktop */}
-        <div className="relative order-last w-full sm:order-3 sm:w-auto sm:mr-1">
-          <Search size={15} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 mt-3 flex-wrap">
+        {/* Search */}
+        <div className="relative w-full sm:w-56">
+          <Search
+            size={11}
+            strokeWidth={1.5}
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          />
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full sm:w-64 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
+            placeholder="Search couples..."
+            className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
           />
           {search && (
             <button
@@ -112,99 +128,109 @@ export function CouplesHeader({
                 onSearchChange('')
                 searchInputRef.current?.focus()
               }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
             >
-              <X size={14} strokeWidth={1.5} />
+              <X size={10} strokeWidth={2} />
             </button>
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1 ml-auto sm:ml-0 sm:order-4">
-          {/* Sort — always visible */}
-          <div className="relative" ref={sortRef}>
-            <button
-              onClick={() => setSortOpen(!sortOpen)}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition cursor-pointer"
-            >
-              <ArrowUpDown size={16} strokeWidth={1.5} />
-            </button>
-            {sortOpen && (
-              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-48 py-1">
-                {SORT_OPTIONS.map((option) => (
-                  <button
-                    key={`${option.field}-${option.direction}`}
-                    onClick={() => {
-                      onSortChange(option.field, option.direction)
-                      setSortOpen(false)
-                    }}
-                    className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                      sortField === option.field && sortDirection === option.direction
-                        ? 'bg-gray-50 text-gray-900 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+        {/* Filter button — desktop only; mobile uses status chips below */}
+        <div className="relative hidden sm:block" ref={filtersRef}>
+          <button
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className={`flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs hover:bg-gray-50 transition whitespace-nowrap cursor-pointer ${
+              hasActiveFilter ? 'text-gray-900 bg-gray-50' : 'text-gray-500'
+            }`}
+          >
+            <SlidersHorizontal size={11} strokeWidth={1.5} />
+            <span>{hasActiveFilter ? activeFilterLabel : 'Filter'}</span>
+            {hasActiveFilter && (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onStatusFilterChange('all')
+                }}
+                className="ml-0.5 text-gray-400 hover:text-gray-700 cursor-pointer"
+              >
+                <X size={10} strokeWidth={1.5} />
+              </span>
             )}
-          </div>
-
-          {/* Filter dropdown — desktop only; chips handle filtering on mobile */}
-          <div className="relative hidden sm:block" ref={filtersRef}>
-            <button
-              onClick={() => setFiltersOpen(!filtersOpen)}
-              className={`p-2 rounded-xl transition cursor-pointer ${
-                hasActiveFilter
-                  ? 'text-gray-900 bg-gray-100'
-                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <SlidersHorizontal size={16} strokeWidth={1.5} />
-            </button>
-            {filtersOpen && (
-              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-44 py-1">
+          </button>
+          {filtersOpen && (
+            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-32 py-1">
+              <button
+                onClick={() => {
+                  onStatusFilterChange('all')
+                  setFiltersOpen(false)
+                }}
+                className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                  statusFilter === 'all'
+                    ? 'bg-gray-50 text-gray-900 font-medium'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                All ({couples.length})
+              </button>
+              {statuses.map((status) => (
                 <button
+                  key={status.slug}
                   onClick={() => {
-                    onStatusFilterChange('all')
+                    onStatusFilterChange(status.slug)
                     setFiltersOpen(false)
                   }}
-                  className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                    statusFilter === 'all'
+                  className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                    statusFilter === status.slug
                       ? 'bg-gray-50 text-gray-900 font-medium'
-                      : 'text-gray-600 hover:bg-gray-50'
+                      : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  All ({couples.length})
+                  {status.name} ({countByStatus(status.slug)})
                 </button>
-                {statuses.map((status) => (
-                  <button
-                    key={status.slug}
-                    onClick={() => {
-                      onStatusFilterChange(status.slug)
-                      setFiltersOpen(false)
-                    }}
-                    className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                      statusFilter === status.slug
-                        ? 'bg-gray-50 text-gray-900 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {status.name} ({countByStatus(status.slug)})
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-          {/* + New — desktop only; FAB handles mobile */}
+        {/* Sort button */}
+        <div className="relative" ref={sortRef}>
+          <button
+            onClick={() => setSortOpen(!sortOpen)}
+            className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+          >
+            <ArrowUpDown size={11} strokeWidth={1.5} />
+            <span>{activeSortLabel || 'Sort'}</span>
+          </button>
+          {sortOpen && (
+            <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-40 py-1">
+              {SORT_OPTIONS.map((option) => (
+                <button
+                  key={`${option.field}-${option.direction}`}
+                  onClick={() => {
+                    onSortChange(option.field, option.direction)
+                    setSortOpen(false)
+                  }}
+                  className={`w-full text-left px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                    sortField === option.field && sortDirection === option.direction
+                      ? 'bg-gray-50 text-gray-900 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* New couple button — desktop only */}
+        <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onAddClick}
-            className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-black rounded-xl hover:bg-neutral-800 transition ml-1 cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
           >
-            <Plus size={14} strokeWidth={1.5} />
-            New
+            <Plus size={11} strokeWidth={2} />
+            New couple
           </button>
         </div>
       </div>

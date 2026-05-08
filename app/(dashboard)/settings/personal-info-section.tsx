@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
@@ -18,6 +18,11 @@ function parseBusinessTypes(value: string | string[]): string[] {
   return [value]
 }
 
+interface AddressSuggestion {
+  placeId: string
+  text: string
+}
+
 interface PersonalInfoSectionProps {
   initialData: {
     displayName: string
@@ -28,6 +33,9 @@ interface PersonalInfoSectionProps {
     facebookUrl: string
     businessType: string | string[]
     mcSignatureName: string
+    addressText: string
+    addressLat: number | null
+    addressLng: number | null
   }
   email: string
 }
@@ -43,6 +51,12 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [businessTypes, setBusinessTypes] = useState<string[]>(parseBusinessTypes(initialData.businessType))
   const [businessTypeOpen, setBusinessTypeOpen] = useState(false)
   const [mcSignatureName, setMcSignatureName] = useState(initialData.mcSignatureName)
+  const [addressText, setAddressText] = useState(initialData.addressText)
+  const [addressLat, setAddressLat] = useState<number | null>(initialData.addressLat)
+  const [addressLng, setAddressLng] = useState<number | null>(initialData.addressLng)
+  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([])
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
+  const addressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
@@ -56,7 +70,50 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     instagramUrl !== initialData.instagramUrl ||
     facebookUrl !== initialData.facebookUrl ||
     JSON.stringify([...businessTypes].sort()) !== JSON.stringify([...initialBusinessTypes].sort()) ||
-    mcSignatureName !== initialData.mcSignatureName
+    mcSignatureName !== initialData.mcSignatureName ||
+    addressText !== initialData.addressText
+
+  const handleAddressChange = (value: string) => {
+    setAddressText(value)
+    setAddressLat(null)
+    setAddressLng(null)
+    if (addressDebounceRef.current) clearTimeout(addressDebounceRef.current)
+    if (value.trim().length < 2) {
+      setAddressSuggestions([])
+      setShowAddressSuggestions(false)
+      return
+    }
+    addressDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/places/address-autocomplete?input=${encodeURIComponent(value)}`)
+        const data = await res.json()
+        const suggestions: AddressSuggestion[] = (data.suggestions ?? []).map((s: { placePrediction: { placeId: string; text: { text: string } } }) => ({
+          placeId: s.placePrediction?.placeId,
+          text: s.placePrediction?.text?.text,
+        })).filter((s: AddressSuggestion) => s.placeId && s.text)
+        setAddressSuggestions(suggestions)
+        setShowAddressSuggestions(suggestions.length > 0)
+      } catch {
+        setAddressSuggestions([])
+      }
+    }, 300)
+  }
+
+  const handleAddressSelect = async (suggestion: AddressSuggestion) => {
+    setAddressText(suggestion.text)
+    setShowAddressSuggestions(false)
+    setAddressSuggestions([])
+    try {
+      const res = await fetch(`/api/places/details?place_id=${suggestion.placeId}`)
+      const data = await res.json()
+      if (data.location) {
+        setAddressLat(data.location.latitude)
+        setAddressLng(data.location.longitude)
+      }
+    } catch {
+      // lat/lng optional — address text is still saved
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -82,6 +139,9 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       facebook_url: facebookUrl,
       business_type: businessTypes,
       mc_signature_name: mcSignatureName,
+      address_text: addressText,
+      address_lat: addressLat,
+      address_lng: addressLng,
     }
 
     const { error: metaError } = await supabase.auth.updateUser({
@@ -270,6 +330,35 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
                   {mcSignatureName}
                 </p>
               </div>
+            )}
+          </div>
+
+          <div className="sm:col-span-2 relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Home address</label>
+            <input
+              type="text"
+              value={addressText}
+              onChange={(e) => handleAddressChange(e.target.value)}
+              onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 150)}
+              className={inputClass}
+              placeholder="Start typing your address..."
+              autoComplete="off"
+            />
+            <p className="text-xs text-gray-400 mt-1.5">
+              Used to calculate drive time to each event.
+            </p>
+            {showAddressSuggestions && addressSuggestions.length > 0 && (
+              <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-1 max-h-48 overflow-y-auto">
+                {addressSuggestions.map((s) => (
+                  <li
+                    key={s.placeId}
+                    onMouseDown={() => handleAddressSelect(s)}
+                    className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                  >
+                    {s.text}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </div>

@@ -22,6 +22,16 @@ There is no `users` table. User profile and subscription data is stored in Supab
 
 These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`. See `.claude/docs/branding.md` for full spec.
 
+**Address fields (stored in `user_metadata`):**
+
+| Field | Type | Notes |
+|---|---|---|
+| `address_text` | text | Full address string selected via Google Places autocomplete |
+| `address_lat` | number | Latitude of MC's home address |
+| `address_lng` | number | Longitude of MC's home address |
+
+Used to calculate `drive_time_from_home_seconds` on events.
+
 All CRM tables include a `user_id` column (uuid, not null) referencing `auth.users.id` for row-level security.
 
 ------------------------------------------------------------------------
@@ -90,6 +100,12 @@ id (uuid) user_id (uuid, not null) couple_id (uuid, foreign key) date (date) ven
 timeline_notes (text) price (numeric(10,2), nullable) status (text)
 
 Status values: upcoming completed cancelled
+
+venue_phone (text, nullable) venue_website (text, nullable) venue_lat (double precision, nullable) venue_lng (double precision, nullable) — populated from Google Places when venue is selected.
+
+drive_time_from_home_seconds (integer, nullable) — drive time in seconds from MC's home address to this event's venue; recalculated automatically on event create/update/delete.
+
+drive_time_to_next_event_seconds (integer, nullable) — drive time in seconds from this event's venue to the next event's venue (same couple, same date, ordered by created_at); recalculated automatically on event create/update/delete.
 
 share_token (uuid, nullable, default gen_random_uuid()) — generated on row creation; used as the public share URL key.
 

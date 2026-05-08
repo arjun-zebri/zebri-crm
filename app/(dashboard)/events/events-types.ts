@@ -10,6 +10,8 @@ export interface Event {
   venue_website?: string | null
   venue_lat?: number | null
   venue_lng?: number | null
+  drive_time_from_home_seconds?: number | null
+  drive_time_to_next_event_seconds?: number | null
   timeline_notes: string
   status: EventStatus
   share_token?: string | null

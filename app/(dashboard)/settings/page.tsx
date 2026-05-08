@@ -48,6 +48,9 @@ interface UserMetadata {
   abn?: string;
   show_contact_on_documents?: boolean;
   mc_signature_name?: string;
+  address_text?: string;
+  address_lat?: number;
+  address_lng?: number;
   portal_sections?: {
     timeline?: boolean
     contacts?: boolean
@@ -103,11 +106,11 @@ function SettingsContent() {
   if (loading) {
     return (
       <div className="flex flex-col h-full overflow-hidden">
-        <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
+        <div className="px-6 md:px-[3.75rem] pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
           <div className="h-8 bg-gray-100 rounded w-24 animate-pulse" />
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="px-4 md:px-6 animate-pulse">
+          <div className="px-6 md:px-[3.75rem] animate-pulse">
             <div className="flex gap-6 border-b border-gray-200 mb-8">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="h-4 bg-gray-100 rounded w-20 mb-3" />
@@ -126,13 +129,13 @@ function SettingsContent() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
+      <div className="px-6 md:px-[3.75rem] pt-4 md:pt-6 pb-4 md:pb-6 flex-shrink-0">
         <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">
           Settings
         </h1>
       </div>
 
-      <div className="px-4 md:px-6 flex-shrink-0">
+      <div className="px-6 md:px-[3.75rem] flex-shrink-0">
         <div className="relative overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-b border-gray-200">
           <div className="flex gap-6 mb-0">
             {tabs.map((tab) => (
@@ -157,7 +160,7 @@ function SettingsContent() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="px-4 md:px-6 pt-6 pb-6">
+        <div className="px-6 md:px-[3.75rem] pt-6 pb-6">
           {activeTab === "personal-info" && (
             <PersonalInfoSection
               initialData={{
@@ -169,6 +172,9 @@ function SettingsContent() {
                 facebookUrl: metadata?.facebook_url || "",
                 businessType: metadata?.business_type || "",
                 mcSignatureName: metadata?.mc_signature_name || "",
+                addressText: metadata?.address_text || "",
+                addressLat: metadata?.address_lat ?? null,
+                addressLng: metadata?.address_lng ?? null,
               }}
               email={email || ""}
             />

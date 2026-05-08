@@ -244,10 +244,100 @@ p-6
 
 # Tables
 
-border-b rows\
-hover:bg-gray-50
-
 Clean Notion-style tables: no card wrapper (no border/rounded-xl container), white header with bottom border, sentence-case header text (not uppercase), plain text pagination.
+
+## Column headers
+
+| Property | Value |
+|---|---|
+| Cell class | `px-1 py-1.5 text-left text-xs text-gray-400` |
+| Layout | Each header label uses `flex items-center gap-1.5` with a 12px lucide icon (`size={12} strokeWidth={1.5}`) before the text |
+| Name column | Uses a small "Aa" text marker instead of an icon: `<span className="text-[11px]">Aa</span>` |
+| Sticky header | `sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]` |
+
+## Row styling
+
+| Property | Value |
+|---|---|
+| Cell padding | `px-1 py-2` (compact rows) |
+| Row hover | `hover:bg-gray-50/60` |
+| Row selected | `bg-emerald-50/40` |
+| Row class pattern | `cursor-pointer transition group ${isSelected ? 'bg-emerald-50/40' : 'hover:bg-gray-50/60'}` |
+| Per-row borders | Use `border-separate border-spacing-0` on the `<table>` and `border-b border-gray-100` on each `<td>` |
+
+## Checkboxes
+
+Use a custom `<button>` (not a native `<input type="checkbox">`) so the styling matches across the app:
+
+```tsx
+<button
+  type="button"
+  onClick={toggle}
+  className={`shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
+    selected
+      ? 'bg-emerald-500 border-emerald-500'
+      : `border-gray-300 hover:border-gray-500 ${
+          selectionActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`
+  }`}
+>
+  {selected && <CheckMark />}
+</button>
+```
+
+- Hidden until row hover by default; always visible when row is selected or any selection is active
+- Filled with `bg-emerald-500` when selected, with a white SVG checkmark inside
+- Header "select all" checkbox uses the same component, with a `<DashMark />` for the indeterminate state
+
+## Page header layout
+
+Page headers stack vertically (title row → toolbar row → optional view tabs), matching the `/tasks` page:
+
+```tsx
+<div className="px-6 sm:px-[3.75rem] pt-6 pb-3 flex-shrink-0">
+  {/* Title row */}
+  <div className="flex items-center justify-between mb-4">
+    <div className="flex items-baseline gap-3">
+      <h1 className="text-3xl font-semibold text-gray-900">{title}</h1>
+      <span className="text-sm text-gray-400">{count} total</span>
+    </div>
+    {/* Mobile + button — sm:hidden, w-8 h-8 rounded-full bg-gray-900 */}
+  </div>
+
+  {/* Toolbar row — search, filter, sort on left; primary CTA on right */}
+  <div className="flex items-center gap-2 mt-3 flex-wrap">
+    <SearchInput />
+    <FilterButton />
+    <SortButton />
+    <div className="ml-auto">
+      <NewButton />
+    </div>
+  </div>
+</div>
+```
+
+## Toolbar elements
+
+All toolbar controls share the same compact aesthetic (no `rounded-xl`, no `text-sm`, no large icons):
+
+| Element | Class |
+|---|---|
+| Search input | `w-full sm:w-56 border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300` |
+| Search icon | `Search size={11} strokeWidth={1.5}` at `absolute left-2 top-1/2 -translate-y-1/2 text-gray-400` |
+| Clear (X) | `X size={10} strokeWidth={2}` at `absolute right-1.5` |
+| Filter / Sort button | `flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50` with an 11px lucide icon and a text label |
+| Primary CTA ("New …") | `inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700`, with `Plus size={11} strokeWidth={2}` |
+| Mobile + button | `sm:hidden w-8 h-8 rounded-full bg-gray-900 text-white` with `Plus size={16} strokeWidth={2}` (in the title row, not a FAB) |
+| Dropdown panel | `bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-32` |
+| Dropdown item | `w-full text-left px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-50` |
+
+## Alignment with the page title
+
+The title in the header sits at the page's `sm:px-[3.75rem]` left padding (60px). To make the first row content (e.g. couple names, task names) line up vertically with that title:
+
+- Content area uses **asymmetric padding**: `pl-6 pr-6 sm:pr-[3.75rem]` (24px left, 60px right)
+- A fixed-width gutter column on the left of each row fills the 36px gap. For tables: `width: '36px'` on the select column (with the checkbox `pl-3` inside it). For task-style lists: a 28px grid column with `px-2` row padding.
+- Net result: row content starts at exactly 60px from the sidebar, matching the page title
 
 # Board Views
 

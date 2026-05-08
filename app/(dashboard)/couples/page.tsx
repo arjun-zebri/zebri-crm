@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import {
   useCouples,
@@ -298,7 +297,7 @@ function CouplesPageContent() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden" onClick={handleBackgroundClick}>
-      <div className="px-6 pt-6 pb-2 flex-shrink-0">
+      <div className="px-6 sm:px-[3.75rem] pt-6 pb-2 flex-shrink-0">
         <CouplesHeader
           couples={couples}
           statuses={statuses}
@@ -322,8 +321,8 @@ function CouplesPageContent() {
       </div>
 
       <div
-        className={`flex-1 min-h-0 overflow-hidden px-6 ${
-          viewMode !== "list" ? "pb-14" : ""
+        className={`flex-1 min-h-0 overflow-hidden pl-6 pr-6 sm:pr-[3.75rem] ${
+          viewMode === "list" ? "sm:pl-[3.75rem]" : "sm:pl-12 pb-14"
         }`}
       >
         {viewMode === "list" ? (
@@ -371,19 +370,6 @@ function CouplesPageContent() {
         defaultStatus={defaultStatus}
         loading={createCouple.isPending}
       />
-
-      {/* Mobile FAB — hidden when profile panel is open */}
-      {!selectedCouple && (
-        <button
-          onClick={() => {
-            setDefaultStatus(undefined);
-            setAddModalOpen(true);
-          }}
-          className="sm:hidden fixed bottom-6 right-6 z-40 w-11 h-11 bg-black text-white rounded-full shadow-xl flex items-center justify-center hover:bg-neutral-800 active:scale-95 transition cursor-pointer"
-        >
-          <Plus size={18} strokeWidth={1.5} />
-        </button>
-      )}
 
       <BulkActionBar
         selectedCount={selectedIds.size}
