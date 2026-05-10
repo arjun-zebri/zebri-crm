@@ -262,7 +262,10 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
         recalculateDriveTimes(couple.id, newEvent.date, queryClient).finally(() => setCalculatingDriveTime(false))
       }
     },
-    onError: () => toast('Failed to add event'),
+    onError: (err) => {
+      console.error('[couple-events] create failed', err)
+      toast(err instanceof Error ? `Failed to add event: ${err.message}` : 'Failed to add event')
+    },
   })
 
   const updateEvent = useMutation({
