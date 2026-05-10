@@ -1,7 +1,7 @@
 import { generateHTML } from '@tiptap/html'
 import StarterKit from '@tiptap/starter-kit'
 import Mention from '@tiptap/extension-mention'
-import DOMPurify from 'isomorphic-dompurify'
+import sanitizeHtml from 'sanitize-html'
 import type { JSONContent } from '@tiptap/react'
 
 export interface ContractVariable {
@@ -125,12 +125,12 @@ export function renderContractHtml(contentJson: JSONContent, vars: ContractVaria
       HTMLAttributes: { class: 'inline-block rounded bg-gray-100 px-1.5 py-0.5 text-sm' },
     }),
   ])
-  return DOMPurify.sanitize(raw, {
-    ALLOWED_TAGS: [
+  return sanitizeHtml(raw, {
+    allowedTags: [
       'p', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li',
       'strong', 'em', 'u', 's', 'br', 'a', 'blockquote', 'hr',
       'table', 'thead', 'tbody', 'tr', 'th', 'td', 'code', 'pre', 'span',
     ],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+    allowedAttributes: { '*': ['href', 'target', 'rel', 'class'] },
   })
 }
