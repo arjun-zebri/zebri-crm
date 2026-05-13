@@ -4,7 +4,6 @@ import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PersonalInfoSection } from "./personal-info-section";
-import { BrandingSection } from "./branding-section";
 import { AccountSection } from "./account-section";
 import { BillingSection } from "./billing-section";
 import { TemplatesSection } from "./templates-section";
@@ -63,7 +62,6 @@ interface UserMetadata {
 
 const tabs = [
   { id: "personal-info", label: "Personal Info" },
-  { id: "branding", label: "Branding" },
   { id: "account", label: "Account" },
   { id: "billing", label: "Plans & Billing" },
   { id: "payments", label: "Receive Payments" },
@@ -83,6 +81,13 @@ function SettingsContent() {
   const [loading, setLoading] = useState(true);
 
   const activeTab = (searchParams.get("tab") as TabId) || "personal-info";
+
+  // Legacy deep-link compatibility: branding has moved to its own top-level route.
+  useEffect(() => {
+    if (searchParams.get("tab") === "branding") {
+      router.replace("/branding");
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     const load = async () => {
@@ -177,23 +182,6 @@ function SettingsContent() {
                 addressLng: metadata?.address_lng ?? null,
               }}
               email={email || ""}
-            />
-          )}
-          {activeTab === "branding" && (
-            <BrandingSection
-              initialData={{
-                logoUrl: metadata?.logo_url || "",
-                brandColor: metadata?.brand_color || "#A7F3D0",
-                tagline: metadata?.tagline || "",
-                abn: metadata?.abn || "",
-                showContactOnDocuments:
-                  metadata?.show_contact_on_documents || false,
-                businessName: metadata?.business_name || "",
-                phone: metadata?.phone || "",
-                website: metadata?.website || "",
-                instagramUrl: metadata?.instagram_url || "",
-                facebookUrl: metadata?.facebook_url || "",
-              }}
             />
           )}
           {activeTab === "account" && (

@@ -2,17 +2,17 @@
 
 ## Problem
 
-After a couple confirms a booking, the MC needs to request payment. Currently this means a separate PDF invoice, a bank transfer request via email, or an external tool. Payment status is untracked — the MC has to check their bank account and manually reconcile against bookings. Dashboard revenue only reflects events marked "completed", not what's actually been invoiced or paid.
+After a couple confirms a booking, the MC needs to request payment. Currently this means a separate PDF invoice, a bank transfer request via email, or an external tool. Payment status is untracked  -  the MC has to check their bank account and manually reconcile against bookings. Dashboard revenue only reflects events marked "completed", not what's actually been invoiced or paid.
 
 ## Solution
 
-A lightweight invoicing system. MCs generate an invoice from an accepted quote (or from scratch), share a clean link with the couple, and mark it paid when the transfer clears. When paid, the linked event's price is updated automatically — making dashboard revenue accurate without extra data entry. No payment gateway is required; couples pay via their existing method.
+A lightweight invoicing system. MCs generate an invoice from an accepted quote (or from scratch), share a clean link with the couple, and mark it paid when the transfer clears. When paid, the linked event's price is updated automatically  -  making dashboard revenue accurate without extra data entry. No payment gateway is required; couples pay via their existing method.
 
 ## Access Points
 
-1. **Couple Profile → Invoices tab** — lists all invoices for this couple; "+ New Invoice" button; click any invoice row to open the builder page
-2. **Accepted quote → "Create Invoice" button** — pre-fills invoice with quote title and line items (see `quotes.md`)
-3. **`/invoices/[id]` route** — dedicated full-page invoice builder
+1. **Couple Profile → Invoices tab**  -  lists all invoices for this couple; "+ New Invoice" button; click any invoice row to open the builder page
+2. **Accepted quote → "Create Invoice" button**  -  pre-fills invoice with quote title and line items (see `quotes.md`)
+3. **`/invoices/[id]` route**  -  dedicated full-page invoice builder
 
 ---
 
@@ -47,7 +47,7 @@ A lightweight invoicing system. MCs generate an invoice from an accepted quote (
 1. Open couple profile → Quotes tab → click accepted quote → click "Create Invoice".
 2. Invoice is pre-filled with title, line items, and couple from the quote. Due date defaults to 7 days from today.
 3. Review and adjust line items, set due date, add payment instructions to Notes (e.g. bank details, reference number to use).
-4. Optionally link to an event (if the couple has events — used to update events.price on payment).
+4. Optionally link to an event (if the couple has events  -  used to update events.price on payment).
 5. Save. Invoice created as "draft".
 6. Enable share link → copy URL → send to couple via WhatsApp or email.
    - Status updates from "draft" to "sent" automatically when link is enabled.
@@ -72,14 +72,14 @@ See `database-schema.md` for the authoritative schema. Summary:
 **New table `invoices`:**
 
 - `couple_id` → FK to couples (not null, cascade delete)
-- `event_id` → nullable FK to events (set null on event delete) — links invoice to a specific wedding; used to sync events.price on payment
-- `quote_id` → nullable FK to quotes (set null on quote delete) — preserved link if generated from a quote
-- `invoice_number` (text, not null) — auto-generated as "INV-001" format (sequential per user)
-- `title` (text, required) — e.g. "Wedding MC Services — Smith Wedding"
-- `status` (text, default 'draft') — draft | sent | paid | overdue | cancelled
-- `subtotal` (numeric(10,2), default 0) — sum of invoice_items.amount; updated on item save
-- `due_date` (date, nullable) — defaults to 7 days from creation when generated from a quote
-- `notes` (text, optional) — payment instructions, bank name, BSB, account number, reference request
+- `event_id` → nullable FK to events (set null on event delete)  -  links invoice to a specific wedding; used to sync events.price on payment
+- `quote_id` → nullable FK to quotes (set null on quote delete)  -  preserved link if generated from a quote
+- `invoice_number` (text, not null)  -  auto-generated as "INV-001" format (sequential per user)
+- `title` (text, required)  -  e.g. "Wedding MC Services  -  Smith Wedding"
+- `status` (text, default 'draft')  -  draft | sent | paid | overdue | cancelled
+- `subtotal` (numeric(10,2), default 0)  -  sum of invoice_items.amount; updated on item save
+- `due_date` (date, nullable)  -  defaults to 7 days from creation when generated from a quote
+- `notes` (text, optional)  -  payment instructions, bank name, BSB, account number, reference request
 - `share_token` (uuid, not null, default gen_random_uuid())
 - `share_token_enabled` (boolean, not null, default false)
 - `paid_at` (timestamp with time zone, nullable)
@@ -89,11 +89,11 @@ See `database-schema.md` for the authoritative schema. Summary:
 **New table `invoice_items`:**
 
 - `invoice_id` → FK to invoices (cascade delete)
-- `description` (text, required) — e.g. "Wedding ceremony MC (3 hrs)"
+- `description` (text, required)  -  e.g. "Wedding ceremony MC (3 hrs)"
 - `quantity` (numeric(8,2), not null, default 1.00)
 - `unit_price` (numeric(10,2), not null)
-- `amount` (numeric(10,2), not null) — stored as `quantity × unit_price`; recalculated on save
-- `position` (integer, not null) — ordering, stored as multiples of 1000
+- `amount` (numeric(10,2), not null)  -  stored as `quantity × unit_price`; recalculated on save
+- `position` (integer, not null)  -  ordering, stored as multiples of 1000
 - `user_id` (uuid, not null)
 - `created_at` (timestamp)
 
@@ -115,7 +115,7 @@ See `database-schema.md` for the authoritative schema. Summary:
 
 Follows the timeline and quotes pattern. See `database-schema.md` for RLS conventions.
 
-**`get_public_invoice(token uuid)`** — `SECURITY DEFINER`.
+**`get_public_invoice(token uuid)`**  -  `SECURITY DEFINER`.
 
 - Checks `share_token_enabled = true` before returning any data
 - Returns: invoice_number, title, status, subtotal, due_date, notes, paid_at, items, couple name, MC business_name
@@ -134,7 +134,7 @@ Route: `/invoice/[token]`
 |------------|-------------------------------------|-----------------------------------------------------------------------------------|
 | Active     | status = 'sent', not overdue        | Invoice number, title, line items, subtotal, due date, notes (payment instructions) |
 | Overdue    | status = 'overdue' or due_date past | Same as Active, but due date shown in red with "Overdue" label                    |
-| Paid       | status = 'paid'                     | "This invoice has been paid. Thank you." — line items still visible for reference |
+| Paid       | status = 'paid'                     | "This invoice has been paid. Thank you."  -  line items still visible for reference |
 | Cancelled  | status = 'cancelled'                | "This invoice is no longer active."                                               |
 | Disabled   | `share_token_enabled = false`       | "This invoice is no longer available."                                            |
 | Not found  | Token doesn't match                 | "This invoice is no longer available."                                            |
@@ -156,8 +156,8 @@ Route: `/invoice/[token]`
 Current calculation: `SUM(events.price) WHERE status = 'completed'`
 
 New calculation:
-- **Collected**: `SUM(invoices.subtotal) WHERE status = 'paid'` — money actually received
-- **Invoiced**: `SUM(invoices.subtotal) WHERE status IN ('sent', 'overdue')` — money requested but not yet received
+- **Collected**: `SUM(invoices.subtotal) WHERE status = 'paid'`  -  money actually received
+- **Invoiced**: `SUM(invoices.subtotal) WHERE status IN ('sent', 'overdue')`  -  money requested but not yet received
 
 The dashboard Revenue card shows "Collected" as the primary figure. "Invoiced" shown as a secondary stat beneath it.
 
@@ -173,8 +173,8 @@ The dashboard Revenue card shows "Collected" as the primary figure. "Invoiced" s
 | Invoice created without linking to event                          | Revenue tracked via invoices only. `events.price` not touched.                                                  |
 | Invoice generated from quote; quote line items changed later      | Invoice items are copied at creation time and are independent. Quote edits do not propagate to invoice.         |
 | MC cancels an invoice the couple has already viewed               | Link shows "no longer active." MC should contact the couple directly.                                           |
-| Invoice has no due date                                           | Never marked overdue. Due date column shows "—" on MC's invoices list.                                          |
-| Multiple invoices linked to the same event                        | `events.price` is updated each time any of them is marked paid — last-paid wins. MC should avoid this scenario. |
+| Invoice has no due date                                           | Never marked overdue. Due date column shows " - " on MC's invoices list.                                          |
+| Multiple invoices linked to the same event                        | `events.price` is updated each time any of them is marked paid  -  last-paid wins. MC should avoid this scenario. |
 
 ---
 
@@ -200,21 +200,21 @@ Test file: `tests/e2e/invoicing.spec.ts`
 
 Key test cases:
 
-1. Create invoice from accepted quote — assert title and line items match the quote; subtotal correct
-2. Create invoice from scratch — assert it appears in Invoices tab with "Draft" status
-3. Add, edit, and remove line items — assert quantity × unit_price = amount; subtotal updates
-4. Enable share link — assert status updates to "Sent"
-5. Open invoice link unauthenticated — assert invoice number, line items, subtotal, due date, and notes visible
-6. Mark invoice as paid — assert status updates to "Paid" and paid_at timestamp is set
-7. Mark invoice as paid with event linked — assert events.price is updated to invoice subtotal
-8. View overdue invoice (due date in past) — assert due date shown in red and "Overdue" badge visible
-9. Disable share link — assert public URL shows "This invoice is no longer available."
-10. Cancel invoice — assert status shows "Cancelled" in Invoices tab; excluded from outstanding list
+1. Create invoice from accepted quote  -  assert title and line items match the quote; subtotal correct
+2. Create invoice from scratch  -  assert it appears in Invoices tab with "Draft" status
+3. Add, edit, and remove line items  -  assert quantity × unit_price = amount; subtotal updates
+4. Enable share link  -  assert status updates to "Sent"
+5. Open invoice link unauthenticated  -  assert invoice number, line items, subtotal, due date, and notes visible
+6. Mark invoice as paid  -  assert status updates to "Paid" and paid_at timestamp is set
+7. Mark invoice as paid with event linked  -  assert events.price is updated to invoice subtotal
+8. View overdue invoice (due date in past)  -  assert due date shown in red and "Overdue" badge visible
+9. Disable share link  -  assert public URL shows "This invoice is no longer available."
+10. Cancel invoice  -  assert status shows "Cancelled" in Invoices tab; excluded from outstanding list
 
 **Mobile tests (Pixel 5 + iPhone 12):**
 
 - Invoices tab scrolls correctly in the couple profile slide-over at 375px
-- Invoice builder page is fully usable on mobile — line items, quantity/price fields, total accessible
-- Public invoice page renders cleanly at 375px — line items and payment notes readable without horizontal scroll
+- Invoice builder page is fully usable on mobile  -  line items, quantity/price fields, total accessible
+- Public invoice page renders cleanly at 375px  -  line items and payment notes readable without horizontal scroll
 
 See `.claude/docs/testing.md` for selector and viewport conventions.

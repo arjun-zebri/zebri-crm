@@ -98,7 +98,7 @@ export function ContactProfile({
                 </div>
               </div>
 
-              {/* Actions + close — mobile only */}
+              {/* Actions + close - mobile only */}
               <div className="sm:hidden flex items-center gap-1.5">
                 <Popover.Root open={actionsOpen} onOpenChange={setActionsOpen}>
                   <Popover.Trigger asChild>

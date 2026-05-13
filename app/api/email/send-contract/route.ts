@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   const coupleName = couple?.name || 'there'
   if (!coupleEmail) {
     return NextResponse.json(
-      { error: 'No email on file for this couple — add one in their profile' },
+      { error: 'No email on file for this couple - add one in their profile' },
       { status: 400 }
     )
   }
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
   }
 
   sendSlackAlert({
-    text: `📝 Contract sent to ${coupleName} — ${contract.title} (${contract.contract_number})`,
+    text: `📝 Contract sent to ${coupleName} - ${contract.title} (${contract.contract_number})`,
   }).catch(() => {})
 
   return NextResponse.json({ ok: true })

@@ -69,7 +69,7 @@ const STARTER_TEMPLATES: { name: string; items: Omit<TemplateItem, 'id'>[] }[] =
         title: 'Family & wedding party photos',
         start_time: '16:00',
         duration_min: 30,
-        description: 'Group shots — have a shot list ready. Ushers can help round people up.',
+        description: 'Group shots - have a shot list ready. Ushers can help round people up.',
       },
       {
         title: "Couple's photos",
@@ -328,7 +328,7 @@ function EditTemplateForm({
                   onChange={(e) =>
                     updateItem(item.id, 'duration_min', e.target.value ? parseInt(e.target.value) : null)
                   }
-                  placeholder="—"
+                  placeholder=" - "
                   min={1}
                   className={`w-full text-sm text-gray-900 bg-transparent focus:outline-none ${noArrowsClass}`}
                   disabled={isSaving}
@@ -611,7 +611,7 @@ export function TimelineTemplateManager() {
         <div>
           <h3 className="text-xl font-semibold text-gray-900">Timeline Templates</h3>
           <p className="text-sm text-gray-500 mt-1">
-            Reusable sets of timeline items — with times — you can apply to any event.
+            Reusable sets of timeline items - with times - you can apply to any event.
           </p>
         </div>
         <button

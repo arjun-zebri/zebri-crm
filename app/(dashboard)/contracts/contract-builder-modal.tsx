@@ -247,7 +247,7 @@ export function ContractBuilderModal({
       if (error) throw error
     },
     onSuccess: () => {
-      toast('Contract revoked — you can now edit')
+      toast('Contract revoked - you can now edit')
       setConfirmingRevoke(false)
       queryClient.invalidateQueries({ queryKey: ['contract', contractId] })
       queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] })
@@ -399,7 +399,7 @@ export function ContractBuilderModal({
                       <option value="">None</option>
                       {(quotes || []).map((q) => (
                         <option key={q.id} value={q.id}>
-                          {q.quote_number} — {q.title || 'Untitled'} ({q.status})
+                          {q.quote_number} - {q.title || 'Untitled'} ({q.status})
                         </option>
                       ))}
                     </select>
@@ -453,14 +453,14 @@ export function ContractBuilderModal({
                 {contract?.status === 'signed' && (
                   <div className="border border-emerald-100 bg-emerald-50 rounded-xl p-4 text-sm text-emerald-900">
                     Signed by <strong>{contract.signer_name}</strong> on{' '}
-                    {contract.signed_at ? new Date(contract.signed_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+                    {contract.signed_at ? new Date(contract.signed_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
                     {contract.signer_ip ? <span className="block text-xs text-emerald-700/80 mt-1">From IP {contract.signer_ip}</span> : null}
                   </div>
                 )}
 
                 {contract?.status === 'declined' && (
                   <div className="border border-red-100 bg-red-50 rounded-xl p-4 text-sm text-red-900">
-                    Declined{contract.declined_reason ? ` — ${contract.declined_reason}` : ''}.
+                    Declined{contract.declined_reason ? ` - ${contract.declined_reason}` : ''}.
                   </div>
                 )}
 

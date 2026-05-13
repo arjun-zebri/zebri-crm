@@ -26,7 +26,7 @@ created_at  timestamptz not null default now()
 - Add `NOT NULL` with a default where possible
 - Use `text` over `varchar` for strings
 
-## RLS — Required on Every New Table
+## RLS  -  Required on Every New Table
 ```sql
 alter table [table_name] enable row level security;
 

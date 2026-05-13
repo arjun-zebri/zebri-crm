@@ -135,7 +135,7 @@ export function CouplesHeader({
           )}
         </div>
 
-        {/* Filter button — desktop only; mobile uses status chips below */}
+        {/* Filter button - desktop only; mobile uses status chips below */}
         <div className="relative hidden sm:block" ref={filtersRef}>
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
@@ -223,7 +223,7 @@ export function CouplesHeader({
           )}
         </div>
 
-        {/* New couple button — desktop only */}
+        {/* New couple button - desktop only */}
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onAddClick}
@@ -259,7 +259,7 @@ export function CouplesHeader({
         </button>
       </div>
 
-      {/* Mobile status filter chips — replaces the filter dropdown on mobile; hidden on board view */}
+      {/* Mobile status filter chips - replaces the filter dropdown on mobile; hidden on board view */}
       <div className={`sm:hidden overflow-x-auto flex gap-2 pt-3 -mx-6 px-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${viewMode === 'kanban' ? 'hidden' : ''}`}>
         <button
           onClick={() => onStatusFilterChange('all')}

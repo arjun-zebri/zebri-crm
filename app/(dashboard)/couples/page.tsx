@@ -55,7 +55,7 @@ function CouplesPageContent() {
     }
   }, [viewParam, router]);
 
-  // Open a couple from a deep link (?openCouple=<id>) — syncs URL → React state
+  // Open a couple from a deep link (?openCouple=<id>) - syncs URL → React state
   useEffect(() => {
     if (!couples.length || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);

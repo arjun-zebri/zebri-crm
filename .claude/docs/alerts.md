@@ -67,7 +67,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 ### `lib/slack.ts`
 
-Server-only helper that sends alerts to Slack. Never throws — failures are swallowed and logged to console. Silently no-ops if `SLACK_WEBHOOK_URL` is unset (safe for local dev).
+Server-only helper that sends alerts to Slack. Never throws  -  failures are swallowed and logged to console. Silently no-ops if `SLACK_WEBHOOK_URL` is unset (safe for local dev).
 
 ```ts
 export async function sendSlackAlert(payload: SlackPayload): Promise<void>
@@ -89,7 +89,7 @@ fetch("/api/alerts/slack", {
 }).catch(() => {}) // never blocks UX
 ```
 
-Failures are silently ignored — alerts should never degrade the user experience.
+Failures are silently ignored  -  alerts should never degrade the user experience.
 
 ### Server-side Alerts
 
@@ -206,4 +206,4 @@ Check the Slack channel for alerts. If alerts aren't arriving:
 - Alerts never contain sensitive data (passwords, API keys, tokens)
 - Webhook URL is server-only (`SLACK_WEBHOOK_URL` has no `NEXT_PUBLIC_` prefix)
 - Failed alerts are logged but never shown to users
-- Alerts use fire-and-forget pattern — failures don't degrade UX
+- Alerts use fire-and-forget pattern  -  failures don't degrade UX

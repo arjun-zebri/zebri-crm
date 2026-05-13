@@ -11,7 +11,7 @@ import { CoupleStatusRecord } from "./couples/couples-types";
 
 export type DashboardPeriod = "week" | "month" | "quarter" | "year";
 
-// Rolling window for stat cards — avoids start-of-period cliff drops
+// Rolling window for stat cards - avoids start-of-period cliff drops
 function getRollingWindow(period: DashboardPeriod) {
   const now = new Date();
   const daysMap: Record<DashboardPeriod, number> = { week: 7, month: 30, quarter: 90, year: 365 };
@@ -21,7 +21,7 @@ function getRollingWindow(period: DashboardPeriod) {
   return { currentStart, previousStart, previousEnd: currentStart };
 }
 
-// Calendar-aligned window for charts — anchors to real week/month/quarter/year boundaries
+// Calendar-aligned window for charts - anchors to real week/month/quarter/year boundaries
 function getPeriodWindow(period: DashboardPeriod) {
   const now = new Date();
 
@@ -165,7 +165,7 @@ export function useDashboardStats(period: DashboardPeriod = "month") {
         0
       );
 
-      // % changes — handle zero-previous gracefully
+      // % changes - handle zero-previous gracefully
       const leadsPercentChange =
         (leadsLastPeriod || 0) > 0
           ? Math.round(

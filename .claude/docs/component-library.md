@@ -173,8 +173,8 @@ Desktop: fixed 68px icon-only, expands to 240px on hover (`group/sidebar` patter
 Mobile: hidden by default (`-translate-x-full`), opens as a 280px left drawer when `mobileOpen` prop is true. Labels always visible on mobile (`opacity-100`).
 
 Props:
-- `mobileOpen?: boolean` — controls mobile drawer visibility
-- `onMobileClose?: () => void` — called when backdrop or any nav Link is clicked
+- `mobileOpen?: boolean`  -  controls mobile drawer visibility
+- `onMobileClose?: () => void`  -  called when backdrop or any nav Link is clicked
 
 Mobile top bar is rendered in `DashboardLayout` (not in Sidebar): fixed h-14, z-30, hamburger + centered logo.
 
@@ -197,10 +197,10 @@ Reusable inline vendor picker component used in both couple and event vendor ass
 Purpose: Allow users to search active vendors and add them to a couple or event.
 
 Props:
-- `excludeVendorIds: string[]` — vendor IDs already assigned (excluded from search results)
-- `onAdd: (vendorId: string) => void` — callback when user selects a vendor
-- `onClose: () => void` — callback to close the picker
-- `isAdding: boolean` — loading state while mutation is pending
+- `excludeVendorIds: string[]`  -  vendor IDs already assigned (excluded from search results)
+- `onAdd: (vendorId: string) => void`  -  callback when user selects a vendor
+- `onClose: () => void`  -  callback to close the picker
+- `isAdding: boolean`  -  loading state while mutation is pending
 
 Styles:
 - Container: `border border-gray-200 rounded-xl bg-white shadow-sm p-3`

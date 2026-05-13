@@ -64,10 +64,10 @@ export async function POST(request: NextRequest) {
 
   if (paymentType === 'deposit') {
     amountCents = Math.round(total * (depositPct / 100) * 100)
-    productName = `Deposit — ${invoice.title || 'Invoice'}`
+    productName = `Deposit - ${invoice.title || 'Invoice'}`
   } else if (paymentType === 'final') {
     amountCents = Math.round(total * ((100 - depositPct) / 100) * 100)
-    productName = `Final Balance — ${invoice.title || 'Invoice'}`
+    productName = `Final Balance - ${invoice.title || 'Invoice'}`
   } else {
     amountCents = Math.round(total * 100)
     productName = invoice.title || 'Invoice'

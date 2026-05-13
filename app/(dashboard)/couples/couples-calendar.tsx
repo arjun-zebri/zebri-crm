@@ -475,7 +475,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
           </div>
         </div>
 
-        {/* Status filters — mobile only */}
+        {/* Status filters - mobile only */}
         <div className="md:hidden border-t border-gray-200 pt-4">
           <h3 className="text-xs font-medium text-gray-500 mb-2">Filter by status</h3>
           <div className="flex flex-col gap-1">
@@ -1086,7 +1086,7 @@ function DayView({
                     </p>
                   )}
 
-                  {/* Footer: counts — only shown when non-zero */}
+                  {/* Footer: counts - only shown when non-zero */}
                   {(vendorCount > 0 || taskCount > 0) && (
                     <div className="flex items-center gap-5 mt-4 pt-4 border-t border-gray-100 text-xs">
                       {vendorCount > 0 && (

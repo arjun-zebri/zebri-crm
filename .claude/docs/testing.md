@@ -1,8 +1,8 @@
-# Zebri — Testing Guide
+# Zebri  -  Testing Guide
 
 ## Philosophy
 
-Tests are not just validators — they are **discovery tools**. When running tests, Claude should:
+Tests are not just validators  -  they are **discovery tools**. When running tests, Claude should:
 1. Run the test
 2. Observe failures or visual issues
 3. Fix the underlying problem in the app code (not just patch the test)
@@ -14,7 +14,7 @@ Never skip a test or suppress a failure without understanding why it's failing. 
 
 ## Test Stack
 
-- **Playwright** — end-to-end testing (desktop + mobile)
+- **Playwright**  -  end-to-end testing (desktop + mobile)
 - **Location**: `tests/e2e/`
 - **Config**: `playwright.config.ts`
 - **Helpers**: `tests/e2e/helpers.ts`
@@ -92,7 +92,7 @@ tests/e2e/
 └── README.md
 ```
 
-One file per feature area. Do not create test files for sub-features — add to the relevant spec file.
+One file per feature area. Do not create test files for sub-features  -  add to the relevant spec file.
 
 ## Key Selectors (verified from source)
 
@@ -129,25 +129,25 @@ One file per feature area. Do not create test files for sub-features — add to 
 ## Writing Tests
 
 ### Always authenticate first
-Tests that require data use a pre-saved auth state (see `fixtures/`). Never hardcode credentials in test files — use `process.env.TEST_EMAIL` and `process.env.TEST_PASSWORD`.
+Tests that require data use a pre-saved auth state (see `fixtures/`). Never hardcode credentials in test files  -  use `process.env.TEST_EMAIL` and `process.env.TEST_PASSWORD`.
 
 ### Use semantic selectors (in priority order)
-1. `getByRole` — buttons, inputs, headings
-2. `getByLabel` — form fields
-3. `getByText` — visible content
-4. `data-testid` — last resort for complex components
+1. `getByRole`  -  buttons, inputs, headings
+2. `getByLabel`  -  form fields
+3. `getByText`  -  visible content
+4. `data-testid`  -  last resort for complex components
 
 Avoid `nth()`, index-based selectors, or brittle CSS class selectors.
 
 ### Test the user journey, not implementation
 ```typescript
-// Good — describes what the user does and sees
+// Good  -  describes what the user does and sees
 await page.getByRole('button', { name: 'New Couple' }).click();
 await page.getByLabel('Name').fill('Sarah & Tom');
 await page.getByRole('button', { name: 'Save' }).click();
 await expect(page.getByText('Sarah & Tom')).toBeVisible();
 
-// Bad — brittle, implementation-aware
+// Bad  -  brittle, implementation-aware
 await page.locator('.modal button.primary').nth(2).click();
 ```
 
@@ -156,7 +156,7 @@ Use `test.use({ ...devices['Pixel 5'] })` at the top of a describe block to test
 ```typescript
 import { devices } from '@playwright/test';
 
-test.describe('Couples page — mobile', () => {
+test.describe('Couples page  -  mobile', () => {
   test.use({ ...devices['Pixel 5'] });
 
   test('sidebar is hidden on load', async ({ page }) => {
@@ -172,21 +172,21 @@ test.describe('Couples page — mobile', () => {
 
 When a test fails or reveals a UI problem, Claude should:
 
-1. **Identify the root cause** — is it a missing element, wrong selector, or a real bug?
-2. **Fix app code first** — update the component/page before touching the test
-3. **Update the test only if the UI legitimately changed** — don't weaken assertions to make tests pass
+1. **Identify the root cause**  -  is it a missing element, wrong selector, or a real bug?
+2. **Fix app code first**  -  update the component/page before touching the test
+3. **Update the test only if the UI legitimately changed**  -  don't weaken assertions to make tests pass
 4. **Add `data-testid` attributes** to elements that are hard to select semantically
 5. **Add a mobile variant** if the fix behaves differently on small screens
 
 When fixing mobile issues discovered during testing:
-- Use Tailwind responsive prefixes (`sm:`, `md:`) — never add breakpoints with raw CSS
+- Use Tailwind responsive prefixes (`sm:`, `md:`)  -  never add breakpoints with raw CSS
 - Test the fix on both Pixel 5 and iPhone 12 viewports before marking done
 
 ---
 
 ## Adding `data-testid` Attributes
 
-Add these sparingly — only when no semantic selector works:
+Add these sparingly  -  only when no semantic selector works:
 ```tsx
 // Sidebar
 <nav data-testid="sidebar">

@@ -171,7 +171,7 @@ export default async function PortalPage({
           {portal.event && (
             <p className="text-sm text-gray-500">
               {formatEventDate(portal.event.date)}
-              {portal.event.venue ? ` · ${portal.event.venue.replace(/\s*[—–]\s*/g, ', ')}` : ''}
+              {portal.event.venue ? ` · ${portal.event.venue.replace(/\s*[\u2014\u2013]\s*/g, ', ')}` : ''}
             </p>
           )}
           <p className="mt-3 text-sm text-gray-500">

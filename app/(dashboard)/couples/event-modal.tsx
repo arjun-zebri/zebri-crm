@@ -169,7 +169,7 @@ export function EventModal({
       setVenueLat(data.location?.latitude ?? null)
       setVenueLng(data.location?.longitude ?? null)
     } catch {
-      // Silently skip — venue name is set, details are just a bonus
+      // Silently skip - venue name is set, details are just a bonus
     }
   }
 

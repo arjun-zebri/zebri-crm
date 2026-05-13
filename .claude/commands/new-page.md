@@ -34,7 +34,7 @@ app/(dashboard)/[route]/
 ## Design System Checklist
 - [ ] Page title uses `text-3xl font-semibold`
 - [ ] All body text uses `text-sm`
-- [ ] Buttons use components from `components/ui/` — not native `<button>`
+- [ ] Buttons use components from `components/ui/`  -  not native `<button>`
 - [ ] No `rounded-full` on buttons
 - [ ] Icons use `strokeWidth={1.5}`
 - [ ] No inline styles

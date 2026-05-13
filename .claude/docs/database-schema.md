@@ -101,15 +101,15 @@ timeline_notes (text) price (numeric(10,2), nullable) status (text)
 
 Status values: upcoming completed cancelled
 
-venue_phone (text, nullable) venue_website (text, nullable) venue_lat (double precision, nullable) venue_lng (double precision, nullable) — populated from Google Places when venue is selected.
+venue_phone (text, nullable) venue_website (text, nullable) venue_lat (double precision, nullable) venue_lng (double precision, nullable)  -  populated from Google Places when venue is selected.
 
-drive_time_from_home_seconds (integer, nullable) — drive time in seconds from MC's home address to this event's venue; recalculated automatically on event create/update/delete.
+drive_time_from_home_seconds (integer, nullable)  -  drive time in seconds from MC's home address to this event's venue; recalculated automatically on event create/update/delete.
 
-drive_time_to_next_event_seconds (integer, nullable) — drive time in seconds from this event's venue to the next event's venue (same couple, same date, ordered by created_at); recalculated automatically on event create/update/delete.
+drive_time_to_next_event_seconds (integer, nullable)  -  drive time in seconds from this event's venue to the next event's venue (same couple, same date, ordered by created_at); recalculated automatically on event create/update/delete.
 
-share_token (uuid, nullable, default gen_random_uuid()) — generated on row creation; used as the public share URL key.
+share_token (uuid, nullable, default gen_random_uuid())  -  generated on row creation; used as the public share URL key.
 
-share_token_enabled (boolean, not null, default false) — link is inactive until the MC explicitly enables it. Disabling preserves the token. Regenerating updates share_token to a new gen_random_uuid(), permanently invalidating the old URL.
+share_token_enabled (boolean, not null, default false)  -  link is inactive until the MC explicitly enables it. Disabling preserves the token. Regenerating updates share_token to a new gen_random_uuid(), permanently invalidating the old URL.
 
 created_at (timestamp)
 
@@ -123,21 +123,21 @@ Columns:
 
 id (uuid, primary key, default gen_random_uuid()) event_id (uuid, not null, FK to events.id, on delete cascade) user_id (uuid, not null)
 
-start_time (time, nullable) — stored as HH:MM, displayed as "5:30 PM". Nullable — MC can add untimed items. Items are sorted by start_time ascending when set; untimed items fall below by position.
+start_time (time, nullable)  -  stored as HH:MM, displayed as "5:30 PM". Nullable  -  MC can add untimed items. Items are sorted by start_time ascending when set; untimed items fall below by position.
 
-title (text, not null) — e.g. "Bridal party entrance"
+title (text, not null)  -  e.g. "Bridal party entrance"
 
-description (text, nullable) — MC's internal notes or cues
+description (text, nullable)  -  MC's internal notes or cues
 
-duration_min (integer, nullable) — estimated duration in minutes
+duration_min (integer, nullable)  -  estimated duration in minutes
 
-contact_id (uuid, nullable, FK to contacts.id, on delete set null) — the contact assigned to this item; scoped to contacts already linked to the event via event_contacts
+contact_id (uuid, nullable, FK to contacts.id, on delete set null)  -  the contact assigned to this item; scoped to contacts already linked to the event via event_contacts
 
-position (integer, not null) — ordering; stored as multiples of 1000 on creation to allow insertion between items without a full renumber
+position (integer, not null)  -  ordering; stored as multiples of 1000 on creation to allow insertion between items without a full renumber
 
 created_at (timestamp)
 
-RLS: Standard user_id = auth.uid() policy for authenticated CRUD. Anon SELECT is granted via a SECURITY DEFINER Supabase function get_public_timeline(token uuid) — returns event + items only when share_token_enabled = true; returns null otherwise. This avoids complex anon policy joins.
+RLS: Standard user_id = auth.uid() policy for authenticated CRUD. Anon SELECT is granted via a SECURITY DEFINER Supabase function get_public_timeline(token uuid)  -  returns event + items only when share_token_enabled = true; returns null otherwise. This avoids complex anon policy joins.
 
 ------------------------------------------------------------------------
 
@@ -150,9 +150,9 @@ Columns:
 id (uuid) title (text) description (text) due_date (date) status (text)
 user_id (uuid) related_event_id (uuid) related_couple_id (uuid) related_contact_id (uuid, nullable, FK to contacts.id)
 group_id (uuid, nullable, FK to task_groups.id, set null on group delete)
-position (integer, not null, default 0) — ordering within a custom group / flat list
-priority (text, nullable) — values: low | medium | high
-task_type (text, nullable) — free-form tag (e.g. "Music", "Logistics"); colour assigned deterministically from a 6-colour palette via name hash
+position (integer, not null, default 0)  -  ordering within a custom group / flat list
+priority (text, nullable)  -  values: low | medium | high
+task_type (text, nullable)  -  free-form tag (e.g. "Music", "Logistics"); colour assigned deterministically from a 6-colour palette via name hash
 
 Status values: todo in_progress done (displayed as "Not started" / "In progress" / "Done")
 
@@ -167,8 +167,8 @@ User-defined sections for organising tasks (custom Group-by mode on the tasks pa
 Columns:
 
 id (uuid) user_id (uuid, not null, FK to auth.users)
-name (text, not null) color (text, not null, default 'gray') — gray | green | blue | amber | red | purple
-position (integer, not null, default 0) — ordering of groups
+name (text, not null) color (text, not null, default 'gray')  -  gray | green | blue | amber | red | purple
+position (integer, not null, default 0)  -  ordering of groups
 created_at (timestamp)
 
 RLS: Standard user_id = auth.uid() policy for full CRUD.
@@ -237,23 +237,23 @@ Columns:
 
 id (uuid) user_id (uuid, not null) couple_id (uuid, not null, FK to couples.id, on delete cascade)
 
-title (text, not null) — e.g. "Wedding MC Package — Smith Wedding"
+title (text, not null)  -  e.g. "Wedding MC Package  -  Smith Wedding"
 
-quote_number (text, not null) — auto-generated on insert as "QT-001" format (sequential count per user)
+quote_number (text, not null)  -  auto-generated on insert as "QT-001" format (sequential count per user)
 
 status (text, not null, default 'draft')
 
 Status values: draft sent accepted declined expired
 
-subtotal (numeric(10,2), not null, default 0) — sum of quote_items.amount; updated on item save
+subtotal (numeric(10,2), not null, default 0)  -  sum of quote_items.amount; updated on item save
 
-notes (text, nullable) — terms, inclusions, exclusions
+notes (text, nullable)  -  terms, inclusions, exclusions
 
 expires_at (date, nullable)
 
-share_token (uuid, not null, default gen_random_uuid()) — unique URL key; generated on row creation
+share_token (uuid, not null, default gen_random_uuid())  -  unique URL key; generated on row creation
 
-share_token_enabled (boolean, not null, default false) — link inactive until MC explicitly enables it
+share_token_enabled (boolean, not null, default false)  -  link inactive until MC explicitly enables it
 
 accepted_at (timestamp with time zone, nullable)
 
@@ -271,11 +271,11 @@ Columns:
 
 id (uuid) quote_id (uuid, not null, FK to quotes.id, on delete cascade) user_id (uuid, not null)
 
-description (text, not null) — e.g. "Wedding ceremony MC (2 hrs)"
+description (text, not null)  -  e.g. "Wedding ceremony MC (2 hrs)"
 
 amount (numeric(10,2), not null)
 
-position (integer, not null) — ordering, multiples of 1000
+position (integer, not null)  -  ordering, multiples of 1000
 
 created_at (timestamp)
 
@@ -289,45 +289,45 @@ Columns:
 
 id (uuid) user_id (uuid, not null) couple_id (uuid, not null, FK to couples.id, on delete cascade)
 
-event_id (uuid, nullable, FK to events.id, on delete set null) — links invoice to a specific wedding; used to update events.price when marked paid
+event_id (uuid, nullable, FK to events.id, on delete set null)  -  links invoice to a specific wedding; used to update events.price when marked paid
 
-quote_id (uuid, nullable, FK to quotes.id, on delete set null) — preserved link if invoice was generated from a quote
+quote_id (uuid, nullable, FK to quotes.id, on delete set null)  -  preserved link if invoice was generated from a quote
 
-invoice_number (text, not null) — auto-generated on insert as "INV-001" format (sequential count per user)
+invoice_number (text, not null)  -  auto-generated on insert as "INV-001" format (sequential count per user)
 
-title (text, not null) — e.g. "Wedding MC Services — Smith Wedding"
+title (text, not null)  -  e.g. "Wedding MC Services  -  Smith Wedding"
 
 status (text, not null, default 'draft')
 
 Status values: draft sent paid overdue cancelled
 
-subtotal (numeric(10,2), not null, default 0) — sum of invoice_items.amount; updated on item save
+subtotal (numeric(10,2), not null, default 0)  -  sum of invoice_items.amount; updated on item save
 
-due_date (date, nullable) — defaults to 7 days from creation when generated from a quote
+due_date (date, nullable)  -  defaults to 7 days from creation when generated from a quote
 
-payment_terms (text, nullable) — one of: `net_7`, `net_14`, `net_30`, `due_on_receipt`, `custom`. When set to a net term, due_date is auto-calculated. `due_on_receipt` clears due_date. `custom` keeps due_date freely editable.
+payment_terms (text, nullable)  -  one of: `net_7`, `net_14`, `net_30`, `due_on_receipt`, `custom`. When set to a net term, due_date is auto-calculated. `due_on_receipt` clears due_date. `custom` keeps due_date freely editable.
 
-tax_rate (numeric(5,2), not null, default 0) — GST percentage (e.g. 10 for 10%). 0 means no GST. Currently only 0 and 10 are used.
+tax_rate (numeric(5,2), not null, default 0)  -  GST percentage (e.g. 10 for 10%). 0 means no GST. Currently only 0 and 10 are used.
 
-notes (text, nullable) — payment instructions, bank details, reference number request. Auto-populated from MC's saved bank details when creating a new invoice.
+notes (text, nullable)  -  payment instructions, bank details, reference number request. Auto-populated from MC's saved bank details when creating a new invoice.
 
-deposit_percent (numeric(5,2), nullable) — deposit as a percentage of total (e.g. 50 for 50%). NULL means no payment schedule is active.
+deposit_percent (numeric(5,2), nullable)  -  deposit as a percentage of total (e.g. 50 for 50%). NULL means no payment schedule is active.
 
-deposit_due_date (date, nullable) — due date for the deposit installment
+deposit_due_date (date, nullable)  -  due date for the deposit installment
 
-deposit_paid_at (timestamptz, nullable) — set when the MC manually marks the deposit as paid
+deposit_paid_at (timestamptz, nullable)  -  set when the MC manually marks the deposit as paid
 
-final_due_date (date, nullable) — due date for the final balance installment
+final_due_date (date, nullable)  -  due date for the final balance installment
 
-final_paid_at (timestamptz, nullable) — set when the MC manually marks the final balance as paid; also sets invoice status to `paid`
+final_paid_at (timestamptz, nullable)  -  set when the MC manually marks the final balance as paid; also sets invoice status to `paid`
 
-stripe_payment_enabled (boolean, not null, default false) — when true and MC has Stripe Connect configured, couples see a "Pay with card" button on the public invoice page. Only applicable when no payment schedule is active.
+stripe_payment_enabled (boolean, not null, default false)  -  when true and MC has Stripe Connect configured, couples see a "Pay with card" button on the public invoice page. Only applicable when no payment schedule is active.
 
-stripe_payment_intent_id (text, nullable) — Stripe payment intent ID, set when a couple pays via Stripe Checkout
+stripe_payment_intent_id (text, nullable)  -  Stripe payment intent ID, set when a couple pays via Stripe Checkout
 
-share_token (uuid, not null, default gen_random_uuid()) — unique URL key; generated on row creation
+share_token (uuid, not null, default gen_random_uuid())  -  unique URL key; generated on row creation
 
-share_token_enabled (boolean, not null, default false) — link inactive until MC explicitly enables it
+share_token_enabled (boolean, not null, default false)  -  link inactive until MC explicitly enables it
 
 paid_at (timestamp with time zone, nullable)
 
@@ -351,9 +351,9 @@ quantity (numeric(8,2), not null, default 1.00)
 
 unit_price (numeric(10,2), not null)
 
-amount (numeric(10,2), not null) — stored as quantity × unit_price; recalculated on save
+amount (numeric(10,2), not null)  -  stored as quantity × unit_price; recalculated on save
 
-position (integer, not null) — ordering, multiples of 1000
+position (integer, not null)  -  ordering, multiples of 1000
 
 created_at (timestamp)
 
@@ -376,12 +376,12 @@ RLS: service role only (no client access).
 
 ## couples table additions
 
-portal_token (uuid, not null, default gen_random_uuid()) — unique token for the couple's portal link
-portal_token_enabled (boolean, not null, default true) — always active by default; MCs can rotate the token to invalidate old links
+portal_token (uuid, not null, default gen_random_uuid())  -  unique token for the couple's portal link
+portal_token_enabled (boolean, not null, default true)  -  always active by default; MCs can rotate the token to invalidate old links
 
 ## timeline_items table additions
 
-pending_review (boolean, not null, default false) — true for items submitted via couple portal, awaiting MC approval
+pending_review (boolean, not null, default false)  -  true for items submitted via couple portal, awaiting MC approval
 
 ------------------------------------------------------------------------
 
@@ -392,13 +392,13 @@ Names and pronunciation data submitted by the couple via portal.
 Columns:
 id (uuid, primary key)
 couple_id (uuid, not null, FK to couples.id, on delete cascade)
-user_id (uuid, not null) — MC's user_id (set by SECURITY DEFINER RPC)
-category (text, not null) — 'partner' | 'bridal_party' | 'family'
+user_id (uuid, not null)  -  MC's user_id (set by SECURITY DEFINER RPC)
+category (text, not null)  -  'partner' | 'bridal_party' | 'family'
 full_name (text, not null)
-phonetic (text, nullable) — phonetic spelling of name
-role (text, nullable) — e.g. 'Bride', 'Best Man', 'Mother of Bride'
-audio_url (text, nullable) — Supabase Storage URL for audio pronunciation
-position (integer, default 0) — ordering within category
+phonetic (text, nullable)  -  phonetic spelling of name
+role (text, nullable)  -  e.g. 'Bride', 'Best Man', 'Mother of Bride'
+audio_url (text, nullable)  -  Supabase Storage URL for audio pronunciation
+position (integer, default 0)  -  ordering within category
 created_at (timestamptz, default now())
 
 RLS: Standard user_id = auth.uid() for authenticated users. Anon access via SECURITY DEFINER RPCs: save_portal_person, delete_portal_person.
@@ -412,8 +412,8 @@ Song requests submitted by the couple via portal.
 Columns:
 id (uuid, primary key)
 couple_id (uuid, not null, FK to couples.id, on delete cascade)
-user_id (uuid, not null) — MC's user_id
-category (text, not null) — 'entry_partner1' | 'entry_partner2' | 'first_dance' | 'bridal_party_entry' | 'ceremony' | 'reception' | 'avoid'
+user_id (uuid, not null)  -  MC's user_id
+category (text, not null)  -  'entry_partner1' | 'entry_partner2' | 'first_dance' | 'bridal_party_entry' | 'ceremony' | 'reception' | 'avoid'
 title (text, not null)
 artist (text, nullable)
 notes (text, nullable)
@@ -431,10 +431,10 @@ Files uploaded by the couple via portal.
 Columns:
 id (uuid, primary key)
 couple_id (uuid, not null, FK to couples.id, on delete cascade)
-user_id (uuid, not null) — MC's user_id
-name (text, not null) — original filename
-file_url (text, not null) — Supabase Storage public URL
-file_size (integer, nullable) — bytes
+user_id (uuid, not null)  -  MC's user_id
+name (text, not null)  -  original filename
+file_url (text, not null)  -  Supabase Storage public URL
+file_size (integer, nullable)  -  bytes
 created_at (timestamptz, default now())
 
 Storage bucket: portal-files (public read, max 20MB per file)
@@ -446,15 +446,15 @@ RLS: Standard user_id = auth.uid(). Anon uploads handled via /api/portal/upload 
 
 ## Portal RPC Functions (SECURITY DEFINER, anon-accessible)
 
-get_portal_data(token uuid) — returns couple name + event details + all portal_people + portal_songs + portal_files + timeline_items for first upcoming event
-get_vendor_timeline(token uuid) — returns event date/venue + timeline_items only (no PII)
-save_portal_person(p_token, p_id, p_category, p_full_name, p_phonetic, p_role, p_audio_url, p_position) — upsert
+get_portal_data(token uuid)  -  returns couple name + event details + all portal_people + portal_songs + portal_files + timeline_items for first upcoming event
+get_vendor_timeline(token uuid)  -  returns event date/venue + timeline_items only (no PII)
+save_portal_person(p_token, p_id, p_category, p_full_name, p_phonetic, p_role, p_audio_url, p_position)  -  upsert
 delete_portal_person(p_token, p_id)
-save_portal_song(p_token, p_id, p_category, p_title, p_artist, p_notes, p_position) — upsert
+save_portal_song(p_token, p_id, p_category, p_title, p_artist, p_notes, p_position)  -  upsert
 delete_portal_song(p_token, p_id)
-save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min) — always inserts with pending_review=true into couple's first upcoming event
+save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min)  -  always inserts with pending_review=true into couple's first upcoming event
 delete_portal_timeline_item(p_token, p_id)
-save_portal_file(p_token, p_id, p_name, p_file_url, p_file_size) — insert
+save_portal_file(p_token, p_id, p_name, p_file_url, p_file_size)  -  insert
 delete_portal_file(p_token, p_id)
 
 All RPCs validate portal_token_enabled=true before proceeding.

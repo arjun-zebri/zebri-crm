@@ -174,7 +174,7 @@ function TaskSidePanelInner({
         }
       >
         <div className="max-w-[640px] mx-auto py-4">
-          {/* Title — large, no border, wraps on mobile */}
+          {/* Title - large, no border, wraps on mobile */}
           <textarea
             ref={titleRef}
             rows={1}
@@ -196,7 +196,7 @@ function TaskSidePanelInner({
             autoFocus={!task.title}
           />
 
-          {/* Property table — Notion-style label/value rows */}
+          {/* Property table - Notion-style label/value rows */}
           <div className="space-y-1 mb-6">
             <PropertyRow label="Status">
               <StatusCell

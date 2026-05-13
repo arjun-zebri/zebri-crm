@@ -449,7 +449,7 @@ export default function TasksPage() {
     const sourceBucket = bucketKeyFor(draggedTask, groupBy);
 
     if (destBucket !== sourceBucket && destBucket !== undefined) {
-      // Move between buckets — patch the underlying property
+      // Move between buckets - patch the underlying property
       const patch = bucketPatch(groupBy, destBucket);
       if (patch) {
         patchTask.mutate({ id: activeId, patch });

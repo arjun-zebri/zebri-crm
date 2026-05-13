@@ -12,7 +12,7 @@ const statusVariant: Record<SubscriptionStatus, "paid" | "contacted" | "cancelle
 };
 
 function formatDate(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return " - ";
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -65,14 +65,14 @@ export function UsersTab({
                   className="border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer"
                 >
                   <td className="px-4 py-3 font-medium">
-                    {user.display_name || "—"}
+                    {user.display_name || " - "}
                     {user.account_type === "admin" && (
                       <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
                         admin
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{user.business_name || "—"}</td>
+                  <td className="px-4 py-3 text-gray-600">{user.business_name || " - "}</td>
                   <td className="px-4 py-3 text-gray-600">{user.email}</td>
                   <td className="px-4 py-3">
                     {user.subscription_status ? (
@@ -80,7 +80,7 @@ export function UsersTab({
                         {user.subscription_status.replace("_", " ")}
                       </Badge>
                     ) : (
-                      <span className="text-gray-400 text-xs">—</span>
+                      <span className="text-gray-400 text-xs"> - </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-600">{planLabel(user)}</td>

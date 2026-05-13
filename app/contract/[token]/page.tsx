@@ -34,7 +34,7 @@ interface PublicContract {
 }
 
 function formatDate(s: string | null): string {
-  if (!s) return '—'
+  if (!s) return '-'
   try {
     return new Date(s.length === 10 ? s + 'T00:00:00' : s).toLocaleDateString('en-AU', {
       day: 'numeric', month: 'long', year: 'numeric',
@@ -45,7 +45,7 @@ function formatDate(s: string | null): string {
 }
 
 function formatDateTime(s: string | null): string {
-  if (!s) return '—'
+  if (!s) return '-'
   try {
     return new Date(s).toLocaleString('en-AU', {
       day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit',

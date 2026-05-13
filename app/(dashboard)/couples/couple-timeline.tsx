@@ -138,7 +138,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
 
   const activeEventId = selectedEventId ?? events[0]?.id ?? null
 
-  // Shared cache key with EventDayCalendar — no extra network call
+  // Shared cache key with EventDayCalendar - no extra network call
   const { data: items = [], isLoading: itemsLoading } = useQuery({
     queryKey: ['event-timeline', activeEventId],
     enabled: !!activeEventId,
@@ -296,7 +296,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-4">
 
-      {/* Skeleton — shown while any query is pending */}
+      {/* Skeleton - shown while any query is pending */}
       {isLoading && (
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 flex-1 animate-pulse">
           {/* Left: calendar area */}
@@ -320,7 +320,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
         </div>
       )}
 
-      {/* Real content — always mounted so queries fire; hidden via CSS while loading */}
+      {/* Real content - always mounted so queries fire; hidden via CSS while loading */}
       <div className={`flex flex-col flex-1 min-h-0 gap-4 ${isLoading ? 'hidden' : ''}`}>
         {/* Top bar: event selector + apply template */}
         <div className="flex items-center gap-2 flex-wrap">

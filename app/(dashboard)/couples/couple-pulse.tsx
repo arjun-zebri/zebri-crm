@@ -128,7 +128,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
           </div>
         </div>
 
-        {/* Score breakdown — 2 cols on mobile, 4 on sm+ */}
+        {/* Score breakdown - 2 cols on mobile, 4 on sm+ */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           {SAMPLE.subScores.map((s) => {
             const c = scoreColor(s.value);
@@ -213,7 +213,7 @@ export function CouplePulse({ couple }: CouplePulseProps) {
         </div>
       </div>
 
-      {/* Activity signals — 2 cols on mobile, 4 on sm+ */}
+      {/* Activity signals - 2 cols on mobile, 4 on sm+ */}
       <div className="border-t border-gray-100 pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
         {SAMPLE.activity.map((a) => (
           <div key={a.label}>

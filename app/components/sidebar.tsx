@@ -18,6 +18,7 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  Paintbrush,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -31,6 +32,7 @@ const navItems = [
 ];
 
 const bottomItems = [
+  { label: "Branding", href: "/branding", icon: Paintbrush },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

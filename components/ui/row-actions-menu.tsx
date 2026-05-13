@@ -15,7 +15,7 @@ interface RowActionsMenuProps {
   actions: RowAction[]
   /** Optional submenu sections for nested actions like "Snooze" */
   submenus?: { label: string; icon?: React.ReactNode; items: RowAction[] }[]
-  /** Always visible (mobile / touch) — otherwise hover-only */
+  /** Always visible (mobile / touch) - otherwise hover-only */
   alwaysVisible?: boolean
 }
 

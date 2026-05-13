@@ -322,7 +322,7 @@ export function CoupleProfile({
                 </Popover.Root>
               </div>
 
-              {/* Actions dropdown — mobile only */}
+              {/* Actions dropdown - mobile only */}
               <div className="sm:hidden">
               <Popover.Root open={actionsOpen} onOpenChange={setActionsOpen}>
                 <Popover.Trigger asChild>

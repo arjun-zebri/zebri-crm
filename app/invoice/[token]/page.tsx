@@ -390,7 +390,7 @@ export default function PublicInvoicePage() {
               </div>
             )}
 
-            {/* Pay with card (full — no schedule) */}
+            {/* Pay with card (full - no schedule) */}
             {showFullButton && (
               <div className="px-8 pb-8">
                 <PayWithCardButton invoiceId={invoice.id} shareToken={invoice.share_token} brandColor={invoice.brand_color || '#000000'} />

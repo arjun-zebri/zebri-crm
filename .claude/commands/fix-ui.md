@@ -36,7 +36,7 @@ You are auditing Zebri CRM UI for design system compliance. Run through this che
 
 ### General
 - [ ] No inline styles (`style={{}}`)?
-- [ ] Tailwind only — no CSS modules or external stylesheets?
+- [ ] Tailwind only  -  no CSS modules or external stylesheets?
 - [ ] Consistent spacing using Tailwind scale (4, 6, 8, etc.)?
 
 For each violation found, show: file:line → issue → fix.

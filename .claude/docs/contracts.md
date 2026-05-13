@@ -1,6 +1,6 @@
 # Contracts (e-sign)
 
-Zebri includes a minimal, legally-valid e-signature flow so MCs can send service agreements, have the couple sign them, and automatically spawn the deposit invoice — without leaving the CRM.
+Zebri includes a minimal, legally-valid e-signature flow so MCs can send service agreements, have the couple sign them, and automatically spawn the deposit invoice  -  without leaving the CRM.
 
 ## Status lifecycle
 
@@ -11,12 +11,12 @@ draft ──send──▶ sent ──sign──▶ signed
                  └──revoke──▶ draft (new version, new token)
 ```
 
-- **draft** — content is editable; no public link.
-- **sent** — content is locked (`locked_content_html` is the frozen, variable-substituted snapshot). Public link active.
-- **signed** — immutable. Audit trail is populated (`signer_name`, `signer_ip`, `signer_user_agent`, `signed_at`). Deposit invoice auto-created if a quote is linked.
-- **declined** — terminal; `declined_reason` optional.
-- **expired** — flipped nightly by `expire_contracts()` cron.
-- **revoked** — old link is dead; status resets to `draft`, `version` bumps.
+- **draft**  -  content is editable; no public link.
+- **sent**  -  content is locked (`locked_content_html` is the frozen, variable-substituted snapshot). Public link active.
+- **signed**  -  immutable. Audit trail is populated (`signer_name`, `signer_ip`, `signer_user_agent`, `signed_at`). Deposit invoice auto-created if a quote is linked.
+- **declined**  -  terminal; `declined_reason` optional.
+- **expired**  -  flipped nightly by `expire_contracts()` cron.
+- **revoked**  -  old link is dead; status resets to `draft`, `version` bumps.
 
 ## Content authoring
 
@@ -53,7 +53,7 @@ See `lib/contract-variables.ts` for the catalog and rendering helpers.
 
 When a contract with a linked (accepted) quote is signed, `sign_contract()` inserts:
 1. A new `invoices` row with `status='draft'`, `subtotal` and items copied from the quote, and `deposit_percent` from `raw_user_meta_data.default_deposit_percent` (fallback 25%).
-2. A follow-up task: "Contract signed by X — review & send deposit invoice".
+2. A follow-up task: "Contract signed by X  -  review & send deposit invoice".
 
 The invoice is created as a draft so the MC can review before sending.
 
@@ -68,11 +68,11 @@ Contracts are a **Pro-plan** feature. `lib/subscription.ts` exposes `hasContract
 
 ## Related files
 
-- `supabase/migrations/20260421000000_add_contracts_feature.sql` — schema + RPCs
+- `supabase/migrations/20260421000000_add_contracts_feature.sql`  -  schema + RPCs
 - `app/(dashboard)/contracts/contract-builder-modal.tsx`
 - `app/(dashboard)/couples/couple-contracts.tsx`
 - `app/(dashboard)/settings/contract-template-manager.tsx`
-- `app/contract/[token]/page.tsx` — public sign page
+- `app/contract/[token]/page.tsx`  -  public sign page
 - `app/api/email/send-contract/route.ts`
 - `app/api/contract/sign/route.ts`
 - `app/api/contract/decline/route.ts`
@@ -83,4 +83,4 @@ Contracts are a **Pro-plan** feature. `lib/subscription.ts` exposes `hasContract
 - `lib/contract-variables.ts`
 - `lib/subscription.ts`
 - `lib/generate-pdf.ts` (`'contract'` branch)
-- `vercel.json` — cron schedules
+- `vercel.json`  -  cron schedules

@@ -280,7 +280,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                     !['paid', 'cancelled'].includes(invoice.status)
                   const dueDateFormatted = invoice.due_date
                     ? new Date(invoice.due_date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
-                    : '—'
+                    : '-'
 
                   return (
                     <button

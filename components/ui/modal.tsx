@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 
 // Tracks how many Modal instances are currently open so only the topmost
-// one responds to Escape — prevents nested modals from closing their parent.
+// one responds to Escape - prevents nested modals from closing their parent.
 let _openModalDepth = 0
 
 /** Returns the number of Modal instances currently open. Use this in custom

@@ -339,7 +339,7 @@ export default function QuotePage() {
             type="text"
             value={title}
             onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
-            placeholder="e.g. Wedding MC Package — Smith Wedding"
+            placeholder="e.g. Wedding MC Package - Smith Wedding"
             className={inputClass}
           />
         </div>
@@ -453,7 +453,7 @@ export default function QuotePage() {
             <p className="text-sm font-medium text-gray-900">Share link</p>
             <p className="text-xs text-gray-400 mt-0.5">
               {quote.share_token_enabled
-                ? 'Link is active — couple can view and respond'
+                ? 'Link is active - couple can view and respond'
                 : 'Enable to generate a link for the couple'}
             </p>
           </div>

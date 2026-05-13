@@ -59,7 +59,7 @@ function generateContractHtml(doc: PdfDocumentData): string {
   const auditBlock = signedOn
     ? `<div style="margin-top:40px;padding:18px;background:#f5f9f6;border:1px solid #d1e4d7;border-radius:8px">
         <p style="font-size:11px;font-weight:600;color:#0f766e;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.06em">Audit trail</p>
-        <p style="font-size:12px;color:#333;margin:2px 0">Signed by ${doc.signerName || '—'}</p>
+        <p style="font-size:12px;color:#333;margin:2px 0">Signed by ${doc.signerName || '-'}</p>
         <p style="font-size:12px;color:#333;margin:2px 0">On ${signedOn}</p>
         ${doc.signerIp ? `<p style="font-size:12px;color:#555;margin:2px 0">From IP ${doc.signerIp}</p>` : ''}
         ${doc.signerUserAgent ? `<p style="font-size:11px;color:#777;margin:2px 0;word-break:break-all">${doc.signerUserAgent}</p>` : ''}
@@ -148,7 +148,7 @@ export function generateAndPrintPdf(doc: PdfDocumentData) {
       if (doc.type === 'invoice' && item.quantity != null && item.unit_price != null) {
         return `
           <tr>
-            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111">${item.description || '—'}</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111">${item.description || '-'}</td>
             <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111;text-align:right;width:60px">${item.quantity}</td>
             <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111;text-align:right;width:100px">${formatCurrency(item.unit_price)}</td>
             <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111;text-align:right;width:100px">${formatCurrency(item.amount ?? item.unit_price * item.quantity)}</td>
@@ -156,7 +156,7 @@ export function generateAndPrintPdf(doc: PdfDocumentData) {
       }
       return `
         <tr>
-          <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111">${item.description || '—'}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111">${item.description || '-'}</td>
           <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111;text-align:right;width:120px">${formatCurrency(item.amount ?? 0)}</td>
         </tr>`
     })

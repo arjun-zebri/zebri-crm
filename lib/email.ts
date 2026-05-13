@@ -110,7 +110,7 @@ export async function sendQuoteEmail(opts: {
   const { error } = await resend.emails.send({
     from: FROM,
     to: opts.coupleEmail,
-    subject: `Quote from ${opts.mcBusinessName} — ${opts.quoteNumber}`,
+    subject: `Quote from ${opts.mcBusinessName} - ${opts.quoteNumber}`,
     html: quoteHtml(opts),
   });
   if (error) return { ok: false, error: error.message };
@@ -202,7 +202,7 @@ function contractReminderHtml(opts: {
           ${expiryLine}
           <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
             Hi ${coupleName},<br><br>
-            Just a gentle nudge — your contract from ${mcBusinessName} is still waiting for your signature.
+            Just a gentle nudge - your contract from ${mcBusinessName} is still waiting for your signature.
           </p>
           <table cellpadding="0" cellspacing="0">
             <tr><td style="background:#111827;border-radius:8px;">
@@ -235,7 +235,7 @@ export async function sendContractEmail(opts: {
   const { error } = await resend.emails.send({
     from: FROM,
     to: opts.coupleEmail,
-    subject: `Contract from ${opts.mcBusinessName} — ${opts.contractNumber}`,
+    subject: `Contract from ${opts.mcBusinessName} - ${opts.contractNumber}`,
     html: contractHtml(opts),
   });
   if (error) return { ok: false, error: error.message };
@@ -254,7 +254,7 @@ export async function sendContractReminderEmail(opts: {
   const { error } = await resend.emails.send({
     from: FROM,
     to: opts.coupleEmail,
-    subject: `Reminder: please sign your contract — ${opts.contractNumber}`,
+    subject: `Reminder: please sign your contract - ${opts.contractNumber}`,
     html: contractReminderHtml(opts),
   });
   if (error) return { ok: false, error: error.message };
@@ -273,7 +273,7 @@ export async function sendInvoiceEmail(opts: {
   const { error } = await resend.emails.send({
     from: FROM,
     to: opts.coupleEmail,
-    subject: `Invoice from ${opts.mcBusinessName} — ${opts.invoiceNumber}`,
+    subject: `Invoice from ${opts.mcBusinessName} - ${opts.invoiceNumber}`,
     html: invoiceHtml(opts),
   });
   if (error) return { ok: false, error: error.message };

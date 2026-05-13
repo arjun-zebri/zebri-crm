@@ -259,7 +259,7 @@ export function CouplesList({
         justDraggedRef.current = true;
         setTimeout(() => (justDraggedRef.current = false), 100);
 
-        // Swallow the click that fires after the drag — otherwise the page
+        // Swallow the click that fires after the drag - otherwise the page
         // wrapper's background click handler clears the selection we just made.
         const suppressNextClick = (e: MouseEvent) => {
           e.stopImmediatePropagation();
@@ -537,7 +537,7 @@ export function CouplesList({
         </table>
       </div>
 
-      {/* ── Mobile pagination — simple prev/next ── */}
+      {/* ── Mobile pagination - simple prev/next ── */}
       {table.getPageCount() > 1 && (
         <div className="sm:hidden border-t border-gray-200 bg-white py-3 flex items-center justify-between">
           <span className="text-sm text-gray-500">

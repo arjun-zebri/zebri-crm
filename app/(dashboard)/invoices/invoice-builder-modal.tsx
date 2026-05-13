@@ -439,7 +439,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
       const selectedCouple = couples?.find((c) => c.id === newCoupleId)
       if (isNewInvoice) {
         if (!actualInvoiceId) {
-          // First couple selection — generate real number and create draft row
+          // First couple selection - generate real number and create draft row
           const id = crypto.randomUUID()
           const shareToken = crypto.randomUUID()
           const { data: user } = await supabase.auth.getUser()
@@ -1067,7 +1067,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                     type="text"
                     value={title}
                     onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
-                    placeholder="e.g. Wedding MC Services — Smith Wedding"
+                    placeholder="e.g. Wedding MC Services - Smith Wedding"
                     disabled={!canEdit}
                     className={`${inputClass} disabled:bg-gray-50 disabled:text-gray-400`}
                   />
@@ -1123,7 +1123,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                           ? 'Due on receipt'
                           : dueDate
                           ? new Date(dueDate + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : '—'}
+                          : '-'}
                       </p>
                     )}
                   </div>
@@ -1327,7 +1327,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
                     <div>
                       <p className="text-sm font-medium text-gray-900">Send to couple</p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {activeShareEnabled ? 'Link active — couple can view this invoice' : 'Enable a shareable link for the couple'}
+                        {activeShareEnabled ? 'Link active - couple can view this invoice' : 'Enable a shareable link for the couple'}
                       </p>
                     </div>
                     <button

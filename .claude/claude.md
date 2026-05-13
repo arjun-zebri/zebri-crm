@@ -1,4 +1,4 @@
-# Zebri — Claude Development Guide
+# Zebri  -  Claude Development Guide
 
 Zebri is a **minimal CRM for Wedding MCs**.
 Workflow: Couple → Enquiry → Quote → Booked → Wedding → Follow-up
@@ -9,7 +9,7 @@ Feel: minimal, fast, calm, modern. Never enterprise.
 - Backend: Supabase (Postgres + Auth)
 - Libraries: tanstack-table, react-query, lucide-react, dnd-kit
 
-## MVP Scope — Build ONLY
+## MVP Scope  -  Build ONLY
 Authentication | Couples (with events) | Contacts | Tasks | Payments | Contracts (e-sign)
 
 ## DO NOT build
@@ -20,10 +20,10 @@ Sidebar (240px fixed) | Main content area
 Navigation: Dashboard, Couples, Contacts
 
 ## Component Architecture
-- Pages are orchestrators — no form logic, no mutations
+- Pages are orchestrators  -  no form logic, no mutations
 - Section components co-located with their page file
 - Shared UI lives in `components/ui/`
-- Max ~150 lines per component — split if larger
+- Max ~150 lines per component  -  split if larger
 
 ## Typography
 - Page titles: `text-3xl font-semibold`
@@ -31,7 +31,7 @@ Navigation: Dashboard, Couples, Contacts
 - Everything else: `text-sm`
 
 ## Brand Assets
-Official assets in `.claude/brand_assets/` — copy to `public/` when needed. Never recreate.
+Official assets in `.claude/brand_assets/`  -  copy to `public/` when needed. Never recreate.
 
 ## Document Maintenance
 When you make changes, update the relevant doc in `.claude/docs/`:
@@ -47,20 +47,20 @@ When you make changes, update the relevant doc in `.claude/docs/`:
 
 ## Testing Rules
 - All features must work on **desktop and mobile** (Pixel 5 + iPhone 12)
-- Tests live in `tests/e2e/` — one file per feature area
+- Tests live in `tests/e2e/`  -  one file per feature area
 - When running tests, **fix the app** for every failure; don't just patch the test
-- Use Tailwind responsive prefixes for mobile fixes — never raw CSS media queries
+- Use Tailwind responsive prefixes for mobile fixes  -  never raw CSS media queries
 - Prefer semantic selectors: `getByRole` > `getByLabel` > `getByText` > `data-testid`
 - See `.claude/docs/testing.md` for full conventions
 
 ## Slash Commands Available
-- `/new-page` — scaffold a new page (loads page-specs.md)
-- `/new-component` — create a UI component (loads component-library.md)
-- `/db-migration` — write a schema migration (loads database-schema.md)
-- `/fix-ui` — audit/fix for design system compliance
-- `/add-alert` — add a Slack alert (loads alerts.md)
-- `/ship-check` — pre-ship checklist
-- `/test` — run Playwright tests (desktop + mobile) and fix issues found
+- `/new-page`  -  scaffold a new page (loads page-specs.md)
+- `/new-component`  -  create a UI component (loads component-library.md)
+- `/db-migration`  -  write a schema migration (loads database-schema.md)
+- `/fix-ui`  -  audit/fix for design system compliance
+- `/add-alert`  -  add a Slack alert (loads alerts.md)
+- `/ship-check`  -  pre-ship checklist
+- `/test`  -  run Playwright tests (desktop + mobile) and fix issues found
 
 ## Always-Loaded Context
 @.claude/docs/frontend-design.md

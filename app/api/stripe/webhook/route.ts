@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   // Resolve plan from the actual Stripe price ID. Stripe `metadata.plan` is
   // only set at checkout-creation time and never updates when prices change
-  // via the Customer Portal — so price-ID matching is the source of truth.
+  // via the Customer Portal - so price-ID matching is the source of truth.
   function planFromPrice(priceId: string | null | undefined): 'pro' | 'max' | null {
     if (!priceId) return null
     if (priceId === process.env.STRIPE_MAX_PRICE_ID) return 'max'
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
 
-        // Invoice payments (destination charges) — identified by invoice_id metadata
+        // Invoice payments (destination charges) - identified by invoice_id metadata
         if (session.metadata?.invoice_id) {
           const invoiceId = session.metadata.invoice_id
           const paymentType = session.metadata?.payment_type ?? 'full'
@@ -163,13 +163,13 @@ export async function POST(request: NextRequest) {
 
         const email = await getEmail(userId)
         await sendSlackAlert({
-          text: `:moneybag: New paid subscription — ${email ?? userId} on ${plan?.toUpperCase() ?? '?'}`,
+          text: `:moneybag: New paid subscription - ${email ?? userId} on ${plan?.toUpperCase() ?? '?'}`,
           blocks: [
             {
               type: 'section',
               fields: [
-                { type: 'mrkdwn', text: `*Email:*\n${email ?? '—'}` },
-                { type: 'mrkdwn', text: `*Plan:*\n${plan ?? '—'}` },
+                { type: 'mrkdwn', text: `*Email:*\n${email ?? '-'}` },
+                { type: 'mrkdwn', text: `*Plan:*\n${plan ?? '-'}` },
                 { type: 'mrkdwn', text: `*Status:*\n${subscription.status}` },
                 {
                   type: 'mrkdwn',
@@ -256,40 +256,40 @@ export async function POST(request: NextRequest) {
         const email = await getEmail(userId)
         if (isDeleted) {
           await sendSlackAlert({
-            text: `:wave: Subscription ended — ${email ?? userId}`,
+            text: `:wave: Subscription ended - ${email ?? userId}`,
             blocks: [
               {
                 type: 'section',
                 fields: [
-                  { type: 'mrkdwn', text: `*Email:*\n${email ?? '—'}` },
-                  { type: 'mrkdwn', text: `*Plan:*\n${plan ?? '—'}` },
+                  { type: 'mrkdwn', text: `*Email:*\n${email ?? '-'}` },
+                  { type: 'mrkdwn', text: `*Plan:*\n${plan ?? '-'}` },
                 ],
               },
             ],
           })
         } else if (cancelAtPeriodEnd) {
           await sendSlackAlert({
-            text: `:hourglass_flowing_sand: Cancellation scheduled — ${email ?? userId}`,
+            text: `:hourglass_flowing_sand: Cancellation scheduled - ${email ?? userId}`,
             blocks: [
               {
                 type: 'section',
                 fields: [
-                  { type: 'mrkdwn', text: `*Email:*\n${email ?? '—'}` },
-                  { type: 'mrkdwn', text: `*Plan:*\n${plan ?? '—'}` },
-                  { type: 'mrkdwn', text: `*Ends:*\n${periodEndIso?.slice(0, 10) ?? '—'}` },
+                  { type: 'mrkdwn', text: `*Email:*\n${email ?? '-'}` },
+                  { type: 'mrkdwn', text: `*Plan:*\n${plan ?? '-'}` },
+                  { type: 'mrkdwn', text: `*Ends:*\n${periodEndIso?.slice(0, 10) ?? '-'}` },
                 ],
               },
             ],
           })
         } else if (event.type === 'customer.subscription.updated') {
           await sendSlackAlert({
-            text: `:gear: Subscription updated — ${email ?? userId}`,
+            text: `:gear: Subscription updated - ${email ?? userId}`,
             blocks: [
               {
                 type: 'section',
                 fields: [
-                  { type: 'mrkdwn', text: `*Email:*\n${email ?? '—'}` },
-                  { type: 'mrkdwn', text: `*Plan:*\n${plan ?? '—'}` },
+                  { type: 'mrkdwn', text: `*Email:*\n${email ?? '-'}` },
+                  { type: 'mrkdwn', text: `*Plan:*\n${plan ?? '-'}` },
                   { type: 'mrkdwn', text: `*Status:*\n${subscription.status}` },
                 ],
               },
@@ -320,12 +320,12 @@ export async function POST(request: NextRequest) {
 
         const email = await getEmail(userId)
         await sendSlackAlert({
-          text: `:warning: Payment failed — ${email ?? userId}`,
+          text: `:warning: Payment failed - ${email ?? userId}`,
           blocks: [
             {
               type: 'section',
               fields: [
-                { type: 'mrkdwn', text: `*Email:*\n${email ?? '—'}` },
+                { type: 'mrkdwn', text: `*Email:*\n${email ?? '-'}` },
                 { type: 'mrkdwn', text: `*Invoice:*\n${invoice.id}` },
                 {
                   type: 'mrkdwn',
@@ -368,12 +368,12 @@ export async function POST(request: NextRequest) {
         if (isRecurringCharge) {
           const email = await getEmail(userId)
           await sendSlackAlert({
-            text: `:moneybag: Recurring payment received — ${email ?? userId}`,
+            text: `:moneybag: Recurring payment received - ${email ?? userId}`,
             blocks: [
               {
                 type: 'section',
                 fields: [
-                  { type: 'mrkdwn', text: `*Email:*\n${email ?? '—'}` },
+                  { type: 'mrkdwn', text: `*Email:*\n${email ?? '-'}` },
                   {
                     type: 'mrkdwn',
                     text: `*Amount:*\n$${(invoice.amount_paid / 100).toFixed(2)}`,

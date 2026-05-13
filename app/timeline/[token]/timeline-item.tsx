@@ -9,7 +9,7 @@ interface PublicTimelineItemProps {
 }
 
 function formatTime(time: string | null | undefined): string {
-  if (!time) return "—";
+  if (!time) return " - ";
   const [h, m] = time.split(":").map(Number);
   const period = h >= 12 ? "PM" : "AM";
   const hour12 = h % 12 || 12;

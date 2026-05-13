@@ -217,7 +217,7 @@ function BillingHistory() {
                     <td className="px-4 py-2.5 text-gray-700">
                       ${(inv.amount / 100).toFixed(2)}
                     </td>
-                    <td className="px-4 py-2.5 text-gray-600 capitalize">{inv.status ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-gray-600 capitalize">{inv.status ?? '-'}</td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="inline-flex items-center gap-3">
                         {inv.hostedUrl && (
@@ -525,7 +525,7 @@ export function BillingSection({
 
   // Treat as subscribed if Stripe has a customer OR the user is comped
   // (active without a Stripe customer). A scheduled cancellation no longer
-  // counts as fully subscribed for plan-card purposes — surface "Resubscribe".
+  // counts as fully subscribed for plan-card purposes - surface "Resubscribe".
   const isSubscribed =
     (hasStripeCustomer && (status === 'trialing' || status === 'active')) ||
     (isComped && isSubscribedFlag && status === 'active')
@@ -577,7 +577,7 @@ export function BillingSection({
         <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl px-4 py-3">
           <CheckCircle2 size={16} strokeWidth={1.5} className="text-green-500 shrink-0" />
           <p className="text-sm text-gray-700">
-            Payment successful — your subscription is being activated. This page will update shortly.
+            Payment successful - your subscription is being activated. This page will update shortly.
           </p>
         </div>
       )}

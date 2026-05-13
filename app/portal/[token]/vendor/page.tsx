@@ -76,7 +76,7 @@ export default async function VendorPage({
           <h1 className="text-2xl font-semibold text-gray-900 mb-1">Run Sheet</h1>
           <p className="text-sm text-gray-500">
             {formatEventDate(event.date)}
-            {event.venue ? ` · ${event.venue.replace(/\s*[—–]\s*/g, ', ')}` : ''}
+            {event.venue ? ` · ${event.venue.replace(/\s*[\u2014\u2013]\s*/g, ', ')}` : ''}
           </p>
         </div>
 

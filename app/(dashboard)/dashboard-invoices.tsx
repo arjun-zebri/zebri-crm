@@ -19,7 +19,7 @@ function isOverdue(dateStr: string | null): boolean {
 }
 
 function formatDueDate(dateStr: string | null): string {
-  if (!dateStr) return '—'
+  if (!dateStr) return '-'
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-AU', {
     day: 'numeric', month: 'short',
   })

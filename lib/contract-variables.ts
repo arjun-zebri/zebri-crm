@@ -37,7 +37,7 @@ export interface ContractVariableValues {
 }
 
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—'
+  if (!dateStr) return '-'
   try {
     return new Date(dateStr + (dateStr.length === 10 ? 'T00:00:00' : '')).toLocaleDateString('en-AU', {
       day: 'numeric',
@@ -87,18 +87,18 @@ export function buildContractVariables(input: {
   const deposit = (total * (input.depositPercent || 25)) / 100
 
   return {
-    couple_name: input.couple.name || '—',
-    couple_email: input.couple.email || '—',
+    couple_name: input.couple.name || '-',
+    couple_email: input.couple.email || '-',
     event_date: formatDate(input.firstEvent?.date ?? null),
-    venue: input.firstEvent?.venue || '—',
-    total_amount: input.quote ? formatCurrency(total) : '—',
-    deposit_amount: input.quote ? formatCurrency(deposit) : '—',
-    mc_business_name: (input.userMeta.business_name as string) || '—',
+    venue: input.firstEvent?.venue || '-',
+    total_amount: input.quote ? formatCurrency(total) : '-',
+    deposit_amount: input.quote ? formatCurrency(deposit) : '-',
+    mc_business_name: (input.userMeta.business_name as string) || '-',
     mc_signature_name:
       (input.userMeta.mc_signature_name as string) ||
       (input.userMeta.display_name as string) ||
       (input.userMeta.business_name as string) ||
-      '—',
+      '-',
     today: formatDate(new Date().toISOString().slice(0, 10)),
   }
 }

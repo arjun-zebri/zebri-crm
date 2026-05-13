@@ -43,9 +43,9 @@ These are the **desktop defaults**. Always apply the responsive mobile variants 
 | Chart total (hero number) | `text-2xl font-semibold` | `sm:text-3xl` |
 | Data row label | `text-xs` | `sm:text-sm` |
 | Data row count / amount | `text-xs font-medium` | `sm:text-sm` |
-| Body / descriptions | `text-sm` | — (unchanged) |
-| Labels | `text-sm font-medium text-gray-700` | — (unchanged) |
-| Dense section titles | `text-sm font-medium text-gray-900` | — (unchanged) |
+| Body / descriptions | `text-sm` |  -  (unchanged) |
+| Labels | `text-sm font-medium text-gray-700` |  -  (unchanged) |
+| Dense section titles | `text-sm font-medium text-gray-900` |  -  (unchanged) |
 | Dropdown items | `text-xs` | `sm:text-sm` |
 
 Dense page section titles (e.g. settings): text-sm font-medium text-gray-900
@@ -67,10 +67,10 @@ Breakpoints follow Tailwind defaults: `sm` = 640px, `md` = 768px, `lg` = 1024px.
 - Desktop (`md+`): fixed 68px icon-only sidebar, expands to 240px on hover
 
 **Couple Profile modal:**
-- Wrapper: `fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4` — `p-3` creates visible gaps on all edges on mobile
-- Modal box: `w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] rounded-2xl` — full-bleed with gaps on mobile, bounded on desktop
+- Wrapper: `fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4`  -  `p-3` creates visible gaps on all edges on mobile
+- Modal box: `w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] rounded-2xl`  -  full-bleed with gaps on mobile, bounded on desktop
 - Navigation: horizontal scrollable tab strip (`overflow-x-auto`, `min-w-max`) on mobile (`sm:hidden`); vertical 200px sidebar on desktop (`hidden sm:block`)
-- Header actions: consolidated into a single `⋯` (MoreHorizontal) Popover dropdown — all actions (Call, Email, WhatsApp, Portal, Delete) inside it
+- Header actions: consolidated into a single `⋯` (MoreHorizontal) Popover dropdown  -  all actions (Call, Email, WhatsApp, Portal, Delete) inside it
 - **VendorProfile** (slide-over): Mobile `w-full`, Desktop `w-[640px]`
 
 **Tables:**
@@ -79,9 +79,9 @@ Breakpoints follow Tailwind defaults: `sm` = 640px, `md` = 768px, `lg` = 1024px.
 - Vendors column visibility: name+status always; category at `sm`; contact_name+phone+email at `lg`
 
 **Dashboard grids:**
-- Top section: `grid-cols-1 lg:grid-cols-7` — fixed height only on desktop: `lg:h-[560px]`. No fixed height on mobile.
-- Calendar column: `lg:col-span-2 lg:h-full` — no hardcoded mobile height; calendar fills naturally
-- Bottom section: `grid-cols-1 sm:grid-cols-2 xl:grid-cols-4` — 2-col at 640px (not 768px)
+- Top section: `grid-cols-1 lg:grid-cols-7`  -  fixed height only on desktop: `lg:h-[560px]`. No fixed height on mobile.
+- Calendar column: `lg:col-span-2 lg:h-full`  -  no hardcoded mobile height; calendar fills naturally
+- Bottom section: `grid-cols-1 sm:grid-cols-2 xl:grid-cols-4`  -  2-col at 640px (not 768px)
 - Stats: `grid-cols-1 sm:grid-cols-3`
 
 **Calendar filter sidebar:**
@@ -113,14 +113,14 @@ These rules apply to **every page**. Follow them when building or auditing any c
 ## Grids
 
 - Start with `grid-cols-1` for all grids
-- Use `sm:grid-cols-2` (640px) for 2-column layouts — not `md:grid-cols-2` (768px) which is too late for most phones in landscape
+- Use `sm:grid-cols-2` (640px) for 2-column layouts  -  not `md:grid-cols-2` (768px) which is too late for most phones in landscape
 - Use `xl:grid-cols-4` for 4-column dashboard cards
 - Stats rows: `sm:grid-cols-3`
 
 ## Hiding / showing content on mobile
 
 - Hide a section on mobile, show on tablet+: `hidden sm:block` / `hidden sm:grid`
-- Example: dashboard calendar grid is `hidden sm:grid` — only the events list shows on phones
+- Example: dashboard calendar grid is `hidden sm:grid`  -  only the events list shows on phones
 - Hide desktop-only labels: `hidden sm:inline`, `hidden md:inline`
 
 ## Responsive label text in dropdowns / buttons
@@ -136,17 +136,17 @@ Example: period selector shows `6m` on mobile, `6 months` on desktop.
 
 ## Charts (Recharts)
 
-- XAxis: `interval={1}` — shows every other tick, halves label density
-- YAxis: `tickCount={4}`, `width={40}` — 4 increments, narrower axis
+- XAxis: `interval={1}`  -  shows every other tick, halves label density
+- YAxis: `tickCount={4}`, `width={40}`  -  4 increments, narrower axis
 - Tick font: `fontSize: 11` (down from 12)
 - Wrap the stats row with `flex flex-wrap` so badge + "vs previous period" never overflow
 
 ## Anti-patterns to avoid
 
-- `h-[Npx]` on a mobile container — use `min-h` or natural height instead
+- `h-[Npx]` on a mobile container  -  use `min-h` or natural height instead
 - Fixed label widths narrower than the longest label (causes wrapping): keep `w-28` for "Word of Mouth"-length labels
-- `md:grid-cols-2` on bottom-section cards — use `sm:grid-cols-2` instead
-- Inline period pills (1m 3m 6m 1Y) on the same row as a title — use a dropdown instead
+- `md:grid-cols-2` on bottom-section cards  -  use `sm:grid-cols-2` instead
+- Inline period pills (1m 3m 6m 1Y) on the same row as a title  -  use a dropdown instead
 
 ------------------------------------------------------------------------
 
@@ -161,12 +161,12 @@ Secondary: bg-neutral-100 text-neutral-900 rounded-xl cursor-pointer
 Use a FAB for the primary CTA on mobile when the page header is too narrow to show the full button:
 
 ```tsx
-{/* Header button — desktop only */}
+{/* Header button  -  desktop only */}
 <button className="hidden md:flex text-sm px-3 py-1.5 rounded-xl bg-black text-white ...">
   + New Thing
 </button>
 
-{/* FAB — mobile only, fixed bottom-right above nav bar */}
+{/* FAB  -  mobile only, fixed bottom-right above nav bar */}
 <button className="md:hidden fixed bottom-20 right-4 z-20 bg-black text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg ...">
   <Plus size={22} strokeWidth={2} />
 </button>
@@ -174,15 +174,15 @@ Use a FAB for the primary CTA on mobile when the page header is too narrow to sh
 
 - `bottom-20` clears the mobile nav bar (h-14 = 56px, plus buffer)
 - `right-4` = 16px from screen edge
-- Circle shape (`rounded-full w-12 h-12`) — standard mobile FAB convention
+- Circle shape (`rounded-full w-12 h-12`)  -  standard mobile FAB convention
 
 ------------------------------------------------------------------------
 
-# Dropdowns — Custom Only
+# Dropdowns  -  Custom Only
 
 **Never use native `<select>` elements anywhere in Zebri.** All dropdowns must be custom-built using a `<div>`/`<button>` + popover pattern.
 
-This applies to every context: filter pills, form fields, period selectors, sort pickers, status selectors — everything.
+This applies to every context: filter pills, form fields, period selectors, sort pickers, status selectors  -  everything.
 
 ## Compact pill dropdown (filters / toolbar)
 
@@ -301,10 +301,10 @@ Page headers stack vertically (title row → toolbar row → optional view tabs)
       <h1 className="text-3xl font-semibold text-gray-900">{title}</h1>
       <span className="text-sm text-gray-400">{count} total</span>
     </div>
-    {/* Mobile + button — sm:hidden, w-8 h-8 rounded-full bg-gray-900 */}
+    {/* Mobile + button  -  sm:hidden, w-8 h-8 rounded-full bg-gray-900 */}
   </div>
 
-  {/* Toolbar row — search, filter, sort on left; primary CTA on right */}
+  {/* Toolbar row  -  search, filter, sort on left; primary CTA on right */}
   <div className="flex items-center gap-2 mt-3 flex-wrap">
     <SearchInput />
     <FilterButton />

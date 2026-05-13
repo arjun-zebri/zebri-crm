@@ -7,13 +7,13 @@ description: Add a Slack alert following Zebri alerting conventions
 You are adding a Slack alert to Zebri CRM. Follow these rules exactly:
 
 ## Rules
-- **Never block UX** — alerts are fire-and-forget, never awaited in critical paths
-- **No secrets in payloads** — never include tokens, passwords, or PII beyond what's necessary
-- **Update alerts.md after** — document the new alert in `.claude/docs/alerts.md`
+- **Never block UX**  -  alerts are fire-and-forget, never awaited in critical paths
+- **No secrets in payloads**  -  never include tokens, passwords, or PII beyond what's necessary
+- **Update alerts.md after**  -  document the new alert in `.claude/docs/alerts.md`
 
 ## Client-Side Pattern (fire-and-forget)
 ```typescript
-// Fire and forget — do NOT await
+// Fire and forget  -  do NOT await
 fetch('/api/alerts/slack', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -21,7 +21,7 @@ fetch('/api/alerts/slack', {
     event: 'event_name',
     // minimal context only
   }),
-}).catch(() => {}) // swallow errors — alerts must never break UX
+}).catch(() => {}) // swallow errors  -  alerts must never break UX
 ```
 
 ## Server-Side Pattern
@@ -38,7 +38,7 @@ await sendSlackAlert({
 ## Checklist
 - [ ] Is the alert fire-and-forget (not blocking the user)?
 - [ ] Does the payload contain any secrets or sensitive PII?
-- [ ] Is the alert useful — does it capture something actionable?
+- [ ] Is the alert useful  -  does it capture something actionable?
 - [ ] Will `.claude/docs/alerts.md` be updated after?
 
 Now add the alert: $ARGUMENTS

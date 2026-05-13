@@ -296,7 +296,7 @@ export default function PublicQuotePage() {
               </div>
             )}
 
-            {/* Action buttons — only on active state */}
+            {/* Action buttons - only on active state */}
             {pageState === 'active' && (
               <div className="px-8 py-6 bg-gray-50 border-t border-gray-100">
                 {actionError && (

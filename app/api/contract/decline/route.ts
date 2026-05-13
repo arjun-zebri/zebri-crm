@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   if (result.error) return NextResponse.json({ error: result.error }, { status: 400 })
 
   sendSlackAlert({
-    text: `❌ Contract declined${body.reason ? ` — reason: ${body.reason}` : ''}`,
+    text: `❌ Contract declined${body.reason ? ` - reason: ${body.reason}` : ''}`,
   }).catch(() => {})
 
   return NextResponse.json({ ok: true })

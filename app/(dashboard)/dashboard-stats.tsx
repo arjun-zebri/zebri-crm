@@ -20,7 +20,7 @@ interface DashboardStatsProps {
 
 const formatAUD = (value: number) =>
   value === 0
-    ? "—"
+    ? " - "
     : new Intl.NumberFormat("en-AU", {
         style: "currency",
         currency: "AUD",

@@ -284,7 +284,7 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
       const selectedCouple = couples?.find((c) => c.id === newCoupleId)
       if (isNewQuote) {
         if (!actualQuoteId) {
-          // First couple selection — generate real number and create draft row
+          // First couple selection - generate real number and create draft row
           const id = crypto.randomUUID()
           const shareToken = crypto.randomUUID()
           const { data: user } = await supabase.auth.getUser()
@@ -949,7 +949,7 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                     <div>
                       <p className="text-sm font-medium text-gray-900">Send to couple</p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {activeShareEnabled ? 'Link active — couple can view and respond' : 'Enable a shareable link for the couple'}
+                        {activeShareEnabled ? 'Link active - couple can view and respond' : 'Enable a shareable link for the couple'}
                       </p>
                     </div>
                     <button
@@ -1000,7 +1000,7 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
                   )}
                 </div>
 
-                {/* Create Invoice — only when accepted */}
+                {/* Create Invoice - only when accepted */}
                 {quote?.status === 'accepted' && onCreateInvoice && (
                   <div className="border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between gap-4">
                     <div>

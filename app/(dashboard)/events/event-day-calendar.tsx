@@ -24,7 +24,7 @@ const HOUR_HEIGHT = 120; // px per hour
 const MIN_PX = HOUR_HEIGHT / 60;
 const SNAP_MIN = 15;
 const GRID_OFFSET = 6 * 60; // grid starts at 6am (360 min from midnight)
-const TOTAL_HEIGHT = 24 * 60 * MIN_PX; // 1920px — always full 24h
+const TOTAL_HEIGHT = 24 * 60 * MIN_PX; // 1920px - always full 24h
 
 // Hours displayed: 6, 7, … 23, 0, 1, 2, 3, 4, 5, 6
 const HOURS: number[] = [];
@@ -283,7 +283,7 @@ function CalendarDndMonitor({ items, onReposition, onSchedule, isDraggingRef, sc
       isDraggingRef.current = false;
       const { active, over, delta } = event;
 
-      // Sidebar card dropped onto the calendar grid — schedule it at drop position
+      // Sidebar card dropped onto the calendar grid - schedule it at drop position
       if (over?.id === 'calendar-grid') {
         const item = items.find((i) => i.id === active.id);
         if (!item) return;
@@ -351,14 +351,14 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
     disabled: !skipDndContext,
   });
 
-  // Grid starts at 6am — scroll to top on mount
+  // Grid starts at 6am - scroll to top on mount
   useEffect(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
   }, []);
 
-  // Auto-scroll during drag only — gated on isDraggingRef
+  // Auto-scroll during drag only - gated on isDraggingRef
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
@@ -792,7 +792,7 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
             </MaybeDndContext>
           </div>
 
-          {/* Unscheduled items — right column */}
+          {/* Unscheduled items - right column */}
           {!hideUnscheduled && untimedItems.length > 0 && (
             <div className="w-44 flex-shrink-0 overflow-y-auto min-h-0">
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">

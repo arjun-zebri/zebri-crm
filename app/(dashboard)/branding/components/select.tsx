@@ -1,0 +1,91 @@
+'use client'
+
+import { useState } from 'react'
+import * as Popover from '@radix-ui/react-popover'
+import { Check, ChevronDown } from 'lucide-react'
+
+export interface SelectOption<V extends string = string> {
+  value: V
+  label: string
+  meta?: string
+  fontFamily?: string
+}
+
+interface SelectProps<V extends string> {
+  value: V
+  options: SelectOption<V>[]
+  onChange: (v: V) => void
+  className?: string
+  size?: 'sm' | 'md'
+  align?: 'start' | 'end'
+  placeholder?: string
+}
+
+export function Select<V extends string>({
+  value,
+  options,
+  onChange,
+  className = '',
+  size = 'sm',
+  align = 'start',
+  placeholder,
+}: SelectProps<V>) {
+  const [open, setOpen] = useState(false)
+  const selected = options.find(o => o.value === value)
+  const triggerSize = size === 'sm' ? 'px-2.5 py-1.5 text-sm' : 'px-3 py-2 text-sm'
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className={`inline-flex items-center justify-between gap-1.5 border border-gray-200 rounded-lg ${triggerSize} bg-white text-left text-gray-900 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer w-full transition ${className}`}
+          style={selected?.fontFamily ? { fontFamily: selected.fontFamily } : undefined}
+        >
+          <span className="truncate flex-1">
+            {selected ? selected.label : <span className="text-gray-400">{placeholder ?? 'Select…'}</span>}
+          </span>
+          <ChevronDown size={12} strokeWidth={2} className="text-gray-400 shrink-0" />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align={align}
+          sideOffset={4}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-1 z-[60] animate-modal-in"
+          style={{
+            minWidth: 'var(--radix-popover-trigger-width)',
+            maxHeight: 'min(360px, var(--radix-popover-content-available-height))',
+            overflowY: 'auto',
+          }}
+        >
+          {options.map(opt => {
+            const active = opt.value === value
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  onChange(opt.value)
+                  setOpen(false)
+                }}
+                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md text-sm hover:bg-gray-50 cursor-pointer ${
+                  active ? 'text-gray-900' : 'text-gray-600'
+                }`}
+                style={opt.fontFamily ? { fontFamily: opt.fontFamily } : undefined}
+              >
+                <span className="flex-1 text-left truncate">{opt.label}</span>
+                {opt.meta && (
+                  <span className="text-[11px] text-gray-400" style={opt.fontFamily ? { fontFamily: 'inherit' } : undefined}>
+                    {opt.meta}
+                  </span>
+                )}
+                {active && <Check size={12} strokeWidth={2.5} className="text-gray-900 shrink-0" />}
+              </button>
+            )
+          })}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}

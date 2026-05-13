@@ -1,6 +1,6 @@
 # Zebri Authentication
 
-Authentication uses **Supabase Auth** with email + password. All user profile and subscription data is stored in `user_metadata` on the Supabase Auth user — there is no separate `users` table.
+Authentication uses **Supabase Auth** with email + password. All user profile and subscription data is stored in `user_metadata` on the Supabase Auth user  -  there is no separate `users` table.
 
 ---
 
@@ -8,8 +8,8 @@ Authentication uses **Supabase Auth** with email + password. All user profile an
 
 Stored in `user_metadata.account_type`:
 
-- **admin** — platform operator (future use)
-- **vendor** — wedding MC (default for self-registration)
+- **admin**  -  platform operator (future use)
+- **vendor**  -  wedding MC (default for self-registration)
 
 Admins can use [Shadow Mode](./shadow-mode.md) to view and act on behalf of any user.
 
@@ -32,7 +32,7 @@ Admins can use [Shadow Mode](./shadow-mode.md) to view and act on behalf of any 
 | bank_account_name | text | Bank account name for invoice bank details auto-fill |
 | bank_bsb | text | BSB number for invoice bank details auto-fill |
 | bank_account_number | text | Bank account number for invoice bank details auto-fill |
-| stripe_connect_account_id | text | Stripe Express account ID (e.g. `acct_1PxXXX`) — set after Connect onboarding |
+| stripe_connect_account_id | text | Stripe Express account ID (e.g. `acct_1PxXXX`)  -  set after Connect onboarding |
 | stripe_connect_enabled | boolean | `true` once MC has completed Stripe Connect onboarding |
 | is_subscribed | boolean | Active subscription flag |
 | stripe_customer_id | text | Stripe customer ID (for subscription billing) |
@@ -40,7 +40,7 @@ Admins can use [Shadow Mode](./shadow-mode.md) to view and act on behalf of any 
 | subscription_plan | text | Plan identifier (e.g. `zebri_pro`) |
 | trial_end | timestamp | Trial expiry date |
 | subscription_end | timestamp | Subscription expiry date |
-| is_beta_user | boolean | Beta user flag — entitles lifetime discount pricing |
+| is_beta_user | boolean | Beta user flag  -  entitles lifetime discount pricing |
 
 Subscription and Stripe Connect fields are detailed in `.claude/payments.md`.
 
@@ -60,7 +60,7 @@ Subscription and Stripe Connect fields are detailed in `.claude/payments.md`.
 
 1. User fills in email, password, display_name, business_name
 2. `supabase.auth.signUp()` with `data: { account_type: 'vendor', display_name, business_name, subscription_status: 'trialing', trial_end: <14 days from now>, is_subscribed: true }`
-3. Redirect to dashboard (email confirmation optional — configure in Supabase dashboard)
+3. Redirect to dashboard (email confirmation optional  -  configure in Supabase dashboard)
 
 ### Sign In
 
@@ -89,15 +89,15 @@ Uses `@supabase/ssr` for cookie-based session management across server and clien
 
 ### Browser Client
 
-`lib/supabase/client.ts` — `createBrowserClient()` for client components.
+`lib/supabase/client.ts`  -  `createBrowserClient()` for client components.
 
 ### Server Client
 
-`lib/supabase/server.ts` — `createServerClient()` for server components, server actions, and route handlers. Reads/writes cookies via `next/headers`.
+`lib/supabase/server.ts`  -  `createServerClient()` for server components, server actions, and route handlers. Reads/writes cookies via `next/headers`.
 
 ### Middleware Client
 
-`middleware.ts` — `createServerClient()` with request/response cookie handling. Refreshes the session on every request.
+`middleware.ts`  -  `createServerClient()` with request/response cookie handling. Refreshes the session on every request.
 
 ---
 
@@ -120,10 +120,10 @@ Everything else. If no session, redirect to `/login`.
 
 After confirming auth, middleware checks `user_metadata.subscription_status` and date fields:
 
-- If status is `trialing` and `trial_end` is in the future — allow access
-- If status is `active` — allow access
-- If status is `cancelled` and `subscription_end` is in the future — allow access (grace period)
-- Otherwise — redirect to `/settings?tab=billing` (where they can subscribe or resubscribe)
+- If status is `trialing` and `trial_end` is in the future  -  allow access
+- If status is `active`  -  allow access
+- If status is `cancelled` and `subscription_end` is in the future  -  allow access (grace period)
+- Otherwise  -  redirect to `/settings?tab=billing` (where they can subscribe or resubscribe)
 
 Paywall check skips `/settings` and `/api/stripe/*` routes so users can manage billing.
 
@@ -136,13 +136,13 @@ Paywall check skips `/settings` and `/api/stripe/*` routes so users can manage b
 
 ## Route Groups
 
-### `(auth)` — Authentication Pages
+### `(auth)`  -  Authentication Pages
 
 Routes: `/login`, `/signup`, `/reset-password`, `/update-password`
 
 Layout: Centered card, no sidebar. Uses `app/(auth)/layout.tsx`.
 
-### `(dashboard)` — CRM Pages
+### `(dashboard)`  -  CRM Pages
 
 Routes: `/`, `/couples`, `/vendors`, `/events`, `/tasks`, `/account`
 
@@ -200,10 +200,10 @@ Route: `/account`
 
 Sections:
 
-- **Profile** — edit display_name, business_name, phone, avatar_url via `supabase.auth.updateUser({ data: {...} })`
-- **Password** — change password via `supabase.auth.updateUser({ password })`
-- **Subscription** — shows current plan status, trial info, and action buttons (see `payments.md` for details)
-- **Sign Out** — calls `supabase.auth.signOut()` and redirects to `/login`
+- **Profile**  -  edit display_name, business_name, phone, avatar_url via `supabase.auth.updateUser({ data: {...} })`
+- **Password**  -  change password via `supabase.auth.updateUser({ password })`
+- **Subscription**  -  shows current plan status, trial info, and action buttons (see `payments.md` for details)
+- **Sign Out**  -  calls `supabase.auth.signOut()` and redirects to `/login`
 
 ---
 

@@ -250,7 +250,7 @@ export function ContactsHeader({
           )}
         </div>
 
-        {/* New contact button — desktop only */}
+        {/* New contact button - desktop only */}
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onAddClick}

@@ -98,7 +98,7 @@ export async function compUser(userId: string, plan: "pro" | "max") {
     }
   }
 
-  // Use a dedicated is_comped flag — never set is_beta_user, which would
+  // Use a dedicated is_comped flag - never set is_beta_user, which would
   // route the user to STRIPE_BETA_PRICE_ID (lifetime discount) on any
   // future self-subscribe.
   await patchUserMetadata(userId, {

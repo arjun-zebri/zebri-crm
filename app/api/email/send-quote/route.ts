@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const { quoteId } = body
   if (!quoteId) return NextResponse.json({ error: 'Missing quoteId' }, { status: 400 })
 
-  // Fetch quote + couple email — RLS ensures this belongs to the authenticated user
+  // Fetch quote + couple email - RLS ensures this belongs to the authenticated user
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
     .select('id, quote_number, title, share_token, share_token_enabled, status, couples(email, name)')
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
   if (!coupleEmail) {
     return NextResponse.json(
-      { error: 'No email on file for this couple — add one in their profile' },
+      { error: 'No email on file for this couple - add one in their profile' },
       { status: 400 }
     )
   }

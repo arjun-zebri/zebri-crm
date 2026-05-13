@@ -165,7 +165,7 @@ export async function getGlobalStats(): Promise<GlobalStats> {
       else if (u.subscription_plan === "max") planDistribution.max++;
       else planDistribution.starter++;
 
-      // MRR counts only real paying customers — exclude comped accounts
+      // MRR counts only real paying customers - exclude comped accounts
       // and beta users (lifetime discount price, not the standard plan price).
       const isPaying = !u.is_comped && !u.is_beta_user && !!u.stripe_subscription_id;
       if (isPaying && u.subscription_plan && PLAN_PRICE[u.subscription_plan]) {

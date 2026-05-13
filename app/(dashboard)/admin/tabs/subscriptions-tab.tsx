@@ -16,7 +16,7 @@ const statusVariant: Record<SubscriptionStatus, "paid" | "contacted" | "cancelle
 };
 
 function formatDate(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return " - ";
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -93,7 +93,7 @@ export function SubscriptionsTab({
                   onClick={() => onOpenUser(user.id)}
                   className="border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer"
                 >
-                  <td className="px-4 py-3 font-medium">{user.display_name || "—"}</td>
+                  <td className="px-4 py-3 font-medium">{user.display_name || " - "}</td>
                   <td className="px-4 py-3 text-gray-600">{user.email}</td>
                   <td className="px-4 py-3">
                     {user.subscription_status ? (
@@ -101,11 +101,11 @@ export function SubscriptionsTab({
                         {user.subscription_status.replace("_", " ")}
                       </Badge>
                     ) : (
-                      <span className="text-gray-400 text-xs">—</span>
+                      <span className="text-gray-400 text-xs"> - </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-600 capitalize">
-                    {user.subscription_plan ?? "—"}
+                    {user.subscription_plan ?? " - "}
                   </td>
                   <td className="px-4 py-3 text-gray-600">{formatDate(user.trial_end)}</td>
                   <td className="px-4 py-3 text-gray-600">
@@ -124,11 +124,11 @@ export function SubscriptionsTab({
                         <ExternalLink size={12} strokeWidth={1.5} />
                       </a>
                     ) : (
-                      <span className="text-gray-400 text-xs">—</span>
+                      <span className="text-gray-400 text-xs"> - </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {mrrFor(user) > 0 ? `$${mrrFor(user)}` : "—"}
+                    {mrrFor(user) > 0 ? `$${mrrFor(user)}` : " - "}
                   </td>
                 </tr>
               ))}

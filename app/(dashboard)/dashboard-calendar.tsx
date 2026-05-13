@@ -108,7 +108,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
         </div>
       ) : (
         <>
-          {/* Day headers — hidden on mobile */}
+          {/* Day headers - hidden on mobile */}
           <div className="hidden sm:grid grid-cols-7 w-full justify-between">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div
@@ -120,7 +120,7 @@ export function DashboardCalendar({ onEventClick }: DashboardCalendarProps) {
             ))}
           </div>
 
-          {/* Day grid — hidden on mobile */}
+          {/* Day grid - hidden on mobile */}
           <div className="hidden sm:grid grid-cols-7 w-full">
             {cells.map((day, i) => {
               if (day === null) {

@@ -37,7 +37,7 @@ function formatTimeDisplay(t: string): string {
   return `${hour12}:${String(m).padStart(2, '0')} ${period}`
 }
 
-// 6:00 AM → 5:45 AM (next day) — covers a full wedding day
+// 6:00 AM → 5:45 AM (next day) - covers a full wedding day
 const ALL_TIMES: string[] = []
 for (let i = 0; i < 96; i++) {
   const totalMinutes = (6 * 60 + i * 15) % (24 * 60)
@@ -334,7 +334,7 @@ export function EventTimelineModal({
               <option value="">None</option>
               {eventContacts.map((ec) => (
                 <option key={ec.contact_id} value={ec.contact_id}>
-                  {ec.contact.name} —{' '}
+                  {ec.contact.name}  - {' '}
                   {CATEGORY_LABELS[ec.contact.category as keyof typeof CATEGORY_LABELS] ||
                     ec.contact.category}
                 </option>

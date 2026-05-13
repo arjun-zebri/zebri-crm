@@ -362,7 +362,7 @@ export default function InvoicePage() {
             type="text"
             value={title}
             onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
-            placeholder="e.g. Wedding MC Services — Smith Wedding"
+            placeholder="e.g. Wedding MC Services - Smith Wedding"
             disabled={!canEdit}
             className={`${inputClass} disabled:bg-gray-50 disabled:text-gray-400`}
           />
@@ -379,7 +379,7 @@ export default function InvoicePage() {
             />
           ) : (
             <p className={`text-sm py-2 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-900'}`}>
-              {dueDate ? formatDate(dueDate) : '—'}
+              {dueDate ? formatDate(dueDate) : '-'}
             </p>
           )}
         </div>
@@ -528,7 +528,7 @@ export default function InvoicePage() {
         {/* Notes */}
         <div>
           <label className="block text-sm text-gray-400 mb-1">
-            Notes (optional) — payment instructions, bank details
+            Notes (optional) - payment instructions, bank details
           </label>
           <textarea
             value={notes}
@@ -561,7 +561,7 @@ export default function InvoicePage() {
             <p className="text-sm font-medium text-gray-900">Share link</p>
             <p className="text-xs text-gray-400 mt-0.5">
               {invoice.share_token_enabled
-                ? 'Link is active — couple can view payment details'
+                ? 'Link is active - couple can view payment details'
                 : 'Enable to generate a link for the couple'}
             </p>
           </div>

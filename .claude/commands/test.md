@@ -1,10 +1,10 @@
-# /test — Run Playwright Tests and Improve
+# /test  -  Run Playwright Tests and Improve
 
 Load @.claude/docs/testing.md before starting.
 
 ## What this command does
 
-Run Playwright tests across desktop and mobile viewports. For every failure or visual issue discovered, fix the underlying app code — do not just patch the test.
+Run Playwright tests across desktop and mobile viewports. For every failure or visual issue discovered, fix the underlying app code  -  do not just patch the test.
 
 ## Steps
 
@@ -23,7 +23,7 @@ Run Playwright tests across desktop and mobile viewports. For every failure or v
    - Fix the component or page causing the failure
    - Add `data-testid` attributes only if no semantic selector works
    - For mobile issues, use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`)
-   - Never use raw CSS media queries — always use Tailwind classes
+   - Never use raw CSS media queries  -  always use Tailwind classes
 
 4. **Update the test (only if UI legitimately changed)**
    - Do not weaken assertions (e.g., don't remove `toBeVisible()` checks)
@@ -61,6 +61,6 @@ npx playwright test -g "should create a couple"
 
 - Always fix root causes, not symptoms
 - Never disable or skip a test without a comment explaining why
-- Never use `page.waitForTimeout()` as a fix — find the correct wait condition
+- Never use `page.waitForTimeout()` as a fix  -  find the correct wait condition
 - Always check mobile AND desktop when fixing layout issues
 - After fixing, run `/ship-check` if the change touches a user-facing feature

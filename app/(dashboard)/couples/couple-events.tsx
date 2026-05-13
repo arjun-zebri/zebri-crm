@@ -199,7 +199,7 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
               )
           }
         } catch {
-          // Silently skip — contact creation is best-effort
+          // Silently skip - contact creation is best-effort
         }
       }
 
@@ -240,7 +240,7 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
             })
           }
         } catch {
-          // Silently skip — sunset is a bonus, not critical
+          // Silently skip - sunset is a bonus, not critical
         }
       }
 

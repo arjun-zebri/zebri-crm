@@ -6,14 +6,14 @@ MCs manage the wedding running order in spreadsheets and email. Every time it ch
 
 ## Solution
 
-A structured timeline builder inside the event profile. The MC adds time-stamped items in order, assigns contacts from the event's vendor list, and generates a single shareable link. The link replaces the spreadsheet — when the MC updates the timeline, the link instantly reflects the change. No vendor or couple login required to view it.
+A structured timeline builder inside the event profile. The MC adds time-stamped items in order, assigns contacts from the event's vendor list, and generates a single shareable link. The link replaces the spreadsheet  -  when the MC updates the timeline, the link instantly reflects the change. No vendor or couple login required to view it.
 
 ## Access Points
 
 The timeline is accessible from two places:
 
-1. **Event Profile slide-over → Timeline tab** — when working within a couple's profile
-2. **`/events/[id]/timeline` route** — dedicated full-page editor; bookmarkable, accessible directly, and linked from each event row in the couple's Events tab. Uses the same components as the slide-over tab.
+1. **Event Profile slide-over → Timeline tab**  -  when working within a couple's profile
+2. **`/events/[id]/timeline` route**  -  dedicated full-page editor; bookmarkable, accessible directly, and linked from each event row in the couple's Events tab. Uses the same components as the slide-over tab.
 
 ---
 
@@ -43,12 +43,12 @@ The timeline is accessible from two places:
 ## MC Workflow
 
 1. Open Couples page → click couple → Events tab → click "Timeline" on an event row (or navigate directly to `/events/[id]/timeline`).
-2. Click "Add item" — fill in Time (optional), Title (required), Description, Duration, Assigned contact (optional).
+2. Click "Add item"  -  fill in Time (optional), Title (required), Description, Duration, Assigned contact (optional).
 3. Save. Repeat for each agenda item.
 4. Drag items by their handle to reorder if needed.
 5. Scroll to "Share link" section → toggle on → click "Copy link".
 6. Paste the link into WhatsApp, email, or wherever the MC communicates with the couple and vendors.
-7. Edit items at any time — the link always shows the current version.
+7. Edit items at any time  -  the link always shows the current version.
 
 ---
 
@@ -58,18 +58,18 @@ See `database-schema.md` for the authoritative schema. Summary:
 
 **New columns on `events`:**
 
-- `share_token` (uuid) — unique URL key; generated on event creation
-- `share_token_enabled` (boolean, default false) — link is inactive until explicitly enabled
+- `share_token` (uuid)  -  unique URL key; generated on event creation
+- `share_token_enabled` (boolean, default false)  -  link is inactive until explicitly enabled
 
 **New table `timeline_items`:**
 
 - `event_id` → FK to events (cascade delete)
-- `start_time` (`time` type, nullable) — stored as HH:MM, displayed as "5:30 PM". Nullable for untimed items. Items sorted by `start_time` ascending; untimed items fall below by `position`.
+- `start_time` (`time` type, nullable)  -  stored as HH:MM, displayed as "5:30 PM". Nullable for untimed items. Items sorted by `start_time` ascending; untimed items fall below by `position`.
 - `title` (text, required)
 - `description` (text, optional)
 - `duration_min` (integer, optional)
 - `contact_id` → nullable FK to contacts (set null on contact delete)
-- `position` (integer) — ordering, stored as multiples of 1000
+- `position` (integer)  -  ordering, stored as multiples of 1000
 
 ---
 
@@ -93,9 +93,9 @@ All CRM tables use standard RLS (`user_id = auth.uid()`). The public timeline pa
 Why a function rather than an anon RLS policy:
 
 - Avoids a complex anon SELECT policy that would require a subquery join on `events` to check `share_token_enabled`
-- The function is the single choke point — it checks `share_token_enabled = true` before returning any data
+- The function is the single choke point  -  it checks `share_token_enabled = true` before returning any data
 - Returns only safe fields (no `price`, no `user_id`)
-- Returns null if token not found or link disabled — consistent with the not-found UI state
+- Returns null if token not found or link disabled  -  consistent with the not-found UI state
 
 **Function signature:**
 
@@ -116,10 +116,10 @@ The public page calls this function via the Supabase anon client (no service rol
 
 | Scenario                                               | Behaviour                                                                                                                 |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| Timeline item has no `start_time` set                  | Row renders with "—" in the time column; item sorts below all timed items                                                 |
-| Contact deleted after being assigned to an item        | `contact_id` set to null via FK (on delete set null). Public view omits the contact row gracefully — no broken reference. |
-| Event has 0 timeline items but link is enabled         | Public page shows event header + "No items added yet." — the link is valid, just empty                                    |
-| `share_token_enabled = false`                          | Public page shows "This timeline is no longer available." — not a 403, not a redirect to login                            |
+| Timeline item has no `start_time` set                  | Row renders with " - " in the time column; item sorts below all timed items                                                 |
+| Contact deleted after being assigned to an item        | `contact_id` set to null via FK (on delete set null). Public view omits the contact row gracefully  -  no broken reference. |
+| Event has 0 timeline items but link is enabled         | Public page shows event header + "No items added yet."  -  the link is valid, just empty                                    |
+| `share_token_enabled = false`                          | Public page shows "This timeline is no longer available."  -  not a 403, not a redirect to login                            |
 | MC regenerates link while someone has the old URL open | Old URL immediately returns the not-found state on next load                                                              |
 
 ---
@@ -144,21 +144,21 @@ Test file: `tests/e2e/timeline.spec.ts`
 
 Key test cases:
 
-1. Add a timeline item — assert it appears in the list with correct time and title
-2. Edit a timeline item — assert changes persist on reload
-3. Delete a timeline item — assert it is removed
-4. Reorder two items via drag — assert new position persists after page reload
-5. Enable share link — assert toggle turns on and Copy button becomes active
-6. Copy link — assert clipboard contains the correct `/timeline/[token]` URL
-7. Open share link in a new incognito context — assert event header and all items are visible
-8. Disable share link — assert the public URL now shows "This timeline is no longer available."
-9. Regenerate link — assert old URL returns not-found state; new URL shows timeline
-10. Assign a contact to an item — assert contact name appears on the public view
+1. Add a timeline item  -  assert it appears in the list with correct time and title
+2. Edit a timeline item  -  assert changes persist on reload
+3. Delete a timeline item  -  assert it is removed
+4. Reorder two items via drag  -  assert new position persists after page reload
+5. Enable share link  -  assert toggle turns on and Copy button becomes active
+6. Copy link  -  assert clipboard contains the correct `/timeline/[token]` URL
+7. Open share link in a new incognito context  -  assert event header and all items are visible
+8. Disable share link  -  assert the public URL now shows "This timeline is no longer available."
+9. Regenerate link  -  assert old URL returns not-found state; new URL shows timeline
+10. Assign a contact to an item  -  assert contact name appears on the public view
 
 **Mobile tests (Pixel 5 + iPhone 12):**
 
 - Timeline tab scrolls correctly within the slide-over panel (no overflow issues)
 - Add/Edit modal is fully usable at 375px
-- Public page renders cleanly at 375px — timeline rail and item text readable
+- Public page renders cleanly at 375px  -  timeline rail and item text readable
 
 See `.claude/docs/testing.md` for selector and viewport conventions.

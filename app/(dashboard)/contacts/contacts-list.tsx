@@ -229,7 +229,7 @@ export function ContactsList({ vendors, onRowClick, loading }: ContactsListProps
                         </td>
                       </tr>
 
-                      {/* Column header row — repeats under each group label */}
+                      {/* Column header row - repeats under each group label */}
                       <ColumnHeaderRow />
 
                       {!isCollapsed &&

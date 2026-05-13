@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const { invoiceId } = body
   if (!invoiceId) return NextResponse.json({ error: 'Missing invoiceId' }, { status: 400 })
 
-  // Fetch invoice + couple email — RLS ensures this belongs to the authenticated user
+  // Fetch invoice + couple email - RLS ensures this belongs to the authenticated user
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
     .select('id, invoice_number, title, share_token, share_token_enabled, status, due_date, couples(email, name)')
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
   if (!coupleEmail) {
     return NextResponse.json(
-      { error: 'No email on file for this couple — add one in their profile' },
+      { error: 'No email on file for this couple - add one in their profile' },
       { status: 400 }
     )
   }

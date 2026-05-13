@@ -111,7 +111,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
         setAddressLng(data.location.longitude)
       }
     } catch {
-      // lat/lng optional — address text is still saved
+      // lat/lng optional - address text is still saved
     }
   }
 

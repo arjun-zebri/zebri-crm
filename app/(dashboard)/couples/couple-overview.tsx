@@ -53,7 +53,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
 
   return (
     <>
-      {/* Skeleton — shown while events or contacts are loading */}
+      {/* Skeleton - shown while events or contacts are loading */}
       {isLoading && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 animate-pulse">
           <div className="space-y-4">
@@ -73,7 +73,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
         </div>
       )}
 
-      {/* Real content — always mounted so queries fire; hidden via CSS while loading */}
+      {/* Real content - always mounted so queries fire; hidden via CSS while loading */}
       <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 ${isLoading ? 'hidden' : ''}`}>
       {/* Column 1: General Info */}
       <div>
@@ -203,7 +203,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
               {leadSourceLabel ? (
                 <span className="text-sm text-gray-500">{leadSourceLabel}</span>
               ) : (
-                <span className="text-sm text-gray-300">—</span>
+                <span className="text-sm text-gray-300"> - </span>
               )}
               <Pencil
                 size={11}

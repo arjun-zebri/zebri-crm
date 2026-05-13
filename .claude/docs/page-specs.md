@@ -19,7 +19,7 @@ All pages are fully responsive. Key patterns:
 
 Route: `/login`
 
-Route group: `(auth)` — centered card layout, no sidebar.
+Route group: `(auth)`  -  centered card layout, no sidebar.
 
 Purpose: Sign in to Zebri.
 
@@ -83,7 +83,7 @@ Route: `/dashboard` or `/` (landing page after login)
 
 Route group: `(dashboard)`
 
-Purpose: At a glance, see what's happening this week and this month. The MC's command centre — quick wins, immediate action items, and a pulse on the business. Focused on _action_ not analytics.
+Purpose: At a glance, see what's happening this week and this month. The MC's command centre  -  quick wins, immediate action items, and a pulse on the business. Focused on _action_ not analytics.
 
 ## Layout
 
@@ -91,8 +91,8 @@ Full-width page. Header with "Dashboard" title and New Vendor / New Couple butto
 
 Two-tier grid layout:
 
-1. **Top section:** `grid-cols-5` — Stats + Revenue Chart (left 3 cols) | Calendar Widget (right 2 cols)
-2. **Bottom section:** `grid-cols-3` — Leads (left) | Lead Sources (center) | Outstanding Tasks (right)
+1. **Top section:** `grid-cols-5`  -  Stats + Revenue Chart (left 3 cols) | Calendar Widget (right 2 cols)
+2. **Bottom section:** `grid-cols-3`  -  Leads (left) | Lead Sources (center) | Outstanding Tasks (right)
 
 ## Top Left: Stats (3 metric cards)
 
@@ -110,7 +110,7 @@ Each card shows:
 - Diff text: "+X vs last week" (text-xs text-gray-500)
 - Percentage badge: emerald-50/emerald-600 for positive, red-50/red-600 for negative
 - Currency formatted as AUD
-- Values show "—" when 0
+- Values show " - " when 0
 
 ## Top Left: Revenue Chart
 
@@ -196,7 +196,7 @@ app/(dashboard)/
 
 ## Notes
 
-- **Fast loading:** Limit queries — 10 for tasks, calendar scoped to selected month.
+- **Fast loading:** Limit queries  -  10 for tasks, calendar scoped to selected month.
 - **Calm aesthetic:** Neutral grays and status badge colors. Red only for overdue task dates.
 - **Keyboard friendly:** Arrow keys to navigate, Enter to open profiles.
 
@@ -230,7 +230,7 @@ Kanban style: Notion-inspired board.
 - Colored pill headers (e.g. amber-50 bg + amber-600 text for "New")
 - Cards are bg-white with shadow-sm; hover shows shadow-md
 - "+ New" button full-width at bottom of each column with status-colored border
-- No icons on cards — date and venue shown as plain gray text
+- No icons on cards  -  date and venue shown as plain gray text
 - Scrollbar hidden on kanban container
 
 List style: Notion-inspired clean table.
@@ -259,7 +259,7 @@ Calendar style: Month view showing all couples' event dates.
 Opens as a centered full-screen modal (not a slide-over). Overlay covers the full viewport.
 
 **Modal layout:**
-- Wrapper: `fixed inset-0 flex items-center justify-center p-3 sm:p-4` — 12px gap on all edges on mobile, 16px on desktop
+- Wrapper: `fixed inset-0 flex items-center justify-center p-3 sm:p-4`  -  12px gap on all edges on mobile, 16px on desktop
 - Modal box: `w-full sm:w-[90vw] sm:max-w-[1400px] h-full sm:h-[90vh] rounded-2xl`
 - Body: vertical flex on mobile (tab strip on top), horizontal flex on desktop (sidebar nav on left)
 
@@ -269,8 +269,8 @@ Opens as a centered full-screen modal (not a slide-over). Overlay covers the ful
 - Close button (×) right of `⋯`
 
 **Navigation:**
-- Mobile: horizontal scrollable tab strip (`overflow-x-auto`) below header — icon + label per tab, `whitespace-nowrap`
-- Desktop: vertical 200px sidebar on left — same tabs as icon + label rows
+- Mobile: horizontal scrollable tab strip (`overflow-x-auto`) below header  -  icon + label per tab, `whitespace-nowrap`
+- Desktop: vertical 200px sidebar on left  -  same tabs as icon + label rows
 
 **Tabs:** Overview, Payments, Timeline, Names (MC Portal Names), Songs, Files, Pulse
 
@@ -312,7 +312,7 @@ Opens as a slide-over panel within the Events tab of the Couple Profile (or can 
 
 **Tabs:** Overview | Vendors | Tasks | Timeline
 
-**Overview tab:** Key event details — date, venue, price, status, timeline_notes.
+**Overview tab:** Key event details  -  date, venue, price, status, timeline_notes.
 
 **Vendors tab:** Contacts assigned to this event via event_contacts. Add/remove contacts.
 
@@ -322,19 +322,19 @@ Opens as a slide-over panel within the Events tab of the Couple Profile (or can 
 
 Two sections stacked vertically:
 
-**Section 1 — Timeline Items**
+**Section 1  -  Timeline Items**
 
 Header row: "Timeline" label (text-sm font-medium text-gray-900) + right-aligned "Add item" button (ghost border style, same as other `+ Add` buttons in tab panels).
 
 Item list: each item is a row with `border border-gray-200 rounded-xl p-3 mb-2`. Row layout:
-- Drag handle: GripVertical icon (text-gray-300), visible on hover only. Desktop only — hidden on mobile.
-- Time column: text-sm text-gray-500, min-w-[64px]. Shows "—" when no time set.
+- Drag handle: GripVertical icon (text-gray-300), visible on hover only. Desktop only  -  hidden on mobile.
+- Time column: text-sm text-gray-500, min-w-[64px]. Shows " - " when no time set.
 - Title: text-sm font-medium text-gray-900, flex-1.
 - Duration badge: "~30 min" style, text-xs text-gray-400.
 - Contact badge: category color dot + contact name, text-xs.
 - Edit / delete icons: fade in on hover (same pattern as Vendor row actions).
 
-Sort order: items with `start_time` set are sorted ascending; untimed items sit below, ordered by `position`. Drag-to-reorder adjusts `position` only — timed items stay anchored to their time.
+Sort order: items with `start_time` set are sorted ascending; untimed items sit below, ordered by `position`. Drag-to-reorder adjusts `position` only  -  timed items stay anchored to their time.
 
 Drag and drop: dnd-kit `SortableContext` with vertical list strategy. Drag handle is the only drag initiator (no accidental drags on scroll/tap). On drop, fire optimistic position update mutation.
 
@@ -358,7 +358,7 @@ Form fields (single-column):
 
 Footer: Delete (red, left, "click again to confirm" pattern) + Cancel + Save (black).
 
-**Section 2 — Share Link**
+**Section 2  -  Share Link**
 
 Separated by `border-t border-gray-100 mt-6 pt-6`.
 
@@ -367,7 +367,7 @@ Subtext: "Anyone with this link can view the timeline." (text-xs text-gray-500)
 
 **Disabled state (default):** Pill toggle off. "Copy link" button grayed and disabled. Label: "Enable link to share."
 
-**Enabled state:** Toggle on (green fill). Active "Copy link" button — clicking copies `/timeline/[token]` to clipboard and shows inline "Copied!" text (no toast). "Regenerate" ghost button (RotateCw icon) right of Copy. Clicking Regenerate shows inline confirm: "This will break the existing link. Regenerate?" with Confirm / Cancel. On toggle enable: toast "Share link enabled."
+**Enabled state:** Toggle on (green fill). Active "Copy link" button  -  clicking copies `/timeline/[token]` to clipboard and shows inline "Copied!" text (no toast). "Regenerate" ghost button (RotateCw icon) right of Copy. Clicking Regenerate shows inline confirm: "This will break the existing link. Regenerate?" with Confirm / Cancel. On toggle enable: toast "Share link enabled."
 
 **New component files** (co-located in `app/(dashboard)/events/`):
 
@@ -383,7 +383,7 @@ use-event-timeline.ts
 
 Route: `/events/[id]/timeline`
 
-Route group: `(dashboard)` — authenticated, full sidebar layout.
+Route group: `(dashboard)`  -  authenticated, full sidebar layout.
 
 Purpose: A dedicated full-page view for building and managing the timeline for a specific event. Accessible directly (bookmarkable by the MC) without navigating through the couple profile slide-over.
 
@@ -399,16 +399,16 @@ Two-column on desktop (`lg:grid-cols-[1fr_320px]`), single-column on mobile.
 - Left column (main): timeline items list with the same drag-to-reorder, add/edit/delete behaviour as the Timeline tab in the Event Profile slide-over.
 - Right column (sidebar): event summary card (couple name, date, venue, status badge) + Share Link section.
 
-**Back navigation:** Breadcrumb or back link at top: "← [Couple Name]" — opens the couple profile slide-over.
+**Back navigation:** Breadcrumb or back link at top: "← [Couple Name]"  -  opens the couple profile slide-over.
 
-**Page title:** "[Couple Name] — Timeline" (`text-3xl font-semibold`)
+**Page title:** "[Couple Name]  -  Timeline" (`text-3xl font-semibold`)
 
 **No duplication of logic:** `event-timeline.tsx`, `event-timeline-modal.tsx`, `event-timeline-share.tsx` are the same components reused from the Event Profile slide-over. Only the layout wrapper differs.
 
 **File:**
 
 ```
-app/(dashboard)/events/[id]/timeline/page.tsx  — layout wrapper only, imports event-timeline.tsx
+app/(dashboard)/events/[id]/timeline/page.tsx   -  layout wrapper only, imports event-timeline.tsx
 ```
 
 ---
@@ -423,7 +423,7 @@ Form fields:
 - Email (email, optional)
 - Phone (tel, optional)
 - Status (select, required)
-- Lead Source (select, optional — referral, website, social_media, word_of_mouth, wedding_expo, venue_partner)
+- Lead Source (select, optional  -  referral, website, social_media, word_of_mouth, wedding_expo, venue_partner)
 - Notes (textarea, optional)
 
 Note: Event Date and Venue fields are managed exclusively via the Events tab. The couple modal does not expose these fields for editing.
@@ -452,13 +452,13 @@ Notion-style database table for cross-entity task management. Tasks scoped per-c
 
 ## Properties (columns)
 
-Each task row is a grid: gutter | Task name | Status | Due date | Priority | Task type. Cells inline-edit by click — no need to open the side panel:
+Each task row is a grid: gutter | Task name | Status | Due date | Priority | Task type. Cells inline-edit by click  -  no need to open the side panel:
 
-- **Task name** — click to enter inline text edit; Enter saves, Esc cancels.
-- **Status** — pill picker. Values: `todo`/Not started (gray) · `in_progress`/In progress (blue) · `done`/Done (emerald).
-- **Due date** — date picker popover. Overdue dates render in red.
-- **Priority** — pill picker. `high` (red) · `medium` (amber) · `low` (emerald). Optional.
-- **Task type** — autocomplete popover with create-on-the-fly. Free-form text (`tasks.task_type`); colour assigned deterministically from a 6-colour palette by hashing the value.
+- **Task name**  -  click to enter inline text edit; Enter saves, Esc cancels.
+- **Status**  -  pill picker. Values: `todo`/Not started (gray) · `in_progress`/In progress (blue) · `done`/Done (emerald).
+- **Due date**  -  date picker popover. Overdue dates render in red.
+- **Priority**  -  pill picker. `high` (red) · `medium` (amber) · `low` (emerald). Optional.
+- **Task type**  -  autocomplete popover with create-on-the-fly. Free-form text (`tasks.task_type`); colour assigned deterministically from a 6-colour palette by hashing the value.
 
 The first row of each section renders a column-header strip (`Aa Task name · Status · Due date · Priority · Task type`).
 
@@ -467,7 +467,7 @@ The first row of each section renders a column-header strip (`Aa Task name · St
 - The row gutter shows a hover-revealed checkbox for multi-select (always visible once any task is selected).
 - The title cell shows a hover-revealed `Open` button (with `Maximize2` icon) on the right edge → opens the `TaskSidePanel`.
 - A drag handle appears in the gutter on hover (desktop only).
-- Clicking anywhere else in the row enters that cell's inline edit mode — clicking the row does NOT open the panel.
+- Clicking anywhere else in the row enters that cell's inline edit mode  -  clicking the row does NOT open the panel.
 
 ## Group-by modes
 
@@ -493,7 +493,7 @@ In all modes, drag-to-reorder within a section updates `position`.
 Triggered by the hover `Open` button on the row. Width 640px on desktop, 760px at `lg` breakpoint, full-screen sheet on mobile. Layout mirrors Notion's peek:
 
 - Large editable title (no border; auto-saves on blur)
-- Property table — Status, Due date, Priority, Task type, Group (if any), Couple — each as a clickable cell, same components as the table inline cells.
+- Property table  -  Status, Due date, Priority, Task type, Group (if any), Couple  -  each as a clickable cell, same components as the table inline cells.
 - Notes textarea (auto-saves on blur)
 - Footer: `Delete task` (red).
 - Header: prev / next arrows walk through the visible task list. Esc / backdrop / X close.
@@ -502,16 +502,16 @@ Triggered by the hover `Open` button on the row. Width 640px on desktop, 760px a
 
 ```
 app/(dashboard)/tasks/
-  page.tsx              — orchestrator: queries, mutations, group-by dispatch, dnd-kit wiring
-  task-types.ts         — Status / Priority enums + pill colour tables + taskTypeColor() hash
-  task-cells.tsx        — inline-edit cells: TitleCell, StatusCell, DueDateCell, PriorityCell, TaskTypeCell
-  task-row.tsx          — table row layout (gutter + cells), hover Open button, multi-select
-  task-side-panel.tsx   — wide peek panel reusing the same property cells
-  group-by-toggle.tsx   — toolbar dropdown
-  group-section.tsx     — collapsible section header + ColumnHeader strip
-  filter-bar.tsx        — Notion-style filter + sort chip bar
-  bulk-actions-bar.tsx  — floating multi-select bar
-  use-task-groups.ts    — react-query hooks for task_groups CRUD
+  page.tsx               -  orchestrator: queries, mutations, group-by dispatch, dnd-kit wiring
+  task-types.ts          -  Status / Priority enums + pill colour tables + taskTypeColor() hash
+  task-cells.tsx         -  inline-edit cells: TitleCell, StatusCell, DueDateCell, PriorityCell, TaskTypeCell
+  task-row.tsx           -  table row layout (gutter + cells), hover Open button, multi-select
+  task-side-panel.tsx    -  wide peek panel reusing the same property cells
+  group-by-toggle.tsx    -  toolbar dropdown
+  group-section.tsx      -  collapsible section header + ColumnHeader strip
+  filter-bar.tsx         -  Notion-style filter + sort chip bar
+  bulk-actions-bar.tsx   -  floating multi-select bar
+  use-task-groups.ts     -  react-query hooks for task_groups CRUD
 ```
 
 Shared UI: `components/ui/side-panel.tsx`, `components/ui/row-actions-menu.tsx`.
@@ -584,13 +584,13 @@ Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page.
 - Item list with add/edit/delete actions
 - Quantity/unit price fields (no spinners)
 - Payment terms dropdown (net_7, net_14, net_30, due_on_receipt, custom). Net terms auto-fill due_date. Due on receipt clears it.
-- Due date (compact DatePicker) — only shown when payment_terms is `custom` or empty
-- Notes textarea (rows=4) — auto-populated from MC's saved bank details on new invoice creation
+- Due date (compact DatePicker)  -  only shown when payment_terms is `custom` or empty
+- Notes textarea (rows=4)  -  auto-populated from MC's saved bank details on new invoice creation
 - GST toggle: off by default; when on, shows "GST (10%)" row in totals with calculated amount
 - Totals block: Subtotal → GST (if enabled) → Total
 - Payment schedule toggle: when on, reveals deposit % input + deposit due date + final balance due date. Each installment has a "Mark paid" button (replaced by "Paid" badge once paid). When schedule is active, the main "Mark as Paid" button is hidden.
 - Share token toggle (green, bg-green-500) with instant save
-- Stripe "Accept card payments" toggle — only visible if MC has Stripe Connect configured (`user_metadata.stripe_connect_enabled = true`). Hidden when payment schedule is active. If not connected: shows "Connect Stripe" link to `/settings?tab=payments`.
+- Stripe "Accept card payments" toggle  -  only visible if MC has Stripe Connect configured (`user_metadata.stripe_connect_enabled = true`). Hidden when payment schedule is active. If not connected: shows "Connect Stripe" link to `/settings?tab=payments`.
 - Save button refreshes invoice list
 
 Payment schedule sub-component: `invoice-payment-schedule.tsx` (co-located)
@@ -609,9 +609,9 @@ Route: `/vendors`
 
 Route group: `(dashboard)`
 
-Purpose: The MC's vendor directory — a trusted rolodex of every wedding professional they work with. Find a DJ's phone number at 4pm on a Saturday, remember the celebrant always runs long, or pull up a photographer to recommend to a couple.
+Purpose: The MC's vendor directory  -  a trusted rolodex of every wedding professional they work with. Find a DJ's phone number at 4pm on a Saturday, remember the celebrant always runs long, or pull up a photographer to recommend to a couple.
 
-Header: Title "Vendors" + total count. Same compact Notion-style toolbar as Couples: expandable search icon, sort dropdown (ArrowUpDown icon), filter dropdown (SlidersHorizontal icon), small black "New" button. No List/Board tabs — vendors is list-only (active/inactive is not a workflow).
+Header: Title "Vendors" + total count. Same compact Notion-style toolbar as Couples: expandable search icon, sort dropdown (ArrowUpDown icon), filter dropdown (SlidersHorizontal icon), small black "New" button. No List/Board tabs  -  vendors is list-only (active/inactive is not a workflow).
 
 Category values: venue, celebrant, photographer, videographer, dj, florist, hair_makeup, caterer, photo_booth, lighting_av, planner, other
 
@@ -659,7 +659,7 @@ Category Badge colours:
 | planner | lime-50 | lime-700 | lime-400 |
 | other | gray-50 | gray-600 | gray-400 |
 
-Sorting: Via sort dropdown — Name A-Z, Name Z-A, Newest first (default), Oldest first. No clickable sort on table headers.
+Sorting: Via sort dropdown  -  Name A-Z, Name Z-A, Newest first (default), Oldest first. No clickable sort on table headers.
 
 Filtering: Via filter dropdown. Category filter first (all 12 categories with counts), then a divider, then status filter (Active/Inactive with counts). One active filter at a time.
 
@@ -711,7 +711,7 @@ Opens as a slide-over panel from the right (640px width), not a full page naviga
 
 - Contact details: key-value layout (Phone, Email, Category, Status). Phone and Email clickable.
 - Notes section: rendered text (not form field). If empty: "No notes yet." in italic gray. Edit button next to "Notes" title opens edit modal.
-- Notes are the most valuable field — where MCs record things like "DJ prefers to be introduced as DJ Mike", "Photographer needs 20 min for portraits", "AV tech: ask for lapel mic, not handheld".
+- Notes are the most valuable field  -  where MCs record things like "DJ prefers to be introduced as DJ Mike", "Photographer needs 20 min for portraits", "AV tech: ask for lapel mic, not handheld".
 
 **Events tab:**
 
@@ -783,9 +783,9 @@ See `.claude/payments.md` for the full subscription UI table.
 
 Two sections:
 
-**Bank details** — Account name, BSB, Account number inputs. Save button updates `user_metadata` with `bank_account_name`, `bank_bsb`, `bank_account_number`. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
+**Bank details**  -  Account name, BSB, Account number inputs. Save button updates `user_metadata` with `bank_account_name`, `bank_bsb`, `bank_account_number`. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
 
-**Card payments** — "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. Disconnect clears `stripe_connect_account_id` and `stripe_connect_enabled` from `user_metadata`.
+**Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. Disconnect clears `stripe_connect_account_id` and `stripe_connect_enabled` from `user_metadata`.
 
 ### Packages (`?tab=packages`)
 
@@ -801,9 +801,9 @@ Placeholder empty state. Coming soon.
 
 Route: `/invoice/[token]`
 
-Route group: Top-level `app/invoice/[token]/` — outside `(dashboard)` and `(auth)`. No auth required.
+Route group: Top-level `app/invoice/[token]/`  -  outside `(dashboard)` and `(auth)`. No auth required.
 
-**Middleware:** `/invoice/` and `/api/stripe/invoice-payment` must be exempt from the paywall — couples are not logged in.
+**Middleware:** `/invoice/` and `/api/stripe/invoice-payment` must be exempt from the paywall  -  couples are not logged in.
 
 Purpose: Read-only invoice view for the couple. Shows line items, totals, and (optionally) a card payment button.
 
@@ -813,26 +813,26 @@ No sidebar. Centered card: `max-w-lg mx-auto`. White background.
 
 ## Page States
 
-- `loading` — skeleton
-- `not_found` / `cancelled` — "This invoice is no longer available."
-- `paid` — invoice details + "Payment received" banner (emerald)
-- `active` — full invoice view
-- `overdue` — same as active; due date shown in red
+- `loading`  -  skeleton
+- `not_found` / `cancelled`  -  "This invoice is no longer available."
+- `paid`  -  invoice details + "Payment received" banner (emerald)
+- `active`  -  full invoice view
+- `overdue`  -  same as active; due date shown in red
 
 ## Page Sections (active/overdue state)
 
-1. **Header** — MC business name (small uppercase), invoice number + title, couple name, issue date
-2. **Line items** — description, qty, unit price, amount (tabular)
-3. **Totals** — Subtotal → GST (tax_rate%) if `tax_rate > 0` → Total
-4. **Payment schedule** — shown if `deposit_percent != null`. Two rows: deposit (with %, amount, due date, "Paid" badge if `deposit_paid_at` set) and final balance (same). Not shown if invoice is paid.
-5. **"Pay with card" button** — shown if `stripe_payment_enabled && stripe_connect_enabled && status !== 'paid' && deposit_percent IS NULL`. Black button, full width. On click: `POST /api/stripe/invoice-payment { invoiceId, shareToken }` → redirect to Stripe Checkout.
-6. **Notes** — payment instructions / bank details section, shown if `notes` is non-empty. Label: "Payment instructions".
+1. **Header**  -  MC business name (small uppercase), invoice number + title, couple name, issue date
+2. **Line items**  -  description, qty, unit price, amount (tabular)
+3. **Totals**  -  Subtotal → GST (tax_rate%) if `tax_rate > 0` → Total
+4. **Payment schedule**  -  shown if `deposit_percent != null`. Two rows: deposit (with %, amount, due date, "Paid" badge if `deposit_paid_at` set) and final balance (same). Not shown if invoice is paid.
+5. **"Pay with card" button**  -  shown if `stripe_payment_enabled && stripe_connect_enabled && status !== 'paid' && deposit_percent IS NULL`. Black button, full width. On click: `POST /api/stripe/invoice-payment { invoiceId, shareToken }` → redirect to Stripe Checkout.
+6. **Notes**  -  payment instructions / bank details section, shown if `notes` is non-empty. Label: "Payment instructions".
 
 ## Payment Success Page
 
 Route: `/invoice/payment-success`
 
-No auth required. Shows: "Payment received" heading, short confirmation message, invoice ID from `?invoice=` query param. No redirect — couple can close the tab.
+No auth required. Shows: "Payment received" heading, short confirmation message, invoice ID from `?invoice=` query param. No redirect  -  couple can close the tab.
 
 File: `app/invoice/payment-success/page.tsx`
 
@@ -841,10 +841,10 @@ File: `app/invoice/payment-success/page.tsx`
 ```
 app/invoice/
   [token]/
-    page.tsx                 — fetches via get_public_invoice RPC, renders all states
-    pay-with-card-button.tsx — client component; POST to /api/stripe/invoice-payment
+    page.tsx                  -  fetches via get_public_invoice RPC, renders all states
+    pay-with-card-button.tsx  -  client component; POST to /api/stripe/invoice-payment
   payment-success/
-    page.tsx                 — static confirmation page
+    page.tsx                  -  static confirmation page
 ```
 
 ---
@@ -853,7 +853,7 @@ app/invoice/
 
 Route: `/timeline/[token]`
 
-Route group: Top-level `app/timeline/[token]/` — outside `(dashboard)` and `(auth)`. No auth required.
+Route group: Top-level `app/timeline/[token]/`  -  outside `(dashboard)` and `(auth)`. No auth required.
 
 **Middleware:** `/timeline/` must be in PUBLIC_ROUTES so the auth middleware does not redirect unauthenticated visitors.
 
@@ -868,23 +868,23 @@ No sidebar, no app chrome. Centered content: `max-w-2xl mx-auto px-4`. White bac
 **1. Event header** (`pt-12 pb-8`):
 - Couple name: `text-2xl font-semibold text-gray-900`
 - Event date (formatted, e.g. "Saturday, 12 April 2025") + venue: `text-sm text-gray-500`, separated by a centered dot (·)
-- No status badge — irrelevant to the viewer.
+- No status badge  -  irrelevant to the viewer.
 
 **2. Timeline items list:**
 
-Classic left-rail timeline visual — `border-l-2 border-gray-200 ml-4 pl-6 pb-6` per item block.
+Classic left-rail timeline visual  -  `border-l-2 border-gray-200 ml-4 pl-6 pb-6` per item block.
 
 Time dot: `w-2 h-2 rounded-full bg-gray-400` positioned on the rail (`-ml-[25px]`).
 
 Per item:
-- Time: `text-xs font-medium text-gray-500 uppercase` (shows "—" if not set)
+- Time: `text-xs font-medium text-gray-500 uppercase` (shows " - " if not set)
 - Duration: `text-xs text-gray-400` ("~30 min"), right-aligned on the same row as time
 - Title: `text-sm font-semibold text-gray-900`
 - Description (if present): `text-sm text-gray-600 mt-1`
 - Assigned contact (if present): category dot + contact name, `text-xs text-gray-500`
 
 **3. Footer:** `border-t pt-6 pb-10 text-center`
-- "Prepared by [business_name]" — `text-xs text-gray-400`
+- "Prepared by [business_name]"  -  `text-xs text-gray-400`
 - No Zebri logo. No link back to the app. White-label for the MC.
 
 ## Not-Found / Disabled State
@@ -893,7 +893,7 @@ If the token doesn't match any event, or `share_token_enabled = false`: show cen
 
 ## Print
 
-Apply `print:` Tailwind utilities at the page root to reduce header padding and hide the footer gradient. No Print button needed — browser Cmd+P works. Zero server infrastructure required.
+Apply `print:` Tailwind utilities at the page root to reduce header padding and hide the footer gradient. No Print button needed  -  browser Cmd+P works. Zero server infrastructure required.
 
 ## Data Fetching
 
@@ -914,6 +914,6 @@ event { date, venue, share_token_enabled,
 ```
 app/timeline/
   [token]/
-    page.tsx           — server component, fetches + renders
-    timeline-item.tsx  — presentational component for each item row
+    page.tsx            -  server component, fetches + renders
+    timeline-item.tsx   -  presentational component for each item row
 ```

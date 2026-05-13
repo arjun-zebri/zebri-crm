@@ -1,8 +1,8 @@
-# Zebri — 6-Month Product Plan
+# Zebri  -  6-Month Product Plan
 
 **Created:** March 19, 2026
 **Target audience:** Wedding MCs and Celebrants
-**North star:** Replace every spreadsheet, WhatsApp thread, and Google Doc an MC uses — in one calm, focused tool.
+**North star:** Replace every spreadsheet, WhatsApp thread, and Google Doc an MC uses  -  in one calm, focused tool.
 
 ---
 
@@ -16,11 +16,11 @@
 - Tasks (inline creation, tied to couples/events)
 - Dashboard (upcoming weddings, recent couples, quick stats)
 - Settings (personal info, password, billing placeholder)
-- Stripe subscription scaffolding (trial, checkout, portal — not fully wired)
+- Stripe subscription scaffolding (trial, checkout, portal  -  not fully wired)
 
 ---
 
-## Month 1 — Foundation & Polish (April 2026)
+## Month 1  -  Foundation & Polish (April 2026)
 
 **Theme:** Finish what's started. Make the existing CRM rock-solid before adding new features.
 
@@ -65,7 +65,7 @@
 
 ---
 
-## Month 2 — Timelines (May 2026)
+## Month 2  -  Timelines (May 2026)
 
 **Theme:** The killer feature. No CRM does this well for MCs. This is what makes Zebri indispensable.
 
@@ -79,11 +79,11 @@
   - Accessed from Event profile → new "Timeline" tab
   - Vertical timeline layout with time markers
   - Drag-and-drop reordering (using existing dnd library)
-  - Inline editing — click any item to edit time/title/description
+  - Inline editing  -  click any item to edit time/title/description
   - Quick-add: type a time and title, hit Enter
   - Duration display between items (e.g., "15 min gap")
   - Category color coding on left border
-  - Bulk time shift — select multiple items and shift forward/back by X minutes
+  - Bulk time shift  -  select multiple items and shift forward/back by X minutes
 - **Timeline templates**
   - `timeline_templates` table: `id`, `user_id`, `title`, `description`, `is_default`, `created_at`
   - `template_items` table: mirrors `timeline_items` but linked to template
@@ -103,7 +103,7 @@
 
 ---
 
-## Month 3 — Couple Portal & Forms (June 2026)
+## Month 3  -  Couple Portal & Forms (June 2026)
 
 **Theme:** Stop chasing couples for information. Send one link, get everything back.
 
@@ -141,7 +141,7 @@
 
 ---
 
-## Month 4 — Scripts & Event Mode (July 2026)
+## Month 4  -  Scripts & Event Mode (July 2026)
 
 **Theme:** The MC's performance tools. Move from planning to execution.
 
@@ -157,8 +157,8 @@
   - Rich text editing within sections (bold, italic, highlight for emphasis cues)
   - Drag-and-drop section reordering
   - Link sections to timeline items (shows time cue next to section)
-  - Pronunciation highlights — mark words with phonetic guide tooltip
-  - "Notes to self" — private annotations that don't appear in exports
+  - Pronunciation highlights  -  mark words with phonetic guide tooltip
+  - "Notes to self"  -  private annotations that don't appear in exports
 - **Script templates**
   - Save any script as reusable template
   - Pre-built templates:
@@ -170,7 +170,7 @@
   - Design the UI with an "AI Assist" button on each section
   - Initially disabled with "Coming soon" tooltip
   - When enabled: generate opening lines from couple's story form, suggest transitions, draft speech introductions
-  - This is scaffolding only — no AI integration in Month 4
+  - This is scaffolding only  -  no AI integration in Month 4
 
 ### Event Mode
 
@@ -183,7 +183,7 @@
   - Swipe or arrow keys to advance
   - Current time display
   - "Running late" / "ahead of schedule" indicator vs planned timeline
-  - Quick jump — tap any timeline item to skip to it
+  - Quick jump  -  tap any timeline item to skip to it
 - **Offline support**
   - Service worker caches event data, timeline, and script on "Go Live"
   - Works without internet (critical for remote venues)
@@ -194,13 +194,13 @@
 
 ---
 
-## Month 5 — Workflows, Invoicing & Dashboard 2.0 (August 2026)
+## Month 5  -  Workflows, Invoicing & Dashboard 2.0 (August 2026)
 
 **Theme:** Automate the admin. Inspired by Dubsado but simplified for solopreneurs.
 
 ### Simple Workflows
 
-- **Not Dubsado-level automation** — simplified, opinionated flows for MCs
+- **Not Dubsado-level automation**  -  simplified, opinionated flows for MCs
   - `workflows` table: `id`, `user_id`, `title`, `trigger_type`, `is_active`, `created_at`
   - `workflow_steps` table: `id`, `workflow_id`, `step_type`, `config` (JSONB), `delay_days`, `sort_order`
   - Trigger types: `new_enquiry`, `status_change`, `days_before_event`, `days_after_event`, `form_submitted`
@@ -220,7 +220,7 @@
 
 ### Basic Invoicing
 
-- **Keep it simple** — MCs typically send 1-2 invoices per wedding (deposit + balance)
+- **Keep it simple**  -  MCs typically send 1-2 invoices per wedding (deposit + balance)
   - `invoices` table: `id`, `user_id`, `couple_id`, `event_id`, `invoice_number`, `items` (JSONB), `subtotal`, `tax_rate`, `tax_amount`, `total`, `status`, `due_date`, `paid_date`, `notes`, `created_at`
   - Invoice statuses: `draft`, `sent`, `viewed`, `paid`, `overdue`, `cancelled`
   - `packages` table: `id`, `user_id`, `name`, `description`, `price`, `items` (JSONB), `is_active`, `created_at`
@@ -233,7 +233,7 @@
   - Mark as paid manually (no payment gateway for couples in MVP)
   - Payment status visible on couple profile and dashboard
 - **Packages** (from Settings)
-  - Define reusable service packages (e.g., "MC Package — $1,500", "MC + DJ Package — $2,500")
+  - Define reusable service packages (e.g., "MC Package  -  $1,500", "MC + DJ Package  -  $2,500")
   - Each package has line items
   - Apply package when creating invoice → auto-fills
 - **Invoice section on Dashboard**
@@ -243,7 +243,7 @@
 ### Dashboard 2.0
 
 - **Modular dashboard** (inspired by Dubsado's display settings)
-  - Configurable modules — user can show/hide and reorder:
+  - Configurable modules  -  user can show/hide and reorder:
     - Tasks waiting on you (overdue + due today)
     - Upcoming weddings (next 30 days)
     - Recent couples
@@ -258,7 +258,7 @@
 
 ---
 
-## Month 6 — Multi-Role Support, Polish & Launch (September 2026)
+## Month 6  -  Multi-Role Support, Polish & Launch (September 2026)
 
 **Theme:** Expand beyond MCs. Harden for real users. Prepare for launch.
 
@@ -279,7 +279,7 @@
   - **Both**:
     - Can toggle between MC view and Celebrant view per event
     - Event type field: `ceremony`, `reception`, `both`
-- **Minimal changes** — same core product, different defaults and labels. Not a separate app.
+- **Minimal changes**  -  same core product, different defaults and labels. Not a separate app.
 
 ### Corporate Mode (Light)
 
@@ -288,7 +288,7 @@
   - Corporate events use simplified forms (no bridal party, no couple story)
   - Timeline templates for corporate: "Conference MC", "Awards Night", "Gala Dinner"
   - Scripts adjusted: no couple-specific sections
-- **Not a major feature** — just ensures the tool doesn't feel wedding-only when an MC books a corporate gig
+- **Not a major feature**  -  just ensures the tool doesn't feel wedding-only when an MC books a corporate gig
 
 ### Collaboration & Sharing
 
@@ -296,7 +296,7 @@
   - Share timeline with specific vendors per wedding
   - Vendors see read-only timeline filtered to items relevant to them
   - Category-based filtering: photographer sees photo moments, DJ sees music cues
-  - No vendor login required — token-based access
+  - No vendor login required  -  token-based access
 - **Export improvements**
   - Timeline PDF with vendor-specific views
   - Full wedding run sheet PDF (timeline + vendor contacts + notes)
@@ -325,7 +325,7 @@
   - Marketing site (separate repo, but plan content)
   - Help docs / knowledge base (in-app links)
   - Feedback widget (simple "Send feedback" in sidebar)
-  - Analytics (PostHog or similar — basic usage tracking, not user-facing analytics)
+  - Analytics (PostHog or similar  -  basic usage tracking, not user-facing analytics)
 
 ---
 
@@ -336,9 +336,9 @@ Based on Nathan's ranking and Dubsado analysis:
 | Priority | Feature | Why |
 |----------|---------|-----|
 | 1 | CRM polish + payments | Foundation must be solid before adding features |
-| 2 | Timeline builder + sharing | #1 differentiator — no competitor does this for MCs |
+| 2 | Timeline builder + sharing | #1 differentiator  -  no competitor does this for MCs |
 | 3 | Couple portal + forms | Eliminates the biggest time sink (chasing info) |
-| 4 | Scripts + Event Mode | Performance tools — makes Zebri indispensable day-of |
+| 4 | Scripts + Event Mode | Performance tools  -  makes Zebri indispensable day-of |
 | 5 | Workflows | Automation saves weekly admin hours |
 | 6 | Invoicing | Nice to have but many MCs use Xero/QuickBooks already |
 | 7 | Celebrant/corporate mode | Market expansion with minimal engineering effort |
@@ -349,14 +349,14 @@ Based on Nathan's ranking and Dubsado analysis:
 
 Deliberately excluded to stay focused:
 
-- **DJ features / Spotify integration** — Nathan confirmed this is low priority
-- **Marketplace** — not in scope, maybe future
-- **In-app messaging / email client** — use email templates + links instead
-- **Advanced analytics / reporting** — simple dashboard stats are enough
-- **Team/multi-user accounts** — MCs are solopreneurs, not agencies
-- **Calendar sync (Google/Apple)** — would be nice but not critical for launch
-- **Payment gateway for couples** — MCs handle payments via bank transfer or existing tools
-- **White-labeling** — not needed for launch
+- **DJ features / Spotify integration**  -  Nathan confirmed this is low priority
+- **Marketplace**  -  not in scope, maybe future
+- **In-app messaging / email client**  -  use email templates + links instead
+- **Advanced analytics / reporting**  -  simple dashboard stats are enough
+- **Team/multi-user accounts**  -  MCs are solopreneurs, not agencies
+- **Calendar sync (Google/Apple)**  -  would be nice but not critical for launch
+- **Payment gateway for couples**  -  MCs handle payments via bank transfer or existing tools
+- **White-labeling**  -  not needed for launch
 
 ---
 
@@ -364,13 +364,13 @@ Deliberately excluded to stay focused:
 
 | Date | Milestone |
 |------|-----------|
-| April 18, 2026 | Nathan's 5th anniversary — demo timeline feature to him (even if rough) |
-| End of April | Month 1 complete — CRM solid, payments working, mobile-ready |
-| End of May | Timeline builder shipped — shareable timelines working |
-| End of June | Couple portal live — forms collecting data |
-| End of July | Scripts + Event Mode — full wedding-day toolkit |
-| End of August | Workflows + invoicing — admin automation |
-| End of September | Celebrant mode + launch prep — ready for real users |
+| April 18, 2026 | Nathan's 5th anniversary  -  demo timeline feature to him (even if rough) |
+| End of April | Month 1 complete  -  CRM solid, payments working, mobile-ready |
+| End of May | Timeline builder shipped  -  shareable timelines working |
+| End of June | Couple portal live  -  forms collecting data |
+| End of July | Scripts + Event Mode  -  full wedding-day toolkit |
+| End of August | Workflows + invoicing  -  admin automation |
+| End of September | Celebrant mode + launch prep  -  ready for real users |
 
 ---
 
@@ -395,11 +395,11 @@ Deliberately excluded to stay focused:
 
 ## Architecture Notes for Implementation
 
-- **Keep server components as default** — only use client components when interactivity is needed
-- **React Query for all data** — consistent cache invalidation patterns
-- **Supabase RLS on every new table** — no exceptions
-- **JSONB for flexible schemas** — form definitions, invoice line items, workflow configs
-- **Service workers for offline** — critical for Event Mode at remote venues
-- **PDF generation** — use `@react-pdf/renderer` or server-side Puppeteer
-- **Email** — Resend for transactional, react-email for templates
-- **Rich text** — Tiptap for script editor (lightweight, extensible)
+- **Keep server components as default**  -  only use client components when interactivity is needed
+- **React Query for all data**  -  consistent cache invalidation patterns
+- **Supabase RLS on every new table**  -  no exceptions
+- **JSONB for flexible schemas**  -  form definitions, invoice line items, workflow configs
+- **Service workers for offline**  -  critical for Event Mode at remote venues
+- **PDF generation**  -  use `@react-pdf/renderer` or server-side Puppeteer
+- **Email**  -  Resend for transactional, react-email for templates
+- **Rich text**  -  Tiptap for script editor (lightweight, extensible)

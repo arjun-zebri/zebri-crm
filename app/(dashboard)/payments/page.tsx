@@ -1,9 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { FileText, FileSignature, Receipt, Search, X, Plus } from "lucide-react";
+import {
+  FileText,
+  FileSignature,
+  Receipt,
+  Search,
+  X,
+  Plus,
+  Hash,
+  Users,
+  ListChecks,
+  DollarSign,
+  Calendar,
+} from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { QuoteBuilderModal } from "../quotes/quote-builder-modal";
 import { InvoiceBuilderModal } from "../invoices/invoice-builder-modal";
@@ -98,6 +110,7 @@ export default function PaymentsPage() {
   const [newContractOpen, setNewContractOpen] = useState(false);
   const [newContractFilter, setNewContractFilter] = useState("");
   const [contractsEnabled, setContractsEnabled] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,6 +119,26 @@ export default function PaymentsPage() {
     });
     return () => { cancelled = true };
   }, [supabase]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "/") {
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
+          e.preventDefault();
+          searchInputRef.current?.focus();
+        }
+      }
+      if (e.key === "Escape" && document.activeElement === searchInputRef.current) {
+        setQuoteSearch("");
+        setInvoiceSearch("");
+        setContractSearch("");
+        searchInputRef.current?.blur();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (!contractsEnabled && activeTab === "contracts") setActiveTab("quotes");
@@ -296,39 +329,60 @@ export default function PaymentsPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="px-6 sm:px-[3.75rem] pt-6 pb-2 flex-shrink-0">
-        {/* Header — matches couples/contacts pattern */}
-        <div className="flex items-center flex-wrap gap-x-1 gap-y-3 mb-6">
-          {/* Title */}
-          <div className="flex items-baseline gap-3 flex-none sm:order-1">
-            <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900">Payments</h1>
+        {/* Title row */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-3xl font-semibold text-gray-900">Payments</h1>
             <span className="text-sm text-gray-400">{mobileCount} total</span>
           </div>
+          <Popover.Root
+            open={activeTab === "contracts" ? newContractOpen : false}
+            onOpenChange={activeTab === "contracts" ? setNewContractOpen : undefined}
+          >
+            <Popover.Trigger asChild>
+              <button
+                onClick={handleNew}
+                className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
+                aria-label={`New ${activeTab === "quotes" ? "quote" : activeTab === "invoices" ? "invoice" : "contract"}`}
+              >
+                <Plus size={16} strokeWidth={2} />
+              </button>
+            </Popover.Trigger>
+          </Popover.Root>
+        </div>
 
-          {/* Desktop spacer */}
-          <div className="hidden sm:block sm:flex-1 sm:order-2" />
-
-          {/* Search — full-width below on mobile */}
-          <div className="relative order-last w-full sm:order-3 sm:w-auto sm:mr-1">
-            <Search size={15} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        {/* Toolbar */}
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
+          {/* Search */}
+          <div className="relative w-full sm:w-56">
+            <Search
+              size={11}
+              strokeWidth={1.5}
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
             <input
+              ref={searchInputRef}
               type="text"
-              placeholder="Search..."
               value={currentSearch}
               onChange={(e) => setCurrentSearch(e.target.value)}
-              className="w-full sm:w-64 pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-200"
+              placeholder={`Search ${activeTab}...`}
+              className="w-full border border-gray-200 rounded-md pl-6 pr-6 py-2 text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 transition"
             />
             {currentSearch && (
               <button
-                onClick={() => setCurrentSearch("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                onClick={() => {
+                  setCurrentSearch("");
+                  searchInputRef.current?.focus();
+                }}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition cursor-pointer p-0.5"
               >
-                <X size={14} strokeWidth={1.5} />
+                <X size={10} strokeWidth={2} />
               </button>
             )}
           </div>
 
-          {/* New button */}
-          <div className="flex items-center ml-auto sm:ml-0 sm:order-4">
+          {/* New button - desktop */}
+          <div className="ml-auto flex items-center gap-2">
             <Popover.Root
               open={activeTab === "contracts" ? newContractOpen : false}
               onOpenChange={activeTab === "contracts" ? setNewContractOpen : undefined}
@@ -336,18 +390,10 @@ export default function PaymentsPage() {
               <Popover.Trigger asChild>
                 <button
                   onClick={handleNew}
-                  className="sm:hidden p-1 text-gray-600 hover:text-gray-900 active:scale-95 transition cursor-pointer"
+                  className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
                 >
-                  <Plus size={20} strokeWidth={1.5} />
-                </button>
-              </Popover.Trigger>
-              <Popover.Trigger asChild>
-                <button
-                  onClick={handleNew}
-                  className="hidden sm:flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-black rounded-xl hover:bg-neutral-800 transition ml-1 cursor-pointer"
-                >
-                  <Plus size={14} strokeWidth={1.5} />
-                  New
+                  <Plus size={11} strokeWidth={2} />
+                  New {activeTab === "quotes" ? "quote" : activeTab === "invoices" ? "invoice" : "contract"}
                 </button>
               </Popover.Trigger>
               {activeTab === "contracts" && (
@@ -397,7 +443,7 @@ export default function PaymentsPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-6 border-b border-gray-200">
+        <div className="flex items-center gap-6 border-b border-gray-200 mt-6">
           <button
             onClick={() => setActiveTab("quotes")}
             className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
@@ -435,261 +481,144 @@ export default function PaymentsPage() {
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-6 sm:px-[3.75rem] pb-28">
-          <div>
-            {activeTab === "contracts" ? (
-              <>
-                <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0 sticky top-0 bg-white [box-shadow:0_1px_0_rgb(229,231,235)]">
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Number</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Title</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Couple</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Status</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Signed</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Date</div>
-                </div>
-                {isLoading ? (
-                  <div className="p-4 space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
-                    ))}
-                  </div>
-                ) : filteredContracts.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <FileSignature size={32} strokeWidth={1} className="text-gray-200 mx-auto mb-3" />
-                    <p className="text-sm text-gray-400">
-                      {contractSearch ? "No contracts match your search." : "No contracts yet. Create one from a couple or the + New button."}
-                    </p>
-                  </div>
-                ) : (
-                  filteredContracts.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => setActiveContract({ id: c.id, coupleId: c.couple.id, coupleName: c.couple.name })}
-                      className="w-full text-left border-b border-gray-100 hover:bg-gray-50 transition last:border-b-0 cursor-pointer group"
-                    >
-                      <div className="sm:hidden px-2 py-3">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs font-medium text-gray-400 shrink-0">{c.contract_number}</span>
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize shrink-0 ${CONTRACT_STATUS_STYLES[c.status] || CONTRACT_STATUS_STYLES.draft}`}>
-                              {c.status}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-sm text-gray-900 truncate">{c.title}</span>
-                          <span className="text-gray-300 shrink-0">·</span>
-                          <span className="text-sm text-gray-500 truncate shrink-0 max-w-[120px]">{c.couple.name}</span>
-                        </div>
-                      </div>
-                      <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0">
-                        <div className="px-4 py-3.5 text-sm font-medium text-gray-500 group-hover:text-gray-900 whitespace-nowrap">{c.contract_number}</div>
-                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">{c.title}</div>
-                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">{c.couple.name}</div>
-                        <div className="px-4 py-3.5">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${CONTRACT_STATUS_STYLES[c.status] || CONTRACT_STATUS_STYLES.draft}`}>
-                            {c.status}
-                          </span>
-                        </div>
-                        <div className="px-4 py-3.5 text-sm text-gray-500 text-right whitespace-nowrap">
-                          {c.signed_at ? new Date(c.signed_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" }) : "—"}
-                        </div>
-                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-700 text-right whitespace-nowrap">
-                          {new Date(c.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </>
-            ) : activeTab === "quotes" ? (
-              <>
-                {/* Desktop table header */}
-                <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0 sticky top-0 bg-white [box-shadow:0_1px_0_rgb(229,231,235)]">
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Number</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Title</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Couple</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Status</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Total</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Date</div>
-                </div>
-
-                {isLoading ? (
-                  <div className="p-4 space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
-                    ))}
-                  </div>
-                ) : filteredQuotes.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <FileText size={32} strokeWidth={1} className="text-gray-200 mx-auto mb-3" />
-                    <p className="text-sm text-gray-400">
-                      {quoteSearch ? "No quotes match your search." : "No quotes yet. Create one to get started."}
-                    </p>
-                  </div>
-                ) : (
-                  filteredQuotes.map((quote) => (
-                    <button
-                      key={quote.id}
-                      onClick={() => setActiveQuoteId(quote.id)}
-                      className="w-full text-left border-b border-gray-100 hover:bg-gray-50 transition last:border-b-0 cursor-pointer group"
-                    >
-                      {/* Mobile card */}
-                      <div className="sm:hidden px-2 py-3">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs font-medium text-gray-400 shrink-0">{quote.quote_number}</span>
-                            <span
-                              className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize shrink-0 ${
-                                QUOTE_STATUS_STYLES[quote.status] || QUOTE_STATUS_STYLES.draft
-                              }`}
-                            >
-                              {quote.status}
-                            </span>
-                          </div>
-                          <span className="text-sm font-medium text-gray-900 tabular-nums shrink-0">
-                            {formatCurrency(quote.subtotal)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-sm text-gray-900 truncate">{quote.title}</span>
-                          <span className="text-gray-300 shrink-0">·</span>
-                          <span className="text-sm text-gray-500 truncate shrink-0 max-w-[120px]">{quote.couple.name}</span>
-                        </div>
-                      </div>
-                      {/* Desktop row */}
-                      <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0">
-                        <div className="px-4 py-3.5 text-sm font-medium text-gray-500 group-hover:text-gray-900 whitespace-nowrap">
-                          {quote.quote_number}
-                        </div>
-                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
-                          {quote.title}
-                        </div>
-                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
-                          {quote.couple.name}
-                        </div>
-                        <div className="px-4 py-3.5">
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
-                              QUOTE_STATUS_STYLES[quote.status] || QUOTE_STATUS_STYLES.draft
-                            }`}
-                          >
-                            {quote.status}
-                          </span>
-                        </div>
-                        <div className="px-4 py-3.5 text-sm text-gray-700 font-medium tabular-nums text-right">
-                          {formatCurrency(quote.subtotal)}
-                        </div>
-                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-700 text-right whitespace-nowrap">
-                          {new Date(quote.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </>
-            ) : (
-              <>
-                {/* Desktop table header */}
-                <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0 sticky top-0 bg-white [box-shadow:0_1px_0_rgb(229,231,235)]">
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Number</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Title</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Couple</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900">Status</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Total</div>
-                  <div className="px-4 py-3.5 text-sm font-medium text-gray-900 text-right">Due</div>
-                </div>
-
-                {isLoading ? (
-                  <div className="p-4 space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
-                    ))}
-                  </div>
-                ) : filteredInvoices.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <Receipt size={32} strokeWidth={1} className="text-gray-200 mx-auto mb-3" />
-                    <p className="text-sm text-gray-400">
-                      {invoiceSearch ? "No invoices match your search." : "No invoices yet. Create one to get started."}
-                    </p>
-                  </div>
-                ) : (
-                  filteredInvoices.map((invoice) => (
-                    <button
-                      key={invoice.id}
-                      onClick={() => setActiveInvoiceId(invoice.id)}
-                      className="w-full text-left border-b border-gray-100 hover:bg-gray-50 transition last:border-b-0 cursor-pointer group"
-                    >
-                      {/* Mobile card */}
-                      <div className="sm:hidden px-2 py-3">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs font-medium text-gray-400 shrink-0">{invoice.invoice_number}</span>
-                            <span
-                              className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
-                                INVOICE_STATUS_STYLES[invoice.effectiveStatus] || INVOICE_STATUS_STYLES.draft
-                              }`}
-                            >
-                              {INVOICE_STATUS_LABELS[invoice.effectiveStatus] || invoice.effectiveStatus}
-                            </span>
-                          </div>
-                          <span className="text-sm font-medium text-gray-900 tabular-nums shrink-0">
-                            {formatCurrency(invoice.subtotal)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="text-sm text-gray-900 truncate">{invoice.title}</span>
-                          <span className="text-gray-300 shrink-0">·</span>
-                          <span className="text-sm text-gray-500 truncate shrink-0 max-w-[120px]">{invoice.couple.name}</span>
-                          {invoice.due_date && (
-                            <>
-                              <span className="text-gray-300 shrink-0">·</span>
-                              <span className={`text-xs shrink-0 ${invoice.isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
-                                {new Date(invoice.due_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      {/* Desktop row */}
-                      <div className="hidden sm:grid grid-cols-[auto_1fr_1fr_120px_100px_100px] gap-0">
-                        <div className="px-4 py-3.5 text-sm font-medium text-gray-500 group-hover:text-gray-900 whitespace-nowrap">
-                          {invoice.invoice_number}
-                        </div>
-                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
-                          {invoice.title}
-                        </div>
-                        <div className="px-4 py-3.5 text-sm text-gray-500 group-hover:text-gray-900 truncate min-w-0">
-                          {invoice.couple.name}
-                        </div>
-                        <div className="px-4 py-3.5">
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
-                              INVOICE_STATUS_STYLES[invoice.effectiveStatus] || INVOICE_STATUS_STYLES.draft
-                            }`}
-                          >
-                            {INVOICE_STATUS_LABELS[invoice.effectiveStatus] || invoice.effectiveStatus}
-                          </span>
-                        </div>
-                        <div className="px-4 py-3.5 text-sm text-gray-700 font-medium tabular-nums text-right">
-                          {formatCurrency(invoice.subtotal)}
-                        </div>
-                        <div
-                          className={`px-4 py-3.5 text-sm text-right whitespace-nowrap ${
-                            invoice.isOverdue ? "text-red-500 font-medium" : "text-gray-500 group-hover:text-gray-700"
-                          }`}
-                        >
-                          {invoice.due_date
-                            ? new Date(invoice.due_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })
-                            : "—"}
-                        </div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </>
-            )}
-          </div>
-
+          {activeTab === "contracts" ? (
+            <PaymentsTable
+              loading={isLoading}
+              emptyIcon={<FileSignature size={32} strokeWidth={1} className="text-gray-200 mx-auto mb-3" />}
+              emptyMessage={contractSearch ? "No contracts match your search." : "No contracts yet. Create one from a couple or the + New button."}
+              rows={filteredContracts}
+              lastColLabel="Date"
+              lastColIcon={<Calendar size={12} strokeWidth={1.5} />}
+              valueColLabel="Signed"
+              valueColIcon={<Calendar size={12} strokeWidth={1.5} />}
+              renderRow={(c) => ({
+                key: c.id,
+                onClick: () => setActiveContract({ id: c.id, coupleId: c.couple.id, coupleName: c.couple.name }),
+                number: c.contract_number,
+                title: c.title,
+                coupleName: c.couple.name,
+                statusPill: (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${CONTRACT_STATUS_STYLES[c.status] || CONTRACT_STATUS_STYLES.draft}`}>
+                    {c.status}
+                  </span>
+                ),
+                valueCell: (
+                  <span className="text-sm text-gray-500 group-hover:text-gray-900">
+                    {c.signed_at ? new Date(c.signed_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" }) : " - "}
+                  </span>
+                ),
+                lastCell: (
+                  <span className="text-sm text-gray-500 group-hover:text-gray-900">
+                    {new Date(c.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                  </span>
+                ),
+                mobileSecondary: null,
+                mobileValueRight: null,
+                mobileStatus: (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize whitespace-nowrap ${CONTRACT_STATUS_STYLES[c.status] || CONTRACT_STATUS_STYLES.draft}`}>
+                    {c.status}
+                  </span>
+                ),
+              })}
+            />
+          ) : activeTab === "quotes" ? (
+            <PaymentsTable
+              loading={isLoading}
+              emptyIcon={<FileText size={32} strokeWidth={1} className="text-gray-200 mx-auto mb-3" />}
+              emptyMessage={quoteSearch ? "No quotes match your search." : "No quotes yet. Create one to get started."}
+              rows={filteredQuotes}
+              lastColLabel="Date"
+              lastColIcon={<Calendar size={12} strokeWidth={1.5} />}
+              valueColLabel="Total"
+              valueColIcon={<DollarSign size={12} strokeWidth={1.5} />}
+              renderRow={(quote) => ({
+                key: quote.id,
+                onClick: () => setActiveQuoteId(quote.id),
+                number: quote.quote_number,
+                title: quote.title,
+                coupleName: quote.couple.name,
+                statusPill: (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${QUOTE_STATUS_STYLES[quote.status] || QUOTE_STATUS_STYLES.draft}`}>
+                    {quote.status}
+                  </span>
+                ),
+                valueCell: (
+                  <span className="text-sm text-gray-500 group-hover:text-gray-900 tabular-nums">
+                    {formatCurrency(quote.subtotal)}
+                  </span>
+                ),
+                lastCell: (
+                  <span className="text-sm text-gray-500 group-hover:text-gray-900">
+                    {new Date(quote.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                  </span>
+                ),
+                mobileValueRight: (
+                  <span className="text-sm font-medium text-gray-900 tabular-nums shrink-0">
+                    {formatCurrency(quote.subtotal)}
+                  </span>
+                ),
+                mobileStatus: (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize whitespace-nowrap ${QUOTE_STATUS_STYLES[quote.status] || QUOTE_STATUS_STYLES.draft}`}>
+                    {quote.status}
+                  </span>
+                ),
+                mobileSecondary: null,
+              })}
+            />
+          ) : (
+            <PaymentsTable
+              loading={isLoading}
+              emptyIcon={<Receipt size={32} strokeWidth={1} className="text-gray-200 mx-auto mb-3" />}
+              emptyMessage={invoiceSearch ? "No invoices match your search." : "No invoices yet. Create one to get started."}
+              rows={filteredInvoices}
+              lastColLabel="Due"
+              lastColIcon={<Calendar size={12} strokeWidth={1.5} />}
+              valueColLabel="Total"
+              valueColIcon={<DollarSign size={12} strokeWidth={1.5} />}
+              renderRow={(invoice) => ({
+                key: invoice.id,
+                onClick: () => setActiveInvoiceId(invoice.id),
+                number: invoice.invoice_number,
+                title: invoice.title,
+                coupleName: invoice.couple.name,
+                statusPill: (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${INVOICE_STATUS_STYLES[invoice.effectiveStatus] || INVOICE_STATUS_STYLES.draft}`}>
+                    {INVOICE_STATUS_LABELS[invoice.effectiveStatus] || invoice.effectiveStatus}
+                  </span>
+                ),
+                valueCell: (
+                  <span className="text-sm text-gray-500 group-hover:text-gray-900 tabular-nums">
+                    {formatCurrency(invoice.subtotal)}
+                  </span>
+                ),
+                lastCell: (
+                  <span className={`text-sm ${invoice.isOverdue ? "text-red-500 font-medium" : "text-gray-500 group-hover:text-gray-900"}`}>
+                    {invoice.due_date
+                      ? new Date(invoice.due_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })
+                      : " - "}
+                  </span>
+                ),
+                mobileValueRight: (
+                  <span className="text-sm font-medium text-gray-900 tabular-nums shrink-0">
+                    {formatCurrency(invoice.subtotal)}
+                  </span>
+                ),
+                mobileStatus: (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${INVOICE_STATUS_STYLES[invoice.effectiveStatus] || INVOICE_STATUS_STYLES.draft}`}>
+                    {INVOICE_STATUS_LABELS[invoice.effectiveStatus] || invoice.effectiveStatus}
+                  </span>
+                ),
+                mobileSecondary: invoice.due_date ? (
+                  <>
+                    <span className="text-gray-300 shrink-0">·</span>
+                    <span className={`text-xs shrink-0 ${invoice.isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
+                      {new Date(invoice.due_date + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                    </span>
+                  </>
+                ) : null,
+              })}
+            />
+          )}
         </div>
       </div>
 
@@ -738,6 +667,185 @@ export default function PaymentsPage() {
           onClose={() => setActiveContract(null)}
         />
       )}
+    </div>
+  );
+}
+
+const COL_WIDTHS = {
+  number: "11%",
+  title: "26%",
+  couple: "22%",
+  status: "14%",
+  value: "13%",
+  last: "14%",
+} as const;
+
+interface PaymentsRow {
+  key: string;
+  onClick: () => void;
+  number: string;
+  title: string;
+  coupleName: string;
+  statusPill: React.ReactNode;
+  valueCell: React.ReactNode;
+  lastCell: React.ReactNode;
+  mobileValueRight: React.ReactNode;
+  mobileStatus: React.ReactNode;
+  mobileSecondary: React.ReactNode;
+}
+
+interface PaymentsTableProps<T> {
+  loading: boolean;
+  rows: T[];
+  emptyIcon: React.ReactNode;
+  emptyMessage: string;
+  valueColLabel: string;
+  valueColIcon: React.ReactNode;
+  lastColLabel: string;
+  lastColIcon: React.ReactNode;
+  renderRow: (row: T) => PaymentsRow;
+}
+
+function HeaderLabel({ icon, label, textOnly }: { icon?: React.ReactNode; label: string; textOnly?: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {textOnly ? <span className="text-[11px]">{textOnly}</span> : icon}
+      {label}
+    </span>
+  );
+}
+
+function PaymentsTable<T>({
+  loading,
+  rows,
+  emptyIcon,
+  emptyMessage,
+  valueColLabel,
+  valueColIcon,
+  lastColLabel,
+  lastColIcon,
+  renderRow,
+}: PaymentsTableProps<T>) {
+  if (!loading && rows.length === 0) {
+    return (
+      <div className="py-16 text-center">
+        {emptyIcon}
+        <p className="text-sm text-gray-400">{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  const mapped = rows.map(renderRow);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto">
+        {/* Mobile card list */}
+        <div className="sm:hidden">
+          {loading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
+                >
+                  <div className="flex-1 pr-3">
+                    <div className="h-4 bg-gray-100 rounded-md w-36 mb-1.5" />
+                    <div className="h-3 bg-gray-100 rounded-md w-24" />
+                  </div>
+                  <div className="h-5 bg-gray-100 rounded-full w-16" />
+                </div>
+              ))
+            : mapped.map((r) => (
+                <div
+                  key={r.key}
+                  onClick={r.onClick}
+                  className="flex items-start justify-between gap-3 py-3.5 border-b border-gray-100 last:border-0 cursor-pointer active:bg-gray-50 transition"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-xs font-medium text-gray-400 shrink-0">{r.number}</span>
+                      {r.mobileStatus}
+                    </div>
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="text-sm text-gray-900 truncate">{r.title}</span>
+                      <span className="text-gray-300 shrink-0">·</span>
+                      <span className="text-sm text-gray-500 truncate shrink-0 max-w-[140px]">{r.coupleName}</span>
+                      {r.mobileSecondary}
+                    </div>
+                  </div>
+                  {r.mobileValueRight}
+                </div>
+              ))}
+        </div>
+
+        {/* Desktop table */}
+        <table className="hidden sm:table w-full table-fixed border-separate border-spacing-0 min-w-[600px] md:max-w-[1800px]">
+          <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
+            <tr>
+              <th className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400" style={{ width: COL_WIDTHS.number }}>
+                <HeaderLabel icon={<Hash size={12} strokeWidth={1.5} />} label="Number" />
+              </th>
+              <th className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400" style={{ width: COL_WIDTHS.title }}>
+                <HeaderLabel textOnly="Aa" label="Title" />
+              </th>
+              <th className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400" style={{ width: COL_WIDTHS.couple }}>
+                <HeaderLabel icon={<Users size={12} strokeWidth={1.5} />} label="Couple" />
+              </th>
+              <th className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400" style={{ width: COL_WIDTHS.status }}>
+                <HeaderLabel icon={<ListChecks size={12} strokeWidth={1.5} />} label="Status" />
+              </th>
+              <th className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400" style={{ width: COL_WIDTHS.value }}>
+                <HeaderLabel icon={valueColIcon} label={valueColLabel} />
+              </th>
+              <th className="pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400" style={{ width: COL_WIDTHS.last }}>
+                <HeaderLabel icon={lastColIcon} label={lastColLabel} />
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    {[0, 1, 2, 3, 4, 5].map((j) => (
+                      <td key={j} className="pl-0 pr-2 py-2 border-b border-gray-100">
+                        <div className="h-4 bg-gray-100 rounded-md w-24" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              : mapped.map((r, idx) => {
+                  const isLast = idx === mapped.length - 1;
+                  const borderClass = isLast ? "" : "border-b border-gray-100";
+                  return (
+                    <tr
+                      key={r.key}
+                      onClick={r.onClick}
+                      className="cursor-pointer transition group hover:bg-gray-50/60"
+                    >
+                      <td className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`} style={{ width: COL_WIDTHS.number }}>
+                        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">{r.number}</span>
+                      </td>
+                      <td className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`} style={{ width: COL_WIDTHS.title }}>
+                        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">{r.title}</span>
+                      </td>
+                      <td className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`} style={{ width: COL_WIDTHS.couple }}>
+                        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">{r.coupleName}</span>
+                      </td>
+                      <td className={`pl-0 pr-2 py-2 text-sm ${borderClass}`} style={{ width: COL_WIDTHS.status }}>
+                        {r.statusPill}
+                      </td>
+                      <td className={`pl-0 pr-2 py-2 text-sm overflow-hidden ${borderClass}`} style={{ width: COL_WIDTHS.value }}>
+                        {r.valueCell}
+                      </td>
+                      <td className={`pl-0 pr-3 py-2 text-sm overflow-hidden ${borderClass}`} style={{ width: COL_WIDTHS.last }}>
+                        {r.lastCell}
+                      </td>
+                    </tr>
+                  );
+                })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

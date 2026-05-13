@@ -34,7 +34,7 @@ function formatDateTime(iso: string | null) {
 }
 
 function formatDate(iso: string | null) {
-  if (!iso) return "—";
+  if (!iso) return " - ";
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -284,7 +284,7 @@ function PanelBody({
                 {user.subscription_status.replace("_", " ")}
               </Badge>
             ) : (
-              <span className="text-gray-400">—</span>
+              <span className="text-gray-400"> - </span>
             )}
           </Detail>
           <Detail label="Plan">
@@ -309,7 +309,7 @@ function PanelBody({
                 <ExternalLink size={12} strokeWidth={1.5} />
               </a>
             ) : (
-              <span className="text-gray-400">—</span>
+              <span className="text-gray-400"> - </span>
             )}
           </Detail>
           <Detail label="Signed up">{formatDate(user.created_at)}</Detail>

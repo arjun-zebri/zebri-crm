@@ -14,7 +14,7 @@ See [payments_consolidation.md](payments_consolidation.md) for implementation de
 
 **Events are now owned by couples, not standalone.**
 - Events managed within couple's profile (Overview, Events, Contacts, Tasks tabs)
-- `/events` route removed — no standalone Events page/sidebar navigation
+- `/events` route removed  -  no standalone Events page/sidebar navigation
 - Calendar view moved to Couples page (List/Kanban/Calendar tabs)
 - Couple Profile now has Events tab to manage multiple events per couple
 
@@ -47,7 +47,7 @@ See [calendar_redesign.md](calendar_redesign.md) for implementation details.
 - Event Date and Venue fields removed (managed exclusively via Events tab)
 - Modal only edits: Name, Email, Phone, Status, Notes
 - Event date/venue preserved in DB but not exposed for editing in modal
-- See [feedback_couples_modal_design.md](feedback_couples_modal_design.md) — Overview section should show events & contacts inline, no separate sidebar tabs
+- See [feedback_couples_modal_design.md](feedback_couples_modal_design.md)  -  Overview section should show events & contacts inline, no separate sidebar tabs
 
 ## Contact & Task Management (Implemented Mar 11, 2026; renamed to Contacts Mar 26, 2026)
 
@@ -57,5 +57,5 @@ See [calendar_redesign.md](calendar_redesign.md) for implementation details.
 
 # Working Style
 
-- [Docs-first for new feature design](feedback_docs_first.md) — when user says "plan X" or "put this in docs", deliverable is `.claude/docs/<feature>.md` only, no code/migrations.
-- [No native select elements](feedback_no_native_selects.md) — all dropdowns must be custom button+popover, never `<select>`.
+- [Docs-first for new feature design](feedback_docs_first.md)  -  when user says "plan X" or "put this in docs", deliverable is `.claude/docs/<feature>.md` only, no code/migrations.
+- [No native select elements](feedback_no_native_selects.md)  -  all dropdowns must be custom button+popover, never `<select>`.
