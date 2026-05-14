@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Search, ImageIcon, Type, Table, CreditCard, MessageSquare, Activity, Minus, Image, User, AlignLeft } from 'lucide-react'
+import { Search, ImageIcon, Type, Table, CreditCard, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { BLOCK_LABELS, BLOCK_DESCRIPTIONS, type BlockType } from './types'
 
@@ -12,9 +12,10 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   title: Type,
   lineItems: Table,
   totals: CreditCard,
-  message: MessageSquare,
+  text: Pilcrow,
   action: Activity,
   divider: Minus,
+  footer: PanelBottom,
 }
 
 const BLOCK_ORDER: BlockType[] = [
@@ -24,9 +25,10 @@ const BLOCK_ORDER: BlockType[] = [
   'title',
   'lineItems',
   'totals',
-  'message',
+  'text',
   'action',
   'divider',
+  'footer',
 ]
 
 interface AddBlockPaletteProps {

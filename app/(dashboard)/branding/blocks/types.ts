@@ -21,15 +21,22 @@ export type BlockType =
   | 'title'
   | 'lineItems'
   | 'totals'
-  | 'message'
+  | 'text'
   | 'action'
   | 'divider'
+  | 'footer'
 
 export interface BaseBlock {
   id: string
   type: BlockType
   locked?: boolean
   hidden?: boolean
+  /** Optional outer border. When 0 or undefined, no border is rendered. */
+  borderWidth?: number
+  /** Border colour — defaults to the brand's muted/separator if omitted. */
+  borderColor?: string
+  /** Override the block's corner radius. Falls back to global cornerRadius. */
+  blockRadius?: number
 }
 
 export interface HeaderBannerBlock extends BaseBlock {
@@ -63,7 +70,6 @@ export interface TitleBlock extends BaseBlock {
 
 export interface LineItemsBlock extends BaseBlock {
   type: 'lineItems'
-  showAddPlaceholder: boolean
   showHeader?: boolean
   rowStyle?: 'lines' | 'stripes' | 'plain'
   headerStyle?: TextStyle
@@ -77,10 +83,9 @@ export interface TotalsBlock extends BaseBlock {
   totalStyle?: TextStyle
 }
 
-export interface MessageBlock extends BaseBlock {
-  type: 'message'
+export interface TextBlock extends BaseBlock {
+  type: 'text'
   text: string
-  style: 'plain' | 'card'
   textStyle?: TextStyle
 }
 
@@ -100,6 +105,16 @@ export interface DividerBlock extends BaseBlock {
   color?: string
 }
 
+export interface FooterBlock extends BaseBlock {
+  type: 'footer'
+  /** Optional final line of copy (e.g. "Thank you for choosing us"). */
+  closingNote?: string
+  /** Show the small Zebri-style mark + business name on the left. */
+  showMark?: boolean
+  noteStyle?: TextStyle
+  contactStyle?: TextStyle
+}
+
 export type Block =
   | HeaderBannerBlock
   | BusinessNameBlock
@@ -107,9 +122,10 @@ export type Block =
   | TitleBlock
   | LineItemsBlock
   | TotalsBlock
-  | MessageBlock
+  | TextBlock
   | ActionBlock
   | DividerBlock
+  | FooterBlock
 
 export type BlocksByDoc = Record<'quote' | 'invoice' | 'contract', Block[]>
 
@@ -120,9 +136,10 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   title: 'Title & meta',
   lineItems: 'Line items',
   totals: 'Totals',
-  message: 'Message',
+  text: 'Text',
   action: 'Action',
   divider: 'Divider',
+  footer: 'Footer',
 }
 
 export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
@@ -132,7 +149,8 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   title: 'Document title and reference',
   lineItems: 'Services and amounts',
   totals: 'Subtotal, tax, total',
-  message: 'A note to the client',
+  text: 'Plain paragraph or note',
   action: 'Accept / Decline / Pay',
   divider: 'Horizontal rule',
+  footer: 'Business contact and closing line',
 }

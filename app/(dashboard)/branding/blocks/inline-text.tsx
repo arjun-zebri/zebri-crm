@@ -64,7 +64,7 @@ export function InlineText({
         ;(e.currentTarget as HTMLElement).blur()
       }
     },
-    className: `outline-none rounded px-1 -mx-1 cursor-text hover:bg-gray-100/70 focus:bg-white focus:ring-2 focus:ring-gray-900/15 focus:ring-offset-1 transition empty:before:content-[attr(data-placeholder)] empty:before:text-gray-300 ${className}`,
+    className: `outline-none cursor-text caret-current empty:before:content-[attr(data-placeholder)] empty:before:opacity-40 ${className}`,
     style,
   }
 

@@ -5,8 +5,18 @@ import { useParams } from 'next/navigation'
 import { Loader2, Check, X, Download, AlertCircle, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { generateAndPrintPdf } from '@/lib/generate-pdf'
+import { getTextColor } from '@/lib/branding/contrast'
+import {
+  DENSITY_PAD,
+  headingFontFamily,
+  bodyFontFamily,
+  useBrandingHead,
+  type PublicBranding,
+} from '@/lib/branding/public-surface'
+import { PublicBlockRenderer, findActionStyle } from '@/lib/branding/public-renderer'
+import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
-interface PublicContract {
+interface PublicContract extends PublicBranding {
   id: string
   title: string
   contract_number: string
@@ -22,15 +32,7 @@ interface PublicContract {
   mc_signature_name: string | null
   email_sent_at: string | null
   couple_name: string
-  business_name: string | null
-  logo_url: string | null
-  brand_color: string
-  tagline: string | null
-  show_contact_on_documents: boolean
-  phone: string | null
-  website: string | null
-  instagram_url: string | null
-  facebook_url: string | null
+  branding_blocks: Block[] | null
 }
 
 function formatDate(s: string | null): string {
@@ -53,15 +55,6 @@ function formatDateTime(s: string | null): string {
   } catch {
     return s
   }
-}
-
-function getBrandTextColor(hex: string): string {
-  const c = hex.replace('#', '')
-  const r = parseInt(c.slice(0, 2), 16) / 255
-  const g = parseInt(c.slice(2, 4), 16) / 255
-  const b = parseInt(c.slice(4, 6), 16) / 255
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
-  return luminance > 0.4 ? '#111827' : '#ffffff'
 }
 
 type PageState = 'loading' | 'not_found' | 'active' | 'expired' | 'signed' | 'declined'
@@ -97,6 +90,7 @@ export default function PublicContractPage() {
   }
 
   useEffect(() => { load() }, [params.token])
+  useBrandingHead(contract)
 
   const handleSign = async () => {
     if (!signerName.trim() || !agreed) return
@@ -180,42 +174,97 @@ export default function PublicContractPage() {
   if (!contract) return null
 
   const brand = contract.brand_color || '#A7F3D0'
-  const brandText = getBrandTextColor(brand)
+  const brandText = getTextColor(brand)
+  const pageBg = contract.surface_color || '#fafafa'
+  const textColor = contract.text_color || '#111827'
+  const mutedColor = contract.muted_color || '#6B7280'
+  const radius = contract.corner_radius ?? 16
+  const headingStack = headingFontFamily(contract)
+  const bodyStack = bodyFontFamily(contract)
+  const headingWeight = contract.font_weight ?? 600
+  const pad = DENSITY_PAD[contract.density ?? 'cozy']
+  // Pull Sign/Decline button styling out of the saved action block when present
+  // so the signing UI inherits the user's customised colour + radius.
+  const actionStyle = findActionStyle(contract.branding_blocks, {
+    brandColor: brand,
+    cornerRadius: contract.corner_radius ?? 16,
+  })
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-3xl mx-auto py-6 sm:py-10 px-4">
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-          {/* Branded header */}
-          <div className="p-6 sm:p-8" style={{ backgroundColor: brand, color: brandText }}>
-            <div className="flex items-center gap-3 mb-4">
-              {contract.logo_url && (
-                <img src={contract.logo_url} alt="" className="h-10 w-10 rounded-lg object-cover bg-white" />
-              )}
-              <div className="min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: brandText }}>
-                  {contract.business_name || 'Your MC'}
-                </p>
-                {contract.tagline && (
-                  <p className="text-xs opacity-80 truncate" style={{ color: brandText }}>{contract.tagline}</p>
-                )}
-              </div>
-            </div>
-            <p className="text-xs font-medium opacity-75 uppercase tracking-wide mb-1" style={{ color: brandText }}>
-              Contract {contract.contract_number}
-            </p>
-            <h1 className="text-2xl sm:text-3xl font-semibold" style={{ color: brandText }}>
-              {contract.title}
-            </h1>
-            {contract.expires_at && pageState === 'active' && (
-              <p className="mt-3 text-sm opacity-90" style={{ color: brandText }}>
-                Please sign by <strong>{formatDate(contract.expires_at)}</strong>
-              </p>
-            )}
+    <div
+      className="min-h-screen"
+      style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
+    >
+      <div className={`max-w-3xl mx-auto ${pad.page} px-4`}>
+        {/* Header banner (only when no block tree — the tree renders its own banner block). */}
+        {contract.header_image_url
+          && (!contract.branding_blocks || contract.branding_blocks.length === 0) && (
+          <div className="mb-5 overflow-hidden" style={{ borderRadius: radius }}>
+            <img src={contract.header_image_url} alt="" className="block w-full h-44 object-cover" />
           </div>
+        )}
+
+        <div
+          className="bg-white border border-gray-100 overflow-hidden shadow-sm"
+          style={{ borderRadius: radius }}
+        >
+          {/* Block-tree header (replaces the branded header band when present) */}
+          {contract.branding_blocks && contract.branding_blocks.length > 0 && (
+            <PublicBlockRenderer
+              blocks={contract.branding_blocks}
+              branding={contract}
+              doc={{
+                title: contract.title,
+                refNumber: contract.contract_number,
+                expiresAt: contract.expires_at,
+                items: [],
+                subtotal: 0,
+                taxRate: 0,
+              }}
+              hideAction
+            />
+          )}
+
+          {/* Branded header band — fallback when no block tree */}
+          {(!contract.branding_blocks || contract.branding_blocks.length === 0) && (
+            <div className={pad.cardHeader} style={{ backgroundColor: brand, color: brandText }}>
+              <div className="flex items-center gap-3 mb-4">
+                {contract.logo_url && (
+                  <img
+                    src={contract.logo_url}
+                    alt=""
+                    className="h-10 w-10 object-cover bg-white"
+                    style={{ borderRadius: Math.min(radius, 12) }}
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: brandText, fontFamily: headingStack }}>
+                    {contract.business_name || 'Your MC'}
+                  </p>
+                  {contract.tagline && (
+                    <p className="text-xs opacity-80 truncate" style={{ color: brandText }}>{contract.tagline}</p>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs font-medium opacity-75 uppercase tracking-wide mb-1" style={{ color: brandText }}>
+                Contract {contract.contract_number}
+              </p>
+              <h1
+                className="text-2xl sm:text-3xl"
+                style={{ color: brandText, fontFamily: headingStack, fontWeight: headingWeight }}
+              >
+                {contract.title}
+              </h1>
+              {contract.expires_at && pageState === 'active' && (
+                <p className="mt-3 text-sm opacity-90" style={{ color: brandText }}>
+                  Please sign by <strong>{formatDate(contract.expires_at)}</strong>
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Body */}
-          <div className="p-6 sm:p-10 space-y-8">
+          <div className={`${pad.cardSection} space-y-8 border-t border-gray-100`}>
             {pageState === 'expired' && (
               <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 text-sm text-amber-900">
                 This contract has expired. Please contact {contract.business_name || 'your MC'} for a new link.
@@ -249,19 +298,20 @@ export default function PublicContractPage() {
             {contract.locked_content_html ? (
               <div
                 className="contract-content text-sm"
+                style={{ color: textColor }}
                 dangerouslySetInnerHTML={{ __html: contract.locked_content_html }}
               />
             ) : (
-              <p className="text-sm text-gray-500">No content.</p>
+              <p className="text-sm" style={{ color: mutedColor }}>No content.</p>
             )}
 
             {/* MC countersignature */}
             <div className="border-t border-gray-100 pt-6">
-              <p className="text-xs font-medium text-gray-500 mb-1">Signed by MC</p>
-              <p className="text-xl text-gray-900" style={{ fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
+              <p className="text-xs font-medium mb-1" style={{ color: mutedColor }}>Signed by MC</p>
+              <p className="text-xl" style={{ color: textColor, fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
                 {contract.mc_signature_name || contract.business_name || 'Your MC'}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs mt-1" style={{ color: mutedColor }}>
                 {contract.business_name || ''} · {formatDate(contract.email_sent_at)}
               </p>
             </div>
@@ -269,21 +319,22 @@ export default function PublicContractPage() {
             {/* Couple signature (active only) */}
             {pageState === 'active' && (
               <div className="border-t border-gray-100 pt-6 space-y-4">
-                <p className="text-xs font-medium text-gray-500">Sign to accept</p>
+                <p className="text-xs font-medium" style={{ color: mutedColor }}>Sign to accept</p>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Your full legal name</label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: mutedColor }}>Your full legal name</label>
                   <input
                     type="text"
                     value={signerName}
                     onChange={(e) => setSignerName(e.target.value)}
                     placeholder={contract.couple_name}
-                    className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-gray-400"
+                    className="w-full text-sm border border-gray-200 px-3 py-2.5 focus:outline-none focus:border-gray-400"
+                    style={{ borderRadius: radius, color: textColor }}
                   />
                 </div>
                 {signerName.trim() && (
-                  <div className="border border-gray-100 bg-gray-50 rounded-xl p-4">
-                    <p className="text-xs text-gray-500 mb-1">Your signature will appear as</p>
-                    <p className="text-2xl text-gray-900" style={{ fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
+                  <div className="border border-gray-100 bg-gray-50 p-4" style={{ borderRadius: radius }}>
+                    <p className="text-xs mb-1" style={{ color: mutedColor }}>Your signature will appear as</p>
+                    <p className="text-2xl" style={{ color: textColor, fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
                       {signerName}
                     </p>
                   </div>
@@ -295,7 +346,7 @@ export default function PublicContractPage() {
                     onChange={(e) => setAgreed(e.target.checked)}
                     className="mt-0.5 accent-black w-4 h-4"
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm" style={{ color: textColor }}>
                     I agree to the terms above and intend my typed name to serve as my legal signature.
                   </span>
                 </label>
@@ -304,23 +355,25 @@ export default function PublicContractPage() {
                   <button
                     onClick={handleSign}
                     disabled={!signerName.trim() || !agreed || actionLoading}
-                    className="text-sm font-semibold text-white bg-gray-900 hover:bg-black rounded-xl px-5 py-2.5 inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                    style={{ backgroundColor: actionStyle.color, color: getTextColor(actionStyle.color), borderRadius: actionStyle.radius }}
+                    className="text-sm font-semibold px-5 py-2.5 inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default hover:opacity-90 transition"
                   >
                     {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={2} />}
-                    {actionLoading ? 'Signing…' : 'Sign contract'}
+                    {actionLoading ? 'Signing…' : (actionStyle.primaryLabel ?? 'Sign contract')}
                   </button>
                   <button
                     onClick={() => setDeclineOpen(true)}
-                    className="text-sm font-medium text-gray-600 hover:text-red-600 border border-gray-200 rounded-xl px-4 py-2.5 cursor-pointer"
+                    className="text-sm font-medium border border-gray-200 px-4 py-2.5 cursor-pointer hover:opacity-70"
+                    style={{ color: mutedColor, borderRadius: actionStyle.radius }}
                   >
-                    Decline
+                    {actionStyle.secondaryLabel ?? 'Decline'}
                   </button>
                 </div>
               </div>
             )}
 
             {contract.show_contact_on_documents && (contract.phone || contract.website) && (
-              <div className="border-t border-gray-100 pt-6 text-xs text-gray-500 space-y-0.5">
+              <div className="border-t border-gray-100 pt-6 text-xs space-y-0.5" style={{ color: mutedColor }}>
                 {contract.phone && <p>{contract.phone}</p>}
                 {contract.website && <p>{contract.website}</p>}
               </div>
@@ -328,8 +381,8 @@ export default function PublicContractPage() {
           </div>
         </div>
 
-        <p className="text-xs text-gray-400 text-center mt-6">
-          Secured by Zebri · <a href="https://zebri.com.au" className="hover:text-gray-600">zebri.com.au</a>
+        <p className="text-xs text-center mt-6" style={{ color: mutedColor }}>
+          Secured by Zebri · <a href="https://zebri.com.au" className="hover:opacity-70">zebri.com.au</a>
         </p>
       </div>
 
@@ -340,8 +393,8 @@ export default function PublicContractPage() {
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full">
               <div className="px-6 py-6">
-                <h3 className="text-base font-semibold text-gray-900 mb-2">Decline this contract?</h3>
-                <p className="text-sm text-gray-500 mb-4">
+                <h3 className="text-base font-semibold mb-2" style={{ color: textColor, fontFamily: headingStack }}>Decline this contract?</h3>
+                <p className="text-sm mb-4" style={{ color: mutedColor }}>
                   Let {contract.business_name || 'your MC'} know why, or leave blank.
                 </p>
                 <textarea
@@ -350,6 +403,7 @@ export default function PublicContractPage() {
                   rows={3}
                   placeholder="Reason (optional)"
                   className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-gray-400 mb-4"
+                  style={{ color: textColor }}
                 />
                 {actionError && <p className="text-sm text-red-600 mb-3">{actionError}</p>}
                 <div className="flex gap-3">
@@ -357,6 +411,7 @@ export default function PublicContractPage() {
                     onClick={() => setDeclineOpen(false)}
                     disabled={actionLoading}
                     className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer disabled:opacity-50"
+                    style={{ color: textColor }}
                   >
                     Cancel
                   </button>

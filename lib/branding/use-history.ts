@@ -102,18 +102,20 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
     }
   }, [])
 
-  // Cmd+Z / Cmd+Shift+Z
+  // Cmd+Z / Cmd+Shift+Z — works canvas-wide, including while editing inline text.
+  // Native inputs/textareas keep their built-in undo so kit-name & search behave naturally.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null
-      if (target?.isContentEditable) return
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
       if (!(e.metaKey || e.ctrlKey)) return
+      const target = e.target as HTMLElement | null
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
       if (e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
+        if (target?.isContentEditable) (target as HTMLElement).blur()
         undo()
       } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
         e.preventDefault()
+        if (target?.isContentEditable) (target as HTMLElement).blur()
         redo()
       }
     }

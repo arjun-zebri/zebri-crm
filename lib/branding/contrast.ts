@@ -16,6 +16,20 @@ export function getTextColor(hex: string): string {
   return luminance > 0.4 ? '#111827' : '#ffffff'
 }
 
+export function isLight(hex: string): boolean {
+  const rgb = getRgb(hex)
+  if (!rgb) return true
+  const [r, g, b] = rgb
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  return luminance > 0.65
+}
+
+export function pillForeground(accent: string, brand: string, surface: string): string {
+  if (accent && !isLight(accent) && getContrastRatio(accent, surface) >= 3.5) return accent
+  if (brand && getContrastRatio(brand, surface) >= 3.5) return brand
+  return isLight(surface) ? '#111827' : '#FAFAFA'
+}
+
 function relativeLuminance(hex: string): number {
   const rgb = getRgb(hex)
   if (!rgb) return 0

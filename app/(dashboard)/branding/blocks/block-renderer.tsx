@@ -29,9 +29,10 @@ import {
   RenderTitle,
   RenderLineItems,
   RenderTotals,
-  RenderMessage,
+  RenderText,
   RenderAction,
   RenderDivider,
+  RenderFooter,
 } from './render'
 
 interface BlockRendererProps {
@@ -46,6 +47,8 @@ interface BlockRendererProps {
   deleteBlock: (id: string) => void
   toggleLock: (id: string) => void
   toggleHide: (id: string) => void
+  resetBlock: (id: string) => void
+  applyStyleToAllDocs: (id: string) => void
   styleClipboard: TextStyle | null
   setStyleClipboard: (s: TextStyle | null) => void
 }
@@ -62,6 +65,8 @@ export function BlockRenderer({
   deleteBlock,
   toggleLock,
   toggleHide,
+  resetBlock,
+  applyStyleToAllDocs,
   styleClipboard,
   setStyleClipboard,
 }: BlockRendererProps) {
@@ -141,6 +146,8 @@ export function BlockRenderer({
         className="relative pt-4 pb-8"
         style={{
           fontFamily: FONT_STACKS[state.fontBody],
+          paddingLeft: state.docPadding,
+          paddingRight: state.docPadding,
         }}
         onClick={() => setSelectedBlockIds([])}
       >
@@ -181,6 +188,8 @@ export function BlockRenderer({
                   onDelete={() => deleteBlock(block.id)}
                   onToggleLock={() => toggleLock(block.id)}
                   onToggleHide={() => toggleHide(block.id)}
+                  onResetBlock={() => resetBlock(block.id)}
+                  onApplyToAllDocs={() => applyStyleToAllDocs(block.id)}
                   onCopyStyle={() => setStyleClipboard(readStyle(block))}
                   onPasteStyle={() => {
                     if (styleClipboard) writeStyle(block, styleClipboard, updateBlock)
@@ -226,12 +235,14 @@ function renderBlock(
       return <RenderLineItems block={block} state={state} updateBlock={updateBlock} />
     case 'totals':
       return <RenderTotals block={block} state={state} updateBlock={updateBlock} />
-    case 'message':
-      return <RenderMessage block={block} state={state} updateBlock={updateBlock} />
+    case 'text':
+      return <RenderText block={block} state={state} updateBlock={updateBlock} />
     case 'action':
       return <RenderAction block={block} state={state} updateBlock={updateBlock} />
     case 'divider':
       return <RenderDivider block={block} state={state} updateBlock={updateBlock} />
+    case 'footer':
+      return <RenderFooter block={block} state={state} updateBlock={updateBlock} />
   }
 }
 
@@ -241,7 +252,7 @@ function readStyle(block: Block | undefined): TextStyle | null {
     case 'title': return block.titleStyle ?? null
     case 'businessName': return block.nameStyle ?? null
     case 'tagline': return block.textStyle ?? null
-    case 'message': return block.textStyle ?? null
+    case 'text': return block.textStyle ?? null
     case 'totals': return block.totalStyle ?? null
     case 'action': return block.primaryStyle ?? null
     default: return null
@@ -257,7 +268,7 @@ function writeStyle(
     case 'title': updateBlock(block.id, { titleStyle: { ...(block.titleStyle ?? {}), ...style } }); break
     case 'businessName': updateBlock(block.id, { nameStyle: { ...(block.nameStyle ?? {}), ...style } }); break
     case 'tagline': updateBlock(block.id, { textStyle: { ...(block.textStyle ?? {}), ...style } }); break
-    case 'message': updateBlock(block.id, { textStyle: { ...(block.textStyle ?? {}), ...style } }); break
+    case 'text': updateBlock(block.id, { textStyle: { ...(block.textStyle ?? {}), ...style } }); break
     case 'totals': updateBlock(block.id, { totalStyle: { ...(block.totalStyle ?? {}), ...style } }); break
     case 'action': updateBlock(block.id, { primaryStyle: { ...(block.primaryStyle ?? {}), ...style } }); break
   }

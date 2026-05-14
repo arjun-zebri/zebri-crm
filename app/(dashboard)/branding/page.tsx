@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { BrandingEditor } from './branding-editor'
-import { defaultBlocksFor } from './blocks/defaults'
+import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import type { Block } from './blocks/types'
@@ -17,7 +17,6 @@ interface UserMetadata {
   instagram_url?: string
   facebook_url?: string
   logo_url?: string
-  logo_dark_url?: string
   favicon_url?: string
   header_image_url?: string
   brand_color?: string
@@ -35,16 +34,41 @@ interface UserMetadata {
   font_scale?: number
   density?: Density
   corner_radius?: number
+  doc_padding?: number
   theme_preset?: ThemeIdOrCustom
-  branding_blocks?: { quote?: Block[]; invoice?: Block[]; contract?: Block[] }
   brand_kit_name?: string
+  // Legacy: bulky fields that used to live here. We now read from public.user_branding
+  // and back-fill from these if present, so older accounts don't lose their work.
+  branding_blocks?: { quote?: Block[]; invoice?: Block[]; contract?: Block[] }
   brand_kits?: BrandKit[]
+  portal_sections?: {
+    timeline?: boolean
+    contacts?: boolean
+    payments?: boolean
+    contracts?: boolean
+    songs?: boolean
+    files?: boolean
+  }
+}
+
+interface UserBrandingRow {
+  branding_blocks: { quote?: Block[]; invoice?: Block[]; contract?: Block[] } | null
+  brand_kits: BrandKit[] | null
+  portal_sections: {
+    timeline?: boolean
+    contacts?: boolean
+    payments?: boolean
+    contracts?: boolean
+    songs?: boolean
+    files?: boolean
+  } | null
 }
 
 const fontsHref = googleFontsHref([...HEADING_FONTS, ...BODY_FONTS])
 
 export default function BrandingPage() {
   const [metadata, setMetadata] = useState<UserMetadata | null>(null)
+  const [branding, setBranding] = useState<UserBrandingRow | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -62,7 +86,19 @@ export default function BrandingPage() {
     const load = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) setMetadata(user.user_metadata as UserMetadata)
+      if (user) {
+        setMetadata(user.user_metadata as UserMetadata)
+        const { data: row } = await supabase
+          .from('user_branding')
+          .select('branding_blocks, brand_kits, portal_sections')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        setBranding((row as UserBrandingRow | null) ?? {
+          branding_blocks: null,
+          brand_kits: null,
+          portal_sections: null,
+        })
+      }
       setLoading(false)
     }
     load()
@@ -104,14 +140,20 @@ export default function BrandingPage() {
     return (allowed.includes(v as 400) ? v : def) as FontWeight
   }
 
-  const blocksFromMeta = metadata?.branding_blocks ?? {}
+  // Prefer the new user_branding table; fall back to legacy user_metadata if
+  // the migration hasn't run for this user yet.
+  const blocksSrc = branding?.branding_blocks ?? metadata?.branding_blocks ?? {}
+  const migratedQuote = blocksSrc.quote ? migrateBlocks(blocksSrc.quote) : null
+  const migratedInvoice = blocksSrc.invoice ? migrateBlocks(blocksSrc.invoice) : null
+  const migratedContract = blocksSrc.contract ? migrateBlocks(blocksSrc.contract) : null
+  const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
+  const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
   return (
     <BrandingEditor
       initialData={{
         kitName: metadata?.brand_kit_name || 'My brand',
         logoUrl: metadata?.logo_url || '',
-        logoDarkUrl: metadata?.logo_dark_url || '',
         faviconUrl: metadata?.favicon_url || '',
         headerImageUrl: metadata?.header_image_url || '',
         brandColor: metadata?.brand_color || fallback.color,
@@ -121,7 +163,7 @@ export default function BrandingPage() {
         mutedColor: metadata?.muted_color || fallback.muted,
         tagline: metadata?.tagline || '',
         abn: metadata?.abn || '',
-        showContactOnDocuments: metadata?.show_contact_on_documents || false,
+        showContactOnDocuments: true,
         fontHeading: sanitizeHeading(metadata?.font_heading),
         fontBody: sanitizeBody(metadata?.font_body),
         fontWeight: sanitizeWeight(metadata?.font_weight, fallback.headingWeight),
@@ -129,18 +171,27 @@ export default function BrandingPage() {
         fontScale: typeof metadata?.font_scale === 'number' ? metadata.font_scale : fallback.scale,
         density: metadata?.density ?? fallback.density,
         cornerRadius: typeof metadata?.corner_radius === 'number' ? metadata.corner_radius : fallback.radius,
+        docPadding: typeof metadata?.doc_padding === 'number' ? metadata.doc_padding : 12,
         themePreset,
         blocks: {
-          quote: blocksFromMeta.quote ?? defaultBlocksFor('quote'),
-          invoice: blocksFromMeta.invoice ?? defaultBlocksFor('invoice'),
-          contract: blocksFromMeta.contract ?? defaultBlocksFor('contract'),
+          quote: migratedQuote && migratedQuote.length > 0 ? migratedQuote : defaultBlocksFor('quote'),
+          invoice: migratedInvoice && migratedInvoice.length > 0 ? migratedInvoice : defaultBlocksFor('invoice'),
+          contract: migratedContract && migratedContract.length > 0 ? migratedContract : defaultBlocksFor('contract'),
         },
         businessName: metadata?.business_name || '',
         phone: metadata?.phone || '',
         website: metadata?.website || '',
         instagramUrl: metadata?.instagram_url || '',
         facebookUrl: metadata?.facebook_url || '',
-        brandKits: metadata?.brand_kits || [],
+        brandKits: kits,
+        portalSections: {
+          timeline: portalSrc.timeline ?? true,
+          contacts: portalSrc.contacts ?? true,
+          payments: portalSrc.payments ?? true,
+          contracts: portalSrc.contracts ?? true,
+          songs: portalSrc.songs ?? true,
+          files: portalSrc.files ?? true,
+        },
       }}
     />
   )

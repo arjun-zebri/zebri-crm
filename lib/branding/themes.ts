@@ -109,21 +109,6 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     radius: 2,
     scale: 1,
   },
-  noir: {
-    name: 'Noir',
-    color: '#FAFAFA',
-    accent: '#F59E0B',
-    surface: '#0B0B0F',
-    text: '#FAFAFA',
-    muted: '#9CA3AF',
-    headingFont: 'sora',
-    bodyFont: 'inter',
-    headingWeight: 600,
-    bodyWeight: 400,
-    density: 'cozy',
-    radius: 10,
-    scale: 1,
-  },
   blush: {
     name: 'Blush',
     color: '#BE185D',
@@ -186,7 +171,6 @@ export const SURFACE_PALETTE = [
   '#F9FAFB',
   '#F3F4F6',
   '#FFF7FA',
-  '#0B0B0F',
 ] as const
 
 export const TEXT_PALETTE = [

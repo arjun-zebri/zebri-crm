@@ -22,15 +22,17 @@ export function blockTemplate(type: BlockType): Block {
         showAbn: false,
       }
     case 'lineItems':
-      return { id: newId('li'), type: 'lineItems', showAddPlaceholder: true }
+      return { id: newId('li'), type: 'lineItems' }
     case 'totals':
       return { id: newId('to'), type: 'totals', taxRate: 10, showSubtotal: true }
-    case 'message':
-      return { id: newId('ms'), type: 'message', text: 'Add a message to your client.', style: 'card' }
+    case 'text':
+      return { id: newId('tx'), type: 'text', text: 'Add a note to your client.' }
     case 'action':
       return { id: newId('ac'), type: 'action', primary: 'Submit', secondary: null }
     case 'divider':
       return { id: newId('dv'), type: 'divider' }
+    case 'footer':
+      return { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.', showMark: true }
   }
 }
 
@@ -83,6 +85,7 @@ const SOFT_DIVIDER = { thickness: 1, color: '#E5E7EB' } as const
 export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Block[] {
   if (surface === 'quote') {
     return [
+      { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       {
         id: newId('tt'),
@@ -95,7 +98,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         titleStyle: HERO_TITLE,
         subtitleStyle: HERO_SUBTITLE,
       },
-      { id: newId('li'), type: 'lineItems', showAddPlaceholder: true },
+      { id: newId('li'), type: 'lineItems' },
       {
         id: newId('to'),
         type: 'totals',
@@ -105,17 +108,18 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
       },
       { id: newId('dv'), type: 'divider', ...SOFT_DIVIDER },
       {
-        id: newId('ms'),
-        type: 'message',
-        style: 'card',
+        id: newId('tx'),
+        type: 'text',
         text: 'Thanks for thinking of me for your day. The deposit secures the date - happy to jump on a call before you decide.',
         textStyle: SOFT_MESSAGE,
       },
       { id: newId('ac'), type: 'action', primary: 'Accept quote', secondary: 'Decline' },
+      { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.', showMark: true },
     ]
   }
   if (surface === 'invoice') {
     return [
+      { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       {
         id: newId('tt'),
@@ -128,7 +132,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         titleStyle: FORMAL_TITLE,
         subtitleStyle: HERO_SUBTITLE,
       },
-      { id: newId('li'), type: 'lineItems', showAddPlaceholder: true },
+      { id: newId('li'), type: 'lineItems' },
       {
         id: newId('to'),
         type: 'totals',
@@ -137,17 +141,18 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         totalStyle: EMPHASIZED_TOTAL,
       },
       {
-        id: newId('ms'),
-        type: 'message',
-        style: 'plain',
+        id: newId('tx'),
+        type: 'text',
         text: 'Payment due within 14 days. Bank details on the next page, or pay by card below.',
         textStyle: SOFT_MESSAGE,
       },
       { id: newId('ac'), type: 'action', primary: 'Pay with card', secondary: null },
+      { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.', showMark: true },
     ]
   }
   // contract
   return [
+    { id: newId('hb'), type: 'headerBanner' },
     { id: newId('bn'), type: 'businessName' },
     {
       id: newId('tt'),
@@ -160,156 +165,214 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
       titleStyle: FORMAL_TITLE,
       subtitleStyle: HERO_SUBTITLE,
     },
-    { id: newId('dv'), type: 'divider', ...SOFT_DIVIDER },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'card',
+      id: newId('tx'),
+      type: 'text',
       text:
-        'PARTIES\n\nMC: [Your business name], [ABN], of [your address] ("the MC").\n\nClient: Alex & Jordan, of [client address] ("the Clients").\n\nThis agreement is effective from the date the Clients sign below and continues until all obligations under it have been performed.',
+        'PARTIES\n\nMC: [Your business name], [ABN], of [your address] ("the MC")\nClients: Alex & Jordan, of [client address] ("the Clients")\n\nThis agreement takes effect on the date the Clients sign below and continues until all obligations under it have been performed. It supersedes any prior proposal, quote or correspondence relating to the event.',
       textStyle: SOFT_MESSAGE,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'card',
+      id: newId('tx'),
+      type: 'text',
       text:
-        'EVENT DETAILS\n\nDate: Saturday, 14 September 2026\nVenue: The Glasshouse, Sydney NSW\nCeremony start: 3:00 PM\nReception start: 5:30 PM\nMC finish: 11:00 PM\nExpected guests: 110',
+        'EVENT DETAILS\n\nDate: Saturday, 14 September 2026\nVenue: The Glasshouse, Sydney NSW\nCeremony: 3:00 PM (call time 1:30 PM)\nReception: 5:30 PM\nMC finish: 11:00 PM\nGuest count: 110 (provisional)\nDress code: Cocktail',
       textStyle: SOFT_MESSAGE,
     },
 
     { id: newId('dv'), type: 'divider', ...SOFT_DIVIDER },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '1. SERVICES\n\nThe MC will host the ceremony and reception on the date set out above. Services include: a pre-event planning consultation, agenda and run-sheet preparation, a final confirmation call within seven (7) days of the event, professional MC duties from the agreed call time, coordination with the venue, photographer, videographer, celebrant and band or DJ, and presenting all formalities through to the final speech or last dance.',
+        '1. SERVICES\n\nThe MC will host the ceremony and reception on the event date set out above. Services include:\n\n  (a) a pre-event planning consultation (in person or video) of up to ninety (90) minutes;\n  (b) preparation of an agenda and run-sheet in collaboration with the Clients;\n  (c) a final confirmation call within seven (7) days of the event;\n  (d) professional MC duties from the agreed call time through to the agreed finish time;\n  (e) coordination with the venue, photographer, videographer, celebrant and band or DJ; and\n  (f) presenting all formalities through to the final speech or last dance.\n\nThe MC will make reasonable efforts to accommodate cultural, religious or family requirements communicated by the Clients before the event.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '2. EQUIPMENT & TECHNICAL\n\nThe MC will arrive no later than ninety (90) minutes before the agreed call time to sound-check microphones, review staging and confirm the run-sheet with the venue. The Clients are responsible for ensuring the venue provides a functional sound system with at least one wireless microphone, or for advising the MC if the MC must supply this equipment for an additional fee.',
+        '2. EQUIPMENT & TECHNICAL REQUIREMENTS\n\nThe MC will arrive no later than ninety (90) minutes before the agreed call time to sound-check microphones, review staging and confirm the run-sheet with the venue. The Clients are responsible for ensuring the venue provides a functional sound system with at least one wireless microphone, monitor speaker for speeches and adequate lighting for the MC station. Where the venue cannot supply this equipment, the MC may provide it for an additional fee agreed in writing.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '3. FEES & PAYMENT SCHEDULE\n\nThe total fee for the services is set out in the attached invoice (the "Total Fee"). The Clients agree to pay:\n\n  (a) a non-refundable deposit of twenty-five percent (25%) of the Total Fee on signing this agreement, which secures the date; and\n  (b) the remaining balance no later than fourteen (14) days before the event date.\n\nPayments may be made by bank transfer or credit card. Late payments accrue interest at 2% per month or part-month from the due date.',
+        '3. FEES & PAYMENT SCHEDULE\n\nThe total fee for the services is set out in the attached invoice (the "Total Fee"). The Clients agree to pay:\n\n  (a) a non-refundable deposit of twenty-five percent (25%) of the Total Fee on signing this agreement, which secures the date; and\n  (b) the remaining balance no later than fourteen (14) days before the event date.\n\nPayments may be made by bank transfer or credit card. Late payments accrue interest at 2% per calendar month or part-month from the due date. Travel beyond a fifty (50) kilometre radius of the MC\'s base address is charged at $1.20 per kilometre, agreed in advance.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '4. CANCELLATION BY THE CLIENTS\n\nIf the Clients cancel this agreement, the following fees apply:\n\n  (a) more than 90 days before the event: deposit forfeited;\n  (b) between 60 and 90 days before the event: 50% of the Total Fee;\n  (c) between 14 and 60 days before the event: 75% of the Total Fee;\n  (d) within 14 days of the event: 100% of the Total Fee.\n\nAll cancellations must be made in writing.',
+        '4. CANCELLATION BY THE CLIENTS\n\nIf the Clients cancel this agreement, the following fees apply:\n\n  (a) more than 90 days before the event: deposit forfeited;\n  (b) between 60 and 90 days before the event: 50% of the Total Fee;\n  (c) between 14 and 60 days before the event: 75% of the Total Fee;\n  (d) within 14 days of the event: 100% of the Total Fee.\n\nAll cancellations must be made in writing to the MC at the email address on the attached invoice.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '5. CANCELLATION BY THE MC\n\nIf the MC is unable to perform on the event date for any reason within the MC\'s control, the MC will use reasonable efforts to provide a suitably qualified replacement MC acceptable to the Clients. If no replacement can be arranged, all amounts paid by the Clients will be refunded in full within seven (7) days. The MC\'s liability is limited to that refund.',
+        '5. CANCELLATION BY THE MC\n\nIf the MC is unable to perform on the event date for any reason within the MC\'s control, the MC will use reasonable efforts to provide a suitably qualified replacement MC acceptable to the Clients at no additional cost. If no replacement can be arranged, all amounts paid by the Clients will be refunded in full within seven (7) days. The MC\'s total liability under this clause is limited to that refund.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '6. POSTPONEMENT\n\nThe Clients may postpone the event once at no additional charge, subject to the MC\'s availability on the new date and provided written notice is given at least thirty (30) days before the original event date. A second postponement is treated as a cancellation under clause 4.',
+        '6. POSTPONEMENT\n\nThe Clients may postpone the event once at no additional charge, subject to:\n\n  (a) the MC\'s availability on the proposed new date;\n  (b) at least thirty (30) days\' written notice before the original event date; and\n  (c) the new date falling within twelve (12) months of the original event date.\n\nA second postponement is treated as a cancellation under clause 4.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '7. FORCE MAJEURE\n\nNeither party is liable for failure to perform this agreement where performance is prevented by circumstances beyond that party\'s reasonable control, including (without limitation) illness, injury, government order, pandemic, natural disaster or transport failure. If a force majeure event prevents performance, fees already paid will be credited toward a rescheduled date within twelve (12) months of the original event date.',
+        '7. FORCE MAJEURE\n\nNeither party is liable for failure to perform this agreement where performance is prevented by circumstances beyond that party\'s reasonable control, including (without limitation) serious illness, injury, government order, pandemic, natural disaster or transport failure. Where a force majeure event prevents performance, fees already paid will be credited toward a rescheduled date within twelve (12) months of the original event date.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '8. CONDUCT, BREAKS & OVERTIME\n\nThe MC will conduct themselves professionally at all times. The Clients agree to provide a meal and non-alcoholic refreshments for the MC during the event. Performances run for the period set out in the Event Details. If the Clients request the MC to continue beyond the agreed finish time, an overtime fee of $200 per hour or part-hour applies, payable on the night.',
+        '8. CONDUCT, BREAKS & OVERTIME\n\nThe MC will conduct themselves professionally at all times and treat the Clients\' guests, vendors and venue staff with respect. The Clients agree to provide a hot meal and non-alcoholic refreshments for the MC during the event, and a private space to take a short break of up to twenty (20) minutes during the dinner service.\n\nPerformances run for the period set out in the Event Details. If the Clients request the MC to continue beyond the agreed finish time, an overtime fee of $200 per hour or part-hour applies, payable on the night by bank transfer or card.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '9. RECORDINGS, IMAGES & MARKETING\n\nThe Clients grant the MC a non-exclusive, royalty-free licence to use photographs, audio and video from the event for portfolio, social media and marketing purposes. The Clients may opt out of this clause by giving written notice before the event, in which case the MC will not publish any identifying material from the event.',
+        '9. RECORDINGS, IMAGES & MARKETING\n\nThe Clients grant the MC a non-exclusive, royalty-free licence to use photographs, audio recordings and video from the event for portfolio, social media and marketing purposes. The Clients may opt out of this clause by giving written notice before the event, in which case the MC will not publish any identifying material from the event. The MC will never publish images of children or non-public family members without explicit permission.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '10. INSURANCE, LIABILITY & INDEMNITY\n\nThe MC holds current public liability insurance to the value of AUD $20,000,000. The MC\'s total liability under this agreement is limited to the fees actually paid by the Clients. Neither party is liable for indirect, special or consequential loss, including loss of profit or loss of enjoyment. Each party indemnifies the other against any third-party claim arising from that party\'s own negligence or breach of this agreement.',
+        '10. INSURANCE, LIABILITY & INDEMNITY\n\nThe MC holds current public liability insurance to the value of AUD $20,000,000 and will provide a certificate of currency on request. The MC\'s total liability under this agreement is limited to the fees actually paid by the Clients. Neither party is liable for indirect, special or consequential loss, including loss of profit or loss of enjoyment. Each party indemnifies the other against any third-party claim arising from that party\'s own negligence or breach of this agreement.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '11. CONFIDENTIALITY\n\nThe MC will treat as confidential any personal information, family details or sensitive content shared during the planning of the event, except to the extent disclosure is required to deliver the services or by law.',
+        '11. CONFIDENTIALITY\n\nThe MC will treat as confidential any personal information, family details or sensitive content shared during the planning of the event (including run-sheets, speeches and guest lists), except to the extent disclosure is required to deliver the services or by law.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
         '12. VARIATIONS & ENTIRE AGREEMENT\n\nAny variation to this agreement must be in writing and signed by both parties. This document, together with the attached invoice, constitutes the entire agreement between the parties and supersedes all prior discussions, proposals or correspondence relating to the event.',
       textStyle: CONTRACT_TERMS,
     },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'plain',
+      id: newId('tx'),
+      type: 'text',
       text:
-        '13. DISPUTE RESOLUTION & GOVERNING LAW\n\nThe parties will attempt to resolve any dispute by good-faith discussion. If a dispute is not resolved within thirty (30) days, the parties agree to attempt mediation before any court proceedings. This agreement is governed by the laws of New South Wales, Australia, and the parties submit to the non-exclusive jurisdiction of its courts.',
+        '13. DISPUTE RESOLUTION & GOVERNING LAW\n\nThe parties will attempt to resolve any dispute under this agreement by good-faith discussion within thirty (30) days of the dispute arising. If the dispute is not resolved, the parties agree to attempt mediation through a recognised mediator before commencing any court proceedings. This agreement is governed by the laws of New South Wales, Australia, and the parties submit to the non-exclusive jurisdiction of its courts.',
       textStyle: CONTRACT_TERMS,
     },
 
     { id: newId('dv'), type: 'divider', ...SOFT_DIVIDER },
 
     {
-      id: newId('ms'),
-      type: 'message',
-      style: 'card',
+      id: newId('tx'),
+      type: 'text',
       text:
-        'SIGNATURES\n\nBy clicking "Sign contract" below, the Clients confirm they have read, understood and accept the terms of this agreement on behalf of both parties to the marriage.\n\nClient signature: ______________________________     Date: __________\n\nMC signature: ______________________________     Date: __________\n\nA counter-signed copy will be returned within two (2) business days.',
+        'SIGNATURES\n\nBy clicking "Sign contract" below, the Clients confirm they have read, understood and accept the terms of this agreement on behalf of both parties to the marriage. Digital signatures are recorded with a timestamp and an audit log and are binding.\n\nClient signature       ______________________________________     Date   ____ / ____ / ______\n\nClient signature       ______________________________________     Date   ____ / ____ / ______\n\nMC signature           ______________________________________     Date   ____ / ____ / ______\n\nA counter-signed PDF copy will be returned to the Clients within two (2) business days of receipt.',
       textStyle: SOFT_MESSAGE,
     },
 
     { id: newId('ac'), type: 'action', primary: 'Sign contract', secondary: null },
+    { id: newId('ft'), type: 'footer', closingNote: 'A counter-signed copy will be returned to you.', showMark: true },
   ]
+}
+
+/**
+ * Migrate persisted block data from older shapes (e.g. type: 'message') to the
+ * current schema. Safe to run on every load.
+ */
+export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | 'contract'): Block[] {
+  if (!Array.isArray(blocks)) return []
+  let migrated = blocks
+    .map((raw): Block | null => {
+      if (!raw || typeof raw !== 'object') return null
+      const b = raw as Record<string, unknown> & { type?: string }
+      if (b.type === 'message') {
+        const { style: _style, ...rest } = b as Record<string, unknown>
+        void _style
+        return stripDashes({ ...(rest as object), type: 'text' } as unknown as Block)
+      }
+      if (b.type === 'lineItems' && 'showAddPlaceholder' in b) {
+        const { showAddPlaceholder: _drop, ...rest } = b as Record<string, unknown>
+        void _drop
+        return stripDashes(rest as unknown as Block)
+      }
+      return stripDashes(b as unknown as Block)
+    })
+    .filter((b): b is Block => b !== null)
+
+  // Auto-insert a header banner at the top of any document that was saved
+  // before banners were a default.
+  const hasBanner = migrated.some((b) => b.type === 'headerBanner')
+  if (!hasBanner && migrated.length > 0) {
+    migrated = [{ id: newId('hb'), type: 'headerBanner' } as Block, ...migrated]
+  }
+
+  // Ensure a single businessName sits right after the header banner. Older
+  // invoice templates dropped it at the end of the document; normalise.
+  const businessIdxs = migrated
+    .map((b, i) => (b.type === 'businessName' ? i : -1))
+    .filter((i) => i >= 0)
+  if (businessIdxs.length > 0) {
+    const first = migrated[businessIdxs[0]]
+    const without = migrated.filter((b) => b.type !== 'businessName')
+    const bannerIdx = without.findIndex((b) => b.type === 'headerBanner')
+    const insertAt = bannerIdx >= 0 ? bannerIdx + 1 : 0
+    migrated = [...without.slice(0, insertAt), first, ...without.slice(insertAt)]
+  }
+
+  void surface
+  return migrated
+}
+
+// Replace em-dashes and en-dashes with plain hyphens in any user-visible text
+// fields. The product voice avoids them; this catches them in persisted data
+// without forcing users through a manual reset.
+function stripDashes(block: Block): Block {
+  const swap = (s: string | undefined) =>
+    typeof s === 'string' ? s.replace(/—|–/g, '-') : s
+  switch (block.type) {
+    case 'text':
+      return { ...block, text: swap(block.text) ?? block.text }
+    case 'title':
+      return {
+        ...block,
+        title: swap(block.title) ?? block.title,
+        subtitle: swap(block.subtitle) ?? block.subtitle,
+      }
+    case 'action':
+      return {
+        ...block,
+        primary: swap(block.primary) ?? block.primary,
+        secondary: block.secondary == null ? null : swap(block.secondary) ?? block.secondary,
+      }
+    default:
+      return block
+  }
 }

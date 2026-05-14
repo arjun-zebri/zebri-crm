@@ -1,6 +1,13 @@
 import Image from 'next/image'
 import { createServerClient } from '@supabase/ssr'
 import { PortalShell } from './portal-shell'
+import { BrandingHead } from './branding-head'
+import {
+  FONT_STACKS,
+  type HeadingFont,
+  type BodyFont,
+} from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
 
 export interface PortalPerson {
   id: string
@@ -114,6 +121,7 @@ export interface PortalData {
   }
   contracts: PortalContract[]
   enabled_sections: string[] | null
+  branding: PublicBranding | null
 }
 
 function formatEventDate(dateStr: string): string {
@@ -154,27 +162,75 @@ export default async function PortalPage({
     )
   }
 
+  const branding = portal.branding
+  const pageBg = branding?.surface_color || '#ffffff'
+  const textColor = branding?.text_color || '#111827'
+  const mutedColor = branding?.muted_color || '#6B7280'
+  const headingFont = (branding?.font_heading || 'inter') as HeadingFont
+  const bodyFont = (branding?.font_body || 'inter') as BodyFont
+  const headingStack = FONT_STACKS[headingFont]
+  const bodyStack = FONT_STACKS[bodyFont]
+  const headingWeight = branding?.font_weight ?? 600
+
   return (
-    <div className="min-h-screen bg-white">
+    <div
+      className="min-h-screen"
+      style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
+    >
+      <BrandingHead branding={branding} />
+
       <div className="max-w-4xl mx-auto px-4 pb-20">
+
+        {/* Header banner */}
+        {branding?.header_image_url && (
+          <div className="pt-6">
+            <div
+              className="overflow-hidden"
+              style={{ borderRadius: branding.corner_radius ?? 16 }}
+            >
+              <img
+                src={branding.header_image_url}
+                alt=""
+                className="block w-full h-44 sm:h-56 object-cover"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Logo */}
         <div className="pt-10 pb-2">
-          <Image src="/zebri-logo.svg" alt="Zebri" width={64} height={23} />
+          {branding?.logo_url ? (
+            <img
+              src={branding.logo_url}
+              alt={branding.business_name || 'Logo'}
+              className="max-h-12 object-contain"
+            />
+          ) : branding?.favicon_url ? (
+            <img
+              src={branding.favicon_url}
+              alt={branding.business_name || 'Logo'}
+              className="h-10 w-10 object-contain"
+            />
+          ) : (
+            <Image src="/zebri-logo.svg" alt="Zebri" width={64} height={23} />
+          )}
         </div>
 
         {/* Hero */}
         <div className="pt-8 pb-8 border-b border-gray-200">
-          <h1 className="text-3xl font-semibold text-gray-900 mb-1">
+          <h1
+            className="text-3xl mb-1"
+            style={{ color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
+          >
             {portal.couple_name}
           </h1>
           {portal.event && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm" style={{ color: mutedColor }}>
               {formatEventDate(portal.event.date)}
-              {portal.event.venue ? ` · ${portal.event.venue.replace(/\s*[\u2014\u2013]\s*/g, ', ')}` : ''}
+              {portal.event.venue ? ` · ${portal.event.venue.replace(/\s*[—–]\s*/g, ', ')}` : ''}
             </p>
           )}
-          <p className="mt-3 text-sm text-gray-500">
+          <p className="mt-3 text-sm" style={{ color: mutedColor }}>
             Fill in your details below. Everything saves automatically. You can come back anytime.
           </p>
         </div>

@@ -17,11 +17,13 @@ interface PayWithCardButtonProps {
   invoiceId: string
   shareToken: string
   brandColor?: string
+  /** Override the button's corner radius (defaults to ~12px to match `rounded-xl`). */
+  radius?: number
   paymentType?: 'full' | 'deposit' | 'final'
   label?: string
 }
 
-export function PayWithCardButton({ invoiceId, shareToken, brandColor, paymentType = 'full', label = 'Pay with card' }: PayWithCardButtonProps) {
+export function PayWithCardButton({ invoiceId, shareToken, brandColor, radius, paymentType = 'full', label = 'Pay with card' }: PayWithCardButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -55,8 +57,8 @@ export function PayWithCardButton({ invoiceId, shareToken, brandColor, paymentTy
       <button
         onClick={handleClick}
         disabled={loading}
-        style={{ backgroundColor: bg, color: textColor }}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+        style={{ backgroundColor: bg, color: textColor, borderRadius: radius ?? 12 }}
+        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
       >
         <CreditCard className="w-4 h-4" />
         {loading ? 'Redirecting...' : label}

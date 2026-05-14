@@ -16,6 +16,7 @@ import {
 import { Select, type SelectOption } from '../components/select'
 import { ColorPopover } from '../components/color-popover'
 import { Slider } from '../components/slider'
+import { Tooltip } from '@/components/ui/tooltip'
 import { TEXT_COLOR_PRESETS, type TextStyleDefaults } from './text-style'
 import type { TextStyle, TextAlign } from './types'
 
@@ -46,10 +47,12 @@ export function TextStyleControls({
     underline: style?.underline ?? false,
   }
 
-  const fontOptions: SelectOption<HeadingFont | BodyFont>[] = (
-    fontKind === 'heading' ? HEADING_FONTS
-    : fontKind === 'body' ? BODY_FONTS
-    : [...HEADING_FONTS, ...BODY_FONTS]
+  const fontOptions: SelectOption<HeadingFont | BodyFont>[] = Array.from(
+    new Set<HeadingFont | BodyFont>(
+      fontKind === 'heading' ? HEADING_FONTS
+      : fontKind === 'body' ? BODY_FONTS
+      : [...HEADING_FONTS, ...BODY_FONTS],
+    ),
   ).map((f) => ({ value: f, label: FONT_LABELS[f], fontFamily: FONT_STACKS[f] }))
 
   return (
@@ -114,20 +117,22 @@ export function TextStyleControls({
 
       {expanded && (
         <>
-          <ToggleButton
-            active={eff.italic}
-            onClick={() => onChange({ italic: !eff.italic })}
-            title="Italic"
-          >
-            <Italic size={12} strokeWidth={1.75} />
-          </ToggleButton>
-          <ToggleButton
-            active={eff.underline}
-            onClick={() => onChange({ underline: !eff.underline })}
-            title="Underline"
-          >
-            <Underline size={12} strokeWidth={1.75} />
-          </ToggleButton>
+          <Tooltip label="Italic">
+            <ToggleButton
+              active={eff.italic}
+              onClick={() => onChange({ italic: !eff.italic })}
+            >
+              <Italic size={12} strokeWidth={1.75} />
+            </ToggleButton>
+          </Tooltip>
+          <Tooltip label="Underline">
+            <ToggleButton
+              active={eff.underline}
+              onClick={() => onChange({ underline: !eff.underline })}
+            >
+              <Underline size={12} strokeWidth={1.75} />
+            </ToggleButton>
+          </Tooltip>
           <Divider />
         </>
       )}
@@ -138,16 +143,17 @@ export function TextStyleControls({
         onChange={(v) => onChange({ color: v })}
         swatches={TEXT_COLOR_PRESETS}
         trigger={
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 px-1.5 h-8 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
-            title="Text color"
-          >
-            <span
-              className="w-4 h-4 rounded ring-1 ring-black/10"
-              style={{ background: eff.color }}
-            />
-          </button>
+          <Tooltip label="Text color">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 px-1.5 h-8 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+            >
+              <span
+                className="w-4 h-4 rounded ring-1 ring-black/10"
+                style={{ background: eff.color }}
+              />
+            </button>
+          </Tooltip>
         }
       />
 
@@ -156,20 +162,20 @@ export function TextStyleControls({
       {/* Alignment */}
       <div className="inline-flex items-center bg-gray-50 rounded-md border border-gray-200">
         {(['left', 'center', 'right'] as const).map((a) => (
-          <button
-            key={a}
-            type="button"
-            onClick={() => onChange({ align: a })}
-            title={`Align ${a}`}
-            aria-label={`Align ${a}`}
-            className={`p-1.5 transition cursor-pointer ${
-              eff.align === a ? 'bg-white text-gray-900 shadow-sm rounded-md m-0.5' : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            {a === 'left' && <AlignLeft size={12} strokeWidth={1.75} />}
-            {a === 'center' && <AlignCenter size={12} strokeWidth={1.75} />}
-            {a === 'right' && <AlignRight size={12} strokeWidth={1.75} />}
-          </button>
+          <Tooltip key={a} label={`Align ${a}`}>
+            <button
+              type="button"
+              onClick={() => onChange({ align: a })}
+              aria-label={`Align ${a}`}
+              className={`p-1.5 transition cursor-pointer ${
+                eff.align === a ? 'bg-white text-gray-900 shadow-sm rounded-md m-0.5' : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              {a === 'left' && <AlignLeft size={12} strokeWidth={1.75} />}
+              {a === 'center' && <AlignCenter size={12} strokeWidth={1.75} />}
+              {a === 'right' && <AlignRight size={12} strokeWidth={1.75} />}
+            </button>
+          </Tooltip>
         ))}
       </div>
 
@@ -207,19 +213,16 @@ function Divider() {
 function ToggleButton({
   active,
   onClick,
-  title,
   children,
 }: {
   active: boolean
   onClick: () => void
-  title: string
   children: React.ReactNode
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      title={title}
       aria-pressed={active}
       className={`p-1.5 rounded-md border cursor-pointer ${
         active

@@ -1,17 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, Check, Copy, Trash2, Plus, Lock, Unlock, Eye, EyeOff, Paintbrush, ClipboardPaste, Maximize2, Minimize2 } from 'lucide-react'
+import { ChevronDown, Check, Copy, Trash2, Plus, Lock, Unlock, Eye, EyeOff, Paintbrush, ClipboardPaste, Maximize2, Minimize2, Square, RotateCcw, FileStack } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { TextStyleControls } from './text-style-controls'
 import { ColorPopover } from '../components/color-popover'
+import { Slider } from '../components/slider'
+import { Tooltip } from '@/components/ui/tooltip'
 import { COLOR_PALETTE } from '@/lib/branding/themes'
 import type { TextStyleDefaults } from './text-style'
 import type {
   Block,
   TextStyle,
   TitleBlock,
-  MessageBlock,
+  TextBlock,
   ActionBlock,
   BusinessNameBlock,
   TaglineBlock,
@@ -31,6 +33,8 @@ interface BlockToolbarProps {
   onAddBelow: () => void
   onToggleLock: () => void
   onToggleHide: () => void
+  onResetBlock: () => void
+  onApplyToAllDocs: () => void
   onCopyStyle: () => void
   onPasteStyle: () => void
   hasStyleClipboard: boolean
@@ -45,6 +49,8 @@ export function BlockToolbar({
   onAddBelow,
   onToggleLock,
   onToggleHide,
+  onResetBlock,
+  onApplyToAllDocs,
   onCopyStyle,
   onPasteStyle,
   hasStyleClipboard,
@@ -64,98 +70,128 @@ export function BlockToolbar({
       >
         <BlockSpecificControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
         <Divider />
+        <BorderControl block={block} updateBlock={updateBlock} />
+        <Divider />
         <div className="flex items-center gap-0.5 shrink-0">
-          <button
-            type="button"
-            onClick={onCopyStyle}
-            aria-label="Copy style"
-            title="Copy style (⌘⌥C)"
-            className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
-          >
-            <Paintbrush size={13} strokeWidth={1.75} />
-          </button>
-          <button
-            type="button"
-            onClick={onPasteStyle}
-            disabled={!hasStyleClipboard}
-            aria-label="Paste style"
-            title="Paste style (⌘⌥V)"
-            className={`p-1.5 rounded-md transition ${
-              hasStyleClipboard
-                ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
-                : 'text-gray-300 cursor-not-allowed'
-            }`}
-          >
-            <ClipboardPaste size={13} strokeWidth={1.75} />
-          </button>
+          <Tooltip label="Copy style" shortcut="⌘⌥C">
+            <button
+              type="button"
+              onClick={onCopyStyle}
+              aria-label="Copy style"
+              className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+            >
+              <Paintbrush size={13} strokeWidth={1.75} />
+            </button>
+          </Tooltip>
+          <Tooltip label="Paste style" shortcut="⌘⌥V">
+            <button
+              type="button"
+              onClick={onPasteStyle}
+              disabled={!hasStyleClipboard}
+              aria-label="Paste style"
+              className={`p-1.5 rounded-md transition ${
+                hasStyleClipboard
+                  ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
+                  : 'text-gray-300 cursor-not-allowed'
+              }`}
+            >
+              <ClipboardPaste size={13} strokeWidth={1.75} />
+            </button>
+          </Tooltip>
+          <Tooltip label="Apply to Quote, Invoice and Contract">
+            <button
+              type="button"
+              onClick={onApplyToAllDocs}
+              aria-label="Apply style to all documents"
+              className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+            >
+              <FileStack size={13} strokeWidth={1.75} />
+            </button>
+          </Tooltip>
+          <Tooltip label="Reset to theme defaults">
+            <button
+              type="button"
+              onClick={onResetBlock}
+              aria-label="Reset block to theme defaults"
+              className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+            >
+              <RotateCcw size={13} strokeWidth={1.75} />
+            </button>
+          </Tooltip>
           {expanded && (
             <>
               <Divider />
-              <button
-                type="button"
-                onClick={onToggleHide}
-                aria-label={hidden ? 'Show block' : 'Hide block'}
-                title={hidden ? 'Show' : 'Hide'}
-                className={`p-1.5 rounded-md cursor-pointer transition ${
-                  hidden ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                {hidden ? <EyeOff size={13} strokeWidth={1.75} /> : <Eye size={13} strokeWidth={1.75} />}
-              </button>
-              <button
-                type="button"
-                onClick={onToggleLock}
-                aria-label={locked ? 'Unlock block' : 'Lock block'}
-                title={locked ? 'Unlock' : 'Lock'}
-                className={`p-1.5 rounded-md cursor-pointer transition ${
-                  locked ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                {locked ? <Lock size={13} strokeWidth={1.75} /> : <Unlock size={13} strokeWidth={1.75} />}
-              </button>
-              <button
-                type="button"
-                onClick={onDuplicate}
-                aria-label="Duplicate block"
-                title="Duplicate"
-                className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
-              >
-                <Copy size={13} strokeWidth={1.75} />
-              </button>
+              <Tooltip label={hidden ? 'Show' : 'Hide'}>
+                <button
+                  type="button"
+                  onClick={onToggleHide}
+                  aria-label={hidden ? 'Show block' : 'Hide block'}
+                  className={`p-1.5 rounded-md cursor-pointer transition ${
+                    hidden ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  {hidden ? <EyeOff size={13} strokeWidth={1.75} /> : <Eye size={13} strokeWidth={1.75} />}
+                </button>
+              </Tooltip>
+              <Tooltip label={locked ? 'Unlock' : 'Lock'}>
+                <button
+                  type="button"
+                  onClick={onToggleLock}
+                  aria-label={locked ? 'Unlock block' : 'Lock block'}
+                  className={`p-1.5 rounded-md cursor-pointer transition ${
+                    locked ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  {locked ? <Lock size={13} strokeWidth={1.75} /> : <Unlock size={13} strokeWidth={1.75} />}
+                </button>
+              </Tooltip>
+              <Tooltip label="Duplicate">
+                <button
+                  type="button"
+                  onClick={onDuplicate}
+                  aria-label="Duplicate block"
+                  className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+                >
+                  <Copy size={13} strokeWidth={1.75} />
+                </button>
+              </Tooltip>
             </>
           )}
           <Divider />
-          <button
-            type="button"
-            onClick={onDelete}
-            aria-label="Delete block"
-            title="Delete"
-            className="p-1.5 rounded-md text-gray-500 hover:text-red-600 hover:bg-red-50 cursor-pointer transition"
-          >
-            <Trash2 size={13} strokeWidth={1.75} />
-          </button>
-          <button
-            type="button"
-            onClick={onAddBelow}
-            aria-label="Add block below"
-            title="Add block below"
-            className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
-          >
-            <Plus size={13} strokeWidth={1.75} />
-          </button>
+          <Tooltip label="Delete">
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label="Delete block"
+              className="p-1.5 rounded-md text-gray-500 hover:text-red-600 hover:bg-red-50 cursor-pointer transition"
+            >
+              <Trash2 size={13} strokeWidth={1.75} />
+            </button>
+          </Tooltip>
+          <Tooltip label="Add block below">
+            <button
+              type="button"
+              onClick={onAddBelow}
+              aria-label="Add block below"
+              className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+            >
+              <Plus size={13} strokeWidth={1.75} />
+            </button>
+          </Tooltip>
           <Divider />
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            aria-label={expanded ? 'Collapse toolbar' : 'Expand toolbar'}
-            aria-pressed={expanded}
-            title={expanded ? 'Less' : 'More'}
-            className={`p-1.5 rounded-md cursor-pointer transition ${
-              expanded ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-            }`}
-          >
-            {expanded ? <Minimize2 size={13} strokeWidth={1.75} /> : <Maximize2 size={13} strokeWidth={1.75} />}
-          </button>
+          <Tooltip label={expanded ? 'Less' : 'More'}>
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-label={expanded ? 'Collapse toolbar' : 'Expand toolbar'}
+              aria-pressed={expanded}
+              className={`p-1.5 rounded-md cursor-pointer transition ${
+                expanded ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              {expanded ? <Minimize2 size={13} strokeWidth={1.75} /> : <Maximize2 size={13} strokeWidth={1.75} />}
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>
@@ -173,8 +209,8 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
   switch (block.type) {
     case 'title':
       return <TitleControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
-    case 'message':
-      return <MessageControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+    case 'text':
+      return <TextControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'action':
       return <ActionControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'headerBanner':
@@ -284,15 +320,15 @@ function TitleControls({
   )
 }
 
-// ── Message ───────────────────────────────────────────────────────────────────
+// ── Text ──────────────────────────────────────────────────────────────────────
 
-function MessageControls({
+function TextControls({
   block,
   state,
   updateBlock,
   expanded,
 }: {
-  block: MessageBlock
+  block: TextBlock
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   expanded?: boolean
@@ -309,20 +345,11 @@ function MessageControls({
 
   return (
     <div className="flex items-center gap-2">
-      <PillToggle
-        options={[
-          { value: 'plain', label: 'Plain' },
-          { value: 'card', label: 'Card' },
-        ]}
-        value={block.style}
-        onChange={(v) => updateBlock<MessageBlock>(block.id, { style: v as 'plain' | 'card' })}
-      />
-      <Divider />
       <TextStyleControls
         style={block.textStyle}
         defaults={defaults}
         onChange={(patch) =>
-          updateBlock<MessageBlock>(block.id, { textStyle: { ...(block.textStyle ?? {}), ...patch } })
+          updateBlock<TextBlock>(block.id, { textStyle: { ...(block.textStyle ?? {}), ...patch } })
         }
         expanded={expanded}
       />
@@ -585,11 +612,6 @@ function LineItemsControls({
           label="Header"
           active={block.showHeader ?? true}
           onChange={(v) => updateBlock<LineItemsBlock>(block.id, { showHeader: v })}
-        />
-        <Toggle
-          label="Add line"
-          active={block.showAddPlaceholder}
-          onChange={(v) => updateBlock<LineItemsBlock>(block.id, { showAddPlaceholder: v })}
         />
       </div>
     )
@@ -885,5 +907,99 @@ function NumberField({
 function RadiusInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <NumberField label="Radius" value={value} min={0} max={32} step={1} onChange={onChange} />
+  )
+}
+
+function BorderControl({
+  block,
+  updateBlock,
+}: {
+  block: Block
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const width = block.borderWidth ?? 0
+  const color = block.borderColor || '#E5E7EB'
+  const radius = block.blockRadius
+  const active = width > 0
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 ${
+            active
+              ? 'bg-gray-900 text-white border-gray-900'
+              : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+          }`}
+          title="Border"
+        >
+          <Square size={12} strokeWidth={1.75} />
+          Border
+          {active && <span className="font-mono text-[10px] opacity-80">{width}px</span>}
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="center"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Thickness</span>
+            <span className="text-xs font-mono text-gray-700 tabular-nums">{width}px</span>
+          </div>
+          <Slider
+            value={width}
+            min={0}
+            max={6}
+            step={1}
+            onChange={(v) => updateBlock(block.id, { borderWidth: v } as Partial<Block>)}
+            ariaLabel="Border thickness"
+          />
+          <div className="mt-3 flex items-center justify-between mb-2">
+            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Color</span>
+            <ColorPopover
+              value={color}
+              onChange={(v) => updateBlock(block.id, { borderColor: v } as Partial<Block>)}
+              swatches={['#E5E7EB', '#D1D5DB', '#9CA3AF', '#374151', '#111827', '#0F172A']}
+              trigger={
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md text-xs hover:bg-gray-100 cursor-pointer border border-gray-200"
+                  title="Border color"
+                >
+                  <span
+                    className="w-4 h-4 rounded ring-1 ring-black/10"
+                    style={{ background: color }}
+                  />
+                  <span className="font-mono text-gray-600">{color.toUpperCase()}</span>
+                </button>
+              }
+            />
+          </div>
+          <div className="mt-3 flex items-center justify-between mb-2">
+            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Radius</span>
+            <span className="text-xs font-mono text-gray-700 tabular-nums">{radius ?? 'theme'}</span>
+          </div>
+          <Slider
+            value={radius ?? 0}
+            min={0}
+            max={24}
+            step={1}
+            onChange={(v) => updateBlock(block.id, { blockRadius: v } as Partial<Block>)}
+            ariaLabel="Block corner radius"
+          />
+          {(width > 0 || radius !== undefined) && (
+            <button
+              type="button"
+              onClick={() => updateBlock(block.id, { borderWidth: 0, blockRadius: undefined } as Partial<Block>)}
+              className="mt-3 w-full text-[11px] text-gray-500 hover:text-gray-900 cursor-pointer"
+            >
+              Clear border
+            </button>
+          )}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }

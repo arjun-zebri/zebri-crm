@@ -31,6 +31,18 @@
   }
 }
 
+/* Brief glow used by the branding editor to surface which blocks a brand-kit
+   change just affected. Triggered by adding the .zb-token-flash class. */
+@keyframes zb-token-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(15, 23, 42, 0); }
+  20%  { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+.zb-token-flash {
+  animation: zb-token-flash 900ms ease-out;
+  border-radius: 8px;
+}
+
 /* Rich document styling for contract editor + public contract page.
    Uses !important because Tailwind v4 preflight (@layer base) resets
    h1-h6 font-size to inherit and ul/ol list-style to none, and we need

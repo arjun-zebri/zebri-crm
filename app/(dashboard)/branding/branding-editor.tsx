@@ -25,11 +25,19 @@ import type { Block, TextStyle } from './blocks/types'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from './branding-preview-types'
 import { PortalPreview } from './portal-preview'
 
+export interface PortalSectionSettings {
+  timeline: boolean
+  contacts: boolean
+  payments: boolean
+  contracts: boolean
+  songs: boolean
+  files: boolean
+}
+
 interface BrandingEditorProps {
   initialData: {
     kitName: string
     logoUrl: string
-    logoDarkUrl: string
     faviconUrl: string
     headerImageUrl: string
     brandColor: string
@@ -47,6 +55,7 @@ interface BrandingEditorProps {
     fontScale: number
     density: Density
     cornerRadius: number
+    docPadding: number
     themePreset: ThemeIdOrCustom
     blocks: { quote: Block[]; invoice: Block[]; contract: Block[] }
     businessName: string
@@ -55,13 +64,13 @@ interface BrandingEditorProps {
     instagramUrl: string
     facebookUrl: string
     brandKits: BrandKit[]
+    portalSections: PortalSectionSettings
   }
 }
 
 interface EditorState {
   kitName: string
   logoUrl: string
-  logoDarkUrl: string
   faviconUrl: string
   headerImageUrl: string
   brandColor: string
@@ -80,9 +89,11 @@ interface EditorState {
   fontScale: number
   density: Density
   cornerRadius: number
+  docPadding: number
   themePreset: ThemeIdOrCustom
   blocks: { quote: Block[]; invoice: Block[]; contract: Block[] }
   brandKits: BrandKit[]
+  portalSections: PortalSectionSettings
 }
 
 export function BrandingEditor({ initialData }: BrandingEditorProps) {
@@ -92,7 +103,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     () => ({
       kitName: initialData.kitName,
       logoUrl: initialData.logoUrl,
-      logoDarkUrl: initialData.logoDarkUrl,
       faviconUrl: initialData.faviconUrl,
       headerImageUrl: initialData.headerImageUrl,
       brandColor: initialData.brandColor,
@@ -111,9 +121,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       fontScale: initialData.fontScale,
       density: initialData.density,
       cornerRadius: initialData.cornerRadius,
+      docPadding: initialData.docPadding,
       themePreset: initialData.themePreset,
       blocks: initialData.blocks,
       brandKits: initialData.brandKits,
+      portalSections: initialData.portalSections,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -135,12 +147,35 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not signed in')
     const existing = user.user_metadata || {}
+
+    // Heavy fields (block trees, saved kits, portal section toggles) live in
+    // public.user_branding so they don't bloat the auth JWT and trigger HTTP
+    // 431 on the cookie. user_metadata only keeps small scalar fields.
+    const { error: brandingError } = await supabase
+      .from('user_branding')
+      .upsert(
+        {
+          user_id: user.id,
+          branding_blocks: value.blocks,
+          brand_kits: value.brandKits,
+          portal_sections: value.portalSections,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      )
+    if (brandingError) throw brandingError
+
     const { error } = await supabase.auth.updateUser({
       data: {
         ...existing,
+        // Strip the legacy heavy fields so the JWT shrinks as users save.
+        branding_blocks: null,
+        brand_kits: null,
+        portal_sections: null,
         brand_kit_name: value.kitName || 'My brand',
         logo_url: value.logoUrl || null,
-        logo_dark_url: value.logoDarkUrl || null,
+        // Dark logo was removed; null it on next save so the orphan field gets cleaned.
+        logo_dark_url: null,
         favicon_url: value.faviconUrl || null,
         header_image_url: value.headerImageUrl || null,
         brand_color: value.brandColor,
@@ -159,9 +194,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         font_scale: value.fontScale,
         density: value.density,
         corner_radius: value.cornerRadius,
+        doc_padding: value.docPadding,
         theme_preset: value.themePreset,
-        branding_blocks: value.blocks,
-        brand_kits: value.brandKits,
       },
     })
     if (error) throw error
@@ -173,6 +207,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   const setEditor = (patch: Partial<EditorState>, customize = true) => {
     setState((prev) => ({ ...prev, ...patch, themePreset: customize ? 'custom' : prev.themePreset }))
+    flashAffectedBlocks(patch, state.blocks, docSurface, surface)
   }
 
   const applyTheme = (id: ThemeId) => {
@@ -211,20 +246,50 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setSelectedBlockIds([])
   }
 
-  const uploadAsset = async (file: File, kind: 'logo' | 'logoDark' | 'favicon' | 'header'): Promise<string> => {
+  const uploadAsset = async (file: File, kind: 'logo' | 'favicon' | 'header'): Promise<string> => {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not signed in')
-    const fileName = `${user.id}/${kind}`
-    const { error } = await supabase.storage
-      .from('branding')
-      .upload(fileName, file, { upsert: true })
-    if (error) throw error
-    const { data } = supabase.storage.from('branding').getPublicUrl(fileName)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not signed in')
+    const userId = session.user.id
+    const path = `${userId}/${kind}`
+    // Manual fetch (bypassing supabase-js) so we see the actual response body
+    // when Cloudflare/nginx in front of storage rejects with HTML. supabase-js
+    // throws away non-JSON response bodies and reports a generic "HTTP 400 error".
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/branding/${path}`
+    const apikey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+    const body = await file.arrayBuffer()
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey,
+        'x-upsert': 'true',
+        'Content-Type': file.type || 'application/octet-stream',
+        'Cache-Control': 'max-age=3600',
+      },
+      body,
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      console.error('[branding upload failed]', {
+        kind,
+        size: file.size,
+        type: file.type,
+        fileName: file.name,
+        status: res.status,
+        respContentType: res.headers.get('content-type'),
+        respBodyPreview: text.slice(0, 800),
+        tokenLength: session.access_token.length,
+        apikeyLength: apikey.length,
+      })
+      toast(`Upload failed (${res.status}): ${text.slice(0, 100) || res.statusText}`, 'error')
+      throw new Error(`Upload failed: ${res.status}`)
+    }
+    const { data } = supabase.storage.from('branding').getPublicUrl(path)
     return `${data.publicUrl}?t=${Date.now()}`
   }
 
-  const removeAsset = async (kind: 'logo' | 'logoDark' | 'favicon' | 'header') => {
+  const removeAsset = async (kind: 'logo' | 'favicon' | 'header') => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -242,18 +307,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const removeLogo = async () => {
     await removeAsset('logo')
     setEditor({ logoUrl: '' }, false)
-  }
-  const uploadLogoDark = async (file: File) => {
-    if (file.size > 2 * 1024 * 1024) {
-      toast('Logo must be under 2MB', 'error')
-      throw new Error('size')
-    }
-    const url = await uploadAsset(file, 'logoDark')
-    setEditor({ logoDarkUrl: url }, false)
-  }
-  const removeLogoDark = async () => {
-    await removeAsset('logoDark')
-    setEditor({ logoDarkUrl: '' }, false)
   }
   const uploadFavicon = async (file: File) => {
     if (file.size > 256 * 1024) {
@@ -326,6 +379,37 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setBlocksForCurrent(state.blocks[docSurface].map(b => b.id === id ? ({ ...b, hidden: !b.hidden } as Block) : b))
   }
 
+  function resetBlockStyles(id: string) {
+    if (!docSurface) return
+    const list = state.blocks[docSurface]
+    const target = list.find((b) => b.id === id)
+    if (!target) return
+    const cleared = clearStyleOverrides(target)
+    setBlocksForCurrent(list.map((b) => (b.id === id ? cleared : b)))
+  }
+
+  function applyStyleToAllDocs(id: string) {
+    if (!docSurface) return
+    const source = state.blocks[docSurface].find((b) => b.id === id)
+    if (!source) return
+    const others: Array<'quote' | 'invoice' | 'contract'> = (['quote', 'invoice', 'contract'] as const).filter(
+      (s) => s !== docSurface,
+    )
+    setState((prev) => {
+      const next = { ...prev, blocks: { ...prev.blocks } }
+      for (const other of others) {
+        const list = prev.blocks[other]
+        const updated = list.map((b) => {
+          if (b.type !== source.type) return b
+          return mergeBlockStyleFrom(b, source)
+        })
+        next.blocks = { ...next.blocks, [other]: updated }
+      }
+      return next
+    }, { commit: true })
+    toast(`Style applied to ${others.join(' and ')}`, 'success')
+  }
+
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
     if (!docSurface) return
     const newBlock = blockTemplate(type)
@@ -366,12 +450,14 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       density: state.density,
       cornerRadius: state.cornerRadius,
       logoUrl: state.logoUrl,
-      logoDarkUrl: state.logoDarkUrl,
       faviconUrl: state.faviconUrl,
       headerImageUrl: state.headerImageUrl,
       createdAt: new Date().toISOString(),
     }
-    setState((prev) => ({ ...prev, brandKits: [kit, ...prev.brandKits] }), { commit: true })
+    setState(
+      (prev) => ({ ...prev, kitName: kit.name, brandKits: [kit, ...prev.brandKits] }),
+      { commit: true },
+    )
     setSaveKitOpen(false)
     toast('Brand kit saved', 'success')
   }
@@ -379,6 +465,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const onApplyKit = (kit: BrandKit) => {
     setState((prev) => ({
       ...prev,
+      kitName: kit.name,
       themePreset: 'custom',
       brandColor: kit.brandColor,
       accentColor: kit.accentColor,
@@ -393,11 +480,40 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       density: kit.density,
       cornerRadius: kit.cornerRadius,
       logoUrl: prev.logoUrl || kit.logoUrl || '',
-      logoDarkUrl: prev.logoDarkUrl || kit.logoDarkUrl || '',
       faviconUrl: prev.faviconUrl || kit.faviconUrl || '',
       headerImageUrl: prev.headerImageUrl || kit.headerImageUrl || '',
     }), { commit: true })
-    toast(`Applied “${kit.name}”`, 'success')
+    toast(`Applied "${kit.name}"`, 'success')
+  }
+
+  const onCreateNewKit = () => {
+    const preset = THEME_PRESETS.minimal
+    setState(
+      (prev) => ({
+        ...prev,
+        kitName: 'Untitled brand',
+        themePreset: 'minimal',
+        brandColor: preset.color,
+        accentColor: preset.accent,
+        surfaceColor: preset.surface,
+        textColor: preset.text,
+        mutedColor: preset.muted,
+        fontHeading: preset.headingFont,
+        fontBody: preset.bodyFont,
+        fontWeight: preset.headingWeight,
+        fontBodyWeight: preset.bodyWeight,
+        fontScale: preset.scale,
+        density: preset.density,
+        cornerRadius: preset.radius,
+        docPadding: 12,
+        logoUrl: '',
+        faviconUrl: '',
+        headerImageUrl: '',
+        tagline: '',
+      }),
+      { commit: true },
+    )
+    toast('New brand kit started')
   }
 
   const onDeleteKit = (id: string) => {
@@ -421,7 +537,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   const previewState: BrandPreviewState = useMemo(() => ({
     logoUrl: state.logoUrl,
-    logoDarkUrl: state.logoDarkUrl,
     faviconUrl: state.faviconUrl,
     headerImageUrl: state.headerImageUrl,
     brandColor: state.brandColor,
@@ -440,6 +555,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     fontScale: state.fontScale,
     density: state.density,
     cornerRadius: state.cornerRadius,
+    docPadding: state.docPadding,
     businessName: state.businessName,
     phone: initialData.phone,
     website: initialData.website,
@@ -448,6 +564,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }), [state, initialData.phone, initialData.website, initialData.instagramUrl, initialData.facebookUrl])
 
   const visibleBlocks = docSurface ? state.blocks[docSurface] : []
+
+  // Heuristic: contracts saved before the rewrite were tiny (3-line stubs).
+  // When we detect one, offer a one-click swap to the new template.
+  const looksLikeStaleContract =
+    docSurface === 'contract' && state.blocks.contract.filter((b) => b.type === 'text').length < 5
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden">
@@ -462,8 +583,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         onUndo={undo}
         onRedo={redo}
         onPreview={() => toast('Customer preview coming soon')}
-        onResetSurface={resetCurrentSurface}
         onSaveAsKit={onSaveAsKit}
+        onCreateNewKit={onCreateNewKit}
+        brandKits={state.brandKits}
+        onApplyKit={onApplyKit}
+        onDeleteKit={onDeleteKit}
         addBlockSlot={docSurface ? (
           <AddBlockPalette
             open={paletteOpen}
@@ -515,12 +639,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setDensity={(v) => setEditor({ density: v })}
           cornerRadius={state.cornerRadius}
           setCornerRadius={(v) => setEditor({ cornerRadius: v })}
+          docPadding={state.docPadding}
+          setDocPadding={(v) => setEditor({ docPadding: v })}
           logoUrl={state.logoUrl}
           uploadLogo={uploadLogo}
           removeLogo={removeLogo}
-          logoDarkUrl={state.logoDarkUrl}
-          uploadLogoDark={uploadLogoDark}
-          removeLogoDark={removeLogoDark}
           faviconUrl={state.faviconUrl}
           uploadFavicon={uploadFavicon}
           removeFavicon={removeFavicon}
@@ -533,12 +656,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setTagline={(v) => setEditor({ tagline: v }, false)}
           abn={state.abn}
           setAbn={(v) => setEditor({ abn: v }, false)}
-          showContactOnDocuments={state.showContactOnDocuments}
-          setShowContactOnDocuments={(v) => setEditor({ showContactOnDocuments: v }, false)}
-          brandKits={state.brandKits}
-          onSaveAsKit={onSaveAsKit}
-          onApplyKit={onApplyKit}
-          onDeleteKit={onDeleteKit}
         />
 
         <SaveKitDialog
@@ -550,6 +667,23 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         />
 
         <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
+          {looksLikeStaleContract && (
+            <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-900">Refreshed contract template available</p>
+                <p className="text-[11px] text-gray-600">
+                  We&apos;ve added 13 industry-standard clauses with signature placeholders. Replace the current contract?
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={resetCurrentSurface}
+                className="shrink-0 inline-flex items-center justify-center h-8 px-3 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-black cursor-pointer transition"
+              >
+                Use new template
+              </button>
+            </div>
+          )}
           {docSurface ? (
             <BlockRenderer
               blocks={visibleBlocks}
@@ -563,11 +697,23 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               deleteBlock={deleteBlock}
               toggleLock={toggleLock}
               toggleHide={toggleHide}
+              resetBlock={resetBlockStyles}
+              applyStyleToAllDocs={applyStyleToAllDocs}
               styleClipboard={styleClipboard}
               setStyleClipboard={setStyleClipboard}
             />
           ) : (
-            <PortalPreview state={previewState} device={device} />
+            <PortalPreview
+              state={previewState}
+              device={device}
+              sections={state.portalSections}
+              setSections={(patch) =>
+                setEditor(
+                  { portalSections: { ...state.portalSections, ...patch } },
+                  false,
+                )
+              }
+            />
           )}
         </CanvasFrame>
       </div>
@@ -581,4 +727,178 @@ export function defaultBlocks(): { quote: Block[]; invoice: Block[]; contract: B
     invoice: defaultBlocksFor('invoice'),
     contract: defaultBlocksFor('contract'),
   }
+}
+
+// ── Block style helpers ──────────────────────────────────────────────────────
+
+function clearStyleOverrides(block: Block): Block {
+  switch (block.type) {
+    case 'title': {
+      const { titleStyle: _t, subtitleStyle: _s, ...rest } = block
+      void _t; void _s
+      return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
+    }
+    case 'businessName': {
+      const { nameStyle: _n, ...rest } = block
+      void _n
+      return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
+    }
+    case 'tagline':
+    case 'text': {
+      const { textStyle: _x, ...rest } = block
+      void _x
+      return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
+    }
+    case 'totals': {
+      const { totalStyle: _t, ...rest } = block
+      void _t
+      return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
+    }
+    case 'action': {
+      const { primaryStyle: _p, secondaryStyle: _s, buttonColor: _b, buttonRadius: _br, ...rest } = block
+      void _p; void _s; void _b; void _br
+      return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
+    }
+    case 'lineItems': {
+      const { headerStyle: _h, itemStyle: _i, rowStyle: _r, ...rest } = block
+      void _h; void _i; void _r
+      return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
+    }
+    case 'divider': {
+      return { ...block, thickness: undefined, color: undefined, borderWidth: 0, blockRadius: undefined } as Block
+    }
+    default:
+      return { ...block, borderWidth: 0, blockRadius: undefined } as Block
+  }
+}
+
+function mergeBlockStyleFrom(target: Block, source: Block): Block {
+  if (target.type !== source.type) return target
+  const carry = {
+    borderWidth: source.borderWidth,
+    borderColor: source.borderColor,
+    blockRadius: source.blockRadius,
+  }
+  switch (target.type) {
+    case 'title':
+      return {
+        ...target,
+        ...carry,
+        titleStyle: (source as TitleBlockLike).titleStyle,
+        subtitleStyle: (source as TitleBlockLike).subtitleStyle,
+      } as Block
+    case 'businessName':
+      return { ...target, ...carry, nameStyle: (source as BusinessNameLike).nameStyle } as Block
+    case 'tagline':
+      return { ...target, ...carry, textStyle: (source as TaglineLike).textStyle } as Block
+    case 'text':
+      return { ...target, ...carry, textStyle: (source as TextBlockLike).textStyle } as Block
+    case 'totals':
+      return { ...target, ...carry, totalStyle: (source as TotalsLike).totalStyle } as Block
+    case 'action':
+      return {
+        ...target,
+        ...carry,
+        primaryStyle: (source as ActionLike).primaryStyle,
+        secondaryStyle: (source as ActionLike).secondaryStyle,
+        buttonColor: (source as ActionLike).buttonColor,
+        buttonRadius: (source as ActionLike).buttonRadius,
+      } as Block
+    case 'lineItems':
+      return {
+        ...target,
+        ...carry,
+        rowStyle: (source as LineItemsLike).rowStyle,
+        headerStyle: (source as LineItemsLike).headerStyle,
+        itemStyle: (source as LineItemsLike).itemStyle,
+      } as Block
+    case 'divider':
+      return {
+        ...target,
+        ...carry,
+        thickness: (source as DividerLike).thickness,
+        color: (source as DividerLike).color,
+      } as Block
+    default:
+      return { ...target, ...carry } as Block
+  }
+}
+
+interface TitleBlockLike { titleStyle?: unknown; subtitleStyle?: unknown }
+interface BusinessNameLike { nameStyle?: unknown }
+interface TaglineLike { textStyle?: unknown }
+interface TextBlockLike { textStyle?: unknown }
+interface TotalsLike { totalStyle?: unknown }
+interface ActionLike { primaryStyle?: unknown; secondaryStyle?: unknown; buttonColor?: unknown; buttonRadius?: unknown }
+interface LineItemsLike { rowStyle?: unknown; headerStyle?: unknown; itemStyle?: unknown }
+interface DividerLike { thickness?: unknown; color?: unknown }
+
+// ── Affected-block feedback ──────────────────────────────────────────────────
+// When a brand-kit token changes we briefly flash the blocks that consume it,
+// scrolling the first one into view if it's offscreen. This makes it obvious
+// what the change did, especially when the affected block was not previously
+// in the viewport.
+
+type TokenKey = keyof EditorState
+
+const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
+  brandColor: new Set(['businessName', 'title', 'action', 'totals', 'footer']),
+  accentColor: new Set(['action']),
+  surfaceColor: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text', 'action', 'divider', 'headerBanner', 'footer']),
+  textColor: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text']),
+  mutedColor: new Set(['tagline', 'lineItems', 'text', 'title', 'footer']),
+  fontHeading: new Set(['businessName', 'title', 'totals']),
+  fontBody: new Set(['tagline', 'lineItems', 'text', 'action', 'footer']),
+  fontWeight: new Set(['businessName', 'title', 'totals']),
+  fontBodyWeight: new Set(['tagline', 'lineItems', 'text', 'action', 'footer']),
+  fontScale: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text', 'action', 'footer']),
+  density: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text', 'action', 'divider', 'footer']),
+  cornerRadius: new Set(['action', 'headerBanner', 'businessName']),
+  headerImageUrl: new Set(['headerBanner', 'businessName']),
+  logoUrl: new Set(['businessName', 'footer']),
+  faviconUrl: new Set(['businessName', 'footer']),
+  businessName: new Set(['businessName', 'footer']),
+  tagline: new Set(['tagline']),
+  abn: new Set(['title', 'footer']),
+}
+
+function flashAffectedBlocks(
+  patch: Partial<EditorState>,
+  blocks: { quote: Block[]; invoice: Block[]; contract: Block[] },
+  docSurface: 'quote' | 'invoice' | 'contract' | null,
+  surface: SurfaceTab,
+) {
+  if (typeof document === 'undefined') return
+  if (!docSurface) return
+
+  const affectedTypes = new Set<Block['type']>()
+  for (const key of Object.keys(patch) as TokenKey[]) {
+    const types = TOKEN_TO_BLOCK_TYPES[key]
+    if (types) types.forEach((t) => affectedTypes.add(t))
+  }
+  if (affectedTypes.size === 0) return
+
+  const list = blocks[docSurface]
+  const targets = list.filter((b) => affectedTypes.has(b.type))
+  if (targets.length === 0) return
+
+  // Wait one frame so React's render has the latest values painted.
+  requestAnimationFrame(() => {
+    const first = document.querySelector(`[data-block-id="${targets[0].id}"]`) as HTMLElement | null
+    if (first) {
+      const rect = first.getBoundingClientRect()
+      const inView = rect.top > 32 && rect.bottom < window.innerHeight - 32
+      if (!inView) first.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    targets.forEach((t) => {
+      const el = document.querySelector(`[data-block-id="${t.id}"]`) as HTMLElement | null
+      if (!el) return
+      el.classList.remove('zb-token-flash')
+      // Force reflow so the animation restarts on rapid repeats.
+      void el.offsetWidth
+      el.classList.add('zb-token-flash')
+    })
+  })
+
+  void surface
 }

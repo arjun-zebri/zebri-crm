@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import {
   ChevronDown, Check, Upload, Plus, RotateCcw, Paintbrush, Type as TypeIcon,
-  Layout, Image as ImageIcon, Sparkles, Wand2, Trash2,
+  Layout, Image as ImageIcon, Sparkles, Trash2,
 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import {
@@ -30,8 +30,8 @@ import {
   type FontWeight,
 } from '@/lib/branding/fonts'
 import { Slider } from './components/slider'
-import { extractColorsFromFile } from '@/lib/branding/extract-colors'
-import type { BrandKit } from './branding-preview-types'
+import { ColorPopover } from './components/color-popover'
+import { getContrastRatio, getWcagLevel } from '@/lib/branding/contrast'
 
 interface BrandPanelProps {
   themePreset: ThemeIdOrCustom
@@ -64,13 +64,12 @@ interface BrandPanelProps {
   setDensity: (v: Density) => void
   cornerRadius: number
   setCornerRadius: (v: number) => void
+  docPadding: number
+  setDocPadding: (v: number) => void
 
   logoUrl: string
   uploadLogo: (file: File) => Promise<void>
   removeLogo: () => void
-  logoDarkUrl: string
-  uploadLogoDark: (file: File) => Promise<void>
-  removeLogoDark: () => void
   faviconUrl: string
   uploadFavicon: (file: File) => Promise<void>
   removeFavicon: () => void
@@ -85,27 +84,19 @@ interface BrandPanelProps {
   setTagline: (v: string) => void
   abn: string
   setAbn: (v: string) => void
-  showContactOnDocuments: boolean
-  setShowContactOnDocuments: (v: boolean) => void
 
-  // Brand kits
-  brandKits: BrandKit[]
-  onSaveAsKit: () => void
-  onApplyKit: (kit: BrandKit) => void
-  onDeleteKit: (id: string) => void
 }
 
-type SectionId = 'themes' | 'colors' | 'fonts' | 'layout' | 'identity' | 'info' | 'kits'
+type SectionId = 'themes' | 'colors' | 'fonts' | 'layout' | 'identity' | 'info'
 
 export function BrandPanel(props: BrandPanelProps) {
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
-    themes: true,
-    colors: true,
+    themes: false,
+    colors: false,
     fonts: false,
     layout: false,
     identity: false,
     info: false,
-    kits: false,
   })
 
   const toggle = (id: SectionId) => setOpen((p) => ({ ...p, [id]: !p[id] }))
@@ -189,16 +180,6 @@ export function BrandPanel(props: BrandPanelProps) {
           onToggle={() => toggle('info')}
         >
           <InfoSection {...props} />
-        </Accordion>
-
-        <Accordion
-          icon={<Sparkles size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Saved kits"
-          subtitle="Swap between brand kits"
-          open={open.kits}
-          onToggle={() => toggle('kits')}
-        >
-          <KitsSection {...props} />
         </Accordion>
       </div>
     </aside>
@@ -320,10 +301,55 @@ function ColorSection({
       <ColorRow label="Surface"  value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
       <ColorRow label="Text"     value={textColor}    onChange={setTextColor}    swatches={TEXT_PALETTE} />
       <ColorRow label="Muted"    value={mutedColor}   onChange={setMutedColor}   swatches={MUTED_PALETTE} />
-      <ColorFromImage onColors={(cs) => {
-        if (cs[0]) setBrandColor(cs[0])
-        if (cs[1]) setAccentColor(cs[1])
-      }} />
+      <ContrastWarnings
+        textColor={textColor}
+        mutedColor={mutedColor}
+        surfaceColor={surfaceColor}
+        brandColor={brandColor}
+      />
+    </div>
+  )
+}
+
+function ContrastWarnings({
+  textColor,
+  mutedColor,
+  surfaceColor,
+  brandColor,
+}: {
+  textColor: string
+  mutedColor: string
+  surfaceColor: string
+  brandColor: string
+}) {
+  const checks: Array<{ label: string; ratio: number; level: ReturnType<typeof getWcagLevel> }> = [
+    {
+      label: 'Text on Surface',
+      ratio: getContrastRatio(textColor, surfaceColor),
+      level: getWcagLevel(textColor, surfaceColor),
+    },
+    {
+      label: 'Muted on Surface',
+      ratio: getContrastRatio(mutedColor, surfaceColor),
+      level: getWcagLevel(mutedColor, surfaceColor),
+    },
+    {
+      label: 'Primary on Surface',
+      ratio: getContrastRatio(brandColor, surfaceColor),
+      level: getWcagLevel(brandColor, surfaceColor),
+    },
+  ]
+  const fails = checks.filter((c) => c.level === 'fail')
+  if (fails.length === 0) return null
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-2.5 space-y-1">
+      <p className="text-[11px] font-medium text-amber-800">Low contrast</p>
+      {fails.map((c) => (
+        <p key={c.label} className="text-[11px] text-amber-700">
+          {c.label} <span className="font-mono">{c.ratio.toFixed(2)}:1</span>
+        </p>
+      ))}
+      <p className="text-[10px] text-amber-700/80 pt-0.5">Aim for at least 4.5 for body text.</p>
     </div>
   )
 }
@@ -341,8 +367,11 @@ function ColorRow({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <Popover.Root>
-        <Popover.Trigger asChild>
+      <ColorPopover
+        value={value}
+        onChange={onChange}
+        swatches={swatches}
+        trigger={
           <button
             type="button"
             className="w-9 h-9 rounded-lg ring-1 ring-black/10 cursor-pointer shrink-0 relative overflow-hidden hover:ring-black/20 transition"
@@ -350,51 +379,8 @@ function ColorRow({
             aria-label={`${label} colour`}
             title={value}
           />
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Content
-            align="start"
-            sideOffset={6}
-            className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <label className="relative w-9 h-9 rounded-lg ring-1 ring-black/10 cursor-pointer overflow-hidden shrink-0">
-                <input
-                  type="color"
-                  value={value || '#000000'}
-                  onChange={(e) => onChange(e.target.value)}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-                <span className="absolute inset-0" style={{ background: value }} />
-              </label>
-              <input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-xs font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300"
-                placeholder="#000000"
-              />
-            </div>
-            <div className="grid grid-cols-6 gap-1.5">
-              {swatches.map((c) => {
-                const active = value.toLowerCase() === c.toLowerCase()
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => onChange(c)}
-                    title={c}
-                    className={`w-7 h-7 rounded-md ring-1 hover:scale-110 transition cursor-pointer ${
-                      active ? 'ring-2 ring-gray-900 ring-offset-1' : 'ring-black/10'
-                    }`}
-                    style={{ background: c }}
-                  />
-                )
-              })}
-            </div>
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
+        }
+      />
       <div className="flex-1 min-w-0">
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">{label}</p>
         <p className="text-xs font-mono text-gray-700 truncate">{value}</p>
@@ -420,44 +406,6 @@ function ColorRow({
   )
 }
 
-function ColorFromImage({ onColors }: { onColors: (cs: string[]) => void }) {
-  const ref = useRef<HTMLInputElement>(null)
-  const [working, setWorking] = useState(false)
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => ref.current?.click()}
-        className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-lg bg-gray-50 hover:bg-gray-100 border border-dashed border-gray-200 text-xs text-gray-600 cursor-pointer transition"
-        disabled={working}
-      >
-        <Wand2 size={12} strokeWidth={1.75} />
-        {working ? 'Extracting…' : 'Pick colours from image'}
-      </button>
-      <input
-        ref={ref}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const f = e.target.files?.[0]
-          if (!f) return
-          setWorking(true)
-          try {
-            const cs = await extractColorsFromFile(f, 4)
-            onColors(cs)
-          } catch {
-            /* swallow */
-          } finally {
-            setWorking(false)
-            if (ref.current) ref.current.value = ''
-          }
-        }}
-      />
-    </>
-  )
-}
-
 // ── Fonts ─────────────────────────────────────────────────────────────────────
 
 function FontSection({
@@ -469,10 +417,18 @@ function FontSection({
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
-      <FontPicker role="Heading" value={fontHeading} options={HEADING_FONTS as readonly HeadingFont[]} onChange={setFontHeading} />
+      <div>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1">Heading</p>
+        <p className="text-[10px] text-gray-400 -mt-0.5 mb-1.5">Used by Business name, Title and Totals</p>
+        <FontPicker role="Heading" value={fontHeading} options={HEADING_FONTS as readonly HeadingFont[]} onChange={setFontHeading} />
+      </div>
       <WeightPills label="Heading weight" value={fontWeight} onChange={setFontWeight} />
 
-      <FontPicker role="Body" value={fontBody} options={BODY_FONTS as readonly BodyFont[]} onChange={setFontBody} />
+      <div>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1">Body</p>
+        <p className="text-[10px] text-gray-400 -mt-0.5 mb-1.5">Used by Subtitle, Text, Tagline and Line items</p>
+        <FontPicker role="Body" value={fontBody} options={BODY_FONTS as readonly BodyFont[]} onChange={setFontBody} />
+      </div>
       <WeightPills label="Body weight" value={fontBodyWeight} onChange={setFontBodyWeight} />
 
       <div className="pt-1">
@@ -481,6 +437,7 @@ function FontSection({
           <span className="text-xs font-mono text-gray-700 tabular-nums">{Math.round(fontScale * 100)}%</span>
         </div>
         <Slider value={fontScale} min={0.85} max={1.2} step={0.01} onChange={setFontScale} ariaLabel="Font scale" />
+        <p className="text-[10px] text-gray-400 mt-1">Scales every text block on the document.</p>
       </div>
     </div>
   )
@@ -574,7 +531,14 @@ function FontPicker<V extends HeadingFont | BodyFont>({
 
 // ── Layout ────────────────────────────────────────────────────────────────────
 
-function LayoutSection({ density, setDensity, cornerRadius, setCornerRadius }: BrandPanelProps) {
+function LayoutSection({
+  density,
+  setDensity,
+  cornerRadius,
+  setCornerRadius,
+  docPadding,
+  setDocPadding,
+}: BrandPanelProps) {
   const densities: { id: Density; label: string }[] = [
     { id: 'compact', label: 'Compact' },
     { id: 'cozy',    label: 'Cozy' },
@@ -601,6 +565,13 @@ function LayoutSection({ density, setDensity, cornerRadius, setCornerRadius }: B
       </div>
       <div>
         <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Padding</span>
+          <span className="text-xs font-mono text-gray-700 tabular-nums">{docPadding}px</span>
+        </div>
+        <Slider value={docPadding} min={0} max={48} step={1} onChange={setDocPadding} ariaLabel="Document padding" />
+      </div>
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Corner radius</span>
           <span className="text-xs font-mono text-gray-700 tabular-nums">{cornerRadius}px</span>
         </div>
@@ -614,7 +585,6 @@ function LayoutSection({ density, setDensity, cornerRadius, setCornerRadius }: B
 
 function IdentitySection({
   logoUrl, uploadLogo, removeLogo,
-  logoDarkUrl, uploadLogoDark, removeLogoDark,
   faviconUrl, uploadFavicon, removeFavicon,
   headerImageUrl, uploadHeader, removeHeader,
 }: BrandPanelProps) {
@@ -623,7 +593,7 @@ function IdentitySection({
       <div className="grid grid-cols-2 gap-2">
         <IdentityTile
           label="Logo"
-          hint="Light backgrounds"
+          hint="PNG/JPG/SVG"
           url={logoUrl}
           onUpload={uploadLogo}
           onRemove={removeLogo}
@@ -632,13 +602,12 @@ function IdentitySection({
           tall
         />
         <IdentityTile
-          label="Logo dark"
-          hint="Dark backgrounds"
-          url={logoDarkUrl}
-          onUpload={uploadLogoDark}
-          onRemove={removeLogoDark}
-          accept="image/png,image/jpeg,image/svg+xml"
-          surface="dark"
+          label="Favicon"
+          hint="Browser tab · 256KB"
+          url={faviconUrl}
+          onUpload={uploadFavicon}
+          onRemove={removeFavicon}
+          accept="image/png,image/x-icon,image/svg+xml,image/vnd.microsoft.icon"
           tall
         />
       </div>
@@ -651,17 +620,6 @@ function IdentitySection({
         accept="image/png,image/jpeg"
         wide
       />
-      <div className="grid grid-cols-2 gap-2">
-        <IdentityTile
-          label="Favicon"
-          hint="Browser tab · 256KB"
-          url={faviconUrl}
-          onUpload={uploadFavicon}
-          onRemove={removeFavicon}
-          accept="image/png,image/x-icon,image/svg+xml,image/vnd.microsoft.icon"
-        />
-        <div />
-      </div>
     </div>
   )
 }
@@ -793,17 +751,12 @@ function InfoSection({
   businessName, setBusinessName,
   tagline, setTagline,
   abn, setAbn,
-  showContactOnDocuments, setShowContactOnDocuments,
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
       <TextField label="Business name" value={businessName} onChange={setBusinessName} placeholder="Your business name" />
       <TextField label="Tagline" value={tagline} onChange={setTagline} placeholder="A short line about you" />
       <TextField label="ABN" value={abn} onChange={setAbn} placeholder="00 000 000 000" />
-      <label className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-        <span className="text-sm text-gray-700">Show contact on docs</span>
-        <Switch checked={showContactOnDocuments} onChange={setShowContactOnDocuments} />
-      </label>
     </div>
   )
 }
@@ -823,77 +776,4 @@ function TextField({ label, value, onChange, placeholder }: { label: string; val
   )
 }
 
-function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 rounded-full transition cursor-pointer ${
-        checked ? 'bg-gray-900' : 'bg-gray-200'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${
-          checked ? 'translate-x-4' : 'translate-x-0'
-        }`}
-      />
-    </button>
-  )
-}
 
-// ── Saved brand kits ──────────────────────────────────────────────────────────
-
-function KitsSection({ brandKits, onSaveAsKit, onApplyKit, onDeleteKit }: BrandPanelProps) {
-  return (
-    <div className="space-y-2">
-      <button
-        type="button"
-        onClick={onSaveAsKit}
-        className="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-lg border border-dashed border-gray-300 hover:border-gray-400 text-xs text-gray-600 cursor-pointer transition"
-      >
-        <Plus size={12} strokeWidth={1.75} />
-        Save current as kit
-      </button>
-      {brandKits.length === 0 ? (
-        <p className="text-[11px] text-gray-400 text-center py-2">
-          No saved kits yet. Save a snapshot you like to switch back later.
-        </p>
-      ) : (
-        <ul className="space-y-1.5">
-          {brandKits.map((kit) => (
-            <li
-              key={kit.id}
-              className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 hover:border-gray-300 group transition"
-            >
-              <div className="flex items-center gap-0.5 shrink-0">
-                <span className="w-3.5 h-3.5 rounded-full ring-1 ring-black/5" style={{ background: kit.brandColor }} />
-                <span className="w-3.5 h-3.5 rounded-full ring-1 ring-black/5" style={{ background: kit.accentColor }} />
-                <span className="w-3.5 h-3.5 rounded-full ring-1 ring-black/5" style={{ background: kit.surfaceColor }} />
-              </div>
-              <button
-                type="button"
-                onClick={() => onApplyKit(kit)}
-                className="flex-1 min-w-0 text-left cursor-pointer"
-                title={`Apply ${kit.name}`}
-              >
-                <p className="text-xs font-medium text-gray-900 truncate">{kit.name}</p>
-                <p className="text-[10px] text-gray-400 truncate">{FONT_LABELS[kit.fontHeading]} · {FONT_LABELS[kit.fontBody]}</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => onDeleteKit(kit.id)}
-                className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition opacity-0 group-hover:opacity-100"
-                title="Delete kit"
-                aria-label="Delete kit"
-              >
-                <Trash2 size={12} strokeWidth={1.75} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}

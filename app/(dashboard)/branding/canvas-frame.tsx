@@ -12,6 +12,10 @@ interface CanvasFrameProps {
 }
 
 export function CanvasFrame({ device, zoom, setZoom, wide, children }: CanvasFrameProps) {
+  // Portal uses a wider surface (it's a real-app dashboard preview); documents
+  // stay narrower and identical across quote / invoice / contract.
+  const desktopWidth = wide ? 920 : 720
+
   return (
     <div className="relative flex-1 min-h-0 overflow-hidden bg-[#F4F4F1]">
       {/* Subtle dotted backdrop, ala Canva / Figma */}
@@ -26,40 +30,22 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children }: CanvasFra
       />
 
       <div className="relative h-full overflow-y-auto overflow-x-auto">
-        <div className={`${wide ? 'max-w-[1100px]' : 'max-w-3xl'} mx-auto px-6 lg:px-12 pt-12 pb-24 flex justify-center`}>
+        <div className="max-w-[1100px] mx-auto px-6 lg:px-12 pt-12 pb-24 flex justify-center">
           <div
             // Use the `zoom` CSS property (not transform: scale) so dnd-kit's
             // pointer geometry stays correct while dragging.
             style={{ zoom }}
           >
             {device === 'mobile' ? (
-              <MobileBezel>{children}</MobileBezel>
+              <div className="w-[380px]">{children}</div>
             ) : (
-              <div className={wide ? 'w-[920px] max-w-full' : 'max-w-2xl'}>{children}</div>
+              <div style={{ width: desktopWidth }} className="max-w-full">{children}</div>
             )}
           </div>
         </div>
       </div>
 
       <ZoomWidget zoom={zoom} setZoom={setZoom} />
-    </div>
-  )
-}
-
-function MobileBezel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="relative bg-gray-900 rounded-[2.25rem] p-2.5 shadow-[0_18px_40px_-12px_rgba(15,23,42,0.35)]"
-      style={{ width: 380 }}
-    >
-      {/* Notch */}
-      <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-10 w-24 h-5 bg-gray-900 rounded-b-2xl flex items-center justify-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-gray-700" />
-        <span className="w-1 h-1 rounded-full bg-gray-700" />
-      </div>
-      <div className="bg-white rounded-[1.75rem] overflow-hidden pt-6">
-        {children}
-      </div>
     </div>
   )
 }

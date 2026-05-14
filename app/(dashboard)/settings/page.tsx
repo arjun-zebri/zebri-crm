@@ -10,7 +10,6 @@ import { TemplatesSection } from "./templates-section";
 import { NotificationsSection } from "./notifications-section";
 import { StatusesSection } from "./statuses-section";
 import { PaymentSettingsSection } from "./payment-settings-section";
-import { PortalSection } from "./portal-section";
 
 interface EmailPreferencesData {
   product_updates?: boolean;
@@ -50,14 +49,6 @@ interface UserMetadata {
   address_text?: string;
   address_lat?: number;
   address_lng?: number;
-  portal_sections?: {
-    timeline?: boolean
-    contacts?: boolean
-    payments?: boolean
-    contracts?: boolean
-    songs?: boolean
-    files?: boolean
-  }
 }
 
 const tabs = [
@@ -68,7 +59,6 @@ const tabs = [
   { id: "templates", label: "Templates" },
   { id: "statuses", label: "Statuses" },
   { id: "notifications", label: "Notifications" },
-  { id: "portal", label: "Portal" },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -82,9 +72,10 @@ function SettingsContent() {
 
   const activeTab = (searchParams.get("tab") as TabId) || "personal-info";
 
-  // Legacy deep-link compatibility: branding has moved to its own top-level route.
+  // Legacy deep-link compatibility: branding (and portal sub-tab) live under /branding now.
   useEffect(() => {
-    if (searchParams.get("tab") === "branding") {
+    const tab = searchParams.get("tab");
+    if (tab === "branding" || tab === "portal") {
       router.replace("/branding");
     }
   }, [searchParams, router]);
@@ -214,18 +205,6 @@ function SettingsContent() {
           {activeTab === "templates" && <TemplatesSection />}
           {activeTab === "statuses" && <StatusesSection />}
           {activeTab === "notifications" && <NotificationsSection />}
-          {activeTab === "portal" && (
-            <PortalSection
-              initialSettings={metadata?.portal_sections ? {
-                timeline: metadata.portal_sections.timeline ?? true,
-                contacts: metadata.portal_sections.contacts ?? true,
-                payments: metadata.portal_sections.payments ?? true,
-                contracts: metadata.portal_sections.contracts ?? true,
-                songs: metadata.portal_sections.songs ?? true,
-                files: metadata.portal_sections.files ?? true,
-              } : null}
-            />
-          )}
         </div>
       </div>
     </div>

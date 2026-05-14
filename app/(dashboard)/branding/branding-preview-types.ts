@@ -3,7 +3,6 @@ import type { Density } from '@/lib/branding/themes'
 
 export interface BrandPreviewState {
   logoUrl: string
-  logoDarkUrl: string
   faviconUrl: string
   headerImageUrl: string
   brandColor: string
@@ -22,6 +21,7 @@ export interface BrandPreviewState {
   fontScale: number
   density: Density
   cornerRadius: number
+  docPadding: number
   businessName: string
   phone: string
   website: string
@@ -45,11 +45,9 @@ export const NOOP_ACTIONS: BrandPreviewActions = {
   setTagline: () => {},
 }
 
-export const DENSITY_PADDING: Record<Density, { docX: string; docY: string; rowY: string; blockY: string }> = {
-  compact: { docX: 'px-6',  docY: 'py-5', rowY: 'py-2', blockY: 'py-3' },
-  cozy:    { docX: 'px-8',  docY: 'py-7', rowY: 'py-3', blockY: 'py-4' },
-  roomy:   { docX: 'px-10', docY: 'py-9', rowY: 'py-4', blockY: 'py-5' },
-}
+// Canonical map lives in lib/branding/density.ts now (used by both the editor
+// renderer and the public couple-facing pages). Re-export for callers.
+export { DENSITY_PADDING } from '@/lib/branding/density'
 
 export interface BrandKit {
   id: string
@@ -67,7 +65,6 @@ export interface BrandKit {
   density: Density
   cornerRadius: number
   logoUrl?: string
-  logoDarkUrl?: string
   faviconUrl?: string
   headerImageUrl?: string
   createdAt: string

@@ -1,9 +1,10 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Monitor, Smartphone, Undo2, Redo2, Eye, Sparkles, MoreHorizontal, RotateCcw } from 'lucide-react'
+import { Monitor, Smartphone, Undo2, Redo2, Eye, Sparkles, ChevronDown, Check, Trash2, Plus } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import type { SaveStatus } from '@/lib/branding/use-autosave'
+import type { BrandKit } from './branding-preview-types'
 
 interface EditorTopbarProps {
   kitName: string
@@ -16,8 +17,11 @@ interface EditorTopbarProps {
   onUndo: () => void
   onRedo: () => void
   onPreview: () => void
-  onResetSurface: () => void
   onSaveAsKit: () => void
+  onCreateNewKit: () => void
+  brandKits: BrandKit[]
+  onApplyKit: (kit: BrandKit) => void
+  onDeleteKit: (id: string) => void
   addBlockSlot?: React.ReactNode
 }
 
@@ -32,14 +36,25 @@ export function EditorTopbar({
   onUndo,
   onRedo,
   onPreview,
-  onResetSurface,
   onSaveAsKit,
+  onCreateNewKit,
+  brandKits,
+  onApplyKit,
+  onDeleteKit,
   addBlockSlot,
 }: EditorTopbarProps) {
   return (
     <header className="flex items-center justify-between gap-3 h-12 px-3 border-b border-gray-100 bg-white shrink-0">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div className="flex items-center gap-1 min-w-0 flex-1">
         <KitNameField value={kitName} onChange={setKitName} />
+        <KitPicker
+          kits={brandKits}
+          onApply={onApplyKit}
+          onDelete={onDeleteKit}
+          onSaveAsKit={onSaveAsKit}
+          onCreateNewKit={onCreateNewKit}
+          currentName={kitName}
+        />
       </div>
 
       <div className="hidden md:flex items-center bg-gray-100 rounded-lg p-0.5">
@@ -101,49 +116,6 @@ export function EditorTopbar({
           </button>
         </div>
 
-        <span className="w-px h-5 bg-gray-200" />
-
-        <Popover.Root>
-          <Popover.Trigger asChild>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
-              aria-label="More actions"
-              title="More"
-            >
-              <MoreHorizontal size={14} strokeWidth={1.75} />
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              align="end"
-              sideOffset={4}
-              className="bg-white border border-gray-200 rounded-xl shadow-xl p-1 z-50 min-w-[200px]"
-            >
-              <Popover.Close asChild>
-                <button
-                  type="button"
-                  onClick={onSaveAsKit}
-                  className="flex items-center gap-2 w-full px-2.5 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
-                >
-                  <Sparkles size={13} strokeWidth={1.75} className="text-gray-400" />
-                  Save as brand kit…
-                </button>
-              </Popover.Close>
-              <Popover.Close asChild>
-                <button
-                  type="button"
-                  onClick={onResetSurface}
-                  className="flex items-center gap-2 w-full px-2.5 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
-                >
-                  <RotateCcw size={13} strokeWidth={1.75} className="text-gray-400" />
-                  Reset this document
-                </button>
-              </Popover.Close>
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-
         {addBlockSlot}
 
         <button
@@ -177,9 +149,9 @@ function KitNameField({ value, onChange }: { value: string; onChange: (v: string
     setEditing(false)
   }
 
-  return (
-    <div className="flex items-center min-w-0">
-      {editing ? (
+  if (editing) {
+    return (
+      <div className="flex items-center min-w-0">
         <input
           ref={inputRef}
           autoFocus
@@ -195,19 +167,127 @@ function KitNameField({ value, onChange }: { value: string; onChange: (v: string
               setEditing(false)
             }
           }}
-          className="text-sm font-medium text-gray-900 bg-transparent border-b border-gray-300 focus:border-gray-900 focus:outline-none px-1 min-w-0 w-[220px]"
+          onFocus={(e) => e.currentTarget.select()}
+          className="h-7 text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-md px-2 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 min-w-0 w-[220px]"
         />
-      ) : (
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      title="Rename brand kit"
+      className="inline-flex items-center h-7 px-1.5 -ml-1.5 rounded-md hover:bg-gray-100 cursor-pointer transition min-w-0"
+    >
+      <span className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{value}</span>
+    </button>
+  )
+}
+
+function KitPicker({
+  kits,
+  onApply,
+  onDelete,
+  onSaveAsKit,
+  onCreateNewKit,
+  currentName,
+}: {
+  kits: BrandKit[]
+  onApply: (kit: BrandKit) => void
+  onDelete: (id: string) => void
+  onSaveAsKit: () => void
+  onCreateNewKit: () => void
+  currentName: string
+}) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>
         <button
           type="button"
-          onClick={() => setEditing(true)}
-          className="text-sm font-medium text-gray-900 hover:bg-gray-50 px-1.5 py-0.5 -mx-1.5 rounded-md cursor-pointer truncate max-w-[260px] transition"
-          title="Rename brand kit"
+          aria-label="Switch brand kit"
+          title="Switch brand kit"
+          className="inline-flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition shrink-0"
         >
-          {value}
+          <ChevronDown size={12} strokeWidth={2} />
         </button>
-      )}
-    </div>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-1.5 z-50 w-[260px] animate-modal-in"
+        >
+          <div className="px-2 pt-1 pb-1.5 flex items-center justify-between">
+            <p className="text-[11px] font-medium text-gray-400 uppercase tracking-[0.06em]">Saved kits</p>
+            <span className="text-[10px] text-gray-400">{kits.length}</span>
+          </div>
+          {kits.length === 0 ? (
+            <p className="px-2 py-2 text-[11px] text-gray-400">
+              No saved kits yet. Save your current setup to switch back later.
+            </p>
+          ) : (
+            <ul className="space-y-0.5 max-h-[260px] overflow-y-auto">
+              {kits.map((kit) => {
+                const active = kit.name === currentName
+                return (
+                  <li key={kit.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50">
+                    <span className="flex items-center gap-0.5 shrink-0">
+                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.brandColor }} />
+                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.accentColor }} />
+                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.surfaceColor }} />
+                    </span>
+                    <Popover.Close asChild>
+                      <button
+                        type="button"
+                        onClick={() => onApply(kit)}
+                        className="flex-1 min-w-0 text-left cursor-pointer"
+                        title={`Apply ${kit.name}`}
+                      >
+                        <p className="text-xs font-medium text-gray-900 truncate">{kit.name}</p>
+                      </button>
+                    </Popover.Close>
+                    {active && <Check size={11} strokeWidth={2.5} className="text-gray-900 shrink-0" />}
+                    <button
+                      type="button"
+                      onClick={() => onDelete(kit.id)}
+                      className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition opacity-0 group-hover:opacity-100"
+                      title="Delete kit"
+                      aria-label="Delete kit"
+                    >
+                      <Trash2 size={11} strokeWidth={1.75} />
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+          <div className="border-t border-gray-100 mt-1.5 pt-1.5 space-y-0.5">
+            <Popover.Close asChild>
+              <button
+                type="button"
+                onClick={onCreateNewKit}
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                <Plus size={11} strokeWidth={1.75} className="text-gray-400" />
+                Create new kit
+              </button>
+            </Popover.Close>
+            <Popover.Close asChild>
+              <button
+                type="button"
+                onClick={onSaveAsKit}
+                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
+              >
+                <Sparkles size={11} strokeWidth={1.75} className="text-gray-400" />
+                Save current as kit…
+              </button>
+            </Popover.Close>
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 

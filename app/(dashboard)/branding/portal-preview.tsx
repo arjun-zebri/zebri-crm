@@ -1,39 +1,102 @@
 'use client'
 
-import { LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText, Menu } from 'lucide-react'
+import { LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText, Menu, Info, Eye, EyeOff } from 'lucide-react'
 import { FONT_STACKS } from '@/lib/branding/fonts'
+import { pillForeground } from '@/lib/branding/contrast'
 import type { BrandPreviewState } from './branding-preview-types'
+import type { PortalSectionSettings } from './branding-editor'
 
-const SECTIONS = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard, count: 1, active: true },
-  { id: 'timeline', label: 'Timeline', icon: Clock, count: 12 },
-  { id: 'contacts', label: 'Contacts', icon: Users2, count: 8 },
-  { id: 'payments', label: 'Payments', icon: Receipt, count: 2 },
-  { id: 'contracts', label: 'Contracts', icon: FileSignature, count: 1 },
-  { id: 'songs', label: 'Songs', icon: Music, count: 18 },
-  { id: 'files', label: 'Files', icon: FileText, count: 3 },
-]
+type SectionKey = 'timeline' | 'contacts' | 'payments' | 'contracts' | 'songs' | 'files'
 
-function isDarkSurface(hex: string): boolean {
-  const h = (hex || '').replace('#', '')
-  if (h.length !== 6) return false
-  const r = parseInt(h.slice(0, 2), 16) / 255
-  const g = parseInt(h.slice(2, 4), 16) / 255
-  const b = parseInt(h.slice(4, 6), 16) / 255
-  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-  return lum < 0.4
+interface Section {
+  id: 'overview' | SectionKey
+  label: string
+  icon: typeof LayoutDashboard
+  count?: number
+  active?: boolean
+  toggleable?: boolean
 }
+
+const SECTIONS: Section[] = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard, count: 1, active: true },
+  { id: 'timeline', label: 'Timeline', icon: Clock, count: 12, toggleable: true },
+  { id: 'contacts', label: 'Contacts', icon: Users2, count: 8, toggleable: true },
+  { id: 'payments', label: 'Payments', icon: Receipt, count: 2, toggleable: true },
+  { id: 'contracts', label: 'Contracts', icon: FileSignature, count: 1, toggleable: true },
+  { id: 'songs', label: 'Songs', icon: Music, count: 18, toggleable: true },
+  { id: 'files', label: 'Files', icon: FileText, count: 3, toggleable: true },
+]
 
 interface PortalPreviewProps {
   state: BrandPreviewState
   device?: 'desktop' | 'mobile'
+  sections: PortalSectionSettings
+  setSections: (patch: Partial<PortalSectionSettings>) => void
 }
 
-export function PortalPreview({ state, device = 'desktop' }: PortalPreviewProps) {
-  return device === 'mobile' ? <MobilePortal state={state} /> : <DesktopPortal state={state} />
+export function PortalPreview({ state, device = 'desktop', sections, setSections }: PortalPreviewProps) {
+  const visibleSections = SECTIONS.filter(
+    (s) => !s.toggleable || sections[s.id as SectionKey] !== false,
+  )
+  return (
+    <div className="space-y-3">
+      <PortalToolbar sections={sections} setSections={setSections} />
+      {device === 'mobile'
+        ? <MobilePortal state={state} sections={visibleSections} />
+        : <DesktopPortal state={state} sections={visibleSections} />}
+    </div>
+  )
 }
 
-function DesktopPortal({ state }: { state: BrandPreviewState }) {
+function PortalToolbar({
+  sections,
+  setSections,
+}: {
+  sections: PortalSectionSettings
+  setSections: (patch: Partial<PortalSectionSettings>) => void
+}) {
+  const toggleable = SECTIONS.filter((s) => s.toggleable) as (Section & { id: SectionKey })[]
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-3">
+      <div className="flex items-start gap-2.5">
+        <span className="w-6 h-6 rounded-md bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+          <Info size={12} strokeWidth={1.75} className="text-amber-600" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] font-medium text-gray-900">Portal layout is fixed</p>
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            Unlike documents, the portal uses your brand colors and logo but you can&apos;t move blocks. Toggle which sections couples see below.
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center flex-wrap gap-1.5">
+        {toggleable.map((s) => {
+          const enabled = sections[s.id] !== false
+          const Icon = s.icon
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setSections({ [s.id]: !enabled })}
+              className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] cursor-pointer transition border ${
+                enabled
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white text-gray-400 border-gray-200 hover:text-gray-700 hover:border-gray-300'
+              }`}
+              title={enabled ? `Hide ${s.label}` : `Show ${s.label}`}
+            >
+              {enabled ? <Eye size={11} strokeWidth={2} /> : <EyeOff size={11} strokeWidth={2} />}
+              <Icon size={11} strokeWidth={1.75} />
+              {s.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function DesktopPortal({ state, sections: SECTIONS }: { state: BrandPreviewState; sections: Section[] }) {
   const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
   const fontBody = { fontFamily: FONT_STACKS[state.fontBody] }
 
@@ -47,8 +110,12 @@ function DesktopPortal({ state }: { state: BrandPreviewState }) {
         ...fontBody,
       }}
     >
-      {state.headerImageUrl && (
+      {state.headerImageUrl ? (
         <img src={state.headerImageUrl} alt="" className="block w-full h-32 object-cover" />
+      ) : (
+        <div className="m-3 h-28 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/40 flex items-center justify-center">
+          <span className="text-xs text-gray-400">Header banner · upload in Logo &amp; assets</span>
+        </div>
       )}
 
       <div className="px-8 pt-7 pb-5 flex items-center gap-4 border-b border-gray-100">
@@ -95,7 +162,7 @@ function DesktopPortal({ state }: { state: BrandPreviewState }) {
   )
 }
 
-function MobilePortal({ state }: { state: BrandPreviewState }) {
+function MobilePortal({ state, sections: SECTIONS }: { state: BrandPreviewState; sections: Section[] }) {
   const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
   const fontBody = { fontFamily: FONT_STACKS[state.fontBody] }
 
@@ -107,8 +174,12 @@ function MobilePortal({ state }: { state: BrandPreviewState }) {
         ...fontBody,
       }}
     >
-      {state.headerImageUrl && (
+      {state.headerImageUrl ? (
         <img src={state.headerImageUrl} alt="" className="block w-full h-24 object-cover" />
+      ) : (
+        <div className="m-3 h-20 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/40 flex items-center justify-center">
+          <span className="text-[10px] text-gray-400">Header banner</span>
+        </div>
       )}
 
       {/* Top bar */}
@@ -183,10 +254,10 @@ function MobilePortal({ state }: { state: BrandPreviewState }) {
 
 function BrandMark({ state, size }: { state: BrandPreviewState; size: number }) {
   const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
-  if (state.logoUrl || state.logoDarkUrl) {
+  if (state.logoUrl) {
     return (
       <img
-        src={isDarkSurface(state.surfaceColor) && state.logoDarkUrl ? state.logoDarkUrl : state.logoUrl}
+        src={state.logoUrl}
         alt={state.businessName || 'Logo'}
         className="object-contain rounded-lg bg-white shrink-0"
         style={{ width: size, height: size }}
@@ -254,8 +325,8 @@ function EventCard({ state, compact }: { state: BrandPreviewState; compact?: boo
           <span
             className={`shrink-0 ${compact ? 'text-[9px] px-1.5 py-0.5' : 'text-xs px-2.5 py-1'} font-medium rounded-full whitespace-nowrap`}
             style={{
-              background: `${state.accentColor || state.brandColor}1A`,
-              color: state.accentColor || state.brandColor,
+              background: `${state.accentColor || state.brandColor}26`,
+              color: pillForeground(state.accentColor, state.brandColor, state.surfaceColor || '#FFFFFF'),
             }}
           >
             127 days away

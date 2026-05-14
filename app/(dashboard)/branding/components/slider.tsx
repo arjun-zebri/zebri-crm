@@ -108,12 +108,12 @@ export function Slider({
         className="relative w-full h-1.5 rounded-full bg-gray-100"
       >
         <div
-          className="absolute top-0 left-0 h-full rounded-full transition-[width]"
+          className={`absolute top-0 left-0 h-full rounded-full ${dragging ? '' : 'transition-[width] duration-100'}`}
           style={{ width: `${ratio}%`, background: FILL }}
         />
         <div
-          className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 shadow-sm transition-[left,transform,box-shadow] ${
-            dragging ? 'scale-110' : ''
+          className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border-2 shadow-sm ${
+            dragging ? 'scale-110' : 'transition-[left,transform,box-shadow] duration-100'
           }`}
           style={{
             left: `${ratio}%`,

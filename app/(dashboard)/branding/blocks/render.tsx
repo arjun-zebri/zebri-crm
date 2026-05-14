@@ -14,9 +14,10 @@ import type {
   TitleBlock,
   LineItemsBlock,
   TotalsBlock,
-  MessageBlock,
+  TextBlock,
   ActionBlock,
   DividerBlock,
+  FooterBlock,
 } from './types'
 
 function fmt(n: number) {
@@ -54,14 +55,13 @@ export function RenderHeaderBanner({ block, state }: RenderProps<HeaderBannerBlo
   if (!headerImageUrl) {
     return (
       <div
-        className="w-full bg-gray-100 flex items-center justify-center"
+        className="w-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
         style={{
           height: heightPx,
-          borderTopLeftRadius: state.cornerRadius,
-          borderTopRightRadius: state.cornerRadius,
+          borderRadius: state.cornerRadius,
         }}
       >
-        <span className="text-xs text-gray-400">Header banner · upload in Styling</span>
+        <span className="text-xs text-gray-400">Header banner · upload in Logo &amp; assets</span>
       </div>
     )
   }
@@ -93,7 +93,7 @@ export function RenderHeaderBanner({ block, state }: RenderProps<HeaderBannerBlo
 // ── Business name ─────────────────────────────────────────────────────────────
 
 export function RenderBusinessName({ block, state }: RenderProps<BusinessNameBlock>) {
-  const { logoUrl, businessName } = state
+  const { logoUrl, faviconUrl, businessName } = state
   const fallbackInitial = businessName?.[0]?.toUpperCase() || 'Z'
   const pad = PAD(state)
 
@@ -107,11 +107,15 @@ export function RenderBusinessName({ block, state }: RenderProps<BusinessNameBlo
     letterSpacing: 0,
   }
 
+  // Prefer the full logo when available, fall back to favicon, then the
+  // monogrammed brand-coloured tile.
+  const markUrl = logoUrl || faviconUrl
+
   return (
     <div className={`${pad.docX} ${pad.blockY} flex items-center gap-4`}>
-      {logoUrl ? (
+      {markUrl ? (
         <img
-          src={logoUrl}
+          src={markUrl}
           alt={businessName || 'Logo'}
           className="w-12 h-12 object-contain rounded-lg bg-white shrink-0"
         />
@@ -278,11 +282,6 @@ export function RenderLineItems({ block, state }: RenderProps<LineItemsBlock>) {
           </span>
         </div>
       ))}
-      {block.showAddPlaceholder && (
-        <div className={`flex items-center ${pad.rowY} text-sm text-gray-400`}>
-          <span>+ Add line</span>
-        </div>
-      )}
     </div>
   )
 }
@@ -329,9 +328,9 @@ export function RenderTotals({ block, state }: RenderProps<TotalsBlock>) {
   )
 }
 
-// ── Message ───────────────────────────────────────────────────────────────────
+// ── Text ──────────────────────────────────────────────────────────────────────
 
-export function RenderMessage({ block, state, updateBlock }: RenderProps<MessageBlock>) {
+export function RenderText({ block, state, updateBlock }: RenderProps<TextBlock>) {
   const pad = PAD(state)
   const defaults: TextStyleDefaults = {
     fontFamily: state.fontBody,
@@ -344,31 +343,12 @@ export function RenderMessage({ block, state, updateBlock }: RenderProps<Message
   }
   const css = resolveTextStyle(block.textStyle, defaults)
 
-  if (block.style === 'card') {
-    return (
-      <div className={`${pad.docX} ${pad.blockY}`}>
-        <div
-          className="bg-gray-50 px-5 py-4"
-          style={{ borderRadius: Math.min(state.cornerRadius, 12), ...css }}
-        >
-          <InlineText
-            value={block.text}
-            onChange={(v) => updateBlock<MessageBlock>(block.id, { text: v })}
-            placeholder="Add a note to your client…"
-            multiline
-            as="div"
-            className="whitespace-pre-wrap"
-          />
-        </div>
-      </div>
-    )
-  }
   return (
     <div className={`${pad.docX} ${pad.blockY}`} style={css}>
       <InlineText
         value={block.text}
-        onChange={(v) => updateBlock<MessageBlock>(block.id, { text: v })}
-        placeholder="Add contract terms…"
+        onChange={(v) => updateBlock<TextBlock>(block.id, { text: v })}
+        placeholder="Add text…"
         multiline
         as="div"
         className="whitespace-pre-wrap"
@@ -451,6 +431,78 @@ export function RenderDivider({ block, state }: RenderProps<DividerBlock>) {
   return (
     <div className={`${pad.docX} ${pad.blockY}`}>
       <hr style={{ borderTopWidth: thickness, borderTopColor: color, borderTopStyle: 'solid', borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }} />
+    </div>
+  )
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+
+export function RenderFooter({ block, state, updateBlock }: RenderProps<FooterBlock>) {
+  const pad = PAD(state)
+  const noteDefaults: TextStyleDefaults = {
+    fontFamily: state.fontBody,
+    fontSize: 12,
+    fontWeight: state.fontBodyWeight ?? 400,
+    color: state.mutedColor || '#6B7280',
+    align: 'left',
+    lineHeight: 1.5,
+    letterSpacing: 0,
+  }
+  const contactDefaults: TextStyleDefaults = {
+    fontFamily: state.fontBody,
+    fontSize: 11,
+    fontWeight: 400,
+    color: state.mutedColor || '#9CA3AF',
+    align: 'left',
+    lineHeight: 1.5,
+    letterSpacing: 0,
+  }
+  const noteCss = resolveTextStyle(block.noteStyle, noteDefaults)
+  const contactCss = resolveTextStyle(block.contactStyle, contactDefaults)
+  const showMark = block.showMark ?? true
+
+  const contactParts = [
+    state.businessName,
+    state.phone,
+    state.website,
+    state.abn ? `ABN ${state.abn}` : null,
+  ].filter(Boolean) as string[]
+
+  return (
+    <div className={`${pad.docX} ${pad.blockY} mt-6 border-t border-gray-100 pt-5`}>
+      <div className="flex items-start gap-4">
+        {showMark && (state.logoUrl || state.faviconUrl) ? (
+          <img
+            src={state.logoUrl || state.faviconUrl}
+            alt={state.businessName || ''}
+            className="w-6 h-6 object-contain rounded shrink-0"
+          />
+        ) : showMark ? (
+          <div
+            className="w-6 h-6 flex items-center justify-center text-white text-[10px] font-semibold shrink-0"
+            style={{
+              background: state.brandColor,
+              borderRadius: Math.min(state.cornerRadius, 6),
+              fontFamily: FONT_STACKS[state.fontHeading],
+            }}
+          >
+            {state.businessName?.[0]?.toUpperCase() || 'Z'}
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1 space-y-1">
+          <p style={noteCss}>
+            <InlineText
+              value={block.closingNote ?? ''}
+              onChange={(v) => updateBlock<FooterBlock>(block.id, { closingNote: v })}
+              placeholder="Closing line"
+              as="span"
+            />
+          </p>
+          {contactParts.length > 0 && (
+            <p style={contactCss}>{contactParts.join('  ·  ')}</p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
