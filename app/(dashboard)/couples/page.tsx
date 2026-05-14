@@ -69,6 +69,17 @@ function CouplesPageContent() {
     window.history.replaceState(null, "", qs ? `/couples?${qs}` : "/couples");
   }, [couples]);
 
+  // Keep the open profile drawer in sync with the couples cache so mutations
+  // (e.g. rotating the portal token) reflect immediately without a re-open.
+  useEffect(() => {
+    if (!selectedCouple) return;
+    const fresh = couples.find((c) => c.id === selectedCouple.id);
+    if (fresh && fresh !== selectedCouple) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedCouple(fresh);
+    }
+  }, [couples, selectedCouple]);
+
   const handleViewModeChange = (mode: ViewMode) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("view", mode === "kanban" ? "board" : mode);

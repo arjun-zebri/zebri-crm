@@ -51,11 +51,26 @@ export default async function VendorPage({
   const { data } = await supabase.rpc('get_vendor_timeline', { token })
   const vendorData = data as VendorData | null
 
-  if (!vendorData || !vendorData.event) {
+  if (!vendorData) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 gap-6">
         <Image src="/zebri-logo.svg" alt="Zebri" width={80} height={29} />
         <p className="text-sm text-gray-500">This link is not active.</p>
+        <p className="text-xs text-gray-400 text-center max-w-xs">
+          Contact the MC to activate the run sheet link.
+        </p>
+      </div>
+    )
+  }
+
+  if (!vendorData.event) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 gap-6">
+        <Image src="/zebri-logo.svg" alt="Zebri" width={80} height={29} />
+        <p className="text-sm text-gray-500">No event scheduled yet.</p>
+        <p className="text-xs text-gray-400 text-center max-w-xs">
+          The run sheet will appear here once the MC adds an event for this couple.
+        </p>
       </div>
     )
   }
