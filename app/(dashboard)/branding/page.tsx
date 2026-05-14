@@ -142,10 +142,12 @@ export default function BrandingPage() {
 
   // Prefer the new user_branding table; fall back to legacy user_metadata if
   // the migration hasn't run for this user yet.
+  // Distinguish "never saved" (undefined → use defaults) from "saved empty"
+  // (deliberately deleted by the user → preserve the empty array).
   const blocksSrc = branding?.branding_blocks ?? metadata?.branding_blocks ?? {}
-  const migratedQuote = blocksSrc.quote ? migrateBlocks(blocksSrc.quote) : null
-  const migratedInvoice = blocksSrc.invoice ? migrateBlocks(blocksSrc.invoice) : null
-  const migratedContract = blocksSrc.contract ? migrateBlocks(blocksSrc.contract) : null
+  const migratedQuote    = blocksSrc.quote    !== undefined ? migrateBlocks(blocksSrc.quote)    : null
+  const migratedInvoice  = blocksSrc.invoice  !== undefined ? migrateBlocks(blocksSrc.invoice)  : null
+  const migratedContract = blocksSrc.contract !== undefined ? migrateBlocks(blocksSrc.contract) : null
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
@@ -174,9 +176,12 @@ export default function BrandingPage() {
         docPadding: typeof metadata?.doc_padding === 'number' ? metadata.doc_padding : 12,
         themePreset,
         blocks: {
-          quote: migratedQuote && migratedQuote.length > 0 ? migratedQuote : defaultBlocksFor('quote'),
-          invoice: migratedInvoice && migratedInvoice.length > 0 ? migratedInvoice : defaultBlocksFor('invoice'),
-          contract: migratedContract && migratedContract.length > 0 ? migratedContract : defaultBlocksFor('contract'),
+          // Only fall back to defaults when the user has never saved this
+          // surface. An empty array means they intentionally deleted everything
+          // and should see the empty state, not the defaults.
+          quote:    migratedQuote    !== null ? migratedQuote    : defaultBlocksFor('quote'),
+          invoice:  migratedInvoice  !== null ? migratedInvoice  : defaultBlocksFor('invoice'),
+          contract: migratedContract !== null ? migratedContract : defaultBlocksFor('contract'),
         },
         businessName: metadata?.business_name || '',
         phone: metadata?.phone || '',

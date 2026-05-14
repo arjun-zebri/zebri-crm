@@ -13,10 +13,11 @@ export function RenderHeaderBanner({
 }) {
   const url = branding.header_image_url
   if (!url) return null
-  const heightPx = HEADER_HEIGHTS[block.height ?? 'md']
+  const heightPx = block.heightPx ?? HEADER_HEIGHTS[block.height ?? 'md']
   const fit = block.fit ?? 'cover'
-  const overlay = block.overlayColor
-  const overlayOpacity = block.overlayOpacity ?? 0
+  const imageX = block.imageX ?? 50
+  const imageY = block.imageY ?? 50
+  const imageScale = block.imageScale ?? 1
   return (
     <div
       className="relative w-full overflow-hidden"
@@ -26,13 +27,17 @@ export function RenderHeaderBanner({
         borderTopRightRadius: branding.corner_radius,
       }}
     >
-      <img src={url} alt="" className="block w-full h-full" style={{ objectFit: fit }} />
-      {overlay && overlayOpacity > 0 && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: overlay, opacity: overlayOpacity / 100 }}
-        />
-      )}
+      <img
+        src={url}
+        alt=""
+        className="block w-full h-full"
+        style={{
+          objectFit: fit,
+          objectPosition: `${imageX}% ${imageY}%`,
+          transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
+          transformOrigin: `${imageX}% ${imageY}%`,
+        }}
+      />
     </div>
   )
 }

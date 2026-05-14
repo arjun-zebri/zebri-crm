@@ -21,7 +21,7 @@ import { BlockRenderer } from './blocks/block-renderer'
 import { AddBlockPalette } from './blocks/add-block-palette'
 import { SaveKitDialog } from './save-kit-dialog'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
-import type { Block, TextStyle } from './blocks/types'
+import type { Block } from './blocks/types'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from './branding-preview-types'
 import { PortalPreview } from './portal-preview'
 
@@ -139,7 +139,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
-  const [styleClipboard, setStyleClipboard] = useState<TextStyle | null>(null)
   const [saveKitOpen, setSaveKitOpen] = useState(false)
 
   const { status } = useAutosave(state, async (value) => {
@@ -369,16 +368,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setSelectedBlockIds([cloned.id])
   }
 
-  function toggleLock(id: string) {
-    if (!docSurface) return
-    setBlocksForCurrent(state.blocks[docSurface].map(b => b.id === id ? ({ ...b, locked: !b.locked } as Block) : b))
-  }
-
-  function toggleHide(id: string) {
-    if (!docSurface) return
-    setBlocksForCurrent(state.blocks[docSurface].map(b => b.id === id ? ({ ...b, hidden: !b.hidden } as Block) : b))
-  }
-
   function resetBlockStyles(id: string) {
     if (!docSurface) return
     const list = state.blocks[docSurface]
@@ -386,28 +375,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     if (!target) return
     const cleared = clearStyleOverrides(target)
     setBlocksForCurrent(list.map((b) => (b.id === id ? cleared : b)))
-  }
-
-  function applyStyleToAllDocs(id: string) {
-    if (!docSurface) return
-    const source = state.blocks[docSurface].find((b) => b.id === id)
-    if (!source) return
-    const others: Array<'quote' | 'invoice' | 'contract'> = (['quote', 'invoice', 'contract'] as const).filter(
-      (s) => s !== docSurface,
-    )
-    setState((prev) => {
-      const next = { ...prev, blocks: { ...prev.blocks } }
-      for (const other of others) {
-        const list = prev.blocks[other]
-        const updated = list.map((b) => {
-          if (b.type !== source.type) return b
-          return mergeBlockStyleFrom(b, source)
-        })
-        next.blocks = { ...next.blocks, [other]: updated }
-      }
-      return next
-    }, { commit: true })
-    toast(`Style applied to ${others.join(' and ')}`, 'success')
   }
 
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
@@ -684,6 +651,20 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               </button>
             </div>
           )}
+          {docSurface && visibleBlocks.length > 0 && (
+            <div className="flex justify-end mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBlocksForCurrent([])
+                  setSelectedBlockIds([])
+                }}
+                className="text-[11px] text-gray-400 hover:text-red-500 cursor-pointer transition"
+              >
+                Clear all blocks
+              </button>
+            </div>
+          )}
           {docSurface ? (
             <BlockRenderer
               blocks={visibleBlocks}
@@ -695,12 +676,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               updateBlock={updateBlock}
               duplicateBlock={duplicateBlock}
               deleteBlock={deleteBlock}
-              toggleLock={toggleLock}
-              toggleHide={toggleHide}
               resetBlock={resetBlockStyles}
-              applyStyleToAllDocs={applyStyleToAllDocs}
-              styleClipboard={styleClipboard}
-              setStyleClipboard={setStyleClipboard}
             />
           ) : (
             <PortalPreview
@@ -771,67 +747,6 @@ function clearStyleOverrides(block: Block): Block {
       return { ...block, borderWidth: 0, blockRadius: undefined } as Block
   }
 }
-
-function mergeBlockStyleFrom(target: Block, source: Block): Block {
-  if (target.type !== source.type) return target
-  const carry = {
-    borderWidth: source.borderWidth,
-    borderColor: source.borderColor,
-    blockRadius: source.blockRadius,
-  }
-  switch (target.type) {
-    case 'title':
-      return {
-        ...target,
-        ...carry,
-        titleStyle: (source as TitleBlockLike).titleStyle,
-        subtitleStyle: (source as TitleBlockLike).subtitleStyle,
-      } as Block
-    case 'businessName':
-      return { ...target, ...carry, nameStyle: (source as BusinessNameLike).nameStyle } as Block
-    case 'tagline':
-      return { ...target, ...carry, textStyle: (source as TaglineLike).textStyle } as Block
-    case 'text':
-      return { ...target, ...carry, textStyle: (source as TextBlockLike).textStyle } as Block
-    case 'totals':
-      return { ...target, ...carry, totalStyle: (source as TotalsLike).totalStyle } as Block
-    case 'action':
-      return {
-        ...target,
-        ...carry,
-        primaryStyle: (source as ActionLike).primaryStyle,
-        secondaryStyle: (source as ActionLike).secondaryStyle,
-        buttonColor: (source as ActionLike).buttonColor,
-        buttonRadius: (source as ActionLike).buttonRadius,
-      } as Block
-    case 'lineItems':
-      return {
-        ...target,
-        ...carry,
-        rowStyle: (source as LineItemsLike).rowStyle,
-        headerStyle: (source as LineItemsLike).headerStyle,
-        itemStyle: (source as LineItemsLike).itemStyle,
-      } as Block
-    case 'divider':
-      return {
-        ...target,
-        ...carry,
-        thickness: (source as DividerLike).thickness,
-        color: (source as DividerLike).color,
-      } as Block
-    default:
-      return { ...target, ...carry } as Block
-  }
-}
-
-interface TitleBlockLike { titleStyle?: unknown; subtitleStyle?: unknown }
-interface BusinessNameLike { nameStyle?: unknown }
-interface TaglineLike { textStyle?: unknown }
-interface TextBlockLike { textStyle?: unknown }
-interface TotalsLike { totalStyle?: unknown }
-interface ActionLike { primaryStyle?: unknown; secondaryStyle?: unknown; buttonColor?: unknown; buttonRadius?: unknown }
-interface LineItemsLike { rowStyle?: unknown; headerStyle?: unknown; itemStyle?: unknown }
-interface DividerLike { thickness?: unknown; color?: unknown }
 
 // ── Affected-block feedback ──────────────────────────────────────────────────
 // When a brand-kit token changes we briefly flash the blocks that consume it,

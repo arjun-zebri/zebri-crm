@@ -164,7 +164,7 @@ export function BrandPanel(props: BrandPanelProps) {
 
         <Accordion
           icon={<ImageIcon size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Logo & assets"
+          title="Assets"
           subtitle="Logo, favicon, banner"
           open={open.identity}
           onToggle={() => toggle('identity')}

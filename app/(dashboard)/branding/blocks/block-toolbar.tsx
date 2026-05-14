@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, Check, Copy, Trash2, Plus, Lock, Unlock, Eye, EyeOff, Paintbrush, ClipboardPaste, Maximize2, Minimize2, Square, RotateCcw, FileStack } from 'lucide-react'
+import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { TextStyleControls } from './text-style-controls'
 import { ColorPopover } from '../components/color-popover'
@@ -30,34 +30,10 @@ interface BlockToolbarProps {
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   onDuplicate: () => void
   onDelete: () => void
-  onAddBelow: () => void
-  onToggleLock: () => void
-  onToggleHide: () => void
   onResetBlock: () => void
-  onApplyToAllDocs: () => void
-  onCopyStyle: () => void
-  onPasteStyle: () => void
-  hasStyleClipboard: boolean
 }
 
-export function BlockToolbar({
-  block,
-  state,
-  updateBlock,
-  onDuplicate,
-  onDelete,
-  onAddBelow,
-  onToggleLock,
-  onToggleHide,
-  onResetBlock,
-  onApplyToAllDocs,
-  onCopyStyle,
-  onPasteStyle,
-  hasStyleClipboard,
-}: BlockToolbarProps) {
-  const [expanded, setExpanded] = useState(false)
-  const locked = !!block.locked
-  const hidden = !!block.hidden
+export function BlockToolbar({ block, state, updateBlock, onDuplicate, onDelete, onResetBlock }: BlockToolbarProps) {
   return (
     <div
       className="bg-white border border-gray-200 rounded-xl shadow-[0_8px_24px_-8px_rgba(15,23,42,0.18),0_2px_6px_-2px_rgba(15,23,42,0.06)] animate-modal-in"
@@ -68,46 +44,11 @@ export function BlockToolbar({
         className="flex items-center gap-1 p-1 max-w-[min(960px,calc(100vw-32px))] overflow-x-auto"
         style={{ scrollbarWidth: 'thin' }}
       >
-        <BlockSpecificControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+        <BlockSpecificControls block={block} state={state} updateBlock={updateBlock} />
         <Divider />
         <BorderControl block={block} updateBlock={updateBlock} />
         <Divider />
         <div className="flex items-center gap-0.5 shrink-0">
-          <Tooltip label="Copy style" shortcut="⌘⌥C">
-            <button
-              type="button"
-              onClick={onCopyStyle}
-              aria-label="Copy style"
-              className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
-            >
-              <Paintbrush size={13} strokeWidth={1.75} />
-            </button>
-          </Tooltip>
-          <Tooltip label="Paste style" shortcut="⌘⌥V">
-            <button
-              type="button"
-              onClick={onPasteStyle}
-              disabled={!hasStyleClipboard}
-              aria-label="Paste style"
-              className={`p-1.5 rounded-md transition ${
-                hasStyleClipboard
-                  ? 'text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
-                  : 'text-gray-300 cursor-not-allowed'
-              }`}
-            >
-              <ClipboardPaste size={13} strokeWidth={1.75} />
-            </button>
-          </Tooltip>
-          <Tooltip label="Apply to Quote, Invoice and Contract">
-            <button
-              type="button"
-              onClick={onApplyToAllDocs}
-              aria-label="Apply style to all documents"
-              className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
-            >
-              <FileStack size={13} strokeWidth={1.75} />
-            </button>
-          </Tooltip>
           <Tooltip label="Reset to theme defaults">
             <button
               type="button"
@@ -118,45 +59,16 @@ export function BlockToolbar({
               <RotateCcw size={13} strokeWidth={1.75} />
             </button>
           </Tooltip>
-          {expanded && (
-            <>
-              <Divider />
-              <Tooltip label={hidden ? 'Show' : 'Hide'}>
-                <button
-                  type="button"
-                  onClick={onToggleHide}
-                  aria-label={hidden ? 'Show block' : 'Hide block'}
-                  className={`p-1.5 rounded-md cursor-pointer transition ${
-                    hidden ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  {hidden ? <EyeOff size={13} strokeWidth={1.75} /> : <Eye size={13} strokeWidth={1.75} />}
-                </button>
-              </Tooltip>
-              <Tooltip label={locked ? 'Unlock' : 'Lock'}>
-                <button
-                  type="button"
-                  onClick={onToggleLock}
-                  aria-label={locked ? 'Unlock block' : 'Lock block'}
-                  className={`p-1.5 rounded-md cursor-pointer transition ${
-                    locked ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  {locked ? <Lock size={13} strokeWidth={1.75} /> : <Unlock size={13} strokeWidth={1.75} />}
-                </button>
-              </Tooltip>
-              <Tooltip label="Duplicate">
-                <button
-                  type="button"
-                  onClick={onDuplicate}
-                  aria-label="Duplicate block"
-                  className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
-                >
-                  <Copy size={13} strokeWidth={1.75} />
-                </button>
-              </Tooltip>
-            </>
-          )}
+          <Tooltip label="Duplicate">
+            <button
+              type="button"
+              onClick={onDuplicate}
+              aria-label="Duplicate block"
+              className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
+            >
+              <Copy size={13} strokeWidth={1.75} />
+            </button>
+          </Tooltip>
           <Divider />
           <Tooltip label="Delete">
             <button
@@ -166,30 +78,6 @@ export function BlockToolbar({
               className="p-1.5 rounded-md text-gray-500 hover:text-red-600 hover:bg-red-50 cursor-pointer transition"
             >
               <Trash2 size={13} strokeWidth={1.75} />
-            </button>
-          </Tooltip>
-          <Tooltip label="Add block below">
-            <button
-              type="button"
-              onClick={onAddBelow}
-              aria-label="Add block below"
-              className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition"
-            >
-              <Plus size={13} strokeWidth={1.75} />
-            </button>
-          </Tooltip>
-          <Divider />
-          <Tooltip label={expanded ? 'Less' : 'More'}>
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              aria-label={expanded ? 'Collapse toolbar' : 'Expand toolbar'}
-              aria-pressed={expanded}
-              className={`p-1.5 rounded-md cursor-pointer transition ${
-                expanded ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              {expanded ? <Minimize2 size={13} strokeWidth={1.75} /> : <Maximize2 size={13} strokeWidth={1.75} />}
             </button>
           </Tooltip>
         </div>
@@ -214,7 +102,7 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
     case 'action':
       return <ActionControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'headerBanner':
-      return <HeaderBannerControls block={block} state={state} updateBlock={updateBlock} />
+      return <HeaderBannerControls block={block} updateBlock={updateBlock} />
     case 'businessName':
       return <BusinessNameControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'tagline':
@@ -670,28 +558,19 @@ function LineItemsControls({
 
 function HeaderBannerControls({
   block,
-  state,
   updateBlock,
 }: {
   block: HeaderBannerBlock
-  state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }) {
-  void state
-  const overlayColor = block.overlayColor ?? '#000000'
-  const overlayOpacity = block.overlayOpacity ?? 0
+  const scale = block.imageScale ?? 1
+  const customised =
+    (block.imageX !== undefined && block.imageX !== 50) ||
+    (block.imageY !== undefined && block.imageY !== 50) ||
+    block.heightPx !== undefined ||
+    scale !== 1
   return (
     <div className="flex items-center gap-2">
-      <PillToggle
-        options={[
-          { value: 'sm', label: 'Sm' },
-          { value: 'md', label: 'Md' },
-          { value: 'lg', label: 'Lg' },
-        ]}
-        value={block.height ?? 'md'}
-        onChange={(v) => updateBlock<HeaderBannerBlock>(block.id, { height: v as 'sm' | 'md' | 'lg' })}
-      />
-      <Divider />
       <PillToggle
         options={[
           { value: 'cover', label: 'Cover' },
@@ -701,32 +580,45 @@ function HeaderBannerControls({
         onChange={(v) => updateBlock<HeaderBannerBlock>(block.id, { fit: v as 'cover' | 'contain' })}
       />
       <Divider />
-      <ColorPopover
-        value={overlayColor}
-        onChange={(v) => updateBlock<HeaderBannerBlock>(block.id, { overlayColor: v })}
-        swatches={['#000000', '#111827', '#FFFFFF', '#7C2D12', '#1E40AF']}
-        trigger={
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 h-8 px-2.5 rounded-md text-xs hover:bg-gray-100 cursor-pointer border border-gray-200"
-            title="Overlay color"
-          >
-            <span
-              className="w-4 h-4 rounded ring-1 ring-black/10"
-              style={{ background: overlayColor }}
-            />
-            <span className="text-gray-700">Overlay</span>
-          </button>
+      <div className="inline-flex items-center gap-2 h-8 px-2 rounded-md border border-gray-200 bg-white shrink-0">
+        <span className="text-[11px] text-gray-500">Zoom</span>
+        <div className="w-20">
+          <Slider
+            value={scale}
+            min={1}
+            max={4}
+            step={0.1}
+            onChange={(v) => updateBlock<HeaderBannerBlock>(block.id, { imageScale: parseFloat(v.toFixed(2)) })}
+            ariaLabel="Image zoom"
+          />
+        </div>
+        <span className="text-[11px] font-mono text-gray-700 tabular-nums w-9 text-right">
+          {Math.round(scale * 100)}%
+        </span>
+      </div>
+      <Divider />
+      <button
+        type="button"
+        onClick={() =>
+          updateBlock<HeaderBannerBlock>(block.id, {
+            imageX: 50,
+            imageY: 50,
+            heightPx: undefined,
+            imageScale: 1,
+          })
         }
-      />
-      <NumberField
-        label="Opacity"
-        value={overlayOpacity}
-        min={0}
-        max={100}
-        step={5}
-        onChange={(v) => updateBlock<HeaderBannerBlock>(block.id, { overlayOpacity: v })}
-      />
+        disabled={!customised}
+        className={`inline-flex items-center px-2 h-8 rounded-md text-xs border transition ${
+          customised
+            ? 'bg-white text-gray-700 border-gray-200 hover:text-gray-900 hover:bg-gray-50 cursor-pointer'
+            : 'bg-white text-gray-300 border-gray-100 cursor-not-allowed'
+        }`}
+      >
+        Reset
+      </button>
+      <span className="hidden lg:inline text-[11px] text-gray-400 pl-1">
+        Drag to pan · ⌘+scroll to zoom · Drag edge to resize
+      </span>
     </div>
   )
 }

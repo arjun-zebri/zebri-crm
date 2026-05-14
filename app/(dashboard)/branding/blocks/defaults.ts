@@ -327,12 +327,9 @@ export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | '
     })
     .filter((b): b is Block => b !== null)
 
-  // Auto-insert a header banner at the top of any document that was saved
-  // before banners were a default.
-  const hasBanner = migrated.some((b) => b.type === 'headerBanner')
-  if (!hasBanner && migrated.length > 0) {
-    migrated = [{ id: newId('hb'), type: 'headerBanner' } as Block, ...migrated]
-  }
+  // (Removed: previous code auto-inserted a header banner if missing. That
+  // ran on every load, so deleting the banner caused it to reappear on
+  // refresh. New users still get a banner via defaultBlocksFor.)
 
   // Ensure a single businessName sits right after the header banner. Older
   // invoice templates dropped it at the end of the document; normalise.

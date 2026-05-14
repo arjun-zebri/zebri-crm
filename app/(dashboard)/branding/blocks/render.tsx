@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { getTextColor } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { BrandPreviewState } from '../branding-preview-types'
@@ -46,28 +47,105 @@ const HEADER_HEIGHTS: Record<NonNullable<HeaderBannerBlock['height']>, number> =
   lg: 192,
 }
 
-export function RenderHeaderBanner({ block, state }: RenderProps<HeaderBannerBlock>) {
+export function RenderHeaderBanner({ block, state, updateBlock }: RenderProps<HeaderBannerBlock>) {
   const { headerImageUrl } = state
-  const heightPx = HEADER_HEIGHTS[block.height ?? 'md']
+  const heightPx = block.heightPx ?? HEADER_HEIGHTS[block.height ?? 'md']
   const fit = block.fit ?? 'cover'
-  const overlayColor = block.overlayColor
-  const overlayOpacity = block.overlayOpacity ?? 0
+  const imageX = block.imageX ?? 50
+  const imageY = block.imageY ?? 50
+  const imageScale = block.imageScale ?? 1
+
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [panning, setPanning] = useState(false)
+  const [resizing, setResizing] = useState(false)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || !headerImageUrl) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      e.stopPropagation()
+      const delta = -e.deltaY * 0.003
+      const next = Math.max(1, Math.min(4, imageScale + delta))
+      updateBlock<HeaderBannerBlock>(block.id, { imageScale: parseFloat(next.toFixed(2)) })
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [headerImageUrl, imageScale, block.id, updateBlock])
+
+  const startPan = (e: React.MouseEvent) => {
+    if (!headerImageUrl) return
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const startX = e.clientX
+    const startY = e.clientY
+    const startImageX = imageX
+    const startImageY = imageY
+    let dragged = false
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX
+      const dy = ev.clientY - startY
+      if (!dragged && Math.abs(dx) + Math.abs(dy) < 3) return
+      dragged = true
+      setPanning(true)
+      // Drag-the-image semantics: moving right reveals more of the LEFT side,
+      // so object-position X decreases as the cursor moves right.
+      const nextX = Math.max(0, Math.min(100, startImageX - (dx / rect.width) * 100))
+      const nextY = Math.max(0, Math.min(100, startImageY - (dy / rect.height) * 100))
+      updateBlock<HeaderBannerBlock>(block.id, {
+        imageX: Math.round(nextX),
+        imageY: Math.round(nextY),
+      })
+    }
+    const onUp = () => {
+      setPanning(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = heightPx
+    setResizing(true)
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(60, Math.min(480, startHeight + dy))
+      updateBlock<HeaderBannerBlock>(block.id, { heightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      setResizing(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
   if (!headerImageUrl) {
     return (
       <div
-        className="w-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
-        style={{
-          height: heightPx,
-          borderRadius: state.cornerRadius,
-        }}
+        ref={containerRef}
+        className="group relative w-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+        style={{ height: heightPx, borderRadius: state.cornerRadius }}
       >
-        <span className="text-xs text-gray-400">Header banner · upload in Logo &amp; assets</span>
+        <span className="text-xs text-gray-400">Header banner · upload in Assets</span>
+        <ResizeHandle onMouseDown={startResize} active={resizing} />
       </div>
     )
   }
+
   return (
     <div
-      className="relative w-full overflow-hidden"
+      ref={containerRef}
+      className="group relative w-full overflow-hidden"
       style={{
         height: heightPx,
         borderTopLeftRadius: state.cornerRadius,
@@ -77,15 +155,36 @@ export function RenderHeaderBanner({ block, state }: RenderProps<HeaderBannerBlo
       <img
         src={headerImageUrl}
         alt=""
-        className="block w-full h-full"
-        style={{ objectFit: fit }}
+        draggable={false}
+        onMouseDown={startPan}
+        className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
+        style={{
+          objectFit: fit,
+          objectPosition: `${imageX}% ${imageY}%`,
+          transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
+          transformOrigin: `${imageX}% ${imageY}%`,
+        }}
       />
-      {overlayColor && overlayOpacity > 0 && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: overlayColor, opacity: overlayOpacity / 100 }}
-        />
+      {imageScale > 1 && (
+        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
+          {Math.round(imageScale * 100)}%
+        </div>
       )}
+      <ResizeHandle onMouseDown={startResize} active={resizing} />
+    </div>
+  )
+}
+
+function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.MouseEvent) => void; active: boolean }) {
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      className={`absolute left-0 right-0 bottom-0 h-3 cursor-ns-resize flex items-end justify-center pb-1 transition ${
+        active ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      }`}
+      title="Drag to resize"
+    >
+      <div className="h-1 w-10 rounded-full bg-gray-900/60 ring-1 ring-white/80 shadow-sm" />
     </div>
   )
 }

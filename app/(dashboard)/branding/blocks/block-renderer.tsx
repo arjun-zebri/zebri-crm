@@ -18,8 +18,9 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
+import { Plus } from 'lucide-react'
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import type { Block, TextStyle } from './types'
+import type { Block } from './types'
 import type { BrandPreviewState } from '../branding-preview-types'
 import { BlockFrame } from './block-frame'
 import {
@@ -45,12 +46,7 @@ interface BlockRendererProps {
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   duplicateBlock: (id: string) => void
   deleteBlock: (id: string) => void
-  toggleLock: (id: string) => void
-  toggleHide: (id: string) => void
   resetBlock: (id: string) => void
-  applyStyleToAllDocs: (id: string) => void
-  styleClipboard: TextStyle | null
-  setStyleClipboard: (s: TextStyle | null) => void
 }
 
 export function BlockRenderer({
@@ -63,12 +59,7 @@ export function BlockRenderer({
   updateBlock,
   duplicateBlock,
   deleteBlock,
-  toggleLock,
-  toggleHide,
   resetBlock,
-  applyStyleToAllDocs,
-  styleClipboard,
-  setStyleClipboard,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -108,18 +99,6 @@ export function BlockRenderer({
           e.preventDefault()
           duplicateBlock(primarySelectedId)
         }
-      } else if (meta && e.altKey && (e.key === 'c' || e.key === 'C')) {
-        if (primarySelectedId) {
-          e.preventDefault()
-          const styleOfBlock = readStyle(blocks.find(b => b.id === primarySelectedId))
-          setStyleClipboard(styleOfBlock)
-        }
-      } else if (meta && e.altKey && (e.key === 'v' || e.key === 'V')) {
-        if (primarySelectedId && styleClipboard) {
-          e.preventDefault()
-          const target = blocks.find(b => b.id === primarySelectedId)
-          if (target) writeStyle(target, styleClipboard, updateBlock)
-        }
       } else if (meta && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault()
         setSelectedBlockIds(blocks.map(b => b.id))
@@ -130,7 +109,24 @@ export function BlockRenderer({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBlockIds, blocks, styleClipboard, primarySelectedId])
+  }, [selectedBlockIds, blocks, primarySelectedId])
+
+  if (blocks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <p className="text-sm font-semibold text-gray-800">No blocks yet</p>
+        <p className="text-xs text-gray-500 mt-1 mb-4">Build your document layout block by block</p>
+        <button
+          type="button"
+          onClick={() => requestAddAfter(null)}
+          className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black cursor-pointer transition shadow-sm"
+        >
+          <Plus size={14} strokeWidth={2} />
+          Add your first element
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="relative">
@@ -186,15 +182,7 @@ export function BlockRenderer({
                   onRequestAddBelow={() => requestAddAfter(block.id)}
                   onDuplicate={() => duplicateBlock(block.id)}
                   onDelete={() => deleteBlock(block.id)}
-                  onToggleLock={() => toggleLock(block.id)}
-                  onToggleHide={() => toggleHide(block.id)}
                   onResetBlock={() => resetBlock(block.id)}
-                  onApplyToAllDocs={() => applyStyleToAllDocs(block.id)}
-                  onCopyStyle={() => setStyleClipboard(readStyle(block))}
-                  onPasteStyle={() => {
-                    if (styleClipboard) writeStyle(block, styleClipboard, updateBlock)
-                  }}
-                  hasStyleClipboard={!!styleClipboard}
                 >
                   {renderBlock(block, state, updateBlock)}
                 </BlockFrame>
@@ -246,30 +234,3 @@ function renderBlock(
   }
 }
 
-function readStyle(block: Block | undefined): TextStyle | null {
-  if (!block) return null
-  switch (block.type) {
-    case 'title': return block.titleStyle ?? null
-    case 'businessName': return block.nameStyle ?? null
-    case 'tagline': return block.textStyle ?? null
-    case 'text': return block.textStyle ?? null
-    case 'totals': return block.totalStyle ?? null
-    case 'action': return block.primaryStyle ?? null
-    default: return null
-  }
-}
-
-function writeStyle(
-  block: Block,
-  style: TextStyle,
-  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void,
-) {
-  switch (block.type) {
-    case 'title': updateBlock(block.id, { titleStyle: { ...(block.titleStyle ?? {}), ...style } }); break
-    case 'businessName': updateBlock(block.id, { nameStyle: { ...(block.nameStyle ?? {}), ...style } }); break
-    case 'tagline': updateBlock(block.id, { textStyle: { ...(block.textStyle ?? {}), ...style } }); break
-    case 'text': updateBlock(block.id, { textStyle: { ...(block.textStyle ?? {}), ...style } }); break
-    case 'totals': updateBlock(block.id, { totalStyle: { ...(block.totalStyle ?? {}), ...style } }); break
-    case 'action': updateBlock(block.id, { primaryStyle: { ...(block.primaryStyle ?? {}), ...style } }); break
-  }
-}

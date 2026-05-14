@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus, GripVertical, Lock, EyeOff, Copy, Trash2, Eye, Unlock, Paintbrush, ClipboardPaste, RotateCcw, FileStack } from 'lucide-react'
+import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { BlockToolbar } from './block-toolbar'
 import type { Block } from './types'
@@ -21,13 +21,7 @@ interface BlockFrameProps {
   onRequestAddBelow: () => void
   onDuplicate: () => void
   onDelete: () => void
-  onToggleLock: () => void
-  onToggleHide: () => void
   onResetBlock: () => void
-  onApplyToAllDocs: () => void
-  onCopyStyle: () => void
-  onPasteStyle: () => void
-  hasStyleClipboard: boolean
   children: React.ReactNode
 }
 
@@ -43,25 +37,16 @@ export function BlockFrame({
   onRequestAddBelow,
   onDuplicate,
   onDelete,
-  onToggleLock,
-  onToggleHide,
   onResetBlock,
-  onApplyToAllDocs,
-  onCopyStyle,
-  onPasteStyle,
-  hasStyleClipboard,
   children,
 }: BlockFrameProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     animateLayoutChanges: () => false,
-    disabled: !!block.locked,
   })
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
 
-  const hidden = !!block.hidden
-  const locked = !!block.locked
   const selectionColor = state.brandColor || '#111827'
 
   const borderWidth = block.borderWidth ?? 0
@@ -92,7 +77,7 @@ export function BlockFrame({
         if (!selected) onSelect(false)
         setMenuPos({ x: e.clientX, y: e.clientY })
       }}
-      className={`group relative ${isDragging ? 'opacity-0' : ''} ${hidden ? 'opacity-40' : ''}`}
+      className={`group relative ${isDragging ? 'opacity-0' : ''}`}
     >
       {/* Selection / hover outline using brand color */}
       <div
@@ -113,49 +98,28 @@ export function BlockFrame({
         className="absolute inset-0 pointer-events-none rounded-md border border-transparent group-hover:border-gray-300/70 transition"
       />
 
-      {/* Drag / lock handle — sits inside the block-frame's left padding so it
-          never gets clipped by the document card's edge. */}
+      {/* Drag handle */}
       <div
         className={`absolute left-0.5 top-1/2 -translate-y-1/2 transition z-10 ${
           selected || isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {locked ? (
-          <span
-            title="Locked"
-            className="inline-flex items-center justify-center w-5 h-5 rounded-sm text-gray-400"
-          >
-            <Lock size={11} strokeWidth={1.75} />
-          </span>
-        ) : (
-          <button
-            {...attributes}
-            {...listeners}
-            aria-label="Drag to reorder"
-            title="Drag to reorder"
-            className="cursor-grab active:cursor-grabbing inline-flex items-center justify-center w-5 h-5 rounded-sm text-gray-400 hover:text-gray-700 hover:bg-gray-100/80"
-          >
-            <GripVertical size={14} strokeWidth={1.5} />
-          </button>
-        )}
-      </div>
-
-      {/* Hidden eye badge - shows on selection */}
-      {hidden && (
-        <span
-          className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-gray-900 text-white inline-flex items-center gap-1 z-10"
-          title="Hidden from output"
+        <button
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to reorder"
+          title="Drag to reorder"
+          className="cursor-grab active:cursor-grabbing inline-flex items-center justify-center w-5 h-5 rounded-sm text-gray-400 hover:text-gray-700 hover:bg-gray-100/80"
         >
-          <EyeOff size={9} strokeWidth={2} />
-          Hidden
-        </span>
-      )}
+          <GripVertical size={14} strokeWidth={1.5} />
+        </button>
+      </div>
 
       {children}
 
       {/* Add-below hover affordance */}
-      {!selected && !locked && (
+      {!selected && (
         <button
           type="button"
           onClick={(e) => {
@@ -203,14 +167,7 @@ export function BlockFrame({
               updateBlock={updateBlock}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
-              onAddBelow={onRequestAddBelow}
-              onToggleLock={onToggleLock}
-              onToggleHide={onToggleHide}
               onResetBlock={onResetBlock}
-              onApplyToAllDocs={onApplyToAllDocs}
-              onCopyStyle={onCopyStyle}
-              onPasteStyle={onPasteStyle}
-              hasStyleClipboard={hasStyleClipboard}
             />
           </Popover.Content>
         </Popover.Portal>
@@ -219,18 +176,10 @@ export function BlockFrame({
         <ContextMenu
           x={menuPos.x}
           y={menuPos.y}
-          locked={locked}
-          hidden={hidden}
-          hasStyleClipboard={hasStyleClipboard}
           onClose={() => setMenuPos(null)}
           onDuplicate={onDuplicate}
           onDelete={onDelete}
-          onToggleLock={onToggleLock}
-          onToggleHide={onToggleHide}
           onResetBlock={onResetBlock}
-          onApplyToAllDocs={onApplyToAllDocs}
-          onCopyStyle={onCopyStyle}
-          onPasteStyle={onPasteStyle}
         />
       )}
     </>
@@ -240,33 +189,17 @@ export function BlockFrame({
 function ContextMenu({
   x,
   y,
-  locked,
-  hidden,
-  hasStyleClipboard,
   onClose,
   onDuplicate,
   onDelete,
-  onToggleLock,
-  onToggleHide,
   onResetBlock,
-  onApplyToAllDocs,
-  onCopyStyle,
-  onPasteStyle,
 }: {
   x: number
   y: number
-  locked: boolean
-  hidden: boolean
-  hasStyleClipboard: boolean
   onClose: () => void
   onDuplicate: () => void
   onDelete: () => void
-  onToggleLock: () => void
-  onToggleHide: () => void
   onResetBlock: () => void
-  onApplyToAllDocs: () => void
-  onCopyStyle: () => void
-  onPasteStyle: () => void
 }) {
   useEffect(() => {
     const close = () => onClose()
@@ -283,18 +216,12 @@ function ContextMenu({
     }
   }, [onClose])
 
-  // Keep menu inside viewport
   const left = Math.min(x, (typeof window === 'undefined' ? 9999 : window.innerWidth) - 220)
-  const top = Math.min(y, (typeof window === 'undefined' ? 9999 : window.innerHeight) - 280)
+  const top = Math.min(y, (typeof window === 'undefined' ? 9999 : window.innerHeight) - 160)
 
-  const items: Array<{ label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean; disabled?: boolean }> = [
-    { label: 'Copy style', icon: <Paintbrush size={12} strokeWidth={1.75} />, onClick: onCopyStyle },
-    { label: 'Paste style', icon: <ClipboardPaste size={12} strokeWidth={1.75} />, onClick: onPasteStyle, disabled: !hasStyleClipboard },
-    { label: 'Apply to all docs', icon: <FileStack size={12} strokeWidth={1.75} />, onClick: onApplyToAllDocs },
+  const items: Array<{ label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean }> = [
     { label: 'Reset to theme', icon: <RotateCcw size={12} strokeWidth={1.75} />, onClick: onResetBlock },
     { label: 'Duplicate', icon: <Copy size={12} strokeWidth={1.75} />, onClick: onDuplicate },
-    { label: hidden ? 'Show' : 'Hide', icon: hidden ? <Eye size={12} strokeWidth={1.75} /> : <EyeOff size={12} strokeWidth={1.75} />, onClick: onToggleHide },
-    { label: locked ? 'Unlock' : 'Lock', icon: locked ? <Unlock size={12} strokeWidth={1.75} /> : <Lock size={12} strokeWidth={1.75} />, onClick: onToggleLock },
     { label: 'Delete', icon: <Trash2 size={12} strokeWidth={1.75} />, onClick: onDelete, danger: true },
   ]
 
@@ -310,18 +237,12 @@ function ContextMenu({
           key={i}
           type="button"
           role="menuitem"
-          disabled={item.disabled}
           onClick={() => {
-            if (item.disabled) return
             item.onClick()
             onClose()
           }}
           className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md text-xs text-left cursor-pointer transition ${
-            item.disabled
-              ? 'text-gray-300 cursor-not-allowed'
-              : item.danger
-                ? 'text-red-600 hover:bg-red-50'
-                : 'text-gray-700 hover:bg-gray-50'
+            item.danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
           <span className={item.danger ? 'text-red-500' : 'text-gray-400'}>{item.icon}</span>

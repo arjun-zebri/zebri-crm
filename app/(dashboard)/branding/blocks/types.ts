@@ -42,9 +42,12 @@ export interface BaseBlock {
 export interface HeaderBannerBlock extends BaseBlock {
   type: 'headerBanner'
   height?: 'sm' | 'md' | 'lg'
+  heightPx?: number
   fit?: 'cover' | 'contain'
-  overlayColor?: string
-  overlayOpacity?: number
+  imageX?: number
+  imageY?: number
+  /** Image zoom factor, 1–4. Anchored at imageX/imageY so panning sets the zoom focus. */
+  imageScale?: number
 }
 
 export interface BusinessNameBlock extends BaseBlock {
