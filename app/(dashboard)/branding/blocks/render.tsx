@@ -191,10 +191,13 @@ function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.MouseEve
 
 // ── Business name ─────────────────────────────────────────────────────────────
 
-export function RenderBusinessName({ block, state }: RenderProps<BusinessNameBlock>) {
-  const { logoUrl, faviconUrl, businessName } = state
+export function RenderBusinessName({ block, state, updateBlock }: RenderProps<BusinessNameBlock>) {
+  const { logoUrl, businessName } = state
   const fallbackInitial = businessName?.[0]?.toUpperCase() || 'Z'
   const pad = PAD(state)
+  const layout = block.layout ?? 'row'
+  const logoHeight = block.logoHeightPx ?? 48
+  const align = block.nameStyle?.align ?? 'left'
 
   const nameDefaults: TextStyleDefaults = {
     fontFamily: state.fontHeading,
@@ -206,33 +209,88 @@ export function RenderBusinessName({ block, state }: RenderProps<BusinessNameBlo
     letterSpacing: 0,
   }
 
-  // Prefer the full logo when available, fall back to favicon, then the
-  // monogrammed brand-coloured tile.
-  const markUrl = logoUrl || faviconUrl
+  const startResizeLogo = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = logoHeight
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(24, Math.min(160, startHeight + dy))
+      updateBlock<BusinessNameBlock>(block.id, { logoHeightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
 
+  const logoNode = logoUrl ? (
+    <div className="group/logo relative shrink-0" style={{ height: logoHeight }}>
+      <img
+        src={logoUrl}
+        alt={businessName || 'Logo'}
+        draggable={false}
+        className="block h-full w-auto object-contain select-none"
+      />
+      <div
+        onMouseDown={startResizeLogo}
+        title="Drag to resize"
+        className="absolute -right-1 -bottom-1 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-ns-resize opacity-0 group-hover/logo:opacity-100 transition"
+      />
+    </div>
+  ) : (
+    <div
+      className="group/logo relative shrink-0 flex items-center justify-center text-white font-semibold"
+      style={{
+        width: logoHeight,
+        height: logoHeight,
+        background: state.brandColor,
+        borderRadius: Math.min(state.cornerRadius, 12),
+        fontFamily: FONT_STACKS[state.fontHeading],
+        fontSize: Math.round(logoHeight * 0.42),
+      }}
+    >
+      {fallbackInitial}
+      <div
+        onMouseDown={startResizeLogo}
+        title="Drag to resize"
+        className="absolute -right-1 -bottom-1 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-ns-resize opacity-0 group-hover/logo:opacity-100 transition"
+      />
+    </div>
+  )
+
+  const nameNode = (
+    <p className="truncate" style={resolveTextStyle(block.nameStyle, nameDefaults)}>
+      {businessName || 'Your business name'}
+    </p>
+  )
+
+  const justify =
+    align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'
+  const items =
+    align === 'center' ? 'items-center' : align === 'right' ? 'items-end' : 'items-start'
+
+  if (layout === 'logo') {
+    return <div className={`${pad.docX} ${pad.blockY} flex ${justify}`}>{logoNode}</div>
+  }
+  if (layout === 'name') {
+    return <div className={`${pad.docX} ${pad.blockY} flex ${justify}`}>{nameNode}</div>
+  }
+  if (layout === 'stacked') {
+    return (
+      <div className={`${pad.docX} ${pad.blockY} flex flex-col gap-2 ${items}`}>
+        {logoNode}
+        {nameNode}
+      </div>
+    )
+  }
   return (
-    <div className={`${pad.docX} ${pad.blockY} flex items-center gap-4`}>
-      {markUrl ? (
-        <img
-          src={markUrl}
-          alt={businessName || 'Logo'}
-          className="w-12 h-12 object-contain rounded-lg bg-white shrink-0"
-        />
-      ) : (
-        <div
-          className="w-12 h-12 shrink-0 flex items-center justify-center text-white font-semibold"
-          style={{
-            background: state.brandColor,
-            borderRadius: Math.min(state.cornerRadius, 12),
-            fontFamily: FONT_STACKS[state.fontHeading],
-          }}
-        >
-          {fallbackInitial}
-        </div>
-      )}
-      <p className="truncate" style={resolveTextStyle(block.nameStyle, nameDefaults)}>
-        {businessName || 'Your business name'}
-      </p>
+    <div className={`${pad.docX} ${pad.blockY} flex items-center gap-4 ${justify}`}>
+      {logoNode}
+      {nameNode}
     </div>
   )
 }

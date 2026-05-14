@@ -357,16 +357,45 @@ function BusinessNameControls({
     lineHeight: 1.3,
     letterSpacing: 0,
   }
+  const layout = block.layout ?? 'row'
   return (
     <div className="flex items-center gap-2">
-      <TextStyleControls
-        style={block.nameStyle}
-        defaults={defaults}
-        onChange={(patch) =>
-          updateBlock<BusinessNameBlock>(block.id, { nameStyle: { ...(block.nameStyle ?? {}), ...patch } })
-        }
-        expanded={expanded}
+      <PillToggle
+        options={[
+          { value: 'row', label: 'Row' },
+          { value: 'stacked', label: 'Stacked' },
+          { value: 'logo', label: 'Logo' },
+          { value: 'name', label: 'Name' },
+        ]}
+        value={layout}
+        onChange={(v) => updateBlock<BusinessNameBlock>(block.id, { layout: v as BusinessNameBlock['layout'] })}
       />
+      {layout !== 'name' && (
+        <>
+          <Divider />
+          <NumberField
+            label="Logo"
+            value={block.logoHeightPx ?? 48}
+            min={24}
+            max={160}
+            step={4}
+            onChange={(v) => updateBlock<BusinessNameBlock>(block.id, { logoHeightPx: v })}
+          />
+        </>
+      )}
+      {layout !== 'logo' && (
+        <>
+          <Divider />
+          <TextStyleControls
+            style={block.nameStyle}
+            defaults={defaults}
+            onChange={(patch) =>
+              updateBlock<BusinessNameBlock>(block.id, { nameStyle: { ...(block.nameStyle ?? {}), ...patch } })
+            }
+            expanded={expanded}
+          />
+        </>
+      )}
     </div>
   )
 }

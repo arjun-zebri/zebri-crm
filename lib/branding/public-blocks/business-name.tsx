@@ -14,9 +14,12 @@ export function RenderBusinessName({
   branding: PublicBranding
 }) {
   const p = pad(branding)
-  const markUrl = branding.logo_url || branding.favicon_url
+  const logoUrl = branding.logo_url
   const businessName = branding.business_name
   const fallbackInitial = businessName?.[0]?.toUpperCase() || 'Z'
+  const layout = block.layout ?? 'row'
+  const logoHeight = block.logoHeightPx ?? 48
+  const align = block.nameStyle?.align ?? 'left'
 
   const nameDefaults: TextStyleDefaults = {
     fontFamily: branding.font_heading,
@@ -28,29 +31,58 @@ export function RenderBusinessName({
     letterSpacing: 0,
   }
 
+  const logoNode = logoUrl ? (
+    <img
+      src={logoUrl}
+      alt={businessName || 'Logo'}
+      className="block w-auto object-contain shrink-0"
+      style={{ height: logoHeight }}
+    />
+  ) : (
+    <div
+      className="shrink-0 flex items-center justify-center text-white font-semibold"
+      style={{
+        width: logoHeight,
+        height: logoHeight,
+        background: branding.brand_color,
+        borderRadius: Math.min(branding.corner_radius, 12),
+        fontFamily: FONT_STACKS[branding.font_heading],
+        fontSize: Math.round(logoHeight * 0.42),
+      }}
+    >
+      {fallbackInitial}
+    </div>
+  )
+
+  const nameNode = (
+    <p className="truncate" style={resolveTextStyle(block.nameStyle, nameDefaults)}>
+      {businessName || 'Your business name'}
+    </p>
+  )
+
+  const justify =
+    align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'
+  const items =
+    align === 'center' ? 'items-center' : align === 'right' ? 'items-end' : 'items-start'
+
+  if (layout === 'logo') {
+    return <div className={`${p.docX} ${p.blockY} flex ${justify}`}>{logoNode}</div>
+  }
+  if (layout === 'name') {
+    return <div className={`${p.docX} ${p.blockY} flex ${justify}`}>{nameNode}</div>
+  }
+  if (layout === 'stacked') {
+    return (
+      <div className={`${p.docX} ${p.blockY} flex flex-col gap-2 ${items}`}>
+        {logoNode}
+        {nameNode}
+      </div>
+    )
+  }
   return (
-    <div className={`${p.docX} ${p.blockY} flex items-center gap-4`}>
-      {markUrl ? (
-        <img
-          src={markUrl}
-          alt={businessName || 'Logo'}
-          className="w-12 h-12 object-contain rounded-lg bg-white shrink-0"
-        />
-      ) : (
-        <div
-          className="w-12 h-12 shrink-0 flex items-center justify-center text-white font-semibold"
-          style={{
-            background: branding.brand_color,
-            borderRadius: Math.min(branding.corner_radius, 12),
-            fontFamily: FONT_STACKS[branding.font_heading],
-          }}
-        >
-          {fallbackInitial}
-        </div>
-      )}
-      <p className="truncate" style={resolveTextStyle(block.nameStyle, nameDefaults)}>
-        {businessName || 'Your business name'}
-      </p>
+    <div className={`${p.docX} ${p.blockY} flex items-center gap-4 ${justify}`}>
+      {logoNode}
+      {nameNode}
     </div>
   )
 }

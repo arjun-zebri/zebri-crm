@@ -715,8 +715,8 @@ function clearStyleOverrides(block: Block): Block {
       return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
     }
     case 'businessName': {
-      const { nameStyle: _n, ...rest } = block
-      void _n
+      const { nameStyle: _n, layout: _l, logoHeightPx: _h, ...rest } = block
+      void _n; void _l; void _h
       return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
     }
     case 'tagline':

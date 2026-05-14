@@ -50,9 +50,15 @@ export interface HeaderBannerBlock extends BaseBlock {
   imageScale?: number
 }
 
+export type BusinessNameLayout = 'row' | 'stacked' | 'logo' | 'name'
+
 export interface BusinessNameBlock extends BaseBlock {
   type: 'businessName'
   nameStyle?: TextStyle
+  /** Composition layout. Defaults to 'row' (mark on left, name on right). */
+  layout?: BusinessNameLayout
+  /** Pixel height of the logo / monogram. Defaults to 48. */
+  logoHeightPx?: number
 }
 
 export interface TaglineBlock extends BaseBlock {
