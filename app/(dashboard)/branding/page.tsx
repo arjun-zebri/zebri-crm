@@ -24,6 +24,8 @@ interface UserMetadata {
   surface_color?: string
   text_color?: string
   muted_color?: string
+  secondary_color?: string
+  secondary_text_color?: string
   tagline?: string
   abn?: string
   show_contact_on_documents?: boolean
@@ -164,6 +166,8 @@ export default function BrandingPage() {
         surfaceColor: metadata?.surface_color || fallback.surface,
         textColor: metadata?.text_color || fallback.text,
         mutedColor: metadata?.muted_color || fallback.muted,
+        secondaryColor: metadata?.secondary_color || '#FFFFFF',
+        secondaryTextColor: metadata?.secondary_text_color || '#374151',
         tagline: metadata?.tagline || '',
         abn: metadata?.abn || '',
         showContactOnDocuments: true,

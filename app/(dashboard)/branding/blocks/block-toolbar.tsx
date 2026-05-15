@@ -8,6 +8,7 @@ import { ColorPopover } from '../components/color-popover'
 import { Slider } from '../components/slider'
 import { Tooltip } from '@/components/ui/tooltip'
 import { COLOR_PALETTE } from '@/lib/branding/themes'
+import { getTextColor } from '@/lib/branding/contrast'
 import type { TextStyleDefaults } from './text-style'
 import type {
   Block,
@@ -293,11 +294,12 @@ function ActionControls({
 
   const isPrimary = target === 'primary'
   const style = isPrimary ? block.primaryStyle : block.secondaryStyle
+  const buttonColor = block.buttonColor ?? state.brandColor
   const defaults: TextStyleDefaults = {
     fontFamily: state.fontBody,
     fontSize: 14,
     fontWeight: 500,
-    color: isPrimary ? '#FFFFFF' : '#374151',
+    color: isPrimary ? getTextColor(buttonColor) : (state.secondaryTextColor || '#374151'),
     align: 'center',
     lineHeight: 1.4,
     letterSpacing: 0,
@@ -307,6 +309,44 @@ function ActionControls({
     <div className="flex items-center gap-2 w-full">
       <TargetSwitcher target={target} setTarget={setTarget} options={options} />
       <Divider />
+      {isPrimary && (
+        <>
+          <ColorPopover
+            value={buttonColor}
+            onChange={(v) => updateBlock<ActionBlock>(block.id, { buttonColor: v })}
+            swatches={COLOR_PALETTE}
+            trigger={
+              <button
+                type="button"
+                title="Button fill"
+                className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+              >
+                <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: buttonColor }} />
+              </button>
+            }
+          />
+          <Divider />
+        </>
+      )}
+      {!isPrimary && (
+        <>
+          <ColorPopover
+            value={block.secondaryColor ?? state.secondaryColor}
+            onChange={(v) => updateBlock<ActionBlock>(block.id, { secondaryColor: v })}
+            swatches={COLOR_PALETTE}
+            trigger={
+              <button
+                type="button"
+                title="Button fill"
+                className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+              >
+                <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: block.secondaryColor ?? state.secondaryColor }} />
+              </button>
+            }
+          />
+          <Divider />
+        </>
+      )}
       <TextStyleControls
         style={style}
         defaults={defaults}
@@ -329,7 +369,6 @@ function ActionBlockControls({
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }) {
-  const buttonColor = block.buttonColor ?? state.brandColor
   const radius = block.buttonRadius ?? Math.min(state.cornerRadius, 12)
   return (
     <>
@@ -360,20 +399,6 @@ function ActionBlockControls({
       <Divider />
       <BorderControl block={block} updateBlock={updateBlock} />
       <Divider />
-      <ColorPopover
-        value={buttonColor}
-        onChange={(v) => updateBlock<ActionBlock>(block.id, { buttonColor: v })}
-        swatches={COLOR_PALETTE}
-        trigger={
-          <button
-            type="button"
-            className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
-            title="Button color"
-          >
-            <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: buttonColor }} />
-          </button>
-        }
-      />
       <Popover.Root>
         <Tooltip label="Button radius">
           <Popover.Trigger asChild>

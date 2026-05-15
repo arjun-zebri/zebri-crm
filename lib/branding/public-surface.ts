@@ -21,6 +21,8 @@ export interface PublicBranding {
   surface_color: string
   text_color: string
   muted_color: string
+  secondary_color: string
+  secondary_text_color: string
   business_name: string | null
   tagline: string | null
   abn: string | null

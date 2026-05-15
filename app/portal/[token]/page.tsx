@@ -8,6 +8,8 @@ import {
   type BodyFont,
 } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
+import type { Block, HeaderBannerBlock } from '@/app/(dashboard)/branding/blocks/types'
+import { RenderHeaderBanner } from '@/lib/branding/public-blocks/header-banner'
 
 export interface PortalPerson {
   id: string
@@ -122,6 +124,7 @@ export interface PortalData {
   contracts: PortalContract[]
   enabled_sections: string[] | null
   branding: PublicBranding | null
+  branding_blocks: Block[] | null
 }
 
 function formatEventDate(dateStr: string): string {
@@ -171,6 +174,9 @@ export default async function PortalPage({
   const headingStack = FONT_STACKS[headingFont]
   const bodyStack = FONT_STACKS[bodyFont]
   const headingWeight = branding?.font_weight ?? 600
+  const headerBlock = portal.branding_blocks?.find(
+    (b): b is HeaderBannerBlock => b.type === 'headerBanner',
+  )
 
   return (
     <div
@@ -181,18 +187,25 @@ export default async function PortalPage({
 
       <div className="max-w-4xl mx-auto px-4 pb-20">
 
-        {/* Header banner */}
+        {/* Header banner — uses the customised headerBanner block (height,
+            position, zoom, fit) from the quote surface, same as the public
+            quote/invoice/contract pages. Falls back to a fixed-height image
+            when no block tree is saved. */}
         {branding?.header_image_url && (
           <div className="pt-6">
             <div
               className="overflow-hidden"
               style={{ borderRadius: branding.corner_radius ?? 16 }}
             >
-              <img
-                src={branding.header_image_url}
-                alt=""
-                className="block w-full h-44 sm:h-56 object-cover"
-              />
+              {headerBlock && !headerBlock.hidden ? (
+                <RenderHeaderBanner block={headerBlock} branding={branding} />
+              ) : (
+                <img
+                  src={branding.header_image_url}
+                  alt=""
+                  className="block w-full h-44 sm:h-56 object-cover"
+                />
+              )}
             </div>
           </div>
         )}

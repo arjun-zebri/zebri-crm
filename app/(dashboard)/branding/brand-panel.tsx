@@ -48,6 +48,10 @@ interface BrandPanelProps {
   setTextColor: (v: string) => void
   mutedColor: string
   setMutedColor: (v: string) => void
+  secondaryColor: string
+  setSecondaryColor: (v: string) => void
+  secondaryTextColor: string
+  setSecondaryTextColor: (v: string) => void
 
   fontHeading: HeadingFont
   setFontHeading: (v: HeadingFont) => void
@@ -276,6 +280,8 @@ function ColorSection({
   surfaceColor, setSurfaceColor,
   textColor, setTextColor,
   mutedColor, setMutedColor,
+  secondaryColor, setSecondaryColor,
+  secondaryTextColor, setSecondaryTextColor,
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
@@ -284,6 +290,8 @@ function ColorSection({
       <ColorRow label="Surface"  value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
       <ColorRow label="Text"     value={textColor}    onChange={setTextColor}    swatches={TEXT_PALETTE} />
       <ColorRow label="Muted"    value={mutedColor}   onChange={setMutedColor}   swatches={MUTED_PALETTE} />
+      <ColorRow label="Secondary"      value={secondaryColor}     onChange={setSecondaryColor}     swatches={COLOR_PALETTE} />
+      <ColorRow label="Secondary text" value={secondaryTextColor} onChange={setSecondaryTextColor} swatches={TEXT_PALETTE} />
       <ContrastWarnings
         textColor={textColor}
         mutedColor={mutedColor}

@@ -19,7 +19,6 @@ import { SurfaceTabs } from './surface-tabs'
 import { CanvasFrame } from './canvas-frame'
 import { BlockRenderer } from './blocks/block-renderer'
 import { AddBlockPalette } from './blocks/add-block-palette'
-import { InlineFormatBar } from './blocks/inline-format-bar'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from './branding-preview-types'
@@ -45,6 +44,8 @@ interface BrandingEditorProps {
     surfaceColor: string
     textColor: string
     mutedColor: string
+    secondaryColor: string
+    secondaryTextColor: string
     tagline: string
     abn: string
     showContactOnDocuments: boolean
@@ -79,6 +80,8 @@ interface EditorState {
   surfaceColor: string
   textColor: string
   mutedColor: string
+  secondaryColor: string
+  secondaryTextColor: string
   tagline: string
   abn: string
   showContactOnDocuments: boolean
@@ -112,6 +115,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       surfaceColor: initialData.surfaceColor,
       textColor: initialData.textColor,
       mutedColor: initialData.mutedColor,
+      secondaryColor: initialData.secondaryColor,
+      secondaryTextColor: initialData.secondaryTextColor,
       tagline: initialData.tagline,
       abn: initialData.abn,
       showContactOnDocuments: initialData.showContactOnDocuments,
@@ -184,6 +189,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         surface_color: value.surfaceColor,
         text_color: value.textColor,
         muted_color: value.mutedColor,
+        secondary_color: value.secondaryColor,
+        secondary_text_color: value.secondaryTextColor,
         tagline: value.tagline,
         abn: value.abn,
         show_contact_on_documents: value.showContactOnDocuments,
@@ -229,6 +236,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         surfaceColor: prev.surfaceColor,
         textColor: prev.textColor,
         mutedColor: prev.mutedColor,
+        secondaryColor: prev.secondaryColor,
+        secondaryTextColor: prev.secondaryTextColor,
         fontHeading: prev.fontHeading,
         fontBody: prev.fontBody,
         fontWeight: prev.fontWeight,
@@ -250,6 +259,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         current.surfaceColor === next.surfaceColor &&
         current.textColor === next.textColor &&
         current.mutedColor === next.mutedColor &&
+        current.secondaryColor === next.secondaryColor &&
+        current.secondaryTextColor === next.secondaryTextColor &&
         current.fontHeading === next.fontHeading &&
         current.fontBody === next.fontBody &&
         current.fontWeight === next.fontWeight &&
@@ -278,6 +289,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     state.surfaceColor,
     state.textColor,
     state.mutedColor,
+    state.secondaryColor,
+    state.secondaryTextColor,
     state.fontHeading,
     state.fontBody,
     state.fontWeight,
@@ -305,6 +318,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         surfaceColor: p.surface,
         textColor: p.text,
         mutedColor: p.muted,
+        secondaryColor: '#FFFFFF',
+        secondaryTextColor: '#374151',
         fontHeading: p.headingFont,
         fontBody: p.bodyFont,
         fontWeight: p.headingWeight,
@@ -494,6 +509,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       surfaceColor: kit.surfaceColor,
       textColor: kit.textColor,
       mutedColor: kit.mutedColor,
+      secondaryColor: kit.secondaryColor,
+      secondaryTextColor: kit.secondaryTextColor,
       fontHeading: kit.fontHeading,
       fontBody: kit.fontBody,
       fontWeight: kit.fontWeight,
@@ -533,6 +550,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       surfaceColor: preset.surface,
       textColor: preset.text,
       mutedColor: preset.muted,
+      secondaryColor: '#FFFFFF',
+      secondaryTextColor: '#374151',
       fontHeading: preset.headingFont,
       fontBody: preset.bodyFont,
       fontWeight: preset.headingWeight,
@@ -559,6 +578,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         surfaceColor: kit.surfaceColor,
         textColor: kit.textColor,
         mutedColor: kit.mutedColor,
+        secondaryColor: kit.secondaryColor,
+        secondaryTextColor: kit.secondaryTextColor,
         fontHeading: kit.fontHeading,
         fontBody: kit.fontBody,
         fontWeight: kit.fontWeight,
@@ -609,6 +630,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           surfaceColor: next.surfaceColor,
           textColor: next.textColor,
           mutedColor: next.mutedColor,
+          secondaryColor: next.secondaryColor,
+          secondaryTextColor: next.secondaryTextColor,
           fontHeading: next.fontHeading,
           fontBody: next.fontBody,
           fontWeight: next.fontWeight,
@@ -652,6 +675,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     surfaceColor: state.surfaceColor,
     textColor: state.textColor,
     mutedColor: state.mutedColor,
+    secondaryColor: state.secondaryColor,
+    secondaryTextColor: state.secondaryTextColor,
     tagline: state.tagline,
     footerText: '',
     abn: state.abn,
@@ -680,7 +705,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden">
-      <InlineFormatBar />
       <EditorTopbar
         kitName={state.kitName}
         setKitName={(v) => setState((prev) => ({ ...prev, kitName: v }))}
@@ -733,6 +757,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setTextColor={(v) => setEditor({ textColor: v })}
           mutedColor={state.mutedColor}
           setMutedColor={(v) => setEditor({ mutedColor: v })}
+          secondaryColor={state.secondaryColor}
+          setSecondaryColor={(v) => setEditor({ secondaryColor: v })}
+          secondaryTextColor={state.secondaryTextColor}
+          setSecondaryTextColor={(v) => setEditor({ secondaryTextColor: v })}
           fontHeading={state.fontHeading}
           setFontHeading={(v) => setEditor({ fontHeading: v })}
           fontBody={state.fontBody}

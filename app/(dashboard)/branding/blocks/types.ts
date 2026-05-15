@@ -126,6 +126,8 @@ export interface ActionBlock extends BaseBlock {
   secondaryPaddingY?: number
   /** Horizontal alignment of the button group within the block. Default 'center'. */
   buttonJustify?: 'start' | 'center' | 'end'
+  /** Block-level override for the secondary button background. Falls back to brand secondaryColor. */
+  secondaryColor?: string
 }
 
 export interface DividerBlock extends BaseBlock {

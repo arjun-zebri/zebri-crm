@@ -649,6 +649,7 @@ export function RenderAction({
 }: RenderProps<ActionBlock> & { selected?: boolean }) {
   const pad = PAD(state)
   const buttonColor = block.buttonColor ?? state.brandColor
+  const secondaryBg = block.secondaryColor ?? state.secondaryColor
   const radius = block.buttonRadius ?? Math.min(state.cornerRadius, 12)
   const primaryPadY = block.primaryPaddingY ?? 14
   const secondaryPadY = block.secondaryPaddingY ?? 14
@@ -666,7 +667,7 @@ export function RenderAction({
     fontFamily: state.fontBody,
     fontSize: 14,
     fontWeight: 500,
-    color: state.textColor || '#374151',
+    color: state.secondaryTextColor || '#374151',
     align: 'center',
     lineHeight: 1.4,
     letterSpacing: 0,
@@ -741,6 +742,7 @@ export function RenderAction({
             className={`relative group/sbtn border border-gray-200 transition cursor-text ${hasSecondaryW ? 'shrink-0' : 'px-6'}`}
             style={{
               borderRadius: radius,
+              background: secondaryBg,
               paddingTop: secondaryPadY,
               paddingBottom: secondaryPadY,
               ...(hasSecondaryW ? { width: block.secondaryWidthPx } : {}),
