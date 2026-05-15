@@ -701,7 +701,7 @@ export function RenderAction({
 
   const hasPrimaryW = block.primaryWidthPx !== undefined
   const hasSecondaryW = block.secondaryWidthPx !== undefined
-  const justifyClass = { start: 'justify-start', center: 'justify-center', end: 'justify-end' }[block.buttonJustify ?? 'center']
+  const justifyClass = { start: 'justify-start', center: 'justify-center', end: 'justify-end' }[block.buttonJustify ?? 'start']
 
   return (
     <div className={`group ${pad.docX} ${pad.blockY}`}>
@@ -710,7 +710,7 @@ export function RenderAction({
           ref={primaryRef}
           type="button"
           tabIndex={-1}
-          className={`relative group/pbtn transition cursor-text ${hasPrimaryW ? 'shrink-0' : 'flex-1'}`}
+          className={`relative group/pbtn transition cursor-text ${hasPrimaryW ? 'shrink-0' : 'px-6'}`}
           style={{
             borderRadius: radius,
             background: buttonColor,
