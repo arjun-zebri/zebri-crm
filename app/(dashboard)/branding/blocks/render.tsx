@@ -534,7 +534,7 @@ export function RenderLineItems({ block, state }: RenderProps<LineItemsBlock>) {
       {showHeader && (
         <div className="flex items-center pb-3 border-b border-gray-200">
           <span className="flex-1 uppercase" style={{ ...headerCss, textTransform: 'uppercase' }}>Description</span>
-          <span className="flex-1 uppercase" style={{ ...headerCss, textTransform: 'uppercase' }}>Amount</span>
+          <span className={block.colSpread ? 'shrink-0' : 'flex-1'} style={{ ...headerCss, textTransform: 'uppercase', ...(block.colSpread ? { textAlign: 'right' } : {}) }}>Amount</span>
         </div>
       )}
       {PLACEHOLDER_ITEMS.map((item, i) => (
@@ -543,7 +543,7 @@ export function RenderLineItems({ block, state }: RenderProps<LineItemsBlock>) {
           className={`flex items-center ${pad.rowY} ${rowBorder} ${rowBg(i)}`}
         >
           <span className="flex-1" style={itemCss}>{item.description}</span>
-          <span className="flex-1 tabular-nums" style={{ ...itemCss, fontWeight: (itemCss.fontWeight as number ?? 400) + 100 }}>
+          <span className={`tabular-nums ${block.colSpread ? 'shrink-0 ml-4' : 'flex-1'}`} style={{ ...itemCss, ...(block.colSpread ? { textAlign: 'right' } : {}), fontWeight: (itemCss.fontWeight as number ?? 400) + 100 }}>
             {fmt(item.amount)}
           </span>
         </div>
@@ -559,6 +559,17 @@ export function RenderTotals({ block, state }: RenderProps<TotalsBlock>) {
   const subtotal = PLACEHOLDER_ITEMS.reduce((s, i) => s + i.amount, 0)
   const tax = subtotal * (block.taxRate / 100)
   const total = subtotal + tax
+  const spread = block.colSpread ?? true
+
+  const rowDefaults: TextStyleDefaults = {
+    fontFamily: state.fontBody,
+    fontSize: 13,
+    fontWeight: 400,
+    color: state.mutedColor || '#6B7280',
+    align: 'left',
+    lineHeight: 1.4,
+    letterSpacing: 0,
+  }
   const totalDefaults: TextStyleDefaults = {
     fontFamily: state.fontHeading,
     fontSize: 18,
@@ -568,26 +579,31 @@ export function RenderTotals({ block, state }: RenderProps<TotalsBlock>) {
     lineHeight: 1.2,
     letterSpacing: 0,
   }
+
+  const subtotalCss = resolveTextStyle(block.subtotalStyle, rowDefaults)
+  const taxCss = resolveTextStyle(block.taxStyle, rowDefaults)
   const totalCss = resolveTextStyle(block.totalStyle, totalDefaults)
+
+  const Row = ({ label, value, css }: { label: string; value: string; css: React.CSSProperties }) => (
+    <div className="flex items-center">
+      <span className="flex-1" style={css}>{label}</span>
+      <span className={`tabular-nums ${spread ? 'shrink-0 ml-4' : 'flex-1'}`} style={{ ...css, ...(spread ? { textAlign: 'right' } : {}) }}>{value}</span>
+    </div>
+  )
 
   return (
     <div className={`${pad.docX} ${pad.blockY}`}>
       <div className="space-y-1.5 pt-3 border-t border-gray-200">
         {block.showSubtotal && (
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-sm text-gray-500">Subtotal</span>
-            <span className="text-sm text-gray-700 tabular-nums">{fmt(subtotal)}</span>
+          <div className="pt-2">
+            <Row label="Subtotal" value={fmt(subtotal)} css={subtotalCss} />
           </div>
         )}
-        {block.taxRate > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">GST ({block.taxRate}%)</span>
-            <span className="text-sm text-gray-700 tabular-nums">{fmt(tax)}</span>
-          </div>
+        {(block.showTax ?? true) && (
+          <Row label={`GST (${block.taxRate}%)`} value={fmt(tax)} css={taxCss} />
         )}
-        <div className="flex items-center justify-between pt-3 mt-2 border-t border-gray-200">
-          <span style={{ ...totalCss, fontSize: undefined }}>Total</span>
-          <span className="tabular-nums" style={totalCss}>{fmt(total)}</span>
+        <div className="pt-3 mt-2 border-t border-gray-200">
+          <Row label="Total" value={fmt(total)} css={totalCss} />
         </div>
       </div>
     </div>
@@ -625,10 +641,18 @@ export function RenderText({ block, state, updateBlock }: RenderProps<TextBlock>
 
 // ── Action ────────────────────────────────────────────────────────────────────
 
-export function RenderAction({ block, state, updateBlock }: RenderProps<ActionBlock>) {
+export function RenderAction({
+  block,
+  state,
+  updateBlock,
+  selected,
+}: RenderProps<ActionBlock> & { selected?: boolean }) {
   const pad = PAD(state)
   const buttonColor = block.buttonColor ?? state.brandColor
   const radius = block.buttonRadius ?? Math.min(state.cornerRadius, 12)
+  const primaryPadY = block.primaryPaddingY ?? 14
+  const secondaryPadY = block.secondaryPaddingY ?? 14
+
   const primaryDefaults: TextStyleDefaults = {
     fontFamily: state.fontBody,
     fontSize: 14,
@@ -648,55 +672,115 @@ export function RenderAction({ block, state, updateBlock }: RenderProps<ActionBl
     letterSpacing: 0,
   }
 
+  const primaryRef = useRef<HTMLButtonElement>(null)
+  const secondaryRef = useRef<HTMLButtonElement>(null)
+
+  const makeResizeHandler = (
+    ref: React.RefObject<HTMLButtonElement | null>,
+    widthKey: 'primaryWidthPx' | 'secondaryWidthPx',
+    paddingKey: 'primaryPaddingY' | 'secondaryPaddingY',
+    startPadY: number,
+  ) => (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.clientX
+    const startY = e.clientY
+    const startW = (block[widthKey] ?? ref.current?.getBoundingClientRect().width) ?? 160
+    const onMove = (ev: MouseEvent) => {
+      const nextW = Math.round(Math.max(60, startW + (ev.clientX - startX)))
+      const nextPad = Math.round(Math.max(4, startPadY + (ev.clientY - startY)))
+      updateBlock<ActionBlock>(block.id, { [widthKey]: nextW, [paddingKey]: nextPad })
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  const hasPrimaryW = block.primaryWidthPx !== undefined
+  const hasSecondaryW = block.secondaryWidthPx !== undefined
+  const justifyClass = { start: 'justify-start', center: 'justify-center', end: 'justify-end' }[block.buttonJustify ?? 'center']
+
   return (
-    <div className={`group ${pad.docX} ${pad.blockY} flex gap-3 items-stretch`}>
-      <button
-        type="button"
-        tabIndex={-1}
-        className="flex-1 py-3.5 transition cursor-text"
-        style={{
-          borderRadius: radius,
-          background: buttonColor,
-          ...resolveTextStyle(block.primaryStyle, primaryDefaults),
-        }}
-        onClick={(e) => e.preventDefault()}
-      >
-        <InlineText
-          value={block.primary}
-          onChange={(v) => updateBlock<ActionBlock>(block.id, { primary: v })}
-          placeholder="Primary"
-          as="span"
-        />
-      </button>
-      {block.secondary !== null ? (
+    <div className={`group ${pad.docX} ${pad.blockY}`}>
+      <div className={`relative flex gap-3 items-stretch w-full ${justifyClass}`}>
         <button
+          ref={primaryRef}
           type="button"
           tabIndex={-1}
-          className="px-6 py-3.5 border border-gray-200 cursor-text"
-          style={{ borderRadius: radius, ...resolveTextStyle(block.secondaryStyle, secondaryDefaults) }}
+          className={`relative group/pbtn transition cursor-text ${hasPrimaryW ? 'shrink-0' : 'flex-1'}`}
+          style={{
+            borderRadius: radius,
+            background: buttonColor,
+            paddingTop: primaryPadY,
+            paddingBottom: primaryPadY,
+            ...(hasPrimaryW ? { width: block.primaryWidthPx } : {}),
+            ...resolveTextStyle(block.primaryStyle, primaryDefaults),
+          }}
           onClick={(e) => e.preventDefault()}
         >
           <InlineText
-            value={block.secondary}
-            onChange={(v) => updateBlock<ActionBlock>(block.id, { secondary: v })}
-            placeholder="Secondary"
+            value={block.primary}
+            onChange={(v) => updateBlock<ActionBlock>(block.id, { primary: v })}
+            placeholder="Primary"
             as="span"
           />
+          <div
+            onMouseDown={makeResizeHandler(primaryRef, 'primaryWidthPx', 'primaryPaddingY', primaryPadY)}
+            title="Drag to resize"
+            className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/pbtn:opacity-100 transition z-20"
+          />
         </button>
-      ) : (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            updateBlock<ActionBlock>(block.id, { secondary: 'Secondary' })
-          }}
-          className="px-4 py-3.5 border border-dashed border-gray-300 rounded-md text-xs text-gray-400 hover:text-gray-700 hover:border-gray-400 cursor-pointer transition opacity-0 group-hover:opacity-100"
-          style={{ borderRadius: radius }}
-          title="Add secondary button"
-        >
-          + Add secondary
-        </button>
-      )}
+        {block.secondary !== null ? (
+          <button
+            ref={secondaryRef}
+            type="button"
+            tabIndex={-1}
+            className={`relative group/sbtn border border-gray-200 transition cursor-text ${hasSecondaryW ? 'shrink-0' : 'px-6'}`}
+            style={{
+              borderRadius: radius,
+              paddingTop: secondaryPadY,
+              paddingBottom: secondaryPadY,
+              ...(hasSecondaryW ? { width: block.secondaryWidthPx } : {}),
+              ...resolveTextStyle(block.secondaryStyle, secondaryDefaults),
+            }}
+            onClick={(e) => e.preventDefault()}
+          >
+            <InlineText
+              value={block.secondary}
+              onChange={(v) => updateBlock<ActionBlock>(block.id, { secondary: v })}
+              placeholder="Secondary"
+              as="span"
+            />
+            <div
+              onMouseDown={makeResizeHandler(secondaryRef, 'secondaryWidthPx', 'secondaryPaddingY', secondaryPadY)}
+              title="Drag to resize"
+              className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/sbtn:opacity-100 transition z-20"
+            />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              updateBlock<ActionBlock>(block.id, { secondary: 'Secondary' })
+            }}
+            className={`px-4 border border-dashed border-gray-300 rounded-md text-xs text-gray-400 hover:text-gray-700 hover:border-gray-400 cursor-pointer transition ${
+              selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+            style={{
+              borderRadius: radius,
+              paddingTop: secondaryPadY,
+              paddingBottom: secondaryPadY,
+            }}
+            title="Add secondary button"
+          >
+            + Add secondary
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -739,7 +823,6 @@ export function RenderFooter({ block, state, updateBlock }: RenderProps<FooterBl
   }
   const noteCss = resolveTextStyle(block.noteStyle, noteDefaults)
   const contactCss = resolveTextStyle(block.contactStyle, contactDefaults)
-  const showMark = block.showMark ?? true
 
   const contactParts = [
     state.businessName,
@@ -750,43 +833,23 @@ export function RenderFooter({ block, state, updateBlock }: RenderProps<FooterBl
 
   return (
     <div className={`${pad.docX} ${pad.blockY} mt-6 border-t border-gray-100 pt-5`}>
-      <div className="flex items-start gap-4">
-        {showMark && (state.logoUrl || state.faviconUrl) ? (
-          <img
-            src={state.logoUrl || state.faviconUrl}
-            alt={state.businessName || ''}
-            className="w-6 h-6 object-contain rounded shrink-0"
+      <div className="space-y-1">
+        <p style={noteCss}>
+          <InlineText
+            value={block.closingNote ?? ''}
+            onChange={(v) => updateBlock<FooterBlock>(block.id, { closingNote: v })}
+            placeholder="Closing line"
+            as="span"
           />
-        ) : showMark ? (
-          <div
-            className="w-6 h-6 flex items-center justify-center text-white text-[10px] font-semibold shrink-0"
-            style={{
-              background: state.brandColor,
-              borderRadius: Math.min(state.cornerRadius, 6),
-              fontFamily: FONT_STACKS[state.fontHeading],
-            }}
+        </p>
+        {contactParts.length > 0 && (
+          <p
+            style={contactCss}
+            title="Contact details come from your business info — update them in the side panel"
           >
-            {state.businessName?.[0]?.toUpperCase() || 'Z'}
-          </div>
-        ) : null}
-        <div className="min-w-0 flex-1 space-y-1">
-          <p style={noteCss}>
-            <InlineText
-              value={block.closingNote ?? ''}
-              onChange={(v) => updateBlock<FooterBlock>(block.id, { closingNote: v })}
-              placeholder="Closing line"
-              as="span"
-            />
+            {contactParts.join('  ·  ')}
           </p>
-          {contactParts.length > 0 && (
-            <p
-              style={contactCss}
-              title="Contact details come from your business info — update them in the side panel"
-            >
-              {contactParts.join('  ·  ')}
-            </p>
-          )}
-        </div>
+        )}
       </div>
     </div>
   )

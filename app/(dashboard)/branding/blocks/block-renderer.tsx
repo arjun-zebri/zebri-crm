@@ -197,6 +197,7 @@ export function BlockRenderer({
                   onResetBlock={() => resetBlock(block.id)}
                 >
                   {renderBlock(block, state, updateBlock, {
+                    selected,
                     setTagline,
                     setBusinessName,
                     uploadLogo,
@@ -225,6 +226,7 @@ export function BlockRenderer({
 }
 
 interface RenderExtras {
+  selected?: boolean
   setTagline?: (v: string) => void
   setBusinessName?: (v: string) => void
   uploadLogo?: (file: File) => Promise<void>
@@ -272,7 +274,7 @@ function renderBlock(
     case 'text':
       return <RenderText block={block} state={state} updateBlock={updateBlock} />
     case 'action':
-      return <RenderAction block={block} state={state} updateBlock={updateBlock} />
+      return <RenderAction block={block} state={state} updateBlock={updateBlock} selected={extras.selected} />
     case 'divider':
       return <RenderDivider block={block} state={state} updateBlock={updateBlock} />
     case 'footer':

@@ -144,8 +144,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
   const { status } = useAutosave(state, async (value) => {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not signed in')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not signed in')
+    const user = session.user
     const existing = user.user_metadata || {}
 
     // Heavy fields (block trees, saved kits, portal section toggles) live in

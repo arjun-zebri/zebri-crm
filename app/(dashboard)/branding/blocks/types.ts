@@ -87,12 +87,18 @@ export interface LineItemsBlock extends BaseBlock {
   rowStyle?: 'lines' | 'stripes' | 'plain'
   headerStyle?: TextStyle
   itemStyle?: TextStyle
+  /** When true, description is left and amount is right (justify-between). Default false = both columns share the same alignment. */
+  colSpread?: boolean
 }
 
 export interface TotalsBlock extends BaseBlock {
   type: 'totals'
   taxRate: number
   showSubtotal: boolean
+  showTax?: boolean
+  colSpread?: boolean
+  subtotalStyle?: TextStyle
+  taxStyle?: TextStyle
   totalStyle?: TextStyle
 }
 
@@ -110,6 +116,16 @@ export interface ActionBlock extends BaseBlock {
   secondaryStyle?: TextStyle
   buttonColor?: string
   buttonRadius?: number
+  /** Explicit width of primary button in px. When undefined, primary fills available space (flex-1). */
+  primaryWidthPx?: number
+  /** Explicit width of secondary button in px. When undefined, secondary sizes to content. */
+  secondaryWidthPx?: number
+  /** Vertical padding of primary button (px). Default 14. */
+  primaryPaddingY?: number
+  /** Vertical padding of secondary button (px). Default 14. */
+  secondaryPaddingY?: number
+  /** Horizontal alignment of the button group within the block. Default 'center'. */
+  buttonJustify?: 'start' | 'center' | 'end'
 }
 
 export interface DividerBlock extends BaseBlock {
@@ -123,8 +139,6 @@ export interface FooterBlock extends BaseBlock {
   type: 'footer'
   /** Optional final line of copy (e.g. "Thank you for choosing us"). */
   closingNote?: string
-  /** Show the small Zebri-style mark + business name on the left. */
-  showMark?: boolean
   noteStyle?: TextStyle
   contactStyle?: TextStyle
 }

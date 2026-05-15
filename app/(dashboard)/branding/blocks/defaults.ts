@@ -22,9 +22,9 @@ export function blockTemplate(type: BlockType): Block {
         showAbn: false,
       }
     case 'lineItems':
-      return { id: newId('li'), type: 'lineItems' }
+      return { id: newId('li'), type: 'lineItems', colSpread: true }
     case 'totals':
-      return { id: newId('to'), type: 'totals', taxRate: 10, showSubtotal: true }
+      return { id: newId('to'), type: 'totals', taxRate: 10, showSubtotal: true, colSpread: true }
     case 'text':
       return { id: newId('tx'), type: 'text', text: 'Add a note to your client.' }
     case 'action':
@@ -32,7 +32,7 @@ export function blockTemplate(type: BlockType): Block {
     case 'divider':
       return { id: newId('dv'), type: 'divider' }
     case 'footer':
-      return { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.', showMark: true }
+      return { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.' }
   }
 }
 
@@ -98,7 +98,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         titleStyle: HERO_TITLE,
         subtitleStyle: HERO_SUBTITLE,
       },
-      { id: newId('li'), type: 'lineItems' },
+      { id: newId('li'), type: 'lineItems', colSpread: true },
       {
         id: newId('to'),
         type: 'totals',
@@ -114,7 +114,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         textStyle: SOFT_MESSAGE,
       },
       { id: newId('ac'), type: 'action', primary: 'Accept quote', secondary: 'Decline' },
-      { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.', showMark: true },
+      { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.' },
     ]
   }
   if (surface === 'invoice') {
@@ -132,7 +132,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         titleStyle: FORMAL_TITLE,
         subtitleStyle: HERO_SUBTITLE,
       },
-      { id: newId('li'), type: 'lineItems' },
+      { id: newId('li'), type: 'lineItems', colSpread: true },
       {
         id: newId('to'),
         type: 'totals',
@@ -147,7 +147,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         textStyle: SOFT_MESSAGE,
       },
       { id: newId('ac'), type: 'action', primary: 'Pay with card', secondary: null },
-      { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.', showMark: true },
+      { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.' },
     ]
   }
   // contract
@@ -299,7 +299,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
     },
 
     { id: newId('ac'), type: 'action', primary: 'Sign contract', secondary: null },
-    { id: newId('ft'), type: 'footer', closingNote: 'A counter-signed copy will be returned to you.', showMark: true },
+    { id: newId('ft'), type: 'footer', closingNote: 'A counter-signed copy will be returned to you.' },
   ]
 }
 
