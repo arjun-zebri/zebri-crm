@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { sanitizeHtml } from '@/lib/branding/sanitize'
 
 type InlineTextElement = 'span' | 'div' | 'p' | 'h1' | 'h2' | 'h3'
@@ -31,6 +31,7 @@ export function InlineText({
 }: InlineTextProps) {
   const ref = useRef<HTMLElement>(null)
   const lists = allowLists ?? multiline
+  const [editable, setEditable] = useState(false)
 
   useEffect(() => {
     const el = ref.current
@@ -42,8 +43,24 @@ export function InlineText({
     }
   }, [value, lists])
 
+  // Track whether the parent block is selected. React state keeps contentEditable
+  // in sync with re-renders. First click on an unselected block: editable=false →
+  // no focus, click bubbles to BlockFrame and selects. Second click: editable=true
+  // → focus and edit. MutationObserver watches data-selected on the parent block.
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const blockEl = el.closest('[data-block-id]')
+    if (!blockEl) return
+    const sync = () => setEditable(blockEl.hasAttribute('data-selected'))
+    sync()
+    const observer = new MutationObserver(sync)
+    observer.observe(blockEl, { attributes: true, attributeFilter: ['data-selected'] })
+    return () => observer.disconnect()
+  }, [])
+
   const sharedProps = {
-    contentEditable: true,
+    contentEditable: editable,
     suppressContentEditableWarning: true,
     role: 'textbox',
     'aria-label': placeholder,
@@ -75,7 +92,7 @@ export function InlineText({
         el.blur()
       }
     },
-    className: `outline-none cursor-text caret-current empty:before:content-[attr(data-placeholder)] empty:before:opacity-40 ${className}`,
+    className: `outline-none cursor-text caret-current transition-colors empty:before:content-[attr(data-placeholder)] empty:before:opacity-40 ${className}`,
     style,
   }
 

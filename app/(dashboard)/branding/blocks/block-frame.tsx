@@ -79,6 +79,7 @@ export function BlockFrame({
     <div
       ref={setNodeRef}
       data-block-id={id}
+      data-selected={selected || undefined}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -187,6 +188,18 @@ export function BlockFrame({
             avoidCollisions
             onOpenAutoFocus={(e) => e.preventDefault()}
             onPointerDownOutside={(e) => {
+              const target = e.target as HTMLElement | null
+              if (target?.closest(`[data-block-id="${id}"]`)) {
+                e.preventDefault()
+              }
+            }}
+            onFocusOutside={(e) => {
+              const target = e.target as HTMLElement | null
+              if (target?.closest(`[data-block-id="${id}"]`)) {
+                e.preventDefault()
+              }
+            }}
+            onInteractOutside={(e) => {
               const target = e.target as HTMLElement | null
               if (target?.closest(`[data-block-id="${id}"]`)) {
                 e.preventDefault()
