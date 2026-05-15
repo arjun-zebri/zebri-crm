@@ -14,13 +14,14 @@ export function RenderDivider({
   const p = pad(branding)
   const thickness = block.thickness ?? 1
   const color = block.color ?? '#E5E7EB'
+  const lineStyle = block.lineStyle ?? 'solid'
   return (
     <div className={`${p.docX} ${p.blockY}`}>
       <hr
         style={{
           borderTopWidth: thickness,
           borderTopColor: color,
-          borderTopStyle: 'solid',
+          borderTopStyle: lineStyle,
           borderBottom: 'none',
           borderLeft: 'none',
           borderRight: 'none',

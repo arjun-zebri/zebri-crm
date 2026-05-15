@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { ImageIcon } from 'lucide-react'
 import { getTextColor } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { BrandPreviewState } from '../branding-preview-types'
 import { DENSITY_PADDING } from '../branding-preview-types'
 import { resolveTextStyle, type TextStyleDefaults } from './text-style'
 import { InlineText } from './inline-text'
+import { InlineAsset } from './inline-asset'
 import type {
   Block,
   HeaderBannerBlock,
@@ -47,7 +49,16 @@ const HEADER_HEIGHTS: Record<NonNullable<HeaderBannerBlock['height']>, number> =
   lg: 192,
 }
 
-export function RenderHeaderBanner({ block, state, updateBlock }: RenderProps<HeaderBannerBlock>) {
+export function RenderHeaderBanner({
+  block,
+  state,
+  updateBlock,
+  uploadHeader,
+  removeHeader,
+}: RenderProps<HeaderBannerBlock> & {
+  uploadHeader?: (file: File) => Promise<void>
+  removeHeader?: () => void | Promise<void>
+}) {
   const { headerImageUrl } = state
   const heightPx = block.heightPx ?? HEADER_HEIGHTS[block.height ?? 'md']
   const fit = block.fit ?? 'cover'
@@ -133,21 +144,44 @@ export function RenderHeaderBanner({ block, state, updateBlock }: RenderProps<He
     return (
       <div
         ref={containerRef}
-        className="group relative w-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+        className="group relative w-full"
         style={{ height: heightPx, borderRadius: state.cornerRadius }}
       >
-        <span className="text-xs text-gray-400">Header banner · upload in Assets</span>
+        {uploadHeader ? (
+          <InlineAsset
+            value={null}
+            onUpload={uploadHeader}
+            label="Upload header banner"
+            overlayPosition="center"
+            className="w-full h-full"
+            emptyState={
+              <div
+                className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+                style={{ borderRadius: state.cornerRadius }}
+              >
+                <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
+              </div>
+            }
+          >
+            {null}
+          </InlineAsset>
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+            style={{ borderRadius: state.cornerRadius }}
+          >
+            <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
+          </div>
+        )}
         <ResizeHandle onMouseDown={startResize} active={resizing} />
       </div>
     )
   }
 
-  return (
+  const imageNode = (
     <div
-      ref={containerRef}
-      className="group relative w-full overflow-hidden"
+      className="w-full h-full overflow-hidden"
       style={{
-        height: heightPx,
         borderTopLeftRadius: state.cornerRadius,
         borderTopRightRadius: state.cornerRadius,
       }}
@@ -165,8 +199,31 @@ export function RenderHeaderBanner({ block, state, updateBlock }: RenderProps<He
           transformOrigin: `${imageX}% ${imageY}%`,
         }}
       />
+    </div>
+  )
+
+  return (
+    <div
+      ref={containerRef}
+      className="group relative w-full"
+      style={{ height: heightPx }}
+    >
+      {uploadHeader ? (
+        <InlineAsset
+          value={headerImageUrl}
+          onUpload={uploadHeader}
+          onClear={removeHeader}
+          label="Replace header banner"
+          className="w-full h-full"
+          emptyState={null}
+        >
+          {imageNode}
+        </InlineAsset>
+      ) : (
+        imageNode
+      )}
       {imageScale > 1 && (
-        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
+        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
           {Math.round(imageScale * 100)}%
         </div>
       )}
@@ -191,9 +248,19 @@ function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.MouseEve
 
 // ── Business name ─────────────────────────────────────────────────────────────
 
-export function RenderBusinessName({ block, state, updateBlock }: RenderProps<BusinessNameBlock>) {
+export function RenderBusinessName({
+  block,
+  state,
+  updateBlock,
+  setBusinessName,
+  uploadLogo,
+  removeLogo,
+}: RenderProps<BusinessNameBlock> & {
+  setBusinessName?: (v: string) => void
+  uploadLogo?: (file: File) => Promise<void>
+  removeLogo?: () => void | Promise<void>
+}) {
   const { logoUrl, businessName } = state
-  const fallbackInitial = businessName?.[0]?.toUpperCase() || 'Z'
   const pad = PAD(state)
   const layout = block.layout ?? 'row'
   const logoHeight = block.logoHeightPx ?? 48
@@ -227,44 +294,70 @@ export function RenderBusinessName({ block, state, updateBlock }: RenderProps<Bu
     window.addEventListener('mouseup', onUp)
   }
 
-  const logoNode = logoUrl ? (
-    <div className="group/logo relative shrink-0" style={{ height: logoHeight }}>
-      <img
-        src={logoUrl}
-        alt={businessName || 'Logo'}
-        draggable={false}
-        className="block h-full w-auto object-contain select-none"
-      />
-      <div
-        onMouseDown={startResizeLogo}
-        title="Drag to resize"
-        className="absolute -right-1 -bottom-1 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-ns-resize opacity-0 group-hover/logo:opacity-100 transition"
-      />
-    </div>
-  ) : (
+  const resizeGrip = (
     <div
-      className="group/logo relative shrink-0 flex items-center justify-center text-white font-semibold"
+      onMouseDown={startResizeLogo}
+      title="Drag to resize"
+      className="absolute -right-1 -bottom-1 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-ns-resize opacity-0 group-hover/logo:opacity-100 transition z-20"
+    />
+  )
+
+  const logoImage = (
+    <img
+      src={logoUrl}
+      alt={businessName || 'Logo'}
+      draggable={false}
+      className="block h-full w-auto object-contain select-none"
+    />
+  )
+
+  const logoPlaceholder = (
+    <div
+      className="flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
       style={{
         width: logoHeight,
         height: logoHeight,
-        background: state.brandColor,
         borderRadius: Math.min(state.cornerRadius, 12),
-        fontFamily: FONT_STACKS[state.fontHeading],
-        fontSize: Math.round(logoHeight * 0.42),
       }}
     >
-      {fallbackInitial}
-      <div
-        onMouseDown={startResizeLogo}
-        title="Drag to resize"
-        className="absolute -right-1 -bottom-1 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-ns-resize opacity-0 group-hover/logo:opacity-100 transition"
-      />
+      <ImageIcon size={Math.max(12, Math.round(logoHeight * 0.3))} strokeWidth={1.5} className="text-gray-300" />
+    </div>
+  )
+
+  const logoNode = (
+    <div className="group/logo relative shrink-0" style={{ height: logoHeight }}>
+      {uploadLogo ? (
+        <InlineAsset
+          value={logoUrl || null}
+          onUpload={uploadLogo}
+          onClear={logoUrl ? removeLogo : undefined}
+          label={logoUrl ? 'Replace logo' : 'Upload logo'}
+          overlayPosition="center"
+          className="h-full"
+          style={logoUrl ? undefined : { width: logoHeight }}
+          emptyState={logoPlaceholder}
+        >
+          {logoImage}
+        </InlineAsset>
+      ) : (
+        logoUrl ? logoImage : logoPlaceholder
+      )}
+      {resizeGrip}
     </div>
   )
 
   const nameNode = (
-    <p className="truncate" style={resolveTextStyle(block.nameStyle, nameDefaults)}>
-      {businessName || 'Your business name'}
+    <p style={resolveTextStyle(block.nameStyle, nameDefaults)}>
+      {setBusinessName ? (
+        <InlineText
+          value={businessName ?? ''}
+          onChange={setBusinessName}
+          placeholder="Your business name"
+          as="span"
+        />
+      ) : (
+        <span className="truncate">{businessName || 'Your business name'}</span>
+      )}
     </p>
   )
 
@@ -297,7 +390,11 @@ export function RenderBusinessName({ block, state, updateBlock }: RenderProps<Bu
 
 // ── Tagline ───────────────────────────────────────────────────────────────────
 
-export function RenderTagline({ block, state }: RenderProps<TaglineBlock>) {
+export function RenderTagline({
+  block,
+  state,
+  setTagline,
+}: RenderProps<TaglineBlock> & { setTagline?: (v: string) => void }) {
   const { tagline } = state
   const pad = PAD(state)
   const defaults: TextStyleDefaults = {
@@ -309,11 +406,23 @@ export function RenderTagline({ block, state }: RenderProps<TaglineBlock>) {
     lineHeight: 1.4,
     letterSpacing: 0,
   }
+  const textStyle = resolveTextStyle(block.textStyle, defaults)
   return (
     <div className={`${pad.docX} ${pad.blockY}`}>
-      <p className="truncate" style={resolveTextStyle(block.textStyle, defaults)}>
-        {tagline || 'Your tagline'}
-      </p>
+      {setTagline ? (
+        <p style={textStyle}>
+          <InlineText
+            value={tagline ?? ''}
+            onChange={setTagline}
+            placeholder="Your tagline"
+            as="span"
+          />
+        </p>
+      ) : (
+        <p className="truncate" style={textStyle}>
+          {tagline || 'Your tagline'}
+        </p>
+      )}
     </div>
   )
 }
@@ -423,18 +532,18 @@ export function RenderLineItems({ block, state }: RenderProps<LineItemsBlock>) {
   return (
     <div className={`${pad.docX} ${pad.blockY}`}>
       {showHeader && (
-        <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-          <span className="uppercase" style={{ ...headerCss, textTransform: 'uppercase' }}>Description</span>
-          <span className="uppercase" style={{ ...headerCss, textTransform: 'uppercase' }}>Amount</span>
+        <div className="flex items-center pb-3 border-b border-gray-200">
+          <span className="flex-1 uppercase" style={{ ...headerCss, textTransform: 'uppercase' }}>Description</span>
+          <span className="flex-1 uppercase" style={{ ...headerCss, textTransform: 'uppercase' }}>Amount</span>
         </div>
       )}
       {PLACEHOLDER_ITEMS.map((item, i) => (
         <div
           key={i}
-          className={`flex items-center justify-between ${pad.rowY} ${rowBorder} ${rowBg(i)}`}
+          className={`flex items-center ${pad.rowY} ${rowBorder} ${rowBg(i)}`}
         >
-          <span style={itemCss}>{item.description}</span>
-          <span className="tabular-nums ml-4" style={{ ...itemCss, fontWeight: (itemCss.fontWeight as number ?? 400) + 100 }}>
+          <span className="flex-1" style={itemCss}>{item.description}</span>
+          <span className="flex-1 tabular-nums" style={{ ...itemCss, fontWeight: (itemCss.fontWeight as number ?? 400) + 100 }}>
             {fmt(item.amount)}
           </span>
         </div>
@@ -540,7 +649,7 @@ export function RenderAction({ block, state, updateBlock }: RenderProps<ActionBl
   }
 
   return (
-    <div className={`${pad.docX} ${pad.blockY} flex gap-3`}>
+    <div className={`group ${pad.docX} ${pad.blockY} flex gap-3 items-stretch`}>
       <button
         type="button"
         tabIndex={-1}
@@ -559,7 +668,7 @@ export function RenderAction({ block, state, updateBlock }: RenderProps<ActionBl
           as="span"
         />
       </button>
-      {block.secondary !== null && (
+      {block.secondary !== null ? (
         <button
           type="button"
           tabIndex={-1}
@@ -574,6 +683,19 @@ export function RenderAction({ block, state, updateBlock }: RenderProps<ActionBl
             as="span"
           />
         </button>
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            updateBlock<ActionBlock>(block.id, { secondary: 'Secondary' })
+          }}
+          className="px-4 py-3.5 border border-dashed border-gray-300 rounded-md text-xs text-gray-400 hover:text-gray-700 hover:border-gray-400 cursor-pointer transition opacity-0 group-hover:opacity-100"
+          style={{ borderRadius: radius }}
+          title="Add secondary button"
+        >
+          + Add secondary
+        </button>
       )}
     </div>
   )
@@ -585,9 +707,10 @@ export function RenderDivider({ block, state }: RenderProps<DividerBlock>) {
   const pad = PAD(state)
   const thickness = block.thickness ?? 1
   const color = block.color ?? '#E5E7EB'
+  const lineStyle = block.lineStyle ?? 'solid'
   return (
     <div className={`${pad.docX} ${pad.blockY}`}>
-      <hr style={{ borderTopWidth: thickness, borderTopColor: color, borderTopStyle: 'solid', borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }} />
+      <hr style={{ borderTopWidth: thickness, borderTopColor: color, borderTopStyle: lineStyle, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }} />
     </div>
   )
 }
@@ -656,7 +779,12 @@ export function RenderFooter({ block, state, updateBlock }: RenderProps<FooterBl
             />
           </p>
           {contactParts.length > 0 && (
-            <p style={contactCss}>{contactParts.join('  ·  ')}</p>
+            <p
+              style={contactCss}
+              title="Contact details come from your business info — update them in the side panel"
+            >
+              {contactParts.join('  ·  ')}
+            </p>
           )}
         </div>
       </div>

@@ -5,6 +5,7 @@ import type { BusinessNameBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { FONT_STACKS } from '../fonts'
 import type { PublicBranding } from '../public-surface'
 import { pad } from './shared'
+import { Html } from './html'
 
 export function RenderBusinessName({
   block,
@@ -55,8 +56,12 @@ export function RenderBusinessName({
   )
 
   const nameNode = (
-    <p className="truncate" style={resolveTextStyle(block.nameStyle, nameDefaults)}>
-      {businessName || 'Your business name'}
+    <p style={resolveTextStyle(block.nameStyle, nameDefaults)}>
+      {businessName ? (
+        <Html value={businessName} allowLists={false} />
+      ) : (
+        'Your business name'
+      )}
     </p>
   )
 

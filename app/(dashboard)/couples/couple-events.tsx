@@ -28,19 +28,27 @@ async function recalculateDriveTimes(coupleId: string, date: string, queryClient
 
   const { data: events } = await supabase
     .from('events')
-    .select('id, venue_lat, venue_lng, drive_time_from_home_seconds, drive_time_to_next_event_seconds')
+    .select('id, venue_lat, venue_lng, drive_time_from_home_seconds, drive_time_to_next_event_seconds, drive_distance_from_home_meters, drive_distance_to_next_event_meters')
     .eq('couple_id', coupleId)
     .eq('date', date)
     .order('created_at', { ascending: true })
 
   if (!events || events.length === 0) return
 
-  const updates: { id: string; drive_time_from_home_seconds: number | null; drive_time_to_next_event_seconds: number | null }[] = []
+  const updates: {
+    id: string
+    drive_time_from_home_seconds: number | null
+    drive_time_to_next_event_seconds: number | null
+    drive_distance_from_home_meters: number | null
+    drive_distance_to_next_event_meters: number | null
+  }[] = []
 
   for (let i = 0; i < events.length; i++) {
     const ev = events[i]
     let fromHome: number | null = null
     let toNext: number | null = null
+    let fromHomeMeters: number | null = null
+    let toNextMeters: number | null = null
 
     if (ev.venue_lat && ev.venue_lng) {
       if (homeLat && homeLng) {
@@ -48,6 +56,7 @@ async function recalculateDriveTimes(coupleId: string, date: string, queryClient
           const r = await fetch(`/api/drive-time?origin_lat=${homeLat}&origin_lng=${homeLng}&dest_lat=${ev.venue_lat}&dest_lng=${ev.venue_lng}`)
           const d = await r.json()
           if (typeof d.duration_seconds === 'number') fromHome = d.duration_seconds
+          if (typeof d.distance_meters === 'number') fromHomeMeters = d.distance_meters
         } catch { /* best-effort */ }
       }
 
@@ -57,18 +66,30 @@ async function recalculateDriveTimes(coupleId: string, date: string, queryClient
           const r = await fetch(`/api/drive-time?origin_lat=${ev.venue_lat}&origin_lng=${ev.venue_lng}&dest_lat=${next.venue_lat}&dest_lng=${next.venue_lng}`)
           const d = await r.json()
           if (typeof d.duration_seconds === 'number') toNext = d.duration_seconds
+          if (typeof d.distance_meters === 'number') toNextMeters = d.distance_meters
         } catch { /* best-effort */ }
       }
     }
 
-    updates.push({ id: ev.id, drive_time_from_home_seconds: fromHome, drive_time_to_next_event_seconds: toNext })
+    updates.push({
+      id: ev.id,
+      drive_time_from_home_seconds: fromHome,
+      drive_time_to_next_event_seconds: toNext,
+      drive_distance_from_home_meters: fromHomeMeters,
+      drive_distance_to_next_event_meters: toNextMeters,
+    })
   }
 
   await Promise.all(
     updates.map((u) =>
       supabase
         .from('events')
-        .update({ drive_time_from_home_seconds: u.drive_time_from_home_seconds, drive_time_to_next_event_seconds: u.drive_time_to_next_event_seconds })
+        .update({
+          drive_time_from_home_seconds: u.drive_time_from_home_seconds,
+          drive_time_to_next_event_seconds: u.drive_time_to_next_event_seconds,
+          drive_distance_from_home_meters: u.drive_distance_from_home_meters,
+          drive_distance_to_next_event_meters: u.drive_distance_to_next_event_meters,
+        })
         .eq('id', u.id)
     )
   )
@@ -78,6 +99,11 @@ async function recalculateDriveTimes(coupleId: string, date: string, queryClient
 
 function formatDriveTime(seconds: number): string {
   return `~${Math.round(seconds / 60)} min`
+}
+
+function formatDriveDistance(meters: number): string {
+  const km = meters / 1000
+  return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`
 }
 
 function formatGroupDate(dateStr: string): string {
@@ -315,12 +341,27 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
       if (editingEvent) {
         queryClient.invalidateQueries({ queryKey: ['event-contacts', editingEvent.id] })
       }
+
+      const routeChanged = !editingEvent
+        || editingEvent.date !== variables.date
+        || editingEvent.venue_lat !== variables.venue_lat
+        || editingEvent.venue_lng !== variables.venue_lng
+      const previousDate = editingEvent?.date
+
       setShowModal(false)
       setEditingEvent(undefined)
       toast('Event updated')
-      if (variables?.date) {
-        setCalculatingDriveTime(true)
-        recalculateDriveTimes(couple.id, variables.date, queryClient).finally(() => setCalculatingDriveTime(false))
+
+      if (routeChanged) {
+        const datesToRecalc = new Set<string>()
+        if (variables?.date) datesToRecalc.add(variables.date)
+        if (previousDate && previousDate !== variables?.date) datesToRecalc.add(previousDate)
+        if (datesToRecalc.size > 0) {
+          setCalculatingDriveTime(true)
+          Promise.all(
+            Array.from(datesToRecalc).map((d) => recalculateDriveTimes(couple.id, d, queryClient))
+          ).finally(() => setCalculatingDriveTime(false))
+        }
       }
     },
     onError: () => toast('Failed to update event'),
@@ -430,7 +471,9 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
                   {group.map((event, idx) => {
                     const time = formatEventTime(event.start_time)
                     const driveLabel = event.drive_time_from_home_seconds != null
-                      ? `${formatDriveTime(event.drive_time_from_home_seconds)} from home`
+                      ? event.drive_distance_from_home_meters != null
+                        ? `${formatDriveTime(event.drive_time_from_home_seconds)} · ${formatDriveDistance(event.drive_distance_from_home_meters)} from home`
+                        : `${formatDriveTime(event.drive_time_from_home_seconds)} from home`
                       : null
                     const meta = [time, driveLabel].filter(Boolean).join(' · ')
                     return (
@@ -454,7 +497,10 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
                         ) : null}
                       </div>
                       {event.drive_time_to_next_event_seconds != null && idx < group.length - 1 && (
-                        <p className="text-xs text-gray-400 pl-6 py-1.5">→ {formatDriveTime(event.drive_time_to_next_event_seconds)} drive</p>
+                        <p className="text-xs text-gray-400 pl-6 py-1.5">
+                          → {formatDriveTime(event.drive_time_to_next_event_seconds)}
+                          {event.drive_distance_to_next_event_meters != null ? ` · ${formatDriveDistance(event.drive_distance_to_next_event_meters)}` : ''} drive
+                        </p>
                       )}
                     </div>
                   )})}

@@ -5,6 +5,7 @@ import type { ActionBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { getTextColor } from '../contrast'
 import type { PublicBranding } from '../public-surface'
 import { pad, type ActionSlotProps } from './shared'
+import { Html } from './html'
 
 export function RenderAction({
   block,
@@ -59,7 +60,13 @@ export function RenderAction({
           ...resolveTextStyle(block.primaryStyle, primaryDefaults),
         }}
       >
-        {primaryLoading ? 'Processing…' : primaryText}
+        {primaryLoading ? (
+          'Processing…'
+        ) : primaryLabel !== undefined ? (
+          primaryText
+        ) : (
+          <Html value={primaryText} allowLists={false} />
+        )}
       </button>
       {secondaryText !== null && (
         <button
@@ -69,7 +76,7 @@ export function RenderAction({
           className="px-6 py-3.5 border border-gray-200 cursor-pointer hover:bg-gray-50 transition disabled:opacity-50"
           style={{ borderRadius: radius, ...resolveTextStyle(block.secondaryStyle, secondaryDefaults) }}
         >
-          {secondaryText}
+          {secondaryLabel !== undefined ? secondaryText : <Html value={secondaryText} allowLists={false} />}
         </button>
       )}
     </div>

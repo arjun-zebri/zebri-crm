@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { sanitizeHtml } from '@/lib/branding/sanitize'
 
 type InlineTextElement = 'span' | 'div' | 'p' | 'h1' | 'h2' | 'h3'
 
@@ -10,6 +11,8 @@ interface InlineTextProps {
   placeholder?: string
   maxLength?: number
   multiline?: boolean
+  /** When true, allow ul/ol/li in HTML output. Default = multiline. */
+  allowLists?: boolean
   className?: string
   style?: React.CSSProperties
   as?: InlineTextElement
@@ -19,21 +22,25 @@ export function InlineText({
   value,
   onChange,
   placeholder,
-  maxLength = 280,
+  maxLength = 2000,
   multiline = false,
+  allowLists,
   className = '',
   style,
   as = 'span',
 }: InlineTextProps) {
   const ref = useRef<HTMLElement>(null)
+  const lists = allowLists ?? multiline
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    if (el.textContent !== value) {
-      el.textContent = value
+    if (document.activeElement === el) return
+    const sanitized = sanitizeHtml(value ?? '', { allowLists: lists })
+    if (el.innerHTML !== sanitized) {
+      el.innerHTML = sanitized
     }
-  }, [value])
+  }, [value, lists])
 
   const sharedProps = {
     contentEditable: true,
@@ -42,6 +49,7 @@ export function InlineText({
     'aria-label': placeholder,
     'aria-multiline': multiline,
     'data-placeholder': placeholder,
+    'data-inline-text': 'true',
     onPaste: (e: React.ClipboardEvent) => {
       e.preventDefault()
       const text = e.clipboardData.getData('text/plain').slice(0, maxLength)
@@ -49,10 +57,12 @@ export function InlineText({
     },
     onBlur: (e: React.FocusEvent) => {
       const el = e.currentTarget as HTMLElement
-      let text = el.textContent ?? ''
-      if (!multiline) text = text.replace(/\n/g, ' ')
-      text = text.slice(0, maxLength)
-      if (text !== value) onChange(text)
+      let html = sanitizeHtml(el.innerHTML, { allowLists: lists })
+      if (!multiline) {
+        html = html.replace(/<\/?(p|ul|ol|li|br)[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+      }
+      if (html.length > maxLength * 2) html = html.slice(0, maxLength * 2)
+      if (html !== value) onChange(html)
     },
     onKeyDown: (e: React.KeyboardEvent) => {
       if (!multiline && e.key === 'Enter') {
@@ -60,8 +70,9 @@ export function InlineText({
         ;(e.currentTarget as HTMLElement).blur()
       }
       if (e.key === 'Escape') {
-        ;(e.currentTarget as HTMLElement).textContent = value
-        ;(e.currentTarget as HTMLElement).blur()
+        const el = e.currentTarget as HTMLElement
+        el.innerHTML = sanitizeHtml(value, { allowLists: lists })
+        el.blur()
       }
     },
     className: `outline-none cursor-text caret-current empty:before:content-[attr(data-placeholder)] empty:before:opacity-40 ${className}`,

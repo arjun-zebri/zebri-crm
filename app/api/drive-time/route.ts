@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': process.env.GOOGLE_PLACES_API_KEY!,
-      'X-Goog-FieldMask': 'routes.duration',
+      'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters',
     },
     body: JSON.stringify({
       origin: { location: { latLng: { latitude: parseFloat(originLat), longitude: parseFloat(originLng) } } },
@@ -33,6 +33,8 @@ export async function GET(req: NextRequest) {
 
   const durationStr: string = data.routes?.[0]?.duration ?? '0s'
   const duration_seconds = parseInt(durationStr.replace('s', ''), 10)
+  const distanceMeters = data.routes?.[0]?.distanceMeters
+  const distance_meters = typeof distanceMeters === 'number' ? distanceMeters : null
 
-  return NextResponse.json({ duration_seconds })
+  return NextResponse.json({ duration_seconds, distance_meters })
 }

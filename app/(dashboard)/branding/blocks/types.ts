@@ -37,6 +37,10 @@ export interface BaseBlock {
   borderColor?: string
   /** Override the block's corner radius. Falls back to global cornerRadius. */
   blockRadius?: number
+  /** Explicit minimum height (px) set by dragging the resize handle. */
+  blockHeightPx?: number
+  /** Vertical alignment of content when blockHeightPx creates extra space. Defaults to 'middle'. */
+  blockVAlign?: 'top' | 'middle' | 'bottom'
 }
 
 export interface HeaderBannerBlock extends BaseBlock {
@@ -112,6 +116,7 @@ export interface DividerBlock extends BaseBlock {
   type: 'divider'
   thickness?: number
   color?: string
+  lineStyle?: 'solid' | 'dashed' | 'dotted'
 }
 
 export interface FooterBlock extends BaseBlock {
@@ -140,7 +145,7 @@ export type BlocksByDoc = Record<'quote' | 'invoice' | 'contract', Block[]>
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   headerBanner: 'Header banner',
-  businessName: 'Business name',
+  businessName: 'My details',
   tagline: 'Tagline',
   title: 'Title & meta',
   lineItems: 'Line items',

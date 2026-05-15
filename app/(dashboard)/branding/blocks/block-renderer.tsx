@@ -47,6 +47,12 @@ interface BlockRendererProps {
   duplicateBlock: (id: string) => void
   deleteBlock: (id: string) => void
   resetBlock: (id: string) => void
+  setTagline?: (v: string) => void
+  setBusinessName?: (v: string) => void
+  uploadLogo?: (file: File) => Promise<void>
+  removeLogo?: () => void | Promise<void>
+  uploadHeader?: (file: File) => Promise<void>
+  removeHeader?: () => void | Promise<void>
 }
 
 export function BlockRenderer({
@@ -60,6 +66,12 @@ export function BlockRenderer({
   duplicateBlock,
   deleteBlock,
   resetBlock,
+  setTagline,
+  setBusinessName,
+  uploadLogo,
+  removeLogo,
+  uploadHeader,
+  removeHeader,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -184,7 +196,14 @@ export function BlockRenderer({
                   onDelete={() => deleteBlock(block.id)}
                   onResetBlock={() => resetBlock(block.id)}
                 >
-                  {renderBlock(block, state, updateBlock)}
+                  {renderBlock(block, state, updateBlock, {
+                    setTagline,
+                    setBusinessName,
+                    uploadLogo,
+                    removeLogo,
+                    uploadHeader,
+                    removeHeader,
+                  })}
                 </BlockFrame>
               )
             })}
@@ -205,18 +224,45 @@ export function BlockRenderer({
   )
 }
 
+interface RenderExtras {
+  setTagline?: (v: string) => void
+  setBusinessName?: (v: string) => void
+  uploadLogo?: (file: File) => Promise<void>
+  removeLogo?: () => void | Promise<void>
+  uploadHeader?: (file: File) => Promise<void>
+  removeHeader?: () => void | Promise<void>
+}
+
 function renderBlock(
   block: Block,
   state: BrandPreviewState,
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void,
+  extras: RenderExtras = {},
 ) {
   switch (block.type) {
     case 'headerBanner':
-      return <RenderHeaderBanner block={block} state={state} updateBlock={updateBlock} />
+      return (
+        <RenderHeaderBanner
+          block={block}
+          state={state}
+          updateBlock={updateBlock}
+          uploadHeader={extras.uploadHeader}
+          removeHeader={extras.removeHeader}
+        />
+      )
     case 'businessName':
-      return <RenderBusinessName block={block} state={state} updateBlock={updateBlock} />
+      return (
+        <RenderBusinessName
+          block={block}
+          state={state}
+          updateBlock={updateBlock}
+          setBusinessName={extras.setBusinessName}
+          uploadLogo={extras.uploadLogo}
+          removeLogo={extras.removeLogo}
+        />
+      )
     case 'tagline':
-      return <RenderTagline block={block} state={state} updateBlock={updateBlock} />
+      return <RenderTagline block={block} state={state} updateBlock={updateBlock} setTagline={extras.setTagline} />
     case 'title':
       return <RenderTitle block={block} state={state} updateBlock={updateBlock} />
     case 'lineItems':

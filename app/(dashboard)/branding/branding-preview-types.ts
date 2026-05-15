@@ -1,5 +1,6 @@
 import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
 import type { Density } from '@/lib/branding/themes'
+import type { Block } from './blocks/types'
 
 export interface BrandPreviewState {
   logoUrl: string
@@ -64,8 +65,11 @@ export interface BrandKit {
   fontScale: number
   density: Density
   cornerRadius: number
+  docPadding?: number
+  tagline?: string
   logoUrl?: string
   faviconUrl?: string
   headerImageUrl?: string
+  blocks?: { quote: Block[]; invoice: Block[]; contract: Block[] }
   createdAt: string
 }

@@ -37,6 +37,7 @@ interface UserMetadata {
   doc_padding?: number
   theme_preset?: ThemeIdOrCustom
   brand_kit_name?: string
+  active_kit_id?: string | null
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
   branding_blocks?: { quote?: Block[]; invoice?: Block[]; contract?: Block[] }
@@ -189,6 +190,7 @@ export default function BrandingPage() {
         instagramUrl: metadata?.instagram_url || '',
         facebookUrl: metadata?.facebook_url || '',
         brandKits: kits,
+        activeKitId: metadata?.active_kit_id ?? null,
         portalSections: {
           timeline: portalSrc.timeline ?? true,
           contacts: portalSrc.contacts ?? true,

@@ -4,6 +4,7 @@ import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/bran
 import type { TextBlock } from '@/app/(dashboard)/branding/blocks/types'
 import type { PublicBranding } from '../public-surface'
 import { pad } from './shared'
+import { Html } from './html'
 
 export function RenderText({
   block,
@@ -25,7 +26,7 @@ export function RenderText({
   }
   return (
     <div className={`${p.docX} ${p.blockY}`} style={resolveTextStyle(block.textStyle, defaults)}>
-      <div className="whitespace-pre-wrap">{block.text}</div>
+      <Html value={block.text} as="div" className="whitespace-pre-wrap" />
     </div>
   )
 }

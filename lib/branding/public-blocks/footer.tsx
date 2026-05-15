@@ -5,6 +5,7 @@ import type { FooterBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { FONT_STACKS } from '../fonts'
 import type { PublicBranding } from '../public-surface'
 import { pad } from './shared'
+import { Html } from './html'
 
 export function RenderFooter({
   block,
@@ -65,7 +66,11 @@ export function RenderFooter({
           </div>
         ) : null}
         <div className="min-w-0 flex-1 space-y-1">
-          {block.closingNote && <p style={noteCss}>{block.closingNote}</p>}
+          {block.closingNote && (
+            <p style={noteCss}>
+              <Html value={block.closingNote} allowLists={false} />
+            </p>
+          )}
           {contactParts.length > 0 && <p style={contactCss}>{contactParts.join('  ·  ')}</p>}
         </div>
       </div>

@@ -12,6 +12,8 @@ export interface Event {
   venue_lng?: number | null
   drive_time_from_home_seconds?: number | null
   drive_time_to_next_event_seconds?: number | null
+  drive_distance_from_home_meters?: number | null
+  drive_distance_to_next_event_meters?: number | null
   timeline_notes: string
   status: EventStatus
   share_token?: string | null

@@ -13,6 +13,8 @@ import {
   type PublicBranding,
 } from '@/lib/branding/public-surface'
 import { PublicBlockRenderer, findActionStyle } from '@/lib/branding/public-renderer'
+import { Html } from '@/lib/branding/public-blocks/html'
+import { htmlToPlainText } from '@/lib/branding/sanitize'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 interface InvoiceItem {
@@ -151,7 +153,7 @@ export default function PublicInvoicePage() {
           <div className="mb-3 px-5 py-3 rounded-xl bg-red-50 border border-red-100">
             <p className="text-sm text-red-600 font-medium">
               This invoice is overdue.
-              {invoice.business_name ? ` Please contact ${invoice.business_name} if you have any questions.` : ''}
+              {invoice.business_name ? ` Please contact ${htmlToPlainText(invoice.business_name)} if you have any questions.` : ''}
             </p>
           </div>
         )}
@@ -338,16 +340,18 @@ export default function PublicInvoicePage() {
               {invoice.logo_url ? (
                 <img
                   src={invoice.logo_url}
-                  alt={invoice.business_name || 'Logo'}
+                  alt={htmlToPlainText(invoice.business_name) || 'Logo'}
                   className="max-h-12 object-contain mb-3"
                 />
               ) : invoice.business_name ? (
                 <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: mutedColor }}>
-                  {invoice.business_name}
+                  <Html value={invoice.business_name} allowLists={false} />
                 </p>
               ) : null}
               {invoice.tagline && (
-                <p className="text-xs mb-3" style={{ color: mutedColor }}>{invoice.tagline}</p>
+                <p className="text-xs mb-3" style={{ color: mutedColor }}>
+                  <Html value={invoice.tagline} allowLists={false} />
+                </p>
               )}
               <h1
                 className="text-2xl mb-1"

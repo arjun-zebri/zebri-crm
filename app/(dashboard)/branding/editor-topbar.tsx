@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Monitor, Smartphone, Undo2, Redo2, Eye, Sparkles, ChevronDown, Check, Trash2, Plus } from 'lucide-react'
+import { Monitor, Smartphone, Undo2, Redo2, Eye, ChevronDown, Check, Trash2, Plus } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import type { SaveStatus } from '@/lib/branding/use-autosave'
 import type { BrandKit } from './branding-preview-types'
@@ -17,7 +17,6 @@ interface EditorTopbarProps {
   onUndo: () => void
   onRedo: () => void
   onPreview: () => void
-  onSaveAsKit: () => void
   onCreateNewKit: () => void
   brandKits: BrandKit[]
   onApplyKit: (kit: BrandKit) => void
@@ -36,7 +35,6 @@ export function EditorTopbar({
   onUndo,
   onRedo,
   onPreview,
-  onSaveAsKit,
   onCreateNewKit,
   brandKits,
   onApplyKit,
@@ -51,7 +49,6 @@ export function EditorTopbar({
           kits={brandKits}
           onApply={onApplyKit}
           onDelete={onDeleteKit}
-          onSaveAsKit={onSaveAsKit}
           onCreateNewKit={onCreateNewKit}
           currentName={kitName}
         />
@@ -190,14 +187,12 @@ function KitPicker({
   kits,
   onApply,
   onDelete,
-  onSaveAsKit,
   onCreateNewKit,
   currentName,
 }: {
   kits: BrandKit[]
   onApply: (kit: BrandKit) => void
   onDelete: (id: string) => void
-  onSaveAsKit: () => void
   onCreateNewKit: () => void
   currentName: string
 }) {
@@ -249,15 +244,17 @@ function KitPicker({
                       </button>
                     </Popover.Close>
                     {active && <Check size={11} strokeWidth={2.5} className="text-gray-900 shrink-0" />}
-                    <button
-                      type="button"
-                      onClick={() => onDelete(kit.id)}
-                      className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition opacity-0 group-hover:opacity-100"
-                      title="Delete kit"
-                      aria-label="Delete kit"
-                    >
-                      <Trash2 size={11} strokeWidth={1.75} />
-                    </button>
+                    {kits.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => onDelete(kit.id)}
+                        className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition opacity-0 group-hover:opacity-100"
+                        title="Delete kit"
+                        aria-label="Delete kit"
+                      >
+                        <Trash2 size={11} strokeWidth={1.75} />
+                      </button>
+                    )}
                   </li>
                 )
               })}
@@ -272,16 +269,6 @@ function KitPicker({
               >
                 <Plus size={11} strokeWidth={1.75} className="text-gray-400" />
                 Create new kit
-              </button>
-            </Popover.Close>
-            <Popover.Close asChild>
-              <button
-                type="button"
-                onClick={onSaveAsKit}
-                className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
-              >
-                <Sparkles size={11} strokeWidth={1.75} className="text-gray-400" />
-                Save current as kit…
               </button>
             </Popover.Close>
           </div>

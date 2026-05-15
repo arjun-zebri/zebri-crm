@@ -40,15 +40,21 @@ export function BlockToolbar({ block, state, updateBlock, onDuplicate, onDelete,
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <div
-        className="flex items-center gap-1 p-1 max-w-[min(960px,calc(100vw-32px))] overflow-x-auto"
-        style={{ scrollbarWidth: 'thin' }}
-      >
+      {/* Row 1: block-type-specific controls */}
+      <div className="flex items-center gap-1 px-1 pt-1">
         <BlockSpecificControls block={block} state={state} updateBlock={updateBlock} />
-        <Divider />
+      </div>
+
+      {/* Row 2: structural controls + actions */}
+      <div className="flex items-center gap-1 px-1 pb-1 pt-0.5 border-t border-gray-100 mt-1">
+        {block.type !== 'headerBanner' && (
+          <>
+            <VAlignControl block={block} updateBlock={updateBlock} />
+            <Divider />
+          </>
+        )}
         <BorderControl block={block} updateBlock={updateBlock} />
-        <Divider />
-        <div className="flex items-center gap-0.5 shrink-0">
+        <div className="ml-auto flex items-center gap-0.5 shrink-0">
           <Tooltip label="Reset to theme defaults">
             <button
               type="button"
@@ -110,7 +116,7 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
     case 'totals':
       return <TotalsControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'lineItems':
-      return <LineItemsControls block={block} state={state} updateBlock={updateBlock} />
+      return <LineItemsControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'divider':
       return <DividerControls block={block} updateBlock={updateBlock} />
   }
@@ -370,19 +376,6 @@ function BusinessNameControls({
         value={layout}
         onChange={(v) => updateBlock<BusinessNameBlock>(block.id, { layout: v as BusinessNameBlock['layout'] })}
       />
-      {layout !== 'name' && (
-        <>
-          <Divider />
-          <NumberField
-            label="Logo"
-            value={block.logoHeightPx ?? 48}
-            min={24}
-            max={160}
-            step={4}
-            onChange={(v) => updateBlock<BusinessNameBlock>(block.id, { logoHeightPx: v })}
-          />
-        </>
-      )}
       {layout !== 'logo' && (
         <>
           <Divider />
@@ -495,10 +488,12 @@ function LineItemsControls({
   block,
   state,
   updateBlock,
+  expanded,
 }: {
   block: LineItemsBlock
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  expanded?: boolean
 }) {
   const [target, setTarget] = useState<LineItemsTarget>('rows')
 
@@ -578,6 +573,7 @@ function LineItemsControls({
             isHeader ? { headerStyle: merged } : { itemStyle: merged },
           )
         }}
+        expanded={expanded}
       />
     </div>
   )
@@ -663,6 +659,18 @@ function DividerControls({
 }) {
   return (
     <div className="flex items-center gap-2">
+      <PillToggle
+        options={[
+          { value: 'solid', label: 'Solid' },
+          { value: 'dashed', label: 'Dashed' },
+          { value: 'dotted', label: 'Dotted' },
+        ]}
+        value={block.lineStyle ?? 'solid'}
+        onChange={(v) =>
+          updateBlock<DividerBlock>(block.id, { lineStyle: v as 'solid' | 'dashed' | 'dotted' })
+        }
+      />
+      <Divider />
       <NumberField
         label="Thickness"
         value={block.thickness ?? 1}
@@ -722,24 +730,29 @@ function PillToggle<V extends string>({
   value,
   onChange,
 }: {
-  options: { value: V; label: string }[]
+  options: { value: V; label: string; icon?: React.ReactNode }[]
   value: V
   onChange: (v: V) => void
 }) {
   return (
     <div className="inline-flex bg-gray-100 rounded-md p-0.5">
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`px-2 py-1 text-xs rounded-sm cursor-pointer transition ${
-            value === opt.value ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
+      {options.map((opt) => {
+        const btn = (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`px-2 py-1 text-xs rounded-sm cursor-pointer transition ${
+              value === opt.value ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            {opt.icon ?? opt.label}
+          </button>
+        )
+        return opt.icon ? (
+          <Tooltip key={opt.value} label={opt.label}>{btn}</Tooltip>
+        ) : btn
+      })}
     </div>
   )
 }
@@ -831,6 +844,37 @@ function RadiusInput({ value, onChange }: { value: number; onChange: (v: number)
   )
 }
 
+function VAlignControl({
+  block,
+  updateBlock,
+}: {
+  block: Block
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const value = block.blockVAlign ?? 'middle'
+  return (
+    <PillToggle
+      options={[
+        { value: 'top', label: 'Align top', icon: <VAlignIcon position="top" /> },
+        { value: 'middle', label: 'Align middle', icon: <VAlignIcon position="middle" /> },
+        { value: 'bottom', label: 'Align bottom', icon: <VAlignIcon position="bottom" /> },
+      ]}
+      value={value}
+      onChange={(v) => updateBlock(block.id, { blockVAlign: v } as Partial<Block>)}
+    />
+  )
+}
+
+function VAlignIcon({ position }: { position: 'top' | 'middle' | 'bottom' }) {
+  const lineY = position === 'top' ? 4 : position === 'middle' ? 6 : 8
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="3.5" y={lineY} width="7" height="2" rx="0.75" fill="currentColor" />
+    </svg>
+  )
+}
+
 function BorderControl({
   block,
   updateBlock,
@@ -844,21 +888,21 @@ function BorderControl({
   const active = width > 0
   return (
     <Popover.Root>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 ${
-            active
-              ? 'bg-gray-900 text-white border-gray-900'
-              : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
-          }`}
-          title="Border"
-        >
-          <Square size={12} strokeWidth={1.75} />
-          Border
-          {active && <span className="font-mono text-[10px] opacity-80">{width}px</span>}
-        </button>
-      </Popover.Trigger>
+      <Tooltip label="Border">
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 ${
+              active
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+            }`}
+          >
+            <Square size={12} strokeWidth={1.75} />
+            {active && <span className="font-mono text-[10px] opacity-80">{width}px</span>}
+          </button>
+        </Popover.Trigger>
+      </Tooltip>
       <Popover.Portal>
         <Popover.Content
           align="center"

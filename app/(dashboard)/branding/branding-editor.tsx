@@ -19,7 +19,7 @@ import { SurfaceTabs } from './surface-tabs'
 import { CanvasFrame } from './canvas-frame'
 import { BlockRenderer } from './blocks/block-renderer'
 import { AddBlockPalette } from './blocks/add-block-palette'
-import { SaveKitDialog } from './save-kit-dialog'
+import { InlineFormatBar } from './blocks/inline-format-bar'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from './branding-preview-types'
@@ -64,6 +64,7 @@ interface BrandingEditorProps {
     instagramUrl: string
     facebookUrl: string
     brandKits: BrandKit[]
+    activeKitId: string | null
     portalSections: PortalSectionSettings
   }
 }
@@ -93,6 +94,7 @@ interface EditorState {
   themePreset: ThemeIdOrCustom
   blocks: { quote: Block[]; invoice: Block[]; contract: Block[] }
   brandKits: BrandKit[]
+  activeKitId: string | null
   portalSections: PortalSectionSettings
 }
 
@@ -125,6 +127,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       themePreset: initialData.themePreset,
       blocks: initialData.blocks,
       brandKits: initialData.brandKits,
+      activeKitId: initialData.activeKitId,
       portalSections: initialData.portalSections,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,8 +142,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
-  const [saveKitOpen, setSaveKitOpen] = useState(false)
-
   const { status } = useAutosave(state, async (value) => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -195,6 +196,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         corner_radius: value.cornerRadius,
         doc_padding: value.docPadding,
         theme_preset: value.themePreset,
+        active_kit_id: value.activeKitId,
       },
     })
     if (error) throw error
@@ -208,6 +210,88 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setState((prev) => ({ ...prev, ...patch, themePreset: customize ? 'custom' : prev.themePreset }))
     flashAffectedBlocks(patch, state.blocks, docSurface, surface)
   }
+
+  // Mirror workspace edits onto the active kit so kits behave as live snapshots.
+  // Without this, "Apply kit" would re-apply stale values after the user tweaks them.
+  useEffect(() => {
+    if (!state.activeKitId) return
+    setState((prev) => {
+      if (!prev.activeKitId) return prev
+      const idx = prev.brandKits.findIndex((k) => k.id === prev.activeKitId)
+      if (idx === -1) return prev
+      const current = prev.brandKits[idx]
+      const next: BrandKit = {
+        ...current,
+        name: prev.kitName,
+        brandColor: prev.brandColor,
+        accentColor: prev.accentColor,
+        surfaceColor: prev.surfaceColor,
+        textColor: prev.textColor,
+        mutedColor: prev.mutedColor,
+        fontHeading: prev.fontHeading,
+        fontBody: prev.fontBody,
+        fontWeight: prev.fontWeight,
+        fontBodyWeight: prev.fontBodyWeight,
+        fontScale: prev.fontScale,
+        density: prev.density,
+        cornerRadius: prev.cornerRadius,
+        docPadding: prev.docPadding,
+        tagline: prev.tagline,
+        logoUrl: prev.logoUrl,
+        faviconUrl: prev.faviconUrl,
+        headerImageUrl: prev.headerImageUrl,
+        blocks: prev.blocks,
+      }
+      if (
+        current.name === next.name &&
+        current.brandColor === next.brandColor &&
+        current.accentColor === next.accentColor &&
+        current.surfaceColor === next.surfaceColor &&
+        current.textColor === next.textColor &&
+        current.mutedColor === next.mutedColor &&
+        current.fontHeading === next.fontHeading &&
+        current.fontBody === next.fontBody &&
+        current.fontWeight === next.fontWeight &&
+        current.fontBodyWeight === next.fontBodyWeight &&
+        current.fontScale === next.fontScale &&
+        current.density === next.density &&
+        current.cornerRadius === next.cornerRadius &&
+        current.docPadding === next.docPadding &&
+        current.tagline === next.tagline &&
+        current.logoUrl === next.logoUrl &&
+        current.faviconUrl === next.faviconUrl &&
+        current.headerImageUrl === next.headerImageUrl &&
+        current.blocks === next.blocks
+      ) {
+        return prev
+      }
+      const newKits = [...prev.brandKits]
+      newKits[idx] = next
+      return { ...prev, brandKits: newKits }
+    })
+  }, [
+    state.activeKitId,
+    state.kitName,
+    state.brandColor,
+    state.accentColor,
+    state.surfaceColor,
+    state.textColor,
+    state.mutedColor,
+    state.fontHeading,
+    state.fontBody,
+    state.fontWeight,
+    state.fontBodyWeight,
+    state.fontScale,
+    state.density,
+    state.cornerRadius,
+    state.docPadding,
+    state.tagline,
+    state.logoUrl,
+    state.faviconUrl,
+    state.headerImageUrl,
+    state.blocks,
+    setState,
+  ])
 
   const applyTheme = (id: ThemeId) => {
     const p = THEME_PRESETS[id]
@@ -398,41 +482,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setPaletteOpen(true)
   }
 
-  const onSaveAsKit = () => setSaveKitOpen(true)
-
-  const handleSaveKitConfirm = (name: string) => {
-    const kit: BrandKit = {
-      id: `kit-${Date.now().toString(36)}`,
-      name: name || 'Untitled kit',
-      brandColor: state.brandColor,
-      accentColor: state.accentColor,
-      surfaceColor: state.surfaceColor,
-      textColor: state.textColor,
-      mutedColor: state.mutedColor,
-      fontHeading: state.fontHeading,
-      fontBody: state.fontBody,
-      fontWeight: state.fontWeight,
-      fontBodyWeight: state.fontBodyWeight,
-      fontScale: state.fontScale,
-      density: state.density,
-      cornerRadius: state.cornerRadius,
-      logoUrl: state.logoUrl,
-      faviconUrl: state.faviconUrl,
-      headerImageUrl: state.headerImageUrl,
-      createdAt: new Date().toISOString(),
-    }
-    setState(
-      (prev) => ({ ...prev, kitName: kit.name, brandKits: [kit, ...prev.brandKits] }),
-      { commit: true },
-    )
-    setSaveKitOpen(false)
-    toast('Brand kit saved', 'success')
-  }
-
   const onApplyKit = (kit: BrandKit) => {
     setState((prev) => ({
       ...prev,
       kitName: kit.name,
+      activeKitId: kit.id,
       themePreset: 'custom',
       brandColor: kit.brandColor,
       accentColor: kit.accentColor,
@@ -446,45 +500,131 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       fontScale: kit.fontScale,
       density: kit.density,
       cornerRadius: kit.cornerRadius,
-      logoUrl: prev.logoUrl || kit.logoUrl || '',
-      faviconUrl: prev.faviconUrl || kit.faviconUrl || '',
-      headerImageUrl: prev.headerImageUrl || kit.headerImageUrl || '',
+      docPadding: kit.docPadding ?? prev.docPadding,
+      tagline: kit.tagline ?? '',
+      logoUrl: kit.logoUrl ?? '',
+      faviconUrl: kit.faviconUrl ?? prev.faviconUrl,
+      headerImageUrl: kit.headerImageUrl ?? '',
+      blocks: kit.blocks ?? prev.blocks,
     }), { commit: true })
     toast(`Applied "${kit.name}"`, 'success')
   }
 
   const onCreateNewKit = () => {
     const preset = THEME_PRESETS.minimal
+    const baseName = 'Untitled brand'
+    const existingNames = new Set(state.brandKits.map((k) => k.name))
+    let name = baseName
+    let n = 2
+    while (existingNames.has(name)) {
+      name = `${baseName} ${n++}`
+    }
+    const defaultBlocks = {
+      quote: defaultBlocksFor('quote'),
+      invoice: defaultBlocksFor('invoice'),
+      contract: defaultBlocksFor('contract'),
+    }
+    const kit: BrandKit = {
+      id: `kit-${Date.now().toString(36)}`,
+      name,
+      brandColor: preset.color,
+      accentColor: preset.accent,
+      surfaceColor: preset.surface,
+      textColor: preset.text,
+      mutedColor: preset.muted,
+      fontHeading: preset.headingFont,
+      fontBody: preset.bodyFont,
+      fontWeight: preset.headingWeight,
+      fontBodyWeight: preset.bodyWeight,
+      fontScale: preset.scale,
+      density: preset.density,
+      cornerRadius: preset.radius,
+      docPadding: 12,
+      tagline: '',
+      logoUrl: '',
+      faviconUrl: '',
+      headerImageUrl: '',
+      blocks: defaultBlocks,
+      createdAt: new Date().toISOString(),
+    }
     setState(
       (prev) => ({
         ...prev,
-        kitName: 'Untitled brand',
+        kitName: kit.name,
+        activeKitId: kit.id,
         themePreset: 'minimal',
-        brandColor: preset.color,
-        accentColor: preset.accent,
-        surfaceColor: preset.surface,
-        textColor: preset.text,
-        mutedColor: preset.muted,
-        fontHeading: preset.headingFont,
-        fontBody: preset.bodyFont,
-        fontWeight: preset.headingWeight,
-        fontBodyWeight: preset.bodyWeight,
-        fontScale: preset.scale,
-        density: preset.density,
-        cornerRadius: preset.radius,
+        brandColor: kit.brandColor,
+        accentColor: kit.accentColor,
+        surfaceColor: kit.surfaceColor,
+        textColor: kit.textColor,
+        mutedColor: kit.mutedColor,
+        fontHeading: kit.fontHeading,
+        fontBody: kit.fontBody,
+        fontWeight: kit.fontWeight,
+        fontBodyWeight: kit.fontBodyWeight,
+        fontScale: kit.fontScale,
+        density: kit.density,
+        cornerRadius: kit.cornerRadius,
         docPadding: 12,
         logoUrl: '',
         faviconUrl: '',
         headerImageUrl: '',
         tagline: '',
+        blocks: defaultBlocks,
+        brandKits: [kit, ...prev.brandKits],
       }),
       { commit: true },
     )
-    toast('New brand kit started')
+    toast(`Created "${kit.name}"`, 'success')
   }
 
   const onDeleteKit = (id: string) => {
-    setState((prev) => ({ ...prev, brandKits: prev.brandKits.filter(k => k.id !== id) }), { commit: true })
+    if (state.brandKits.length <= 1) {
+      toast('You need at least one kit', 'error')
+      return
+    }
+    setState(
+      (prev) => {
+        const idx = prev.brandKits.findIndex((k) => k.id === id)
+        const remaining = prev.brandKits.filter((k) => k.id !== id)
+        const wasActive = prev.activeKitId === id
+        if (!wasActive || remaining.length === 0) {
+          return {
+            ...prev,
+            brandKits: remaining,
+            activeKitId: wasActive ? null : prev.activeKitId,
+          }
+        }
+        // Auto-switch: prefer the kit that took the deleted slot, else the previous one
+        const next = remaining[idx] ?? remaining[idx - 1] ?? remaining[0]
+        return {
+          ...prev,
+          brandKits: remaining,
+          activeKitId: next.id,
+          kitName: next.name,
+          themePreset: 'custom',
+          brandColor: next.brandColor,
+          accentColor: next.accentColor,
+          surfaceColor: next.surfaceColor,
+          textColor: next.textColor,
+          mutedColor: next.mutedColor,
+          fontHeading: next.fontHeading,
+          fontBody: next.fontBody,
+          fontWeight: next.fontWeight,
+          fontBodyWeight: next.fontBodyWeight,
+          fontScale: next.fontScale,
+          density: next.density,
+          cornerRadius: next.cornerRadius,
+          docPadding: next.docPadding ?? prev.docPadding,
+          tagline: next.tagline ?? '',
+          logoUrl: next.logoUrl ?? '',
+          faviconUrl: next.faviconUrl ?? prev.faviconUrl,
+          headerImageUrl: next.headerImageUrl ?? '',
+          blocks: next.blocks ?? prev.blocks,
+        }
+      },
+      { commit: true },
+    )
   }
 
   useEffect(() => {
@@ -539,6 +679,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden">
+      <InlineFormatBar />
       <EditorTopbar
         kitName={state.kitName}
         setKitName={(v) => setState((prev) => ({ ...prev, kitName: v }))}
@@ -550,7 +691,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         onUndo={undo}
         onRedo={redo}
         onPreview={() => toast('Customer preview coming soon')}
-        onSaveAsKit={onSaveAsKit}
         onCreateNewKit={onCreateNewKit}
         brandKits={state.brandKits}
         onApplyKit={onApplyKit}
@@ -608,29 +748,15 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setCornerRadius={(v) => setEditor({ cornerRadius: v })}
           docPadding={state.docPadding}
           setDocPadding={(v) => setEditor({ docPadding: v })}
-          logoUrl={state.logoUrl}
-          uploadLogo={uploadLogo}
-          removeLogo={removeLogo}
           faviconUrl={state.faviconUrl}
           uploadFavicon={uploadFavicon}
           removeFavicon={removeFavicon}
-          headerImageUrl={state.headerImageUrl}
-          uploadHeader={uploadHeader}
-          removeHeader={removeHeader}
           businessName={state.businessName}
           setBusinessName={(v) => setEditor({ businessName: v }, false)}
           tagline={state.tagline}
           setTagline={(v) => setEditor({ tagline: v }, false)}
           abn={state.abn}
           setAbn={(v) => setEditor({ abn: v }, false)}
-        />
-
-        <SaveKitDialog
-          open={saveKitOpen}
-          onClose={() => setSaveKitOpen(false)}
-          onSave={handleSaveKitConfirm}
-          defaultName={state.kitName || 'My brand'}
-          state={previewState}
         />
 
         <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
@@ -677,6 +803,12 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               duplicateBlock={duplicateBlock}
               deleteBlock={deleteBlock}
               resetBlock={resetBlockStyles}
+              setTagline={(v) => setEditor({ tagline: v }, false)}
+              setBusinessName={(v) => setEditor({ businessName: v }, false)}
+              uploadLogo={uploadLogo}
+              removeLogo={removeLogo}
+              uploadHeader={uploadHeader}
+              removeHeader={removeHeader}
             />
           ) : (
             <PortalPreview

@@ -4,6 +4,7 @@ import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/bran
 import type { TaglineBlock } from '@/app/(dashboard)/branding/blocks/types'
 import type { PublicBranding } from '../public-surface'
 import { pad } from './shared'
+import { Html } from './html'
 
 export function RenderTagline({
   block,
@@ -25,8 +26,8 @@ export function RenderTagline({
   }
   return (
     <div className={`${p.docX} ${p.blockY}`}>
-      <p className="truncate" style={resolveTextStyle(block.textStyle, defaults)}>
-        {branding.tagline}
+      <p style={resolveTextStyle(block.textStyle, defaults)}>
+        <Html value={branding.tagline} allowLists={false} />
       </p>
     </div>
   )
