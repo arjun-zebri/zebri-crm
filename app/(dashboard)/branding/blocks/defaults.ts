@@ -82,7 +82,10 @@ const SOFT_DIVIDER = { thickness: 1, color: '#E5E7EB' } as const
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
-export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Block[] {
+export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'portal'): Block[] {
+  if (surface === 'portal') {
+    return [{ id: newId('hb'), type: 'headerBanner' }]
+  }
   if (surface === 'quote') {
     return [
       { id: newId('hb'), type: 'headerBanner' },
@@ -307,7 +310,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
  * Migrate persisted block data from older shapes (e.g. type: 'message') to the
  * current schema. Safe to run on every load.
  */
-export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | 'contract'): Block[] {
+export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | 'contract' | 'portal'): Block[] {
   if (!Array.isArray(blocks)) return []
   let migrated = blocks
     .map((raw): Block | null => {

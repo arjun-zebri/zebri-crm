@@ -58,7 +58,7 @@ interface BrandingEditorProps {
     cornerRadius: number
     docPadding: number
     themePreset: ThemeIdOrCustom
-    blocks: { quote: Block[]; invoice: Block[]; contract: Block[] }
+    blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
     businessName: string
     phone: string
     website: string
@@ -95,7 +95,7 @@ interface EditorState {
   cornerRadius: number
   docPadding: number
   themePreset: ThemeIdOrCustom
-  blocks: { quote: Block[]; invoice: Block[]; contract: Block[] }
+  blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
   brandKits: BrandKit[]
   activeKitId: string | null
   portalSections: PortalSectionSettings
@@ -435,6 +435,17 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const docSurface: 'quote' | 'invoice' | 'contract' | null =
     surface === 'portal' ? null : surface
 
+  const portalBlocks = state.blocks.portal ?? []
+  const portalHeaderBlock = portalBlocks.find((b): b is import('./blocks/types').HeaderBannerBlock => b.type === 'headerBanner')
+  const updatePortalBlock = <B extends Block>(id: string, patch: Partial<B>) =>
+    setState((prev) => ({ ...prev, blocks: { ...prev.blocks, portal: (prev.blocks.portal ?? []).map(b => b.id === id ? ({ ...b, ...patch } as Block) : b) } }))
+  const addPortalHeader = () =>
+    setState((prev) => ({ ...prev, blocks: { ...prev.blocks, portal: [...(prev.blocks.portal ?? []), blockTemplate('headerBanner')] } }))
+  const deletePortalHeader = () =>
+    setState((prev) => ({ ...prev, blocks: { ...prev.blocks, portal: [] } }))
+  const resetPortalHeader = (id: string) =>
+    setState((prev) => ({ ...prev, blocks: { ...prev.blocks, portal: (prev.blocks.portal ?? []).map(b => b.id === id ? clearStyleOverrides(b) : b) } }))
+
   const setBlocksForCurrent = (blocks: Block[]) => {
     if (!docSurface) return
     setState((prev) => ({
@@ -541,6 +552,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       quote: defaultBlocksFor('quote'),
       invoice: defaultBlocksFor('invoice'),
       contract: defaultBlocksFor('contract'),
+      portal: defaultBlocksFor('portal'),
     }
     const kit: BrandKit = {
       id: `kit-${Date.now().toString(36)}`,
@@ -850,6 +862,15 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
                   false,
                 )
               }
+              headerBlock={portalHeaderBlock}
+              updateHeaderBlock={updatePortalBlock}
+              addHeaderBlock={addPortalHeader}
+              uploadHeader={uploadHeader}
+              removeHeader={removeHeader}
+              selectedBlockIds={selectedBlockIds}
+              setSelectedBlockIds={setSelectedBlockIds}
+              deleteHeaderBlock={deletePortalHeader}
+              resetHeaderBlock={resetPortalHeader}
             />
           )}
         </CanvasFrame>
@@ -858,11 +879,12 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   )
 }
 
-export function defaultBlocks(): { quote: Block[]; invoice: Block[]; contract: Block[] } {
+export function defaultBlocks(): { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] } {
   return {
     quote: defaultBlocksFor('quote'),
     invoice: defaultBlocksFor('invoice'),
     contract: defaultBlocksFor('contract'),
+    portal: defaultBlocksFor('portal'),
   }
 }
 
@@ -940,7 +962,7 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
-  blocks: { quote: Block[]; invoice: Block[]; contract: Block[] },
+  blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] },
   docSurface: 'quote' | 'invoice' | 'contract' | null,
   surface: SurfaceTab,
 ) {

@@ -74,6 +74,6 @@ export interface BrandKit {
   logoUrl?: string
   faviconUrl?: string
   headerImageUrl?: string
-  blocks?: { quote: Block[]; invoice: Block[]; contract: Block[] }
+  blocks?: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
   createdAt: string
 }

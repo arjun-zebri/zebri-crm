@@ -1,13 +1,12 @@
 -- The couple portal previously rendered the header banner with a fixed-height
 -- hardcoded <img> using only the scalar header_image_url. The branding editor
--- lets users customise the banner (height, image position, zoom, fit) per
--- surface via the block tree. The portal isn't its own block surface, so it
--- borrows the 'quote' surface's headerBanner block — the quote is the primary
--- customer-facing document, so its banner framing is the natural canonical one.
+-- now gives the portal its OWN headerBanner block (independent of
+-- quote/invoice/contract), customisable for height, image position, zoom and
+-- fit just like the document surfaces.
 --
 -- This re-defines get_portal_data verbatim plus one extra field:
--- branding_blocks (the quote surface block tree) so the portal can render the
--- header banner the same way quote/invoice/contract pages do.
+-- branding_blocks (the portal surface block tree) so the portal page can
+-- render its own customised header banner.
 
 create or replace function get_portal_data(token uuid)
 returns json
@@ -147,7 +146,7 @@ begin
       '[]'::jsonb
     ),
     'branding',        _user_branding(v_user_id),
-    'branding_blocks', _user_branding_blocks(v_user_id, 'quote')
+    'branding_blocks', _user_branding_blocks(v_user_id, 'portal')
   )
   into result
   from couples c

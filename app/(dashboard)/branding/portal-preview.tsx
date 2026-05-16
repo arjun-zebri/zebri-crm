@@ -1,10 +1,15 @@
 'use client'
 
-import { LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText, Menu, Info, Eye, EyeOff } from 'lucide-react'
+import { LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText, Menu, Info, Eye, EyeOff, Plus } from 'lucide-react'
+import { DndContext, closestCenter } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import { pillForeground } from '@/lib/branding/contrast'
+import { RenderHeaderBanner } from './blocks/render'
+import { BlockFrame } from './blocks/block-frame'
 import type { BrandPreviewState } from './branding-preview-types'
 import type { PortalSectionSettings } from './branding-editor'
+import type { Block, HeaderBannerBlock } from './blocks/types'
 
 type SectionKey = 'timeline' | 'contacts' | 'payments' | 'contracts' | 'songs' | 'files'
 
@@ -32,9 +37,18 @@ interface PortalPreviewProps {
   device?: 'desktop' | 'mobile'
   sections: PortalSectionSettings
   setSections: (patch: Partial<PortalSectionSettings>) => void
+  headerBlock?: HeaderBannerBlock
+  updateHeaderBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  addHeaderBlock: () => void
+  uploadHeader?: (file: File) => Promise<void>
+  removeHeader?: () => void | Promise<void>
+  selectedBlockIds: string[]
+  setSelectedBlockIds: (ids: string[]) => void
+  deleteHeaderBlock: () => void
+  resetHeaderBlock: (id: string) => void
 }
 
-export function PortalPreview({ state, device = 'desktop', sections, setSections }: PortalPreviewProps) {
+export function PortalPreview({ state, device = 'desktop', sections, setSections, headerBlock, updateHeaderBlock, addHeaderBlock, uploadHeader, removeHeader, selectedBlockIds, setSelectedBlockIds, deleteHeaderBlock, resetHeaderBlock }: PortalPreviewProps) {
   const visibleSections = SECTIONS.filter(
     (s) => !s.toggleable || sections[s.id as SectionKey] !== false,
   )
@@ -42,8 +56,8 @@ export function PortalPreview({ state, device = 'desktop', sections, setSections
     <div className="space-y-3">
       <PortalToolbar sections={sections} setSections={setSections} />
       {device === 'mobile'
-        ? <MobilePortal state={state} sections={visibleSections} />
-        : <DesktopPortal state={state} sections={visibleSections} />}
+        ? <MobilePortal state={state} sections={visibleSections} headerBlock={headerBlock} updateHeaderBlock={updateHeaderBlock} addHeaderBlock={addHeaderBlock} uploadHeader={uploadHeader} removeHeader={removeHeader} selectedBlockIds={selectedBlockIds} setSelectedBlockIds={setSelectedBlockIds} deleteHeaderBlock={deleteHeaderBlock} resetHeaderBlock={resetHeaderBlock} />
+        : <DesktopPortal state={state} sections={visibleSections} headerBlock={headerBlock} updateHeaderBlock={updateHeaderBlock} addHeaderBlock={addHeaderBlock} uploadHeader={uploadHeader} removeHeader={removeHeader} selectedBlockIds={selectedBlockIds} setSelectedBlockIds={setSelectedBlockIds} deleteHeaderBlock={deleteHeaderBlock} resetHeaderBlock={resetHeaderBlock} />}
     </div>
   )
 }
@@ -65,7 +79,7 @@ function PortalToolbar({
         <div className="flex-1 min-w-0">
           <p className="text-[12px] font-medium text-gray-900">Portal layout is fixed</p>
           <p className="text-[11px] text-gray-500 leading-relaxed">
-            Unlike documents, the portal uses your brand colors and logo but you can&apos;t move blocks. Toggle which sections couples see below.
+            The portal uses your brand colors and logo. You can customise the header banner; the section layout is fixed. Toggle which sections couples see below.
           </p>
         </div>
       </div>
@@ -96,7 +110,7 @@ function PortalToolbar({
   )
 }
 
-function DesktopPortal({ state, sections: SECTIONS }: { state: BrandPreviewState; sections: Section[] }) {
+function DesktopPortal({ state, sections: SECTIONS, headerBlock, updateHeaderBlock, addHeaderBlock, uploadHeader, removeHeader, selectedBlockIds, setSelectedBlockIds, deleteHeaderBlock, resetHeaderBlock }: { state: BrandPreviewState; sections: Section[]; headerBlock?: HeaderBannerBlock; updateHeaderBlock: <B extends Block>(id: string, patch: Partial<B>) => void; addHeaderBlock: () => void; uploadHeader?: (file: File) => Promise<void>; removeHeader?: () => void | Promise<void>; selectedBlockIds: string[]; setSelectedBlockIds: (ids: string[]) => void; deleteHeaderBlock: () => void; resetHeaderBlock: (id: string) => void }) {
   const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
   const fontBody = { fontFamily: FONT_STACKS[state.fontBody] }
 
@@ -110,12 +124,35 @@ function DesktopPortal({ state, sections: SECTIONS }: { state: BrandPreviewState
         ...fontBody,
       }}
     >
-      {state.headerImageUrl ? (
-        <img src={state.headerImageUrl} alt="" className="block w-full h-32 object-cover" />
+      {headerBlock ? (
+        <DndContext collisionDetection={closestCenter} onDragEnd={() => {}}>
+          <SortableContext items={[headerBlock.id]} strategy={verticalListSortingStrategy}>
+            <BlockFrame
+              id={headerBlock.id}
+              block={headerBlock}
+              state={state}
+              updateBlock={updateHeaderBlock}
+              selected={selectedBlockIds[0] === headerBlock.id}
+              multiSelected={false}
+              onSelect={() => setSelectedBlockIds([headerBlock.id])}
+              onDeselect={() => setSelectedBlockIds([])}
+              onRequestAddBelow={() => {}}
+              onDuplicate={() => {}}
+              onDelete={deleteHeaderBlock}
+              onResetBlock={() => resetHeaderBlock(headerBlock.id)}
+            >
+              <RenderHeaderBanner block={headerBlock} state={state} updateBlock={updateHeaderBlock} uploadHeader={uploadHeader} removeHeader={removeHeader} />
+            </BlockFrame>
+          </SortableContext>
+        </DndContext>
       ) : (
-        <div className="m-3 h-28 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/40 flex items-center justify-center">
-          <span className="text-xs text-gray-400">Header banner · upload in Logo &amp; assets</span>
-        </div>
+        <button
+          onClick={addHeaderBlock}
+          className="w-full m-3 h-28 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/40 flex items-center justify-center gap-2 text-gray-400 hover:text-gray-500 hover:border-gray-300 transition"
+        >
+          <Plus size={16} strokeWidth={1.75} />
+          <span className="text-xs">Add header banner</span>
+        </button>
       )}
 
       <div className="px-8 pt-7 pb-5 flex items-center gap-4 border-b border-gray-100">
@@ -162,7 +199,7 @@ function DesktopPortal({ state, sections: SECTIONS }: { state: BrandPreviewState
   )
 }
 
-function MobilePortal({ state, sections: SECTIONS }: { state: BrandPreviewState; sections: Section[] }) {
+function MobilePortal({ state, sections: SECTIONS, headerBlock, updateHeaderBlock, addHeaderBlock, uploadHeader, removeHeader, selectedBlockIds, setSelectedBlockIds, deleteHeaderBlock, resetHeaderBlock }: { state: BrandPreviewState; sections: Section[]; headerBlock?: HeaderBannerBlock; updateHeaderBlock: <B extends Block>(id: string, patch: Partial<B>) => void; addHeaderBlock: () => void; uploadHeader?: (file: File) => Promise<void>; removeHeader?: () => void | Promise<void>; selectedBlockIds: string[]; setSelectedBlockIds: (ids: string[]) => void; deleteHeaderBlock: () => void; resetHeaderBlock: (id: string) => void }) {
   const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
   const fontBody = { fontFamily: FONT_STACKS[state.fontBody] }
 
@@ -174,12 +211,35 @@ function MobilePortal({ state, sections: SECTIONS }: { state: BrandPreviewState;
         ...fontBody,
       }}
     >
-      {state.headerImageUrl ? (
-        <img src={state.headerImageUrl} alt="" className="block w-full h-24 object-cover" />
+      {headerBlock ? (
+        <DndContext collisionDetection={closestCenter} onDragEnd={() => {}}>
+          <SortableContext items={[headerBlock.id]} strategy={verticalListSortingStrategy}>
+            <BlockFrame
+              id={headerBlock.id}
+              block={headerBlock}
+              state={state}
+              updateBlock={updateHeaderBlock}
+              selected={selectedBlockIds[0] === headerBlock.id}
+              multiSelected={false}
+              onSelect={() => setSelectedBlockIds([headerBlock.id])}
+              onDeselect={() => setSelectedBlockIds([])}
+              onRequestAddBelow={() => {}}
+              onDuplicate={() => {}}
+              onDelete={deleteHeaderBlock}
+              onResetBlock={() => resetHeaderBlock(headerBlock.id)}
+            >
+              <RenderHeaderBanner block={headerBlock} state={state} updateBlock={updateHeaderBlock} uploadHeader={uploadHeader} removeHeader={removeHeader} />
+            </BlockFrame>
+          </SortableContext>
+        </DndContext>
       ) : (
-        <div className="m-3 h-20 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/40 flex items-center justify-center">
-          <span className="text-[10px] text-gray-400">Header banner</span>
-        </div>
+        <button
+          onClick={addHeaderBlock}
+          className="w-full m-3 h-20 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/40 flex items-center justify-center gap-1 text-gray-400 hover:text-gray-500 hover:border-gray-300 transition"
+        >
+          <Plus size={12} strokeWidth={1.75} />
+          <span className="text-[10px]">Add header banner</span>
+        </button>
       )}
 
       {/* Top bar */}

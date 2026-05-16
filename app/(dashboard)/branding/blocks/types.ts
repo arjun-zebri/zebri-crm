@@ -157,7 +157,7 @@ export type Block =
   | DividerBlock
   | FooterBlock
 
-export type BlocksByDoc = Record<'quote' | 'invoice' | 'contract', Block[]>
+export type BlocksByDoc = Record<'quote' | 'invoice' | 'contract' | 'portal', Block[]>
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   headerBanner: 'Header banner',
