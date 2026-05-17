@@ -72,6 +72,15 @@ export function InlineText({
       const text = e.clipboardData.getData('text/plain').slice(0, maxLength)
       document.execCommand('insertText', false, text)
     },
+    // Commit on every input (not just blur) so an edit survives even if the
+    // user refreshes/navigates without clicking away first. The value-sync
+    // effect early-returns while this element is focused, so the caret is
+    // preserved. Final normalisation still happens in onBlur.
+    onInput: (e: React.FormEvent) => {
+      const el = e.currentTarget as HTMLElement
+      const html = sanitizeHtml(el.innerHTML, { allowLists: lists })
+      if (html !== value) onChange(html)
+    },
     onBlur: (e: React.FocusEvent) => {
       const el = e.currentTarget as HTMLElement
       let html = sanitizeHtml(el.innerHTML, { allowLists: lists })

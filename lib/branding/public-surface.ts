@@ -31,6 +31,11 @@ export interface PublicBranding {
   instagram_url: string | null
   facebook_url: string | null
   show_contact_on_documents: boolean
+  /** Real bank settings (present on the invoice surface). The paymentDetails
+   *  block prefers these over its own placeholder values when available. */
+  bank_account_name?: string | null
+  bank_bsb?: string | null
+  bank_account_number?: string | null
   font_heading: HeadingFont
   font_body: BodyFont
   font_weight: FontWeight

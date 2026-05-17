@@ -8,8 +8,9 @@ import {
   type BodyFont,
 } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
-import type { Block, HeaderBannerBlock } from '@/app/(dashboard)/branding/blocks/types'
-import { RenderHeaderBanner } from '@/lib/branding/public-blocks/header-banner'
+import { DENSITY_PADDING } from '@/lib/branding/density'
+import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 
 export interface PortalPerson {
   id: string
@@ -137,6 +138,8 @@ function formatEventDate(dateStr: string): string {
   })
 }
 
+const PORTAL_DOC: PublicDocData = { title: '', refNumber: '', expiresAt: null, items: [], subtotal: 0, taxRate: 0 }
+
 export default async function PortalPage({
   params,
 }: {
@@ -174,9 +177,20 @@ export default async function PortalPage({
   const headingStack = FONT_STACKS[headingFont]
   const bodyStack = FONT_STACKS[bodyFont]
   const headingWeight = branding?.font_weight ?? 600
-  const headerBlock = portal.branding_blocks?.find(
-    (b): b is HeaderBannerBlock => b.type === 'headerBanner',
-  )
+  // The businessName block renders with this horizontal padding; match it on the
+  // hero so the couple name lines up with the logo/business name above it.
+  const docX = (DENSITY_PADDING[branding?.density ?? 'cozy'] ?? DENSITY_PADDING.cozy).docX
+
+  // The couplePortal block is a placeholder for the real portal (hero + section
+  // nav). Split the saved blocks around it so blocks the MC placed above it
+  // render before the portal and blocks placed below render after — matching
+  // the branding editor's order. No couplePortal marker (legacy) → all blocks
+  // render before the portal.
+  const allBlocks = portal.branding_blocks ?? []
+  const hasBlocks = allBlocks.length > 0 && !!branding
+  const cpIdx = allBlocks.findIndex((b) => b.type === 'couplePortal')
+  const preBlocks = cpIdx >= 0 ? allBlocks.slice(0, cpIdx) : allBlocks
+  const postBlocks = cpIdx >= 0 ? allBlocks.slice(cpIdx + 1) : []
 
   return (
     <div
@@ -187,50 +201,79 @@ export default async function PortalPage({
 
       <div className="max-w-4xl mx-auto px-4 pb-20">
 
-        {/* Header banner — uses the customised headerBanner block (height,
-            position, zoom, fit) from the quote surface, same as the public
-            quote/invoice/contract pages. Falls back to a fixed-height image
-            when no block tree is saved. */}
-        {branding?.header_image_url && (
-          <div className="pt-6">
-            <div
-              className="overflow-hidden"
-              style={{ borderRadius: branding.corner_radius ?? 16 }}
-            >
-              {headerBlock && !headerBlock.hidden ? (
-                <RenderHeaderBanner block={headerBlock} branding={branding} />
-              ) : (
+        {hasBlocks && branding ? (
+          preBlocks.length > 0 && (
+            <div className="pt-6"><PublicBlockRenderer blocks={preBlocks} branding={branding} doc={PORTAL_DOC} /></div>
+          )
+        ) : (
+          <>
+            {branding?.header_image_url && (
+              <div className="pt-6">
+                <div
+                  className="overflow-hidden"
+                  style={{ borderRadius: branding.corner_radius ?? 16 }}
+                >
+                  <img
+                    src={branding.header_image_url}
+                    alt=""
+                    className="block w-full h-44 sm:h-56 object-cover"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className={`${docX} pt-10 pb-2 flex items-center gap-4`}>
+              {branding?.logo_url ? (
                 <img
-                  src={branding.header_image_url}
-                  alt=""
-                  className="block w-full h-44 sm:h-56 object-cover"
+                  src={branding.logo_url}
+                  alt={branding.business_name || 'Logo'}
+                  className="object-contain rounded-lg bg-white shrink-0"
+                  style={{ width: 48, height: 48 }}
                 />
+              ) : branding?.favicon_url ? (
+                <img
+                  src={branding.favicon_url}
+                  alt={branding.business_name || 'Logo'}
+                  className="object-contain rounded-lg bg-white shrink-0"
+                  style={{ width: 48, height: 48 }}
+                />
+              ) : (
+                <div
+                  className="flex items-center justify-center text-white font-semibold shrink-0"
+                  style={{
+                    width: 48,
+                    height: 48,
+                    background: branding?.brand_color || '#111827',
+                    borderRadius: Math.min(branding?.corner_radius ?? 12, 12),
+                    fontSize: 22,
+                    fontFamily: headingStack,
+                    fontWeight: headingWeight,
+                  }}
+                >
+                  {branding?.business_name?.[0]?.toUpperCase() || 'Z'}
+                </div>
+              )}
+              {branding?.business_name && (
+                <div className="min-w-0">
+                  <p
+                    className="text-base font-semibold truncate"
+                    style={{ color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
+                  >
+                    {branding.business_name}
+                  </p>
+                  {branding.tagline && (
+                    <p className="text-sm truncate" style={{ color: mutedColor }}>
+                      {branding.tagline}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
-          </div>
+          </>
         )}
 
-        {/* Logo */}
-        <div className="pt-10 pb-2">
-          {branding?.logo_url ? (
-            <img
-              src={branding.logo_url}
-              alt={branding.business_name || 'Logo'}
-              className="max-h-12 object-contain"
-            />
-          ) : branding?.favicon_url ? (
-            <img
-              src={branding.favicon_url}
-              alt={branding.business_name || 'Logo'}
-              className="h-10 w-10 object-contain"
-            />
-          ) : (
-            <Image src="/zebri-logo.svg" alt="Zebri" width={64} height={23} />
-          )}
-        </div>
-
         {/* Hero */}
-        <div className="pt-8 pb-8 border-b border-gray-200">
+        <div className={`${docX} pt-8 pb-8 border-b border-gray-200`}>
           <h1
             className="text-3xl mb-1"
             style={{ color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
@@ -248,11 +291,19 @@ export default async function PortalPage({
           </p>
         </div>
 
-        {/* Portal sections */}
-        <PortalShell
-          token={token}
-          initialData={portal}
-        />
+        {/* Portal sections — same horizontal padding as the blocks/hero so the
+            Overview nav lines up with the logo, couple name and intro. */}
+        <div className={docX}>
+          <PortalShell
+            token={token}
+            initialData={portal}
+          />
+        </div>
+
+        {/* Blocks the MC placed below the couple portal in the editor. */}
+        {hasBlocks && branding && postBlocks.length > 0 && (
+          <div className="pt-6"><PublicBlockRenderer blocks={postBlocks} branding={branding} doc={PORTAL_DOC} /></div>
+        )}
 
       </div>
     </div>

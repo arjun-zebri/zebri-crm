@@ -33,18 +33,18 @@ export function blockTemplate(type: BlockType): Block {
       return { id: newId('dv'), type: 'divider' }
     case 'footer':
       return { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.' }
+    case 'paymentDetails':
+      return { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' }
+    case 'couplePortal':
+      return { id: newId('cp'), type: 'couplePortal', locked: true }
+    case 'paymentSchedule':
+      return { id: newId('ps'), type: 'paymentSchedule', locked: true }
   }
 }
 
 // ── Curated styles ────────────────────────────────────────────────────────────
 // Intentional overrides that give the starter template a designed feel.
 // Kept minimal so theme/font changes still flow through cleanly.
-
-const HERO_TITLE: TextStyle = {
-  fontSize: 44,
-  letterSpacing: -0.025,
-  lineHeight: 1.05,
-}
 
 const HERO_SUBTITLE: TextStyle = {
   fontSize: 12,
@@ -84,7 +84,11 @@ const SOFT_DIVIDER = { thickness: 1, color: '#E5E7EB' } as const
 
 export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'portal'): Block[] {
   if (surface === 'portal') {
-    return [{ id: newId('hb'), type: 'headerBanner' }]
+    return [
+      { id: newId('hb'), type: 'headerBanner' },
+      { id: newId('bn'), type: 'businessName' },
+      { id: newId('cp'), type: 'couplePortal', locked: true },
+    ]
   }
   if (surface === 'quote') {
     return [
@@ -93,12 +97,12 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'po
       {
         id: newId('tt'),
         type: 'title',
-        title: 'Your wedding, hosted.',
+        title: 'Quote',
         subtitle: 'ALEX & JORDAN  ·  14 SEPTEMBER 2026',
         showRef: true,
         showExpires: true,
         showAbn: false,
-        titleStyle: HERO_TITLE,
+        titleStyle: FORMAL_TITLE,
         subtitleStyle: HERO_SUBTITLE,
       },
       { id: newId('li'), type: 'lineItems', colSpread: true },
@@ -143,12 +147,14 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'po
         showSubtotal: true,
         totalStyle: EMPHASIZED_TOTAL,
       },
+      { id: newId('ps'), type: 'paymentSchedule', locked: true },
       {
         id: newId('tx'),
         type: 'text',
-        text: 'Payment due within 14 days. Bank details on the next page, or pay by card below.',
+        text: 'Payment due within 14 days. Pay by card, or by bank transfer using the details below.',
         textStyle: SOFT_MESSAGE,
       },
+      { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' },
       { id: newId('ac'), type: 'action', primary: 'Pay with card', secondary: null },
       { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.' },
     ]

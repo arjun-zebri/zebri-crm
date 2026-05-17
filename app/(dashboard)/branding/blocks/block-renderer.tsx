@@ -30,10 +30,13 @@ import {
   RenderTitle,
   RenderLineItems,
   RenderTotals,
+  RenderPaymentDetails,
   RenderText,
   RenderAction,
   RenderDivider,
   RenderFooter,
+  RenderCouplePortal,
+  RenderPaymentSchedule,
 } from './render'
 
 interface BlockRendererProps {
@@ -168,6 +171,25 @@ export function BlockRenderer({
         >
           <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
             {blocks.map((block) => {
+              if (block.type === 'couplePortal' || block.type === 'paymentSchedule') {
+                return (
+                  <div key={block.id} aria-label={block.type === 'couplePortal' ? 'Couple portal (fixed)' : 'Payment schedule (fixed)'} className="group relative">
+                    {renderBlock(block, state, updateBlock, {})}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        requestAddAfter(block.id)
+                      }}
+                      aria-label="Add block below"
+                      title="Add block below"
+                      className="absolute left-1/2 -translate-x-1/2 -bottom-3 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                    >
+                      <Plus size={12} strokeWidth={2} />
+                    </button>
+                  </div>
+                )
+              }
               const selected = primarySelectedId === block.id
               const multi = !selected && selectedBlockIds.includes(block.id)
               return (
@@ -271,6 +293,8 @@ function renderBlock(
       return <RenderLineItems block={block} state={state} updateBlock={updateBlock} />
     case 'totals':
       return <RenderTotals block={block} state={state} updateBlock={updateBlock} />
+    case 'paymentDetails':
+      return <RenderPaymentDetails block={block} state={state} updateBlock={updateBlock} />
     case 'text':
       return <RenderText block={block} state={state} updateBlock={updateBlock} />
     case 'action':
@@ -279,6 +303,10 @@ function renderBlock(
       return <RenderDivider block={block} state={state} updateBlock={updateBlock} />
     case 'footer':
       return <RenderFooter block={block} state={state} updateBlock={updateBlock} />
+    case 'couplePortal':
+      return <RenderCouplePortal state={state} />
+    case 'paymentSchedule':
+      return <RenderPaymentSchedule state={state} />
   }
 }
 

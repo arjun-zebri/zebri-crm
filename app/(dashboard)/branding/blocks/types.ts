@@ -21,10 +21,13 @@ export type BlockType =
   | 'title'
   | 'lineItems'
   | 'totals'
+  | 'paymentDetails'
   | 'text'
   | 'action'
   | 'divider'
   | 'footer'
+  | 'couplePortal'
+  | 'paymentSchedule'
 
 export interface BaseBlock {
   id: string
@@ -102,6 +105,17 @@ export interface TotalsBlock extends BaseBlock {
   totalStyle?: TextStyle
 }
 
+export interface PaymentDetailsBlock extends BaseBlock {
+  type: 'paymentDetails'
+  heading: string
+  accountName: string
+  bsb: string
+  accountNumber: string
+  headingStyle?: TextStyle
+  labelStyle?: TextStyle
+  valueStyle?: TextStyle
+}
+
 export interface TextBlock extends BaseBlock {
   type: 'text'
   text: string
@@ -145,6 +159,14 @@ export interface FooterBlock extends BaseBlock {
   contactStyle?: TextStyle
 }
 
+export interface CouplePortalBlock extends BaseBlock {
+  type: 'couplePortal'
+}
+
+export interface PaymentScheduleBlock extends BaseBlock {
+  type: 'paymentSchedule'
+}
+
 export type Block =
   | HeaderBannerBlock
   | BusinessNameBlock
@@ -152,10 +174,13 @@ export type Block =
   | TitleBlock
   | LineItemsBlock
   | TotalsBlock
+  | PaymentDetailsBlock
   | TextBlock
   | ActionBlock
   | DividerBlock
   | FooterBlock
+  | CouplePortalBlock
+  | PaymentScheduleBlock
 
 export type BlocksByDoc = Record<'quote' | 'invoice' | 'contract' | 'portal', Block[]>
 
@@ -166,10 +191,13 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   title: 'Title & meta',
   lineItems: 'Line items',
   totals: 'Totals',
+  paymentDetails: 'Payment details',
   text: 'Text',
   action: 'Action',
   divider: 'Divider',
   footer: 'Footer',
+  couplePortal: 'Couple portal',
+  paymentSchedule: 'Payment schedule',
 }
 
 export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
@@ -179,8 +207,11 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   title: 'Document title and reference',
   lineItems: 'Services and amounts',
   totals: 'Subtotal, tax, total',
+  paymentDetails: 'Bank transfer account details',
   text: 'Plain paragraph or note',
   action: 'Accept / Decline / Pay',
   divider: 'Horizontal rule',
   footer: 'Business contact and closing line',
+  couplePortal: 'The couple-facing portal (fixed)',
+  paymentSchedule: 'Deposit & final balance (live invoice data)',
 }

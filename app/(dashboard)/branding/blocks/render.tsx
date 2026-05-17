@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ImageIcon } from 'lucide-react'
-import { getTextColor } from '@/lib/branding/contrast'
+import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
+import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { BrandPreviewState } from '../branding-preview-types'
 import { DENSITY_PADDING } from '../branding-preview-types'
@@ -17,10 +17,13 @@ import type {
   TitleBlock,
   LineItemsBlock,
   TotalsBlock,
+  PaymentDetailsBlock,
   TextBlock,
   ActionBlock,
   DividerBlock,
   FooterBlock,
+  CouplePortalBlock,
+  PaymentScheduleBlock,
 } from './types'
 
 function fmt(n: number) {
@@ -852,6 +855,167 @@ export function RenderFooter({ block, state, updateBlock }: RenderProps<FooterBl
             {contactParts.join('  ·  ')}
           </p>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Payment Details ───────────────────────────────────────────────────────────
+
+export function RenderPaymentDetails({ block, state, updateBlock }: RenderProps<PaymentDetailsBlock>) {
+  const pad = PAD(state)
+  const headingDefaults: TextStyleDefaults = {
+    fontFamily: state.fontHeading,
+    fontSize: 16,
+    fontWeight: state.fontWeight,
+    color: state.textColor || '#111827',
+    align: 'left',
+    lineHeight: 1.3,
+    letterSpacing: 0,
+  }
+  const labelDefaults: TextStyleDefaults = {
+    fontFamily: state.fontBody,
+    fontSize: 12,
+    fontWeight: 500,
+    color: state.mutedColor || '#6B7280',
+    align: 'left',
+    lineHeight: 1.5,
+    letterSpacing: 0,
+  }
+  const valueDefaults: TextStyleDefaults = {
+    fontFamily: state.fontBody,
+    fontSize: 14,
+    fontWeight: 500,
+    color: state.textColor || '#111827',
+    align: 'left',
+    lineHeight: 1.5,
+    letterSpacing: 0,
+  }
+
+  const headingCss = resolveTextStyle(block.headingStyle, headingDefaults)
+  const labelCss = resolveTextStyle(block.labelStyle, labelDefaults)
+  const valueCss = resolveTextStyle(block.valueStyle, valueDefaults)
+
+  return (
+    <div className={`${pad.docX} ${pad.blockY}`}>
+      <p className="mb-3" style={headingCss}>
+        <InlineText value={block.heading} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { heading: v })} placeholder="Heading" as="span" />
+      </p>
+      <div className="space-y-1.5">
+        <div className="flex items-baseline gap-3">
+          <span className="w-28 shrink-0" style={labelCss}>Account name</span>
+          <span className="flex-1" style={valueCss}><InlineText value={block.accountName} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountName: v })} placeholder="Account name" as="span" /></span>
+        </div>
+        <div className="flex items-baseline gap-3">
+          <span className="w-28 shrink-0" style={labelCss}>BSB</span>
+          <span className="flex-1" style={valueCss}><InlineText value={block.bsb} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { bsb: v })} placeholder="BSB" as="span" /></span>
+        </div>
+        <div className="flex items-baseline gap-3">
+          <span className="w-28 shrink-0" style={labelCss}>Account number</span>
+          <span className="flex-1" style={valueCss}><InlineText value={block.accountNumber} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountNumber: v })} placeholder="Account number" as="span" /></span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Couple portal ─────────────────────────────────────────────────────────────
+
+type PortalSectionKey = keyof NonNullable<BrandPreviewState['portalSections']>
+
+const PORTAL_SECTIONS: Array<{ label: string; icon: typeof LayoutDashboard; count: number; active?: boolean; key?: PortalSectionKey }> = [
+  { label: 'Overview', icon: LayoutDashboard, count: 1, active: true },
+  { label: 'Timeline', icon: Clock, count: 12, key: 'timeline' },
+  { label: 'Contacts', icon: Users2, count: 8, key: 'contacts' },
+  { label: 'Payments', icon: Receipt, count: 2, key: 'payments' },
+  { label: 'Contracts', icon: FileSignature, count: 1, key: 'contracts' },
+  { label: 'Songs', icon: Music, count: 18, key: 'songs' },
+  { label: 'Files', icon: FileText, count: 3, key: 'files' },
+]
+
+export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
+  const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
+  const visibleSections = PORTAL_SECTIONS.filter(
+    (s) => !s.key || state.portalSections?.[s.key] !== false,
+  )
+  return (
+    <div className="border-t border-gray-100">
+      <div className="px-8 pt-8 pb-8 border-b border-gray-100">
+        <p
+          className="text-3xl mb-1"
+          style={{ color: state.textColor || '#111827', fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }}
+        >
+          Couple name
+        </p>
+        <p className="mt-3 text-sm" style={{ color: state.mutedColor || '#6B7280' }}>
+          Fill in your details below. Everything saves automatically. You can come back anytime.
+        </p>
+      </div>
+      <div className="flex gap-8 px-8 py-7 min-h-[420px]">
+      <nav className="w-52 shrink-0 border-r border-gray-100 pr-4 space-y-0.5">
+        {visibleSections.map((s) => {
+          const Icon = s.icon
+          return (
+            <div key={s.label} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${s.active ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500'}`}>
+              <Icon size={15} strokeWidth={1.5} className="shrink-0" />
+              <span className="flex-1 text-sm">{s.label}</span>
+              <span className="text-[11px] text-gray-400">{s.count}</span>
+            </div>
+          )
+        })}
+      </nav>
+      <div className="flex-1 min-w-0 space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900" style={fontHeading}>Overview</h2>
+          <p className="text-sm text-gray-500 mt-1">Your details and upcoming events</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-6">
+          <p className="text-xs font-medium text-gray-500 mb-4">Your details</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Name</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>Alex &amp; Jordan</p></div>
+            <div><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Email</p><p className="text-sm text-gray-700">hello@example.com</p></div>
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-medium text-gray-500 mb-2">Your events</p>
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-medium text-gray-900">Saturday, 14 September 2026</p>
+                <p className="text-sm text-gray-500 mt-0.5">The Glasshouse, Sydney</p>
+              </div>
+              <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-full whitespace-nowrap" style={{ background: `${state.accentColor || state.brandColor}26`, color: pillForeground(state.accentColor, state.brandColor, state.surfaceColor || '#FFFFFF') }}>127 days away</span>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-5"><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Next payment</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>$1,250</p><p className="text-xs text-gray-500 mt-1">Due 1 August 2026</p></div>
+          <div className="bg-white border border-gray-200 rounded-xl p-5"><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Contract</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>Signed</p><p className="text-xs text-gray-500 mt-1">12 April 2026</p></div>
+        </div>
+      </div>
+      </div>
+    </div>
+  )
+}
+
+export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
+  const pad = PAD(state)
+  const muted = state.mutedColor || '#6B7280'
+  const text = state.textColor || '#111827'
+  return (
+    <div className="border-t border-gray-100">
+      <div className={`${pad.docX} ${pad.blockY}`}>
+        <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: muted }}>Payment schedule</p>
+        <div className="space-y-2">
+          <div className="py-2.5 border-b border-gray-50 flex items-center justify-between">
+            <span className="text-sm" style={{ color: text }}>Deposit (50%)</span>
+            <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
+          </div>
+          <div className="py-2.5 flex items-center justify-between">
+            <span className="text-sm" style={{ color: text }}>Final balance (50%)</span>
+            <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
+          </div>
+        </div>
       </div>
     </div>
   )

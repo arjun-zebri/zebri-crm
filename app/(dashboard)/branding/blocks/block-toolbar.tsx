@@ -19,6 +19,7 @@ import type {
   BusinessNameBlock,
   TaglineBlock,
   TotalsBlock,
+  PaymentDetailsBlock,
   LineItemsBlock,
   DividerBlock,
   HeaderBannerBlock,
@@ -117,12 +118,18 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
       return <TaglineControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'totals':
       return <TotalsControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+    case 'paymentDetails':
+      return <PaymentDetailsControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'lineItems':
       return <LineItemsControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'divider':
       return <DividerControls block={block} updateBlock={updateBlock} />
     case 'footer':
       return <FooterControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+    case 'couplePortal':
+      return null
+    case 'paymentSchedule':
+      return null
   }
 }
 
@@ -663,6 +670,84 @@ function TotalsControls({
         defaults={defaults}
         onChange={(patch) =>
           updateBlock<TotalsBlock>(block.id, { [styleKey]: { ...(style ?? {}), ...patch } })
+        }
+        expanded={expanded}
+      />
+    </div>
+  )
+}
+
+// ── Payment Details ───────────────────────────────────────────────────────────
+
+type PaymentDetailsTarget = 'heading' | 'label' | 'value'
+
+function PaymentDetailsControls({
+  block,
+  state,
+  updateBlock,
+  expanded,
+}: {
+  block: PaymentDetailsBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  expanded?: boolean
+}) {
+  const [target, setTarget] = useState<PaymentDetailsTarget>('heading')
+
+  const isHeading = target === 'heading'
+  const isLabel = target === 'label'
+  const isValue = target === 'value'
+
+  const style = isHeading ? block.headingStyle : isLabel ? block.labelStyle : block.valueStyle
+  const defaults: TextStyleDefaults = isHeading
+    ? {
+        fontFamily: state.fontHeading,
+        fontSize: 16,
+        fontWeight: state.fontWeight,
+        color: state.textColor || '#111827',
+        align: 'left',
+        lineHeight: 1.3,
+        letterSpacing: 0,
+      }
+    : isLabel
+      ? {
+          fontFamily: state.fontBody,
+          fontSize: 12,
+          fontWeight: 500,
+          color: state.mutedColor || '#6B7280',
+          align: 'left',
+          lineHeight: 1.5,
+          letterSpacing: 0,
+        }
+      : {
+          fontFamily: state.fontBody,
+          fontSize: 14,
+          fontWeight: 500,
+          color: state.textColor || '#111827',
+          align: 'left',
+          lineHeight: 1.5,
+          letterSpacing: 0,
+        }
+
+  const styleKey = isHeading ? 'headingStyle' : isLabel ? 'labelStyle' : 'valueStyle'
+
+  return (
+    <div className="flex items-center gap-2">
+      <TargetSwitcher
+        target={target}
+        setTarget={setTarget}
+        options={[
+          { value: 'heading', label: 'Heading' },
+          { value: 'label', label: 'Label' },
+          { value: 'value', label: 'Value' },
+        ]}
+      />
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        onChange={(patch) =>
+          updateBlock<PaymentDetailsBlock>(block.id, { [styleKey]: { ...(style ?? {}), ...patch } })
         }
         expanded={expanded}
       />

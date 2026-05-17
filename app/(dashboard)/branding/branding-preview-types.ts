@@ -30,6 +30,15 @@ export interface BrandPreviewState {
   website: string
   instagramUrl: string
   facebookUrl: string
+  /** Which couple-portal sections are enabled. Drives the couplePortal block preview. */
+  portalSections?: {
+    timeline: boolean
+    contacts: boolean
+    payments: boolean
+    contracts: boolean
+    songs: boolean
+    files: boolean
+  }
 }
 
 export interface BrandPreviewActions {

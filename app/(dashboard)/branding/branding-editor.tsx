@@ -22,7 +22,7 @@ import { AddBlockPalette } from './blocks/add-block-palette'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from './branding-preview-types'
-import { PortalPreview } from './portal-preview'
+import { PortalSectionsBar } from './portal-preview'
 
 export interface PortalSectionSettings {
   timeline: boolean
@@ -337,7 +337,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   const resetCurrentSurface = () => {
-    if (surface === 'portal') return
     setState((prev) => ({
       ...prev,
       blocks: { ...prev.blocks, [surface]: defaultBlocksFor(surface) },
@@ -432,22 +431,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setEditor({ headerImageUrl: '' }, false)
   }
 
-  const docSurface: 'quote' | 'invoice' | 'contract' | null =
-    surface === 'portal' ? null : surface
-
-  const portalBlocks = state.blocks.portal ?? []
-  const portalHeaderBlock = portalBlocks.find((b): b is import('./blocks/types').HeaderBannerBlock => b.type === 'headerBanner')
-  const updatePortalBlock = <B extends Block>(id: string, patch: Partial<B>) =>
-    setState((prev) => ({ ...prev, blocks: { ...prev.blocks, portal: (prev.blocks.portal ?? []).map(b => b.id === id ? ({ ...b, ...patch } as Block) : b) } }))
-  const addPortalHeader = () =>
-    setState((prev) => ({ ...prev, blocks: { ...prev.blocks, portal: [...(prev.blocks.portal ?? []), blockTemplate('headerBanner')] } }))
-  const deletePortalHeader = () =>
-    setState((prev) => ({ ...prev, blocks: { ...prev.blocks, portal: [] } }))
-  const resetPortalHeader = (id: string) =>
-    setState((prev) => ({ ...prev, blocks: { ...prev.blocks, portal: (prev.blocks.portal ?? []).map(b => b.id === id ? clearStyleOverrides(b) : b) } }))
+  const docSurface: 'quote' | 'invoice' | 'contract' | 'portal' = surface
 
   const setBlocksForCurrent = (blocks: Block[]) => {
-    if (!docSurface) return
     setState((prev) => ({
       ...prev,
       blocks: { ...prev.blocks, [docSurface]: blocks },
@@ -455,23 +441,23 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   function updateBlock<B extends Block>(id: string, patch: Partial<B>) {
-    if (!docSurface) return
     const list = state.blocks[docSurface]
     setBlocksForCurrent(list.map(b => (b.id === id ? ({ ...b, ...patch } as Block) : b)))
   }
 
   function deleteBlock(id: string) {
-    if (!docSurface) return
+    const block = state.blocks[docSurface].find(b => b.id === id)
+    if (block?.type === 'couplePortal' || block?.type === 'paymentSchedule') return
     setBlocksForCurrent(state.blocks[docSurface].filter(b => b.id !== id))
     setSelectedBlockIds((prev) => prev.filter(x => x !== id))
   }
 
   function duplicateBlock(id: string) {
-    if (!docSurface) return
     const list = state.blocks[docSurface]
     const idx = list.findIndex(b => b.id === id)
     if (idx < 0) return
     const original = list[idx]
+    if (original.type === 'couplePortal' || original.type === 'paymentSchedule') return
     const cloned = { ...original, id: `${original.type}-${Date.now().toString(36)}` } as Block
     const next = [...list]
     next.splice(idx + 1, 0, cloned)
@@ -480,7 +466,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   function resetBlockStyles(id: string) {
-    if (!docSurface) return
     const list = state.blocks[docSurface]
     const target = list.find((b) => b.id === id)
     if (!target) return
@@ -489,7 +474,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
-    if (!docSurface) return
     const newBlock = blockTemplate(type)
     const list = state.blocks[docSurface]
     if (insertAfterId) {
@@ -668,7 +652,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       const target = e.target as HTMLElement | null
       if (target?.isContentEditable) return
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
-      if (e.key === '/' && docSurface) {
+      if (e.key === '/') {
         e.preventDefault()
         setInsertAfterId(null)
         setPaletteOpen(true)
@@ -706,9 +690,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     website: initialData.website,
     instagramUrl: initialData.instagramUrl,
     facebookUrl: initialData.facebookUrl,
+    portalSections: state.portalSections,
   }), [state, initialData.phone, initialData.website, initialData.instagramUrl, initialData.facebookUrl])
 
-  const visibleBlocks = docSurface ? state.blocks[docSurface] : []
+  const visibleBlocks = state.blocks[docSurface]
 
   // Heuristic: contracts saved before the rewrite were tiny (3-line stubs).
   // When we detect one, offer a one-click swap to the new template.
@@ -732,7 +717,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         brandKits={state.brandKits}
         onApplyKit={onApplyKit}
         onDeleteKit={onDeleteKit}
-        addBlockSlot={docSurface ? (
+        addBlockSlot={
           <AddBlockPalette
             open={paletteOpen}
             onOpenChange={setPaletteOpen}
@@ -749,7 +734,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               </button>
             }
           />
-        ) : null}
+        }
       />
 
       <SurfaceTabs surface={surface} setSurface={setSurface} state={previewState} />
@@ -818,12 +803,12 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               </button>
             </div>
           )}
-          {docSurface && visibleBlocks.length > 0 && (
+          {visibleBlocks.length > 0 && (
             <div className="flex justify-end mb-2">
               <button
                 type="button"
                 onClick={() => {
-                  setBlocksForCurrent([])
+                  setBlocksForCurrent(state.blocks[docSurface].filter(b => b.type === 'couplePortal' || b.type === 'paymentSchedule'))
                   setSelectedBlockIds([])
                 }}
                 className="text-[11px] text-gray-400 hover:text-red-500 cursor-pointer transition"
@@ -832,29 +817,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               </button>
             </div>
           )}
-          {docSurface ? (
-            <BlockRenderer
-              blocks={visibleBlocks}
-              setBlocks={setBlocksForCurrent}
-              state={previewState}
-              selectedBlockIds={selectedBlockIds}
-              setSelectedBlockIds={setSelectedBlockIds}
-              requestAddAfter={requestAddAfter}
-              updateBlock={updateBlock}
-              duplicateBlock={duplicateBlock}
-              deleteBlock={deleteBlock}
-              resetBlock={resetBlockStyles}
-              setTagline={(v) => setEditor({ tagline: v }, false)}
-              setBusinessName={(v) => setEditor({ businessName: v }, false)}
-              uploadLogo={uploadLogo}
-              removeLogo={removeLogo}
-              uploadHeader={uploadHeader}
-              removeHeader={removeHeader}
-            />
-          ) : (
-            <PortalPreview
-              state={previewState}
-              device={device}
+          {surface === 'portal' && (
+            <PortalSectionsBar
               sections={state.portalSections}
               setSections={(patch) =>
                 setEditor(
@@ -862,17 +826,26 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
                   false,
                 )
               }
-              headerBlock={portalHeaderBlock}
-              updateHeaderBlock={updatePortalBlock}
-              addHeaderBlock={addPortalHeader}
-              uploadHeader={uploadHeader}
-              removeHeader={removeHeader}
-              selectedBlockIds={selectedBlockIds}
-              setSelectedBlockIds={setSelectedBlockIds}
-              deleteHeaderBlock={deletePortalHeader}
-              resetHeaderBlock={resetPortalHeader}
             />
           )}
+          <BlockRenderer
+            blocks={visibleBlocks}
+            setBlocks={setBlocksForCurrent}
+            state={previewState}
+            selectedBlockIds={selectedBlockIds}
+            setSelectedBlockIds={setSelectedBlockIds}
+            requestAddAfter={requestAddAfter}
+            updateBlock={updateBlock}
+            duplicateBlock={duplicateBlock}
+            deleteBlock={deleteBlock}
+            resetBlock={resetBlockStyles}
+            setTagline={(v) => setEditor({ tagline: v }, false)}
+            setBusinessName={(v) => setEditor({ businessName: v }, false)}
+            uploadLogo={uploadLogo}
+            removeLogo={removeLogo}
+            uploadHeader={uploadHeader}
+            removeHeader={removeHeader}
+          />
         </CanvasFrame>
       </div>
     </div>
@@ -911,6 +884,11 @@ function clearStyleOverrides(block: Block): Block {
     case 'totals': {
       const { totalStyle: _t, ...rest } = block
       void _t
+      return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
+    }
+    case 'paymentDetails': {
+      const { headingStyle: _h, labelStyle: _l, valueStyle: _v, ...rest } = block
+      void _h; void _l; void _v
       return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
     }
     case 'action': {
@@ -963,11 +941,10 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
   blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] },
-  docSurface: 'quote' | 'invoice' | 'contract' | null,
+  docSurface: 'quote' | 'invoice' | 'contract' | 'portal',
   surface: SurfaceTab,
 ) {
   if (typeof document === 'undefined') return
-  if (!docSurface) return
 
   const affectedTypes = new Set<Block['type']>()
   for (const key of Object.keys(patch) as TokenKey[]) {
