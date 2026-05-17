@@ -21,10 +21,13 @@ export type BlockType =
   | 'title'
   | 'lineItems'
   | 'totals'
+  | 'paymentDetails'
   | 'text'
   | 'action'
   | 'divider'
   | 'footer'
+  | 'couplePortal'
+  | 'paymentSchedule'
 
 export interface BaseBlock {
   id: string
@@ -37,6 +40,10 @@ export interface BaseBlock {
   borderColor?: string
   /** Override the block's corner radius. Falls back to global cornerRadius. */
   blockRadius?: number
+  /** Explicit minimum height (px) set by dragging the resize handle. */
+  blockHeightPx?: number
+  /** Vertical alignment of content when blockHeightPx creates extra space. Defaults to 'middle'. */
+  blockVAlign?: 'top' | 'middle' | 'bottom'
 }
 
 export interface HeaderBannerBlock extends BaseBlock {
@@ -83,13 +90,30 @@ export interface LineItemsBlock extends BaseBlock {
   rowStyle?: 'lines' | 'stripes' | 'plain'
   headerStyle?: TextStyle
   itemStyle?: TextStyle
+  /** When true, description is left and amount is right (justify-between). Default false = both columns share the same alignment. */
+  colSpread?: boolean
 }
 
 export interface TotalsBlock extends BaseBlock {
   type: 'totals'
   taxRate: number
   showSubtotal: boolean
+  showTax?: boolean
+  colSpread?: boolean
+  subtotalStyle?: TextStyle
+  taxStyle?: TextStyle
   totalStyle?: TextStyle
+}
+
+export interface PaymentDetailsBlock extends BaseBlock {
+  type: 'paymentDetails'
+  heading: string
+  accountName: string
+  bsb: string
+  accountNumber: string
+  headingStyle?: TextStyle
+  labelStyle?: TextStyle
+  valueStyle?: TextStyle
 }
 
 export interface TextBlock extends BaseBlock {
@@ -106,22 +130,41 @@ export interface ActionBlock extends BaseBlock {
   secondaryStyle?: TextStyle
   buttonColor?: string
   buttonRadius?: number
+  /** Explicit width of primary button in px. When undefined, primary fills available space (flex-1). */
+  primaryWidthPx?: number
+  /** Explicit width of secondary button in px. When undefined, secondary sizes to content. */
+  secondaryWidthPx?: number
+  /** Vertical padding of primary button (px). Default 14. */
+  primaryPaddingY?: number
+  /** Vertical padding of secondary button (px). Default 14. */
+  secondaryPaddingY?: number
+  /** Horizontal alignment of the button group within the block. Default 'center'. */
+  buttonJustify?: 'start' | 'center' | 'end'
+  /** Block-level override for the secondary button background. Falls back to brand secondaryColor. */
+  secondaryColor?: string
 }
 
 export interface DividerBlock extends BaseBlock {
   type: 'divider'
   thickness?: number
   color?: string
+  lineStyle?: 'solid' | 'dashed' | 'dotted'
 }
 
 export interface FooterBlock extends BaseBlock {
   type: 'footer'
   /** Optional final line of copy (e.g. "Thank you for choosing us"). */
   closingNote?: string
-  /** Show the small Zebri-style mark + business name on the left. */
-  showMark?: boolean
   noteStyle?: TextStyle
   contactStyle?: TextStyle
+}
+
+export interface CouplePortalBlock extends BaseBlock {
+  type: 'couplePortal'
+}
+
+export interface PaymentScheduleBlock extends BaseBlock {
+  type: 'paymentSchedule'
 }
 
 export type Block =
@@ -131,24 +174,30 @@ export type Block =
   | TitleBlock
   | LineItemsBlock
   | TotalsBlock
+  | PaymentDetailsBlock
   | TextBlock
   | ActionBlock
   | DividerBlock
   | FooterBlock
+  | CouplePortalBlock
+  | PaymentScheduleBlock
 
-export type BlocksByDoc = Record<'quote' | 'invoice' | 'contract', Block[]>
+export type BlocksByDoc = Record<'quote' | 'invoice' | 'contract' | 'portal', Block[]>
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   headerBanner: 'Header banner',
-  businessName: 'Business name',
+  businessName: 'My details',
   tagline: 'Tagline',
   title: 'Title & meta',
   lineItems: 'Line items',
   totals: 'Totals',
+  paymentDetails: 'Payment details',
   text: 'Text',
   action: 'Action',
   divider: 'Divider',
   footer: 'Footer',
+  couplePortal: 'Couple portal',
+  paymentSchedule: 'Payment schedule',
 }
 
 export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
@@ -158,8 +207,11 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   title: 'Document title and reference',
   lineItems: 'Services and amounts',
   totals: 'Subtotal, tax, total',
+  paymentDetails: 'Bank transfer account details',
   text: 'Plain paragraph or note',
   action: 'Accept / Decline / Pay',
   divider: 'Horizontal rule',
   footer: 'Business contact and closing line',
+  couplePortal: 'The couple-facing portal (fixed)',
+  paymentSchedule: 'Deposit & final balance (live invoice data)',
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Search, ImageIcon, Type, Table, CreditCard, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom } from 'lucide-react'
+import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { BLOCK_LABELS, BLOCK_DESCRIPTIONS, type BlockType } from './types'
 
@@ -12,6 +12,7 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   title: Type,
   lineItems: Table,
   totals: CreditCard,
+  paymentDetails: Landmark,
   text: Pilcrow,
   action: Activity,
   divider: Minus,
@@ -25,6 +26,7 @@ const BLOCK_ORDER: BlockType[] = [
   'title',
   'lineItems',
   'totals',
+  'paymentDetails',
   'text',
   'action',
   'divider',

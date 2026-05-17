@@ -107,6 +107,10 @@ drive_time_from_home_seconds (integer, nullable)  -  drive time in seconds from 
 
 drive_time_to_next_event_seconds (integer, nullable)  -  drive time in seconds from this event's venue to the next event's venue (same couple, same date, ordered by created_at); recalculated automatically on event create/update/delete.
 
+drive_distance_from_home_meters (integer, nullable)  -  driving distance in meters from MC's home address to this event's venue; recalculated alongside drive_time_from_home_seconds.
+
+drive_distance_to_next_event_meters (integer, nullable)  -  driving distance in meters from this event's venue to the next event's venue; recalculated alongside drive_time_to_next_event_seconds.
+
 share_token (uuid, nullable, default gen_random_uuid())  -  generated on row creation; used as the public share URL key.
 
 share_token_enabled (boolean, not null, default false)  -  link is inactive until the MC explicitly enables it. Disabling preserves the token. Regenerating updates share_token to a new gen_random_uuid(), permanently invalidating the old URL.
@@ -440,7 +444,7 @@ created_at (timestamptz, default now())
 Storage bucket: portal-files (public read, max 20MB per file)
 Storage bucket: portal-audio (public read, max 10MB per file)
 
-RLS: Standard user_id = auth.uid(). Anon uploads handled via /api/portal/upload route (service role key). Anon deletes via: delete_portal_file RPC.
+RLS: Standard user_id = auth.uid(). MC dashboard uploads run client-side with the publishable key (path = "<couple_id>/..."), anon portal uploads run through /api/portal/upload (path = "<portal_token>/..."). Storage INSERT/UPDATE/DELETE policies on storage.objects authorize an upload when (storage.foldername(name))[1] is either a couple_id owned by auth.uid() (is_own_couple) or an active portal_token (is_valid_portal_token) — both SECURITY DEFINER. Don't depend on service_role bypass; the new publishable/secret key model makes that unreliable. Anon deletes via: delete_portal_file RPC.
 
 ------------------------------------------------------------------------
 

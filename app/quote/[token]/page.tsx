@@ -12,6 +12,8 @@ import {
   type PublicBranding,
 } from '@/lib/branding/public-surface'
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
+import { Html } from '@/lib/branding/public-blocks/html'
+import { htmlToPlainText } from '@/lib/branding/sanitize'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 interface QuoteItem {
@@ -142,7 +144,7 @@ export default function PublicQuotePage() {
               Quote accepted{quote.accepted_at ? ` on ${formatDate(quote.accepted_at.split('T')[0])}` : ''}.
             </p>
             <p className="text-sm text-emerald-600">
-              {quote.business_name ? `${quote.business_name} will` : 'Your MC will'} be in touch to confirm the details.
+              {quote.business_name ? `${htmlToPlainText(quote.business_name)} will` : 'Your MC will'} be in touch to confirm the details.
             </p>
           </div>
         )}
@@ -155,7 +157,7 @@ export default function PublicQuotePage() {
           <div className="mb-3 px-5 py-3 rounded-xl bg-amber-50 border border-amber-100">
             <p className="text-sm text-amber-700">
               This quote expired on {formatDate(quote.expires_at!)}.
-              {quote.business_name ? ` Please contact ${quote.business_name} for an updated quote.` : ''}
+              {quote.business_name ? ` Please contact ${htmlToPlainText(quote.business_name)} for an updated quote.` : ''}
             </p>
           </div>
         )}
@@ -227,16 +229,18 @@ export default function PublicQuotePage() {
               {quote.logo_url ? (
                 <img
                   src={quote.logo_url}
-                  alt={quote.business_name || 'Logo'}
+                  alt={htmlToPlainText(quote.business_name) || 'Logo'}
                   className="max-h-12 object-contain mb-3"
                 />
               ) : quote.business_name ? (
                 <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: mutedColor }}>
-                  {quote.business_name}
+                  <Html value={quote.business_name} allowLists={false} />
                 </p>
               ) : null}
               {quote.tagline && (
-                <p className="text-xs mb-3" style={{ color: mutedColor }}>{quote.tagline}</p>
+                <p className="text-xs mb-3" style={{ color: mutedColor }}>
+                  <Html value={quote.tagline} allowLists={false} />
+                </p>
               )}
               <h1
                 className="text-2xl mb-1"

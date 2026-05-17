@@ -1,5 +1,6 @@
 import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
 import type { Density } from '@/lib/branding/themes'
+import type { Block } from './blocks/types'
 
 export interface BrandPreviewState {
   logoUrl: string
@@ -10,6 +11,8 @@ export interface BrandPreviewState {
   surfaceColor: string
   textColor: string
   mutedColor: string
+  secondaryColor: string
+  secondaryTextColor: string
   tagline: string
   footerText: string
   abn: string
@@ -27,6 +30,15 @@ export interface BrandPreviewState {
   website: string
   instagramUrl: string
   facebookUrl: string
+  /** Which couple-portal sections are enabled. Drives the couplePortal block preview. */
+  portalSections?: {
+    timeline: boolean
+    contacts: boolean
+    payments: boolean
+    contracts: boolean
+    songs: boolean
+    files: boolean
+  }
 }
 
 export interface BrandPreviewActions {
@@ -57,6 +69,8 @@ export interface BrandKit {
   surfaceColor: string
   textColor: string
   mutedColor: string
+  secondaryColor: string
+  secondaryTextColor: string
   fontHeading: HeadingFont
   fontBody: BodyFont
   fontWeight: FontWeight
@@ -64,8 +78,11 @@ export interface BrandKit {
   fontScale: number
   density: Density
   cornerRadius: number
+  docPadding?: number
+  tagline?: string
   logoUrl?: string
   faviconUrl?: string
   headerImageUrl?: string
+  blocks?: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
   createdAt: string
 }

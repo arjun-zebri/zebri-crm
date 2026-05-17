@@ -13,6 +13,7 @@ import { RenderTagline } from './public-blocks/tagline'
 import { RenderTitle } from './public-blocks/title'
 import { RenderLineItems } from './public-blocks/line-items'
 import { RenderTotals } from './public-blocks/totals'
+import { RenderPaymentDetails } from './public-blocks/payment-details'
 import { RenderText } from './public-blocks/text'
 import { RenderAction } from './public-blocks/action'
 import { RenderDivider } from './public-blocks/divider'
@@ -77,6 +78,7 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'title':        return <RenderTitle block={block} branding={branding} doc={doc} />
     case 'lineItems':    return <RenderLineItems block={block} branding={branding} doc={doc} />
     case 'totals':       return <RenderTotals block={block} branding={branding} doc={doc} />
+    case 'paymentDetails': return <RenderPaymentDetails block={block} branding={branding} />
     case 'text':         return <RenderText block={block} branding={branding} />
     case 'action':       return (
       <RenderAction
@@ -93,6 +95,8 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     )
     case 'divider':      return <RenderDivider block={block} branding={branding} />
     case 'footer':       return <RenderFooter block={block} branding={branding} />
+    case 'couplePortal': return null
+    case 'paymentSchedule': return null
   }
 }
 

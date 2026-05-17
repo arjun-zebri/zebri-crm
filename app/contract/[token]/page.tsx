@@ -14,6 +14,8 @@ import {
   type PublicBranding,
 } from '@/lib/branding/public-surface'
 import { PublicBlockRenderer, findActionStyle } from '@/lib/branding/public-renderer'
+import { Html } from '@/lib/branding/public-blocks/html'
+import { htmlToPlainText } from '@/lib/branding/sanitize'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 interface PublicContract extends PublicBranding {
@@ -138,7 +140,7 @@ export default function PublicContractPage() {
       title: contract.title,
       status: contract.status,
       coupleName: contract.couple_name,
-      businessName: contract.business_name ?? '',
+      businessName: htmlToPlainText(contract.business_name ?? ''),
       items: [],
       subtotal: 0,
       total: 0,
@@ -239,10 +241,12 @@ export default function PublicContractPage() {
                 )}
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate" style={{ color: brandText, fontFamily: headingStack }}>
-                    {contract.business_name || 'Your MC'}
+                    {contract.business_name ? <Html value={contract.business_name} allowLists={false} /> : 'Your MC'}
                   </p>
                   {contract.tagline && (
-                    <p className="text-xs opacity-80 truncate" style={{ color: brandText }}>{contract.tagline}</p>
+                    <p className="text-xs opacity-80 truncate" style={{ color: brandText }}>
+                      <Html value={contract.tagline} allowLists={false} />
+                    </p>
                   )}
                 </div>
               </div>
@@ -267,7 +271,7 @@ export default function PublicContractPage() {
           <div className={`${pad.cardSection} space-y-8 border-t border-gray-100`}>
             {pageState === 'expired' && (
               <div className="border border-amber-200 bg-amber-50 rounded-xl p-4 text-sm text-amber-900">
-                This contract has expired. Please contact {contract.business_name || 'your MC'} for a new link.
+                This contract has expired. Please contact {htmlToPlainText(contract.business_name) || 'your MC'} for a new link.
               </div>
             )}
 
@@ -309,10 +313,10 @@ export default function PublicContractPage() {
             <div className="border-t border-gray-100 pt-6">
               <p className="text-xs font-medium mb-1" style={{ color: mutedColor }}>Signed by MC</p>
               <p className="text-xl" style={{ color: textColor, fontFamily: 'Caveat, "Brush Script MT", cursive' }}>
-                {contract.mc_signature_name || contract.business_name || 'Your MC'}
+                {contract.mc_signature_name || htmlToPlainText(contract.business_name) || 'Your MC'}
               </p>
               <p className="text-xs mt-1" style={{ color: mutedColor }}>
-                {contract.business_name || ''} · {formatDate(contract.email_sent_at)}
+                {htmlToPlainText(contract.business_name) || ''} · {formatDate(contract.email_sent_at)}
               </p>
             </div>
 
@@ -395,7 +399,7 @@ export default function PublicContractPage() {
               <div className="px-6 py-6">
                 <h3 className="text-base font-semibold mb-2" style={{ color: textColor, fontFamily: headingStack }}>Decline this contract?</h3>
                 <p className="text-sm mb-4" style={{ color: mutedColor }}>
-                  Let {contract.business_name || 'your MC'} know why, or leave blank.
+                  Let {htmlToPlainText(contract.business_name) || 'your MC'} know why, or leave blank.
                 </p>
                 <textarea
                   value={declineReason}

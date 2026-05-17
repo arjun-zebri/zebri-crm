@@ -30,10 +30,13 @@ import {
   RenderTitle,
   RenderLineItems,
   RenderTotals,
+  RenderPaymentDetails,
   RenderText,
   RenderAction,
   RenderDivider,
   RenderFooter,
+  RenderCouplePortal,
+  RenderPaymentSchedule,
 } from './render'
 
 interface BlockRendererProps {
@@ -47,6 +50,12 @@ interface BlockRendererProps {
   duplicateBlock: (id: string) => void
   deleteBlock: (id: string) => void
   resetBlock: (id: string) => void
+  setTagline?: (v: string) => void
+  setBusinessName?: (v: string) => void
+  uploadLogo?: (file: File) => Promise<void>
+  removeLogo?: () => void | Promise<void>
+  uploadHeader?: (file: File) => Promise<void>
+  removeHeader?: () => void | Promise<void>
 }
 
 export function BlockRenderer({
@@ -60,6 +69,12 @@ export function BlockRenderer({
   duplicateBlock,
   deleteBlock,
   resetBlock,
+  setTagline,
+  setBusinessName,
+  uploadLogo,
+  removeLogo,
+  uploadHeader,
+  removeHeader,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -156,6 +171,25 @@ export function BlockRenderer({
         >
           <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
             {blocks.map((block) => {
+              if (block.type === 'couplePortal' || block.type === 'paymentSchedule') {
+                return (
+                  <div key={block.id} aria-label={block.type === 'couplePortal' ? 'Couple portal (fixed)' : 'Payment schedule (fixed)'} className="group relative">
+                    {renderBlock(block, state, updateBlock, {})}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        requestAddAfter(block.id)
+                      }}
+                      aria-label="Add block below"
+                      title="Add block below"
+                      className="absolute left-1/2 -translate-x-1/2 -bottom-3 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                    >
+                      <Plus size={12} strokeWidth={2} />
+                    </button>
+                  </div>
+                )
+              }
               const selected = primarySelectedId === block.id
               const multi = !selected && selectedBlockIds.includes(block.id)
               return (
@@ -184,7 +218,15 @@ export function BlockRenderer({
                   onDelete={() => deleteBlock(block.id)}
                   onResetBlock={() => resetBlock(block.id)}
                 >
-                  {renderBlock(block, state, updateBlock)}
+                  {renderBlock(block, state, updateBlock, {
+                    selected,
+                    setTagline,
+                    setBusinessName,
+                    uploadLogo,
+                    removeLogo,
+                    uploadHeader,
+                    removeHeader,
+                  })}
                 </BlockFrame>
               )
             })}
@@ -205,32 +247,66 @@ export function BlockRenderer({
   )
 }
 
+interface RenderExtras {
+  selected?: boolean
+  setTagline?: (v: string) => void
+  setBusinessName?: (v: string) => void
+  uploadLogo?: (file: File) => Promise<void>
+  removeLogo?: () => void | Promise<void>
+  uploadHeader?: (file: File) => Promise<void>
+  removeHeader?: () => void | Promise<void>
+}
+
 function renderBlock(
   block: Block,
   state: BrandPreviewState,
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void,
+  extras: RenderExtras = {},
 ) {
   switch (block.type) {
     case 'headerBanner':
-      return <RenderHeaderBanner block={block} state={state} updateBlock={updateBlock} />
+      return (
+        <RenderHeaderBanner
+          block={block}
+          state={state}
+          updateBlock={updateBlock}
+          uploadHeader={extras.uploadHeader}
+          removeHeader={extras.removeHeader}
+        />
+      )
     case 'businessName':
-      return <RenderBusinessName block={block} state={state} updateBlock={updateBlock} />
+      return (
+        <RenderBusinessName
+          block={block}
+          state={state}
+          updateBlock={updateBlock}
+          setBusinessName={extras.setBusinessName}
+          uploadLogo={extras.uploadLogo}
+          removeLogo={extras.removeLogo}
+        />
+      )
     case 'tagline':
-      return <RenderTagline block={block} state={state} updateBlock={updateBlock} />
+      return <RenderTagline block={block} state={state} updateBlock={updateBlock} setTagline={extras.setTagline} />
     case 'title':
       return <RenderTitle block={block} state={state} updateBlock={updateBlock} />
     case 'lineItems':
       return <RenderLineItems block={block} state={state} updateBlock={updateBlock} />
     case 'totals':
       return <RenderTotals block={block} state={state} updateBlock={updateBlock} />
+    case 'paymentDetails':
+      return <RenderPaymentDetails block={block} state={state} updateBlock={updateBlock} />
     case 'text':
       return <RenderText block={block} state={state} updateBlock={updateBlock} />
     case 'action':
-      return <RenderAction block={block} state={state} updateBlock={updateBlock} />
+      return <RenderAction block={block} state={state} updateBlock={updateBlock} selected={extras.selected} />
     case 'divider':
       return <RenderDivider block={block} state={state} updateBlock={updateBlock} />
     case 'footer':
       return <RenderFooter block={block} state={state} updateBlock={updateBlock} />
+    case 'couplePortal':
+      return <RenderCouplePortal state={state} />
+    case 'paymentSchedule':
+      return <RenderPaymentSchedule state={state} />
   }
 }
 

@@ -5,6 +5,7 @@ import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/bran
 import type { TitleBlock } from '@/app/(dashboard)/branding/blocks/types'
 import type { PublicBranding } from '../public-surface'
 import { fmtDate, pad, type PublicDocData } from './shared'
+import { Html } from './html'
 
 export function RenderTitle({
   block,
@@ -43,7 +44,9 @@ export function RenderTitle({
       <div className={p.docX}>
         <h1 className="leading-tight tracking-tight" style={titleCss}>{doc.title}</h1>
         {block.subtitle && (
-          <p className="mt-2" style={subtitleCss}>{block.subtitle}</p>
+          <p className="mt-2" style={subtitleCss}>
+            <Html value={block.subtitle} allowLists={false} />
+          </p>
         )}
       </div>
       {(block.showRef || block.showExpires || block.showAbn) && (

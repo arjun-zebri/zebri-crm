@@ -13,6 +13,8 @@ import {
   type PublicBranding,
 } from '@/lib/branding/public-surface'
 import { PublicBlockRenderer, findActionStyle } from '@/lib/branding/public-renderer'
+import { Html } from '@/lib/branding/public-blocks/html'
+import { htmlToPlainText } from '@/lib/branding/sanitize'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 interface InvoiceItem {
@@ -122,6 +124,11 @@ export default function PublicInvoicePage() {
     cornerRadius: invoice?.corner_radius ?? 16,
   })
 
+  // Split block tree at paymentSchedule marker
+  const psIdx = invoice?.branding_blocks?.findIndex((b) => b.type === 'paymentSchedule') ?? -1
+  const preInvoiceBlocks = invoice?.branding_blocks ? (psIdx >= 0 ? invoice.branding_blocks.slice(0, psIdx) : invoice.branding_blocks) : []
+  const postInvoiceBlocks = invoice?.branding_blocks && psIdx >= 0 ? invoice.branding_blocks.slice(psIdx + 1) : []
+
   return (
     <div
       className={`min-h-screen ${pad.page} px-4`}
@@ -151,7 +158,7 @@ export default function PublicInvoicePage() {
           <div className="mb-3 px-5 py-3 rounded-xl bg-red-50 border border-red-100">
             <p className="text-sm text-red-600 font-medium">
               This invoice is overdue.
-              {invoice.business_name ? ` Please contact ${invoice.business_name} if you have any questions.` : ''}
+              {invoice.business_name ? ` Please contact ${htmlToPlainText(invoice.business_name)} if you have any questions.` : ''}
             </p>
           </div>
         )}
@@ -186,7 +193,7 @@ export default function PublicInvoicePage() {
           && invoice.branding_blocks && invoice.branding_blocks.length > 0 && (
           <div className="bg-white shadow-sm border border-gray-100 overflow-hidden" style={{ borderRadius: radius }}>
             <PublicBlockRenderer
-              blocks={invoice.branding_blocks}
+              blocks={preInvoiceBlocks}
               branding={invoice}
               doc={{
                 title: invoice.title,
@@ -284,47 +291,27 @@ export default function PublicInvoicePage() {
               </div>
             )}
 
-            {/* Notes + bank details */}
-            {(invoice.notes || invoice.bank_account_name || invoice.bank_bsb || invoice.bank_account_number) && (
-              <div className={`${pad.cardSection} border-t border-gray-100`}>
-                <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: mutedColor }}>
-                  Payment instructions
-                </p>
-                <div className="space-y-3">
-                  {invoice.notes && (
-                    <p className="text-sm whitespace-pre-wrap" style={{ color: mutedColor }}>{invoice.notes}</p>
-                  )}
-                  {(invoice.bank_account_name || invoice.bank_bsb || invoice.bank_account_number) && (
-                    <div className="bg-gray-50 rounded-lg p-3 space-y-1.5 text-sm">
-                      {invoice.bank_account_name && (
-                        <div>
-                          <span style={{ color: mutedColor }}>Account name:</span>
-                          <span className="ml-2" style={{ color: textColor }}>{invoice.bank_account_name}</span>
-                        </div>
-                      )}
-                      {invoice.bank_bsb && (
-                        <div>
-                          <span style={{ color: mutedColor }}>BSB:</span>
-                          <span className="ml-2 font-mono" style={{ color: textColor }}>{invoice.bank_bsb}</span>
-                        </div>
-                      )}
-                      {invoice.bank_account_number && (
-                        <div>
-                          <span style={{ color: mutedColor }}>Account:</span>
-                          <span className="ml-2 font-mono" style={{ color: textColor }}>{invoice.bank_account_number}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Pay with card (full - no schedule) */}
             {showFullButton && (
               <div className={`${pad.cardSection} border-t border-gray-100`}>
                 <PayWithCardButton invoiceId={invoice.id} shareToken={invoice.share_token} brandColor={actionStyle.color} radius={actionStyle.radius} />
               </div>
+            )}
+
+            {postInvoiceBlocks.length > 0 && (
+              <PublicBlockRenderer
+                blocks={postInvoiceBlocks}
+                branding={invoice}
+                doc={{
+                  title: invoice.title,
+                  refNumber: invoice.invoice_number,
+                  expiresAt: invoice.due_date,
+                  items: invoice.items,
+                  subtotal: invoice.subtotal,
+                  taxRate: invoice.tax_rate ?? 0,
+                }}
+                hideAction
+              />
             )}
           </div>
         )}
@@ -338,16 +325,18 @@ export default function PublicInvoicePage() {
               {invoice.logo_url ? (
                 <img
                   src={invoice.logo_url}
-                  alt={invoice.business_name || 'Logo'}
+                  alt={htmlToPlainText(invoice.business_name) || 'Logo'}
                   className="max-h-12 object-contain mb-3"
                 />
               ) : invoice.business_name ? (
                 <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: mutedColor }}>
-                  {invoice.business_name}
+                  <Html value={invoice.business_name} allowLists={false} />
                 </p>
               ) : null}
               {invoice.tagline && (
-                <p className="text-xs mb-3" style={{ color: mutedColor }}>{invoice.tagline}</p>
+                <p className="text-xs mb-3" style={{ color: mutedColor }}>
+                  <Html value={invoice.tagline} allowLists={false} />
+                </p>
               )}
               <h1
                 className="text-2xl mb-1"

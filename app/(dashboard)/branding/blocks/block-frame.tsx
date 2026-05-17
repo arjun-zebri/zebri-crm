@@ -46,8 +46,30 @@ export function BlockFrame({
   })
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
+  const [resizing, setResizing] = useState(false)
 
   const selectionColor = state.brandColor || '#111827'
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const blockEl = (e.currentTarget as HTMLElement).closest('[data-block-id]') as HTMLElement | null
+    const startHeight = block.blockHeightPx ?? (blockEl ? blockEl.getBoundingClientRect().height : 80)
+    const startY = e.clientY
+    setResizing(true)
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(32, startHeight + dy)
+      updateBlock(block.id, { blockHeightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      setResizing(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
 
   const borderWidth = block.borderWidth ?? 0
   const borderColor = block.borderColor || '#E5E7EB'
@@ -57,6 +79,7 @@ export function BlockFrame({
     <div
       ref={setNodeRef}
       data-block-id={id}
+      data-selected={selected || undefined}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -66,6 +89,12 @@ export function BlockFrame({
         borderStyle: borderWidth ? 'solid' : undefined,
         borderColor: borderWidth ? borderColor : undefined,
         borderRadius: blockRadius ?? (borderWidth ? state.cornerRadius : undefined),
+        minHeight: block.type !== 'headerBanner' && block.blockHeightPx ? block.blockHeightPx : undefined,
+        display: block.type !== 'headerBanner' && block.blockHeightPx ? 'flex' : undefined,
+        flexDirection: block.type !== 'headerBanner' && block.blockHeightPx ? 'column' : undefined,
+        justifyContent: block.type !== 'headerBanner' && block.blockHeightPx
+          ? (block.blockVAlign === 'top' ? 'flex-start' : block.blockVAlign === 'bottom' ? 'flex-end' : 'center')
+          : undefined,
       }}
       onClick={(e) => {
         e.stopPropagation()
@@ -118,6 +147,11 @@ export function BlockFrame({
 
       {children}
 
+      {/* Block resize handle — shown for all block types except headerBanner (which has its own) */}
+      {block.type !== 'headerBanner' && (
+        <BlockResizeHandle onMouseDown={startResize} active={resizing} />
+      )}
+
       {/* Add-below hover affordance */}
       {!selected && (
         <button
@@ -147,13 +181,25 @@ export function BlockFrame({
         <Popover.Anchor asChild>{blockNode}</Popover.Anchor>
         <Popover.Portal>
           <Popover.Content
-            side="top"
+            side="bottom"
             align="center"
-            sideOffset={10}
+            sideOffset={6}
             collisionPadding={16}
             avoidCollisions
             onOpenAutoFocus={(e) => e.preventDefault()}
             onPointerDownOutside={(e) => {
+              const target = e.target as HTMLElement | null
+              if (target?.closest(`[data-block-id="${id}"]`)) {
+                e.preventDefault()
+              }
+            }}
+            onFocusOutside={(e) => {
+              const target = e.target as HTMLElement | null
+              if (target?.closest(`[data-block-id="${id}"]`)) {
+                e.preventDefault()
+              }
+            }}
+            onInteractOutside={(e) => {
               const target = e.target as HTMLElement | null
               if (target?.closest(`[data-block-id="${id}"]`)) {
                 e.preventDefault()
@@ -249,6 +295,26 @@ function ContextMenu({
           {item.label}
         </button>
       ))}
+    </div>
+  )
+}
+
+function BlockResizeHandle({
+  onMouseDown,
+  active,
+}: {
+  onMouseDown: (e: React.MouseEvent) => void
+  active: boolean
+}) {
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      className={`absolute left-0 right-0 bottom-0 h-3 cursor-ns-resize flex items-end justify-center pb-1 transition ${
+        active ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      }`}
+      title="Drag to resize"
+    >
+      <div className="h-1 w-10 rounded-full bg-gray-900/60 ring-1 ring-white/80 shadow-sm" />
     </div>
   )
 }

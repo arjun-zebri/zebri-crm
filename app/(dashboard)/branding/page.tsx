@@ -24,6 +24,8 @@ interface UserMetadata {
   surface_color?: string
   text_color?: string
   muted_color?: string
+  secondary_color?: string
+  secondary_text_color?: string
   tagline?: string
   abn?: string
   show_contact_on_documents?: boolean
@@ -37,9 +39,10 @@ interface UserMetadata {
   doc_padding?: number
   theme_preset?: ThemeIdOrCustom
   brand_kit_name?: string
+  active_kit_id?: string | null
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
-  branding_blocks?: { quote?: Block[]; invoice?: Block[]; contract?: Block[] }
+  branding_blocks?: { quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] }
   brand_kits?: BrandKit[]
   portal_sections?: {
     timeline?: boolean
@@ -52,7 +55,7 @@ interface UserMetadata {
 }
 
 interface UserBrandingRow {
-  branding_blocks: { quote?: Block[]; invoice?: Block[]; contract?: Block[] } | null
+  branding_blocks: { quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] } | null
   brand_kits: BrandKit[] | null
   portal_sections: {
     timeline?: boolean
@@ -145,9 +148,10 @@ export default function BrandingPage() {
   // Distinguish "never saved" (undefined → use defaults) from "saved empty"
   // (deliberately deleted by the user → preserve the empty array).
   const blocksSrc = branding?.branding_blocks ?? metadata?.branding_blocks ?? {}
-  const migratedQuote    = blocksSrc.quote    !== undefined ? migrateBlocks(blocksSrc.quote)    : null
-  const migratedInvoice  = blocksSrc.invoice  !== undefined ? migrateBlocks(blocksSrc.invoice)  : null
-  const migratedContract = blocksSrc.contract !== undefined ? migrateBlocks(blocksSrc.contract) : null
+  const migratedQuote    = blocksSrc.quote    !== undefined ? migrateBlocks(blocksSrc.quote, 'quote')    : null
+  const migratedInvoice  = blocksSrc.invoice  !== undefined ? migrateBlocks(blocksSrc.invoice, 'invoice')  : null
+  const migratedContract = blocksSrc.contract !== undefined ? migrateBlocks(blocksSrc.contract, 'contract') : null
+  const migratedPortal   = blocksSrc.portal   !== undefined ? migrateBlocks(blocksSrc.portal, 'portal')   : null
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
@@ -163,6 +167,8 @@ export default function BrandingPage() {
         surfaceColor: metadata?.surface_color || fallback.surface,
         textColor: metadata?.text_color || fallback.text,
         mutedColor: metadata?.muted_color || fallback.muted,
+        secondaryColor: metadata?.secondary_color || '#FFFFFF',
+        secondaryTextColor: metadata?.secondary_text_color || '#374151',
         tagline: metadata?.tagline || '',
         abn: metadata?.abn || '',
         showContactOnDocuments: true,
@@ -182,6 +188,7 @@ export default function BrandingPage() {
           quote:    migratedQuote    !== null ? migratedQuote    : defaultBlocksFor('quote'),
           invoice:  migratedInvoice  !== null ? migratedInvoice  : defaultBlocksFor('invoice'),
           contract: migratedContract !== null ? migratedContract : defaultBlocksFor('contract'),
+          portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),
         },
         businessName: metadata?.business_name || '',
         phone: metadata?.phone || '',
@@ -189,6 +196,7 @@ export default function BrandingPage() {
         instagramUrl: metadata?.instagram_url || '',
         facebookUrl: metadata?.facebook_url || '',
         brandKits: kits,
+        activeKitId: metadata?.active_kit_id ?? null,
         portalSections: {
           timeline: portalSrc.timeline ?? true,
           contacts: portalSrc.contacts ?? true,

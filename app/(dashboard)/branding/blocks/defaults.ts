@@ -22,9 +22,9 @@ export function blockTemplate(type: BlockType): Block {
         showAbn: false,
       }
     case 'lineItems':
-      return { id: newId('li'), type: 'lineItems' }
+      return { id: newId('li'), type: 'lineItems', colSpread: true }
     case 'totals':
-      return { id: newId('to'), type: 'totals', taxRate: 10, showSubtotal: true }
+      return { id: newId('to'), type: 'totals', taxRate: 10, showSubtotal: true, colSpread: true }
     case 'text':
       return { id: newId('tx'), type: 'text', text: 'Add a note to your client.' }
     case 'action':
@@ -32,19 +32,19 @@ export function blockTemplate(type: BlockType): Block {
     case 'divider':
       return { id: newId('dv'), type: 'divider' }
     case 'footer':
-      return { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.', showMark: true }
+      return { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.' }
+    case 'paymentDetails':
+      return { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' }
+    case 'couplePortal':
+      return { id: newId('cp'), type: 'couplePortal', locked: true }
+    case 'paymentSchedule':
+      return { id: newId('ps'), type: 'paymentSchedule', locked: true }
   }
 }
 
 // ── Curated styles ────────────────────────────────────────────────────────────
 // Intentional overrides that give the starter template a designed feel.
 // Kept minimal so theme/font changes still flow through cleanly.
-
-const HERO_TITLE: TextStyle = {
-  fontSize: 44,
-  letterSpacing: -0.025,
-  lineHeight: 1.05,
-}
 
 const HERO_SUBTITLE: TextStyle = {
   fontSize: 12,
@@ -82,7 +82,14 @@ const SOFT_DIVIDER = { thickness: 1, color: '#E5E7EB' } as const
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
-export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Block[] {
+export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'portal'): Block[] {
+  if (surface === 'portal') {
+    return [
+      { id: newId('hb'), type: 'headerBanner' },
+      { id: newId('bn'), type: 'businessName' },
+      { id: newId('cp'), type: 'couplePortal', locked: true },
+    ]
+  }
   if (surface === 'quote') {
     return [
       { id: newId('hb'), type: 'headerBanner' },
@@ -90,15 +97,15 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
       {
         id: newId('tt'),
         type: 'title',
-        title: 'Your wedding, hosted.',
+        title: 'Quote',
         subtitle: 'ALEX & JORDAN  ·  14 SEPTEMBER 2026',
         showRef: true,
         showExpires: true,
         showAbn: false,
-        titleStyle: HERO_TITLE,
+        titleStyle: FORMAL_TITLE,
         subtitleStyle: HERO_SUBTITLE,
       },
-      { id: newId('li'), type: 'lineItems' },
+      { id: newId('li'), type: 'lineItems', colSpread: true },
       {
         id: newId('to'),
         type: 'totals',
@@ -114,7 +121,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         textStyle: SOFT_MESSAGE,
       },
       { id: newId('ac'), type: 'action', primary: 'Accept quote', secondary: 'Decline' },
-      { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.', showMark: true },
+      { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.' },
     ]
   }
   if (surface === 'invoice') {
@@ -132,7 +139,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         titleStyle: FORMAL_TITLE,
         subtitleStyle: HERO_SUBTITLE,
       },
-      { id: newId('li'), type: 'lineItems' },
+      { id: newId('li'), type: 'lineItems', colSpread: true },
       {
         id: newId('to'),
         type: 'totals',
@@ -140,14 +147,16 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
         showSubtotal: true,
         totalStyle: EMPHASIZED_TOTAL,
       },
+      { id: newId('ps'), type: 'paymentSchedule', locked: true },
       {
         id: newId('tx'),
         type: 'text',
-        text: 'Payment due within 14 days. Bank details on the next page, or pay by card below.',
+        text: 'Payment due within 14 days. Pay by card, or by bank transfer using the details below.',
         textStyle: SOFT_MESSAGE,
       },
+      { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' },
       { id: newId('ac'), type: 'action', primary: 'Pay with card', secondary: null },
-      { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.', showMark: true },
+      { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.' },
     ]
   }
   // contract
@@ -299,7 +308,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
     },
 
     { id: newId('ac'), type: 'action', primary: 'Sign contract', secondary: null },
-    { id: newId('ft'), type: 'footer', closingNote: 'A counter-signed copy will be returned to you.', showMark: true },
+    { id: newId('ft'), type: 'footer', closingNote: 'A counter-signed copy will be returned to you.' },
   ]
 }
 
@@ -307,7 +316,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract'): Blo
  * Migrate persisted block data from older shapes (e.g. type: 'message') to the
  * current schema. Safe to run on every load.
  */
-export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | 'contract'): Block[] {
+export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | 'contract' | 'portal'): Block[] {
   if (!Array.isArray(blocks)) return []
   let migrated = blocks
     .map((raw): Block | null => {

@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import {
   ChevronDown, Check, Upload, Plus, RotateCcw, Paintbrush, Type as TypeIcon,
-  Layout, Image as ImageIcon, Sparkles, Trash2,
+  Layout, Sparkles, Trash2, ImageIcon,
 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import {
@@ -48,6 +48,10 @@ interface BrandPanelProps {
   setTextColor: (v: string) => void
   mutedColor: string
   setMutedColor: (v: string) => void
+  secondaryColor: string
+  setSecondaryColor: (v: string) => void
+  secondaryTextColor: string
+  setSecondaryTextColor: (v: string) => void
 
   fontHeading: HeadingFont
   setFontHeading: (v: HeadingFont) => void
@@ -67,15 +71,9 @@ interface BrandPanelProps {
   docPadding: number
   setDocPadding: (v: number) => void
 
-  logoUrl: string
-  uploadLogo: (file: File) => Promise<void>
-  removeLogo: () => void
   faviconUrl: string
   uploadFavicon: (file: File) => Promise<void>
   removeFavicon: () => void
-  headerImageUrl: string
-  uploadHeader: (file: File) => Promise<void>
-  removeHeader: () => void
 
   // Brand info - promoted into the rail
   businessName: string
@@ -87,7 +85,7 @@ interface BrandPanelProps {
 
 }
 
-type SectionId = 'themes' | 'colors' | 'fonts' | 'layout' | 'identity' | 'info'
+type SectionId = 'themes' | 'colors' | 'fonts' | 'layout' | 'info'
 
 export function BrandPanel(props: BrandPanelProps) {
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
@@ -95,7 +93,6 @@ export function BrandPanel(props: BrandPanelProps) {
     colors: false,
     fonts: false,
     layout: false,
-    identity: false,
     info: false,
   })
 
@@ -163,19 +160,9 @@ export function BrandPanel(props: BrandPanelProps) {
         </Accordion>
 
         <Accordion
-          icon={<ImageIcon size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Assets"
-          subtitle="Logo, favicon, banner"
-          open={open.identity}
-          onToggle={() => toggle('identity')}
-        >
-          <IdentitySection {...props} />
-        </Accordion>
-
-        <Accordion
           icon={<TypeIcon size={13} strokeWidth={1.75} className="text-gray-500" />}
           title="Business info"
-          subtitle="Name, tagline, ABN"
+          subtitle="Name, tagline, favicon, ABN"
           open={open.info}
           onToggle={() => toggle('info')}
         >
@@ -293,6 +280,8 @@ function ColorSection({
   surfaceColor, setSurfaceColor,
   textColor, setTextColor,
   mutedColor, setMutedColor,
+  secondaryColor, setSecondaryColor,
+  secondaryTextColor, setSecondaryTextColor,
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
@@ -301,6 +290,8 @@ function ColorSection({
       <ColorRow label="Surface"  value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
       <ColorRow label="Text"     value={textColor}    onChange={setTextColor}    swatches={TEXT_PALETTE} />
       <ColorRow label="Muted"    value={mutedColor}   onChange={setMutedColor}   swatches={MUTED_PALETTE} />
+      <ColorRow label="Secondary"      value={secondaryColor}     onChange={setSecondaryColor}     swatches={COLOR_PALETTE} />
+      <ColorRow label="Secondary text" value={secondaryTextColor} onChange={setSecondaryTextColor} swatches={TEXT_PALETTE} />
       <ContrastWarnings
         textColor={textColor}
         mutedColor={mutedColor}
@@ -583,47 +574,6 @@ function LayoutSection({
 
 // ── Identity ──────────────────────────────────────────────────────────────────
 
-function IdentitySection({
-  logoUrl, uploadLogo, removeLogo,
-  faviconUrl, uploadFavicon, removeFavicon,
-  headerImageUrl, uploadHeader, removeHeader,
-}: BrandPanelProps) {
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2">
-        <IdentityTile
-          label="Logo"
-          hint="PNG/JPG/SVG"
-          url={logoUrl}
-          onUpload={uploadLogo}
-          onRemove={removeLogo}
-          accept="image/png,image/jpeg,image/svg+xml"
-          surface="light"
-          tall
-        />
-        <IdentityTile
-          label="Favicon"
-          hint="Browser tab · 256KB"
-          url={faviconUrl}
-          onUpload={uploadFavicon}
-          onRemove={removeFavicon}
-          accept="image/png,image/x-icon,image/svg+xml,image/vnd.microsoft.icon"
-          tall
-        />
-      </div>
-      <IdentityTile
-        label="Banner"
-        hint="Header image · PNG/JPG"
-        url={headerImageUrl}
-        onUpload={uploadHeader}
-        onRemove={removeHeader}
-        accept="image/png,image/jpeg"
-        wide
-      />
-    </div>
-  )
-}
-
 function IdentityTile({
   label,
   hint,
@@ -633,6 +583,7 @@ function IdentityTile({
   accept,
   wide,
   tall,
+  square,
   surface = 'light',
 }: {
   label: string
@@ -643,6 +594,7 @@ function IdentityTile({
   accept: string
   wide?: boolean
   tall?: boolean
+  square?: boolean
   surface?: 'light' | 'dark'
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -656,7 +608,7 @@ function IdentityTile({
     try { await onUpload(f) } catch { /* toast upstream */ } finally { setUploading(false) }
   }
 
-  const baseHeight = wide ? 'h-24' : tall ? 'h-24' : 'h-16'
+  const sizeClass = square ? 'w-16 h-16' : `w-full ${wide ? 'h-24' : tall ? 'h-24' : 'h-16'}`
   const bg = surface === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
   const placeholderText = surface === 'dark' ? 'text-gray-500' : 'text-gray-400'
 
@@ -687,7 +639,7 @@ function IdentityTile({
           if (f) onFile(f)
         }}
         aria-label={filled ? `Replace ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
-        className={`relative w-full ${baseHeight} rounded-xl ${bg} border border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-gray-900/10 transition ${
+        className={`relative ${sizeClass} rounded-xl ${bg} border border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-gray-900/10 transition ${
           dragging ? 'border-gray-900 bg-gray-100' : filled ? 'border-gray-200 hover:border-gray-300' : 'border-gray-300 hover:border-gray-400'
         }`}
       >
@@ -696,10 +648,7 @@ function IdentityTile({
         ) : uploading ? (
           <span className={`text-[10px] ${placeholderText} pointer-events-none`}>Uploading…</span>
         ) : (
-          <span className={`flex flex-col items-center gap-1 ${placeholderText} pointer-events-none`}>
-            <Plus size={14} strokeWidth={1.75} />
-            <span className="text-[10px]">Drop or click</span>
-          </span>
+          <ImageIcon size={20} strokeWidth={1.25} className={`${placeholderText} pointer-events-none opacity-50`} />
         )}
         {filled && hovering && (
           <span className="absolute inset-0 bg-gray-900/40 flex items-center justify-center gap-2 pointer-events-none">
@@ -751,12 +700,22 @@ function InfoSection({
   businessName, setBusinessName,
   tagline, setTagline,
   abn, setAbn,
+  faviconUrl, uploadFavicon, removeFavicon,
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
       <TextField label="Business name" value={businessName} onChange={setBusinessName} placeholder="Your business name" />
       <TextField label="Tagline" value={tagline} onChange={setTagline} placeholder="A short line about you" />
       <TextField label="ABN" value={abn} onChange={setAbn} placeholder="00 000 000 000" />
+      <IdentityTile
+        label="Favicon"
+        hint="Browser tab · 256KB"
+        url={faviconUrl}
+        onUpload={uploadFavicon}
+        onRemove={removeFavicon}
+        accept="image/png,image/x-icon,image/svg+xml,image/vnd.microsoft.icon"
+        square
+      />
     </div>
   )
 }

@@ -19,11 +19,10 @@ import { SurfaceTabs } from './surface-tabs'
 import { CanvasFrame } from './canvas-frame'
 import { BlockRenderer } from './blocks/block-renderer'
 import { AddBlockPalette } from './blocks/add-block-palette'
-import { SaveKitDialog } from './save-kit-dialog'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from './branding-preview-types'
-import { PortalPreview } from './portal-preview'
+import { PortalSectionsBar } from './portal-preview'
 
 export interface PortalSectionSettings {
   timeline: boolean
@@ -45,6 +44,8 @@ interface BrandingEditorProps {
     surfaceColor: string
     textColor: string
     mutedColor: string
+    secondaryColor: string
+    secondaryTextColor: string
     tagline: string
     abn: string
     showContactOnDocuments: boolean
@@ -57,13 +58,14 @@ interface BrandingEditorProps {
     cornerRadius: number
     docPadding: number
     themePreset: ThemeIdOrCustom
-    blocks: { quote: Block[]; invoice: Block[]; contract: Block[] }
+    blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
     businessName: string
     phone: string
     website: string
     instagramUrl: string
     facebookUrl: string
     brandKits: BrandKit[]
+    activeKitId: string | null
     portalSections: PortalSectionSettings
   }
 }
@@ -78,6 +80,8 @@ interface EditorState {
   surfaceColor: string
   textColor: string
   mutedColor: string
+  secondaryColor: string
+  secondaryTextColor: string
   tagline: string
   abn: string
   showContactOnDocuments: boolean
@@ -91,8 +95,9 @@ interface EditorState {
   cornerRadius: number
   docPadding: number
   themePreset: ThemeIdOrCustom
-  blocks: { quote: Block[]; invoice: Block[]; contract: Block[] }
+  blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
   brandKits: BrandKit[]
+  activeKitId: string | null
   portalSections: PortalSectionSettings
 }
 
@@ -110,6 +115,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       surfaceColor: initialData.surfaceColor,
       textColor: initialData.textColor,
       mutedColor: initialData.mutedColor,
+      secondaryColor: initialData.secondaryColor,
+      secondaryTextColor: initialData.secondaryTextColor,
       tagline: initialData.tagline,
       abn: initialData.abn,
       showContactOnDocuments: initialData.showContactOnDocuments,
@@ -125,6 +132,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       themePreset: initialData.themePreset,
       blocks: initialData.blocks,
       brandKits: initialData.brandKits,
+      activeKitId: initialData.activeKitId,
       portalSections: initialData.portalSections,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,12 +147,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
-  const [saveKitOpen, setSaveKitOpen] = useState(false)
-
   const { status } = useAutosave(state, async (value) => {
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not signed in')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not signed in')
+    const user = session.user
     const existing = user.user_metadata || {}
 
     // Heavy fields (block trees, saved kits, portal section toggles) live in
@@ -182,6 +189,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         surface_color: value.surfaceColor,
         text_color: value.textColor,
         muted_color: value.mutedColor,
+        secondary_color: value.secondaryColor,
+        secondary_text_color: value.secondaryTextColor,
         tagline: value.tagline,
         abn: value.abn,
         show_contact_on_documents: value.showContactOnDocuments,
@@ -195,6 +204,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         corner_radius: value.cornerRadius,
         doc_padding: value.docPadding,
         theme_preset: value.themePreset,
+        active_kit_id: value.activeKitId,
       },
     })
     if (error) throw error
@@ -209,6 +219,94 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     flashAffectedBlocks(patch, state.blocks, docSurface, surface)
   }
 
+  // Mirror workspace edits onto the active kit so kits behave as live snapshots.
+  // Without this, "Apply kit" would re-apply stale values after the user tweaks them.
+  useEffect(() => {
+    if (!state.activeKitId) return
+    setState((prev) => {
+      if (!prev.activeKitId) return prev
+      const idx = prev.brandKits.findIndex((k) => k.id === prev.activeKitId)
+      if (idx === -1) return prev
+      const current = prev.brandKits[idx]
+      const next: BrandKit = {
+        ...current,
+        name: prev.kitName,
+        brandColor: prev.brandColor,
+        accentColor: prev.accentColor,
+        surfaceColor: prev.surfaceColor,
+        textColor: prev.textColor,
+        mutedColor: prev.mutedColor,
+        secondaryColor: prev.secondaryColor,
+        secondaryTextColor: prev.secondaryTextColor,
+        fontHeading: prev.fontHeading,
+        fontBody: prev.fontBody,
+        fontWeight: prev.fontWeight,
+        fontBodyWeight: prev.fontBodyWeight,
+        fontScale: prev.fontScale,
+        density: prev.density,
+        cornerRadius: prev.cornerRadius,
+        docPadding: prev.docPadding,
+        tagline: prev.tagline,
+        logoUrl: prev.logoUrl,
+        faviconUrl: prev.faviconUrl,
+        headerImageUrl: prev.headerImageUrl,
+        blocks: prev.blocks,
+      }
+      if (
+        current.name === next.name &&
+        current.brandColor === next.brandColor &&
+        current.accentColor === next.accentColor &&
+        current.surfaceColor === next.surfaceColor &&
+        current.textColor === next.textColor &&
+        current.mutedColor === next.mutedColor &&
+        current.secondaryColor === next.secondaryColor &&
+        current.secondaryTextColor === next.secondaryTextColor &&
+        current.fontHeading === next.fontHeading &&
+        current.fontBody === next.fontBody &&
+        current.fontWeight === next.fontWeight &&
+        current.fontBodyWeight === next.fontBodyWeight &&
+        current.fontScale === next.fontScale &&
+        current.density === next.density &&
+        current.cornerRadius === next.cornerRadius &&
+        current.docPadding === next.docPadding &&
+        current.tagline === next.tagline &&
+        current.logoUrl === next.logoUrl &&
+        current.faviconUrl === next.faviconUrl &&
+        current.headerImageUrl === next.headerImageUrl &&
+        current.blocks === next.blocks
+      ) {
+        return prev
+      }
+      const newKits = [...prev.brandKits]
+      newKits[idx] = next
+      return { ...prev, brandKits: newKits }
+    })
+  }, [
+    state.activeKitId,
+    state.kitName,
+    state.brandColor,
+    state.accentColor,
+    state.surfaceColor,
+    state.textColor,
+    state.mutedColor,
+    state.secondaryColor,
+    state.secondaryTextColor,
+    state.fontHeading,
+    state.fontBody,
+    state.fontWeight,
+    state.fontBodyWeight,
+    state.fontScale,
+    state.density,
+    state.cornerRadius,
+    state.docPadding,
+    state.tagline,
+    state.logoUrl,
+    state.faviconUrl,
+    state.headerImageUrl,
+    state.blocks,
+    setState,
+  ])
+
   const applyTheme = (id: ThemeId) => {
     const p = THEME_PRESETS[id]
     setState(
@@ -220,6 +318,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         surfaceColor: p.surface,
         textColor: p.text,
         mutedColor: p.muted,
+        secondaryColor: '#FFFFFF',
+        secondaryTextColor: '#374151',
         fontHeading: p.headingFont,
         fontBody: p.bodyFont,
         fontWeight: p.headingWeight,
@@ -237,7 +337,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   const resetCurrentSurface = () => {
-    if (surface === 'portal') return
     setState((prev) => ({
       ...prev,
       blocks: { ...prev.blocks, [surface]: defaultBlocksFor(surface) },
@@ -332,11 +431,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setEditor({ headerImageUrl: '' }, false)
   }
 
-  const docSurface: 'quote' | 'invoice' | 'contract' | null =
-    surface === 'portal' ? null : surface
+  const docSurface: 'quote' | 'invoice' | 'contract' | 'portal' = surface
 
   const setBlocksForCurrent = (blocks: Block[]) => {
-    if (!docSurface) return
     setState((prev) => ({
       ...prev,
       blocks: { ...prev.blocks, [docSurface]: blocks },
@@ -344,23 +441,23 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   function updateBlock<B extends Block>(id: string, patch: Partial<B>) {
-    if (!docSurface) return
     const list = state.blocks[docSurface]
     setBlocksForCurrent(list.map(b => (b.id === id ? ({ ...b, ...patch } as Block) : b)))
   }
 
   function deleteBlock(id: string) {
-    if (!docSurface) return
+    const block = state.blocks[docSurface].find(b => b.id === id)
+    if (block?.type === 'couplePortal' || block?.type === 'paymentSchedule') return
     setBlocksForCurrent(state.blocks[docSurface].filter(b => b.id !== id))
     setSelectedBlockIds((prev) => prev.filter(x => x !== id))
   }
 
   function duplicateBlock(id: string) {
-    if (!docSurface) return
     const list = state.blocks[docSurface]
     const idx = list.findIndex(b => b.id === id)
     if (idx < 0) return
     const original = list[idx]
+    if (original.type === 'couplePortal' || original.type === 'paymentSchedule') return
     const cloned = { ...original, id: `${original.type}-${Date.now().toString(36)}` } as Block
     const next = [...list]
     next.splice(idx + 1, 0, cloned)
@@ -369,7 +466,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   function resetBlockStyles(id: string) {
-    if (!docSurface) return
     const list = state.blocks[docSurface]
     const target = list.find((b) => b.id === id)
     if (!target) return
@@ -378,7 +474,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
-    if (!docSurface) return
     const newBlock = blockTemplate(type)
     const list = state.blocks[docSurface]
     if (insertAfterId) {
@@ -398,47 +493,19 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setPaletteOpen(true)
   }
 
-  const onSaveAsKit = () => setSaveKitOpen(true)
-
-  const handleSaveKitConfirm = (name: string) => {
-    const kit: BrandKit = {
-      id: `kit-${Date.now().toString(36)}`,
-      name: name || 'Untitled kit',
-      brandColor: state.brandColor,
-      accentColor: state.accentColor,
-      surfaceColor: state.surfaceColor,
-      textColor: state.textColor,
-      mutedColor: state.mutedColor,
-      fontHeading: state.fontHeading,
-      fontBody: state.fontBody,
-      fontWeight: state.fontWeight,
-      fontBodyWeight: state.fontBodyWeight,
-      fontScale: state.fontScale,
-      density: state.density,
-      cornerRadius: state.cornerRadius,
-      logoUrl: state.logoUrl,
-      faviconUrl: state.faviconUrl,
-      headerImageUrl: state.headerImageUrl,
-      createdAt: new Date().toISOString(),
-    }
-    setState(
-      (prev) => ({ ...prev, kitName: kit.name, brandKits: [kit, ...prev.brandKits] }),
-      { commit: true },
-    )
-    setSaveKitOpen(false)
-    toast('Brand kit saved', 'success')
-  }
-
   const onApplyKit = (kit: BrandKit) => {
     setState((prev) => ({
       ...prev,
       kitName: kit.name,
+      activeKitId: kit.id,
       themePreset: 'custom',
       brandColor: kit.brandColor,
       accentColor: kit.accentColor,
       surfaceColor: kit.surfaceColor,
       textColor: kit.textColor,
       mutedColor: kit.mutedColor,
+      secondaryColor: kit.secondaryColor,
+      secondaryTextColor: kit.secondaryTextColor,
       fontHeading: kit.fontHeading,
       fontBody: kit.fontBody,
       fontWeight: kit.fontWeight,
@@ -446,45 +513,138 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       fontScale: kit.fontScale,
       density: kit.density,
       cornerRadius: kit.cornerRadius,
-      logoUrl: prev.logoUrl || kit.logoUrl || '',
-      faviconUrl: prev.faviconUrl || kit.faviconUrl || '',
-      headerImageUrl: prev.headerImageUrl || kit.headerImageUrl || '',
+      docPadding: kit.docPadding ?? prev.docPadding,
+      tagline: kit.tagline ?? '',
+      logoUrl: kit.logoUrl ?? '',
+      faviconUrl: kit.faviconUrl ?? prev.faviconUrl,
+      headerImageUrl: kit.headerImageUrl ?? '',
+      blocks: kit.blocks ?? prev.blocks,
     }), { commit: true })
     toast(`Applied "${kit.name}"`, 'success')
   }
 
   const onCreateNewKit = () => {
     const preset = THEME_PRESETS.minimal
+    const baseName = 'Untitled brand'
+    const existingNames = new Set(state.brandKits.map((k) => k.name))
+    let name = baseName
+    let n = 2
+    while (existingNames.has(name)) {
+      name = `${baseName} ${n++}`
+    }
+    const defaultBlocks = {
+      quote: defaultBlocksFor('quote'),
+      invoice: defaultBlocksFor('invoice'),
+      contract: defaultBlocksFor('contract'),
+      portal: defaultBlocksFor('portal'),
+    }
+    const kit: BrandKit = {
+      id: `kit-${Date.now().toString(36)}`,
+      name,
+      brandColor: preset.color,
+      accentColor: preset.accent,
+      surfaceColor: preset.surface,
+      textColor: preset.text,
+      mutedColor: preset.muted,
+      secondaryColor: '#FFFFFF',
+      secondaryTextColor: '#374151',
+      fontHeading: preset.headingFont,
+      fontBody: preset.bodyFont,
+      fontWeight: preset.headingWeight,
+      fontBodyWeight: preset.bodyWeight,
+      fontScale: preset.scale,
+      density: preset.density,
+      cornerRadius: preset.radius,
+      docPadding: 12,
+      tagline: '',
+      logoUrl: '',
+      faviconUrl: '',
+      headerImageUrl: '',
+      blocks: defaultBlocks,
+      createdAt: new Date().toISOString(),
+    }
     setState(
       (prev) => ({
         ...prev,
-        kitName: 'Untitled brand',
+        kitName: kit.name,
+        activeKitId: kit.id,
         themePreset: 'minimal',
-        brandColor: preset.color,
-        accentColor: preset.accent,
-        surfaceColor: preset.surface,
-        textColor: preset.text,
-        mutedColor: preset.muted,
-        fontHeading: preset.headingFont,
-        fontBody: preset.bodyFont,
-        fontWeight: preset.headingWeight,
-        fontBodyWeight: preset.bodyWeight,
-        fontScale: preset.scale,
-        density: preset.density,
-        cornerRadius: preset.radius,
+        brandColor: kit.brandColor,
+        accentColor: kit.accentColor,
+        surfaceColor: kit.surfaceColor,
+        textColor: kit.textColor,
+        mutedColor: kit.mutedColor,
+        secondaryColor: kit.secondaryColor,
+        secondaryTextColor: kit.secondaryTextColor,
+        fontHeading: kit.fontHeading,
+        fontBody: kit.fontBody,
+        fontWeight: kit.fontWeight,
+        fontBodyWeight: kit.fontBodyWeight,
+        fontScale: kit.fontScale,
+        density: kit.density,
+        cornerRadius: kit.cornerRadius,
         docPadding: 12,
         logoUrl: '',
         faviconUrl: '',
         headerImageUrl: '',
         tagline: '',
+        blocks: defaultBlocks,
+        brandKits: [kit, ...prev.brandKits],
       }),
       { commit: true },
     )
-    toast('New brand kit started')
+    toast(`Created "${kit.name}"`, 'success')
   }
 
   const onDeleteKit = (id: string) => {
-    setState((prev) => ({ ...prev, brandKits: prev.brandKits.filter(k => k.id !== id) }), { commit: true })
+    if (state.brandKits.length <= 1) {
+      toast('You need at least one kit', 'error')
+      return
+    }
+    setState(
+      (prev) => {
+        const idx = prev.brandKits.findIndex((k) => k.id === id)
+        const remaining = prev.brandKits.filter((k) => k.id !== id)
+        const wasActive = prev.activeKitId === id
+        if (!wasActive || remaining.length === 0) {
+          return {
+            ...prev,
+            brandKits: remaining,
+            activeKitId: wasActive ? null : prev.activeKitId,
+          }
+        }
+        // Auto-switch: prefer the kit that took the deleted slot, else the previous one
+        const next = remaining[idx] ?? remaining[idx - 1] ?? remaining[0]
+        return {
+          ...prev,
+          brandKits: remaining,
+          activeKitId: next.id,
+          kitName: next.name,
+          themePreset: 'custom',
+          brandColor: next.brandColor,
+          accentColor: next.accentColor,
+          surfaceColor: next.surfaceColor,
+          textColor: next.textColor,
+          mutedColor: next.mutedColor,
+          secondaryColor: next.secondaryColor,
+          secondaryTextColor: next.secondaryTextColor,
+          fontHeading: next.fontHeading,
+          fontBody: next.fontBody,
+          fontWeight: next.fontWeight,
+          fontBodyWeight: next.fontBodyWeight,
+          fontScale: next.fontScale,
+          density: next.density,
+          cornerRadius: next.cornerRadius,
+          docPadding: next.docPadding ?? prev.docPadding,
+          tagline: next.tagline ?? '',
+          logoUrl: next.logoUrl ?? '',
+          faviconUrl: next.faviconUrl ?? prev.faviconUrl,
+          headerImageUrl: next.headerImageUrl ?? '',
+          blocks: next.blocks ?? prev.blocks,
+        }
+      },
+      { commit: true },
+    )
   }
 
   useEffect(() => {
@@ -492,7 +652,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       const target = e.target as HTMLElement | null
       if (target?.isContentEditable) return
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
-      if (e.key === '/' && docSurface) {
+      if (e.key === '/') {
         e.preventDefault()
         setInsertAfterId(null)
         setPaletteOpen(true)
@@ -511,6 +671,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     surfaceColor: state.surfaceColor,
     textColor: state.textColor,
     mutedColor: state.mutedColor,
+    secondaryColor: state.secondaryColor,
+    secondaryTextColor: state.secondaryTextColor,
     tagline: state.tagline,
     footerText: '',
     abn: state.abn,
@@ -528,9 +690,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     website: initialData.website,
     instagramUrl: initialData.instagramUrl,
     facebookUrl: initialData.facebookUrl,
+    portalSections: state.portalSections,
   }), [state, initialData.phone, initialData.website, initialData.instagramUrl, initialData.facebookUrl])
 
-  const visibleBlocks = docSurface ? state.blocks[docSurface] : []
+  const visibleBlocks = state.blocks[docSurface]
 
   // Heuristic: contracts saved before the rewrite were tiny (3-line stubs).
   // When we detect one, offer a one-click swap to the new template.
@@ -550,12 +713,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         onUndo={undo}
         onRedo={redo}
         onPreview={() => toast('Customer preview coming soon')}
-        onSaveAsKit={onSaveAsKit}
         onCreateNewKit={onCreateNewKit}
         brandKits={state.brandKits}
         onApplyKit={onApplyKit}
         onDeleteKit={onDeleteKit}
-        addBlockSlot={docSurface ? (
+        addBlockSlot={
           <AddBlockPalette
             open={paletteOpen}
             onOpenChange={setPaletteOpen}
@@ -572,7 +734,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               </button>
             }
           />
-        ) : null}
+        }
       />
 
       <SurfaceTabs surface={surface} setSurface={setSurface} state={previewState} />
@@ -592,6 +754,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setTextColor={(v) => setEditor({ textColor: v })}
           mutedColor={state.mutedColor}
           setMutedColor={(v) => setEditor({ mutedColor: v })}
+          secondaryColor={state.secondaryColor}
+          setSecondaryColor={(v) => setEditor({ secondaryColor: v })}
+          secondaryTextColor={state.secondaryTextColor}
+          setSecondaryTextColor={(v) => setEditor({ secondaryTextColor: v })}
           fontHeading={state.fontHeading}
           setFontHeading={(v) => setEditor({ fontHeading: v })}
           fontBody={state.fontBody}
@@ -608,29 +774,15 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setCornerRadius={(v) => setEditor({ cornerRadius: v })}
           docPadding={state.docPadding}
           setDocPadding={(v) => setEditor({ docPadding: v })}
-          logoUrl={state.logoUrl}
-          uploadLogo={uploadLogo}
-          removeLogo={removeLogo}
           faviconUrl={state.faviconUrl}
           uploadFavicon={uploadFavicon}
           removeFavicon={removeFavicon}
-          headerImageUrl={state.headerImageUrl}
-          uploadHeader={uploadHeader}
-          removeHeader={removeHeader}
           businessName={state.businessName}
           setBusinessName={(v) => setEditor({ businessName: v }, false)}
           tagline={state.tagline}
           setTagline={(v) => setEditor({ tagline: v }, false)}
           abn={state.abn}
           setAbn={(v) => setEditor({ abn: v }, false)}
-        />
-
-        <SaveKitDialog
-          open={saveKitOpen}
-          onClose={() => setSaveKitOpen(false)}
-          onSave={handleSaveKitConfirm}
-          defaultName={state.kitName || 'My brand'}
-          state={previewState}
         />
 
         <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
@@ -651,12 +803,12 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               </button>
             </div>
           )}
-          {docSurface && visibleBlocks.length > 0 && (
+          {visibleBlocks.length > 0 && (
             <div className="flex justify-end mb-2">
               <button
                 type="button"
                 onClick={() => {
-                  setBlocksForCurrent([])
+                  setBlocksForCurrent(state.blocks[docSurface].filter(b => b.type === 'couplePortal' || b.type === 'paymentSchedule'))
                   setSelectedBlockIds([])
                 }}
                 className="text-[11px] text-gray-400 hover:text-red-500 cursor-pointer transition"
@@ -665,23 +817,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               </button>
             </div>
           )}
-          {docSurface ? (
-            <BlockRenderer
-              blocks={visibleBlocks}
-              setBlocks={setBlocksForCurrent}
-              state={previewState}
-              selectedBlockIds={selectedBlockIds}
-              setSelectedBlockIds={setSelectedBlockIds}
-              requestAddAfter={requestAddAfter}
-              updateBlock={updateBlock}
-              duplicateBlock={duplicateBlock}
-              deleteBlock={deleteBlock}
-              resetBlock={resetBlockStyles}
-            />
-          ) : (
-            <PortalPreview
-              state={previewState}
-              device={device}
+          {surface === 'portal' && (
+            <PortalSectionsBar
               sections={state.portalSections}
               setSections={(patch) =>
                 setEditor(
@@ -691,17 +828,36 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               }
             />
           )}
+          <BlockRenderer
+            blocks={visibleBlocks}
+            setBlocks={setBlocksForCurrent}
+            state={previewState}
+            selectedBlockIds={selectedBlockIds}
+            setSelectedBlockIds={setSelectedBlockIds}
+            requestAddAfter={requestAddAfter}
+            updateBlock={updateBlock}
+            duplicateBlock={duplicateBlock}
+            deleteBlock={deleteBlock}
+            resetBlock={resetBlockStyles}
+            setTagline={(v) => setEditor({ tagline: v }, false)}
+            setBusinessName={(v) => setEditor({ businessName: v }, false)}
+            uploadLogo={uploadLogo}
+            removeLogo={removeLogo}
+            uploadHeader={uploadHeader}
+            removeHeader={removeHeader}
+          />
         </CanvasFrame>
       </div>
     </div>
   )
 }
 
-export function defaultBlocks(): { quote: Block[]; invoice: Block[]; contract: Block[] } {
+export function defaultBlocks(): { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] } {
   return {
     quote: defaultBlocksFor('quote'),
     invoice: defaultBlocksFor('invoice'),
     contract: defaultBlocksFor('contract'),
+    portal: defaultBlocksFor('portal'),
   }
 }
 
@@ -728,6 +884,11 @@ function clearStyleOverrides(block: Block): Block {
     case 'totals': {
       const { totalStyle: _t, ...rest } = block
       void _t
+      return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
+    }
+    case 'paymentDetails': {
+      const { headingStyle: _h, labelStyle: _l, valueStyle: _v, ...rest } = block
+      void _h; void _l; void _v
       return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
     }
     case 'action': {
@@ -779,12 +940,11 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
-  blocks: { quote: Block[]; invoice: Block[]; contract: Block[] },
-  docSurface: 'quote' | 'invoice' | 'contract' | null,
+  blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] },
+  docSurface: 'quote' | 'invoice' | 'contract' | 'portal',
   surface: SurfaceTab,
 ) {
   if (typeof document === 'undefined') return
-  if (!docSurface) return
 
   const affectedTypes = new Set<Block['type']>()
   for (const key of Object.keys(patch) as TokenKey[]) {
