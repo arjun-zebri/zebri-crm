@@ -182,7 +182,7 @@ Verdict: **none of the four dirs are dead code.** They are active modules misfil
 | `invoices/invoice-payment-schedule.tsx` | n/a (component) | `invoices/invoice-builder-modal` (internal) | **KEEP** (part of active invoice modal) |
 | `invoices/[id]/page.tsx` (`/invoices/[id]`) | only via `quotes/[id]/page.tsx:244` `router.push` | — | **CUT candidate** — dies with `/quotes/[id]`; verify together |
 | `contracts/contract-builder-modal.tsx` | n/a (`contracts/` has no page) | `payments/page`, `couples/couple-contracts` | **KEEP** → relocate in 0.1 |
-| `events/*` (modals, types, calendars) + `events/[id]/timeline/page.tsx` | timeline route live | `couples/*` (timeline, events, modal, calendar), `use-dashboard`, `settings/timeline-template-manager` | **KEEP** → relocate/rename in 0.1 (it's a couple-owned shared module, not a standalone route) |
+| `events/*` (modals, calendars) + `events/[id]/timeline/page.tsx` | **timeline route LIVE** | `couples/*` (timeline, events, modal, calendar), `use-dashboard`, `settings/timeline-template-manager` | **KEEP** → relocation **deferred** to Events page-hardening phase (see §7.7) |
 
 Action for 0.1: relocate the three builder modals + the `events` module to honest homes (e.g. `components/` feature modules or `app/(dashboard)/payments/_components`); they are not route dirs.
 
@@ -212,6 +212,10 @@ There is **no SQL-level admin/role bypass** — no RLS policy references `user_m
 
 - Committed `.env.example` + `.env.test.example` (keys only, documented, marked public/secret/required); `.gitignore` updated to permit them.
 - `supabase/.temp/` now gitignored; `supabase/.temp/cli-latest` untracked (was tracked & dirtying every status).
+
+### 7.7 Decision (from 0.1): `events/` relocation deferred
+
+Increment D was reassessed and **deliberately not done in 0.1**. `app/(dashboard)/events/` contains a **live route** (`events/[id]/timeline/page.tsx` → `/events/[id]/timeline`), so relocating the folder changes a production URL — a routing/product decision, not a structural move. It also has cross-feature relative imports (`../contacts`, `../couples`). Doing this safely requires the Phase 0.3 test net and a decision on whether that URL moves under `/couples`. Deferred to the **Events page-hardening phase** (Phase 4). 0.1's structural scope = `types/` extraction, builder-modal relocation, `lib/` domains, conventions docs. Consistent with §6 ("safety net first; small reversible PRs").
 
 ### 7.6 Finding (from 0.1): colliding generic export names
 
