@@ -1,6 +1,6 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ (tsconfig ratchet · replayable migration chain · generated DB types · typed clients everywhere · 39 errors fixed incl. 2 latent bugs · `lib/db` helpers) · 0.3 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ (Vitest unit + RTL · integration harness vs local Supabase with real RLS · cross-tenant isolation test · `npm test` 14 green · testing.md) · 0.4 next
 
 ### Type-strictness ratchet (Phase 0.2)
 
