@@ -1,6 +1,6 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 in progress (ratchet ✅; DB types pending local-stack image pull)
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 in progress (ratchet ✅ · migration chain replayable ✅ · `types/database.ts` generated ✅ · typed-client adoption + 39-error burndown = remaining, decision pending §7.10)
 
 ### Type-strictness ratchet (Phase 0.2)
 
@@ -230,6 +230,27 @@ There is **no SQL-level admin/role bypass** — no RLS policy references `user_m
 
 - Committed `.env.example` + `.env.test.example` (keys only, documented, marked public/secret/required); `.gitignore` updated to permit them.
 - `supabase/.temp/` now gitignored; `supabase/.temp/cli-latest` untracked (was tracked & dirtying every status).
+
+### 7.10 Decision point (0.2): typed-client adoption sequencing
+
+`types/database.ts` is generated and committed. Applying `createClient<Database>()` to the 3 clients surfaced **39 tsc errors** across ~13 files (portal, quote/contract/invoice public pages, contract APIs, invoice builder, a few react-query call sites). Categorised:
+- ~30 mechanical type-honesty fixes (nullable columns → guards/`?? ''`; RPC-returns-`Json` → `as unknown as T`; query-fn annotations) — no behaviour change.
+- ~2 genuine latent bugs: code writes the **dropped `events.price`** column (`invoices/[id]/page.tsx` — the §7.1 dead route — and the live `invoice-builder-modal.tsx`).
+- ~5 public-page RPC `Json` casts.
+
+The generated types alone break nothing (unused until imported), so they ship now with tsc still 0. The client-generic switch + burndown is deferred pending the user's chosen sequencing (fix-all-now as type-honesty in 0.2, vs. transitional seam + per-page burndown when each page gets its 0.3 test net). Tracked, not lost.
+
+### 7.9 Finding (from 0.2): migration chain is systemically non-replayable
+
+Beyond the demo-data issue (§7.8), real **schema** migrations also fail to replay. First instance: `20260405000001_create_branding_storage_bucket.sql` contained invalid SQL (`auth.uid()::text || '/' in name` — misused `IN`); it can never have applied to prod as written, yet prod has the bucket policies — i.e. **prod was hand-patched and the committed migrations diverge from reality**. (Here, the very next migration `…002_fix_branding_bucket_rls_policies` drops & recreates these policies correctly, so fixing `…001` to the valid form leaves the end state identical.)
+
+This is systemic, not a one-off: the chain has clearly never been validated from zero. **Implication:** "everything has been applied" (0.0) was true only for the live cloud DBs via manual intervention; the repo's migration history is not a faithful, replayable source of truth. A clean from-zero replay is a hard prerequisite for the 0.3 test harness and 0.7 CI. Approach: fix forward migration-by-migration (each `supabase start` failure = one finding + minimal intent-preserving fix that matches prod's actual end state), tracked under task #11 (broadened). Remote ledger reconciliation handled in 0.7.
+
+### 7.8 Finding (from 0.2): migrations are NOT reproducible from scratch
+
+`supabase start` fails applying `20260312010000_insert_demo_data.sql`: it inserts demo `couples` with a **hardcoded `user_id` (`9524e31d…dde3`) that doesn't exist in `auth.users`** on a clean DB → FK violation, aborting the whole stack. Same hardcoded user in `20260321010000_add_demo_pricing_and_sources.sql`. These two are **pure demo fixtures mis-committed as schema migrations**; nothing in app/code/RPCs/other migrations references those rows. The migration chain only ever "worked" because that user was hand-created in the cloud envs (confirms 0.0's drift hypothesis: "everything applied" was true for cloud, but the set is not self-contained).
+
+Impact: blocks local DB, the 0.3 test harness, and CI-from-zero (0.7). **Production defect** (non-reproducible schema). Prod data is unaffected by any fix — Supabase tracks migrations by version and never re-runs/un-applies; removing the files deletes nothing on remote and `db push` never reverts. Remediation chosen with the user (task #11); remote ledger note (`migration list` showing version applied-remote/absent-local) is cosmetic, reconciled in 0.7.
 
 ### 7.7 Decision (from 0.1): `events/` relocation deferred
 
