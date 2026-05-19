@@ -20,7 +20,7 @@ test.describe('Calendar View', () => {
   // ── 2. Default is Week view ───────────────────────────────────────────────
   test('default view is Week (Week button appears active)', async ({ page, browserName }) => {
     // Skip on mobile browsers since they have different layout
-    const isMobile = browserName.includes('webkit') || page.viewportSize()?.width! < 768
+    const isMobile = browserName.includes('webkit') || (page.viewportSize()?.width ?? 0) < 768
     if (isMobile) test.skip()
 
     // View dropdown shows "week" (lowercase) as current view
@@ -87,7 +87,7 @@ test.describe('Calendar View', () => {
   // ── 6. Sidebar shows mini calendar and day timeline ─────────────────────────────
   test('sidebar displays mini calendar and events timeline', async ({ page, browserName }) => {
     // Skip on mobile browsers - different layout on mobile
-    const isMobile = browserName.includes('webkit') || page.viewportSize()?.width! < 768
+    const isMobile = browserName.includes('webkit') || (page.viewportSize()?.width ?? 0) < 768
     if (isMobile) test.skip()
 
     // Mini calendar should be visible in sidebar

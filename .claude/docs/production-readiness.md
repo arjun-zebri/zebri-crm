@@ -1,6 +1,19 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ (Vitest unit + RTL · integration harness vs local Supabase with real RLS · cross-tenant isolation test · `npm test` 14 green · testing.md) · 0.4 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ (Prettier · expanded ESLint · lint ratchet `npm run lint:gate` · knip report-only) · 0.5 next
+
+### Lint ratchet (Phase 0.4)
+
+ESLint expanded (Prettier-compatible via `eslint-config-prettier`; `import/order`, `no-console`, `lib/` layer-boundary as ratcheted warnings). Per the user's chosen approach, the large legacy set is **not** mass-fixed — ~91 of the errors are behavioural (react-hooks strict) or `any` typing debt in feature code, fixed per-page during hardening. Same pattern as the strict ratchet.
+
+`npm run lint:gate` (`scripts/lint-gate.mjs`) enforces a monotonically-decreasing budget; CI uses it (0.7). `npm run lint` stays the raw reporter (severities kept honest, not downgraded).
+
+| Metric | Baseline 2026-05-20 |
+|---|---|
+| ESLint **errors** (34 `any` + 57 react-hooks-strict) | **91** → target 0 first |
+| ESLint **warnings** (import-order, no-console, unused-vars, exhaustive-deps, img, lib-purity) | **876** → then 0 |
+
+Fixed now (safe, no behaviour change): 3 `prefer-const`, 2 `no-non-null-asserted-optional-chain`, 1 e2e `rules-of-hooks` false-positive (scoped off for Playwright), `react/no-unescaped-entities` disabled (low-signal noise rule). `knip` is report-only until 0.7 (promoted to a gate once the known dead routes are cut in their page phases). Prettier is **format-on-touch** (no repo-wide reformat — consistent with the ratchet/go-slow approach); `lib/` purity has ~21 real violations (React under `lib/branding/*.tsx`) tracked as warnings, fixed when those modules are hardened.
 
 ### Type-strictness ratchet (Phase 0.2)
 

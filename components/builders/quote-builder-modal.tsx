@@ -347,7 +347,7 @@ export function QuoteBuilderModal({ quoteId, initialCoupleId, isOpen, onClose, o
       const { data: user } = await supabase.auth.getUser()
       if (!user.user) throw new Error('Not authenticated')
 
-      let finalQuoteId = effectiveQuoteId
+      const finalQuoteId = effectiveQuoteId
 
       if (isNewQuote) {
         if (!coupleId) throw new Error('Please select a couple')
