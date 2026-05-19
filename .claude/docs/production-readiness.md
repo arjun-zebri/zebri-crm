@@ -1,6 +1,6 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 recon complete (in review → `staging`); 0.1 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ (structure: `types/`, `lib/` domains, `components/builders/`, conventions); 0.2 next
 > Owner: Arjun (solo) · Last updated: 2026-05-19
 > This is the master plan for taking Zebri from prototype to a production-grade SaaS.
 > It is executed **foundation first, then page-by-page**. Take it slow. One section per PR.
