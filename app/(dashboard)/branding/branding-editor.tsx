@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import type { Json } from '@/types/database'
 import { useToast } from '@/components/ui/toast'
 import { useAutosave } from '@/lib/branding/use-autosave'
 import { useHistory } from '@/lib/branding/use-history'
@@ -162,9 +163,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       .upsert(
         {
           user_id: user.id,
-          branding_blocks: value.blocks,
-          brand_kits: value.brandKits,
-          portal_sections: value.portalSections,
+          // jsonb columns are generated as `Json`; the editor's strongly
+          // typed structures are serialised as-is (shape unchanged).
+          branding_blocks: value.blocks as unknown as Json,
+          brand_kits: value.brandKits as unknown as Json,
+          portal_sections: value.portalSections as unknown as Json,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' },

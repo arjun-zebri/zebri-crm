@@ -104,7 +104,9 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
         .eq('couple_id', coupleId)
         .order('created_at')
       if (error) throw error
-      return data || []
+      // Generated portal_files Row vs the hand-written PortalFile shape;
+      // runtime shape matches — bridge the nominal difference.
+      return (data ?? []) as PortalFile[]
     },
   })
 

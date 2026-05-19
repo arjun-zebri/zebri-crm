@@ -304,7 +304,8 @@ export function ContractBuilderModal({
     const vars = buildContractVariables({
       couple: { name: coupleName, email: null },
       firstEvent: firstEvent ?? null,
-      quote: quote ?? null,
+      // DB discount_type is text|null; helper narrows to a literal union.
+      quote: (quote ?? null) as Parameters<typeof buildContractVariables>[0]['quote'],
       userMeta: userRes.user?.user_metadata ?? {},
       depositPercent,
     })

@@ -80,7 +80,8 @@ export default function PublicContractPage() {
       setPageState('not_found')
       return
     }
-    const c = data as PublicContract
+    // jsonb-returning RPC (Json) → known payload shape.
+    const c = data as unknown as PublicContract
     setContract(c)
 
     if (c.status === 'signed') { setPageState('signed'); return }

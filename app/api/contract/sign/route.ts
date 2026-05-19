@@ -28,8 +28,9 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase.rpc('sign_contract', {
     token,
     p_signer_name: signerName,
-    p_signer_ip: ip,
-    p_signer_user_agent: userAgent,
+    // SQL params accept null; casts bridge Supabase type-gen imprecision.
+    p_signer_ip: ip as string,
+    p_signer_user_agent: userAgent as string,
   })
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

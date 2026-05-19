@@ -148,7 +148,9 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
 
       if (error) throw error
 
-      return (data || []).map((row: Event & { timeline_items?: { start_time: string | null }[] }) => {
+      // Let the row type infer from the typed query (the manual annotation
+      // shadowed the generated events Row); final shape cast below.
+      return (data || []).map((row) => {
         const times = (row.timeline_items ?? [])
           .map((t) => t.start_time)
           .filter((t): t is string => !!t)

@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
   const { data, error } = await supabase.rpc('decline_contract', {
     token,
-    p_reason: body.reason ?? null,
+    // SQL param accepts null; cast bridges Supabase type-gen imprecision.
+    p_reason: (body.reason ?? null) as string,
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

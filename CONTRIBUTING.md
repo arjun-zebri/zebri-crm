@@ -67,6 +67,27 @@ tests/              unit | integration | e2e  (e2e exists today; unit &
   *is this type a domain concept used across features, or the internal
   vocabulary of one subsystem?*
 
+### Typed database access
+
+- `types/database.ts` is **generated** — never hand-edit. Regenerate after
+  any migration with:
+  `supabase gen types typescript --local --schema public > types/database.ts`
+- The Supabase clients are `SupabaseClient<Database>`, so `.from(...)`
+  queries and `.rpc(...)` calls are fully typed at the call site.
+- Use the ergonomic aliases from `@/lib/db` (`Tables<'couples'>`,
+  `TablesInsert<'invoices'>`, …) instead of hand-written row interfaces, so
+  shapes track migrations. Legacy hand-written shapes are replaced during
+  each page's hardening phase.
+- jsonb-returning RPCs are typed `Json`; bridge to a known payload with
+  `as unknown as T` at the boundary (commented).
+
+### Local database
+
+- `supabase start` boots the stack; `supabase db reset` re-applies all
+  migrations from zero **plus** `supabase/seed.sql` (local/CI only — never
+  prod). The full chain must replay from scratch (CI enforces this); see
+  roadmap §7.8/§7.9 for the remediation history.
+
 ### Known deferral: `app/(dashboard)/events/`
 
 The `events/` folder is **not dead code** — it is the couple-owned event /

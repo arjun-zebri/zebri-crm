@@ -79,7 +79,8 @@ export default function PublicInvoicePage() {
         return
       }
 
-      const inv = data as PublicInvoice
+      // jsonb-returning RPC (Json) → known payload shape.
+      const inv = data as unknown as PublicInvoice
       setInvoice(inv)
 
       if (inv.status === 'paid') { setPageState('paid'); return }

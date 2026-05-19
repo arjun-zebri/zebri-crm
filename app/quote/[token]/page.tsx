@@ -69,7 +69,9 @@ export default function PublicQuotePage() {
       return
     }
 
-    const q = data as PublicQuote
+    // get_public_quote is a jsonb-returning RPC, typed as Json by the
+    // generated client; bridge to the known payload shape.
+    const q = data as unknown as PublicQuote
     setQuote(q)
 
     if (q.status === 'accepted') { setPageState('accepted'); return }
@@ -89,9 +91,10 @@ export default function PublicQuotePage() {
     setActionError('')
     const { data } = await supabase.rpc('accept_quote', { token: params.token })
     setActionLoading(false)
-    if (data?.error) {
-      if (data.error === 'expired') setPageState('expired')
-      else if (data.error === 'already_actioned') await load()
+    const res = data as { error?: string } | null
+    if (res?.error) {
+      if (res.error === 'expired') setPageState('expired')
+      else if (res.error === 'already_actioned') await load()
       else setActionError('Something went wrong. Please try again.')
       return
     }
@@ -103,8 +106,9 @@ export default function PublicQuotePage() {
     setActionError('')
     const { data } = await supabase.rpc('decline_quote', { token: params.token })
     setActionLoading(false)
-    if (data?.error) {
-      if (data.error === 'already_actioned') await load()
+    const res = data as { error?: string } | null
+    if (res?.error) {
+      if (res.error === 'already_actioned') await load()
       else setActionError('Something went wrong. Please try again.')
       return
     }
