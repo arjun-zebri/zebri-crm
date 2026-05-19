@@ -118,14 +118,25 @@ that URL moves under `/couples`). See roadmap §7.
 
 ## Verifying a change
 
-Until Phase 0.3/0.4 land the full gates, the local safety net is:
+Local gates (all enforced by CI in Phase 0.7):
 
 ```bash
-npx tsc --noEmit      # must be 0 errors
-npm run build         # must exit 0
-npm run lint          # must NOT increase the baseline (108 errors / 94
-                      # warnings as of Phase 0.1 — pre-existing, owned by 0.4)
+npm run typecheck         # must be 0 errors
+npm run typecheck:strict  # ratchet — must not exceed budget (see roadmap §0.2)
+npm run lint:gate         # ratchet — must not exceed lint budget (roadmap §0.4)
+npm test                  # unit + integration must pass
+npm run build             # must exit 0
+npm run format:check      # touched files must be Prettier-clean
+npm run deadcode          # knip — report-only until 0.7
 ```
+
+- `npm run lint` is the raw ESLint reporter (shows all violations);
+  `npm run lint:gate` is the pass/fail ratchet CI uses.
+- Ratchets only ever go **down**. If you legitimately remove violations,
+  lower the baseline in `tsconfig.strict.json` notes / `scripts/lint-gate.mjs`
+  so the gain is locked in. **New code must be clean** under strict + lint.
+- **Prettier is format-on-touch**: run `npm run format` on files you change
+  (no repo-wide reformat). `import/order` autofixes via `npm run lint:fix`.
 
 A change is **Done** only when it meets the Definition of Done in
 `.claude/docs/production-readiness.md` §5 (typed, TSDoc'd, unit + integration

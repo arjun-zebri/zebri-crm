@@ -51,12 +51,17 @@ export function localSupabaseEnv(): LocalEnv {
         '(or set SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY).',
     )
   }
-  cached = {
-    url: json.API_URL,
-    anonKey: json.ANON_KEY,
-    serviceRoleKey: json.SERVICE_ROLE_KEY,
+  const url = json.API_URL
+  const anonKey = json.ANON_KEY
+  const serviceRoleKey = json.SERVICE_ROLE_KEY
+  if (!url || !anonKey || !serviceRoleKey) {
+    throw new Error(
+      '`supabase status -o json` did not return API_URL / ANON_KEY / SERVICE_ROLE_KEY.',
+    )
   }
-  return cached
+  const env: LocalEnv = { url, anonKey, serviceRoleKey }
+  cached = env
+  return env
 }
 
 /** Service-role client — bypasses RLS. Use only for setup/teardown. */

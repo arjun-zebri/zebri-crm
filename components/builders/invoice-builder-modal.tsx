@@ -526,7 +526,7 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
       const { data: user } = await supabase.auth.getUser()
       if (!user.user) throw new Error('Not authenticated')
 
-      let finalInvoiceId = effectiveInvoiceId
+      const finalInvoiceId = effectiveInvoiceId
 
       if (isNewInvoice) {
         if (!coupleId) throw new Error('Please select a couple')

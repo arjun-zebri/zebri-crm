@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "app/**/{page,layout,template,loading,error,not-found,route,default}.{ts,tsx}",
+    "app/**/global-error.tsx",
+    "tests/**/*.{test,spec}.{ts,tsx}",
+    "scripts/*.mjs"
+  ],
+  "project": ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "types/**/*.ts"],
+  "ignore": ["types/database.ts"],
+  "ignoreDependencies": [],
+  "ignoreExportsUsedInFile": true
+}
