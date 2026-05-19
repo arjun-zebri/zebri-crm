@@ -73,12 +73,18 @@ export async function POST(request: NextRequest) {
   const vars = buildContractVariables({
     couple: { name: couple.name, email: couple.email },
     firstEvent: firstEvent ?? null,
-    quote: quoteRes.data ?? null,
+    // DB row's discount_type is `text|null`; the helper narrows to a
+    // literal union — bridge the generated-type width (values are valid).
+    quote: (quoteRes.data ?? null) as Parameters<typeof buildContractVariables>[0]['quote'],
     userMeta: user.user_metadata ?? {},
     depositPercent,
   })
 
-  const lockedHtml = renderContractHtml(contract.content, vars)
+  // contract.content is generated as Json; renderer expects tiptap JSONContent.
+  const lockedHtml = renderContractHtml(
+    contract.content as unknown as Parameters<typeof renderContractHtml>[0],
+    vars,
+  )
 
   const mcSignatureName = vars.mc_signature_name
   const mcBusinessName =

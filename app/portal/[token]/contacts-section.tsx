@@ -442,13 +442,16 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         p_id: merged.id,
         p_category: merged.category,
         p_full_name: merged.full_name,
-        p_phonetic: merged.phonetic ?? null,
-        p_role: merged.role ?? null,
-        p_audio_url: merged.audio_url ?? null,
+        // Supabase type-gen types nullable text RPC params as `string`;
+        // these SQL params accept null at runtime — behaviour unchanged,
+        // the `as string` only bridges the generated-type imprecision.
+        p_phonetic: (merged.phonetic ?? null) as string,
+        p_role: (merged.role ?? null) as string,
+        p_audio_url: (merged.audio_url ?? null) as string,
         p_position: merged.position,
-        p_notes: merged.notes ?? null,
-        p_email: merged.email ?? null,
-        p_phone: merged.phone ?? null,
+        p_notes: merged.notes ?? undefined,
+        p_email: merged.email ?? undefined,
+        p_phone: merged.phone ?? undefined,
       })
     } else {
       const newId = crypto.randomUUID()
@@ -470,13 +473,13 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         p_id: newId,
         p_category: modalCategory,
         p_full_name: newPerson.full_name,
-        p_phonetic: newPerson.phonetic,
-        p_role: newPerson.role,
-        p_audio_url: newPerson.audio_url,
+        p_phonetic: (newPerson.phonetic ?? null) as string,
+        p_role: (newPerson.role ?? null) as string,
+        p_audio_url: (newPerson.audio_url ?? null) as string,
         p_position: newPerson.position,
-        p_notes: newPerson.notes,
-        p_email: newPerson.email,
-        p_phone: newPerson.phone,
+        p_notes: newPerson.notes ?? undefined,
+        p_email: newPerson.email ?? undefined,
+        p_phone: newPerson.phone ?? undefined,
       })
     }
     setSaving(false)
@@ -510,8 +513,8 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
       const { data, error } = await supabase.rpc('save_portal_contact', {
         p_token: token,
         p_name: vendorForm.name.trim(),
-        p_email: vendorForm.email.trim() || null,
-        p_phone: vendorForm.phone.trim() || null,
+        p_email: (vendorForm.email.trim() || null) as string,
+        p_phone: (vendorForm.phone.trim() || null) as string,
         p_category: vendorForm.category,
         p_notes: '',
       })

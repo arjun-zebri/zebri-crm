@@ -687,9 +687,8 @@ export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClos
         .update({ final_paid_at: new Date().toISOString(), status: 'paid', paid_at: new Date().toISOString() })
         .eq('id', effectiveInvoiceId!)
       if (error) throw error
-      if (invoice.event_id) {
-        await supabase.from('events').update({ price: total }).eq('id', invoice.event_id)
-      }
+      // (events.price was removed from the schema — pricing lives on
+      // quotes/invoices now; the old event-price sync is obsolete.)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })

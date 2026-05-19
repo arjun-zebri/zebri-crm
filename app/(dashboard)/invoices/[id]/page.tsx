@@ -207,14 +207,7 @@ export default function InvoicePage() {
         .update({ status: 'paid', paid_at: new Date().toISOString() })
         .eq('id', params.id)
       if (error) throw error
-
-      // Sync events.price if linked
-      if (invoice.event_id) {
-        await supabase
-          .from('events')
-          .update({ price: subtotal })
-          .eq('id', invoice.event_id)
-      }
+      // (events.price was removed from the schema — obsolete sync dropped.)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', params.id] })

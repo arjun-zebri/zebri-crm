@@ -1,5 +1,47 @@
--- Insert demo data for a Zebri demo account
--- User ID: 9524e31d-d35b-4ea4-b775-eea8dcf0dde3
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Zebri — LOCAL / CI seed data  (NEVER runs against production)
+--
+-- Loaded by the Supabase CLI on `supabase start` / `supabase db reset`
+-- (config.toml → [db.seed] sql_paths = ["./seed.sql"]). It is NOT part of the
+-- migration chain and is never applied to remote environments.
+--
+-- This content was relocated out of two schema migrations
+-- (20260312010000_insert_demo_data, 20260321010000_add_demo_pricing_and_sources)
+-- which were not reproducible from scratch — they inserted demo rows owning a
+-- hardcoded auth user that does not exist on a clean DB. See
+-- .claude/docs/production-readiness.md §7.8.
+--
+-- The demo auth user is provisioned here (minimally) so the fixture FK
+-- (couples.user_id → auth.users.id) is satisfiable locally.
+-- Demo login: demo@zebri.local  /  password: demo-password
+-- ─────────────────────────────────────────────────────────────────────────────
+
+create extension if not exists pgcrypto with schema extensions;
+
+-- Minimal demo auth user (idempotent). Enough for referential integrity and a
+-- usable local login; not a full GoTrue provisioning flow.
+insert into auth.users (
+  instance_id, id, aud, role, email,
+  encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at
+) values (
+  '00000000-0000-0000-0000-000000000000',
+  '9524e31d-d35b-4ea4-b775-eea8dcf0dde3',
+  'authenticated', 'authenticated', 'demo@zebri.local',
+  crypt('demo-password', gen_salt('bf')), now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  -- Pro subscription so the demo account showcases the full product and is
+  -- not capped by the DB-enforced starter limit
+  -- (20260508100000_enforce_starter_couple_limit reads these fields from
+  -- raw_user_meta_data; note this is also the §7.4 entitlement-in-user-
+  -- metadata vector tracked for the 0.8 security work).
+  '{"display_name":"Demo MC","business_name":"Demo MC Co","account_type":"vendor","subscription_status":"active","subscription_plan":"pro","is_subscribed":true}'::jsonb,
+  now(), now()
+)
+on conflict (id) do nothing;
+
+-- ─── Demo CRM data (relocated verbatim from 20260312010000_insert_demo_data) ───
 
 -- Insert 20 sample couples
 INSERT INTO couples (id, user_id, name, email, phone, event_date, venue, notes, status, created_at) VALUES
@@ -24,8 +66,9 @@ INSERT INTO couples (id, user_id, name, email, phone, event_date, venue, notes, 
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Harper & Lucas Scott', 'harper.scott@email.com', '+61 490 123 457', '2026-05-22', 'Centennial Vineyards', 'Wine country celebration', 'new', now() - interval '6 days'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Victoria & Noah Green', 'victoria.green@email.com', '+61 401 234 568', '2026-03-20', 'Carrington Hotel', 'Hunter Valley destination', 'complete', now() - interval '45 days');
 
--- Insert 20 sample vendors
-INSERT INTO vendors (id, user_id, name, contact_name, email, phone, category, notes, status, created_at) VALUES
+-- Insert 20 sample contacts (table was renamed vendors → contacts in
+-- 20260326000000_rename_vendors_to_contacts; identical column set)
+INSERT INTO contacts (id, user_id, name, contact_name, email, phone, category, notes, status, created_at) VALUES
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Elegance Photography', 'Marcus Wong', 'marcus@elegance.com.au', '+61 487 654 321', 'photographer', 'Exceptional at candid shots, friendly personality', 'active', now() - interval '180 days'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Cinematic Dreams Films', 'Lisa Patel', 'lisa@cinematicdreams.com.au', '+61 498 765 432', 'videographer', 'Drone footage available, great for highlights reels', 'active', now() - interval '150 days'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Florist & Botanicals', 'Rachel Green', 'rachel@floristbotanicals.com.au', '+61 409 876 543', 'florist', 'Specialises in native Australian flowers', 'active', now() - interval '120 days'),
@@ -47,7 +90,7 @@ INSERT INTO vendors (id, user_id, name, contact_name, email, phone, category, no
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'The Elegant Cake Co', 'Susan White', 'susan@elegantcakes.com.au', '+61 486 543 111', 'caterer', 'Custom wedding cakes, dessert packages', 'active', now() - interval '55 days'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Honeymoon Concierge', 'James Harris', 'james@honeyconcierge.com.au', '+61 497 654 122', 'other', 'Post-wedding travel planning and coordination', 'active', now() - interval '40 days');
 
--- Insert 20 sample events (simplified with direct IDs)
+-- Insert 20 sample events (linked to couples by email)
 INSERT INTO events (id, user_id, couple_id, date, venue, timeline_notes, status, created_at) VALUES
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', (SELECT id FROM couples WHERE email = 'sarah.johnson@email.com' LIMIT 1), '2026-04-15', 'The Botanical Gardens', 'Ceremony 2pm, Reception 6pm', 'upcoming', now() - interval '40 days'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', (SELECT id FROM couples WHERE email = 'emma.chen@email.com' LIMIT 1), '2026-03-28', 'Taronga House Wedding Venue', 'Ceremony 12pm, intimate dinner 1pm', 'upcoming', now() - interval '25 days'),
@@ -93,7 +136,7 @@ INSERT INTO tasks (id, user_id, title, description, due_date, status, related_co
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Lighting and music check', 'Technical walkthrough', CURRENT_DATE + interval '2 days', 'in_progress', (SELECT id FROM couples WHERE email = 'isabella.g@email.com' LIMIT 1), now()),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Send invitations', 'Finalize invites', CURRENT_DATE + interval '15 days', 'done', (SELECT id FROM couples WHERE email = 'amelia.m@email.com' LIMIT 1), now());
 
--- Insert 8 historical couples from March 2025 for YoY comparison
+-- Historical couples (March 2025) for YoY comparison
 INSERT INTO couples (id, user_id, name, email, phone, event_date, venue, notes, status, created_at) VALUES
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Rachel & Andrew 2025', 'rachel.2025@email.com', '+61 412 345 680', '2025-04-20', 'Last Year Venue', 'Previous year wedding', 'complete', '2025-03-05 10:30:00'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Michelle & Daniel 2025', 'michelle.2025@email.com', '+61 423 456 791', '2025-04-12', 'Last Year Venue', 'Previous year wedding', 'complete', '2025-03-08 14:15:00'),
@@ -104,7 +147,7 @@ INSERT INTO couples (id, user_id, name, email, phone, event_date, venue, notes, 
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Patricia & George 2025', 'patricia.2025@email.com', '+61 478 901 236', '2025-04-15', 'Last Year Venue', 'Previous year wedding', 'complete', '2025-03-22 10:00:00'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'Dorothy & William 2025', 'dorothy.2025@email.com', '+61 489 012 347', '2025-05-05', 'Last Year Venue', 'Previous year wedding', 'complete', '2025-03-25 15:45:00');
 
--- Insert 6 tasks from March 2025 for YoY comparison
+-- Historical tasks (March 2025) for YoY comparison
 INSERT INTO tasks (id, user_id, title, description, due_date, status, created_at) VALUES
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'March 2025 task 1', 'Historical task', '2025-03-15', 'done', '2025-03-05 10:00:00'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'March 2025 task 2', 'Historical task', '2025-03-20', 'done', '2025-03-08 11:00:00'),
@@ -112,3 +155,34 @@ INSERT INTO tasks (id, user_id, title, description, due_date, status, created_at
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'March 2025 task 4', 'Historical task', '2025-03-25', 'done', '2025-03-12 14:00:00'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'March 2025 task 5', 'Historical task', '2025-03-22', 'done', '2025-03-15 10:30:00'),
   (gen_random_uuid(), '9524e31d-d35b-4ea4-b775-eea8dcf0dde3', 'March 2025 task 6', 'Historical task', '2025-03-28', 'done', '2025-03-18 13:15:00');
+
+-- ─── Demo lead sources (relocated from 20260321010000) ───
+--
+-- The original migration also did `UPDATE events SET price = …`. That block
+-- is intentionally OMITTED: the `price` column was added by
+-- 20260320000000_add_price_to_events then permanently dropped by
+-- 20260417000001_drop_price_from_events (never re-added). It only ever
+-- "worked" because the migration ran before the column was dropped; in a
+-- from-zero replay (seed runs after all migrations) the column is gone.
+-- Pricing now lives on quotes/invoices, not events. (§7.8/§7.9)
+
+UPDATE couples SET lead_source = 'referral' WHERE email = 'sarah.johnson@email.com';
+UPDATE couples SET lead_source = 'website' WHERE email = 'emma.chen@email.com';
+UPDATE couples SET lead_source = 'social_media' WHERE email = 'olivia.m@email.com';
+UPDATE couples SET lead_source = 'word_of_mouth' WHERE email = 'jessica.wilson@email.com';
+UPDATE couples SET lead_source = 'referral' WHERE email = 'sophie.taylor@email.com';
+UPDATE couples SET lead_source = 'venue_partner' WHERE email = 'grace.lee@email.com';
+UPDATE couples SET lead_source = 'website' WHERE email = 'hannah.b@email.com';
+UPDATE couples SET lead_source = 'referral' WHERE email = 'mia.thompson@email.com';
+UPDATE couples SET lead_source = 'social_media' WHERE email = 'charlotte.r@email.com';
+UPDATE couples SET lead_source = 'wedding_expo' WHERE email = 'amelia.m@email.com';
+UPDATE couples SET lead_source = 'referral' WHERE email = 'isabella.g@email.com';
+UPDATE couples SET lead_source = 'word_of_mouth' WHERE email = 'ava.anderson@email.com';
+UPDATE couples SET lead_source = 'website' WHERE email = 'sophia.t@email.com';
+UPDATE couples SET lead_source = 'social_media' WHERE email = 'evelyn.j@email.com';
+UPDATE couples SET lead_source = 'venue_partner' WHERE email = 'lily.white@email.com';
+UPDATE couples SET lead_source = 'referral' WHERE email = 'chloe.h@email.com';
+UPDATE couples SET lead_source = 'word_of_mouth' WHERE email = 'nora.martin@email.com';
+UPDATE couples SET lead_source = 'wedding_expo' WHERE email = 'abigail.p@email.com';
+UPDATE couples SET lead_source = 'website' WHERE email = 'harper.scott@email.com';
+UPDATE couples SET lead_source = 'venue_partner' WHERE email = 'victoria.green@email.com';
