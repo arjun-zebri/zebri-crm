@@ -5,8 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 import { FileText } from 'lucide-react'
-import { QuoteBuilderModal } from '../quotes/quote-builder-modal'
-import { InvoiceBuilderModal } from '../invoices/invoice-builder-modal'
+import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal'
+import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal'
 
 interface CoupleQuotesProps {
   coupleId: string

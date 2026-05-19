@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileSignature } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
-import { ContractBuilderModal } from '../contracts/contract-builder-modal'
+import { ContractBuilderModal } from '@/components/builders/contract-builder-modal'
 
 interface Contract {
   id: string
