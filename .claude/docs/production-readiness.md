@@ -1,6 +1,24 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ (structure: `types/`, `lib/` domains, `components/builders/`, conventions); 0.2 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 in progress (ratchet ✅; DB types pending local-stack image pull)
+
+### Type-strictness ratchet (Phase 0.2)
+
+Base `tsconfig.json` now also enforces (0 errors, zero-cost): `noImplicitOverride`, `noFallthroughCasesInSwitch`, `forceConsistentCasingInFileNames`. `npm run typecheck` must stay **0**.
+
+Two high-volume flags are deferred behind `tsconfig.strict.json` (`npm run typecheck:strict`), burned down per page:
+
+| Flag | Errors at 0.2 baseline |
+|---|---|
+| `noUncheckedIndexedAccess` | 199 |
+| `exactOptionalPropertyTypes` | 90 |
+| **Combined budget** | **289** |
+
+Rule: this number must **monotonically decrease**, target **0** by end of the page-by-page phases. CI (0.7) enforces "must not increase". New code must be clean under the strict config.
+
+### Sequencing note (0.2 ⇄ 0.3)
+
+Generating `types/database.ts` needs a live DB; no Supabase login/DB-URL creds are available, so the **local Supabase stack (`supabase init` + `supabase start`, Docker) was brought forward from 0.3 into 0.2**. 0.3 still owns the Vitest/integration *harness* built on top of the now-running stack. `supabase/config.toml` added; migrations folder untouched (58, source of truth).
 > Owner: Arjun (solo) · Last updated: 2026-05-19
 > This is the master plan for taking Zebri from prototype to a production-grade SaaS.
 > It is executed **foundation first, then page-by-page**. Take it slow. One section per PR.

@@ -1,0 +1,16 @@
+{
+  // Ratchet config — NOT the build config. Extends the base tsconfig and
+  // turns on the two high-volume strictness flags we are burning down
+  // incrementally (see .claude/docs/production-readiness.md §0.2).
+  //
+  // `npm run typecheck:strict` reports the remaining count. The number must
+  // monotonically DECREASE and reach 0 by the end of the page-by-page phases;
+  // CI (Phase 0.7) enforces "strict error count must not increase". New code
+  // is expected to be clean under this config from the start.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "incremental": false
+  }
+}
