@@ -21,7 +21,7 @@ import { BlockRenderer } from './blocks/block-renderer'
 import { AddBlockPalette } from './blocks/add-block-palette'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import type { Block } from './blocks/types'
-import type { BrandPreviewState, SurfaceTab, BrandKit } from './branding-preview-types'
+import type { BrandPreviewState, SurfaceTab, BrandKit } from '@/types/branding-preview'
 import { PortalSectionsBar } from './portal-preview'
 
 export interface PortalSectionSettings {

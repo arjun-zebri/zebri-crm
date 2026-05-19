@@ -8,7 +8,7 @@ import { Plus } from 'lucide-react'
 import { TaskRow, TaskRowTask } from '@/app/(dashboard)/tasks/task-row'
 import { TaskSidePanel, TaskFieldUpdate } from '@/app/(dashboard)/tasks/task-side-panel'
 import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section'
-import { TaskPriority, STATUS_ORDER } from '@/app/(dashboard)/tasks/task-types'
+import { TaskPriority, STATUS_ORDER } from '@/types/task'
 
 interface CoupleTasksProps {
   coupleId: string

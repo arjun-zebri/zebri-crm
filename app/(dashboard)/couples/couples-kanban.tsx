@@ -3,7 +3,7 @@
 import { DragDropContext, DragStart, DropResult } from "@hello-pangea/dnd";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Couple, CoupleStatusRecord } from "./couples-types";
+import { Couple, CoupleStatusRecord } from '@/types/couple';
 import { KanbanColumn } from "./kanban-column";
 
 interface CouplesKanbanProps {

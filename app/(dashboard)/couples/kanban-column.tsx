@@ -7,7 +7,7 @@ import {
   Couple,
   CoupleStatusRecord,
   getStatusClasses,
-} from "./couples-types";
+} from '@/types/couple';
 import { KanbanCard } from "./kanban-card";
 
 interface KanbanColumnProps {

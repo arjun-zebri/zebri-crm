@@ -6,7 +6,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { createClient } from '@/lib/supabase/client'
 import { Modal } from '@/components/ui/modal'
 import type { PortalContact, PortalPerson } from './page'
-import { CATEGORY_LABELS, CATEGORIES } from '@/app/(dashboard)/contacts/contacts-types'
+import { CATEGORY_LABELS, CATEGORIES } from '@/types/contact'
 
 const PARTNER_ROLES = ['Bride', 'Groom', 'Partner']
 const BRIDAL_ROLES = [

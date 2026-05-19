@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { AdminUser, SubscriptionStatus } from "@/lib/admin-analytics";
+import type { AdminUser, SubscriptionStatus } from '@/lib/admin/admin-analytics';
 
 const PLAN_PRICE: Record<string, number> = { pro: 49, max: 89 };
 

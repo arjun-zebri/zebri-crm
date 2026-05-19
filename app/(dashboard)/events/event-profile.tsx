@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { X, Pencil } from 'lucide-react'
-import { Event, STATUS_LABELS } from './events-types'
+import { Event, STATUS_LABELS } from '@/types/event'
 import { Badge } from '@/components/ui/badge'
 import { EventOverview } from './event-overview'
 import { EventVendors } from './event-vendors'

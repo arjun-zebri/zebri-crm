@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { CATEGORY_LABELS, CATEGORIES, type ContactCategory } from '../contacts/contacts-types'
+import { CATEGORY_LABELS, CATEGORIES, type ContactCategory } from '@/types/contact'
 import { X, Plus, ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 

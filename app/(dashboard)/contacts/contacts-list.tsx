@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { Store, ChevronRight, User, Mail, Phone } from "lucide-react";
-import { Contact, CATEGORIES, CATEGORY_LABELS } from "./contacts-types";
+import { Contact, CATEGORIES, CATEGORY_LABELS } from '@/types/contact';
 
 const INACTIVE_KEY = "__inactive__";
 

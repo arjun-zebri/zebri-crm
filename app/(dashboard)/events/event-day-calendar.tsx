@@ -15,8 +15,8 @@ import {
 import { Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
-import { TimelineItem } from "./events-types";
-import { CATEGORY_LABELS } from "../contacts/contacts-types";
+import { TimelineItem } from '@/types/event';
+import { CATEGORY_LABELS } from '@/types/contact';
 import { EventTimelineModal } from "./event-timeline-modal";
 import { EventTimelineShare } from "./event-timeline-share";
 

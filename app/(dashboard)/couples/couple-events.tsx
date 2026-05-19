@@ -6,11 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
 import { Pencil, Trash2, Plus } from 'lucide-react'
-import { Event } from '../events/events-types'
+import { Event } from '@/types/event'
 
 type EventWithTime = Event & { start_time?: string | null }
 import { EventModal } from './event-modal'
-import { Couple } from './couples-types'
+import { Couple } from '@/types/couple'
 
 interface CoupleEventsProps {
   couple: Couple

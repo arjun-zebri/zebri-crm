@@ -6,7 +6,7 @@ import { SidePanel } from "@/components/ui/side-panel";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
-import type { AdminUser, SubscriptionStatus, UserAnalytics } from "@/lib/admin-analytics";
+import type { AdminUser, SubscriptionStatus, UserAnalytics } from '@/lib/admin/admin-analytics';
 import {
   enterShadow,
   extendTrial,

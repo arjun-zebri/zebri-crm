@@ -21,7 +21,7 @@ import { CoupleModal } from "./couple-modal";
 import { CoupleProfile } from "./couple-profile";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Couple, ViewMode, SortField, SortDirection } from "./couples-types";
+import { Couple, ViewMode, SortField, SortDirection } from '@/types/couple';
 
 function CouplesPageContent() {
   const router = useRouter();

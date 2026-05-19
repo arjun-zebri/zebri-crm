@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 import { Receipt } from 'lucide-react'
-import { InvoiceBuilderModal } from '../invoices/invoice-builder-modal'
+import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal'
 
 interface CoupleInvoicesProps {
   coupleId: string

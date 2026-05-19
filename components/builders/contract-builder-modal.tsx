@@ -11,8 +11,8 @@ import { useToast } from '@/components/ui/toast'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DatePicker } from '@/components/ui/date-picker'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
-import { generateAndPrintPdf } from '@/lib/generate-pdf'
-import { buildContractVariables, renderContractHtml } from '@/lib/contract-variables'
+import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf'
+import { buildContractVariables, renderContractHtml } from '@/lib/contracts/contract-variables'
 
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-600',

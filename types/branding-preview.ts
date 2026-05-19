@@ -1,6 +1,16 @@
+/**
+ * Branding preview-state types.
+ *
+ * The editable brand-kit shape (fonts, density, colour, block tree) that
+ * drives the branding editor and the public-surface preview. The block AST
+ * itself stays co-located with its renderers in branding/blocks.
+ *
+ * @module types/branding-preview
+ */
+
 import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
 import type { Density } from '@/lib/branding/themes'
-import type { Block } from './blocks/types'
+import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 export interface BrandPreviewState {
   logoUrl: string

@@ -12,7 +12,7 @@ import {
   STATUS_ORDER,
   getPriorityLabel,
   getStatusLabel,
-} from './task-types'
+} from '@/types/task'
 
 export type FilterProperty = 'status' | 'priority' | 'task_type' | 'couple'
 export type SortProperty = 'due_date' | 'status' | 'priority' | 'title'

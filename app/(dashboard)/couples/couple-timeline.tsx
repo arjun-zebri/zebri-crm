@@ -18,7 +18,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
 import { EventDayCalendar } from '../events/event-day-calendar'
 import { EventTimelineModal } from '../events/event-timeline-modal'
-import { TimelineItem } from '../events/events-types'
+import { TimelineItem } from '@/types/event'
 
 interface TimelineTemplate {
   id: string

@@ -1,6 +1,6 @@
 'use client'
 
-import { Event, STATUS_LABELS } from './events-types'
+import { Event, STATUS_LABELS } from '@/types/event'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
 

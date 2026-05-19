@@ -10,7 +10,7 @@ import { DashboardLeadSources } from "./dashboard-lead-sources";
 import { DashboardTasks } from "./dashboard-tasks";
 import { DashboardInvoices } from "./dashboard-invoices";
 import { CoupleProfile } from "./couples/couple-profile";
-import { Couple } from "./couples/couples-types";
+import { Couple } from '@/types/couple';
 import { ChevronDown } from "lucide-react";
 
 const periodOptions: { value: DashboardPeriod; label: string }[] = [

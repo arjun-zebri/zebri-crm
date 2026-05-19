@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import type { AdminUser, SubscriptionStatus } from "@/lib/admin-analytics";
+import type { AdminUser, SubscriptionStatus } from '@/lib/admin/admin-analytics';
 
 const statusVariant: Record<SubscriptionStatus, "paid" | "contacted" | "cancelled" | "default"> = {
   active: "paid",

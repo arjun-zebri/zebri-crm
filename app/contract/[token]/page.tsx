@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Loader2, Check, X, Download, AlertCircle, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { generateAndPrintPdf } from '@/lib/generate-pdf'
+import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf'
 import { getTextColor } from '@/lib/branding/contrast'
 import {
   DENSITY_PAD,

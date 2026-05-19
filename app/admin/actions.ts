@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { stripe } from "@/lib/stripe";
+import { stripe } from '@/lib/payments/stripe';
 
 function createAdminClient() {
   return createServiceClient(
@@ -268,7 +268,7 @@ export async function deleteUser(userId: string) {
 
 export async function fetchUserAnalytics(userId: string) {
   await assertAdmin();
-  const { getUserAnalytics } = await import("@/lib/admin-analytics");
+  const { getUserAnalytics } = await import('@/lib/admin/admin-analytics');
   return getUserAnalytics(userId);
 }
 

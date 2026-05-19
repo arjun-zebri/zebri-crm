@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { CoupleStatusRecord, COLOR_PALETTE } from './couples-types'
+import { CoupleStatusRecord, COLOR_PALETTE } from '@/types/couple'
 
 const DEFAULTS = [
   { name: 'New', slug: 'new', color: 'amber', position: 0 },

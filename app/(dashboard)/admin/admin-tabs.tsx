@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { AdminUser, GlobalStats } from "@/lib/admin-analytics";
+import type { AdminUser, GlobalStats } from '@/lib/admin/admin-analytics';
 import { UsersTab } from "./tabs/users-tab";
 import { SubscriptionsTab } from "./tabs/subscriptions-tab";
 import { StatsTab } from "./tabs/stats-tab";

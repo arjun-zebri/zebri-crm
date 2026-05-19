@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Pencil } from "lucide-react";
-import { Contact } from "./contacts-types";
+import { Contact } from '@/types/contact';
 import { ContactUsedBy } from "./contact-used-by";
 
 interface ContactOverviewProps {

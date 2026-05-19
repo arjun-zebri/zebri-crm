@@ -15,7 +15,7 @@ import {
   getStatusLabel,
   getPriorityPillClass,
   getPriorityLabel,
-} from './task-types'
+} from '@/types/task'
 
 // ─── Cell wrapper ──────────────────────────────────────────────────────────
 // Notion cells are flush, no border, hover bg-gray-50, cursor pointer.

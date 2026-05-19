@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { CATEGORY_LABELS } from '../contacts/contacts-types'
+import { CATEGORY_LABELS } from '@/types/contact'
 import { Badge } from '@/components/ui/badge'
 import { X } from 'lucide-react'
 import { ContactPicker } from '../couples/contact-picker'
