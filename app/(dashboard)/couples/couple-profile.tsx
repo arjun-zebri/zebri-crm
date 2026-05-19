@@ -41,7 +41,7 @@ import { CoupleOverview } from "./couple-overview";
 import { CoupleTasks } from "./couple-tasks";
 import { CouplePayments } from "./couple-payments";
 import { CoupleContracts } from "./couple-contracts";
-import { hasContractsAccess } from "@/lib/subscription";
+import { hasContractsAccess } from '@/lib/payments/subscription';
 import { usePortalData } from "./use-portal-data";
 import { PersonModal, SongModal } from "./portal-modals";
 import { McPortalContacts } from "./mc-portal-contacts";

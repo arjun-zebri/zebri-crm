@@ -21,7 +21,7 @@ import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal';
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal';
 import { ContractBuilderModal } from '@/components/builders/contract-builder-modal';
 import { useToast } from "@/components/ui/toast";
-import { hasContractsAccess } from "@/lib/subscription";
+import { hasContractsAccess } from '@/lib/payments/subscription';
 
 interface Quote {
   id: string;

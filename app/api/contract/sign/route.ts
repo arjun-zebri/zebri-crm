@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase/server'
-import { sendSlackAlert } from '@/lib/slack'
+import { sendSlackAlert } from '@/lib/alerts/slack'
 
 function clientIp(request: NextRequest): string | null {
   const forwarded = request.headers.get('x-forwarded-for')

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendContractEmail } from '@/lib/email'
-import { buildContractVariables, renderContractHtml } from '@/lib/contract-variables'
-import { hasContractsAccess } from '@/lib/subscription'
-import { sendSlackAlert } from '@/lib/slack'
+import { buildContractVariables, renderContractHtml } from '@/lib/contracts/contract-variables'
+import { hasContractsAccess } from '@/lib/payments/subscription'
+import { sendSlackAlert } from '@/lib/alerts/slack'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()

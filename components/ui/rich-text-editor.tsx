@@ -11,7 +11,7 @@ import {
   Undo, Redo, AtSign,
 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
-import { CONTRACT_VARIABLES } from '@/lib/contract-variables'
+import { CONTRACT_VARIABLES } from '@/lib/contracts/contract-variables'
 
 interface RichTextEditorProps {
   value: JSONContent

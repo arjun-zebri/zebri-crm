@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
-import { stripe } from '@/lib/stripe'
-import { sendSlackAlert } from '@/lib/slack'
+import { stripe } from '@/lib/payments/stripe'
+import { sendSlackAlert } from '@/lib/alerts/slack'
 import Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
