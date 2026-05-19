@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { FONT_STACKS, FONT_LABELS } from '@/lib/branding/fonts'
-import type { BrandPreviewState } from './branding-preview-types'
+import type { BrandPreviewState } from '@/types/branding-preview'
 
 interface SaveKitDialogProps {
   open: boolean

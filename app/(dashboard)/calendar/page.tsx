@@ -9,7 +9,7 @@ import {
   useDeleteCouple,
 } from "@/app/(dashboard)/couples/use-couples";
 import { useToast } from "@/components/ui/toast";
-import { Couple } from "@/app/(dashboard)/couples/couples-types";
+import { Couple } from '@/types/couple';
 
 export default function CalendarPage() {
   const { data: couples } = useCouples();

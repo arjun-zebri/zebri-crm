@@ -8,7 +8,7 @@ import {
   Contact,
   CATEGORY_LABELS,
   STATUS_LABELS,
-} from "./contacts-types";
+} from '@/types/contact';
 import { ContactOverview } from "./contact-overview";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 

@@ -19,7 +19,7 @@ import { useCoupleStatuses } from "@/app/(dashboard)/couples/use-couple-statuses
 import { useUpdateCouple, useDeleteCouple } from "@/app/(dashboard)/couples/use-couples";
 import { CoupleProfile } from "@/app/(dashboard)/couples/couple-profile";
 import { CoupleModal } from "@/app/(dashboard)/couples/couple-modal";
-import { Couple } from "@/app/(dashboard)/couples/couples-types";
+import { Couple } from '@/types/couple';
 import {
   useTaskGroups,
   useCreateTaskGroup,
@@ -44,7 +44,7 @@ import {
   STATUS_ORDER,
   TaskPriority,
   TaskStatus,
-} from "./task-types";
+} from '@/types/task';
 
 interface Task extends TaskRowTask {
   position: number;

@@ -15,8 +15,8 @@ import {
   ChevronDown,
   Check,
 } from "lucide-react";
-import { Event } from "../events/events-types";
-import { CoupleStatusRecord, getStatusClasses } from "./couples-types";
+import { Event } from '@/types/event';
+import { CoupleStatusRecord, getStatusClasses } from '@/types/couple';
 import { useCoupleStatuses } from "./use-couple-statuses";
 
 interface CouplesCalendarProps {

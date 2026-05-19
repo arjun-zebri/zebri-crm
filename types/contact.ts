@@ -1,3 +1,13 @@
+/**
+ * Contact domain types and constants.
+ *
+ * Vendor/contact shapes and category enums. Contacts attach to couples and
+ * events via join tables; consumed by Contacts, couple/event contact panels,
+ * and the public portal/timeline surfaces.
+ *
+ * @module types/contact
+ */
+
 export type ContactCategory =
   | 'venue'
   | 'celebrant'

@@ -32,7 +32,7 @@ import {
   CoupleStatusRecord,
   COLOR_PALETTE,
   getStatusClasses,
-} from "@/app/(dashboard)/couples/couples-types";
+} from '@/types/couple';
 import { useToast } from "@/components/ui/toast";
 
 function StatusRow({

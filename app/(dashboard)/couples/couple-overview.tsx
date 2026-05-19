@@ -8,7 +8,7 @@ import {
   LEAD_SOURCE_LABELS,
   LeadSource,
   LEAD_SOURCES,
-} from "./couples-types";
+} from '@/types/couple';
 import { CoupleEvents } from "./couple-events";
 
 interface CoupleOverviewProps {

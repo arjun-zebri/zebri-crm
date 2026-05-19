@@ -2,7 +2,7 @@
 
 import { FileText, Receipt, FileSignature, Users2 } from 'lucide-react'
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import type { SurfaceTab, BrandPreviewState } from './branding-preview-types'
+import type { SurfaceTab, BrandPreviewState } from '@/types/branding-preview'
 
 interface SurfaceTabsProps {
   surface: SurfaceTab

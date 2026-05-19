@@ -21,7 +21,7 @@ import {
 import { Plus } from 'lucide-react'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { Block } from './types'
-import type { BrandPreviewState } from '../branding-preview-types'
+import type { BrandPreviewState } from '@/types/branding-preview'
 import { BlockFrame } from './block-frame'
 import {
   RenderHeaderBanner,

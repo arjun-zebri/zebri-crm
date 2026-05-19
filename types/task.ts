@@ -1,4 +1,11 @@
-// Shared types and constants for the Notion-style tasks UI.
+/**
+ * Task domain types and constants.
+ *
+ * Shapes for the task-management surface (status, priority, grouping) shared
+ * across the Tasks page, couple/event task panels, and the dashboard.
+ *
+ * @module types/task
+ */
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
 

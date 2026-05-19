@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
-import { TimelineItem } from './events-types'
-import { CATEGORY_LABELS } from '../contacts/contacts-types'
+import { TimelineItem } from '@/types/event'
+import { CATEGORY_LABELS } from '@/types/contact'
 
 interface EventContact {
   contact_id: string

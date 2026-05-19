@@ -1,4 +1,4 @@
-import { CATEGORY_LABELS } from "@/app/(dashboard)/contacts/contacts-types";
+import { CATEGORY_LABELS } from '@/types/contact';
 
 interface PublicTimelineItemProps {
   time: string | null;

@@ -33,7 +33,7 @@ import {
   LEAD_SOURCES,
   LEAD_SOURCE_LABELS,
   getStatusClasses,
-} from "./couples-types";
+} from '@/types/couple';
 import { useCoupleStatuses } from "./use-couple-statuses";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { getOpenModalDepth } from "@/components/ui/modal";

@@ -11,7 +11,7 @@ import {
   TaskTypeCell,
   TitleCell,
 } from './task-cells'
-import { TaskPriority } from './task-types'
+import { TaskPriority } from '@/types/task'
 import { formatRelativeDate } from '@/lib/utils'
 
 export interface TaskRowTask {

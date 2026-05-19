@@ -1,3 +1,13 @@
+/**
+ * Event domain types and constants.
+ *
+ * Wedding/event shapes owned by a couple (an event always belongs to a
+ * couple — there is no standalone events surface). Used by couple profile,
+ * calendar, timeline, and the dashboard.
+ *
+ * @module types/event
+ */
+
 export type EventStatus = 'upcoming' | 'completed' | 'cancelled'
 
 export interface Event {

@@ -8,7 +8,7 @@ import {
   Lightbulb,
   XCircle,
 } from "lucide-react";
-import { Couple } from "./couples-types";
+import { Couple } from '@/types/couple';
 
 const SAMPLE = {
   score: 78,

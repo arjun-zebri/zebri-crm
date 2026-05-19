@@ -212,3 +212,7 @@ There is **no SQL-level admin/role bypass** — no RLS policy references `user_m
 
 - Committed `.env.example` + `.env.test.example` (keys only, documented, marked public/secret/required); `.gitignore` updated to permit them.
 - `supabase/.temp/` now gitignored; `supabase/.temp/cli-latest` untracked (was tracked & dirtying every status).
+
+### 7.6 Finding (from 0.1): colliding generic export names
+
+Domain type modules export the same generic identifiers (`SORT_OPTIONS`, `SortField`, `SortDirection`, `STATUS_LABELS`) from multiple files (`couple`, `contact`, `event`, `task`). A `types/` barrel is therefore not viable without renames. Convention adopted instead: **import the specific module** (`@/types/couple`), no barrel. The name collisions are a smell to resolve during the relevant per-page phases (rename to domain-scoped names, e.g. `COUPLE_SORT_OPTIONS`) — out of scope for 0.1 (risky cross-cutting churn without the 0.3 test net).

@@ -9,7 +9,7 @@ import {
   SortField,
   SortDirection,
   SORT_OPTIONS,
-} from './couples-types'
+} from '@/types/couple'
 
 interface CouplesHeaderProps {
   couples: Couple[]

@@ -6,8 +6,8 @@ import { useQuery } from '@tanstack/react-query'
 import * as Popover from '@radix-ui/react-popover'
 import { Modal } from '@/components/ui/modal'
 import { DatePicker } from '@/components/ui/date-picker'
-import { Event, EventStatus, STATUS_LABELS } from '../events/events-types'
-import { CATEGORY_LABELS } from '../contacts/contacts-types'
+import { Event, EventStatus, STATUS_LABELS } from '@/types/event'
+import { CATEGORY_LABELS } from '@/types/contact'
 import { createClient } from '@/lib/supabase/client'
 
 interface EventModalProps {

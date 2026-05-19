@@ -19,7 +19,7 @@ import {
   SortField,
   SortDirection,
   CATEGORY_LABELS,
-} from './contacts-types'
+} from '@/types/contact'
 
 export default function ContactsPage() {
   const { data: vendors, isLoading } = useContacts()

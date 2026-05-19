@@ -1,3 +1,12 @@
+/**
+ * Couple domain types and constants.
+ *
+ * The core CRM entity (couple/enquiry), its status records, and lead-source
+ * enums. Referenced widely across Couples, Calendar, Dashboard, and Settings.
+ *
+ * @module types/couple
+ */
+
 export type LeadSource = 'referral' | 'website' | 'social_media' | 'word_of_mouth' | 'wedding_expo' | 'venue_partner'
 
 export const LEAD_SOURCES: LeadSource[] = ['referral', 'website', 'social_media', 'word_of_mouth', 'wedding_expo', 'venue_partner']

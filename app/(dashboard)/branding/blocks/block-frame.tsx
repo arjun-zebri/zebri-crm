@@ -7,7 +7,7 @@ import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { BlockToolbar } from './block-toolbar'
 import type { Block } from './types'
-import type { BrandPreviewState } from '../branding-preview-types'
+import type { BrandPreviewState } from '@/types/branding-preview'
 
 interface BlockFrameProps {
   id: string

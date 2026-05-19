@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { X, Trash2, Download, ChevronDown } from 'lucide-react'
-import { CoupleStatusRecord, getStatusClasses } from './couples-types'
+import { CoupleStatusRecord, getStatusClasses } from '@/types/couple'
 
 interface BulkActionBarProps {
   selectedCount: number

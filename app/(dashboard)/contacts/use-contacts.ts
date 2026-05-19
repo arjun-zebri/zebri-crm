@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import { Contact } from './contacts-types'
+import { Contact } from '@/types/contact'
 
 export function useContacts() {
   const queryClient = useQueryClient()

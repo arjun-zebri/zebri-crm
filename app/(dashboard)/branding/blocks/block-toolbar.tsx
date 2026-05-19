@@ -25,7 +25,7 @@ import type {
   HeaderBannerBlock,
   FooterBlock,
 } from './types'
-import type { BrandPreviewState } from '../branding-preview-types'
+import type { BrandPreviewState } from '@/types/branding-preview'
 
 interface BlockToolbarProps {
   block: Block

@@ -20,7 +20,7 @@ import {
   MapPin,
   ListChecks,
 } from "lucide-react";
-import { Couple, CoupleStatusRecord, getStatusClasses } from "./couples-types";
+import { Couple, CoupleStatusRecord, getStatusClasses } from '@/types/couple';
 import { formatDate } from "@/lib/utils";
 
 interface CouplesListProps {
