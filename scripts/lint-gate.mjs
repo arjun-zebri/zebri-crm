@@ -15,9 +15,12 @@
  */
 import { execSync } from 'node:child_process';
 
-// Baseline captured 2026-05-20 (Phase 0.4). Only ever decrease these.
+// Baseline captured 2026-05-20 (Phase 0.4); warnings re-baselined in 0.5
+// after the off-token-colour rule landed (876 → 884, +8 surfaced sites);
+// 0.5b autofixed one import-order in app/layout.tsx (884 → 883).
+// Only ever decrease these.
 const ERROR_BUDGET = 91;
-const WARNING_BUDGET = 876;
+const WARNING_BUDGET = 883;
 
 function runEslintJson() {
   try {

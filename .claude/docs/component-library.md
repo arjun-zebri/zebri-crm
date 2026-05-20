@@ -9,6 +9,40 @@ Goal: Consistency, speed, and minimal design.
 
 ---
 
+## Foundational primitives (Phase 0.5)
+
+Every page's Definition of Done requires an explicit **loading**, **empty**,
+and **error** state. Use these primitives rather than ad-hoc spinners /
+"No data" text / inline error banners.
+
+### `<Loading />` — `@/components/ui/loading`
+Accessible (`role="status"`), centered or inline, optional label. Use for
+any pending fetch / mutation. Drives the loading branch of every data view.
+
+### `<Empty />` — `@/components/ui/empty`
+Empty-state for lists / collections. Always pass an `action` that lets the
+user move forward (the only valid empty state without an action is a
+deliberately read-only surface). Optional `icon` from `lucide-react`.
+
+### `<ThemeToggle />` — `@/components/ui/theme-toggle` (Phase 0.5b)
+Light/dark mode toggle (`'use client'`). Reads/writes `zebri-theme` in
+`localStorage` and flips the `dark` class on `<html>`. The bootstrap in
+`app/layout.tsx` applies the initial theme synchronously (no FOUC). Place
+once — typically the sidebar.
+
+### `<ErrorState />` — `@/components/ui/error-state`
+Accessible (`role="alert"`). Pass `error` (an `Error`) or `description`;
+always include a recovery path via `onRetry` (default "Try again" button) or
+a custom `action`. **Never** render `error.stack` — only `.message`, and
+only when it is human-safe (no PII).
+
+Conventions:
+- All three honour the design tokens (`text-text`, `text-text-muted`,
+  `text-danger`, `text-body`, `text-section`). Don't override with raw hex.
+- Unit-tested under `tests/unit/components/ui/{loading,empty,error-state}.test.tsx`.
+
+---
+
 # Core Components
 
 ## Button
