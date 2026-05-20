@@ -1,6 +1,6 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ (tokens · primitives · **dark mode** · off-token-colour lint rule) · 0.5.5 next (Button/Input/Select primitives) · then 0.6
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ (tokens · primitives · **dark mode** · off-token-colour lint rule) · 0.5.5 ✅ (Button/Input/Select primitives + tests) · 0.6 next
 
 ### Design system (Phase 0.5)
 

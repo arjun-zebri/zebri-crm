@@ -9,6 +9,37 @@ Goal: Consistency, speed, and minimal design.
 
 ---
 
+## Core form primitives (Phase 0.5.5)
+
+Use these everywhere instead of raw `<button>` / `<input>` / `<select>` markup —
+they share the same token vocabulary so light/dark and brand changes propagate
+automatically.
+
+### `<Button />` — `@/components/ui/button`
+Variants: `primary` (brand-fg / inverse text), `secondary` (subtle), `ghost`
+(transparent), `danger`. Sizes: `sm` / `md` / `lg`. `loading` shows a spinner,
+sets `aria-busy`, and disables the click. Defaults `type="button"` to avoid
+accidental form submits.
+
+### `<Input />` — `@/components/ui/input`
+Labelled input with optional `help` and `error`. All accessible wiring
+(`htmlFor`/`id`, `aria-describedby`, `aria-invalid`, `role="alert"` on the
+error) is built in — pass a `label` and trust the primitive.
+
+### `<Select />` — `@/components/ui/select`
+Built on Radix Select for full keyboard + screen-reader support, styled to
+match `<Input />`. Pass an `options: { value, label }[]` array and a
+controlled `value` + `onValueChange` (or uncontrolled `defaultValue`).
+Standalone (no companion components to import).
+
+Conventions:
+- All three use design tokens only — no raw hex / arbitrary values.
+- Unit-tested in `tests/unit/components/ui/{button,input,select}.test.tsx`.
+- Existing raw-button / raw-input call sites stay until each page is
+  hardened (per-page adoption, consistent with the ratchets).
+
+---
+
 ## Foundational primitives (Phase 0.5)
 
 Every page's Definition of Done requires an explicit **loading**, **empty**,
