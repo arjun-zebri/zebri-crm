@@ -1,6 +1,33 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ (structured logger · typed `AlertEvent` catalog + `sendAlert()` · Slack matrix · **Sentry deferred** — see §1) · 0.7 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ · 0.7 ✅ (GitHub Actions PR gates + staging/prod migration deploys + destructive-SQL safety + runbook) · 0.8 next
+
+### CI/CD pipeline (Phase 0.7)
+
+Shipped (see runbook in `.claude/docs/cicd.md`):
+
+- **`ci.yml`** — required PR pipeline on `main`/`staging`: install →
+  `typecheck` → `typecheck:strict` → `lint:gate` → `knip`
+  (non-blocking) → unit → build → integration vs **local Supabase**
+  with real RLS. Cheapest-first so failures surface fast.
+- **`deploy-staging.yml`** + **`deploy-prod.yml`** — push migrations to
+  Supabase on merge to `staging` / `main`. Production is gated by the
+  `production` GitHub Environment (required reviewers). App deploys
+  remain on Vercel's GitHub integration; these workflows are DB-only.
+- **`scripts/check-migrations.sh`** — refuses to deploy destructive
+  migrations (`DROP TABLE` / `DROP COLUMN` / `TRUNCATE` / `DROP SCHEMA`
+  / un-guarded `DELETE FROM`) without an explicit
+  `-- @ALLOW_DESTRUCTIVE: <reason>` marker. Verified end-to-end on the
+  existing `drop_price_from_events` migration; marker added there with
+  rationale.
+- The §7.9 ledger discrepancy (deleted/renamed migrations from 0.2) is
+  reconciled via a documented one-time `supabase migration repair` per
+  env — see the runbook.
+
+User-side setup (one-time): create `staging` + `production` GitHub
+Environments with `SUPABASE_ACCESS_TOKEN`/`PROJECT_REF`/`DB_PASSWORD`
+secrets, branch protection on both branches requiring the `ci.yml` job.
+Runbook lists every step.
 
 ### Observability & alerting (Phase 0.6)
 
@@ -286,6 +313,8 @@ The generated types alone break nothing (unused until imported), so they ship no
 Beyond the demo-data issue (§7.8), real **schema** migrations also fail to replay. First instance: `20260405000001_create_branding_storage_bucket.sql` contained invalid SQL (`auth.uid()::text || '/' in name` — misused `IN`); it can never have applied to prod as written, yet prod has the bucket policies — i.e. **prod was hand-patched and the committed migrations diverge from reality**. (Here, the very next migration `…002_fix_branding_bucket_rls_policies` drops & recreates these policies correctly, so fixing `…001` to the valid form leaves the end state identical.)
 
 This is systemic, not a one-off: the chain has clearly never been validated from zero. **Implication:** "everything has been applied" (0.0) was true only for the live cloud DBs via manual intervention; the repo's migration history is not a faithful, replayable source of truth. A clean from-zero replay is a hard prerequisite for the 0.3 test harness and 0.7 CI. Approach: fix forward migration-by-migration (each `supabase start` failure = one finding + minimal intent-preserving fix that matches prod's actual end state), tracked under task #11 (broadened). Remote ledger reconciliation handled in 0.7.
+
+> **Resolved 2026-05-20.** Confirmed root cause: historical migrations were applied via the Supabase web SQL editor, which never writes to `supabase_migrations.schema_migrations`. Both staging and prod ledgers were back-filled by running `supabase migration repair --status applied <version>` for all 56 local versions; `migration list --linked` now shows 56/56 Local↔Remote with no gaps on both envs. Future migrations go through the CI deploy workflow (`supabase db push`) — **manual SQL-editor application is now deprecated** for schema changes (see new memory: `migration_management_2026.md`).
 
 ### 7.8 Finding (from 0.2): migrations are NOT reproducible from scratch
 

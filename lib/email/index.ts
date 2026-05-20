@@ -1,6 +1,23 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+/**
+ * Lazy Resend client.
+ *
+ * Constructing the SDK at module top throws when `RESEND_API_KEY` isn't
+ * set (e.g. Next's "collect page data" build step in CI evaluates server
+ * modules without env vars). The lazy singleton lets the module import
+ * cleanly in any environment and only requires the key when an email is
+ * actually sent — runtime behaviour is unchanged.
+ */
+let _resend: Resend | undefined;
+function resend(): Resend {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) throw new Error("RESEND_API_KEY is not set");
+    _resend = new Resend(key);
+  }
+  return _resend;
+}
 
 const FROM = "Zebri <noreply@app.zebri.com.au>";
 
@@ -107,7 +124,7 @@ export async function sendQuoteEmail(opts: {
   shareUrl: string;
   mcBusinessName: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: FROM,
     to: opts.coupleEmail,
     subject: `Quote from ${opts.mcBusinessName} - ${opts.quoteNumber}`,
@@ -232,7 +249,7 @@ export async function sendContractEmail(opts: {
   shareUrl: string;
   mcBusinessName: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: FROM,
     to: opts.coupleEmail,
     subject: `Contract from ${opts.mcBusinessName} - ${opts.contractNumber}`,
@@ -251,7 +268,7 @@ export async function sendContractReminderEmail(opts: {
   shareUrl: string;
   mcBusinessName: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: FROM,
     to: opts.coupleEmail,
     subject: `Reminder: please sign your contract - ${opts.contractNumber}`,
@@ -270,7 +287,7 @@ export async function sendInvoiceEmail(opts: {
   shareUrl: string;
   mcBusinessName: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await resend.emails.send({
+  const { error } = await resend().emails.send({
     from: FROM,
     to: opts.coupleEmail,
     subject: `Invoice from ${opts.mcBusinessName} - ${opts.invoiceNumber}`,

@@ -1,10 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const adminClient = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+/**
+ * Lazy service-role Supabase client.
+ *
+ * Constructing at module top throws when env vars are missing (e.g.
+ * Next's "collect page data" build step in CI). The lazy singleton
+ * lets the module import cleanly in any environment and only requires
+ * the keys when an upload actually arrives — runtime behaviour
+ * unchanged.
+ */
+let _adminClient: SupabaseClient | undefined
+function adminClient(): SupabaseClient {
+  if (!_adminClient) {
+    _adminClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+  }
+  return _adminClient
+}
 
 export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -16,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate token
-  const { data: couple, error: coupleErr } = await adminClient
+  const { data: couple, error: coupleErr } = await adminClient()
     .from('couples')
     .select('id, user_id, portal_token_enabled')
     .eq('portal_token', token)
@@ -60,7 +75,7 @@ export async function POST(request: NextRequest) {
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
 
-  const { error: uploadError } = await adminClient.storage
+  const { error: uploadError } = await adminClient().storage
     .from(bucket)
     .upload(path, buffer, {
       contentType: file.type,
@@ -71,12 +86,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 })
   }
 
-  const { data: urlData } = adminClient.storage.from(bucket).getPublicUrl(path)
+  const { data: urlData } = adminClient().storage.from(bucket).getPublicUrl(path)
   const publicUrl = urlData.publicUrl
 
   // For file uploads, also record in portal_files via RPC
   if (type === 'file') {
-    await adminClient.rpc('save_portal_file', {
+    await adminClient().rpc('save_portal_file', {
       p_token: token,
       p_id: fileId,
       p_name: file.name,
