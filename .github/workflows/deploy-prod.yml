@@ -21,6 +21,9 @@ on:
     paths:
       - 'supabase/migrations/**'
       - 'supabase/config.toml'
+  # Manual trigger from the Actions tab — required-reviewer gate still
+  # applies (the `production` environment requires your click).
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -49,17 +52,21 @@ jobs:
         with:
           version: latest
 
+      # IMPORTANT: secrets are passed via env vars, NEVER interpolated
+      # directly into the shell `run:` block. GitHub's `${{ secrets.X }}`
+      # substitution happens before bash parses the line, so a password
+      # containing `$`/backtick/etc. (very common for Supabase-generated
+      # passwords) would be mangled by shell expansion. The Supabase CLI
+      # picks up `SUPABASE_DB_PASSWORD` natively — no `--password` flag.
       - name: Link Supabase project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          supabase link \
-            --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" \
-            --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: supabase link --project-ref "$PROJECT_REF"
 
       - name: Push migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          supabase db push \
-            --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push
