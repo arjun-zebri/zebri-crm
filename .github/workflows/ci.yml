@@ -46,7 +46,7 @@ jobs:
         run: npm run typecheck
 
       - name: Typecheck (strictness ratchet — must not exceed budget)
-        run: npm run typecheck:strict
+        run: npm run typecheck:strict:gate
 
       - name: Lint ratchet (errors + warnings must not exceed budget)
         run: npm run lint:gate
@@ -71,11 +71,15 @@ jobs:
           version: latest
 
       - name: Start local Supabase
+        id: supabase_start
         run: supabase start --workdir .
 
       - name: Integration tests (RLS + DB)
         run: npm run test:integration
 
+      # Only attempt to stop if `supabase start` actually succeeded —
+      # otherwise an early failure (e.g. a fast gate) makes this step run
+      # before the CLI is installed and explode with "command not found".
       - name: Stop local Supabase
-        if: always()
+        if: always() && steps.supabase_start.outcome == 'success'
         run: supabase stop --no-backup --workdir .
