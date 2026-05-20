@@ -35,6 +35,20 @@ const eslintConfig = defineConfig([
       // Low-signal stylistic rule (apostrophes/quotes in JSX text are fine);
       // disabled deliberately — not masking a correctness issue.
       "react/no-unescaped-entities": "off",
+
+      // Forbid Tailwind arbitrary-value colour classes (e.g. `bg-[#fff]`,
+      // `text-[#abc]`) — use the design tokens declared in
+      // `app/globals.css @theme` instead (`bg-surface`, `text-text-muted`,
+      // `bg-brand-fg`, …). Phase 0.5; ratcheted `warn`, burned down per page.
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector:
+            "Literal[value=/(?:^|\\s)(?:bg|text|border|from|to|via|ring|outline|fill|stroke|caret|decoration|divide|accent|placeholder|shadow)-\\[#/]",
+          message:
+            "Use a design token instead of an arbitrary colour value (e.g. `bg-brand-fg` instead of `bg-[#000]`). Tokens live in app/globals.css @theme.",
+        },
+      ],
     },
   },
 

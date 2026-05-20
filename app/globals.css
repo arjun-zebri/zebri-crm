@@ -1,9 +1,60 @@
 @import "tailwindcss";
 
 @theme {
+  /* ── Animations ─────────────────────────────────────────────────── */
   --animate-fade-in: fade-in 150ms ease-out;
   --animate-modal-in: modal-in 200ms ease-out;
   --animate-slide-in-right: slide-in-right 250ms ease-out;
+
+  /* ── Design tokens (Phase 0.5) ──────────────────────────────────────
+     Semantic tokens for the internal CRM surface. Brand is monochrome
+     (see .claude/brand_assets). These tokens generate Tailwind utilities
+     (e.g. `bg-surface`, `text-text-muted`, `border-border`,
+     `rounded-card`, `text-section`). Prefer them over raw colours /
+     arbitrary values (`bg-[#xxx]`) — enforced by ESLint
+     (no-restricted-syntax). Existing utilities (text-3xl, bg-white, …)
+     still work; the legacy use-set is burned down per-page.
+
+     Note: the public-facing brand customisation system (`lib/branding/*`,
+     branding editor) is end-user-controlled and separate from these
+     internal tokens — do not entangle the two.
+  */
+
+  /* Surfaces */
+  --color-surface: #ffffff;
+  --color-surface-muted: #fafafa;
+  --color-surface-emphasis: #f3f4f6;
+
+  /* Text */
+  --color-text: #111827;        /* gray-900 — primary text */
+  --color-text-muted: #6b7280;  /* gray-500 — secondary text */
+  --color-text-subtle: #9ca3af; /* gray-400 — meta/placeholder */
+  --color-text-inverse: #ffffff;
+
+  /* Borders */
+  --color-border: #e5e7eb;        /* gray-200 — default divider */
+  --color-border-strong: #d1d5db; /* gray-300 — emphasised border */
+
+  /* Brand (monochrome) */
+  --color-brand-fg: #000000;
+  --color-brand-bg: #ffffff;
+
+  /* Semantic states */
+  --color-success: #059669;  /* emerald-600 */
+  --color-danger:  #dc2626;  /* red-600 */
+  --color-warning: #f59e0b;  /* amber-500 */
+  --color-info:    #2563eb;  /* blue-600 */
+
+  /* Radii */
+  --radius-control: 0.375rem; /* 6px — buttons, inputs */
+  --radius-card:    0.5rem;   /* 8px — cards, panels */
+  --radius-pill:    9999px;
+
+  /* Typography (semantic — anchored to CLAUDE.md typography rules) */
+  --text-display: 1.875rem; /* page titles  (≡ text-3xl + font-semibold) */
+  --text-section: 1.25rem;  /* section titles (≡ text-xl + font-semibold) */
+  --text-body:    0.875rem; /* body / default (≡ text-sm) */
+  --text-caption: 0.75rem;  /* captions / meta (≡ text-xs) */
 }
 
 @keyframes fade-in {

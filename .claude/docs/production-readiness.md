@@ -1,6 +1,17 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ (Prettier · expanded ESLint · lint ratchet `npm run lint:gate` · knip report-only) · 0.5 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ (design tokens · `Loading`/`Empty`/`ErrorState` primitives + tests · off-token-colour lint rule) · 0.6 next
+
+### Design system (Phase 0.5)
+
+Semantic tokens (colour, typography, radius) added to `app/globals.css`
+`@theme` — see `.claude/docs/frontend-design.md` for the full table.
+Three foundational primitives that every page-DoD needs (`<Loading />`,
+`<Empty />`, `<ErrorState />`) shipped in `components/ui/` with TSDoc and
+unit tests (11 new tests, 20 total). New ESLint rule (warn, ratcheted)
+forbids arbitrary-value colour utilities (`bg-[#…]`, `text-[#…]`, …) —
+surfaced 6 existing violations folded into the lint warning budget (876 →
+884). No legacy codemod — token adoption happens per-page during hardening.
 
 ### Lint ratchet (Phase 0.4)
 
