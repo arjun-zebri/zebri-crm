@@ -1,6 +1,6 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ (design tokens · `Loading`/`Empty`/`ErrorState` primitives + tests · off-token-colour lint rule) · 0.6 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ (tokens · primitives · **dark mode** · off-token-colour lint rule) · 0.5.5 next (Button/Input/Select primitives) · then 0.6
 
 ### Design system (Phase 0.5)
 
@@ -12,6 +12,14 @@ unit tests (11 new tests, 20 total). New ESLint rule (warn, ratcheted)
 forbids arbitrary-value colour utilities (`bg-[#…]`, `text-[#…]`, …) —
 surfaced 6 existing violations folded into the lint warning budget (876 →
 884). No legacy codemod — token adoption happens per-page during hardening.
+
+**0.5b retrofit (dark mode):** the `@theme` block was refactored to
+`@theme inline` referencing `:root` CSS variables, with a `.dark` override
+class. The same token utility (`bg-surface`, `text-text`, …) now resolves
+to the correct value per theme — no `dark:` modifier needed at call sites.
+Synchronous bootstrap in `app/layout.tsx` (no FOUC); `<ThemeToggle />`
+primitive added (+4 tests, suite now 29). Scoped to the authenticated
+dashboard; public surfaces follow the MC brand kit and remain unchanged.
 
 ### Lint ratchet (Phase 0.4)
 

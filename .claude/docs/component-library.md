@@ -24,6 +24,12 @@ Empty-state for lists / collections. Always pass an `action` that lets the
 user move forward (the only valid empty state without an action is a
 deliberately read-only surface). Optional `icon` from `lucide-react`.
 
+### `<ThemeToggle />` — `@/components/ui/theme-toggle` (Phase 0.5b)
+Light/dark mode toggle (`'use client'`). Reads/writes `zebri-theme` in
+`localStorage` and flips the `dark` class on `<html>`. The bootstrap in
+`app/layout.tsx` applies the initial theme synchronously (no FOUC). Place
+once — typically the sidebar.
+
 ### `<ErrorState />` — `@/components/ui/error-state`
 Accessible (`role="alert"`). Pass `error` (an `Error`) or `description`;
 always include a recovery path via `onRetry` (default "Try again" button) or

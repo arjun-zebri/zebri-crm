@@ -58,6 +58,44 @@ tokens below are equivalent and preferred in new code:
 
 Spacing uses the Tailwind default scale; no custom spacing tokens.
 
+### Dark mode (Phase 0.5b)
+
+Class-based dark variant (`<html class="dark">`), scoped to the
+authenticated CRM. The token *names* don't change — the SAME utility
+(`bg-surface`, `text-text`, …) resolves to a different colour per theme via
+the underlying CSS variables. No `dark:` modifier required at call sites.
+
+Dark-mode token values:
+
+| Token | Light | Dark |
+|---|---|---|
+| `bg-surface` | `#ffffff` | `#0a0a0a` |
+| `bg-surface-muted` | `#fafafa` | `#171717` |
+| `bg-surface-emphasis` | `#f3f4f6` | `#262626` |
+| `text-text` | `#111827` | `#fafafa` |
+| `text-text-muted` | `#6b7280` | `#a1a1aa` |
+| `text-text-subtle` | `#9ca3af` | `#71717a` |
+| `border-border` | `#e5e7eb` | `#27272a` |
+| `border-border-strong` | `#d1d5db` | `#3f3f46` |
+| `bg-brand-fg` / `text-brand-fg` | `#000000` | `#ffffff` (flips) |
+| `bg-success` | `#059669` | `#10b981` |
+| `bg-danger` | `#dc2626` | `#ef4444` |
+| `bg-info` | `#2563eb` | `#3b82f6` |
+
+Activation:
+- A synchronous bootstrap in `app/layout.tsx` reads `localStorage.zebri-theme`
+  before paint (no FOUC). Defaults to the OS `prefers-color-scheme`.
+- `<ThemeToggle />` (`components/ui/theme-toggle.tsx`) flips the `dark` class
+  on `<html>` and persists the choice. Place it once, typically in the
+  sidebar / settings.
+
+Out of scope:
+- **Public surfaces** (portal / quote / invoice / contract / timeline) follow
+  each MC's brand kit, not the dashboard theme — they currently use raw
+  colours via `lib/branding/*` and remain visually unchanged.
+- **Auth pages** (login / signup / reset) use raw colours today; they pick
+  up dark mode automatically only after migration to tokens.
+
 > The hex / hard-coded colour values **below** are the pre-0.5 reference and
 > are kept for context; new code uses the token utilities above. Legacy
 > off-token usage is burned down per page.
