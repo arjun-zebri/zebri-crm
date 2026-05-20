@@ -59,7 +59,25 @@ jobs:
         run: npm run test:unit
 
       # ── Slower gates ──────────────────────────────────────────────────
+      # `next build` imports every server module to collect page data and
+      # pre-render statically-analysable pages. That means any module-top
+      # SDK constructor and any page that touches the Supabase client at
+      # import time would crash without env vars. These build-time dummies
+      # are clearly marked DUMMY values — the build never makes outbound
+      # calls, it just needs the constructors not to throw on import.
+      # Real values live in Vercel env config for actual deploys.
       - name: Build
+        env:
+          # Supabase — used by lib/supabase/{client,server,middleware}.ts.
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-build-dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci_publishable_dummy
+          SUPABASE_SERVICE_ROLE_KEY: ci_service_role_dummy
+          # Stripe — lib/payments/stripe.ts constructs at module top.
+          # Proper lazy-init lands during the Payments page-hardening phase.
+          STRIPE_SECRET_KEY: sk_test_BUILD_DUMMY_DO_NOT_USE
+          # App / public URLs read at module level in a few places.
+          NEXT_PUBLIC_APP_URL: https://ci-build-dummy.local
+          # (lib/email is lazy-init — no RESEND_API_KEY dummy needed.)
         run: npm run build
 
       # Integration tests run against a real local Supabase stack
