@@ -51,6 +51,9 @@ jobs:
       - name: Lint ratchet (errors + warnings must not exceed budget)
         run: npm run lint:gate
 
+      - name: Service-role-key leak guard
+        run: npm run check:no-service-role
+
       - name: Dead-code report (knip — non-blocking until cleaned up)
         run: npm run deadcode
         continue-on-error: true

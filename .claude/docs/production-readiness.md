@@ -1,6 +1,40 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ · 0.7 ✅ (GitHub Actions PR gates + staging/prod migration deploys + destructive-SQL safety + runbook) · 0.8 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ · 0.7 ✅ · 0.8a ✅ (security headers + cron-auth constant-time + service-role leak guard + Zod + rate-limit infra + RLS matrix) · 0.8b next (user_metadata privilege fix — own PR)
+
+### Security infrastructure (Phase 0.8a)
+
+Foundational, low-risk security work — additive across the board. See
+`.claude/docs/security.md` for the full audit, RLS coverage matrix,
+and per-page security checklist.
+
+- HTTP security headers in `next.config.ts` (`X-Frame-Options`,
+  `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`,
+  prod-only HSTS). CSP deferred (needs per-page testing against
+  Stripe/Supabase/inline theme bootstrap; landing in a later tightening
+  phase).
+- **Audit findings:** Stripe webhook signature ✅ verified;
+  service-role key ✅ exclusively server-side; cron-secret check ⚠️
+  was non-constant-time, **fixed**. Resend webhook doesn't exist
+  (documented as future).
+- `@/lib/api/cron-auth` — shared `isCronAuthorized()` with constant-
+  time comparison, replacing two inline implementations.
+- `scripts/check-no-service-role-in-client.mjs` — wired into CI as a
+  required step; fails the build if any `'use client'` file references
+  the service-role key.
+- `@/lib/api/validate` — Zod-backed `parseJsonBody` /
+  `parseSearchParams`. Per-route adoption is per-page work; new code
+  uses these from now on.
+- `@/lib/api/rate-limit` — `inMemoryLimiter` + `ipOf`; per-route
+  adoption (auth, money, public surfaces) per-page.
+- 12 new unit tests (cron-auth 5, rate-limit 6, validate 4).
+
+**0.8b (next) — `user_metadata` privilege escalation fix.** Its own
+focused PR (per the 2026-05-21 scope decision) doing the migration
+end-to-end across middleware + `lib/payments/subscription` + the 5
+public-page RPCs + signup flow + admin shadow-mode, with integration
+tests landing alongside each piece proving the escalation paths are
+blocked. Backfill all live users; verify in staging.
 
 ### CI/CD pipeline (Phase 0.7)
 

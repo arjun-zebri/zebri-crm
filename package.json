@@ -9,6 +9,7 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "lint:gate": "node scripts/lint-gate.mjs",
+    "check:no-service-role": "node scripts/check-no-service-role-in-client.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "deadcode": "knip",
@@ -50,7 +51,8 @@
     "resend": "^6.12.0",
     "sanitize-html": "^2.17.3",
     "stripe": "^21.0.1",
-    "tippy.js": "^6.3.7"
+    "tippy.js": "^6.3.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.2",
