@@ -1,0 +1,81 @@
+# Zebri — PR pipeline (Phase 0.7).
+#
+# Runs every gate established in 0.2–0.6 on every PR and on direct pushes
+# to `main`/`staging`. Configure branch-protection on both branches in the
+# GitHub UI to require this job — see `.claude/docs/cicd.md`.
+#
+# Order is "cheapest first" so the slow Supabase step doesn't burn 8 min
+# when a TypeScript error would have failed in 30 seconds.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [main, staging]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: Gates (typecheck · lint · tests · build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Fast gates first ─────────────────────────────────────────────
+      - name: Typecheck (strict)
+        run: npm run typecheck
+
+      - name: Typecheck (strictness ratchet — must not exceed budget)
+        run: npm run typecheck:strict
+
+      - name: Lint ratchet (errors + warnings must not exceed budget)
+        run: npm run lint:gate
+
+      - name: Dead-code report (knip — non-blocking until cleaned up)
+        run: npm run deadcode
+        continue-on-error: true
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      # ── Slower gates ──────────────────────────────────────────────────
+      - name: Build
+        run: npm run build
+
+      # Integration tests run against a real local Supabase stack
+      # (migrations + seed.sql from a clean DB — proves the chain replays
+      # and exercises RLS as production does). Slowest step, so last.
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start --workdir .
+
+      - name: Integration tests (RLS + DB)
+        run: npm run test:integration
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup --workdir .

@@ -1,0 +1,65 @@
+# Zebri — production migration deploy (Phase 0.7).
+#
+# Runs on every push to `main`. Configure the `production` GitHub
+# Environment with required reviewers (Settings → Environments →
+# production → "Required reviewers") so a human approves every prod DB
+# change. Vercel handles the app deploy separately.
+#
+# Required secrets (configured in GitHub Settings → Environments → "production"):
+#   SUPABASE_ACCESS_TOKEN  — personal access token
+#   SUPABASE_PROJECT_REF   — prod project ref
+#   SUPABASE_DB_PASSWORD   — prod Postgres `postgres` user password
+#
+# Same first-run ledger-reconciliation note applies as for staging — see
+# .claude/docs/cicd.md.
+
+name: Deploy migrations · production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  push-migrations:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout (full history for migration safety diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Migration safety check
+        run: bash scripts/check-migrations.sh "${{ github.event.before }}" "${{ github.sha }}"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link \
+            --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" \
+            --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
+
+      - name: Push migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase db push \
+            --password "${{ secrets.SUPABASE_DB_PASSWORD }}"

@@ -1,6 +1,33 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ (structured logger · typed `AlertEvent` catalog + `sendAlert()` · Slack matrix · **Sentry deferred** — see §1) · 0.7 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ · 0.7 ✅ (GitHub Actions PR gates + staging/prod migration deploys + destructive-SQL safety + runbook) · 0.8 next
+
+### CI/CD pipeline (Phase 0.7)
+
+Shipped (see runbook in `.claude/docs/cicd.md`):
+
+- **`ci.yml`** — required PR pipeline on `main`/`staging`: install →
+  `typecheck` → `typecheck:strict` → `lint:gate` → `knip`
+  (non-blocking) → unit → build → integration vs **local Supabase**
+  with real RLS. Cheapest-first so failures surface fast.
+- **`deploy-staging.yml`** + **`deploy-prod.yml`** — push migrations to
+  Supabase on merge to `staging` / `main`. Production is gated by the
+  `production` GitHub Environment (required reviewers). App deploys
+  remain on Vercel's GitHub integration; these workflows are DB-only.
+- **`scripts/check-migrations.sh`** — refuses to deploy destructive
+  migrations (`DROP TABLE` / `DROP COLUMN` / `TRUNCATE` / `DROP SCHEMA`
+  / un-guarded `DELETE FROM`) without an explicit
+  `-- @ALLOW_DESTRUCTIVE: <reason>` marker. Verified end-to-end on the
+  existing `drop_price_from_events` migration; marker added there with
+  rationale.
+- The §7.9 ledger discrepancy (deleted/renamed migrations from 0.2) is
+  reconciled via a documented one-time `supabase migration repair` per
+  env — see the runbook.
+
+User-side setup (one-time): create `staging` + `production` GitHub
+Environments with `SUPABASE_ACCESS_TOKEN`/`PROJECT_REF`/`DB_PASSWORD`
+secrets, branch protection on both branches requiring the `ci.yml` job.
+Runbook lists every step.
 
 ### Observability & alerting (Phase 0.6)
 
