@@ -4,33 +4,69 @@ Zebri uses lightweight Slack alerting for operational visibility. All alerts flo
 
 ---
 
-## Architecture
+## Architecture (Phase 0.6)
 
-All alerts are routed through a centralized server-side gateway:
+Alerts flow through a typed event catalog and a single dispatcher:
 
 ```
-Client → POST /api/alerts/slack → lib/slack.ts → Slack Webhook
-Server routes → lib/slack.ts (direct)
+                            ┌─ Slack webhook       (lib/alerts/slack.ts)
+sendAlert(event) ──────────┤
+  (lib/alerts/send-alert)   └─ logger (Vercel runtime logs + transports)
 ```
+
+- **`lib/alerts/events.ts`** — discriminated-union catalog of every alert
+  the app can dispatch. Adding a new alert means adding a variant here.
+- **`lib/alerts/send-alert.ts`** — `sendAlert(event)` formats a Slack
+  message and writes a structured log record at the matching severity.
+- **`lib/alerts/logger.ts`** — structured logger (debug/info/warn/error
+  + `.child({...})`). Writes to console; additional destinations plug in
+  via `registerTransport`.
+- **`lib/alerts/slack.ts`** — low-level Slack webhook transport (still
+  available for one-off custom Block-Kit payloads).
+
+> **Observability stack:** Vercel runtime logs (captures every logger
+> write) + Slack alerts via `sendAlert()` + the existing global error
+> boundaries (`app/error.tsx`, `app/global-error.tsx`, `app/providers.tsx`)
+> which already Slack on uncaught errors. **Sentry is deferred** —
+> roadmap §1 amended to "Slack-only (Sentry deferred)".
 
 The Slack webhook URL is server-only and never exposed to the client (`SLACK_WEBHOOK_URL`, not `NEXT_PUBLIC_`).
 
 ---
 
-## Alert Types
+## Alert matrix
 
-| Event | Source | Emoji | Payload |
+1:1 with `AlertEvent` in `lib/alerts/events.ts`. Severity drives the
+default emoji and routing.
+
+| `type` | Severity | When | Source (target) |
 |---|---|---|---|
-| **New sign-up** | `app/(auth)/signup/page.tsx` | :tada: | Name, Business, Email, Trial end date |
-| **App error** | `app/error.tsx` | :rotating_light: | Error message, timestamp |
-| **Global error** | `app/global-error.tsx` | :skull: | Error message, timestamp |
-| **Mutation error** | `app/providers.tsx` | :warning: | Error message, timestamp |
-| **Stripe new sub** | `app/api/stripe/webhook/route.ts` (future) | :credit_card: | Email, subscription ID, amount |
-| **Stripe payment failed** | Stripe webhook (future) | :x: | Email, amount, reason |
-| **Stripe subscription cancelled** | Stripe webhook (future) | :wave: | Email, cancellation date |
-| **Contract sent** | `app/api/email/send-contract/route.ts` | :memo: | Couple, title, number |
-| **Contract signed** | `app/api/contract/sign/route.ts` | :lower_left_fountain_pen: | Signer name |
-| **Contract declined** | `app/api/contract/decline/route.ts` | :x: | Reason (if given) |
+| `signup_completed` | info | New MC completes signup | `app/(auth)/signup` |
+| `subscription_created` | info | Stripe sub starts | `/api/stripe/webhook` |
+| `subscription_cancelled` | warn | Sub cancelled | `/api/stripe/webhook` |
+| `subscription_churn` | warn | Paid → free / lapsed | `/api/stripe/webhook` |
+| `payment_failed` | error | Charge / invoice failure | `/api/stripe/webhook` |
+| `stripe_webhook_failed` | error | Signature invalid / handler threw | `/api/stripe/webhook` |
+| `stripe_connect_onboarding_failed` | warn | Connect onboarding errored | `/api/stripe/connect/*` |
+| `resend_send_failed` | error | Resend API rejected / errored | `/api/email/*` |
+| `resend_bounced` | warn | Bounce reported | `/api/resend/webhook` |
+| `cron_job_failed` | error | Cron handler threw | `/api/cron/*` |
+| `cron_job_missed` | warn | Expected run did not arrive | scheduled checker (Phase 0.7) |
+| `auth_anomaly` | warn | Failed-login spike, token reuse, … | middleware (Phase 0.8) |
+| `rls_denied_spike` | warn | Cluster of RLS denials in a window | logs aggregator (Phase 0.8) |
+| `app_error` | error | Catch-all / uncaught errors | global error boundaries |
+
+Wiring each row to its source happens during that surface's hardening
+phase — the dispatcher and matrix land here, the call sites follow
+per-page (consistent with the ratchets).
+
+### Default emoji
+
+| Severity | Emoji |
+|---|---|
+| `info` | `:information_source:` |
+| `warn` | `:warning:` |
+| `error` | `:rotating_light:` |
 
 ---
 
@@ -65,9 +101,27 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 ## Implementation Details
 
-### `lib/slack.ts`
+### `lib/alerts/send-alert.ts`
 
-Server-only helper that sends alerts to Slack. Never throws  -  failures are swallowed and logged to console. Silently no-ops if `SLACK_WEBHOOK_URL` is unset (safe for local dev).
+The canonical entry point. Type-checked event in → Slack message out +
+structured log record. Server-only. Never throws to the caller.
+
+```ts
+import { sendAlert } from '@/lib/alerts'
+
+await sendAlert({
+  type: 'stripe_webhook_failed',
+  severity: 'error',
+  eventType: event.type,
+  errorMessage: err.message,
+})
+```
+
+### `lib/alerts/slack.ts`
+
+Low-level Slack transport. Never throws  -  failures are swallowed and
+logged. Silently no-ops if `SLACK_WEBHOOK_URL` is unset (safe for local
+dev). Still available for custom Block-Kit payloads:
 
 ```ts
 export async function sendSlackAlert(payload: SlackPayload): Promise<void>
@@ -93,63 +147,32 @@ Failures are silently ignored  -  alerts should never degrade the user experienc
 
 ### Server-side Alerts
 
-Server routes call `sendSlackAlert` directly (no API hop):
+Server routes use the typed dispatcher:
 
 ```ts
-import { sendSlackAlert } from "@/lib/slack"
-await sendSlackAlert({ ... })
+import { sendAlert } from "@/lib/alerts"
+await sendAlert({ type: ..., severity: ..., ...payload })
 ```
+
+Only fall back to `sendSlackAlert` (under `@/lib/alerts/slack`) for
+one-off custom Block-Kit messages that don't fit the matrix.
 
 ---
 
 ## Adding New Alerts
 
-### Client-side
+1. **Add a variant to `lib/alerts/events.ts`** — give it a `type`,
+   `severity`, and the typed payload fields you need.
+2. **Add a `describe()` case in `lib/alerts/send-alert.ts`** so the
+   Slack message reads well.
+3. **Document the row** in the matrix above.
+4. **Call `sendAlert({ type: ..., ... })`** from the source.
 
-```ts
-fetch("/api/alerts/slack", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    text: ":emoji: Alert Title",
-    blocks: [
-      {
-        type: "header",
-        text: { type: "plain_text", text: ":emoji: Alert Title" },
-      },
-      {
-        type: "section",
-        fields: [
-          { type: "mrkdwn", text: `*Key:*\nValue` },
-          // ...
-        ],
-      },
-    ],
-  }),
-}).catch(() => {})
-```
+Tests under `tests/unit/lib/alerts/` cover the dispatcher + formatter.
 
-### Server-side
-
-```ts
-import { sendSlackAlert } from "@/lib/slack"
-
-await sendSlackAlert({
-  text: ":emoji: Alert Title",
-  blocks: [
-    {
-      type: "header",
-      text: { type: "plain_text", text: ":emoji: Alert Title" },
-    },
-    {
-      type: "section",
-      fields: [
-        { type: "mrkdwn", text: `*Key:*\nValue` },
-      ],
-    },
-  ],
-})
-```
+> Bare Slack payloads (`sendSlackAlert(...)`) are only for genuine
+> one-off messages outside the alert taxonomy — prefer extending the
+> typed catalog so the matrix and code stay 1:1.
 
 ---
 

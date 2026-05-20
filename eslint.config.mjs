@@ -30,7 +30,9 @@ const eslintConfig = defineConfig([
           groups: ["builtin", "external", "internal", "parent", "sibling", "index"],
         },
       ],
-      // Tightened to "logger only" in Phase 0.6 once lib/alerts logger lands.
+      // Use `lib/alerts/logger` instead of raw console (Phase 0.6 shipped
+      // the logger). Stays `warn` to ratchet the 23 legacy raw console
+      // calls down per-page rather than fail the build today.
       "no-console": ["warn", { allow: ["warn", "error"] }],
       // Low-signal stylistic rule (apostrophes/quotes in JSX text are fine);
       // disabled deliberately — not masking a correctness issue.

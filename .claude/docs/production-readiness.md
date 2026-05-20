@@ -1,6 +1,14 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ (tokens · primitives · **dark mode** · off-token-colour lint rule) · 0.5.5 ✅ (Button/Input/Select primitives + tests) · 0.6 next
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ (structured logger · typed `AlertEvent` catalog + `sendAlert()` · Slack matrix · **Sentry deferred** — see §1) · 0.7 next
+
+### Observability & alerting (Phase 0.6)
+
+Shipped: structured `lib/alerts/logger` (`debug/info/warn/error` + `.child()` + pluggable `Transport`s), typed `AlertEvent` discriminated-union catalog, `sendAlert(event)` dispatcher that fans out to Slack + the logger pipeline, and the full alert matrix in `.claude/docs/alerts.md` (1:1 with the events catalog). 18 new unit tests across the alerts module (suite now 66).
+
+**Sentry deferred** (per user 2026-05-20). Observability stack is **Vercel runtime logs + Slack via `sendAlert()` + existing global error boundaries** — sufficient for current scale; Sentry slots in cleanly later via a registered Transport. Roadmap §1 amended accordingly.
+
+Per-route wiring (`/api/stripe/webhook` calling `sendAlert({type:'stripe_webhook_failed',…})` etc.) is intentionally **not** done in 0.6 — those edits happen during the relevant page/route hardening, consistent with the ratchet/no-bulk-feature-edits philosophy. The 23 legacy raw `console.*` calls likewise migrate per-page to `logger.*` (the `no-console` lint rule stays `warn`/ratcheted).
 
 ### Design system (Phase 0.5)
 
@@ -67,7 +75,7 @@ These were agreed up front and govern everything below.
 | Sequencing | **Foundation first**, then page-by-page hardening on top of the safety net |
 | Scope | **Everything currently in the app** is in scope (core CRM + portal, branding, workflows, timeline, admin/shadow, email, Stripe Connect, subscriptions) |
 | Team / process | **Solo**, lightweight process but **strict, required CI gates** |
-| Observability | **Sentry + Slack** (Sentry for errors/perf, Slack for business/ops alerts) |
+| Observability | **Slack-only (Sentry deferred — amended 0.6)** — structured logger + typed `sendAlert()` + Slack matrix + Vercel runtime logs. Sentry can be added in ~half a day if/when error volume warrants it. |
 | Promotion flow | `main` = production · `staging` branch = staging env · PR → CI gates → merge to `staging` (verify) → promote to `main` (prod) |
 | Design system | **Design tokens + enforced primitives** (no Storybook) |
 | Comment style | **TSDoc on every exported API** + why-comments on non-obvious logic |
