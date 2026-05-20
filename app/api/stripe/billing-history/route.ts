@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import type Stripe from 'stripe'
-import { createClient } from '@/lib/supabase/server'
+
+import { stripeCustomerId, stripeSubscriptionId } from '@/lib/auth/entitlements'
 import { stripe } from '@/lib/payments/stripe'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
   try {
@@ -11,7 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const customerId = user.user_metadata?.stripe_customer_id as string | undefined
+    const customerId = stripeCustomerId(user)
     if (!customerId) {
       return NextResponse.json({ invoices: [], upcoming: null })
     }
@@ -29,7 +31,7 @@ export async function GET() {
 
     let upcoming: { amount: number; nextChargeAt: number } | null = null
     try {
-      const subId = user.user_metadata?.stripe_subscription_id as string | undefined
+      const subId = stripeSubscriptionId(user)
       if (subId) {
         const subscription = (await stripe.subscriptions.retrieve(subId)) as Stripe.Subscription & {
           current_period_end?: number

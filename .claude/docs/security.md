@@ -28,12 +28,32 @@ A user can call `supabase.auth.updateUser({ data: {…} })` and set
 their own `account_type` to `admin`, set `subscription_plan` to `pro`,
 or alter the bank details displayed on their public invoices.
 
-**Fix (Phase 0.8b — its own focused PR):** move all the entitlement
-and financial fields to either `app_metadata` (server-only writable,
-JWT-readable for middleware) or a secured `profiles` table.
-Backfill all live users; verify in staging first. Each layer's
-change ships with integration tests proving the corresponding
-escalation path is now blocked.
+**Resolved 2026-05-21 in Phase 0.8b.** Migration
+`20260521000000_backfill_app_metadata_entitlements.sql`:
+- one-shot UPDATE backfilling 11 entitlement fields from
+  `raw_user_meta_data` → `raw_app_meta_data` for every existing user
+  (idempotent; `app_metadata.account_type` is the migration sentinel);
+- INSERT trigger on `auth.users` that mirrors the same fields for every
+  new signup (so the existing `supabase.auth.signUp({ data })` flow
+  keeps working without code changes);
+- re-authored `enforce_starter_couple_limit` to read from
+  `raw_app_meta_data` (blocks the cap-bypass).
+
+Code: `@/lib/auth/entitlements` is the single source of truth for
+every read; `updateEntitlements()` is the single write path. All
+middleware + admin + Stripe write/read paths migrated. 15 unit tests
++ 4 integration tests pin the escalation blocks end-to-end against
+the real DB. `lib/payments/subscription` is now a thin re-export of
+the helper.
+
+**Residual (per-page, NOT security-critical):**
+- 5 public-RPC reads of `raw_user_meta_data` for `business_name` (user
+  owns), `bank_*` (user owns), `stripe_connect_enabled` (UX flip on
+  public Pay button only — Stripe rejects on charge if no Connect
+  account). Tracked for Payments page hardening.
+- Sidebar admin-link visibility (display only — middleware enforces).
+- The `user_metadata` fallback inside the helper itself stays for the
+  JWT-refresh soak window (24-48h post-deploy); a follow-up removes it.
 
 ---
 

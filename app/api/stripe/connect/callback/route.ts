@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
+
+import { updateEntitlements } from '@/lib/auth/entitlements'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
@@ -22,15 +24,15 @@ export async function GET(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const { error: updateError } = await adminClient.auth.admin.updateUserById(user.id, {
-    user_metadata: {
-      ...user.user_metadata,
+  // Connect identity is server-managed entitlement data — goes into
+  // app_metadata so a user can't self-set stripe_connect_account_id to
+  // route payouts elsewhere (§7.4 / Phase 0.8b).
+  try {
+    await updateEntitlements(adminClient.auth.admin, user.id, {
       stripe_connect_account_id: accountId,
       stripe_connect_enabled: true,
-    },
-  })
-
-  if (updateError) {
+    })
+  } catch {
     return NextResponse.redirect(`${appUrl}/settings?tab=payments&error=connect_failed`)
   }
 

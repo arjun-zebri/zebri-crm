@@ -1,8 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
-import { stripe } from '@/lib/payments/stripe'
-import { sendSlackAlert } from '@/lib/alerts/slack'
+import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+
+import { sendSlackAlert } from '@/lib/alerts/slack'
+import {
+  subscriptionPlan,
+  subscriptionStatus,
+  updateEntitlements,
+} from '@/lib/auth/entitlements'
+import { stripe } from '@/lib/payments/stripe'
+
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -146,19 +153,20 @@ export async function POST(request: NextRequest) {
           (subscription.metadata?.plan === 'pro' || subscription.metadata?.plan === 'max'
             ? subscription.metadata.plan
             : null)
-        await adminClient.auth.admin.updateUserById(userId, {
-          user_metadata: {
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            subscription_status: subscription.status,
-            subscription_plan: plan,
-            is_subscribed: ['active', 'trialing'].includes(subscription.status),
-            trial_end: subscription.trial_end
-              ? new Date(subscription.trial_end * 1000).toISOString()
-              : null,
-            cancel_at_period_end: false,
-            subscription_end: null,
-          },
+        // Entitlement fields go to app_metadata (§7.4 / Phase 0.8b) so a
+        // user can't self-set subscription_status='active' and bypass the
+        // paywall via auth.updateUser({ data: … }).
+        await updateEntitlements(adminClient.auth.admin, userId, {
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+          subscription_status: subscription.status,
+          subscription_plan: plan ?? undefined,
+          is_subscribed: ['active', 'trialing'].includes(subscription.status),
+          trial_end: subscription.trial_end
+            ? new Date(subscription.trial_end * 1000).toISOString()
+            : undefined,
+          cancel_at_period_end: false,
+          subscription_end: undefined,
         })
 
         const email = await getEmail(userId)
@@ -227,10 +235,9 @@ export async function POST(request: NextRequest) {
         // metadata is missing.
         const priceId = subscription.items.data[0]?.price.id
         const { data: { user: existingUser } } = await adminClient.auth.admin.getUserById(userId)
-        const existingPlan = existingUser?.user_metadata?.subscription_plan as
+        const existingPlan = subscriptionPlan(existingUser) as
           | 'pro'
           | 'max'
-          | null
           | undefined
         const plan =
           planFromPrice(priceId) ??
@@ -240,17 +247,15 @@ export async function POST(request: NextRequest) {
           existingPlan ??
           null
 
-        await adminClient.auth.admin.updateUserById(userId, {
-          user_metadata: {
-            subscription_status: nextStatus,
-            is_subscribed: isSubscribed,
-            subscription_end: subscriptionEnd,
-            cancel_at_period_end: !isDeleted && cancelAtPeriodEnd,
-            subscription_plan: plan,
-            trial_end: subscription.trial_end
-              ? new Date(subscription.trial_end * 1000).toISOString()
-              : null,
-          },
+        await updateEntitlements(adminClient.auth.admin, userId, {
+          subscription_status: nextStatus,
+          is_subscribed: isSubscribed,
+          subscription_end: subscriptionEnd ?? undefined,
+          cancel_at_period_end: !isDeleted && cancelAtPeriodEnd,
+          subscription_plan: plan ?? undefined,
+          trial_end: subscription.trial_end
+            ? new Date(subscription.trial_end * 1000).toISOString()
+            : undefined,
         })
 
         const email = await getEmail(userId)
@@ -314,8 +319,8 @@ export async function POST(request: NextRequest) {
           break
         }
 
-        await adminClient.auth.admin.updateUserById(userId, {
-          user_metadata: { subscription_status: 'past_due' },
+        await updateEntitlements(adminClient.auth.admin, userId, {
+          subscription_status: 'past_due',
         })
 
         const email = await getEmail(userId)
@@ -355,9 +360,10 @@ export async function POST(request: NextRequest) {
         }
 
         const { data: { user: existing } } = await adminClient.auth.admin.getUserById(userId)
-        if (existing?.user_metadata?.subscription_status === 'past_due') {
-          await adminClient.auth.admin.updateUserById(userId, {
-            user_metadata: { subscription_status: 'active', is_subscribed: true },
+        if (subscriptionStatus(existing) === 'past_due') {
+          await updateEntitlements(adminClient.auth.admin, userId, {
+            subscription_status: 'active',
+            is_subscribed: true,
           })
         }
 

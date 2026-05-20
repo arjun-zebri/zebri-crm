@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { sendContractEmail } from '@/lib/email'
-import { buildContractVariables, renderContractHtml } from '@/lib/contracts/contract-variables'
-import { hasContractsAccess } from '@/lib/payments/subscription'
+
 import { sendSlackAlert } from '@/lib/alerts/slack'
+import { buildContractVariables, renderContractHtml } from '@/lib/contracts/contract-variables'
+import { sendContractEmail } from '@/lib/email'
+import { hasContractsAccess } from '@/lib/payments/subscription'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  if (!hasContractsAccess(user.user_metadata)) {
+  if (!hasContractsAccess(user)) {
     return NextResponse.json({ error: 'Contracts requires a Pro or Max plan' }, { status: 402 })
   }
 

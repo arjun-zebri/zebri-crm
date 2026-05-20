@@ -1,6 +1,45 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ · 0.7 ✅ · 0.8a ✅ (security headers + cron-auth constant-time + service-role leak guard + Zod + rate-limit infra + RLS matrix) · 0.8b next (user_metadata privilege fix — own PR)
+> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ · 0.7 ✅ · 0.8a ✅ · 0.8b ✅ (**user_metadata privilege fix landed** — §7.4 closed; helper + backfill migration + INSERT trigger + 4 e2e escalation-block integration tests) · 0.9 next
+
+### user_metadata privilege fix (Phase 0.8b) — §7.4 resolved
+
+The centerpiece of the security work. Every entitlement read/write
+previously trusted user-writable `user_metadata`; an attacker could
+self-elevate to admin, bypass the paywall, or alter Stripe Connect
+identity via `supabase.auth.updateUser({ data: … })`.
+
+Landed in this PR:
+
+- **`@/lib/auth/entitlements`** — single source of truth for all
+  entitlement reads (account_type, subscription_*, stripe_*,
+  is_beta_user). app_metadata wins; falls back to user_metadata only
+  for users not yet migrated (sentinel: `app_metadata.account_type`).
+  15 unit tests pin the escalation blocks.
+- **`updateEntitlements(admin, userId, patch)`** — single write path
+  into `app_metadata`. All write sites migrated (admin actions,
+  Stripe webhook 4 paths, Stripe checkout, Stripe Connect callback).
+- **DB migration** `20260521000000_backfill_app_metadata_entitlements`:
+  idempotent UPDATE copies 11 entitlement fields user_metadata →
+  app_metadata for every existing user. INSERT trigger mirrors the
+  same fields for every new signup (no code change to signup flow
+  needed). Re-authored `enforce_starter_couple_limit` to read from
+  `app_metadata` (blocks the couple-cap bypass).
+- **Integration tests** (`tests/integration/rls/entitlements-
+  escalation.test.ts`): 4 tests against the live local DB proving
+  the attacker writes don't grant admin or paid features, and that
+  server writes via `app_metadata` DO work. The canonical regression
+  test for §7.4.
+- **lib/payments/subscription** demoted to a thin re-export of the
+  entitlements helper; the deprecated test file removed.
+- Lint warning budget ratcheted down 880 → 849.
+
+Residual (per-page, not security-critical) documented in
+`.claude/docs/security.md`: 5 public-RPC reads of bank/business
+fields (user-owned, not escalation surface) + stripe_connect_enabled
+(UX flip only), sidebar admin-link visibility (display only —
+middleware enforces), and the user_metadata fallback inside the
+helper (kept during the JWT-refresh soak window; cleanup follow-up).
 
 ### Security infrastructure (Phase 0.8a)
 
