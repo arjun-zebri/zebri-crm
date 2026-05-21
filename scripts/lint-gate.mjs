@@ -17,10 +17,13 @@ import { execSync } from 'node:child_process';
 
 // Baseline captured 2026-05-20 (Phase 0.4); warnings re-baselined in 0.5
 // after the off-token-colour rule landed (876 → 884, +8 surfaced sites);
-// 0.5b autofixed one import-order in app/layout.tsx (884 → 883).
+// 0.5b autofixed one import-order in app/layout.tsx (884 → 883); 0.8a
+// autofixed import-order in two edited cron routes (883 → 880); 0.8b
+// autofixed import-order across the user_metadata→app_metadata refactor
+// (880 → 849).
 // Only ever decrease these.
 const ERROR_BUDGET = 91;
-const WARNING_BUDGET = 883;
+const WARNING_BUDGET = 849;
 
 function runEslintJson() {
   try {

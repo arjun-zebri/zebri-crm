@@ -1,7 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+import {
+  isBetaUser,
+  stripeCustomerId,
+  trialEnd,
+  updateEntitlements,
+} from '@/lib/auth/entitlements'
 import { stripe } from '@/lib/payments/stripe'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +21,9 @@ export async function POST(request: NextRequest) {
 
     const { plan } = await request.json() as { plan: 'pro' | 'max' }
 
-    const isBeta = user.user_metadata?.is_beta_user === true
+    // Entitlement flag — read via the helper so a user can't grant
+    // themselves the beta price by setting user_metadata.is_beta_user.
+    const isBeta = isBetaUser(user)
     const priceId = isBeta
       ? process.env.STRIPE_BETA_PRICE_ID
       : plan === 'max'
@@ -40,7 +49,7 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    let customerId = user.user_metadata?.stripe_customer_id as string | undefined
+    let customerId = stripeCustomerId(user)
     if (!customerId) {
       // Reuse any existing lookup row (e.g. from an abandoned checkout) so
       // we never create more than one Stripe customer per user.
@@ -67,19 +76,17 @@ export async function POST(request: NextRequest) {
 
     // Persist on the auth user so the next checkout attempt (e.g. if the
     // user abandons Stripe Checkout) doesn't create another customer.
-    if (user.user_metadata?.stripe_customer_id !== customerId) {
-      await adminClient.auth.admin.updateUserById(user.id, {
-        user_metadata: {
-          ...(user.user_metadata ?? {}),
-          stripe_customer_id: customerId,
-        },
+    // Lives in app_metadata (server-managed entitlement identity).
+    if (stripeCustomerId(user) !== customerId) {
+      await updateEntitlements(adminClient.auth.admin, user.id, {
+        stripe_customer_id: customerId,
       })
     }
 
     // Honor any remaining trial from signup so the user doesn't get a
     // fresh 14 days on top of what they already have. If their signup
     // trial has already expired, no Stripe trial is granted.
-    const existingTrialEnd = user.user_metadata?.trial_end as string | undefined
+    const existingTrialEnd = trialEnd(user)
     let trialDays: number | undefined = 14
     if (existingTrialEnd) {
       const remainingMs = new Date(existingTrialEnd).getTime() - Date.now()

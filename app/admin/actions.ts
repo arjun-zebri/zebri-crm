@@ -1,11 +1,22 @@
 "use server";
 
+import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { createClient as createServiceClient } from "@supabase/supabase-js";
+
+import {
+  accountType,
+  isAdmin,
+  stripeCustomerId,
+  stripeSubscriptionId,
+  subscriptionStatus,
+  updateEntitlements,
+} from "@/lib/auth/entitlements";
 import { stripe } from '@/lib/payments/stripe';
+import { createClient } from "@/lib/supabase/server";
+
+
 
 function createAdminClient() {
   return createServiceClient(
@@ -20,7 +31,9 @@ async function assertAdmin() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || user.user_metadata?.account_type !== "admin") {
+  // Read via the entitlements helper so an attacker can't grant
+  // themselves admin by writing `user_metadata.account_type` (§7.4).
+  if (!user || !isAdmin(user)) {
     throw new Error("Unauthorized");
   }
   return user;
@@ -38,11 +51,18 @@ export async function listUsers() {
     email: u.email ?? "",
     display_name: (u.user_metadata?.display_name as string) ?? "",
     business_name: (u.user_metadata?.business_name as string) ?? "",
-    account_type: (u.user_metadata?.account_type as string) ?? "vendor",
+    // accountType() honours app_metadata first — no escalation via user_metadata.
+    account_type: accountType(u),
   }));
 }
 
-async function patchUserMetadata(
+/**
+ * Patch a user's **display** fields (display_name / business_name etc.) —
+ * lives in user_metadata. Entitlement fields go through
+ * {@link updateEntitlements} into app_metadata; never use this for
+ * subscription / Stripe / account_type fields.
+ */
+async function patchUserDisplay(
   userId: string,
   patch: Record<string, unknown>
 ) {
@@ -60,8 +80,8 @@ export async function extendTrial(userId: string, newTrialEndISO: string) {
   await assertAdmin();
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
-  const currentStatus = existing.user?.user_metadata?.subscription_status as string | undefined;
-  const subId = existing.user?.user_metadata?.stripe_subscription_id as string | undefined;
+  const currentStatus = subscriptionStatus(existing.user);
+  const subId = stripeSubscriptionId(existing.user);
 
   // Push the new trial_end to Stripe first so it drives the schedule.
   // Otherwise Stripe charges the card on the original trial end date and
@@ -78,7 +98,7 @@ export async function extendTrial(userId: string, newTrialEndISO: string) {
     patch.subscription_status = "trialing";
     patch.is_subscribed = true;
   }
-  await patchUserMetadata(userId, patch);
+  await updateEntitlements(admin.auth.admin, userId, patch);
   revalidatePath("/admin");
 }
 
@@ -86,7 +106,7 @@ export async function compUser(userId: string, plan: "pro" | "max") {
   await assertAdmin();
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
-  const subId = existing.user?.user_metadata?.stripe_subscription_id as string | undefined;
+  const subId = stripeSubscriptionId(existing.user);
 
   // Cancel any live Stripe subscription so the user isn't double-billed
   // while we mark them as comped.
@@ -101,14 +121,14 @@ export async function compUser(userId: string, plan: "pro" | "max") {
   // Use a dedicated is_comped flag - never set is_beta_user, which would
   // route the user to STRIPE_BETA_PRICE_ID (lifetime discount) on any
   // future self-subscribe.
-  await patchUserMetadata(userId, {
+  await updateEntitlements(admin.auth.admin, userId, {
     subscription_status: "active",
     is_subscribed: true,
     subscription_plan: plan,
     is_comped: true,
-    stripe_subscription_id: null,
+    stripe_subscription_id: undefined,
     cancel_at_period_end: false,
-    subscription_end: null,
+    subscription_end: undefined,
   });
   revalidatePath("/admin");
 }
@@ -151,18 +171,18 @@ export async function linkStripeCustomer(userId: string, stripeCustomerId: strin
     );
 
   const subWithEnd = sub as (typeof sub) & { current_period_end?: number };
-  await patchUserMetadata(userId, {
+  await updateEntitlements(admin.auth.admin, userId, {
     stripe_customer_id: trimmed,
-    stripe_subscription_id: sub?.id ?? null,
+    stripe_subscription_id: sub?.id ?? undefined,
     subscription_status: sub?.status ?? "active",
-    subscription_plan: plan,
+    subscription_plan: plan ?? undefined,
     is_subscribed: sub ? ["active", "trialing"].includes(sub.status) : true,
-    trial_end: sub?.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+    trial_end: sub?.trial_end ? new Date(sub.trial_end * 1000).toISOString() : undefined,
     cancel_at_period_end: !!sub?.cancel_at_period_end,
     subscription_end:
       sub?.cancel_at_period_end && subWithEnd.current_period_end
         ? new Date(subWithEnd.current_period_end * 1000).toISOString()
-        : null,
+        : undefined,
   });
 
   revalidatePath("/admin");
@@ -177,7 +197,7 @@ export async function cancelAtPeriodEnd(userId: string) {
   await assertAdmin();
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
-  const subId = existing.user?.user_metadata?.stripe_subscription_id as string | undefined;
+  const subId = stripeSubscriptionId(existing.user);
   if (!subId) throw new Error("User has no Stripe subscription");
 
   await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
@@ -191,7 +211,7 @@ export async function refundLastInvoice(userId: string, amountCents: number) {
   }
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
-  const customerId = existing.user?.user_metadata?.stripe_customer_id as string | undefined;
+  const customerId = stripeCustomerId(existing.user);
   if (!customerId) throw new Error("User has no Stripe customer");
 
   const intents = await stripe.paymentIntents.list({ customer: customerId, limit: 5 });
@@ -215,7 +235,7 @@ export async function updateUserProfile(
   if (typeof fields.display_name === "string") patch.display_name = fields.display_name;
   if (typeof fields.business_name === "string") patch.business_name = fields.business_name;
   if (Object.keys(patch).length === 0) return;
-  await patchUserMetadata(userId, patch);
+  await patchUserDisplay(userId, patch);
   revalidatePath("/admin");
 }
 
@@ -240,8 +260,8 @@ export async function deleteUser(userId: string) {
 
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
-  const customerId = existing.user?.user_metadata?.stripe_customer_id as string | undefined;
-  const subId = existing.user?.user_metadata?.stripe_subscription_id as string | undefined;
+  const customerId = stripeCustomerId(existing.user);
+  const subId = stripeSubscriptionId(existing.user);
 
   // Stop billing in Stripe before tearing down the auth user. Cascade on
   // stripe_customers FK will remove our lookup row, so any later webhooks

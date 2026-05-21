@@ -115,7 +115,7 @@ export default function PaymentsPage() {
   useEffect(() => {
     let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled) setContractsEnabled(hasContractsAccess(data.user?.user_metadata));
+      if (!cancelled) setContractsEnabled(hasContractsAccess(data.user));
     });
     return () => { cancelled = true };
   }, [supabase]);

@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
+
+import { stripeConnectAccountId, stripeConnectEnabled } from '@/lib/auth/entitlements'
 import { stripe } from '@/lib/payments/stripe'
 
 export async function POST(request: NextRequest) {
@@ -51,8 +53,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'MC account not found' }, { status: 500 })
   }
 
-  const connectedAccountId = user.user_metadata?.stripe_connect_account_id
-  if (!connectedAccountId || !user.user_metadata?.stripe_connect_enabled) {
+  // Reading Connect identity via the helper guarantees the user can't
+  // self-set stripe_connect_account_id in user_metadata to redirect
+  // their clients' payments to another account (§7.4 / Phase 0.8b).
+  const connectedAccountId = stripeConnectAccountId(user)
+  if (!connectedAccountId || !stripeConnectEnabled(user)) {
     return NextResponse.json({ error: 'Stripe not connected' }, { status: 400 })
   }
 

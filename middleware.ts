@@ -1,5 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+
+import { isAdmin, subscriptionStatus } from "@/lib/auth/entitlements";
 import type { Database } from "@/types/database";
 
 const PUBLIC_ROUTES = [
@@ -87,9 +89,11 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Gate /admin to admins only
+  // Gate /admin to admins only — read via the entitlements helper so
+  // app_metadata is authoritative (user can't self-elevate via the
+  // user-writable user_metadata; §7.4 / Phase 0.8b).
   if (user && pathname.startsWith("/admin")) {
-    if (user.user_metadata?.account_type !== "admin") {
+    if (!isAdmin(user)) {
       return withCookies(
         response,
         NextResponse.redirect(new URL("/", request.url))
@@ -112,9 +116,10 @@ export async function middleware(request: NextRequest) {
     // Starter (free) is a real long-term state. Everyone gets in except
     // users with a failed recurring charge — they need to update their
     // payment method. Feature limits (e.g. 5-couple cap on Starter) are
-    // enforced at the data layer, not here.
-    const subscriptionStatus = (user.user_metadata || {}).subscription_status;
-    if (subscriptionStatus === "past_due") {
+    // enforced at the data layer, not here. The entitlements helper
+    // ignores user-writable user_metadata for migrated users — no self-
+    // bypass via auth.updateUser({ data: { subscription_status: 'active' } }).
+    if (subscriptionStatus(user) === "past_due") {
       return withCookies(
         response,
         NextResponse.redirect(new URL("/settings?tab=billing", request.url))

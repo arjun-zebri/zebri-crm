@@ -1,23 +1,16 @@
-export type PlanId = 'starter' | 'pro' | 'max'
-
-export interface SubscriptionMeta {
-  subscription_status?: string
-  subscription_plan?: string
-}
-
-function isActive(meta: SubscriptionMeta | null | undefined): boolean {
-  if (!meta) return false
-  return meta.subscription_status === 'trialing' || meta.subscription_status === 'active'
-}
-
-export function currentPlan(meta: SubscriptionMeta | null | undefined): PlanId {
-  if (!isActive(meta)) return 'starter'
-  const p = meta?.subscription_plan
-  if (p === 'pro' || p === 'max') return p
-  return 'starter'
-}
-
-export function hasContractsAccess(meta: SubscriptionMeta | null | undefined): boolean {
-  const plan = currentPlan(meta)
-  return plan === 'pro' || plan === 'max'
-}
+/**
+ * Subscription-plan checks — thin re-export of the canonical
+ * entitlements helper (Phase 0.8b moved the source of truth to
+ * `@/lib/auth/entitlements` so every entitlement read goes through
+ * one app_metadata-authoritative helper).
+ *
+ * **Caller change:** these functions now take the FULL user object
+ * (or any shape with `app_metadata` / `user_metadata`), NOT
+ * `user.user_metadata` alone. Passing `user_metadata` directly was
+ * the §7.4 escalation hole — `app_metadata` must be visible to the
+ * checker.
+ *
+ * @module lib/payments/subscription
+ */
+export { currentPlan, hasContractsAccess } from '@/lib/auth/entitlements';
+export type { PlanId, EntitlementSource as SubscriptionMeta } from '@/lib/auth/entitlements';
