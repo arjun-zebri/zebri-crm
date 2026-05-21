@@ -3,8 +3,9 @@
  *
  * Compact, low-chrome list view of past Stripe invoices, fetched
  * once from `/api/stripe/billing-history`. Renders nothing when
- * there are no invoices to show; the loading state uses the shared
- * `<Loading />` primitive.
+ * there are no invoices to show; the loading state shows skeleton
+ * rows that mirror the final layout, so there's no jump when data
+ * arrives.
  *
  * @module app/(dashboard)/settings/billing/billing-history
  */
@@ -12,8 +13,6 @@
 
 import { Download, ExternalLink } from 'lucide-react';
 import { useEffect, useState } from 'react';
-
-import { Loading } from '@/components/ui/loading';
 
 import { formatUnixDate } from './plans';
 
@@ -80,7 +79,7 @@ export function BillingHistory() {
   }, []);
 
   if (loading) {
-    return <Loading label="Loading billing history…" />;
+    return <BillingHistorySkeleton />;
   }
 
   if (error || !invoices) return null;
@@ -136,6 +135,32 @@ export function BillingHistory() {
           .
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Skeleton state — mirrors the final row layout (date · amount ·
+ * status · view/pdf links) plus a "next charge" line so the
+ * transition to real data doesn't jump.
+ */
+function BillingHistorySkeleton() {
+  return (
+    <div className="animate-pulse">
+      <ul className="divide-y divide-border/60">
+        {[0, 1, 2].map((i) => (
+          <li key={i} className="flex items-center gap-4 py-3">
+            <span className="h-3 w-24 shrink-0 rounded bg-surface-muted" />
+            <span className="h-3 w-16 shrink-0 rounded bg-surface-muted" />
+            <span className="h-3 flex-1 max-w-[6rem] rounded bg-surface-muted" />
+            <span className="flex shrink-0 items-center gap-4">
+              <span className="h-3 w-10 rounded bg-surface-muted" />
+              <span className="h-3 w-8 rounded bg-surface-muted" />
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 h-3 w-64 rounded bg-surface-muted" />
     </div>
   );
 }

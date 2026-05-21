@@ -18,10 +18,14 @@
  */
 'use server';
 
+import { z } from 'zod';
+
 import { stripeCustomerId, stripeSubscriptionId, updateEntitlements } from '@/lib/auth/entitlements';
 import { stripe } from '@/lib/payments/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+
+const planSchema = z.enum(['pro', 'max']);
 
 export interface BillingActionResult {
   ok?: true;
@@ -50,6 +54,12 @@ function priceFor(plan: 'pro' | 'max'): string | undefined {
 export async function createPlanChangeSessionAction(
   plan: 'pro' | 'max',
 ): Promise<BillingRedirectResult> {
+  // Runtime validation: server actions can be called with arbitrary
+  // shapes (TypeScript narrowing is compile-time only). Reject any
+  // value outside the literal enum.
+  const parsedPlan = planSchema.safeParse(plan);
+  if (!parsedPlan.success) return { error: 'Invalid plan.' };
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -61,7 +71,7 @@ export async function createPlanChangeSessionAction(
   const subId = stripeSubscriptionId(user);
   if (!subId) return { error: 'No active subscription to switch.' };
 
-  const targetPrice = priceFor(plan);
+  const targetPrice = priceFor(parsedPlan.data);
   if (!targetPrice) return { error: 'Plan not configured.' };
 
   try {
@@ -69,7 +79,7 @@ export async function createPlanChangeSessionAction(
     const currentItem = subscription.items.data[0];
     if (!currentItem) return { error: 'Subscription has no items.' };
     if (currentItem.price.id === targetPrice) {
-      return { error: `You're already on the ${plan === 'max' ? 'Max' : 'Pro'} plan.` };
+      return { error: `You're already on the ${parsedPlan.data === 'max' ? 'Max' : 'Pro'} plan.` };
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -117,9 +127,15 @@ export async function cancelSubscriptionAction(): Promise<BillingActionResult> {
       cancel_at_period_end: true,
     });
 
-    // Periods-end can occasionally land in slightly different shapes
-    // depending on the Stripe API version; coerce to ISO if present.
-    const periodEnd = (updated as unknown as { current_period_end?: number }).current_period_end;
+    // `current_period_end` is on the SubscriptionItem in current
+    // Stripe API versions (it used to be a top-level field on the
+    // Subscription itself). Read from the first item with a
+    // fallback to the top-level field for older API versions; the
+    // cast is the cheapest cross-version read.
+    type WithPeriodEnd = { current_period_end?: number };
+    const firstItem = updated.items.data[0] as unknown as WithPeriodEnd | undefined;
+    const periodEnd =
+      firstItem?.current_period_end ?? (updated as unknown as WithPeriodEnd).current_period_end;
     const subscriptionEnd = periodEnd ? new Date(periodEnd * 1000).toISOString() : undefined;
 
     const admin = createAdminClient();

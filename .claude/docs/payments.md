@@ -115,8 +115,65 @@ Creates a Stripe Checkout Session.
 Creates a Stripe Customer Portal session.
 
 - Requires authenticated user
-- Looks up `stripe_customer_id` from `user_metadata`
+- Looks up `stripe_customer_id` from `app_metadata`
 - Returns `{ url: string }`
+
+### Plans & Billing tab server actions (Phase 1)
+
+In addition to the legacy `/api/stripe/*` routes, the Plans &
+Billing tab uses server actions in
+`app/(dashboard)/settings/billing/actions.ts`:
+
+- **`createPlanChangeSessionAction(plan)`** — builds a Stripe
+  Customer Portal session deep-linked to the
+  `subscription_update_confirm` flow. Returns `{ url }` for the
+  client to redirect to. Stripe shows the user a confirmation page
+  with the prorated amount, the user accepts, and Stripe redirects
+  back to `/settings?tab=billing&change=success`. Used by the
+  "Switch to Pro" / "Switch to Max" buttons in the comparison
+  modal.
+- **`cancelSubscriptionAction()`** — calls
+  `stripe.subscriptions.update(... cancel_at_period_end: true)`
+  and writes both `cancel_at_period_end: true` and
+  `subscription_end` to `app_metadata` synchronously from the
+  Stripe response (so the UI shows the end date immediately,
+  without waiting on the webhook).
+- **`resumeSubscriptionAction()`** — symmetric: clears
+  `cancel_at_period_end` and `subscription_end` in `app_metadata`.
+- **`paymentMethodPortalAction()`** — Stripe Portal session
+  deep-linked to `flow_data.type: 'payment_method_update'` for
+  managing the card on Stripe's PCI surface.
+
+## Stripe Dashboard configuration (REQUIRED for plan changes)
+
+The `subscription_update_confirm` flow used by
+`createPlanChangeSessionAction` requires explicit configuration in
+the Stripe Customer Portal settings — without it, Stripe returns
+`This subscription cannot be updated because the subscription
+update feature in the portal configuration is disabled.`
+
+Both **test** and **live** modes have independent portal configs:
+
+- Test: https://dashboard.stripe.com/test/settings/billing/portal
+- Live: https://dashboard.stripe.com/settings/billing/portal
+
+### Required settings
+
+| Section | Setting | Value |
+|---|---|---|
+| Features → Subscriptions | "Customers can switch plans" | **enabled** |
+| Features → Subscriptions | Products list | Pro + Max (add both, with their respective monthly prices) |
+| Features → Subscriptions | Proration | **"Create invoice items on next invoice"** — keeps the credit on the next renewal so downgrades don't generate a $0 credit invoice in billing history |
+| Features → Subscriptions | "Customers can cancel subscriptions" | enabled (the in-app cancel uses the API directly, but keeping this on is harmless) |
+| Features → Payment methods | "Customers can update their payment methods" | **enabled** (the "Update payment method" link uses the `payment_method_update` deep-link flow) |
+| Business information | All applicable fields | set (Stripe requires them before any portal session can be created) |
+
+After enabling: save the portal config, then test the "Switch to
+Max" / "Switch to Pro" buttons in `/settings?tab=billing` against
+a paying test user.
+
+When promoting to production, repeat the same configuration in
+live mode — there is no automatic copy.
 
 ### `POST /api/stripe/webhook`
 

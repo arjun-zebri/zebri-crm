@@ -193,17 +193,28 @@ export async function updateEntitlements(
   // `Record<string, unknown>` instead of `ServerManagedEntitlements` keeps
   // call sites ergonomic under `exactOptionalPropertyTypes` — explicit
   // `field: undefined` patches are common when clearing entitlement state
-  // (e.g. comping a user clears stripe_subscription_id). The
+  // (e.g. resuming a subscription clears `subscription_end`). The
   // {@link ServerManagedEntitlements} interface documents the canonical
   // shape; deliberate widening here so callers don't have to wrestle the
   // type system to clear a field.
+  //
+  // Clearing semantics: a patch entry with value `undefined` or `null`
+  // **deletes** the corresponding key from `app_metadata` rather than
+  // leaving the existing value in place. JSON serialisation strips
+  // `undefined` keys, so the naive `{ ...existing, ...patch }` merge
+  // wouldn't actually clear them — we explicitly delete here so callers
+  // can write `field: undefined` to mean "clear this field".
   patch: Record<string, unknown>,
 ): Promise<void> {
   const { data, error: getErr } = await admin.getUserById(userId);
   if (getErr) throw getErr;
   const existing = (data.user?.app_metadata ?? {}) as Record<string, unknown>;
+  const merged: Record<string, unknown> = { ...existing, ...patch };
+  for (const key of Object.keys(patch)) {
+    if (patch[key] === undefined || patch[key] === null) delete merged[key];
+  }
   const { error } = await admin.updateUserById(userId, {
-    app_metadata: { ...existing, ...patch },
+    app_metadata: merged,
   });
   if (error) throw error;
 }
