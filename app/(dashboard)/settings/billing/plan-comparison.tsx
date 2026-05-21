@@ -1,11 +1,14 @@
 /**
  * Plan comparison dialog — focused modal that opens from the
- * "Compare plans" link on the current-plan card.
+ * "Manage subscription" / "Compare plans" buttons.
  *
- * Compact 3-column feature table with the user's current column
- * highlighted. Switch-plan actions live in a row at the bottom as
- * quiet ghost buttons. Closing the modal returns to the calm main
- * flow.
+ * Compact 3-column feature table. Switch-plan actions call the
+ * `switchPlanAction` server action directly (no Stripe Portal
+ * round-trip); after success the parent triggers webhook-polling
+ * via `onAfterAction` and the modal closes.
+ *
+ * For users without an active subscription (Starter / expired),
+ * the switch buttons fall back to the Checkout flow.
  *
  * @module app/(dashboard)/settings/billing/plan-comparison
  */
@@ -18,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 
+import { switchPlanAction } from './actions';
 import { COMPARISON_ROWS, PLANS, type ComparisonCell, type PlanId } from './plans';
 
 export interface PlanComparisonDialogProps {
@@ -26,6 +30,9 @@ export interface PlanComparisonDialogProps {
   currentPlan: PlanId | null;
   isSubscribed: boolean;
   cancelAtPeriodEnd: boolean;
+  /** Called after a successful subscription change so the parent can
+   *  start polling for the webhook to land. */
+  onAfterAction: () => void;
 }
 
 export function PlanComparisonDialog({
@@ -34,30 +41,53 @@ export function PlanComparisonDialog({
   currentPlan,
   isSubscribed,
   cancelAtPeriodEnd,
+  onAfterAction,
 }: PlanComparisonDialogProps) {
   const { toast } = useToast();
-  const [redirecting, setRedirecting] = useState<PlanId | null>(null);
+  const [busy, setBusy] = useState<PlanId | null>(null);
 
   async function action(planId: PlanId) {
-    setRedirecting(planId);
+    if (planId === 'starter') {
+      // Starter is a downgrade from Pro/Max — cancel the paid sub at
+      // period end. Confirmation is handled by the parent (cancel
+      // confirm modal) so here we just hand back via onAfterAction
+      // after closing.
+      toast('Use the Cancel subscription option to downgrade to Starter.', 'error');
+      return;
+    }
+    setBusy(planId);
     try {
-      const path =
-        isSubscribed && !cancelAtPeriodEnd ? '/api/stripe/portal' : '/api/stripe/checkout';
-      const body =
-        isSubscribed && !cancelAtPeriodEnd ? undefined : JSON.stringify({ plan: planId });
-      const res = await fetch(path, {
+      if (isSubscribed && !cancelAtPeriodEnd) {
+        // Active subscriber — switch tier via Stripe API directly.
+        const result = await switchPlanAction(planId);
+        if (result.error) {
+          toast(result.error, 'error');
+          setBusy(null);
+          return;
+        }
+        toast('Plan switching — page will refresh shortly.');
+        onClose();
+        onAfterAction();
+        return;
+      }
+      // No active subscription (Starter / expired) OR scheduled
+      // cancellation — go through Checkout to set up the new
+      // subscription. Stripe will redirect back to /settings?tab=
+      // billing&checkout=success which triggers the activation poll.
+      const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
-        ...(body ? { headers: { 'Content-Type': 'application/json' }, body } : {}),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planId }),
       });
       const data = await res.json().catch(() => ({}));
       if (data.url) window.location.assign(data.url);
       else {
-        toast('Could not start that flow. Please try again.', 'error');
-        setRedirecting(null);
+        toast('Could not start checkout. Please try again.', 'error');
+        setBusy(null);
       }
     } catch {
       toast('Could not connect. Try again in a moment.', 'error');
-      setRedirecting(null);
+      setBusy(null);
     }
   }
 
@@ -135,16 +165,25 @@ export function PlanComparisonDialog({
                     </td>
                   );
                 }
-                const isStarter = plan.id === 'starter';
+                if (plan.id === 'starter') {
+                  // Downgrade to starter happens via the Cancel flow.
+                  return (
+                    <td key={plan.id} className="px-4 py-4 text-caption text-text-muted">
+                      <span>Use Cancel to downgrade</span>
+                    </td>
+                  );
+                }
                 return (
                   <td key={plan.id} className="px-4 py-4">
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => action(plan.id)}
-                      loading={redirecting === plan.id}
+                      loading={busy === plan.id}
                     >
-                      {isStarter ? 'Downgrade' : `Switch to ${plan.name}`}
+                      {isSubscribed && !cancelAtPeriodEnd
+                        ? `Switch to ${plan.name}`
+                        : `Subscribe to ${plan.name}`}
                     </Button>
                   </td>
                 );

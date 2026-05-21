@@ -42,23 +42,38 @@ export function BillingSection(props: BillingSectionProps) {
   const [compareOpen, setCompareOpen] = useState(false);
   const [activation, setActivation] = useState<ActivationState>('idle');
   const [refreshing, setRefreshing] = useState(false);
+  // A monotonic counter that ticks every time the user takes a
+  // subscription action (cancel / resume / switch plan). It joins
+  // `justSubscribed` as a trigger for the post-action polling so any
+  // webhook-bound change re-runs the same wait-and-reload flow.
+  const [actionTick, setActionTick] = useState(0);
+  const pollingTrigger = justSubscribed || actionTick > 0;
 
-  // Stripe webhook updates `app_metadata` asynchronously after checkout
-  // completes. Poll refreshSession() + getUser() until the refreshed
-  // JWT carries `is_subscribed: true`, then do a full reload so the
-  // parent settings page re-fetches user data with the new metadata.
+  // Stripe webhook updates `app_metadata` asynchronously after a
+  // subscription change. Poll refreshSession() + getUser() until the
+  // refreshed JWT reflects the new state, then do a full reload so
+  // the parent settings page re-fetches user data.
   //
   // Polling for 60s gives the webhook a generous window. After that
   // we surface a manual "Refresh" button — the most common failure in
   // local dev is "I forgot to start `stripe listen`", and the user
   // needs an out that doesn't require closing the tab.
   useEffect(() => {
-    if (!justSubscribed) return;
-    if (props.isSubscribed) {
+    if (!pollingTrigger) return;
+    if (justSubscribed && props.isSubscribed) {
       router.replace('/settings?tab=billing');
       return;
     }
     setActivation('polling');
+    // Snapshot the metadata at the moment polling starts. The webhook
+    // will alter at least one of these fields; once we observe a
+    // change we reload.
+    const snapshot = {
+      subscription_status: props.status ?? '',
+      subscription_plan: props.subscriptionPlan ?? '',
+      cancel_at_period_end: props.cancelAtPeriodEnd ? '1' : '0',
+      is_subscribed: props.isSubscribed ? '1' : '0',
+    };
     const supabase = createClient();
     let cancelled = false;
     const start = Date.now();
@@ -78,20 +93,35 @@ export function BillingSection(props: BillingSectionProps) {
         const meta = (user?.app_metadata ?? {}) as {
           is_subscribed?: boolean;
           subscription_status?: string;
+          subscription_plan?: string;
+          cancel_at_period_end?: boolean;
         };
-        const nowSubscribed =
+        const subscriptionLanded =
           meta.is_subscribed === true ||
           meta.subscription_status === 'active' ||
           meta.subscription_status === 'trialing';
+        // For checkout completion we wait for active/subscribed. For
+        // post-action polling (cancel/resume/switch) we just wait for
+        // ANY observable change from the snapshot — webhook updates
+        // arrive together so seeing one field flip means the others
+        // are fresh too.
+        const changed =
+          (meta.subscription_status ?? '') !== snapshot.subscription_status ||
+          (meta.subscription_plan ?? '') !== snapshot.subscription_plan ||
+          (meta.cancel_at_period_end ? '1' : '0') !== snapshot.cancel_at_period_end ||
+          (meta.is_subscribed ? '1' : '0') !== snapshot.is_subscribed;
+        const done = justSubscribed ? subscriptionLanded : changed;
         console.warn('[billing] activation poll', {
           attempt,
           elapsedMs: Date.now() - start,
           subscription_status: meta.subscription_status,
+          subscription_plan: meta.subscription_plan,
           is_subscribed: meta.is_subscribed,
-          nowSubscribed,
+          cancel_at_period_end: meta.cancel_at_period_end,
+          done,
         });
         if (cancelled) return;
-        if (nowSubscribed) {
+        if (done) {
           window.location.assign('/settings?tab=billing');
           return;
         }
@@ -109,7 +139,12 @@ export function BillingSection(props: BillingSectionProps) {
     return () => {
       cancelled = true;
     };
-  }, [justSubscribed, props.isSubscribed, router]);
+    // We deliberately don't include the prop fields in the dep array —
+    // they're captured into `snapshot` once when polling starts, and
+    // we want to keep polling against that snapshot until something
+    // changes (or we time out).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pollingTrigger, actionTick]);
 
   async function manualRefresh() {
     setRefreshing(true);
@@ -131,7 +166,7 @@ export function BillingSection(props: BillingSectionProps) {
 
   return (
     <div className="max-w-3xl space-y-12">
-      {justSubscribed && !props.isSubscribed ? (
+      {pollingTrigger && activation !== 'idle' ? (
         <ActivationBanner
           activation={activation}
           refreshing={refreshing}
@@ -140,7 +175,11 @@ export function BillingSection(props: BillingSectionProps) {
       ) : null}
 
       <Section label="Plan">
-        <CurrentPlanCard {...props} onCompare={() => setCompareOpen(true)} />
+        <CurrentPlanCard
+          {...props}
+          onManagePlan={() => setCompareOpen(true)}
+          onAfterAction={() => setActionTick((t) => t + 1)}
+        />
       </Section>
 
       {props.hasStripeCustomer ? (
@@ -155,6 +194,7 @@ export function BillingSection(props: BillingSectionProps) {
         currentPlan={currentPlanForComparison}
         isSubscribed={props.isSubscribed}
         cancelAtPeriodEnd={props.cancelAtPeriodEnd}
+        onAfterAction={() => setActionTick((t) => t + 1)}
       />
     </div>
   );

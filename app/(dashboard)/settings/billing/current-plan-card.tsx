@@ -2,21 +2,30 @@
  * Current-plan surface — no outer border, document-style layout.
  *
  * Big confident header (plan name + price). Status indicator with a
- * coloured dot. "What's included" grid as supporting info. One
- * primary CTA + two text links (Compare plans · Cancel/Resubscribe).
+ * coloured dot. "What's included" grid as supporting info. Primary
+ * action opens the plan-comparison modal (no Stripe portal trip);
+ * cancel goes through an app-side confirmation modal; resubscribe
+ * is a one-click server action.
+ *
  * Starter users see a prominent usage indicator.
  *
  * @module app/(dashboard)/settings/billing/current-plan-card
  */
 'use client';
 
-import { AlertCircle, ArrowRight, Check } from 'lucide-react';
+import { AlertCircle, Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 
+import {
+  cancelSubscriptionAction,
+  paymentMethodPortalAction,
+  resumeSubscriptionAction,
+} from './actions';
 import { formatDate, planById, PLAN_HIGHLIGHTS, type PlanId } from './plans';
 
 export interface CurrentPlanCardProps {
@@ -28,8 +37,11 @@ export interface CurrentPlanCardProps {
   cancelAtPeriodEnd: boolean;
   isSubscribed: boolean;
   isComped: boolean;
-  /** Opens the plan-comparison modal. */
-  onCompare: () => void;
+  /** Open the plan-comparison modal. */
+  onManagePlan: () => void;
+  /** Trigger the post-action polling banner (used after cancel /
+   *  resume / switch flows so the page reloads when the webhook lands). */
+  onAfterAction: () => void;
 }
 
 type CardState =
@@ -51,7 +63,10 @@ function classify(p: CurrentPlanCardProps): CardState {
 
 export function CurrentPlanCard(props: CurrentPlanCardProps) {
   const { toast } = useToast();
-  const [redirecting, setRedirecting] = useState<'portal' | PlanId | null>(null);
+  const [busy, setBusy] = useState<
+    'subscribe' | 'cancel' | 'resume' | 'payment_method' | null
+  >(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const state = classify(props);
 
   const planId: PlanId =
@@ -60,24 +75,8 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
       : (props.subscriptionPlan as PlanId) ?? 'pro';
   const plan = planById(planId);
 
-  async function openPortal() {
-    setRedirecting('portal');
-    try {
-      const res = await fetch('/api/stripe/portal', { method: 'POST' });
-      const data = await res.json();
-      if (data.url) window.location.assign(data.url);
-      else {
-        toast('Billing portal unavailable. Try again or contact support.', 'error');
-        setRedirecting(null);
-      }
-    } catch {
-      toast('Could not connect to billing. Check your connection and try again.', 'error');
-      setRedirecting(null);
-    }
-  }
-
   async function subscribe(planChoice: PlanId) {
-    setRedirecting(planChoice);
+    setBusy('subscribe');
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
@@ -88,17 +87,52 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
       if (data.url) window.location.assign(data.url);
       else {
         toast('Could not start checkout. Please try again.', 'error');
-        setRedirecting(null);
+        setBusy(null);
       }
     } catch {
       toast('Could not start checkout. Please try again.', 'error');
-      setRedirecting(null);
+      setBusy(null);
     }
+  }
+
+  async function openPaymentMethodPortal() {
+    setBusy('payment_method');
+    const result = await paymentMethodPortalAction();
+    if (result.url) window.location.assign(result.url);
+    else {
+      toast(result.error ?? 'Could not open billing portal.', 'error');
+      setBusy(null);
+    }
+  }
+
+  async function confirmCancel() {
+    setBusy('cancel');
+    const result = await cancelSubscriptionAction();
+    if (result.error) {
+      toast(result.error, 'error');
+      setBusy(null);
+      return;
+    }
+    toast('Cancellation scheduled — page will refresh shortly.');
+    setShowCancelConfirm(false);
+    props.onAfterAction();
+  }
+
+  async function resume() {
+    setBusy('resume');
+    const result = await resumeSubscriptionAction();
+    if (result.error) {
+      toast(result.error, 'error');
+      setBusy(null);
+      return;
+    }
+    toast('Subscription resumed — page will refresh shortly.');
+    props.onAfterAction();
   }
 
   return (
     <div>
-      {/* Header — plan name + price, big and confident */}
+      {/* Header — plan name + price */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-section font-semibold text-text">{plan.name}</h2>
@@ -120,7 +154,7 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
       {state === 'past_due' ? (
         <div className="mt-6 inline-flex items-center gap-2 rounded-card border border-danger/40 bg-danger/5 px-3 py-2 text-body text-danger">
           <AlertCircle size={14} strokeWidth={1.5} />
-          Update your payment method in the billing portal to restore access.
+          Update your payment method to restore access.
         </div>
       ) : null}
 
@@ -140,37 +174,52 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
       </div>
 
       {/* Starter usage */}
-      {state === 'starter' ? <StarterUsage onUpgrade={() => subscribe('pro')} redirecting={redirecting === 'pro'} /> : null}
+      {state === 'starter' ? (
+        <StarterUsage onUpgrade={() => subscribe('pro')} redirecting={busy === 'subscribe'} />
+      ) : null}
 
       {/* Actions */}
       {state === 'comped' ? null : (
         <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
           <PrimaryAction
             state={state}
-            redirecting={redirecting}
-            onPortal={openPortal}
+            busy={busy}
+            onManagePlan={props.onManagePlan}
             onSubscribe={() => subscribe('pro')}
+            onResume={resume}
+            onUpdatePayment={openPaymentMethodPortal}
           />
-          <button
-            type="button"
-            onClick={props.onCompare}
-            className="inline-flex items-center gap-1 text-body text-text-muted hover:text-text"
-          >
-            Compare plans
-            <ArrowRight size={14} strokeWidth={1.5} />
-          </button>
-          {state === 'active' || state === 'cancelling_in_grace' ? (
-            <button
-              type="button"
-              onClick={openPortal}
-              className="text-body text-text-muted hover:text-danger"
-              disabled={redirecting !== null}
-            >
-              {state === 'cancelling_in_grace' ? 'Resubscribe' : 'Cancel subscription'}
-            </button>
+          {/* Secondary text links */}
+          {state === 'active' ? (
+            <>
+              <button
+                type="button"
+                onClick={openPaymentMethodPortal}
+                className="text-body text-text-muted hover:text-text disabled:opacity-50"
+                disabled={busy !== null}
+              >
+                Update payment method
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCancelConfirm(true)}
+                className="text-body text-text-muted hover:text-danger disabled:opacity-50"
+                disabled={busy !== null}
+              >
+                Cancel subscription
+              </button>
+            </>
           ) : null}
         </div>
       )}
+
+      <CancelConfirmModal
+        open={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={confirmCancel}
+        busy={busy === 'cancel'}
+        subscriptionEnd={props.subscriptionEnd}
+      />
     </div>
   );
 }
@@ -228,36 +277,100 @@ function StatusLine({
 
 /* ────────────────────────────────────────────────────────────── */
 
+type BusyKey = 'subscribe' | 'cancel' | 'resume' | 'payment_method' | null;
+
 function PrimaryAction({
   state,
-  redirecting,
-  onPortal,
+  busy,
+  onManagePlan,
   onSubscribe,
+  onResume,
+  onUpdatePayment,
 }: {
   state: CardState;
-  redirecting: 'portal' | PlanId | null;
-  onPortal: () => void;
+  busy: BusyKey;
+  onManagePlan: () => void;
   onSubscribe: () => void;
+  onResume: () => void;
+  onUpdatePayment: () => void;
 }) {
   switch (state) {
     case 'starter':
     case 'expired':
       return (
-        <Button onClick={onSubscribe} loading={redirecting === 'pro'}>
+        <Button onClick={onSubscribe} loading={busy === 'subscribe'}>
           Upgrade to Pro
         </Button>
       );
     case 'active':
-    case 'past_due':
+      return (
+        <Button onClick={onManagePlan} disabled={busy !== null}>
+          Manage subscription
+        </Button>
+      );
     case 'cancelling_in_grace':
       return (
-        <Button onClick={onPortal} loading={redirecting === 'portal'}>
-          {state === 'past_due' ? 'Update payment' : 'Manage subscription'}
+        <Button onClick={onResume} loading={busy === 'resume'}>
+          Resubscribe
+        </Button>
+      );
+    case 'past_due':
+      return (
+        <Button onClick={onUpdatePayment} loading={busy === 'payment_method'}>
+          Update payment
         </Button>
       );
     case 'comped':
       return null;
   }
+}
+
+/* ────────────────────────────────────────────────────────────── */
+
+function CancelConfirmModal({
+  open,
+  onClose,
+  onConfirm,
+  busy,
+  subscriptionEnd,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  busy: boolean;
+  subscriptionEnd: string | null;
+}) {
+  return (
+    <Modal
+      isOpen={open}
+      onClose={onClose}
+      title="Cancel subscription?"
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <Button variant="ghost" type="button" onClick={onClose} disabled={busy}>
+            Keep subscription
+          </Button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="inline-flex h-9 cursor-pointer items-center justify-center rounded-control bg-danger px-4 text-body font-medium text-text-inverse transition-colors hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {busy ? 'Cancelling…' : 'Yes, cancel'}
+          </button>
+        </div>
+      }
+    >
+      <p className="text-body text-text">
+        You&apos;ll keep access to Pro features
+        {subscriptionEnd ? <> until <strong>{formatDate(subscriptionEnd)}</strong></> : ' until the end of your current billing period'},
+        then drop to the free Starter plan.
+      </p>
+      <p className="mt-3 text-caption text-text-muted">
+        You can resubscribe any time before then to undo the cancellation.
+      </p>
+    </Modal>
+  );
 }
 
 /* ────────────────────────────────────────────────────────────── */
