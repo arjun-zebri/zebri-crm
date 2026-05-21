@@ -1,19 +1,20 @@
 /**
  * Current-plan surface — no outer border, document-style layout.
  *
- * Big confident header (plan name + price). Status indicator with a
- * coloured dot. "What's included" grid as supporting info. Primary
- * action opens the plan-comparison modal (no Stripe portal trip);
- * cancel goes through an app-side confirmation modal; resubscribe
- * is a one-click server action.
- *
- * Starter users see a prominent usage indicator.
+ * Refined header: plan name on the left, inline price on the right.
+ * Confident state pill below the name (green for active, amber for
+ * cancelling, red for past-due, muted for starter/expired). Inline
+ * meta line carrying renewal date + "Joined {date}" for warmth.
+ * Prose feature summary replaces the previous heavier two-column
+ * checklist. Actions row: primary "Change plan" / "Upgrade" / etc.
+ * on the left, "Update payment method" in the middle, "Cancel
+ * subscription" pushed to the right.
  *
  * @module app/(dashboard)/settings/billing/current-plan-card
  */
 'use client';
 
-import { AlertCircle, Check } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,7 @@ import {
   paymentMethodPortalAction,
   resumeSubscriptionAction,
 } from './actions';
-import { formatDate, planById, PLAN_HIGHLIGHTS, type PlanId } from './plans';
+import { formatDate, planById, PLAN_SUMMARY, type PlanId } from './plans';
 
 export interface CurrentPlanCardProps {
   status: string | null;
@@ -37,6 +38,7 @@ export interface CurrentPlanCardProps {
   cancelAtPeriodEnd: boolean;
   isSubscribed: boolean;
   isComped: boolean;
+  userCreatedAt: string | null;
   /** Open the plan-comparison modal. */
   onManagePlan: () => void;
   /** Trigger the post-action polling banner (used after cancel /
@@ -132,20 +134,27 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
 
   return (
     <div>
-      {/* Header — plan name + price */}
+      {/* Header — plan name + inline price */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-section font-semibold text-text">{plan.name}</h2>
-          <StatusLine state={state} subscriptionEnd={props.subscriptionEnd} />
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-body text-text-muted">
+            <StatePill state={state} />
+            <MetaLine
+              state={state}
+              subscriptionEnd={props.subscriptionEnd}
+              userCreatedAt={props.userCreatedAt}
+            />
+          </div>
         </div>
-        <div className="text-right">
+        <div className="shrink-0 text-section font-semibold text-text">
           {plan.price ? (
             <>
-              <div className="text-section font-semibold text-text">{plan.price}</div>
-              <div className="text-caption text-text-muted">per month</div>
+              {plan.price}
+              <span className="text-body font-normal text-text-muted"> /mo</span>
             </>
           ) : (
-            <div className="text-section font-semibold text-text">Free</div>
+            'Free'
           )}
         </div>
       </div>
@@ -158,20 +167,8 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
         </div>
       ) : null}
 
-      {/* What's included */}
-      <div className="mt-8">
-        <h4 className="mb-3 text-caption font-medium uppercase tracking-wide text-text-muted">
-          Includes
-        </h4>
-        <ul className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
-          {PLAN_HIGHLIGHTS[planId].map((h) => (
-            <li key={h} className="flex items-start gap-2 text-body text-text">
-              <Check size={14} strokeWidth={1.5} className="mt-1 shrink-0 text-text-subtle" />
-              {h}
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Prose feature summary — replaces the previous 2-col checklist */}
+      <p className="mt-6 max-w-2xl text-body text-text-muted">{PLAN_SUMMARY[planId]}</p>
 
       {/* Starter usage */}
       {state === 'starter' ? (
@@ -189,26 +186,25 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
             onResume={resume}
             onUpdatePayment={openPaymentMethodPortal}
           />
-          {/* Secondary text links */}
+          {state === 'active' || state === 'cancelling_in_grace' ? (
+            <button
+              type="button"
+              onClick={openPaymentMethodPortal}
+              className="text-body text-text-muted hover:text-text disabled:opacity-50"
+              disabled={busy !== null}
+            >
+              Update payment method
+            </button>
+          ) : null}
           {state === 'active' ? (
-            <>
-              <button
-                type="button"
-                onClick={openPaymentMethodPortal}
-                className="text-body text-text-muted hover:text-text disabled:opacity-50"
-                disabled={busy !== null}
-              >
-                Update payment method
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCancelConfirm(true)}
-                className="text-body text-text-muted hover:text-danger disabled:opacity-50"
-                disabled={busy !== null}
-              >
-                Cancel subscription
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => setShowCancelConfirm(true)}
+              className="text-body text-text-muted hover:text-danger disabled:opacity-50 sm:ml-auto"
+              disabled={busy !== null}
+            >
+              Cancel subscription
+            </button>
           ) : null}
         </div>
       )}
@@ -226,53 +222,48 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
 
 /* ────────────────────────────────────────────────────────────── */
 
-function StatusLine({
+function StatePill({ state }: { state: CardState }) {
+  const config: Record<CardState, { label: string; tone: string }> = {
+    starter: { label: 'Free plan', tone: 'bg-surface-muted text-text-muted' },
+    active: { label: 'Active', tone: 'bg-success/10 text-success' },
+    cancelling_in_grace: { label: 'Cancelling', tone: 'bg-warning/10 text-warning' },
+    past_due: { label: 'Payment failed', tone: 'bg-danger/10 text-danger' },
+    expired: { label: 'Ended', tone: 'bg-surface-muted text-text-muted' },
+    comped: { label: 'Comped', tone: 'bg-success/10 text-success' },
+  };
+  const cfg = config[state];
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-pill px-2 py-0.5 text-caption font-medium ${cfg.tone}`}
+    >
+      {state === 'active' || state === 'comped' ? (
+        <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
+      ) : null}
+      {cfg.label}
+    </span>
+  );
+}
+
+function MetaLine({
   state,
   subscriptionEnd,
+  userCreatedAt,
 }: {
   state: CardState;
   subscriptionEnd: string | null;
+  userCreatedAt: string | null;
 }) {
-  const tone =
-    state === 'past_due'
-      ? 'danger'
-      : state === 'cancelling_in_grace'
-        ? 'warning'
-        : state === 'starter' || state === 'expired'
-          ? 'muted'
-          : 'success';
-  const dotClass = {
-    success: 'bg-success',
-    warning: 'bg-warning',
-    danger: 'bg-danger',
-    muted: 'bg-text-subtle',
-  }[tone];
-
-  const text = (() => {
-    switch (state) {
-      case 'starter':
-        return 'Free plan';
-      case 'active':
-        return subscriptionEnd ? `Active · Renews ${formatDate(subscriptionEnd)}` : 'Active';
-      case 'cancelling_in_grace':
-        return subscriptionEnd
-          ? `Subscription cancelled · access until ${formatDate(subscriptionEnd)}`
-          : 'Subscription cancelled · access until end of period';
-      case 'past_due':
-        return 'Payment failed';
-      case 'expired':
-        return 'Subscription ended';
-      case 'comped':
-        return 'Comped account';
-    }
-  })();
-
-  return (
-    <div className="mt-1 flex items-center gap-2 text-body text-text-muted">
-      <span className={`inline-block h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
-      {text}
-    </div>
-  );
+  const parts: string[] = [];
+  if (state === 'active' && subscriptionEnd) {
+    parts.push(`Renews ${formatDate(subscriptionEnd)}`);
+  } else if (state === 'cancelling_in_grace' && subscriptionEnd) {
+    parts.push(`Access until ${formatDate(subscriptionEnd)}`);
+  } else if (state === 'expired' && subscriptionEnd) {
+    parts.push(`Ended ${formatDate(subscriptionEnd)}`);
+  }
+  if (userCreatedAt) parts.push(`Joined ${formatDate(userCreatedAt)}`);
+  if (parts.length === 0) return null;
+  return <span className="text-caption text-text-muted">{parts.join(' · ')}</span>;
 }
 
 /* ────────────────────────────────────────────────────────────── */
@@ -305,7 +296,7 @@ function PrimaryAction({
     case 'active':
       return (
         <Button onClick={onManagePlan} disabled={busy !== null}>
-          Manage subscription
+          Change plan
         </Button>
       );
     case 'cancelling_in_grace':
@@ -398,7 +389,7 @@ function StarterUsage({ onUpgrade, redirecting }: { onUpgrade: () => void; redir
   const pct = Math.min(100, (count / 5) * 100);
 
   return (
-    <div className="mt-8">
+    <div className="mt-6">
       <h4 className="mb-3 text-caption font-medium uppercase tracking-wide text-text-muted">
         Usage
       </h4>

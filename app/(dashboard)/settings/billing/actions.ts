@@ -164,11 +164,20 @@ export async function resumeSubscriptionAction(): Promise<BillingActionResult> {
   if (!subId) return { error: 'No subscription to resume.' };
 
   try {
-    await stripe.subscriptions.update(subId, { cancel_at_period_end: false });
+    const updated = await stripe.subscriptions.update(subId, { cancel_at_period_end: false });
+
+    // Keep subscription_end populated — for an active sub it
+    // represents the next renewal date now.
+    type WithPeriodEnd = { current_period_end?: number };
+    const firstItem = updated.items.data[0] as unknown as WithPeriodEnd | undefined;
+    const periodEnd =
+      firstItem?.current_period_end ?? (updated as unknown as WithPeriodEnd).current_period_end;
+    const subscriptionEnd = periodEnd ? new Date(periodEnd * 1000).toISOString() : undefined;
+
     const admin = createAdminClient();
     await updateEntitlements(admin.auth.admin, user.id, {
       cancel_at_period_end: false,
-      subscription_end: undefined,
+      ...(subscriptionEnd ? { subscription_end: subscriptionEnd } : {}),
     });
     return { ok: true };
   } catch (err) {

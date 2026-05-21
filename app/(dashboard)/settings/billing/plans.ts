@@ -96,9 +96,24 @@ export function planById(id: string | null | undefined): Plan {
 }
 
 /**
- * The user-visible highlights for each tier — used inline on the
- * current-plan card to show "what you get" without expanding the
- * full comparison table.
+ * One-line prose summary of each tier. Renders below the plan
+ * header as a single wrapped paragraph — replaces the previous
+ * "INCLUDES" label + 6-bullet feature grid for a more confident
+ * "this is what you pay for" line.
+ */
+export const PLAN_SUMMARY: Record<PlanId, string> = {
+  starter:
+    'Up to 5 couples · CRM, quotes & invoices · Task management',
+  pro:
+    'Unlimited couples · Couple portal · Songs, files & timeline · Quotes & invoices · Full CRM',
+  max:
+    'Everything in Pro · Pulse · Event Mode · Up to 5 team members · Priority support',
+};
+
+/**
+ * The user-visible highlights for each tier — still used by the
+ * comparison modal's per-tier feature list (the inline summary
+ * above replaces the bulleted version on the main plan card).
  */
 export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
   starter: [

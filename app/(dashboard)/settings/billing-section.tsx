@@ -31,6 +31,9 @@ export interface BillingSectionProps {
   cancelAtPeriodEnd: boolean;
   isSubscribed: boolean;
   isComped: boolean;
+  /** Auth user's `created_at` — surfaced as "Joined {date}" in the
+   *  status line so the card carries a little warmth + history. */
+  userCreatedAt: string | null;
 }
 
 type ActivationState = 'idle' | 'polling' | 'timed_out';

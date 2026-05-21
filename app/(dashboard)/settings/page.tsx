@@ -79,6 +79,7 @@ function SettingsContent() {
   const [metadata, setMetadata] = useState<UserMetadata | null>(null);
   const [appMetadata, setAppMetadata] = useState<AppMetadata | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const activeTab = (searchParams.get("tab") as TabId) || "personal-info";
@@ -101,6 +102,7 @@ function SettingsContent() {
         setMetadata(user.user_metadata as UserMetadata);
         setAppMetadata((user.app_metadata ?? {}) as AppMetadata);
         setEmail(user.email ?? null);
+        setUserCreatedAt(user.created_at ?? null);
       }
       setLoading(false);
     };
@@ -200,6 +202,7 @@ function SettingsContent() {
               cancelAtPeriodEnd={!!appMetadata?.cancel_at_period_end}
               isSubscribed={!!appMetadata?.is_subscribed}
               isComped={!!appMetadata?.is_comped}
+              userCreatedAt={userCreatedAt}
             />
           )}
           {activeTab === "payments" && (
