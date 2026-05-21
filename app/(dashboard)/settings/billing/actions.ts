@@ -1,31 +1,35 @@
 /**
  * Billing tab server actions.
  *
- * Subscription lifecycle changes (plan switch, cancel, resume) used to
- * route through the Stripe-hosted Customer Portal, which has no
- * automatic return UX — users got stuck on Stripe with no signal back
- * to the app. These actions call the Stripe API directly so the
- * change happens in-place, the modal closes, and the page reloads
- * once the webhook has updated `app_metadata`.
+ * Plan changes (upgrade / downgrade) hand off to Stripe's hosted
+ * Customer Portal in the `subscription_update_confirm` flow — Stripe
+ * shows the user a confirmation page with the prorated amount, the
+ * user accepts, and Stripe redirects back. Cancel / resume happen
+ * in-place via the Stripe API and also update `app_metadata`
+ * synchronously from Stripe's response so the UI doesn't have to
+ * wait on the asynchronous webhook to populate `subscription_end`.
  *
  * Payment-method updates still route to the Stripe Portal (cards
- * belong on Stripe's PCI surface, and we deep-link to the
+ * belong on Stripe's PCI surface). We deep-link to the
  * `payment_method_update` flow so the user doesn't see the full
- * portal).
- *
- * Each action returns a tagged result the client uses to drive the
- * post-action polling banner.
+ * portal home.
  *
  * @module app/(dashboard)/settings/billing/actions
  */
 'use server';
 
-import { stripeCustomerId, stripeSubscriptionId } from '@/lib/auth/entitlements';
+import { stripeCustomerId, stripeSubscriptionId, updateEntitlements } from '@/lib/auth/entitlements';
 import { stripe } from '@/lib/payments/stripe';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 export interface BillingActionResult {
   ok?: true;
+  error?: string;
+}
+
+export interface BillingRedirectResult {
+  url?: string;
   error?: string;
 }
 
@@ -34,22 +38,26 @@ function priceFor(plan: 'pro' | 'max'): string | undefined {
 }
 
 /**
- * Switch the user's existing subscription to a different plan tier.
+ * Build a Stripe Customer Portal session deep-linked to the
+ * `subscription_update_confirm` flow. Stripe shows the user the
+ * prorated amount, they confirm, payment is collected (for upgrades)
+ * or credit issued (for downgrades) per the portal's proration
+ * settings, then Stripe redirects back to `/settings?tab=billing`.
  *
- * Uses `proration_behavior: 'always_invoice'` so the prorated
- * difference is **billed immediately** at the time of switch (not
- * stacked onto the next monthly invoice). On an upgrade Stripe
- * issues a one-off invoice for the delta and charges the saved card;
- * on a downgrade Stripe issues a $0 invoice with a credit that
- * applies to the next renewal.
+ * Use this for both upgrade (Pro → Max) and downgrade (Max → Pro) —
+ * the portal handles both transparently.
  */
-export async function switchPlanAction(plan: 'pro' | 'max'): Promise<BillingActionResult> {
+export async function createPlanChangeSessionAction(
+  plan: 'pro' | 'max',
+): Promise<BillingRedirectResult> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not signed in.' };
 
+  const customerId = stripeCustomerId(user);
+  if (!customerId) return { error: 'No billing account found.' };
   const subId = stripeSubscriptionId(user);
   if (!subId) return { error: 'No active subscription to switch.' };
 
@@ -60,26 +68,39 @@ export async function switchPlanAction(plan: 'pro' | 'max'): Promise<BillingActi
     const subscription = await stripe.subscriptions.retrieve(subId);
     const currentItem = subscription.items.data[0];
     if (!currentItem) return { error: 'Subscription has no items.' };
-    if (currentItem.price.id === targetPrice) return { ok: true }; // no-op
+    if (currentItem.price.id === targetPrice) {
+      return { error: `You're already on the ${plan === 'max' ? 'Max' : 'Pro'} plan.` };
+    }
 
-    await stripe.subscriptions.update(subId, {
-      items: [{ id: currentItem.id, price: targetPrice }],
-      proration_behavior: 'always_invoice',
-      // If the user had a scheduled cancellation, switching re-activates.
-      cancel_at_period_end: false,
-      metadata: { ...(subscription.metadata ?? {}), plan },
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${baseUrl}/settings?tab=billing&change=success`,
+      flow_data: {
+        type: 'subscription_update_confirm',
+        subscription_update_confirm: {
+          subscription: subId,
+          items: [{ id: currentItem.id, price: targetPrice }],
+        },
+      },
     });
-    return { ok: true };
+
+    return { url: session.url };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Failed to switch plan.' };
+    return { error: err instanceof Error ? err.message : 'Failed to start plan change.' };
   }
 }
 
 /**
  * Schedule the user's subscription for cancellation at the end of the
- * current billing period. The user keeps access until then; the
- * `customer.subscription.updated` webhook lands and flips
- * `cancel_at_period_end: true` in `app_metadata`.
+ * current billing period. Writes `cancel_at_period_end` and
+ * `subscription_end` to `app_metadata` synchronously from Stripe's
+ * response — the UI doesn't have to wait on the webhook to render
+ * the grace-period end date.
+ *
+ * The webhook still fires asynchronously and re-writes the same
+ * fields (idempotent), so the eventual-consistency story is intact.
  */
 export async function cancelSubscriptionAction(): Promise<BillingActionResult> {
   const supabase = await createClient();
@@ -92,7 +113,20 @@ export async function cancelSubscriptionAction(): Promise<BillingActionResult> {
   if (!subId) return { error: 'No active subscription to cancel.' };
 
   try {
-    await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
+    const updated = await stripe.subscriptions.update(subId, {
+      cancel_at_period_end: true,
+    });
+
+    // Periods-end can occasionally land in slightly different shapes
+    // depending on the Stripe API version; coerce to ISO if present.
+    const periodEnd = (updated as unknown as { current_period_end?: number }).current_period_end;
+    const subscriptionEnd = periodEnd ? new Date(periodEnd * 1000).toISOString() : undefined;
+
+    const admin = createAdminClient();
+    await updateEntitlements(admin.auth.admin, user.id, {
+      cancel_at_period_end: true,
+      ...(subscriptionEnd ? { subscription_end: subscriptionEnd } : {}),
+    });
     return { ok: true };
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed to cancel.' };
@@ -100,7 +134,8 @@ export async function cancelSubscriptionAction(): Promise<BillingActionResult> {
 }
 
 /**
- * Undo a scheduled cancellation — restores normal renewal.
+ * Undo a scheduled cancellation. Clears `cancel_at_period_end` and
+ * `subscription_end` in `app_metadata` synchronously.
  */
 export async function resumeSubscriptionAction(): Promise<BillingActionResult> {
   const supabase = await createClient();
@@ -114,6 +149,11 @@ export async function resumeSubscriptionAction(): Promise<BillingActionResult> {
 
   try {
     await stripe.subscriptions.update(subId, { cancel_at_period_end: false });
+    const admin = createAdminClient();
+    await updateEntitlements(admin.auth.admin, user.id, {
+      cancel_at_period_end: false,
+      subscription_end: undefined,
+    });
     return { ok: true };
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed to resume.' };
@@ -126,7 +166,7 @@ export async function resumeSubscriptionAction(): Promise<BillingActionResult> {
  * billing card. Cards belong on Stripe's PCI surface, so this one
  * keeps the portal-roundtrip pattern.
  */
-export async function paymentMethodPortalAction(): Promise<{ ok?: true; url?: string; error?: string }> {
+export async function paymentMethodPortalAction(): Promise<BillingRedirectResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -144,7 +184,7 @@ export async function paymentMethodPortalAction(): Promise<{ ok?: true; url?: st
       return_url: `${baseUrl}/settings?tab=billing`,
       flow_data: { type: 'payment_method_update' },
     });
-    return { ok: true, url: session.url };
+    return { url: session.url };
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Failed to open billing portal.' };
   }

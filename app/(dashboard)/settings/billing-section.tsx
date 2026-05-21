@@ -39,15 +39,16 @@ export function BillingSection(props: BillingSectionProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justSubscribed = searchParams.get('checkout') === 'success';
+  const justChanged = searchParams.get('change') === 'success';
   const [compareOpen, setCompareOpen] = useState(false);
   const [activation, setActivation] = useState<ActivationState>('idle');
   const [refreshing, setRefreshing] = useState(false);
   // A monotonic counter that ticks every time the user takes a
-  // subscription action (cancel / resume / switch plan). It joins
-  // `justSubscribed` as a trigger for the post-action polling so any
+  // subscription action (cancel / resume). It joins `justSubscribed`
+  // and `justChanged` as triggers for the post-action polling so any
   // webhook-bound change re-runs the same wait-and-reload flow.
   const [actionTick, setActionTick] = useState(0);
-  const pollingTrigger = justSubscribed || actionTick > 0;
+  const pollingTrigger = justSubscribed || justChanged || actionTick > 0;
 
   // Stripe webhook updates `app_metadata` asynchronously after a
   // subscription change. Poll refreshSession() + getUser() until the
@@ -60,6 +61,12 @@ export function BillingSection(props: BillingSectionProps) {
   // needs an out that doesn't require closing the tab.
   useEffect(() => {
     if (!pollingTrigger) return;
+    if ((justSubscribed || justChanged) && props.isSubscribed && justChanged) {
+      // Plan change returned but the page already reflects an
+      // updated subscription — drop the query param.
+      router.replace('/settings?tab=billing');
+      return;
+    }
     if (justSubscribed && props.isSubscribed) {
       router.replace('/settings?tab=billing');
       return;
@@ -164,10 +171,16 @@ export function BillingSection(props: BillingSectionProps) {
       ? ((props.subscriptionPlan as PlanId) ?? 'pro')
       : 'starter';
 
+  // Banner copy is action-aware: "Payment successful" only makes
+  // sense after a Stripe Checkout (new subscription / resubscribe).
+  // Plan changes + cancel/resume should say "Updating subscription…".
+  const bannerKind: 'payment' | 'change' = justSubscribed ? 'payment' : 'change';
+
   return (
     <div className="max-w-3xl space-y-12">
       {pollingTrigger && activation !== 'idle' ? (
         <ActivationBanner
+          kind={bannerKind}
           activation={activation}
           refreshing={refreshing}
           onRefresh={manualRefresh}
@@ -194,7 +207,6 @@ export function BillingSection(props: BillingSectionProps) {
         currentPlan={currentPlanForComparison}
         isSubscribed={props.isSubscribed}
         cancelAtPeriodEnd={props.cancelAtPeriodEnd}
-        onAfterAction={() => setActionTick((t) => t + 1)}
       />
     </div>
   );
@@ -203,21 +215,32 @@ export function BillingSection(props: BillingSectionProps) {
 /* ────────────────────────────────────────────────────────────── */
 
 function ActivationBanner({
+  kind,
   activation,
   refreshing,
   onRefresh,
 }: {
+  kind: 'payment' | 'change';
   activation: ActivationState;
   refreshing: boolean;
   onRefresh: () => void;
 }) {
+  const headline =
+    kind === 'payment'
+      ? 'Payment successful — finalising your subscription…'
+      : 'Updating subscription…';
+
   if (activation === 'timed_out') {
     return (
       <div className="flex flex-col gap-3 rounded-card border border-warning/40 bg-warning/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <AlertCircle size={16} strokeWidth={1.5} className="mt-0.5 shrink-0 text-warning" />
           <div>
-            <p>Payment successful, but we haven&apos;t received the activation event yet.</p>
+            <p>
+              {kind === 'payment'
+                ? "Payment successful, but we haven't received the activation event yet."
+                : "Your change went through, but we haven't received the update event yet."}
+            </p>
             <p className="mt-1 text-caption text-text-muted">
               This usually clears in a moment — try refreshing. If it persists, the Stripe webhook
               may not be reaching the app (local dev: ensure <code className="font-mono">stripe
@@ -239,7 +262,7 @@ function ActivationBanner({
         ) : (
           <CheckCircle2 size={16} strokeWidth={1.5} className="shrink-0 text-success" />
         )}
-        Payment successful — finalising your subscription…
+        {headline}
       </div>
       <Button size="sm" variant="ghost" onClick={onRefresh} loading={refreshing}>
         Refresh now

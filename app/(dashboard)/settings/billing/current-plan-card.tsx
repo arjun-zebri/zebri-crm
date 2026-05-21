@@ -256,8 +256,8 @@ function StatusLine({
         return subscriptionEnd ? `Active · Renews ${formatDate(subscriptionEnd)}` : 'Active';
       case 'cancelling_in_grace':
         return subscriptionEnd
-          ? `Cancels ${formatDate(subscriptionEnd)}`
-          : 'Cancellation scheduled';
+          ? `Subscription cancelled · access until ${formatDate(subscriptionEnd)}`
+          : 'Subscription cancelled · access until end of period';
       case 'past_due':
         return 'Payment failed';
       case 'expired':

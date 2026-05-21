@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 
-import { switchPlanAction } from './actions';
+import { createPlanChangeSessionAction } from './actions';
 import { COMPARISON_ROWS, PLANS, type ComparisonCell, type PlanId } from './plans';
 
 export interface PlanComparisonDialogProps {
@@ -30,9 +30,6 @@ export interface PlanComparisonDialogProps {
   currentPlan: PlanId | null;
   isSubscribed: boolean;
   cancelAtPeriodEnd: boolean;
-  /** Called after a successful subscription change so the parent can
-   *  start polling for the webhook to land. */
-  onAfterAction: () => void;
 }
 
 export function PlanComparisonDialog({
@@ -41,33 +38,29 @@ export function PlanComparisonDialog({
   currentPlan,
   isSubscribed,
   cancelAtPeriodEnd,
-  onAfterAction,
 }: PlanComparisonDialogProps) {
   const { toast } = useToast();
   const [busy, setBusy] = useState<PlanId | null>(null);
 
   async function action(planId: PlanId) {
     if (planId === 'starter') {
-      // Starter is a downgrade from Pro/Max — cancel the paid sub at
-      // period end. Confirmation is handled by the parent (cancel
-      // confirm modal) so here we just hand back via onAfterAction
-      // after closing.
       toast('Use the Cancel subscription option to downgrade to Starter.', 'error');
       return;
     }
     setBusy(planId);
     try {
       if (isSubscribed && !cancelAtPeriodEnd) {
-        // Active subscriber — switch tier via Stripe API directly.
-        const result = await switchPlanAction(planId);
-        if (result.error) {
-          toast(result.error, 'error');
-          setBusy(null);
+        // Existing subscriber — hand off to Stripe Portal's hosted
+        // confirmation flow so the user sees the proration breakdown
+        // and explicitly confirms the charge (upgrades) or credit
+        // (downgrades) before it goes through.
+        const result = await createPlanChangeSessionAction(planId);
+        if (result.url) {
+          window.location.assign(result.url);
           return;
         }
-        toast('Plan switching — page will refresh shortly.');
-        onClose();
-        onAfterAction();
+        toast(result.error ?? 'Could not start plan change.', 'error');
+        setBusy(null);
         return;
       }
       // No active subscription (Starter / expired) OR scheduled
