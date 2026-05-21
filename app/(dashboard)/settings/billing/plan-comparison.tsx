@@ -94,12 +94,14 @@ export function PlanComparisonDialog({
 
   return (
     <Modal isOpen={open} onClose={onClose} title="Compare plans" size="xl" flushBottom>
-      {/* Outer wrapper: h-full so we can extend the tint to the full
-          body height. overflow-x-auto handles mobile horizontal scroll.
-          Inner wrapper: relative for the abs-positioned tint, min-w so
-          columns don't squish on phones. */}
-      <div className="h-full overflow-x-auto">
-        <div className="relative h-full min-w-[36rem]">
+      {/* Outer: overflow-x-auto handles mobile horizontal scroll.
+          Inner relative wrapper holds the absolute-positioned tint
+          and the table. Body is now content-sized (flushBottom on
+          Modal drops flex-1) so the inner wrapper's height equals
+          the table height equals the body height — the abs tint at
+          inset-y-0 reaches the modal's rounded bottom edge. */}
+      <div className="overflow-x-auto">
+        <div className="relative min-w-[36rem]">
           {currentPlan ? (
             <div
               aria-hidden
