@@ -16,7 +16,8 @@ import { useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { emptyAuthState, loginAction } from '../actions';
+import { emptyAuthState } from '../action-state';
+import { loginAction } from '../actions';
 
 export interface LoginFormProps {
   /** Optional `?next` value forwarded as a hidden field. */

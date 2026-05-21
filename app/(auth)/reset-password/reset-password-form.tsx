@@ -17,7 +17,8 @@ import { useActionState, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { emptyAuthState, resetPasswordAction } from '../actions';
+import { emptyAuthState } from '../action-state';
+import { resetPasswordAction } from '../actions';
 
 export function ResetPasswordForm() {
   const [state, formAction, pending] = useActionState(resetPasswordAction, emptyAuthState);

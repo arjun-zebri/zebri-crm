@@ -19,7 +19,6 @@
  */
 'use server';
 
-import type { AuthActionState } from '@/app/(auth)/actions';
 import { sendAlert } from '@/lib/alerts/send-alert';
 import {
   AUTH_RATE_LIMITS,
@@ -29,6 +28,8 @@ import { parseFormData } from '@/lib/api/validate';
 import { changePasswordSchema } from '@/lib/auth/schemas';
 import { createClient } from '@/lib/supabase/server';
 
+import type { ChangePasswordResult } from './action-state';
+
 const changePasswordLimiter = inMemoryLimiter(AUTH_RATE_LIMITS.changePassword);
 
 /**
@@ -36,13 +37,8 @@ const changePasswordLimiter = inMemoryLimiter(AUTH_RATE_LIMITS.changePassword);
  * password as a re-auth challenge before applying the change.
  *
  * Returns `{ ok: true, message }` for the form to render a toast on
- * success. Errors come back as inline {@link AuthActionState}.
+ * success. Errors come back as inline {@link ChangePasswordResult}.
  */
-export interface ChangePasswordResult extends AuthActionState {
-  ok?: true;
-  message?: string;
-}
-
 export async function changePasswordAction(
   _prev: ChangePasswordResult,
   formData: FormData,

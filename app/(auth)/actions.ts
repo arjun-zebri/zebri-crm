@@ -51,14 +51,7 @@ import {
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
-/** Inline form state passed back to the client component. */
-export interface AuthActionState {
-  error?: string;
-  fieldErrors?: Record<string, string>;
-}
-
-/** Default "no error yet" form state. */
-export const emptyAuthState: AuthActionState = {};
+import type { AuthActionState } from './action-state';
 
 // One limiter per action, process-local. Keys are scoped per-action
 // so e.g. a login burst doesn't consume the signup budget.

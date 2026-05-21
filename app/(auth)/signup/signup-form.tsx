@@ -18,7 +18,8 @@ import { PasswordStrengthMeter } from '@/components/auth/password-strength-meter
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { emptyAuthState, signupAction } from '../actions';
+import { emptyAuthState } from '../action-state';
+import { signupAction } from '../actions';
 
 export function SignupForm() {
   const [state, formAction, pending] = useActionState(signupAction, emptyAuthState);

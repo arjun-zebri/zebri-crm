@@ -15,7 +15,8 @@ import { PasswordStrengthMeter } from '@/components/auth/password-strength-meter
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { emptyAuthState, updatePasswordAction } from '../actions';
+import { emptyAuthState } from '../action-state';
+import { updatePasswordAction } from '../actions';
 
 export function UpdatePasswordForm() {
   const [state, formAction, pending] = useActionState(updatePasswordAction, emptyAuthState);

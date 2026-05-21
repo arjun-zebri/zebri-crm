@@ -30,10 +30,8 @@ import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 
-import {
-  changePasswordAction,
-  type ChangePasswordResult,
-} from './account/actions';
+import type { ChangePasswordResult } from './account/action-state';
+import { changePasswordAction } from './account/actions';
 
 interface EmailPreferencesData {
   product_updates?: boolean;
