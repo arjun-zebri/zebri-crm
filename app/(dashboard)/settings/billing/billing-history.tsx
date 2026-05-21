@@ -88,39 +88,45 @@ export function BillingHistory() {
   return (
     <div>
       {invoices.length > 0 ? (
-        <ul className="divide-y divide-border/60">
-          {invoices.map((inv) => (
-            <li key={inv.id} className="flex items-center gap-4 py-3 text-body">
-              <span className="w-28 shrink-0 text-text-muted">
-                {formatUnixDate(inv.created)}
-              </span>
-              <span className="w-20 shrink-0 font-medium text-text">{fmtAmount(inv.amount)}</span>
-              <span className="flex-1 text-text-muted">{statusLabel(inv.status)}</span>
-              <span className="flex shrink-0 items-center gap-4 text-caption text-text-muted">
-                {inv.hostedUrl ? (
-                  <a
-                    href={inv.hostedUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 hover:text-text"
-                  >
-                    View <ExternalLink size={11} strokeWidth={1.5} />
-                  </a>
-                ) : null}
-                {inv.pdfUrl ? (
-                  <a
-                    href={inv.pdfUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 hover:text-text"
-                  >
-                    PDF <Download size={11} strokeWidth={1.5} />
-                  </a>
-                ) : null}
-              </span>
-            </li>
-          ))}
-        </ul>
+        // Mobile: rows overflow horizontally rather than getting the
+        // View/PDF column clipped — overflow-x-auto + min-w on the
+        // inner list. Date stays sticky to the left so the user
+        // doesn't lose context while scrolling the row right.
+        <div className="overflow-x-auto">
+          <ul className="min-w-[32rem] divide-y divide-border/60">
+            {invoices.map((inv) => (
+              <li key={inv.id} className="flex items-center gap-4 py-3 text-body">
+                <span className="w-28 shrink-0 text-text-muted">
+                  {formatUnixDate(inv.created)}
+                </span>
+                <span className="w-20 shrink-0 font-medium text-text">{fmtAmount(inv.amount)}</span>
+                <span className="flex-1 text-text-muted">{statusLabel(inv.status)}</span>
+                <span className="flex shrink-0 items-center gap-4 text-caption text-text-muted">
+                  {inv.hostedUrl ? (
+                    <a
+                      href={inv.hostedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 hover:text-text"
+                    >
+                      View <ExternalLink size={11} strokeWidth={1.5} />
+                    </a>
+                  ) : null}
+                  {inv.pdfUrl ? (
+                    <a
+                      href={inv.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 hover:text-text"
+                    >
+                      PDF <Download size={11} strokeWidth={1.5} />
+                    </a>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {upcoming ? (

@@ -8,11 +8,12 @@
  * headers stay quiet (no "Current" pill — the bottom row is
  * unambiguous already).
  *
- * Plan-switch buttons hand off to Stripe's hosted
- * `subscription_update_confirm` flow (the
- * `createPlanChangeSessionAction` server action returns a Portal
- * URL we redirect to). The Starter column's button delegates back
- * to the parent's cancel-confirm modal via `onRequestCancel`.
+ * The "current" column's tint is rendered as an absolutely
+ * positioned div behind the table (not as per-cell `bg-`) so it
+ * fills the entire modal body — including the empty space below the
+ * table content that the body's `flex-1` expands into. This is the
+ * only way to make the tint reach the modal's rounded bottom edge
+ * regardless of how tall the body ends up being.
  *
  * @module app/(dashboard)/settings/billing/plan-comparison
  */
@@ -34,10 +35,16 @@ export interface PlanComparisonDialogProps {
   currentPlan: PlanId | null;
   isSubscribed: boolean;
   cancelAtPeriodEnd: boolean;
-  /** Hand back to the parent to open the shared cancel-confirm modal
-   *  when the user clicks Cancel in the Starter column. */
   onRequestCancel: () => void;
 }
+
+// Column 1 = feature labels (40%). Plans take 20% each, starting at
+// 40% / 60% / 80% from the left of the table.
+const TINT_LEFT: Record<PlanId, string> = {
+  starter: '40%',
+  pro: '60%',
+  max: '80%',
+};
 
 export function PlanComparisonDialog({
   open,
@@ -63,7 +70,6 @@ export function PlanComparisonDialog({
         setBusy(null);
         return;
       }
-      // No active subscription — go through Checkout to set up a new one.
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,34 +94,34 @@ export function PlanComparisonDialog({
 
   return (
     <Modal isOpen={open} onClose={onClose} title="Compare plans" size="xl" flushBottom>
-      {/* `min-w-[36rem]` forces horizontal scroll on phones rather than
-          squishing the columns into illegibility. table-fixed +
-          colgroup keep the three plan columns equal-width and prevent
-          loading-state reflow. flushBottom on the Modal removes the
-          body's pb so the current-column tint reaches the rounded
-          bottom edge. */}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[36rem] table-fixed border-collapse text-body">
-          <colgroup>
-            <col className="w-2/5" />
-            <col className="w-1/5" />
-            <col className="w-1/5" />
-            <col className="w-1/5" />
-          </colgroup>
-          <thead>
-            <tr className="border-b border-border">
-              <th className="px-2 py-3 text-left text-caption font-medium uppercase tracking-wide text-text-muted">
-                Feature
-              </th>
-              {PLANS.map((plan) => {
-                const isCurrent = plan.id === currentPlan;
-                return (
-                  <th
-                    key={plan.id}
-                    className={`px-4 py-3 text-left font-medium ${
-                      isCurrent ? 'bg-surface-muted' : ''
-                    }`}
-                  >
+      {/* Outer wrapper: h-full so we can extend the tint to the full
+          body height. overflow-x-auto handles mobile horizontal scroll.
+          Inner wrapper: relative for the abs-positioned tint, min-w so
+          columns don't squish on phones. */}
+      <div className="h-full overflow-x-auto">
+        <div className="relative h-full min-w-[36rem]">
+          {currentPlan ? (
+            <div
+              aria-hidden
+              className="absolute inset-y-0 w-1/5 bg-surface-muted"
+              style={{ left: TINT_LEFT[currentPlan] }}
+            />
+          ) : null}
+
+          <table className="relative w-full table-fixed border-collapse text-body">
+            <colgroup>
+              <col className="w-2/5" />
+              <col className="w-1/5" />
+              <col className="w-1/5" />
+              <col className="w-1/5" />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-border">
+                <th className="px-2 py-3 text-left text-caption font-medium uppercase tracking-wide text-text-muted">
+                  Feature
+                </th>
+                {PLANS.map((plan) => (
+                  <th key={plan.id} className="px-4 py-3 text-left font-medium">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-text">{plan.name}</span>
                       <span className="text-caption font-normal text-text-muted">
@@ -123,88 +129,71 @@ export function PlanComparisonDialog({
                       </span>
                     </div>
                   </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {COMPARISON_ROWS.filter((r) => r.label !== 'Price').map((row, i, arr) => (
-              <tr
-                key={row.label}
-                className={i < arr.length - 1 ? 'border-b border-border/50' : ''}
-              >
-                <th
-                  scope="row"
-                  className="px-2 py-2.5 text-left text-body font-normal text-text-muted"
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARISON_ROWS.filter((r) => r.label !== 'Price').map((row, i, arr) => (
+                <tr
+                  key={row.label}
+                  className={i < arr.length - 1 ? 'border-b border-border/50' : ''}
                 >
-                  {row.label}
-                </th>
+                  <th
+                    scope="row"
+                    className="px-2 py-2.5 text-left text-body font-normal text-text-muted"
+                  >
+                    {row.label}
+                  </th>
+                  {PLANS.map((plan) => (
+                    <td key={plan.id} className="px-4 py-2.5">
+                      <CellView cell={row.values[plan.id]} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {/* Action row */}
+              <tr className="border-t border-border">
+                <th className="px-2 pb-6 pt-4" aria-hidden />
                 {PLANS.map((plan) => {
-                  const cell = row.values[plan.id];
                   const isCurrent = plan.id === currentPlan;
+                  if (isCurrent) {
+                    return (
+                      <td key={plan.id} className="px-4 pb-6 pt-4">
+                        <span className="inline-flex h-8 w-full items-center justify-center text-caption font-medium text-text">
+                          Current
+                        </span>
+                      </td>
+                    );
+                  }
                   return (
-                    <td
-                      key={plan.id}
-                      className={`px-4 py-2.5 ${isCurrent ? 'bg-surface-muted' : ''}`}
-                    >
-                      <CellView cell={cell} />
+                    <td key={plan.id} className="px-4 pb-6 pt-4">
+                      {plan.id === 'starter' ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleStarter}
+                          className="w-full whitespace-nowrap"
+                        >
+                          Cancel
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => switchTo(plan.id as 'pro' | 'max')}
+                          loading={busy === plan.id}
+                          className="w-full whitespace-nowrap"
+                        >
+                          Switch
+                        </Button>
+                      )}
                     </td>
                   );
                 })}
               </tr>
-            ))}
-            {/* Action row — pb-6 since the modal's pb-4 is consumed
-                by `-mb-4` on the scroll container above. */}
-            <tr className="border-t border-border">
-              <th className="px-2 pb-6 pt-4" aria-hidden />
-              {PLANS.map((plan) => {
-                const isCurrent = plan.id === currentPlan;
-                if (isCurrent) {
-                  // Render a button-shaped span so "Current" sits at
-                  // the same height/position as the Switch + Cancel
-                  // buttons in the other columns — same h-8 footprint,
-                  // same text-caption font weight, just no button
-                  // chrome (the column tint already signals which is
-                  // current).
-                  return (
-                    <td
-                      key={plan.id}
-                      className="bg-surface-muted px-4 pb-6 pt-4"
-                    >
-                      <span className="inline-flex h-8 w-full items-center justify-center text-caption font-medium text-text">
-                        Current
-                      </span>
-                    </td>
-                  );
-                }
-                return (
-                  <td key={plan.id} className="px-4 pb-6 pt-4">
-                    {plan.id === 'starter' ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleStarter}
-                        className="w-full whitespace-nowrap"
-                      >
-                        Cancel
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => switchTo(plan.id as 'pro' | 'max')}
-                        loading={busy === plan.id}
-                        className="w-full whitespace-nowrap"
-                      >
-                        Switch
-                      </Button>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
     </Modal>
   );
