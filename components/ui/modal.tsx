@@ -21,6 +21,10 @@ interface ModalProps {
   headerActions?: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
   nested?: boolean
+  /** Drop the body's default bottom padding so children can bleed
+   *  to the modal's rounded bottom edge. Used by full-bleed tables
+   *  (e.g. plan-comparison) so column tints reach the bottom. */
+  flushBottom?: boolean
 }
 
 const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
@@ -30,7 +34,7 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
   xl: 'max-w-3xl',
 }
 
-export function Modal({ isOpen, onClose, title, children, footer, headerActions, size = 'md', nested = false }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, headerActions, size = 'md', nested = false, flushBottom = false }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -83,7 +87,7 @@ export function Modal({ isOpen, onClose, title, children, footer, headerActions,
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+          <div className={`flex-1 overflow-y-auto px-4 sm:px-6 pt-4 ${flushBottom ? 'pb-0' : 'pb-4'}`}>
             {children}
           </div>
 

@@ -87,13 +87,15 @@ export function PlanComparisonDialog({
   }
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="Compare plans" size="xl">
-      {/* `-mb-4` consumes the modal's bottom padding so the current-
-          column tint reaches the bottom edge of the modal card.
-          `table-fixed` + the colgroup below keep all three plan
-          columns equal-width and prevent loading-state reflow. */}
-      <div className="-mb-4 overflow-x-auto">
-        <table className="w-full table-fixed border-collapse text-body">
+    <Modal isOpen={open} onClose={onClose} title="Compare plans" size="xl" flushBottom>
+      {/* `min-w-[36rem]` forces horizontal scroll on phones rather than
+          squishing the columns into illegibility. table-fixed +
+          colgroup keep the three plan columns equal-width and prevent
+          loading-state reflow. flushBottom on the Modal removes the
+          body's pb so the current-column tint reaches the rounded
+          bottom edge. */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[36rem] table-fixed border-collapse text-body">
           <colgroup>
             <col className="w-2/5" />
             <col className="w-1/5" />
