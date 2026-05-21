@@ -134,18 +134,18 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
 
   return (
     <div>
-      {/* Header — plan name + inline price */}
+      {/* Header — plan name + state pill inline + price right-aligned */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-section font-semibold text-text">{plan.name}</h2>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-body text-text-muted">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="text-section font-semibold text-text">{plan.name}</h2>
             <StatePill state={state} />
-            <MetaLine
-              state={state}
-              subscriptionEnd={props.subscriptionEnd}
-              userCreatedAt={props.userCreatedAt}
-            />
           </div>
+          <MetaLine
+            state={state}
+            subscriptionEnd={props.subscriptionEnd}
+            userCreatedAt={props.userCreatedAt}
+          />
         </div>
         <div className="shrink-0 text-section font-semibold text-text">
           {plan.price ? (
@@ -263,7 +263,7 @@ function MetaLine({
   }
   if (userCreatedAt) parts.push(`Joined ${formatDate(userCreatedAt)}`);
   if (parts.length === 0) return null;
-  return <span className="text-caption text-text-muted">{parts.join(' · ')}</span>;
+  return <p className="mt-1 text-caption text-text-muted">{parts.join(' · ')}</p>;
 }
 
 /* ────────────────────────────────────────────────────────────── */
