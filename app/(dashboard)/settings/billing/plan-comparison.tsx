@@ -1,14 +1,18 @@
 /**
  * Plan comparison dialog — focused modal that opens from the
- * "Manage subscription" / "Compare plans" buttons.
+ * "Change plan" button.
  *
- * Compact 3-column feature table. Switch-plan actions call the
- * `switchPlanAction` server action directly (no Stripe Portal
- * round-trip); after success the parent triggers webhook-polling
- * via `onAfterAction` and the modal closes.
+ * 3-column feature table with fixed widths so the per-column tint
+ * stays put when buttons enter their loading state. The action row
+ * at the bottom carries the actual switch buttons; the column
+ * headers stay quiet (no "Current" pill — the bottom row is
+ * unambiguous already).
  *
- * For users without an active subscription (Starter / expired),
- * the switch buttons fall back to the Checkout flow.
+ * Plan-switch buttons hand off to Stripe's hosted
+ * `subscription_update_confirm` flow (the
+ * `createPlanChangeSessionAction` server action returns a Portal
+ * URL we redirect to). The Starter column's button delegates back
+ * to the parent's cancel-confirm modal via `onRequestCancel`.
  *
  * @module app/(dashboard)/settings/billing/plan-comparison
  */
@@ -30,6 +34,9 @@ export interface PlanComparisonDialogProps {
   currentPlan: PlanId | null;
   isSubscribed: boolean;
   cancelAtPeriodEnd: boolean;
+  /** Hand back to the parent to open the shared cancel-confirm modal
+   *  when the user clicks Cancel in the Starter column. */
+  onRequestCancel: () => void;
 }
 
 export function PlanComparisonDialog({
@@ -38,22 +45,15 @@ export function PlanComparisonDialog({
   currentPlan,
   isSubscribed,
   cancelAtPeriodEnd,
+  onRequestCancel,
 }: PlanComparisonDialogProps) {
   const { toast } = useToast();
   const [busy, setBusy] = useState<PlanId | null>(null);
 
-  async function action(planId: PlanId) {
-    if (planId === 'starter') {
-      toast('Use the Cancel subscription option to downgrade to Starter.', 'error');
-      return;
-    }
+  async function switchTo(planId: 'pro' | 'max') {
     setBusy(planId);
     try {
       if (isSubscribed && !cancelAtPeriodEnd) {
-        // Existing subscriber — hand off to Stripe Portal's hosted
-        // confirmation flow so the user sees the proration breakdown
-        // and explicitly confirms the charge (upgrades) or credit
-        // (downgrades) before it goes through.
         const result = await createPlanChangeSessionAction(planId);
         if (result.url) {
           window.location.assign(result.url);
@@ -63,10 +63,7 @@ export function PlanComparisonDialog({
         setBusy(null);
         return;
       }
-      // No active subscription (Starter / expired) OR scheduled
-      // cancellation — go through Checkout to set up the new
-      // subscription. Stripe will redirect back to /settings?tab=
-      // billing&checkout=success which triggers the activation poll.
+      // No active subscription — go through Checkout to set up a new one.
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,12 +81,19 @@ export function PlanComparisonDialog({
     }
   }
 
+  function handleStarter() {
+    onClose();
+    onRequestCancel();
+  }
+
   return (
     <Modal isOpen={open} onClose={onClose} title="Compare plans" size="xl">
-      <div className="overflow-x-auto">
-        {/* table-fixed + explicit widths so the action-row button
-            loading state can't widen its column mid-click. */}
-        <table className="w-full table-fixed text-body">
+      {/* `-mb-4` consumes the modal's bottom padding so the current-
+          column tint reaches the bottom edge of the modal card.
+          `table-fixed` + the colgroup below keep all three plan
+          columns equal-width and prevent loading-state reflow. */}
+      <div className="-mb-4 overflow-x-auto">
+        <table className="w-full table-fixed border-collapse text-body">
           <colgroup>
             <col className="w-2/5" />
             <col className="w-1/5" />
@@ -111,14 +115,7 @@ export function PlanComparisonDialog({
                     }`}
                   >
                     <div className="flex flex-col gap-0.5">
-                      <span className="flex items-center gap-2 text-text">
-                        {plan.name}
-                        {isCurrent ? (
-                          <span className="rounded-pill border border-border bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-text-muted">
-                            Current
-                          </span>
-                        ) : null}
-                      </span>
+                      <span className="text-text">{plan.name}</span>
                       <span className="text-caption font-normal text-text-muted">
                         {plan.price ? `${plan.price}${plan.period}` : 'Free'}
                       </span>
@@ -154,39 +151,44 @@ export function PlanComparisonDialog({
                 })}
               </tr>
             ))}
-            {/* Action row */}
+            {/* Action row — pb-6 since the modal's pb-4 is consumed
+                by `-mb-4` on the scroll container above. */}
             <tr className="border-t border-border">
-              <th className="px-2 py-4" aria-hidden />
+              <th className="px-2 pb-6 pt-4" aria-hidden />
               {PLANS.map((plan) => {
                 const isCurrent = plan.id === currentPlan;
                 if (isCurrent) {
                   return (
-                    <td key={plan.id} className="bg-surface-muted px-4 py-4 text-body text-text-muted">
-                      Your plan
-                    </td>
-                  );
-                }
-                if (plan.id === 'starter') {
-                  // Downgrade to starter happens via the Cancel flow.
-                  return (
-                    <td key={plan.id} className="px-4 py-4 text-caption text-text-muted">
-                      <span>Use Cancel to downgrade</span>
+                    <td
+                      key={plan.id}
+                      className="bg-surface-muted px-4 pb-6 pt-4 text-body font-medium text-text"
+                    >
+                      Current
                     </td>
                   );
                 }
                 return (
-                  <td key={plan.id} className="px-4 py-4">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => action(plan.id)}
-                      loading={busy === plan.id}
-                      className="w-full"
-                    >
-                      {isSubscribed && !cancelAtPeriodEnd
-                        ? `Switch to ${plan.name}`
-                        : `Subscribe to ${plan.name}`}
-                    </Button>
+                  <td key={plan.id} className="px-4 pb-6 pt-4">
+                    {plan.id === 'starter' ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleStarter}
+                        className="w-full whitespace-nowrap"
+                      >
+                        Cancel
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => switchTo(plan.id as 'pro' | 'max')}
+                        loading={busy === plan.id}
+                        className="w-full whitespace-nowrap"
+                      >
+                        Switch
+                      </Button>
+                    )}
                   </td>
                 );
               })}

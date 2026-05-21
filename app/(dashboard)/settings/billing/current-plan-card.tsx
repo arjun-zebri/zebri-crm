@@ -18,15 +18,10 @@ import { AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 
-import {
-  cancelSubscriptionAction,
-  paymentMethodPortalAction,
-  resumeSubscriptionAction,
-} from './actions';
+import { paymentMethodPortalAction, resumeSubscriptionAction } from './actions';
 import { formatDate, planById, PLAN_SUMMARY, type PlanId } from './plans';
 
 export interface CurrentPlanCardProps {
@@ -41,6 +36,8 @@ export interface CurrentPlanCardProps {
   userCreatedAt: string | null;
   /** Open the plan-comparison modal. */
   onManagePlan: () => void;
+  /** Open the shared cancel-confirm modal (lives in the parent). */
+  onRequestCancel: () => void;
   /** Trigger the post-action polling banner (used after cancel /
    *  resume / switch flows so the page reloads when the webhook lands). */
   onAfterAction: () => void;
@@ -66,9 +63,8 @@ function classify(p: CurrentPlanCardProps): CardState {
 export function CurrentPlanCard(props: CurrentPlanCardProps) {
   const { toast } = useToast();
   const [busy, setBusy] = useState<
-    'subscribe' | 'cancel' | 'resume' | 'payment_method' | null
+    'subscribe' | 'resume' | 'payment_method' | null
   >(null);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const state = classify(props);
 
   const planId: PlanId =
@@ -105,19 +101,6 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
       toast(result.error ?? 'Could not open billing portal.', 'error');
       setBusy(null);
     }
-  }
-
-  async function confirmCancel() {
-    setBusy('cancel');
-    const result = await cancelSubscriptionAction();
-    if (result.error) {
-      toast(result.error, 'error');
-      setBusy(null);
-      return;
-    }
-    toast('Cancellation scheduled — page will refresh shortly.');
-    setShowCancelConfirm(false);
-    props.onAfterAction();
   }
 
   async function resume() {
@@ -199,7 +182,7 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
           {state === 'active' ? (
             <button
               type="button"
-              onClick={() => setShowCancelConfirm(true)}
+              onClick={props.onRequestCancel}
               className="text-body text-text-muted hover:text-danger disabled:opacity-50 sm:ml-auto"
               disabled={busy !== null}
             >
@@ -208,14 +191,6 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
           ) : null}
         </div>
       )}
-
-      <CancelConfirmModal
-        open={showCancelConfirm}
-        onClose={() => setShowCancelConfirm(false)}
-        onConfirm={confirmCancel}
-        busy={busy === 'cancel'}
-        subscriptionEnd={props.subscriptionEnd}
-      />
     </div>
   );
 }
@@ -314,54 +289,6 @@ function PrimaryAction({
     case 'comped':
       return null;
   }
-}
-
-/* ────────────────────────────────────────────────────────────── */
-
-function CancelConfirmModal({
-  open,
-  onClose,
-  onConfirm,
-  busy,
-  subscriptionEnd,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  busy: boolean;
-  subscriptionEnd: string | null;
-}) {
-  return (
-    <Modal
-      isOpen={open}
-      onClose={onClose}
-      title="Cancel subscription?"
-      footer={
-        <div className="flex items-center justify-end gap-3">
-          <Button variant="ghost" type="button" onClick={onClose} disabled={busy}>
-            Keep subscription
-          </Button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={busy}
-            className="inline-flex h-9 cursor-pointer items-center justify-center rounded-control bg-danger px-4 text-body font-medium text-text-inverse transition-colors hover:opacity-90 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {busy ? 'Cancelling…' : 'Yes, cancel'}
-          </button>
-        </div>
-      }
-    >
-      <p className="text-body text-text">
-        You&apos;ll keep access to Pro features
-        {subscriptionEnd ? <> until <strong>{formatDate(subscriptionEnd)}</strong></> : ' until the end of your current billing period'},
-        then drop to the free Starter plan.
-      </p>
-      <p className="mt-3 text-caption text-text-muted">
-        You can resubscribe any time before then to undo the cancellation.
-      </p>
-    </Modal>
-  );
 }
 
 /* ────────────────────────────────────────────────────────────── */

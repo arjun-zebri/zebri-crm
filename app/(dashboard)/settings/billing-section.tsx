@@ -15,9 +15,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 
+import { cancelSubscriptionAction } from './billing/actions';
 import { BillingHistory } from './billing/billing-history';
+import { CancelConfirmModal } from './billing/cancel-confirm-modal';
 import { CurrentPlanCard } from './billing/current-plan-card';
 import { PlanComparisonDialog } from './billing/plan-comparison';
 import { type PlanId } from './billing/plans';
@@ -41,9 +44,12 @@ type ActivationState = 'idle' | 'polling' | 'timed_out';
 export function BillingSection(props: BillingSectionProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const justSubscribed = searchParams.get('checkout') === 'success';
   const justChanged = searchParams.get('change') === 'success';
   const [compareOpen, setCompareOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
   const [activation, setActivation] = useState<ActivationState>('idle');
   const [refreshing, setRefreshing] = useState(false);
   // A monotonic counter that ticks every time the user takes a
@@ -168,6 +174,20 @@ export function BillingSection(props: BillingSectionProps) {
     }
   }
 
+  async function confirmCancel() {
+    setCancelBusy(true);
+    const result = await cancelSubscriptionAction();
+    if (result.error) {
+      toast(result.error, 'error');
+      setCancelBusy(false);
+      return;
+    }
+    toast('Cancellation scheduled — page will refresh shortly.');
+    setCancelOpen(false);
+    setCancelBusy(false);
+    setActionTick((t) => t + 1);
+  }
+
   // Which plan to highlight as the "current" column in the comparison.
   const currentPlanForComparison: PlanId =
     props.isSubscribed && !props.cancelAtPeriodEnd
@@ -194,6 +214,7 @@ export function BillingSection(props: BillingSectionProps) {
         <CurrentPlanCard
           {...props}
           onManagePlan={() => setCompareOpen(true)}
+          onRequestCancel={() => setCancelOpen(true)}
           onAfterAction={() => setActionTick((t) => t + 1)}
         />
       </Section>
@@ -210,6 +231,15 @@ export function BillingSection(props: BillingSectionProps) {
         currentPlan={currentPlanForComparison}
         isSubscribed={props.isSubscribed}
         cancelAtPeriodEnd={props.cancelAtPeriodEnd}
+        onRequestCancel={() => setCancelOpen(true)}
+      />
+
+      <CancelConfirmModal
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={confirmCancel}
+        busy={cancelBusy}
+        subscriptionEnd={props.subscriptionEnd}
       />
     </div>
   );
