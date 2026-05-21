@@ -158,12 +158,20 @@ export function PlanComparisonDialog({
               {PLANS.map((plan) => {
                 const isCurrent = plan.id === currentPlan;
                 if (isCurrent) {
+                  // Render a button-shaped span so "Current" sits at
+                  // the same height/position as the Switch + Cancel
+                  // buttons in the other columns — same h-8 footprint,
+                  // same text-caption font weight, just no button
+                  // chrome (the column tint already signals which is
+                  // current).
                   return (
                     <td
                       key={plan.id}
-                      className="bg-surface-muted px-4 pb-6 pt-4 text-body font-medium text-text"
+                      className="bg-surface-muted px-4 pb-6 pt-4"
                     >
-                      Current
+                      <span className="inline-flex h-8 w-full items-center justify-center text-caption font-medium text-text">
+                        Current
+                      </span>
                     </td>
                   );
                 }
