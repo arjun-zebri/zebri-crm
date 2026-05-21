@@ -8,21 +8,14 @@
  * that trusts `user_metadata` for a security decision lets a user
  * self-escalate by calling `supabase.auth.updateUser({ data: {…} })`.
  *
- * Read model — "migrated user" sentinel:
- *   1. If `app_metadata.account_type` is set, the user has been
- *      backfilled. From that point on `app_metadata` is the SOLE
- *      source of truth for ALL entitlement reads — `user_metadata`
- *      is ignored entirely so an attacker can't grant themselves a
- *      single field that the backfill didn't set yet (e.g. a future
- *      `stripe_connect_account_id`).
- *   2. If `app_metadata.account_type` is missing, the user is
- *      pre-migration — fall back to `user_metadata` so live
- *      sessions don't lose admin / paid access in the deploy gap
- *      before the backfill migration runs. The 0.8b backfill sets
- *      `account_type` for every existing user, so after the
- *      migration completes this branch becomes dead code (a
- *      follow-up cleanup removes the fallback entirely once 24-48h
- *      of JWT-refresh soak has passed).
+ * **Phase 1 (2026-05-21):** the transitional `user_metadata` fallback
+ * was removed. Every existing user has been migrated for days; new
+ * users go through the signup server action which writes
+ * `app_metadata` directly via {@link updateEntitlements} plus the
+ * `sync_signup_app_metadata_on_insert` trigger as defence in depth.
+ * `app_metadata` is now the SOLE source of truth — no fallback,
+ * ever. Tightens the §7.4 fix by removing the transitional escape
+ * hatch.
  *
  * Tests in `tests/unit/lib/auth/entitlements.test.ts` pin the
  * escalation blocks. Integration tests assert end-to-end.
@@ -45,31 +38,23 @@ export interface EntitlementSource {
 }
 
 /**
- * "Has this user been migrated to app_metadata?" — the backfill sets
- * `app_metadata.account_type` for every user, so its presence is
- * the sentinel. Once true, `user_metadata` is ignored entirely for
- * entitlement reads, blocking the §7.4 escalation paths.
- */
-function isMigrated(source: EntitlementSource | null | undefined): boolean {
-  const v = source?.app_metadata?.account_type;
-  return v !== undefined && v !== null;
-}
-
-/**
- * Read a single entitlement field.
+ * Read a single entitlement field from `app_metadata` only.
  *
- * - If the source has been migrated, `app_metadata` is authoritative —
- *   `user_metadata` is NEVER consulted (no escalation).
- * - If not yet migrated, fall back to `user_metadata` so live
- *   sessions keep working in the deploy gap before the backfill.
+ * `user_metadata` is **never** consulted — even if `app_metadata` is
+ * missing the requested key. This is the §7.4 invariant: an
+ * attacker writing `subscription_status: 'active'` to
+ * `user_metadata` via `auth.updateUser({ data })` cannot grant
+ * themselves paid access, because this helper never looks there.
+ *
+ * Pre-Phase 1 there was a transitional fallback to `user_metadata`
+ * for unmigrated users; the backfill migration + INSERT trigger
+ * (Phase 0.8b) and the signup server action (Phase 1) guarantee
+ * `app_metadata` is populated for every user.
  */
 function read<T>(source: EntitlementSource | null | undefined, key: string): T | undefined {
   if (!source) return undefined;
-  const fromApp = source.app_metadata?.[key];
-  if (fromApp !== undefined && fromApp !== null) return fromApp as T;
-  if (isMigrated(source)) return undefined; // app_metadata wins; do NOT fall back.
-  const fromUser = source.user_metadata?.[key];
-  if (fromUser !== undefined && fromUser !== null) return fromUser as T;
+  const v = source.app_metadata?.[key];
+  if (v !== undefined && v !== null) return v as T;
   return undefined;
 }
 

@@ -53,6 +53,7 @@ default emoji and routing.
 | `cron_job_failed` | error | Cron handler threw | `/api/cron/*` |
 | `cron_job_missed` | warn | Expected run did not arrive | scheduled checker (Phase 0.7) |
 | `auth_anomaly` | warn | Failed-login spike, token reuse, … | middleware (Phase 0.8) |
+| `auth_rate_limit_hit` | warn | Per-action rate limit hit (login/signup/reset/update/change password) | `app/(auth)/actions.ts` + `app/(dashboard)/settings/account/actions.ts` (Phase 1) |
 | `rls_denied_spike` | warn | Cluster of RLS denials in a window | logs aggregator (Phase 0.8) |
 | `app_error` | error | Catch-all / uncaught errors | global error boundaries |
 

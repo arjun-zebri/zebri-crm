@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isAdmin, subscriptionStatus } from "@/lib/auth/entitlements";
+import { sameOriginPathSchema } from "@/lib/auth/schemas";
 import type { Database } from "@/types/database";
 
 const PUBLIC_ROUTES = [
@@ -75,12 +76,20 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // If no user and not a public route, redirect to login
+  // If no user and not a public route, redirect to login.
+  // Preserve the requested path as `?next=` so the login page can
+  // bounce the user back after they sign in. The `next` value is
+  // validated against {@link sameOriginPathSchema} (same-origin
+  // relative paths only) so a crafted link can't turn the
+  // redirect-after-login into an open redirect — defence in depth on
+  // top of the login server action's own check.
   if (!user && !isPublicRoute) {
-    return withCookies(
-      response,
-      NextResponse.redirect(new URL("/login", request.url))
-    );
+    const loginUrl = new URL("/login", request.url);
+    const nextCandidate = pathname + (request.nextUrl.search ?? "");
+    if (sameOriginPathSchema.safeParse(nextCandidate).success) {
+      loginUrl.searchParams.set("next", nextCandidate);
+    }
+    return withCookies(response, NextResponse.redirect(loginUrl));
   }
 
   // If user exists and on a public route (auth pages), allow access

@@ -113,6 +113,13 @@ export type AlertEvent =
       userId?: string;
     })
   | (BaseEvent & {
+      type: 'auth_rate_limit_hit';
+      severity: 'warn';
+      action: 'login' | 'signup' | 'resetPassword' | 'updatePassword' | 'changePassword';
+      ip: string;
+      userId?: string;
+    })
+  | (BaseEvent & {
       type: 'rls_denied_spike';
       severity: 'warn';
       table: string;

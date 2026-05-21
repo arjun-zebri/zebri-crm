@@ -15,7 +15,9 @@
  * @module tests/integration/helpers/supabase
  */
 import { execSync } from 'node:child_process'
+
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+
 import type { Database } from '@/types/database'
 
 export type DbClient = SupabaseClient<Database>
@@ -93,11 +95,17 @@ let userSeq = 0
 
 /**
  * Provision an isolated, confirmed auth user and return a client signed in as
- * them. `metadata` is written to `user_metadata` (e.g. a Pro subscription to
- * clear the DB-enforced starter cap).
+ * them.
+ *
+ * `metadata` writes to `user_metadata`; `appMetadata` writes to
+ * `app_metadata` (the server-only bag — entitlements live here post-§7.4).
+ * Pass `appMetadata` when arranging a billing scenario (the
+ * `enforce_starter_couple_limit` Postgres function also reads from there).
+ * Defaults to `{ account_type: 'vendor' }` so users look like real signups.
  */
 export async function createTestUser(
   metadata: Record<string, unknown> = {},
+  appMetadata: Record<string, unknown> = { account_type: 'vendor' },
 ): Promise<TestUser> {
   const admin = serviceClient()
   const email = `it+${Date.now()}-${userSeq++}@zebri.test`
@@ -108,6 +116,7 @@ export async function createTestUser(
     password,
     email_confirm: true,
     user_metadata: metadata,
+    app_metadata: appMetadata,
   })
   if (error || !data.user) {
     throw new Error(`createTestUser failed: ${error?.message ?? 'no user'}`)

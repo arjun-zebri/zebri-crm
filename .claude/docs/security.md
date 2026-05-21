@@ -50,10 +50,14 @@ the helper.
 - 5 public-RPC reads of `raw_user_meta_data` for `business_name` (user
   owns), `bank_*` (user owns), `stripe_connect_enabled` (UX flip on
   public Pay button only — Stripe rejects on charge if no Connect
-  account). Tracked for Payments page hardening.
+  account). Tracked for Payments page hardening (Phase 2).
 - Sidebar admin-link visibility (display only — middleware enforces).
-- The `user_metadata` fallback inside the helper itself stays for the
-  JWT-refresh soak window (24-48h post-deploy); a follow-up removes it.
+  Tracked for Admin / Shadow phase (Phase 13).
+- ~~`user_metadata` fallback inside the helper~~ — **resolved in
+  Phase 1** (2026-05-21). The fallback was removed once the JWT-
+  refresh soak completed; `app_metadata` is now the sole source of
+  truth in both the helper and the `enforce_starter_couple_limit`
+  Postgres function.
 
 ---
 
@@ -157,7 +161,7 @@ DELETE (sampled clean across the migrations).
 
 | Table | RLS enabled | Owner column | Integration test | Per-page phase |
 |---|---|---|---|---|
-| `couples` | ✅ | `user_id` | ✅ `tests/integration/rls/couples.test.ts` (5 tests) | Couples & Events |
+| `couples` | ✅ | `user_id` | ✅ `tests/integration/rls/couples.test.ts` (5 tests) + `tests/integration/billing/couple-cap.test.ts` (10 tests — Starter cap enforcement) | Couples & Events |
 | `events` | ✅ | `user_id` | ☐ | Couples & Events |
 | `contacts` | ✅ | `user_id` | ☐ | Contacts |
 | `tasks` | ✅ | `user_id` | ☐ | Tasks |

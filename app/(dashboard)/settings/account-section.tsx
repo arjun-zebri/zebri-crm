@@ -1,324 +1,300 @@
-'use client'
+/**
+ * Settings → Account tab section.
+ *
+ * Three sub-features:
+ *   1. **Change password** — posts to {@link changePasswordAction}
+ *      (server action) which re-authenticates with the current
+ *      password before updating, rate-limits per session, and
+ *      validates against the shared {@link changePasswordSchema}.
+ *   2. **Email preferences** — toggle which email categories the
+ *      user wants (user-owned data, `user_metadata.email_preferences`).
+ *   3. **Danger zone** — request account deletion. Currently
+ *      delegates to the existing fake-delete behaviour (signs out);
+ *      proper destructive deletion is tracked for Phase 13 (Admin /
+ *      Shadow) since it has Stripe-subscription implications.
+ *
+ * Token-driven primitives only (Phase 1 hardening). The password
+ * meter is shared with signup + update-password.
+ *
+ * @module app/(dashboard)/settings/account-section
+ */
+'use client';
 
-import { useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { Eye, EyeOff } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useToast } from '@/components/ui/toast'
-import { Modal } from '@/components/ui/modal'
+import { useRouter } from 'next/navigation';
+import { useActionState, useEffect, useRef, useState } from 'react';
+
+import { PasswordStrengthMeter } from '@/components/auth/password-strength-meter';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
+import { useToast } from '@/components/ui/toast';
+import { createClient } from '@/lib/supabase/client';
+
+import {
+  changePasswordAction,
+  type ChangePasswordResult,
+} from './account/actions';
 
 interface EmailPreferencesData {
-  product_updates?: boolean
-  booking_reminders?: boolean
-  tips?: boolean
+  product_updates?: boolean;
+  booking_reminders?: boolean;
+  tips?: boolean;
 }
 
-interface AccountSectionProps {
-  emailPreferences?: EmailPreferencesData
+export interface AccountSectionProps {
+  emailPreferences?: EmailPreferencesData;
 }
 
-function getPasswordStrength(password: string): { label: string; color: string; width: string } | null {
-  if (!password) return null
-
-  const hasUpperAndLower = /[a-z]/.test(password) && /[A-Z]/.test(password)
-  const hasNumbers = /\d/.test(password)
-  const hasSpecial = /[^a-zA-Z0-9]/.test(password)
-
-  if (password.length >= 10 && hasUpperAndLower && hasNumbers && hasSpecial) {
-    return { label: 'Strong', color: 'bg-green-500', width: 'w-full' }
-  }
-  if (password.length >= 8 && (hasUpperAndLower || hasNumbers)) {
-    return { label: 'Medium', color: 'bg-yellow-500', width: 'w-2/3' }
-  }
-  return { label: 'Weak', color: 'bg-red-500', width: 'w-1/3' }
-}
+const emptyChangeState: ChangePasswordResult = {};
 
 export function AccountSection({ emailPreferences: initialEmailPreferences }: AccountSectionProps) {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [deleteConfirmText, setDeleteConfirmText] = useState('')
-  const [deleteLoading, setDeleteLoading] = useState(false)
-
-  const savedPrefsRef = useRef({
-    productUpdates: initialEmailPreferences?.product_updates ?? true,
-    bookingReminders: initialEmailPreferences?.booking_reminders ?? true,
-    tips: initialEmailPreferences?.tips ?? false,
-  })
-  const [emailPreferences, setEmailPreferences] = useState({ ...savedPrefsRef.current })
-  const [savingPreferences, setSavingPreferences] = useState(false)
-
-  const isPreferencesDirty =
-    emailPreferences.productUpdates !== savedPrefsRef.current.productUpdates ||
-    emailPreferences.bookingReminders !== savedPrefsRef.current.bookingReminders ||
-    emailPreferences.tips !== savedPrefsRef.current.tips
-
-  const strength = getPasswordStrength(newPassword)
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-
-    if (newPassword !== confirmPassword) {
-      toast('Passwords do not match.', 'error')
-      return
-    }
-
-    if (newPassword.length < 6) {
-      toast('Password must be at least 6 characters.', 'error')
-      return
-    }
-
-    setLoading(true)
-
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-
-    if (error) {
-      toast(error.message, 'error')
-    } else {
-      toast('Password changed.')
-      setNewPassword('')
-      setConfirmPassword('')
-    }
-
-    setLoading(false)
-  }
-
-  const handleDeleteAccount = async () => {
-    setDeleteLoading(true)
-    const supabase = createClient()
-    // TODO: Implement server-side account deletion route (supabase.auth.admin.deleteUser requires service role key)
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
-  const handleSavePreferences = async () => {
-    setSavingPreferences(true)
-
-    const supabase = createClient()
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      toast('Unable to load user data.', 'error')
-      setSavingPreferences(false)
-      return
-    }
-
-    const existingMetadata = user.user_metadata || {}
-    const updatedMetadata = {
-      ...existingMetadata,
-      email_preferences: {
-        product_updates: emailPreferences.productUpdates,
-        booking_reminders: emailPreferences.bookingReminders,
-        tips: emailPreferences.tips,
-      },
-    }
-
-    const { error } = await supabase.auth.updateUser({ data: updatedMetadata })
-
-    if (error) {
-      toast(error.message, 'error')
-    } else {
-      toast('Email preferences saved.')
-      savedPrefsRef.current = { ...emailPreferences }
-    }
-
-    setSavingPreferences(false)
-  }
-
-  const inputClass =
-    'w-full border border-gray-200 rounded-xl px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
-
   return (
     <div className="max-w-2xl space-y-10">
-      {/* Reset Password */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-1">Change password</h2>
-        <p className="text-sm text-gray-500 mb-5">Update your account password.</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="new-password">
-                New Password <span className="text-xs text-gray-400 font-normal ml-1">Min. 6 characters</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="new-password"
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className={inputClass}
-                  placeholder="Enter new password"
-                  aria-describedby={strength ? 'password-strength' : undefined}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                  tabIndex={-1}
-                >
-                  {showNewPassword ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
-                </button>
-              </div>
-              {strength && (
-                <div id="password-strength" className="mt-2">
-                  <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${strength.color} ${strength.width} rounded-full transition-all`} />
-                  </div>
-                  <p className={`text-xs mt-1 ${
-                    strength.label === 'Strong' ? 'text-green-600' :
-                    strength.label === 'Medium' ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
-                    {strength.label}
-                  </p>
-                </div>
-              )}
-            </div>
+      <ChangePasswordCard />
+      {initialEmailPreferences ? (
+        <EmailPreferencesCard initial={initialEmailPreferences} />
+      ) : (
+        <EmailPreferencesCard />
+      )}
+      <DangerZoneCard />
+    </div>
+  );
+}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="confirm-password">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  id="confirm-password"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={inputClass}
-                  placeholder="Confirm new password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                  tabIndex={-1}
-                >
-                  {showConfirmPassword ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
-                </button>
-              </div>
-            </div>
-          </div>
+/* ──────────────────────────────────────────────────────────────────
+   Change password
+─────────────────────────────────────────────────────────────────── */
 
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
-            >
-              {loading ? 'Changing...' : 'Change Password'}
-            </button>
-          </div>
-        </form>
-      </div>
+function ChangePasswordCard() {
+  const { toast } = useToast();
+  const [state, formAction, pending] = useActionState(changePasswordAction, emptyChangeState);
+  const [newPassword, setNewPassword] = useState('');
+  // Track which state object we've already toasted by capturing the
+  // identity in a ref — useEffect reads the previous identity and
+  // updates it inside the same effect, which is the canonical
+  // post-action notification pattern (no state setter cascade).
+  const handledStateRef = useRef<typeof state | null>(null);
 
-      {/* Email Preferences */}
-      <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-4">Email Preferences</h3>
-        <div className="space-y-3 mb-4">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={emailPreferences.productUpdates}
-              onChange={(e) => setEmailPreferences({ ...emailPreferences, productUpdates: e.target.checked })}
-              className="h-4 w-4 rounded border-gray-300 accent-black focus:ring-green-200"
-            />
-            <span className="text-sm text-gray-700">Product updates and announcements</span>
-          </label>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={emailPreferences.bookingReminders}
-              onChange={(e) => setEmailPreferences({ ...emailPreferences, bookingReminders: e.target.checked })}
-              className="h-4 w-4 rounded border-gray-300 accent-black focus:ring-green-200"
-            />
-            <span className="text-sm text-gray-700">Booking reminders and event alerts</span>
-          </label>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={emailPreferences.tips}
-              onChange={(e) => setEmailPreferences({ ...emailPreferences, tips: e.target.checked })}
-              className="h-4 w-4 rounded border-gray-300 accent-black focus:ring-green-200"
-            />
-            <span className="text-sm text-gray-700">Tips and best practices</span>
-          </label>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleSavePreferences}
-            disabled={savingPreferences || !isPreferencesDirty}
-            className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
-          >
-            {savingPreferences ? 'Saving...' : 'Save Preferences'}
-          </button>
-          {isPreferencesDirty && (
-            <span className="text-sm text-gray-400">Unsaved changes</span>
-          )}
-        </div>
-      </div>
+  useEffect(() => {
+    if (!state.ok || !state.message || pending) return;
+    if (handledStateRef.current === state) return;
+    handledStateRef.current = state;
+    toast(state.message);
+  }, [state, pending, toast]);
 
-      {/* Danger Zone */}
-      <div className="border-t border-gray-200 pt-8">
-        <h3 className="text-sm font-medium text-red-600 mb-1">Danger Zone</h3>
-        <p className="text-sm text-gray-500 mb-4">Permanently delete your account and all associated data.</p>
-        <button
-          type="button"
-          onClick={() => setShowDeleteModal(true)}
-          className="border border-red-300 text-red-600 text-sm font-medium rounded-xl px-4 py-2 hover:bg-red-50 transition cursor-pointer"
+  return (
+    <section>
+      <h2 className="mb-1 text-xl font-semibold text-text">Change password</h2>
+      <p className="mb-5 text-caption text-text-muted">Update your account password.</p>
+
+      {state.error && !state.fieldErrors ? (
+        <div
+          role="alert"
+          className="mb-4 rounded-control border border-danger/40 bg-danger/10 p-3 text-caption text-danger"
         >
-          Delete Account
-        </button>
+          {state.error}
+        </div>
+      ) : null}
+
+      <form action={formAction} className="space-y-4">
+        <Input
+          label="Current password"
+          name="currentPassword"
+          type="password"
+          autoComplete="current-password"
+          required
+          {...(state.fieldErrors?.currentPassword ? { error: state.fieldErrors.currentPassword } : {})}
+        />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Input
+              label="New password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              help="Min. 10 chars. Include upper + lower + number + symbol."
+              {...(state.fieldErrors?.password ? { error: state.fieldErrors.password } : {})}
+            />
+            <PasswordStrengthMeter password={newPassword} />
+          </div>
+
+          <Input
+            label="Confirm password"
+            name="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            required
+            {...(state.fieldErrors?.confirmPassword ? { error: state.fieldErrors.confirmPassword } : {})}
+          />
+        </div>
+
+        <Button type="submit" loading={pending}>
+          {pending ? 'Changing…' : 'Change password'}
+        </Button>
+      </form>
+    </section>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Email preferences
+─────────────────────────────────────────────────────────────────── */
+
+interface EmailPreferencesCardProps {
+  initial?: EmailPreferencesData;
+}
+
+function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
+  const { toast } = useToast();
+  const initialPrefs = {
+    productUpdates: initial?.product_updates ?? true,
+    bookingReminders: initial?.booking_reminders ?? true,
+    tips: initial?.tips ?? false,
+  };
+  const [saved, setSaved] = useState(initialPrefs);
+  const [prefs, setPrefs] = useState(initialPrefs);
+  const [saving, setSaving] = useState(false);
+
+  const dirty =
+    prefs.productUpdates !== saved.productUpdates ||
+    prefs.bookingReminders !== saved.bookingReminders ||
+    prefs.tips !== saved.tips;
+
+  async function save() {
+    setSaving(true);
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      toast('Unable to load user data.', 'error');
+      setSaving(false);
+      return;
+    }
+    const updated = {
+      ...(user.user_metadata ?? {}),
+      email_preferences: {
+        product_updates: prefs.productUpdates,
+        booking_reminders: prefs.bookingReminders,
+        tips: prefs.tips,
+      },
+    };
+    const { error } = await supabase.auth.updateUser({ data: updated });
+    if (error) toast(error.message, 'error');
+    else {
+      toast('Email preferences saved.');
+      setSaved({ ...prefs });
+    }
+    setSaving(false);
+  }
+
+  return (
+    <section>
+      <h3 className="mb-4 text-sm font-medium text-text">Email preferences</h3>
+      <div className="mb-4 space-y-3">
+        {(
+          [
+            ['productUpdates', 'Product updates and announcements'],
+            ['bookingReminders', 'Booking reminders and event alerts'],
+            ['tips', 'Tips and best practices'],
+          ] as const
+        ).map(([key, label]) => (
+          <label key={key} className="flex cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              checked={prefs[key]}
+              onChange={(e) => setPrefs({ ...prefs, [key]: e.target.checked })}
+              className="h-4 w-4 rounded border-border accent-brand-fg"
+            />
+            <span className="text-sm text-text">{label}</span>
+          </label>
+        ))}
       </div>
+      <div className="flex items-center gap-3">
+        <Button type="button" onClick={save} loading={saving} disabled={!dirty}>
+          {saving ? 'Saving…' : 'Save preferences'}
+        </Button>
+        {dirty ? <span className="text-caption text-text-muted">Unsaved changes</span> : null}
+      </div>
+    </section>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Danger zone
+   TODO: Phase 13 — implement true destructive deletion server-side
+   (admin.deleteUser + Stripe subscription cancellation). For now the
+   UI sign-out behaviour is preserved.
+─────────────────────────────────────────────────────────────────── */
+
+function DangerZoneCard() {
+  const router = useRouter();
+  const [show, setShow] = useState(false);
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function doDelete() {
+    setLoading(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  }
+
+  return (
+    <section className="border-t border-border pt-8">
+      <h3 className="mb-1 text-sm font-medium text-danger">Danger zone</h3>
+      <p className="mb-4 text-caption text-text-muted">
+        Permanently delete your account and all associated data.
+      </p>
+      <Button variant="ghost" type="button" onClick={() => setShow(true)} className="border border-danger/40 text-danger hover:bg-danger/10">
+        Delete account
+      </Button>
 
       <Modal
-        isOpen={showDeleteModal}
-        onClose={() => { setShowDeleteModal(false); setDeleteConfirmText('') }}
+        isOpen={show}
+        onClose={() => {
+          setShow(false);
+          setConfirm('');
+        }}
         title="Delete your account?"
         footer={
-          <div className="flex items-center gap-3 justify-end">
-            <button
+          <div className="flex items-center justify-end gap-3">
+            <Button
+              variant="ghost"
               type="button"
-              onClick={() => { setShowDeleteModal(false); setDeleteConfirmText('') }}
-              className="text-sm font-medium text-gray-500 hover:text-gray-700 transition cursor-pointer"
+              onClick={() => {
+                setShow(false);
+                setConfirm('');
+              }}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="danger"
               type="button"
-              disabled={deleteConfirmText !== 'DELETE' || deleteLoading}
-              onClick={handleDeleteAccount}
-              className="bg-red-600 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-red-700 disabled:opacity-50 transition cursor-pointer"
+              disabled={confirm !== 'DELETE'}
+              loading={loading}
+              onClick={doDelete}
             >
-              {deleteLoading ? 'Deleting...' : 'Delete Account'}
-            </button>
+              {loading ? 'Deleting…' : 'Delete account'}
+            </Button>
           </div>
         }
       >
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="mb-4 text-caption text-text-muted">
           This action is permanent and cannot be undone. All your data will be deleted.
         </p>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="delete-confirm">
-            Type <span className="font-semibold">DELETE</span> to confirm
-          </label>
-          <input
-            id="delete-confirm"
-            type="text"
-            value={deleteConfirmText}
-            onChange={(e) => setDeleteConfirmText(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-transparent transition"
-            placeholder="DELETE"
-          />
-        </div>
+        <Input
+          label='Type "DELETE" to confirm'
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder="DELETE"
+        />
       </Modal>
-    </div>
-  )
+    </section>
+  );
 }

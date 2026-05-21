@@ -123,27 +123,72 @@ documents only. Editing them via `auth.updateUser({ data })` is fine.
 
 ## Auth flows
 
-### Sign up
+### Sign up (Phase 1 — server action)
 
-1. Form collects email, password, display name, business name.
-2. `supabase.auth.signUp({ email, password, options: { data: {
-   account_type: 'vendor', display_name, business_name,
-   subscription_status: 'trialing', trial_end: <+14 days>,
-   is_subscribed: true } } })`.
-   - These fields write to `user_metadata` (Supabase API limitation).
-3. The **`sync_signup_app_metadata_on_insert` trigger** (migration
-   `20260521000000_backfill_app_metadata_entitlements.sql`) fires
-   `before insert on auth.users` and copies the same 11 entitlement
-   fields from `raw_user_meta_data` to `raw_app_meta_data`. After
-   this, the entitlements helper reads from `app_metadata`.
-4. The trigger fires on **insert only**, never on update — so
-   subsequent `auth.updateUser({ data })` calls cannot poison
+The signup form posts to the **`signupAction`** server action in
+`app/(auth)/actions.ts`. The action:
+
+1. Parses + validates the FormData via `signupSchema`
+   (`@/lib/auth/schemas`) — Zod, with a strong password rule.
+2. Applies rate-limit (3 signups / hour / IP, in-memory).
+3. Calls `supabase.auth.signUp({ email, password, options: {
+   data: { display_name, business_name } } })`. **Only the user-
+   owned fields go into `user_metadata`** — no trust fields.
+4. Uses the admin client + `updateEntitlements()` to write
+   `account_type: 'vendor'`, `subscription_status: 'trialing'`,
+   `trial_end: +14 days`, `is_subscribed: true` directly to
    `app_metadata`.
+5. Fires a `signup_completed` Slack alert via `sendAlert`
+   (server-side; the prior client-side `/api/alerts/slack` POST is
+   gone — closes that open POST surface).
+6. `redirect('/')`.
 
-### Sign in / sign out
+Defence in depth: the **`sync_signup_app_metadata_on_insert`
+trigger** (migration `20260521000000`) still fires on
+`auth.users` INSERT, mirroring fields from `raw_user_meta_data` →
+`raw_app_meta_data`. Since the signup action sends an empty
+trust-field set into `user_metadata`, the trigger has nothing
+trust-relevant to copy — but it stays as a safety net for any
+future signup path (OAuth, magic link, federated) that bypasses
+the server action.
 
-Standard `supabase.auth.signInWithPassword()` and
-`supabase.auth.signOut()`. No app-side state to thread.
+The trigger fires on **insert only**, never on update — so
+subsequent `auth.updateUser({ data })` calls cannot poison
+`app_metadata`.
+
+### Sign in / sign out (Phase 1 — server action)
+
+Login posts to **`loginAction`** in `app/(auth)/actions.ts`:
+
+1. Validates form data via `loginSchema` (Zod). The `next` field
+   is restricted to same-origin relative paths
+   (`sameOriginPathSchema` — blocks open-redirect attempts like
+   `?next=//evil.com`; middleware also re-checks).
+2. Rate-limits per IP (10 / minute).
+3. Calls `supabase.auth.signInWithPassword`. On error returns the
+   raw Supabase message — Supabase returns the same string for
+   "wrong password" and "unknown email" so we don't leak which
+   accounts exist.
+4. `redirect(next ?? '/')` on success.
+
+Logout calls `supabase.auth.signOut()` from the sidebar; no server
+action needed.
+
+### Already-logged-in redirect
+
+Each auth page (login, signup, reset-password, update-password)
+is a server component that checks for an existing session at the
+top and `redirect('/')` away if found (except update-password,
+which **requires** the session set by the password-reset magic
+link).
+
+### `?next=…` redirect-after-login
+
+Middleware preserves the requested path on the unauth redirect:
+`/couples` → `/login?next=/couples`. The `loginAction` reads
+`next` from the form, re-validates against `sameOriginPathSchema`,
+and bounces the user to that path on success. Defence in depth:
+middleware also whitelists the path before setting it in the URL.
 
 ### Password reset
 

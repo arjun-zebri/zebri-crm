@@ -68,6 +68,8 @@ function describe(event: AlertEvent): string {
       return `job=${event.job}${event.lastRunAt ? ` · last run ${event.lastRunAt}` : ''}`;
     case 'auth_anomaly':
       return `kind=${event.kind}${event.userId ? ` · user=${event.userId}` : ''} — ${event.detail}`;
+    case 'auth_rate_limit_hit':
+      return `action=${event.action} · ip=${event.ip}${event.userId ? ` · user=${event.userId}` : ''}`;
     case 'rls_denied_spike':
       return `${event.count} denials on ${event.table} in the last ${event.windowMinutes}m`;
     case 'app_error':
