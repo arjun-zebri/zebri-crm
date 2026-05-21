@@ -87,7 +87,15 @@ export function PlanComparisonDialog({
   return (
     <Modal isOpen={open} onClose={onClose} title="Compare plans" size="xl">
       <div className="overflow-x-auto">
-        <table className="w-full text-body">
+        {/* table-fixed + explicit widths so the action-row button
+            loading state can't widen its column mid-click. */}
+        <table className="w-full table-fixed text-body">
+          <colgroup>
+            <col className="w-2/5" />
+            <col className="w-1/5" />
+            <col className="w-1/5" />
+            <col className="w-1/5" />
+          </colgroup>
           <thead>
             <tr className="border-b border-border">
               <th className="px-2 py-3 text-left text-caption font-medium uppercase tracking-wide text-text-muted">
@@ -173,6 +181,7 @@ export function PlanComparisonDialog({
                       size="sm"
                       onClick={() => action(plan.id)}
                       loading={busy === plan.id}
+                      className="w-full"
                     >
                       {isSubscribed && !cancelAtPeriodEnd
                         ? `Switch to ${plan.name}`
