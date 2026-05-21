@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { X, Plus, ChevronDown } from 'lucide-react'
+import { useState, useMemo } from 'react'
+
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS, CATEGORIES, type ContactCategory } from '@/types/contact'
-import { X, Plus, ChevronDown } from 'lucide-react'
-import * as Popover from '@radix-ui/react-popover'
+
 
 interface ContactPickerProps {
   excludeVendorIds: string[]

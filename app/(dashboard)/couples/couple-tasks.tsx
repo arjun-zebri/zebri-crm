@@ -1,13 +1,14 @@
 'use client'
 
-import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
 import { Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
+
+import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section'
 import { TaskRow, TaskRowTask } from '@/app/(dashboard)/tasks/task-row'
 import { TaskSidePanel, TaskFieldUpdate } from '@/app/(dashboard)/tasks/task-side-panel'
-import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section'
+import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
 import { TaskPriority, STATUS_ORDER } from '@/types/task'
 
 interface CoupleTasksProps {

@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
 import { Search, SlidersHorizontal } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+
 import { Couple, CoupleStatusRecord } from '@/types/couple'
 
 interface CouplesToolbarProps {

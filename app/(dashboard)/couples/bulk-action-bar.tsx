@@ -1,7 +1,8 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
 import { X, Trash2, Download, ChevronDown } from 'lucide-react'
+import { useRef, useEffect, useState } from 'react'
+
 import { CoupleStatusRecord, getStatusClasses } from '@/types/couple'
 
 interface BulkActionBarProps {

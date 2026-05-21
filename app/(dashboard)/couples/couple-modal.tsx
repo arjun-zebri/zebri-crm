@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
-import { Modal } from "@/components/ui/modal";
+import { ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal } from "@/components/ui/modal";
 import { Couple, CoupleStatusRecord, LeadSource, LEAD_SOURCES, LEAD_SOURCE_LABELS } from '@/types/couple';
 
 interface CoupleModalProps {

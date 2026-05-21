@@ -1,7 +1,5 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   DndContext,
   DragEndEvent,
@@ -12,13 +10,18 @@ import {
   useDraggable,
   useDroppable,
 } from '@dnd-kit/core'
-import { ChevronDown, Check, LayoutTemplate } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
-import { createClient } from '@/lib/supabase/client'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ChevronDown, Check, LayoutTemplate } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+
 import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
+import { TimelineItem } from '@/types/event'
+
 import { EventDayCalendar } from '../events/event-day-calendar'
 import { EventTimelineModal } from '../events/event-timeline-modal'
-import { TimelineItem } from '@/types/event'
+
 
 interface TimelineTemplate {
   id: string

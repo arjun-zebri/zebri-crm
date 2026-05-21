@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,8 +13,12 @@ import {
   ChevronDown,
   Check,
 } from "lucide-react";
-import { Event } from '@/types/event';
+import { useState, useMemo, useRef, useEffect } from "react";
+
+import { createClient } from "@/lib/supabase/client";
 import { CoupleStatusRecord, getStatusClasses } from '@/types/couple';
+import { Event } from '@/types/event';
+
 import { useCoupleStatuses } from "./use-couple-statuses";
 
 interface CouplesCalendarProps {

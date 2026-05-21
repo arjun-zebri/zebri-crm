@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { FileText, Download, Trash2, Plus, Loader2 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { FileText, Download, Trash2, Plus, Loader2 } from 'lucide-react'
+import { useState, useRef } from 'react'
+
 import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
 
 interface PortalFile {
   id: string

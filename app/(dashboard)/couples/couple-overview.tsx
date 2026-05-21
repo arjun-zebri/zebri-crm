@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Pencil } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
+import { Pencil } from "lucide-react";
+import { useState, useCallback } from "react";
+
 import {
   Couple,
   LEAD_SOURCE_LABELS,
   LeadSource,
   LEAD_SOURCES,
 } from '@/types/couple';
+
 import { CoupleEvents } from "./couple-events";
 
 interface CoupleOverviewProps {

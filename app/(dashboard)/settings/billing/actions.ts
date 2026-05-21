@@ -35,8 +35,13 @@ function priceFor(plan: 'pro' | 'max'): string | undefined {
 
 /**
  * Switch the user's existing subscription to a different plan tier.
- * Uses `create_prorations` so the user gets the new tier immediately
- * and proration is credited/charged on the next invoice.
+ *
+ * Uses `proration_behavior: 'always_invoice'` so the prorated
+ * difference is **billed immediately** at the time of switch (not
+ * stacked onto the next monthly invoice). On an upgrade Stripe
+ * issues a one-off invoice for the delta and charges the saved card;
+ * on a downgrade Stripe issues a $0 invoice with a credit that
+ * applies to the next renewal.
  */
 export async function switchPlanAction(plan: 'pro' | 'max'): Promise<BillingActionResult> {
   const supabase = await createClient();
@@ -59,7 +64,7 @@ export async function switchPlanAction(plan: 'pro' | 'max'): Promise<BillingActi
 
     await stripe.subscriptions.update(subId, {
       items: [{ id: currentItem.id, price: targetPrice }],
-      proration_behavior: 'create_prorations',
+      proration_behavior: 'always_invoice',
       // If the user had a scheduled cancellation, switching re-activates.
       cancel_at_period_end: false,
       metadata: { ...(subscription.metadata ?? {}), plan },
