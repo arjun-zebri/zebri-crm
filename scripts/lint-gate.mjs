@@ -26,7 +26,9 @@ import { execSync } from 'node:child_process';
 // warnings, 91 → 86 errors).
 // Only ever decrease these.
 const ERROR_BUDGET = 86;
-const WARNING_BUDGET = 826;
+// Phase 1 follow-up (auth UI polish + billing tab redesign) further
+// reduced warnings: 826 → 818.
+const WARNING_BUDGET = 818;
 
 function runEslintJson() {
   try {

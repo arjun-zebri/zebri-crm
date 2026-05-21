@@ -9,6 +9,7 @@
  */
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useActionState } from 'react';
 
@@ -26,6 +27,9 @@ export function LoginForm({ next }: LoginFormProps) {
   const [state, formAction, pending] = useActionState(loginAction, emptyAuthState);
   return (
     <div className="rounded-control border border-border bg-card p-6 shadow-sm sm:p-8">
+      <div className="mb-6 flex justify-center">
+        <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
+      </div>
       <h1 className="mb-6 text-center text-xl font-semibold text-text">Sign in</h1>
 
       {state.error && !state.fieldErrors ? (

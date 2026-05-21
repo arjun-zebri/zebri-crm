@@ -38,7 +38,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 // Visual styling — token-only. Hover/focus tones come from the same token
-// ladder so dark mode flips correctly without extra `dark:` modifiers.
+// ladder so brand changes propagate without per-call overrides.
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
     'bg-brand-fg text-text-inverse hover:opacity-90 focus-visible:ring-2 focus-visible:ring-brand-fg',

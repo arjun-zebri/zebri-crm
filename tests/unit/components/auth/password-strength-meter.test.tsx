@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { PasswordStrengthMeter } from '@/components/auth/password-strength-meter';
 
 describe('<PasswordStrengthMeter>', () => {
-  it('renders nothing for empty password', () => {
-    const { container } = render(<PasswordStrengthMeter password="" />);
-    expect(container.firstChild).toBeNull();
+  it('reserves space but shows no label for empty password', () => {
+    render(<PasswordStrengthMeter password="" />);
+    expect(screen.queryByText(/(weak|medium|strong) password/i)).toBeNull();
   });
 
   it('renders weak label for "abc"', () => {

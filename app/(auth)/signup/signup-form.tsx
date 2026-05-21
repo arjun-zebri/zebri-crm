@@ -10,6 +10,7 @@
  */
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useActionState } from 'react';
 
@@ -25,6 +26,9 @@ export function SignupForm() {
 
   return (
     <div className="rounded-control border border-border bg-card p-6 shadow-sm sm:p-8">
+      <div className="mb-6 flex justify-center">
+        <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
+      </div>
       <h1 className="mb-6 text-center text-xl font-semibold text-text">Create account</h1>
 
       {state.error && !state.fieldErrors ? (
@@ -74,10 +78,9 @@ export function SignupForm() {
             type="password"
             autoComplete="new-password"
             required
-            placeholder="At least 10 characters, mixed case + number + symbol"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            help="Min. 10 chars. Include upper + lower + number + symbol."
+            help="At least 10 characters with upper, lower, number, and symbol."
             {...(state.fieldErrors?.password ? { error: state.fieldErrors.password } : {})}
           />
           <PasswordStrengthMeter password={password} />

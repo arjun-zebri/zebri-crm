@@ -10,6 +10,7 @@
  */
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useActionState, useEffect, useState } from 'react';
 
@@ -34,6 +35,9 @@ export function ResetPasswordForm() {
 
   return (
     <div className="rounded-control border border-border bg-card p-6 shadow-sm sm:p-8">
+      <div className="mb-6 flex justify-center">
+        <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
+      </div>
       <h1 className="mb-2 text-center text-xl font-semibold text-text">Reset password</h1>
       <p className="mb-6 text-center text-caption text-text-muted">
         Enter the email address associated with your account, and we&apos;ll send you a link to reset

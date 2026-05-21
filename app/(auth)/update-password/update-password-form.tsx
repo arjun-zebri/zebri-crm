@@ -8,6 +8,7 @@
  */
 'use client';
 
+import Image from 'next/image';
 import { useActionState, useState } from 'react';
 
 import { PasswordStrengthMeter } from '@/components/auth/password-strength-meter';
@@ -22,6 +23,9 @@ export function UpdatePasswordForm() {
 
   return (
     <div className="rounded-control border border-border bg-card p-6 shadow-sm sm:p-8">
+      <div className="mb-6 flex justify-center">
+        <Image src="/zebri-logo.svg" alt="Zebri" width={96} height={26} priority />
+      </div>
       <h1 className="mb-2 text-center text-xl font-semibold text-text">Set new password</h1>
       <p className="mb-6 text-center text-caption text-text-muted">
         Choose a new password for your account.
@@ -44,10 +48,9 @@ export function UpdatePasswordForm() {
             type="password"
             autoComplete="new-password"
             required
-            placeholder="At least 10 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            help="Min. 10 chars. Include upper + lower + number + symbol."
+            help="At least 10 characters with upper, lower, number, and symbol."
             {...(state.fieldErrors?.password ? { error: state.fieldErrors.password } : {})}
           />
           <PasswordStrengthMeter password={password} />
@@ -59,7 +62,6 @@ export function UpdatePasswordForm() {
           type="password"
           autoComplete="new-password"
           required
-          placeholder="Re-enter your new password"
           {...(state.fieldErrors?.confirmPassword ? { error: state.fieldErrors.confirmPassword } : {})}
         />
 

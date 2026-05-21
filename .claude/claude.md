@@ -32,7 +32,7 @@ must hit the §5 Definition of Done before it's "done".
 ## Tech stack
 
 - **Frontend:** Next.js 16 (App Router, Turbopack) · React 19 ·
-  Tailwind 4 (`@theme inline` tokens with `:root` + `.dark`).
+  Tailwind 4 (`@theme inline` tokens with `:root`).
 - **Backend:** Supabase (Postgres + Auth + Storage), Row-Level
   Security on every owned table.
 - **Payments:** Stripe (subscriptions) + Stripe Connect (MC → couple
@@ -114,8 +114,8 @@ utility (`bg-[#…]`, `text-[#…]`) appears.
 - Borders: `border-border`, `border-border-strong`.
 - Brand / accents: `bg-brand`, `text-brand`, etc.
 
-The same token utility resolves to the right value in light and
-dark mode — no `dark:` modifier needed at call sites.
+The token utilities resolve to the right value via CSS variables,
+so brand changes propagate without per-call overrides.
 
 ## Typography
 

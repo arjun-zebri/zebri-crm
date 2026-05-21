@@ -6,9 +6,12 @@
  * rule the Zod schema enforces ({@link passwordStrength}), so the
  * meter and the schema can never disagree.
  *
+ * The outer container reserves fixed height regardless of state so
+ * the form layout doesn't jump when the meter first appears.
+ *
  * Token-driven — bar colours come from the `danger` / `warning` /
- * `success` semantic tokens so light + dark mode and brand changes
- * propagate without per-call overrides.
+ * `success` semantic tokens so brand changes propagate without
+ * per-call overrides.
  *
  * @example
  * ```tsx
@@ -55,14 +58,22 @@ const STRENGTH_CONFIG: Record<
 /** Real-time password-strength bar + label. See {@link PasswordStrengthMeterProps}. */
 export function PasswordStrengthMeter({ password, id }: PasswordStrengthMeterProps) {
   const grade = passwordStrength(password);
-  if (!grade) return null;
-  const cfg = STRENGTH_CONFIG[grade];
+  const cfg = grade ? STRENGTH_CONFIG[grade] : null;
+  // The outer container's fixed height reserves space so the layout
+  // doesn't shift when the meter starts rendering. The contents
+  // fade in once the user types.
   return (
-    <div id={id} className="mt-2" aria-live="polite">
-      <div className="h-1 w-full overflow-hidden rounded-full bg-surface-muted">
-        <div className={`h-full rounded-full transition-all ${cfg.widthClass} ${cfg.barClass}`} />
-      </div>
-      <p className={`mt-1 text-caption ${cfg.textClass}`}>{cfg.label} password</p>
+    <div id={id} className="mt-2 h-7" aria-live="polite">
+      {cfg ? (
+        <>
+          <div className="h-1 w-full overflow-hidden rounded-full bg-surface-muted">
+            <div
+              className={`h-full rounded-full transition-all ${cfg.widthClass} ${cfg.barClass}`}
+            />
+          </div>
+          <p className={`mt-1 text-caption ${cfg.textClass}`}>{cfg.label} password</p>
+        </>
+      ) : null}
     </div>
   );
 }
