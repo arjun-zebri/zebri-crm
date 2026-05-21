@@ -99,3 +99,43 @@ export function ipOf(request: Request): string {
   }
   return request.headers.get('x-real-ip') ?? 'unknown';
 }
+
+/**
+ * Extract a best-effort client IP from a `Headers` instance —
+ * server-action variant of {@link ipOf}. Server actions get the
+ * request headers from `next/headers.headers()` rather than a
+ * `Request` object.
+ */
+export function ipOfHeaders(headers: Headers): string {
+  const xff = headers.get('x-forwarded-for');
+  if (xff) {
+    const first = xff.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  return headers.get('x-real-ip') ?? 'unknown';
+}
+
+/**
+ * Canonical rate-limit thresholds for the auth + account flows
+ * (Phase 1). Exported so tests and call sites use the same numbers,
+ * and so we have a single place to ratchet them as we learn what
+ * real traffic looks like.
+ *
+ * Tuned to catch scripted abuse without friction for real users:
+ * - login: someone fat-fingering their password 10× in a minute is
+ *   already in the "stop and reset" zone.
+ * - signup: 3 new accounts per hour from one IP covers families on
+ *   shared NAT; bots typically want orders of magnitude more.
+ * - password resets: 5/hour matches Auth provider best practice.
+ * - in-session change/update password: 5/min is generous; anything
+ *   beyond is automation.
+ */
+export const AUTH_RATE_LIMITS = {
+  login: { windowMs: 60_000, max: 10 },
+  signup: { windowMs: 3_600_000, max: 3 },
+  resetPassword: { windowMs: 3_600_000, max: 5 },
+  updatePassword: { windowMs: 60_000, max: 5 },
+  changePassword: { windowMs: 60_000, max: 5 },
+} as const satisfies Record<string, LimiterOptions>;
+
+export type AuthRateLimitKey = keyof typeof AUTH_RATE_LIMITS;

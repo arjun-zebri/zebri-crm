@@ -20,10 +20,16 @@ import { execSync } from 'node:child_process';
 // 0.5b autofixed one import-order in app/layout.tsx (884 → 883); 0.8a
 // autofixed import-order in two edited cron routes (883 → 880); 0.8b
 // autofixed import-order across the user_metadata→app_metadata refactor
-// (880 → 849).
+// (880 → 849); Phase 1 (auth & account hardening) autofixed import-order
+// across the new auth + Settings + integration test files and replaced
+// raw HTML inputs with `<Input>` / `<Button>` primitives (849 → 826
+// warnings, 91 → 86 errors).
 // Only ever decrease these.
-const ERROR_BUDGET = 91;
-const WARNING_BUDGET = 849;
+const ERROR_BUDGET = 86;
+// Phase 1 follow-up (auth UI polish + billing tab redesign) further
+// reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
+// management + couples-page autofix sweep).
+const WARNING_BUDGET = 607;
 
 function runEslintJson() {
   try {

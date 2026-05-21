@@ -1,26 +1,15 @@
 @import "tailwindcss";
 
-/* Class-based dark variant (opt-in via `.dark` on <html>). Phase 0.5b. */
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* ────────────────────────────────────────────────────────────────────
-   Design tokens (Phase 0.5 + dark mode 0.5b)
+   Design tokens (Phase 0.5)
 
-   Two layers:
-   1. `:root` declares the colour VARIABLES for light mode; `.dark`
-      overrides the same variables for dark mode (added 0.5b).
-   2. `@theme inline` exposes them to Tailwind so utilities like
-      `bg-surface`, `text-text-muted`, `border-border` resolve to
-      `var(--surface)` etc. — meaning the SAME utility class produces
-      the right colour per theme, with no `dark:` modifier needed.
+   `:root` declares colour VARIABLES; `@theme inline` exposes them to
+   Tailwind so utilities like `bg-surface`, `text-text-muted`,
+   `border-border` resolve to `var(--surface)` etc.
 
-   Non-colour tokens (radius, typography, animation) don't change per
-   theme, so they stay as plain `@theme` constants.
-
-   Scope: dark mode is opt-in for the authenticated CRM surface only.
-   Public surfaces (lib/branding/* / portal / quote / invoice / contract
-   / timeline) follow the MC's brand kit, not the dashboard theme — they
-   currently use raw colours (not tokens) so they're naturally unaffected.
+   Dark mode was removed in Phase 1 (single light theme; if it ever
+   comes back, restore the `.dark` overrides + `@custom-variant`
+   declarations from the 0.5b commit).
 ─────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -39,7 +28,7 @@
   --border: #e5e7eb;        /* gray-200 */
   --border-strong: #d1d5db; /* gray-300 */
 
-  /* Brand (monochrome — flips in dark) */
+  /* Brand (monochrome) */
   --brand-fg: #000000;
   --brand-bg: #ffffff;
 
@@ -50,35 +39,6 @@
   --info:    #2563eb; /* blue-600 */
 
   color-scheme: light;
-}
-
-.dark {
-  /* Surfaces — near-black ladder for clean dark UI */
-  --surface: #0a0a0a;          /* zinc-950 */
-  --surface-muted: #171717;    /* zinc-900 */
-  --surface-emphasis: #262626; /* zinc-800 */
-
-  /* Text */
-  --text: #fafafa;          /* zinc-50 */
-  --text-muted: #a1a1aa;    /* zinc-400 */
-  --text-subtle: #71717a;   /* zinc-500 */
-  --text-inverse: #0a0a0a;
-
-  /* Borders */
-  --border: #27272a;         /* zinc-800 */
-  --border-strong: #3f3f46;  /* zinc-700 */
-
-  /* Brand monochrome flips: black-on-white → white-on-black */
-  --brand-fg: #ffffff;
-  --brand-bg: #000000;
-
-  /* Semantic states — brighter variants for legibility on dark */
-  --success: #10b981; /* emerald-500 */
-  --danger:  #ef4444; /* red-500 */
-  --warning: #f59e0b; /* amber-500 (unchanged — already bright enough) */
-  --info:    #3b82f6; /* blue-500 */
-
-  color-scheme: dark;
 }
 
 @theme inline {
@@ -111,7 +71,7 @@
 
   /* Radii (theme-agnostic) */
   --radius-control: 0.375rem; /* 6px — buttons, inputs */
-  --radius-card:    0.5rem;   /* 8px — cards, panels */
+  --radius-card:    0.75rem;  /* 12px — cards, panels (matches dashboard `rounded-xl`) */
   --radius-pill:    9999px;
 
   /* Typography (semantic — anchored to CLAUDE.md typography rules) */

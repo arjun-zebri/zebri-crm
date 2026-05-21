@@ -1,6 +1,67 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ · 0.7 ✅ · 0.8a ✅ · 0.8b ✅ · 0.9 ✅. **Phase 1 (per-page hardening) is next**, starting with Auth & account per §4.
+> Status: **Phase 0 (Foundation) COMPLETE** + **Phase 1 (Auth & account) shipped** — 0.0 → 0.9 ✅ · Phase 1 ✅. Per-page hardening continues with Phase 2 (Payments & invoices + Stripe webhooks/Connect) per §4.
+
+### Auth & account hardening (Phase 1)
+
+First per-page hardening PR — the gating surfaces shipped through
+the full §5 DoD bar.
+
+- **5 server actions** — `loginAction`, `signupAction`,
+  `resetPasswordAction`, `updatePasswordAction`,
+  `changePasswordAction`. Every action: Zod validation
+  (`lib/auth/schemas`), per-action rate-limit, server-side Slack
+  alert via `sendAlert()`, tagged `{ ok, error, fieldErrors }`
+  return for inline form rendering. Closed the open POST surface
+  on `/api/alerts/slack` (signup alert moved server-side).
+- **All 5 auth pages rewritten** to server-component +
+  client-form-component pattern, using `<Input>` / `<Button>` /
+  `<PasswordStrengthMeter>` primitives with tokens. ~582 LOC →
+  ~430 LOC. Mobile-responsive. TSDoc throughout.
+- **Signup writes `app_metadata` directly** via
+  `updateEntitlements()` — no longer depends on the INSERT
+  trigger. Trigger stays as defence in depth for future OAuth /
+  magic-link signup paths.
+- **`?next=` redirect-after-login** with same-origin whitelist
+  (`sameOriginPathSchema`). Middleware preserves it on unauth
+  redirect; login action re-validates and bounces. Open-redirect
+  proof (`?next=//evil.com` falls back to `/`).
+- **Already-logged-in redirect** on `/login`, `/signup`,
+  `/reset-password` (server-component guard). `/update-password`
+  intentionally requires session.
+- **Entitlements helper user_metadata fallback REMOVED** —
+  `app_metadata` is now the sole source of truth. JS helper + the
+  `enforce_starter_couple_limit` SQL function both updated.
+  Tightens the §7.4 fix by removing the transitional escape hatch.
+- **Settings Account tab** ported: change password via
+  `changePasswordAction` (re-auth with current password first +
+  per-session rate-limit). Email preferences + Danger Zone
+  rewritten with primitives (Delete Account remains
+  non-destructive — true destructive deletion is Phase 13).
+- **Comprehensive billing scenario test matrix** — the user's
+  explicit ask. 25 integration tests covering all 8 subscription
+  states (never trialled / trialing / trial-expired / active /
+  cancelling-in-grace / past-due / expired / comped), plan-tier
+  gating (Starter / Pro / Max → `hasContractsAccess`), Stripe
+  Connect identity, and the 5-couple cap (`enforce_starter_
+  couple_limit` Postgres function — fires for Starter / past-due
+  / expired; uncapped for Pro / Max / trialing / comped; blocks
+  the §7.4 user_metadata escalation bypass).
+- **Auth schema unit tests** — 33 tests pinning each Zod schema's
+  accept/reject behaviour including the open-redirect rejection
+  and password complexity rule.
+- **Phase 1 stats:** 114 unit tests (+33 new), 34 integration
+  tests (+25 new billing scenarios + 10 couple-cap). Lint budget
+  ratcheted DOWN 91 → 86 errors / 849 → 826 warnings. Strict
+  budget stays 295.
+
+**Out of Phase 1** (explicit): the Billing UI rewrite, Stripe
+webhook hardening, Stripe Checkout/Portal/Connect routes — all
+move to Phase 2 alongside Payments. The sidebar admin-link
+cosmetic `user_metadata` read is the only remaining read of that
+bag on dashboard surfaces; tracked for Phase 13.
+
+
 
 ### Claude system upgrade (Phase 0.9)
 

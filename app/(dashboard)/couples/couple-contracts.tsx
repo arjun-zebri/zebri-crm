@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileSignature } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
+import { useState } from 'react'
+
 import { ContractBuilderModal } from '@/components/builders/contract-builder-modal'
+import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
 
 interface Contract {
   id: string

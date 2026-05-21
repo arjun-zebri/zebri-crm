@@ -766,18 +766,25 @@ Action: Change Password
 
 ### Plans & Billing (`?tab=billing`)
 
-Shows state-specific messaging and CTAs based on subscription_status.
+Document-style layout (Phase 1 redesign): section labels + thin
+dividers, no nested cards. The "Compare plans" link opens a focused
+modal with the 3-tier feature table. See `payments.md` for the full
+state matrix.
 
-See `.claude/payments.md` for the full subscription UI table.
+| Status                       | Message                              | CTA                                  |
+| ---------------------------- | ------------------------------------ | ------------------------------------ |
+| Starter (no subscription)    | "Starter · Free plan"                | Upgrade to Pro (Checkout)            |
+| active                       | "Active · Renews {date}"             | Manage subscription · Cancel (Portal)|
+| active + cancel_at_period_end| "Cancels {date}"                     | Resubscribe (Portal)                 |
+| past_due                     | "Payment failed" + inline banner     | Update payment (Portal)              |
+| expired                      | "Subscription ended"                 | Upgrade to Pro (Checkout)            |
+| comped (admin-set)           | "Comped account"                     | No action row                        |
 
-| Status          | Message                          | CTA              |
-| --------------- | -------------------------------- | ---------------- |
-| No subscription | "Start your 14-day free trial"   | Start Free Trial |
-| trialing        | "Your trial ends on {date}"      | Manage Billing   |
-| active          | "You're subscribed to Zebri Pro" | Manage Billing   |
-| cancelled       | "Your access ends on {date}"     | Resubscribe      |
-| past_due        | "Payment failed"                 | Update Payment   |
-| expired         | "Your subscription has expired"  | Subscribe        |
+**Note (Phase 1):** the 14-day free trial was removed. The Starter
+tier (5-couple cap, long-term free) is the only free path. Paid
+plans charge from day 1.
+
+Starter users see a "X of 5 couples used" usage indicator inline.
 
 ### Payments (`?tab=payments`)
 

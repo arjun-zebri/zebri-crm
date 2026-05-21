@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import * as Popover from "@radix-ui/react-popover";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   X,
   Phone,
@@ -22,11 +23,14 @@ import {
   Activity,
   MoreHorizontal,
 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { PiWhatsappLogoLight } from "react-icons/pi";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
+
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { getOpenModalDepth } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
-import * as Popover from "@radix-ui/react-popover";
+import { hasContractsAccess } from '@/lib/payments/subscription';
+import { createClient } from "@/lib/supabase/client";
 import {
   Couple,
   LeadSource,
@@ -34,21 +38,20 @@ import {
   LEAD_SOURCE_LABELS,
   getStatusClasses,
 } from '@/types/couple';
-import { useCoupleStatuses } from "./use-couple-statuses";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { getOpenModalDepth } from "@/components/ui/modal";
-import { CoupleOverview } from "./couple-overview";
-import { CoupleTasks } from "./couple-tasks";
-import { CouplePayments } from "./couple-payments";
+
 import { CoupleContracts } from "./couple-contracts";
-import { hasContractsAccess } from '@/lib/payments/subscription';
-import { usePortalData } from "./use-portal-data";
-import { PersonModal, SongModal } from "./portal-modals";
+import { CoupleOverview } from "./couple-overview";
+import { CouplePayments } from "./couple-payments";
+import { CouplePulse } from "./couple-pulse";
+import { CoupleTasks } from "./couple-tasks";
 import { McPortalContacts } from "./mc-portal-contacts";
+import { PersonModal, SongModal } from "./portal-modals";
+import { useCoupleStatuses } from "./use-couple-statuses";
+
+import { usePortalData } from "./use-portal-data";
 import { McPortalSongs } from "./mc-portal-songs";
 import { McPortalFiles } from "./mc-portal-files";
 import { CoupleTimeline } from "./couple-timeline";
-import { CouplePulse } from "./couple-pulse";
 
 type Section =
   | "overview"

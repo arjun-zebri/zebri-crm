@@ -156,6 +156,18 @@ export async function POST(request: NextRequest) {
         // Entitlement fields go to app_metadata (§7.4 / Phase 0.8b) so a
         // user can't self-set subscription_status='active' and bypass the
         // paywall via auth.updateUser({ data: … }).
+        //
+        // `subscription_end` = current_period_end at checkout. Used by the
+        // plan card to show "Renews {date}" for active subs.
+        type WithPeriodEnd = { current_period_end?: number }
+        const firstItem = subscription.items.data[0] as unknown as WithPeriodEnd | undefined
+        const periodEndUnix =
+          firstItem?.current_period_end ??
+          (subscription as unknown as WithPeriodEnd).current_period_end
+        const periodEndIso = periodEndUnix
+          ? new Date(periodEndUnix * 1000).toISOString()
+          : undefined
+
         await updateEntitlements(adminClient.auth.admin, userId, {
           stripe_customer_id: customerId,
           stripe_subscription_id: subscriptionId,
@@ -166,7 +178,7 @@ export async function POST(request: NextRequest) {
             ? new Date(subscription.trial_end * 1000).toISOString()
             : undefined,
           cancel_at_period_end: false,
-          subscription_end: undefined,
+          subscription_end: periodEndIso,
         })
 
         const email = await getEmail(userId)
@@ -211,20 +223,24 @@ export async function POST(request: NextRequest) {
         const isDeleted = event.type === 'customer.subscription.deleted'
         const cancelAtPeriodEnd = subscription.cancel_at_period_end === true
 
-        // subscription_end is set both when cancellation is scheduled
-        // (cancel_at_period_end flips true on .updated) AND when the
-        // subscription actually terminates on .deleted. Without the
-        // .updated branch, middleware grace-period check is stale until
-        // the very end.
-        const periodEndIso = subscription.current_period_end
-          ? new Date(subscription.current_period_end * 1000).toISOString()
+        // subscription_end now means "when does the current period
+        // end?" universally: for active subs it's the renewal date
+        // (shown on the plan card), for cancelling-in-grace it's the
+        // access-ends date, for deleted subs it's when the
+        // subscription terminated. Single field, three purposes —
+        // they're the same timestamp anyway. Always populate from
+        // Stripe's current_period_end (subscription item in newer
+        // API versions, top-level in older).
+        type WithPeriodEnd = { current_period_end?: number }
+        const firstItem = subscription.items.data[0] as unknown as WithPeriodEnd | undefined
+        const periodEndUnix =
+          firstItem?.current_period_end ??
+          (subscription as unknown as WithPeriodEnd).current_period_end
+        const periodEndIso = periodEndUnix
+          ? new Date(periodEndUnix * 1000).toISOString()
           : null
 
-        const subscriptionEnd = isDeleted
-          ? periodEndIso
-          : cancelAtPeriodEnd
-            ? periodEndIso
-            : null
+        const subscriptionEnd = periodEndIso
 
         const nextStatus = isDeleted ? 'cancelled' : subscription.status
         const isSubscribed =

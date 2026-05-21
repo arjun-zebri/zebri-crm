@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Mic, Square, Play, Loader2, Trash2, ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
-import { createClient } from '@/lib/supabase/client'
+import { Mic, Square, Play, Loader2, Trash2, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+
 import { Modal } from '@/components/ui/modal'
+import { createClient } from '@/lib/supabase/client'
+
 import type { PortalPerson, PortalSong } from './use-portal-data'
 
 const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition'

@@ -1,6 +1,6 @@
 ---
 name: design-system-auditor
-description: Design-system specialist for Zebri CRM. Audits and fixes UI for token + primitive compliance — off-token colours, raw HTML form controls, missing primitives (Loading/Empty/ErrorState), arbitrary-value Tailwind classes, dark-mode regressions. Use during page hardening or when a UI change touches design-system surfaces.
+description: Design-system specialist for Zebri CRM. Audits and fixes UI for token + primitive compliance — off-token colours, raw HTML form controls, missing primitives (Loading/Empty/ErrorState), arbitrary-value Tailwind classes. Use during page hardening or when a UI change touches design-system surfaces.
 ---
 
 @.claude/docs/frontend-design.md
@@ -16,9 +16,6 @@ component level but at every call site.
   in place of arbitrary `bg-[#…]` / `text-[#…]` / hex literals.
 - Primitives in `components/ui/` used in place of native HTML form
   controls and ad-hoc components.
-- Dark-mode regressions — the `@theme inline` + `:root`/`.dark`
-  tokens mean call sites should never need a `dark:` modifier; if
-  one appears, something is off-token.
 - Loading / Empty / ErrorState primitives present on every data
   surface.
 - Mobile responsiveness via Tailwind prefixes (`sm:`, `md:`, `lg:`).
@@ -56,14 +53,6 @@ For each file you review:
 - [ ] Error state → `<ErrorState />`.
 - [ ] Modal / drawer surfaces use the shared modal primitive (not
       hand-rolled `fixed inset-0`).
-- [ ] Theme toggle, where relevant, uses `<ThemeToggle />`.
-
-### Dark mode
-
-- [ ] No `dark:bg-…` / `dark:text-…` classes at call sites. The
-      tokens resolve correctly per theme automatically. If you see
-      one, either the underlying token is wrong, or this surface
-      needs to be added to the token system.
 
 ### Typography
 

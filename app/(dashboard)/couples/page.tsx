@@ -1,8 +1,20 @@
 "use client";
 
-import { useEffect, useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useMemo, Suspense } from "react";
+
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { Couple, ViewMode, SortField, SortDirection } from '@/types/couple';
+
+import { BulkActionBar } from "./bulk-action-bar";
+import { CoupleModal } from "./couple-modal";
+import { CoupleProfile } from "./couple-profile";
+import { CouplesHeader } from "./couples-header";
+import { CouplesKanban } from "./couples-kanban";
+import { CouplesList } from "./couples-list";
+import { StarterCapLockModal } from "./starter-cap-lock-modal";
+import { useCoupleStatuses } from "./use-couple-statuses";
 import {
   useCouples,
   useCreateCouple,
@@ -13,15 +25,8 @@ import {
   useBulkDeleteCouples,
   StarterLimitError,
 } from "./use-couples";
-import { useCoupleStatuses } from "./use-couple-statuses";
-import { CouplesHeader } from "./couples-header";
-import { CouplesList } from "./couples-list";
-import { CouplesKanban } from "./couples-kanban";
-import { CoupleModal } from "./couple-modal";
-import { CoupleProfile } from "./couple-profile";
-import { BulkActionBar } from "./bulk-action-bar";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Couple, ViewMode, SortField, SortDirection } from '@/types/couple';
+import { useStarterCapLock } from "./use-starter-cap-lock";
+
 
 function CouplesPageContent() {
   const router = useRouter();
@@ -46,7 +51,28 @@ function CouplesPageContent() {
   const [defaultStatus, setDefaultStatus] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [capLockOpen, setCapLockOpen] = useState(false);
   const { toast } = useToast();
+  const capLock = useStarterCapLock(couples.length);
+
+  // Intercept couple-modal opens when the user is over the Starter
+  // cap. The DB trigger already blocks new INSERTs; this guards the
+  // existing-couple edit + add-modal paths in the UI.
+  function tryOpenCouple(couple: Couple) {
+    if (capLock.locked) {
+      setCapLockOpen(true);
+      return;
+    }
+    setSelectedCouple(couple);
+  }
+  function tryOpenAdd(statusSlug?: string) {
+    if (capLock.locked) {
+      setCapLockOpen(true);
+      return;
+    }
+    if (statusSlug) setDefaultStatus(statusSlug);
+    setAddModalOpen(true);
+  }
 
   // Redirect bare /couples to /couples?view=board
   useEffect(() => {
@@ -97,8 +123,7 @@ function CouplesPageContent() {
         const target = e.target as HTMLElement;
         if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
           e.preventDefault();
-          setDefaultStatus(undefined);
-          setAddModalOpen(true);
+          tryOpenAdd();
         }
       }
     };
@@ -312,10 +337,7 @@ function CouplesPageContent() {
         <CouplesHeader
           couples={couples}
           statuses={statuses}
-          onAddClick={() => {
-            setDefaultStatus(undefined);
-            setAddModalOpen(true);
-          }}
+          onAddClick={() => tryOpenAdd()}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
           search={search}
@@ -340,7 +362,7 @@ function CouplesPageContent() {
           <CouplesList
             couples={filteredCouples}
             statuses={statuses}
-            onRowClick={(couple) => setSelectedCouple(couple)}
+            onRowClick={tryOpenCouple}
             loading={isLoading}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
@@ -350,12 +372,9 @@ function CouplesPageContent() {
             <CouplesKanban
               couples={kanbanCouples}
               statuses={statuses}
-              onCardClick={(couple) => setSelectedCouple(couple)}
+              onCardClick={tryOpenCouple}
               onDragEnd={handleDragEnd}
-              onAddClick={(statusSlug) => {
-                setDefaultStatus(statusSlug);
-                setAddModalOpen(true);
-              }}
+              onAddClick={(statusSlug) => tryOpenAdd(statusSlug)}
               selectedIds={selectedIds}
               onSelectionChange={setSelectedIds}
               loading={isLoading}
@@ -399,6 +418,13 @@ function CouplesPageContent() {
         loading={bulkDeleteCouples.isPending}
         onCancel={() => setBulkDeleteOpen(false)}
         onConfirm={handleBulkDelete}
+      />
+
+      <StarterCapLockModal
+        open={capLockOpen}
+        onClose={() => setCapLockOpen(false)}
+        count={couples.length}
+        cap={capLock.cap}
       />
     </div>
   );

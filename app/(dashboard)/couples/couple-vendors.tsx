@@ -1,14 +1,19 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Trash2, Plus } from 'lucide-react'
 import { useState, useEffect } from 'react'
+
+import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS } from '@/types/contact'
 import { Contact } from '@/types/contact'
-import { Trash2, Plus } from 'lucide-react'
-import { ContactPicker } from './contact-picker'
+
 import { ContactModal } from '../contacts/contact-modal'
-import { useToast } from '@/components/ui/toast'
+
+import { ContactPicker } from './contact-picker'
+
+
 
 interface CoupleVendorsProps {
   coupleId: string

@@ -46,7 +46,7 @@ export function formatSlackMessage(event: AlertEvent): SlackPayload {
 function describe(event: AlertEvent): string {
   switch (event.type) {
     case 'signup_completed':
-      return `${event.displayName} (${event.email}) — ${event.businessName ?? 'no business'} · trial ends ${event.trialEnd}`;
+      return `${event.displayName} (${event.email}) — ${event.businessName ?? 'no business'}`;
     case 'subscription_created':
       return `${event.email} → ${event.plan}${event.amount !== undefined ? ` ($${event.amount})` : ''}`;
     case 'subscription_cancelled':
@@ -68,6 +68,8 @@ function describe(event: AlertEvent): string {
       return `job=${event.job}${event.lastRunAt ? ` · last run ${event.lastRunAt}` : ''}`;
     case 'auth_anomaly':
       return `kind=${event.kind}${event.userId ? ` · user=${event.userId}` : ''} — ${event.detail}`;
+    case 'auth_rate_limit_hit':
+      return `action=${event.action} · ip=${event.ip}${event.userId ? ` · user=${event.userId}` : ''}`;
     case 'rls_denied_spike':
       return `${event.count} denials on ${event.table} in the last ${event.windowMinutes}m`;
     case 'app_error':

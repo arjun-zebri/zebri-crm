@@ -1,7 +1,7 @@
 'use client'
 
-import { QuoteTemplateManager } from './quote-template-manager'
 import { ContractTemplateManager } from './contract-template-manager'
+import { QuoteTemplateManager } from './quote-template-manager'
 import { TimelineTemplateManager } from './timeline-template-manager'
 
 export function TemplatesSection() {

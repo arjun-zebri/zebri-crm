@@ -8,8 +8,6 @@ import {
   PaginationState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import {
   Users,
   ChevronLeft,
@@ -20,8 +18,11 @@ import {
   MapPin,
   ListChecks,
 } from "lucide-react";
-import { Couple, CoupleStatusRecord, getStatusClasses } from '@/types/couple';
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+
 import { formatDate } from "@/lib/utils";
+import { Couple, CoupleStatusRecord, getStatusClasses } from '@/types/couple';
 
 interface CouplesListProps {
   couples: Couple[];

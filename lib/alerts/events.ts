@@ -27,7 +27,6 @@ export type AlertEvent =
       email: string;
       displayName: string;
       businessName?: string;
-      trialEnd: string;
     })
   | (BaseEvent & {
       type: 'subscription_created';
@@ -110,6 +109,13 @@ export type AlertEvent =
       severity: 'warn';
       kind: string; // e.g. 'failed_login_spike' | 'token_reuse'
       detail: string;
+      userId?: string;
+    })
+  | (BaseEvent & {
+      type: 'auth_rate_limit_hit';
+      severity: 'warn';
+      action: 'login' | 'signup' | 'resetPassword' | 'updatePassword' | 'changePassword';
+      ip: string;
       userId?: string;
     })
   | (BaseEvent & {

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+
 import { useToast } from "@/components/ui/toast";
+import { createClient } from "@/lib/supabase/client";
 
 interface PaymentSettingsSectionProps {
   initialBankAccountName: string;

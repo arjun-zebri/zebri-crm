@@ -17,7 +17,6 @@ describe('formatSlackMessage', () => {
       email: 'sarah@example.com',
       displayName: 'Sarah',
       businessName: 'Sarah MC',
-      trialEnd: '2026-06-01',
     });
     expect(payload.text).toContain(':information_source:');
     expect(payload.text).toContain('signup completed');

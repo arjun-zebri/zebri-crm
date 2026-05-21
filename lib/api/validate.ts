@@ -44,6 +44,27 @@ export interface ParseFailure {
 export type ParseResult<T> = ParseSuccess<T> | ParseFailure;
 
 /**
+ * Server-action friendly version of {@link ParseSuccess}/{@link ParseFailure}.
+ *
+ * Server actions return values to client components rendering the
+ * form (typically via React's `useActionState`), not HTTP responses
+ * — so a Zod failure has to come back as a tagged value that the
+ * page can show inline. `error` is the headline; `fieldErrors` maps
+ * each invalid field path to its first issue message so the form
+ * can place the error next to the relevant input.
+ */
+export interface FormParseSuccess<T> {
+  ok: true;
+  data: T;
+}
+export interface FormParseFailure {
+  ok: false;
+  error: string;
+  fieldErrors: Record<string, string>;
+}
+export type FormParseResult<T> = FormParseSuccess<T> | FormParseFailure;
+
+/**
  * Build a 400 response from a ZodError. The `issues` list is sanitised
  * to only `{ path, code, message }` — never the offending value (which
  * could contain PII the client already knows about, but logging it
@@ -92,4 +113,39 @@ export function parseSearchParams<T>(
   const parsed = schema.safeParse(params);
   if (!parsed.success) return { ok: false, response: badRequest(parsed.error, 'query parameters') };
   return { ok: true, data: parsed.data };
+}
+
+/**
+ * Parse & validate a `FormData` payload (server-action calling
+ * convention). Returns a tagged result the form can render inline.
+ *
+ * Empty-string values are coerced to `undefined` so optional Zod
+ * fields don't trip on the empty HTML default. Multi-value fields
+ * (`<select multiple>` etc.) keep their array shape.
+ */
+export function parseFormData<T>(
+  formData: FormData,
+  schema: ZodType<T>,
+): FormParseResult<T> {
+  const raw: Record<string, FormDataEntryValue | FormDataEntryValue[] | undefined> = {};
+  for (const key of new Set(formData.keys())) {
+    const all = formData.getAll(key);
+    if (all.length === 0) raw[key] = undefined;
+    else if (all.length === 1) {
+      const v = all[0];
+      raw[key] = typeof v === 'string' && v === '' ? undefined : v;
+    } else raw[key] = all;
+  }
+  const parsed = schema.safeParse(raw);
+  if (parsed.success) return { ok: true, data: parsed.data };
+  const fieldErrors: Record<string, string> = {};
+  for (const issue of parsed.error.issues) {
+    const path = issue.path.join('.') || '_';
+    if (!fieldErrors[path]) fieldErrors[path] = issue.message;
+  }
+  return {
+    ok: false,
+    error: parsed.error.issues[0]?.message ?? 'Invalid input',
+    fieldErrors,
+  };
 }

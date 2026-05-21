@@ -100,22 +100,29 @@ describe('entitlements — server-managed reads (app_metadata wins)', () => {
   });
 });
 
-describe('entitlements — transition fallback to user_metadata', () => {
+describe('entitlements — user_metadata is never consulted (Phase 1)', () => {
   /**
-   * During the JWT-refresh window after the 0.8b backfill, a user's
-   * session may still be carrying an old JWT with values only in
-   * user_metadata. Those reads must keep working — otherwise live
-   * users would lose admin / paid access mid-session until they
-   * re-login. The fallback is intentionally generous; it's tightened
-   * (removed) in a follow-up after a 24-48h soak.
+   * Phase 1 removed the transitional fallback. `app_metadata` is the
+   * SOLE source of truth — even if a field is missing from
+   * `app_metadata`, `user_metadata` is never consulted. Tightens the
+   * §7.4 fix by removing the transitional escape hatch.
    */
-  it('reads from user_metadata when app_metadata is empty', () => {
-    expect(isAdmin({ user_metadata: { account_type: 'admin' } })).toBe(true);
-    expect(currentPlan({ user_metadata: { subscription_status: 'active', subscription_plan: 'pro' } })).toBe('pro');
+  it('an admin claim in user_metadata is IGNORED even when app_metadata is empty', () => {
+    expect(isAdmin({ user_metadata: { account_type: 'admin' } })).toBe(false);
+    expect(accountType({ user_metadata: { account_type: 'admin' } })).toBe('vendor');
   });
 
-  it('handles null app_metadata gracefully', () => {
-    expect(isAdmin({ app_metadata: null, user_metadata: { account_type: 'admin' } })).toBe(true);
+  it('a paid-status claim in user_metadata does NOT grant access', () => {
+    expect(
+      currentPlan({ user_metadata: { subscription_status: 'active', subscription_plan: 'pro' } }),
+    ).toBe('starter');
+    expect(
+      isActive({ user_metadata: { subscription_status: 'active' } }),
+    ).toBe(false);
+  });
+
+  it('null app_metadata + admin in user_metadata is still NOT admin', () => {
+    expect(isAdmin({ app_metadata: null, user_metadata: { account_type: 'admin' } })).toBe(false);
   });
 
   it('handles null/undefined source', () => {

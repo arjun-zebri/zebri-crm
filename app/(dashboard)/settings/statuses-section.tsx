@@ -1,9 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { GripVertical, Trash2, Plus, ChevronDown } from "lucide-react";
-import * as Popover from "@radix-ui/react-popover";
-import { Modal } from "@/components/ui/modal";
 import {
   DndContext,
   closestCenter,
@@ -21,6 +17,10 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import * as Popover from "@radix-ui/react-popover";
+import { GripVertical, Trash2, Plus, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+
 import {
   useCoupleStatuses,
   useCreateStatus,
@@ -28,12 +28,13 @@ import {
   useDeleteStatus,
   useReorderStatuses,
 } from "@/app/(dashboard)/couples/use-couple-statuses";
+import { Modal } from "@/components/ui/modal";
+import { useToast } from "@/components/ui/toast";
 import {
   CoupleStatusRecord,
   COLOR_PALETTE,
   getStatusClasses,
 } from '@/types/couple';
-import { useToast } from "@/components/ui/toast";
 
 function StatusRow({
   status,
