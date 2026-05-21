@@ -8,9 +8,24 @@ The schema is intentionally **simple for the MVP CRM**.
 
 # User Data
 
-There is no `users` table. User profile and subscription data is stored in Supabase Auth `user_metadata`. See `.claude/authentication.md` for the full schema.
+There is no `users` table. User data is stored on the Supabase Auth
+user row in **two** metadata bags:
 
-**Branding fields (stored in `user_metadata`):**
+- **`user_metadata`** — user-writable (`auth.updateUser({ data })`).
+  Holds user-owned fields (display name, business name, bank details,
+  branding, etc.).
+- **`app_metadata`** — **server-only writable**, JWT-readable. Holds
+  all entitlement fields (`account_type`, `subscription_*`,
+  `stripe_*`, `is_beta_user`). The §7.4 / Phase 0.8b fix moved these
+  out of `user_metadata` to close the privilege-escalation surface.
+
+Read entitlements via `@/lib/auth/entitlements`, never directly from
+either bag. Writes go through `updateEntitlements()` (server-only).
+See `.claude/docs/authentication.md` for the full schema of both bags
+and the migration mechanics (backfill migration + `sync_signup_app_
+metadata_on_insert` trigger).
+
+**Branding fields (stored in `user_metadata`, user-owned):**
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
@@ -22,7 +37,7 @@ There is no `users` table. User profile and subscription data is stored in Supab
 
 These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`. See `.claude/docs/branding.md` for full spec.
 
-**Address fields (stored in `user_metadata`):**
+**Address fields (stored in `user_metadata`, user-owned):**
 
 | Field | Type | Notes |
 |---|---|---|
@@ -337,7 +352,7 @@ paid_at (timestamp with time zone, nullable)
 
 created_at (timestamp)
 
-RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER function get_public_invoice (read-only; no couple-side writes on invoices). The function also returns tax_rate, payment schedule fields, stripe_payment_enabled, and stripe_connect_enabled (from auth.users.raw_user_meta_data).
+RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER function get_public_invoice (read-only; no couple-side writes on invoices). The function also returns tax_rate, payment schedule fields, stripe_payment_enabled, and stripe_connect_enabled. The Connect flag is currently read from `raw_user_meta_data` (residual reads documented in `.claude/docs/security.md` §7.4 — UX flip only; Stripe rejects the actual charge if Connect isn't completed). Migration to `raw_app_meta_data` is tracked for the Payments page-hardening phase.
 
 ------------------------------------------------------------------------
 

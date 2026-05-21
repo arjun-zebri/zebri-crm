@@ -1,6 +1,65 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation)** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ · 0.7 ✅ · 0.8a ✅ · 0.8b ✅ (**user_metadata privilege fix landed** — §7.4 closed; helper + backfill migration + INSERT trigger + 4 e2e escalation-block integration tests) · 0.9 next
+> Status: **Phase 0 (Foundation) COMPLETE** — 0.0 ✅ · 0.1 ✅ · 0.2 ✅ · 0.3 ✅ · 0.4 ✅ · 0.5 ✅ · 0.5.5 ✅ · 0.6 ✅ · 0.7 ✅ · 0.8a ✅ · 0.8b ✅ · 0.9 ✅. **Phase 1 (per-page hardening) is next**, starting with Auth & account per §4.
+
+### Claude system upgrade (Phase 0.9)
+
+The foundation finale: refresh every piece of Claude infrastructure
+to reflect the post-0.8 reality so future page-hardening PRs work off
+accurate docs and well-scoped agents.
+
+- **`.claude/CLAUDE.md`** rewritten end-to-end. Locked decisions
+  named, layering rule + comment style + DoD summary, the §7.4
+  entitlements model, the API-route conventions (Zod / rate-limit /
+  cron-auth / no-service-role-leak), the lint + strict-type ratchet
+  pattern, the post-§7.9 migration-deploy flow, agent + slash-command
+  catalog. The obsolete "minimal MVP / do not build automation"
+  framing is gone.
+- **4 new specialised agents** in `.claude/agents/`:
+  - `security-reviewer` — applies the per-page security checklist
+    and the §7.4 / 0.8b entitlements model; outputs P0/P1/P2/P3
+    findings with file:line + fix + pinning test.
+  - `test-runner` — runs the full pyramid (typecheck, strict,
+    lint:gate, unit, integration, build, e2e) and triages by fixing
+    the app; ratchets budgets DOWN when violations drop.
+  - `design-system-auditor` — token + primitive compliance,
+    dark-mode regressions, mobile responsiveness; flags off-token
+    colours and native HTML form controls.
+  - `db-migration` — focused migration-writing specialist; knows
+    the `@ALLOW_DESTRUCTIVE` marker, the from-zero replay rule,
+    idempotent backfills, the INSERT-trigger pattern, and the CI
+    `supabase db push` deploy flow.
+- **Slash commands**:
+  - `/ship-check` upgraded to enforce the **full §5 DoD** (types +
+    comments + tests + design system + L/E/E states + mobile +
+    architecture + security checklist + observability + lint + docs
+    + build). Reports pass/fail per item with file:line.
+  - `/harden-page` added — the canonical per-page hardening
+    workflow. Scope identification → gap report → types →
+    architecture → design system → security → tests →
+    observability → docs → /ship-check → PR. Dispatches the 4 new
+    agents where they fit.
+- **Docs refreshed:**
+  - `authentication.md` rewritten — the two-bag model
+    (user_metadata + app_metadata), the helper as canonical, the
+    INSERT trigger mechanics, the broken admin-override RLS pattern
+    explicitly called out as forbidden.
+  - `database-schema.md` — User Data section acknowledges the
+    user_metadata + app_metadata split; the `get_public_invoice`
+    note for `stripe_connect_enabled` flagged as a tracked
+    residual.
+  - `page-specs.md` — Settings page entries reflect the entitlement
+    writes going through `app_metadata` (not `user_metadata`);
+    Invoice modal references `stripeConnectEnabled(user)` via the
+    helper.
+  - Older `database` agent refreshed to point migration work at
+    the new `db-migration` agent.
+
+Phase 0 ends here. Phase 1 begins with **Auth & account** per
+roadmap §4: hardening login, signup, reset/update-password,
+middleware, paywall — the gateway to everything else.
+
+
 
 ### user_metadata privilege fix (Phase 0.8b) — §7.4 resolved
 

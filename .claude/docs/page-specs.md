@@ -590,7 +590,7 @@ Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page.
 - Totals block: Subtotal → GST (if enabled) → Total
 - Payment schedule toggle: when on, reveals deposit % input + deposit due date + final balance due date. Each installment has a "Mark paid" button (replaced by "Paid" badge once paid). When schedule is active, the main "Mark as Paid" button is hidden.
 - Share token toggle (green, bg-green-500) with instant save
-- Stripe "Accept card payments" toggle  -  only visible if MC has Stripe Connect configured (`user_metadata.stripe_connect_enabled = true`). Hidden when payment schedule is active. If not connected: shows "Connect Stripe" link to `/settings?tab=payments`.
+- Stripe "Accept card payments" toggle  -  only visible if `stripeConnectEnabled(user)` is true (read via `@/lib/auth/entitlements` — `app_metadata.stripe_connect_enabled`; never the user-writable `user_metadata`). Hidden when payment schedule is active. If not connected: shows "Connect Stripe" link to `/settings?tab=payments`.
 - Save button refreshes invoice list
 
 Payment schedule sub-component: `invoice-payment-schedule.tsx` (co-located)
@@ -756,7 +756,7 @@ Tabs:
 
 Fields: Display Name, Business Name, Phone, Avatar URL
 
-Action: Save Changes (updates user_metadata)
+Action: Save Changes (updates user_metadata — these are user-owned fields, not entitlements; safe to write via `auth.updateUser({ data })`)
 
 ### Account (`?tab=account`)
 
@@ -783,9 +783,9 @@ See `.claude/payments.md` for the full subscription UI table.
 
 Two sections:
 
-**Bank details**  -  Account name, BSB, Account number inputs. Save button updates `user_metadata` with `bank_account_name`, `bank_bsb`, `bank_account_number`. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
+**Bank details**  -  Account name, BSB, Account number inputs. Save button updates `user_metadata` (user-owned fields — `bank_account_name`, `bank_bsb`, `bank_account_number`). Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
 
-**Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. Disconnect clears `stripe_connect_account_id` and `stripe_connect_enabled` from `user_metadata`.
+**Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. The Connect callback writes `stripe_connect_account_id` and `stripe_connect_enabled` to **`app_metadata`** via `updateEntitlements()` (entitlements, not user-owned — they govern access to the public Pay button). Disconnect clears those fields the same way.
 
 ### Packages (`?tab=packages`)
 
