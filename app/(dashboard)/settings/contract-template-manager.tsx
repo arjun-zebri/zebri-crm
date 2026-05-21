@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { JSONContent } from '@tiptap/react'
 import { Plus, Pencil, Trash2, FileSignature, X, Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
+import { useState } from 'react'
+
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
+import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
 
 interface ContractTemplate {
   id: string

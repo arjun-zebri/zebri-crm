@@ -21,7 +21,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { startTransition, useActionState, useEffect, useRef, useState } from 'react';
 
 import { PasswordStrengthMeter } from '@/components/auth/password-strength-meter';
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,11 @@ function ChangePasswordCard() {
   const { toast } = useToast();
   const [state, formAction, pending] = useActionState(changePasswordAction, emptyChangeState);
   const [newPassword, setNewPassword] = useState('');
+  // Rotate this key on success to force a fresh, empty form. Cheaper +
+  // more deterministic than manually resetting individual inputs (the
+  // uncontrolled fields wouldn't clear on `formRef.reset()` because
+  // React 19 form actions re-apply React-owned state).
+  const [formKey, setFormKey] = useState(0);
   // Track which state object we've already toasted by capturing the
   // identity in a ref — useEffect reads the previous identity and
   // updates it inside the same effect, which is the canonical
@@ -78,6 +83,12 @@ function ChangePasswordCard() {
     if (handledStateRef.current === state) return;
     handledStateRef.current = state;
     toast(state.message);
+    // Defer the form-reset state updates so React doesn't cascade
+    // them into another effect pass in the same commit.
+    startTransition(() => {
+      setNewPassword('');
+      setFormKey((k) => k + 1);
+    });
   }, [state, pending, toast]);
 
   return (
@@ -94,7 +105,7 @@ function ChangePasswordCard() {
         </div>
       ) : null}
 
-      <form action={formAction} className="space-y-4">
+      <form key={formKey} action={formAction} className="space-y-4">
         <Input
           label="Current password"
           name="currentPassword"
@@ -248,9 +259,13 @@ function DangerZoneCard() {
       <p className="mb-4 text-caption text-text-muted">
         Permanently delete your account and all associated data.
       </p>
-      <Button variant="ghost" type="button" onClick={() => setShow(true)} className="border border-danger/40 text-danger hover:bg-danger/10">
+      <button
+        type="button"
+        onClick={() => setShow(true)}
+        className="inline-flex h-9 cursor-pointer items-center justify-center rounded-control border border-danger/40 px-4 text-body font-medium text-danger transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+      >
         Delete account
-      </Button>
+      </button>
 
       <Modal
         isOpen={show}

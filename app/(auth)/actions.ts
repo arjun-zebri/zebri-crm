@@ -95,12 +95,21 @@ export async function loginAction(
   _prev: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
+  // Capture the email for the echo-back BEFORE Zod parsing so even an
+  // invalid email format renders back. Passwords are never echoed.
+  const submittedEmail = String(formData.get('email') ?? '');
+
   const parsed = parseFormData(formData, loginSchema);
-  if (!parsed.ok) return { error: parsed.error, fieldErrors: parsed.fieldErrors };
+  if (!parsed.ok)
+    return {
+      error: parsed.error,
+      fieldErrors: parsed.fieldErrors,
+      values: { email: submittedEmail },
+    };
 
   const ip = ipOfHeaders(await headers());
   const blocked = await applyAuthRateLimit('login', ip);
-  if (blocked) return blocked;
+  if (blocked) return { ...blocked, values: { email: submittedEmail } };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -112,10 +121,10 @@ export async function loginAction(
     // Supabase returns the same "Invalid login credentials" for wrong
     // password and unknown email — preserving that to avoid leaking
     // which accounts exist.
-    return { error: error.message };
+    return { error: error.message, values: { email: submittedEmail } };
   }
 
-  if (!data.user) return { error: 'Login failed. Please try again.' };
+  if (!data.user) return { error: 'Login failed. Please try again.', values: { email: submittedEmail } };
 
   redirect(parsed.data.next ?? '/');
 }
@@ -136,12 +145,21 @@ export async function signupAction(
   _prev: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
+  // Capture submitted non-secret values up-front for echo-back on error.
+  // Password is deliberately omitted — never echo it.
+  const submitted = {
+    email: String(formData.get('email') ?? ''),
+    displayName: String(formData.get('displayName') ?? ''),
+    businessName: String(formData.get('businessName') ?? ''),
+  };
+
   const parsed = parseFormData(formData, signupSchema);
-  if (!parsed.ok) return { error: parsed.error, fieldErrors: parsed.fieldErrors };
+  if (!parsed.ok)
+    return { error: parsed.error, fieldErrors: parsed.fieldErrors, values: submitted };
 
   const ip = ipOfHeaders(await headers());
   const blocked = await applyAuthRateLimit('signup', ip);
-  if (blocked) return blocked;
+  if (blocked) return { ...blocked, values: submitted };
 
   const supabase = await createClient();
   // Only display + business name go into user_metadata (user-owned).
@@ -157,8 +175,8 @@ export async function signupAction(
     },
   });
 
-  if (error) return { error: error.message };
-  if (!data.user) return { error: 'Signup failed. Please try again.' };
+  if (error) return { error: error.message, values: submitted };
+  if (!data.user) return { error: 'Signup failed. Please try again.', values: submitted };
 
   const admin = createAdminClient();
   await updateEntitlements(admin.auth.admin, data.user.id, {

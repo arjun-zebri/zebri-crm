@@ -1,15 +1,17 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+
 import { createClient } from "@/lib/supabase/client";
-import { PersonalInfoSection } from "./personal-info-section";
+
 import { AccountSection } from "./account-section";
 import { BillingSection } from "./billing-section";
-import { TemplatesSection } from "./templates-section";
 import { NotificationsSection } from "./notifications-section";
-import { StatusesSection } from "./statuses-section";
 import { PaymentSettingsSection } from "./payment-settings-section";
+import { PersonalInfoSection } from "./personal-info-section";
+import { StatusesSection } from "./statuses-section";
+import { TemplatesSection } from "./templates-section";
 
 interface EmailPreferencesData {
   product_updates?: boolean;

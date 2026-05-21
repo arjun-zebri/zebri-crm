@@ -49,6 +49,7 @@ export function SignupForm() {
           autoComplete="name"
           required
           placeholder="Jane Doe"
+          defaultValue={state.values?.displayName ?? ''}
           {...(state.fieldErrors?.displayName ? { error: state.fieldErrors.displayName } : {})}
         />
 
@@ -59,6 +60,7 @@ export function SignupForm() {
           autoComplete="organization"
           required
           placeholder="Your MC business"
+          defaultValue={state.values?.businessName ?? ''}
           {...(state.fieldErrors?.businessName ? { error: state.fieldErrors.businessName } : {})}
         />
 
@@ -69,6 +71,7 @@ export function SignupForm() {
           autoComplete="email"
           required
           placeholder="you@example.com"
+          defaultValue={state.values?.email ?? ''}
           {...(state.fieldErrors?.email ? { error: state.fieldErrors.email } : {})}
         />
 

@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { ChevronDown } from 'lucide-react'
+import { useState, useRef } from 'react'
+
 import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
+
 
 const businessTypeOptions = [
   { value: 'mc', label: 'MC' },

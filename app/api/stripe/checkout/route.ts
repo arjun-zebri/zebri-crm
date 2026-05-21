@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   isBetaUser,
   stripeCustomerId,
-  trialEnd,
   updateEntitlements,
 } from '@/lib/auth/entitlements'
 import { stripe } from '@/lib/payments/stripe'
@@ -83,23 +82,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Honor any remaining trial from signup so the user doesn't get a
-    // fresh 14 days on top of what they already have. If their signup
-    // trial has already expired, no Stripe trial is granted.
-    const existingTrialEnd = trialEnd(user)
-    let trialDays: number | undefined = 14
-    if (existingTrialEnd) {
-      const remainingMs = new Date(existingTrialEnd).getTime() - Date.now()
-      const remainingDays = Math.ceil(remainingMs / 86_400_000)
-      trialDays = remainingDays > 0 ? remainingDays : undefined
-    }
-
+    // Free trials removed in Phase 1 — Starter (5-couple cap) is the
+    // only free tier. Stripe checkout charges from day 1.
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        ...(trialDays ? { trial_period_days: trialDays } : {}),
         metadata: {
           supabase_user_id: user.id,
           plan,

@@ -52,6 +52,7 @@ export function LoginForm({ next }: LoginFormProps) {
           autoComplete="email"
           required
           placeholder="you@example.com"
+          defaultValue={state.values?.email ?? ''}
           {...(state.fieldErrors?.email ? { error: state.fieldErrors.email } : {})}
         />
 

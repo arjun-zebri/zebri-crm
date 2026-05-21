@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
 import { Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
+import { useState, useRef } from 'react'
+
+import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
 
 interface PortalSectionSettings {
   timeline: boolean
