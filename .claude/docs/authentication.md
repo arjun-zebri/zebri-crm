@@ -135,9 +135,9 @@ The signup form posts to the **`signupAction`** server action in
    data: { display_name, business_name } } })`. **Only the user-
    owned fields go into `user_metadata`** — no trust fields.
 4. Uses the admin client + `updateEntitlements()` to write
-   `account_type: 'vendor'`, `subscription_status: 'trialing'`,
-   `trial_end: +14 days`, `is_subscribed: true` directly to
-   `app_metadata`.
+   `account_type: 'vendor'` directly to `app_metadata`. **No
+   trial fields** — new signups land on Starter (5-couple cap is
+   the only free tier).
 5. Fires a `signup_completed` Slack alert via `sendAlert`
    (server-side; the prior client-side `/api/alerts/slack` POST is
    gone — closes that open POST surface).

@@ -9,10 +9,10 @@ Stripe is used for two distinct purposes:
 
 ## Philosophy
 
-- One plan, one price  -  no plan comparison pages
 - Billing should be invisible once subscribed
 - Use Stripe Checkout and Customer Portal  -  no custom payment forms
-- 14-day free trial, no free tier
+- **Starter (5-couple cap) is the only free tier — no time-limited trial.**
+  Phase 1 removed the 14-day trial; paid plans charge from day 1.
 
 ---
 
@@ -20,43 +20,49 @@ Stripe is used for two distinct purposes:
 
 | Plan | Price | Description |
 |---|---|---|
-| Starter | Free | Up to 5 couples, core CRM features |
+| Starter | Free | Up to 5 couples, core CRM features (long-term, not a trial) |
 | Pro | $49/mo | Unlimited couples + Couple portal, Song selection, Timeline Builder |
 | Max | $89/mo | Everything in Pro + Pulse, Event Mode, Team members, Account manager (some Soon) |
 
-All paid plans include a 14-day free trial. No credit card required to start trial.
-
 ---
 
-## Subscription Fields in user_metadata
+## Subscription Fields in app_metadata
 
-These fields live on the Supabase Auth user's `user_metadata` (see `authentication.md` for the full schema):
+These fields live on the Supabase Auth user's `app_metadata` (server-only
+writable post §7.4). Read via `@/lib/auth/entitlements`, never directly.
+See `authentication.md` for the full schema:
 
 | Field | Type | Description |
 |---|---|---|
-| is_subscribed | boolean | `true` when subscription is active or trialing |
+| is_subscribed | boolean | `true` when subscription is active |
 | stripe_customer_id | text | Stripe customer ID |
-| subscription_status | text | `trialing`, `active`, `cancelled`, `past_due`, `expired` |
-| subscription_plan | text | Plan identifier (e.g. `zebri_pro`) |
-| trial_end | timestamp | When the trial expires |
+| subscription_status | text | `active`, `cancelled`, `past_due`, `expired` (`trialing` legacy — admins can still set it for comps) |
+| subscription_plan | text | Plan identifier (`pro` or `max`) |
 | subscription_end | timestamp | When the subscription expires (set on cancellation) |
 | is_beta_user | boolean | Beta user flag  -  uses `STRIPE_BETA_PRICE_ID` for lifetime discount |
+
+`trial_end` still exists as a field but is no longer written at signup —
+new signups land on Starter directly. Admins can still set `trial_end`
+via the admin panel to comp users.
 
 ---
 
 ## Subscription Lifecycle
 
 ```
-sign_up → trialing → active → (cancelled / past_due) → expired
+sign_up → Starter (free, 5-couple cap)
+              ↓ Subscribe
+            active → (cancel_at_period_end / past_due) → expired → Starter
 ```
 
 | Status | Meaning |
 |---|---|
-| trialing | Within 14-day free trial |
+| (unset) | Starter — the long-term free tier |
 | active | Paying subscriber |
 | cancelled | User cancelled  -  access continues until `subscription_end` |
 | past_due | Payment failed  -  Stripe is retrying |
-| expired | Trial or subscription ended  -  no access |
+| expired | Subscription ended  -  reverts to Starter |
+| trialing | Legacy — only set by admin "Extend trial" tool for comps |
 
 ---
 
@@ -100,8 +106,8 @@ Creates a Stripe Checkout Session.
 - Requires authenticated user
 - Sets `client_reference_id` to the user's `auth.uid()`
 - Uses `STRIPE_PRICE_ID` for the subscription
-- Sets `subscription_data.trial_period_days` to 14 (if first subscription)
-- If `user_metadata.is_beta_user` is `true`, uses `STRIPE_BETA_PRICE_ID` instead of `STRIPE_PRICE_ID`
+- **No `trial_period_days`** — Phase 1 removed the 14-day trial; subscriptions charge from day 1
+- If the user is a beta user (`isBetaUser(user)` via the entitlements helper), uses `STRIPE_BETA_PRICE_ID` instead
 - Returns `{ url: string }`
 
 ### `POST /api/stripe/portal`
@@ -181,12 +187,12 @@ The subscription section on `/account` shows state-specific messaging:
 
 | Status | Message | CTA |
 |---|---|---|
-| No subscription | "Start your 14-day free trial" | "Start Free Trial" (goes to Checkout) |
-| trialing | "Your trial ends on {trial_end}" | "Manage Billing" (goes to Portal) |
-| active | "You're subscribed to Zebri Pro" | "Manage Billing" (goes to Portal) |
-| cancelled | "Your access ends on {subscription_end}" | "Resubscribe" (goes to Checkout) |
-| past_due | "Payment failed  -  please update your payment method" | "Update Payment" (goes to Portal) |
-| expired | "Your subscription has expired" | "Subscribe" (goes to Checkout) |
+| Starter (no subscription) | "Free plan · X of 5 couples used" | "Upgrade to Pro" (Checkout) |
+| active | "Active · Renews {date}" | "Manage subscription" (Portal) · "Cancel" (Portal) |
+| active + cancel_at_period_end | "Cancels {subscription_end}" | "Resubscribe" (Portal) |
+| past_due | "Payment failed" + inline danger banner | "Update payment" (Portal) |
+| expired | "Subscription ended" | "Upgrade to Pro" (Checkout) |
+| comped (admin-set) | "Comped account" | No action row |
 
 ---
 
