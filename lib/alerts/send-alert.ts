@@ -46,7 +46,7 @@ export function formatSlackMessage(event: AlertEvent): SlackPayload {
 function describe(event: AlertEvent): string {
   switch (event.type) {
     case 'signup_completed':
-      return `${event.displayName} (${event.email}) — ${event.businessName ?? 'no business'} · trial ends ${event.trialEnd}`;
+      return `${event.displayName} (${event.email}) — ${event.businessName ?? 'no business'}`;
     case 'subscription_created':
       return `${event.email} → ${event.plan}${event.amount !== undefined ? ` ($${event.amount})` : ''}`;
     case 'subscription_cancelled':

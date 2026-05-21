@@ -95,6 +95,62 @@ export function planById(id: string | null | undefined): Plan {
   return PLANS.find((p) => p.id === id) ?? PLANS[0]!;
 }
 
+/**
+ * The user-visible highlights for each tier — used inline on the
+ * current-plan card to show "what you get" without expanding the
+ * full comparison table.
+ */
+export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
+  starter: [
+    'Up to 5 couples',
+    'CRM & pipeline',
+    'Quotes, invoices & payments',
+    'Task management',
+  ],
+  pro: [
+    'Unlimited couples',
+    'CRM & pipeline',
+    'Couple portal',
+    'Song selection & file transfer',
+    'Timeline Builder',
+    'Quotes, invoices & payments',
+  ],
+  max: [
+    'Everything in Pro',
+    'Pulse',
+    'Event Mode',
+    'Up to 5 team members',
+    'Dedicated account manager',
+  ],
+};
+
+/**
+ * Row schema for the compact comparison table. Each cell is either
+ * a string ("Free", "$49/mo", "5"), a boolean (rendered as ✓ / —),
+ * or the literal `'soon'` for "included in this tier but not yet
+ * shipped".
+ */
+export type ComparisonCell = string | boolean | 'soon';
+export interface ComparisonRow {
+  label: string;
+  values: Record<PlanId, ComparisonCell>;
+}
+
+export const COMPARISON_ROWS: ComparisonRow[] = [
+  { label: 'Price', values: { starter: 'Free', pro: '$49/mo', max: '$89/mo' } },
+  { label: 'Couples', values: { starter: '5', pro: 'Unlimited', max: 'Unlimited' } },
+  { label: 'CRM & pipeline', values: { starter: true, pro: true, max: true } },
+  { label: 'Quotes, invoices & payments', values: { starter: true, pro: true, max: true } },
+  { label: 'Task management', values: { starter: true, pro: true, max: true } },
+  { label: 'Couple portal', values: { starter: false, pro: true, max: true } },
+  { label: 'Song selection & files', values: { starter: false, pro: true, max: true } },
+  { label: 'Timeline Builder', values: { starter: false, pro: true, max: true } },
+  { label: 'Pulse', values: { starter: false, pro: false, max: 'soon' } },
+  { label: 'Event Mode', values: { starter: false, pro: false, max: 'soon' } },
+  { label: 'Team members', values: { starter: false, pro: false, max: 'Up to 5' } },
+  { label: 'Priority support', values: { starter: false, pro: false, max: true } },
+];
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-AU', {
     day: 'numeric',

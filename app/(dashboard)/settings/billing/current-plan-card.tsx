@@ -1,22 +1,32 @@
 /**
- * Current-plan card — the single "what state am I in?" view at the
- * top of the Plans & Billing tab.
+ * Current-plan card — integrated billing surface for the Plans &
+ * Billing tab.
  *
- * One card per state. No promotional CTAs, no badge ribbons; one
- * primary action ("Manage subscription" → Stripe portal) and a
- * quiet "Compare plans" link to expand the full tier matrix.
+ * One bordered surface holding: plan name + price + state badge +
+ * inline "what's included" highlights + primary action ("Manage
+ * subscription" → Stripe portal) + a quiet "Change plan" link that
+ * expands the comparison table below + a tertiary "Cancel" link
+ * (also via the Stripe portal).
+ *
+ * Starter users see "X of 5 couples used" inline so the cap is
+ * visible before they hit it.
+ *
+ * Free trial removed — Starter (5-couple cap) is the only free
+ * tier. CTA text for Starter / past-due / expired states reads
+ * "Subscribe" / "Upgrade", never "Start free trial".
  *
  * @module app/(dashboard)/settings/billing/current-plan-card
  */
 'use client';
 
-import { AlertCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { useState } from 'react';
+import { AlertCircle, ArrowRight, Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
+import { createClient } from '@/lib/supabase/client';
 
-import { formatDate, planById, type PlanId } from './plans';
+import { formatDate, planById, PLAN_HIGHLIGHTS, type PlanId } from './plans';
 
 export interface CurrentPlanCardProps {
   status: string | null;
@@ -33,31 +43,27 @@ export interface CurrentPlanCardProps {
   compareOpen: boolean;
 }
 
-/**
- * Classify the user into one of seven render states. The trial-expired
- * case (trial_end < now while status === 'trialing') is treated as
- * "trial expired" so the card surfaces the right copy even before the
- * Stripe webhook flips the status.
- */
-function classify(p: CurrentPlanCardProps):
-  | 'never_trialled'
-  | 'trialing'
-  | 'trial_expired'
+type CardState =
+  | 'starter'
   | 'active'
   | 'cancelling_in_grace'
   | 'past_due'
   | 'expired'
-  | 'comped' {
+  | 'comped';
+
+/**
+ * Classify the user into a render state. The 14-day trial is gone
+ * — `trialing` is no longer written at signup, so we treat any
+ * remaining `trialing` value as "active subscription" (admins
+ * comping a user might still set it).
+ */
+function classify(p: CurrentPlanCardProps): CardState {
   if (p.isComped && p.status === 'active') return 'comped';
   if (p.status === 'past_due') return 'past_due';
   if (p.status === 'expired') return 'expired';
   if (p.status === 'active' && p.cancelAtPeriodEnd) return 'cancelling_in_grace';
-  if (p.status === 'active') return 'active';
-  if (p.status === 'trialing') {
-    if (p.trialEnd && new Date(p.trialEnd).getTime() < Date.now()) return 'trial_expired';
-    return 'trialing';
-  }
-  return 'never_trialled';
+  if (p.status === 'active' || p.status === 'trialing') return 'active';
+  return 'starter';
 }
 
 export function CurrentPlanCard(props: CurrentPlanCardProps) {
@@ -65,14 +71,12 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
   const [redirecting, setRedirecting] = useState<'portal' | PlanId | null>(null);
   const state = classify(props);
 
-  // Which plan to surface as the "current" name. For free-tier states
-  // (never_trialled / expired) we show "Starter"; for everything else
-  // we use the subscription_plan field (defaulting to Pro).
   const planId: PlanId =
-    state === 'never_trialled' || state === 'expired'
+    state === 'starter' || state === 'expired'
       ? 'starter'
       : (props.subscriptionPlan as PlanId) ?? 'pro';
   const plan = planById(planId);
+  const highlights = PLAN_HIGHLIGHTS[planId];
 
   async function openPortal() {
     setRedirecting('portal');
@@ -90,7 +94,7 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
     }
   }
 
-  async function startTrial(planChoice: PlanId) {
+  async function subscribe(planChoice: PlanId) {
     setRedirecting(planChoice);
     try {
       const res = await fetch('/api/stripe/checkout', {
@@ -110,145 +114,199 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
     }
   }
 
-  // ── Status note + primary action per state ────────────────────────
-  let statusNote: { tone: 'neutral' | 'warning' | 'danger'; text: string } | null = null;
-  let primary: { label: string; onClick: () => void; busy: boolean } | null = null;
+  // ── Per-state copy ───────────────────────────────────────────────
+  const statusLabel: { tone: 'success' | 'warning' | 'danger' | 'muted'; text: string } = (() => {
+    switch (state) {
+      case 'starter':
+        return { tone: 'muted', text: 'Free' };
+      case 'active':
+        return {
+          tone: 'success',
+          text: props.subscriptionEnd
+            ? `Renews ${formatDate(props.subscriptionEnd)}`
+            : 'Active',
+        };
+      case 'cancelling_in_grace':
+        return {
+          tone: 'warning',
+          text: props.subscriptionEnd
+            ? `Cancels ${formatDate(props.subscriptionEnd)}`
+            : 'Cancellation scheduled',
+        };
+      case 'past_due':
+        return { tone: 'danger', text: 'Payment failed' };
+      case 'expired':
+        return { tone: 'muted', text: 'Subscription ended' };
+      case 'comped':
+        return { tone: 'success', text: 'Comped' };
+    }
+  })();
 
-  switch (state) {
-    case 'never_trialled':
-      statusNote = { tone: 'neutral', text: 'Start a 14-day free trial of Pro — no credit card required.' };
-      primary = {
-        label: 'Start free trial',
-        onClick: () => startTrial('pro'),
-        busy: redirecting === 'pro',
-      };
-      break;
-    case 'trialing':
-      statusNote = {
-        tone: 'neutral',
-        text: props.trialEnd ? `Free trial — ends ${formatDate(props.trialEnd)}.` : 'Free trial.',
-      };
-      primary = {
-        label: 'Manage subscription',
-        onClick: openPortal,
-        busy: redirecting === 'portal',
-      };
-      break;
-    case 'trial_expired':
-      statusNote = {
-        tone: 'warning',
-        text: 'Your free trial has ended. Subscribe to keep Pro features.',
-      };
-      primary = {
-        label: 'Manage subscription',
-        onClick: openPortal,
-        busy: redirecting === 'portal',
-      };
-      break;
-    case 'active':
-      statusNote = { tone: 'neutral', text: 'Active subscription.' };
-      primary = {
-        label: 'Manage subscription',
-        onClick: openPortal,
-        busy: redirecting === 'portal',
-      };
-      break;
-    case 'cancelling_in_grace':
-      statusNote = {
-        tone: 'warning',
-        text: props.subscriptionEnd
-          ? `Cancellation scheduled — access ends ${formatDate(props.subscriptionEnd)}.`
-          : 'Cancellation scheduled.',
-      };
-      primary = {
-        label: 'Resubscribe',
-        onClick: openPortal,
-        busy: redirecting === 'portal',
-      };
-      break;
-    case 'past_due':
-      statusNote = {
-        tone: 'danger',
-        text: 'Payment failed. Update your payment method to keep access.',
-      };
-      primary = {
-        label: 'Update payment',
-        onClick: openPortal,
-        busy: redirecting === 'portal',
-      };
-      break;
-    case 'expired':
-      statusNote = {
-        tone: 'neutral',
-        text: 'Your previous subscription has ended. You can subscribe again any time.',
-      };
-      primary = {
-        label: 'Subscribe',
-        onClick: () => startTrial('pro'),
-        busy: redirecting === 'pro',
-      };
-      break;
-    case 'comped':
-      statusNote = { tone: 'neutral', text: 'Comped account — no charges.' };
-      // No primary CTA for comped users.
-      break;
-  }
-
-  const ToneIcon =
-    statusNote?.tone === 'danger'
-      ? AlertCircle
-      : statusNote?.tone === 'warning'
-        ? AlertCircle
-        : CheckCircle2;
-  const toneClass =
-    statusNote?.tone === 'danger'
-      ? 'text-danger'
-      : statusNote?.tone === 'warning'
-        ? 'text-warning'
-        : 'text-text-muted';
+  const toneClass = {
+    success: 'text-success',
+    warning: 'text-warning',
+    danger: 'text-danger',
+    muted: 'text-text-muted',
+  }[statusLabel.tone];
 
   return (
     <section className="rounded-card border border-border bg-surface p-6 sm:p-8">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="text-section font-semibold text-text">{plan.name}</h2>
-        {plan.price ? (
-          <div className="text-body text-text-muted">
-            <span className="text-text font-medium">{plan.price}</span>
-            {plan.period}
-          </div>
-        ) : (
-          <div className="text-body text-text-muted">Free</div>
-        )}
+      {/* Header: plan name + price + state */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-section font-semibold text-text">{plan.name} plan</h2>
+          <span className={`text-caption ${toneClass}`}>{statusLabel.text}</span>
+        </div>
+        <div className="text-body text-text-muted">
+          {plan.price ? (
+            <>
+              <span className="text-text font-medium">{plan.price}</span>
+              {plan.period}
+            </>
+          ) : (
+            'Free'
+          )}
+        </div>
       </div>
 
-      <p className="mt-1 text-body text-text-muted">{plan.tagline}</p>
+      {/* Inline what's included */}
+      <ul className="mt-5 grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+        {highlights.map((h) => (
+          <li key={h} className="flex items-start gap-2 text-body text-text">
+            <Check size={14} strokeWidth={1.5} className="mt-0.5 shrink-0 text-text-muted" />
+            {h}
+          </li>
+        ))}
+      </ul>
 
-      {statusNote ? (
-        <p className={`mt-4 inline-flex items-center gap-2 text-body ${toneClass}`}>
-          <ToneIcon size={14} strokeWidth={1.5} />
-          {statusNote.text}
+      {/* Starter-specific usage indicator */}
+      {state === 'starter' ? <StarterUsage /> : null}
+
+      {/* Past-due banner — full-width tone-shaded notice */}
+      {state === 'past_due' ? (
+        <p className="mt-5 inline-flex items-center gap-2 rounded-control border border-danger/40 bg-danger/5 px-3 py-2 text-caption text-danger">
+          <AlertCircle size={14} strokeWidth={1.5} />
+          Update your payment method in the billing portal to restore access.
         </p>
       ) : null}
 
-      <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-        {primary ? (
-          <Button onClick={primary.onClick} loading={primary.busy}>
-            {primary.label}
-          </Button>
-        ) : null}
-        <button
-          type="button"
-          onClick={props.onToggleCompare}
-          className="inline-flex items-center gap-1 text-body text-text-muted hover:text-text"
-        >
-          {props.compareOpen ? 'Hide plan comparison' : 'Compare plans'}
-          <ArrowRight
-            size={14}
-            strokeWidth={1.5}
-            className={`transition-transform ${props.compareOpen ? 'rotate-90' : ''}`}
+      {/* Comped — no actions row */}
+      {state === 'comped' ? null : (
+        <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <PrimaryAction
+            state={state}
+            redirecting={redirecting}
+            onPortal={openPortal}
+            onSubscribe={() => subscribe('pro')}
           />
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={props.onToggleCompare}
+            className="inline-flex items-center gap-1 text-body text-text-muted hover:text-text"
+          >
+            {props.compareOpen ? 'Hide comparison' : 'Compare plans'}
+            <ArrowRight
+              size={14}
+              strokeWidth={1.5}
+              className={`transition-transform ${props.compareOpen ? 'rotate-90' : ''}`}
+            />
+          </button>
+          {state === 'active' || state === 'cancelling_in_grace' ? (
+            <button
+              type="button"
+              onClick={openPortal}
+              className="text-body text-text-muted hover:text-danger"
+              disabled={redirecting !== null}
+            >
+              {state === 'cancelling_in_grace' ? 'Resubscribe' : 'Cancel subscription'}
+            </button>
+          ) : null}
+        </div>
+      )}
     </section>
   );
 }
+
+/* ────────────────────────────────────────────────────────────── */
+
+function PrimaryAction({
+  state,
+  redirecting,
+  onPortal,
+  onSubscribe,
+}: {
+  state: CardState;
+  redirecting: 'portal' | PlanId | null;
+  onPortal: () => void;
+  onSubscribe: () => void;
+}) {
+  switch (state) {
+    case 'starter':
+    case 'expired':
+      return (
+        <Button onClick={onSubscribe} loading={redirecting === 'pro'}>
+          Upgrade to Pro
+        </Button>
+      );
+    case 'active':
+    case 'past_due':
+    case 'cancelling_in_grace':
+      return (
+        <Button onClick={onPortal} loading={redirecting === 'portal'}>
+          {state === 'past_due' ? 'Update payment' : 'Manage subscription'}
+        </Button>
+      );
+    case 'comped':
+      return null;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────── */
+
+function StarterUsage() {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from('couples')
+      .select('id', { count: 'exact', head: true })
+      .then(({ count: c }) => {
+        if (!cancelled) setCount(c ?? 0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (count === null) return null;
+  const remaining = Math.max(0, 5 - count);
+  const atCap = count >= 5;
+  return (
+    <div className="mt-5 flex items-center justify-between gap-3 rounded-control border border-border bg-surface-muted px-3 py-2">
+      <div className="flex items-center gap-3">
+        <CoupleMeter used={count} cap={5} />
+        <span className="text-caption text-text-muted">
+          <span className="font-medium text-text">{count} of 5</span> couples used
+          {atCap ? ' — upgrade to add more' : remaining === 1 ? ' — 1 left' : null}
+        </span>
+      </div>
+      {atCap ? <AlertCircle size={14} strokeWidth={1.5} className="shrink-0 text-warning" /> : null}
+    </div>
+  );
+}
+
+function CoupleMeter({ used, cap }: { used: number; cap: number }) {
+  const pct = Math.min(100, (used / cap) * 100);
+  const overCap = used >= cap;
+  return (
+    <div className="h-1.5 w-24 overflow-hidden rounded-full bg-border">
+      <div
+        className={`h-full transition-all ${overCap ? 'bg-warning' : 'bg-text'}`}
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+}
+

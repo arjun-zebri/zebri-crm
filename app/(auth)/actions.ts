@@ -128,10 +128,16 @@ export async function loginAction(
 }
 
 /**
- * Create a new vendor account. Writes entitlement fields directly to
- * `app_metadata` via {@link updateEntitlements} (server-side admin
- * client) so the trial state lands without depending on the INSERT
- * trigger. Fires a `signup_completed` alert. Redirects to `/`.
+ * Create a new vendor account. New signups land on the **Starter
+ * (free)** tier — no 14-day trial. The 5-couple cap acts as the
+ * organic free-tier limit; users upgrade to Pro/Max via the
+ * Settings → Plans & Billing tab when they need more.
+ *
+ * Writes `account_type: 'vendor'` to `app_metadata` via
+ * {@link updateEntitlements} (server-side admin client). The
+ * `sync_signup_app_metadata_on_insert` trigger stays as defence
+ * in depth for future OAuth signups but no longer needs to copy
+ * trial fields. Fires a `signup_completed` alert. Redirects to `/`.
  */
 export async function signupAction(
   _prev: AuthActionState,
@@ -146,7 +152,7 @@ export async function signupAction(
 
   const supabase = await createClient();
   // Only display + business name go into user_metadata (user-owned).
-  // The trust fields go through updateEntitlements below.
+  // account_type goes through updateEntitlements below.
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
@@ -161,22 +167,9 @@ export async function signupAction(
   if (error) return { error: error.message };
   if (!data.user) return { error: 'Signup failed. Please try again.' };
 
-  const trialEnd = new Date();
-  trialEnd.setDate(trialEnd.getDate() + 14);
-  const trialEndIso = trialEnd.toISOString();
-
-  // Write the trust fields to app_metadata via the admin client.
-  // Defence in depth: the `sync_signup_app_metadata_on_insert`
-  // trigger also runs and writes the same fields from
-  // user_metadata, but we send an empty user_metadata above so the
-  // trigger has nothing trust-relevant to copy — this action is now
-  // the canonical source of truth.
   const admin = createAdminClient();
   await updateEntitlements(admin.auth.admin, data.user.id, {
     account_type: 'vendor',
-    subscription_status: 'trialing',
-    trial_end: trialEndIso,
-    is_subscribed: true,
   });
 
   void sendAlert({
@@ -185,7 +178,6 @@ export async function signupAction(
     email: parsed.data.email,
     displayName: parsed.data.displayName,
     businessName: parsed.data.businessName,
-    trialEnd: trialEndIso,
   });
 
   redirect('/');

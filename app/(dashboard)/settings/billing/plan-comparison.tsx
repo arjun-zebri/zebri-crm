@@ -1,10 +1,14 @@
 /**
- * Plan comparison — the expandable 3-tier feature matrix.
+ * Plan comparison — compact feature table.
  *
- * Quietly hidden by default behind the "Compare plans" link on the
- * current-plan card. Token-driven, no promotional badges; uses a
- * single neutral border per card and a subtle highlight on the
- * user's current plan.
+ * Replaces the previous 3-column feature-list grid. Each tier is a
+ * column, each feature a row; cells render boolean ✓ / —,
+ * "Soon" pill, or a literal string ("$49/mo", "5", "Unlimited").
+ *
+ * Tighter than the previous 3-card layout; the user's current plan
+ * column is highlighted with a soft surface tint + "CURRENT" pill.
+ * Switch-plan actions live in a row at the bottom as quiet ghost
+ * buttons — no shouty colour CTAs.
  *
  * @module app/(dashboard)/settings/billing/plan-comparison
  */
@@ -16,7 +20,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 
-import { PLANS, type PlanId } from './plans';
+import { COMPARISON_ROWS, PLANS, type ComparisonCell, type PlanId } from './plans';
 
 export interface PlanComparisonProps {
   currentPlan: PlanId | null;
@@ -31,11 +35,10 @@ export function PlanComparison({ currentPlan, isSubscribed, cancelAtPeriodEnd }:
   async function action(planId: PlanId) {
     setRedirecting(planId);
     try {
-      // Subscribers route through the Stripe portal so they can up/downgrade
-      // through Stripe's UI (avoids us hand-building the proration flow).
-      // New users go through checkout.
-      const path = isSubscribed && !cancelAtPeriodEnd ? '/api/stripe/portal' : '/api/stripe/checkout';
-      const body = isSubscribed && !cancelAtPeriodEnd ? undefined : JSON.stringify({ plan: planId });
+      const path =
+        isSubscribed && !cancelAtPeriodEnd ? '/api/stripe/portal' : '/api/stripe/checkout';
+      const body =
+        isSubscribed && !cancelAtPeriodEnd ? undefined : JSON.stringify({ plan: planId });
       const res = await fetch(path, {
         method: 'POST',
         ...(body ? { headers: { 'Content-Type': 'application/json' }, body } : {}),
@@ -53,86 +56,119 @@ export function PlanComparison({ currentPlan, isSubscribed, cancelAtPeriodEnd }:
   }
 
   return (
-    <section className="rounded-card border border-border bg-surface p-5 sm:p-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {PLANS.map((plan) => {
-          const isCurrent = currentPlan === plan.id;
-          return (
-            <div
-              key={plan.id}
-              className={`rounded-card border p-5 ${
-                isCurrent ? 'border-text bg-surface-muted' : 'border-border bg-surface'
-              }`}
-            >
-              <div className="mb-2 flex items-baseline justify-between">
-                <h3 className="text-body font-semibold text-text">{plan.name}</h3>
-                {isCurrent ? (
-                  <span className="text-caption uppercase tracking-wide text-text-muted">
-                    Current
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="mb-1 flex items-baseline gap-0.5">
-                <span className="text-section font-semibold text-text">
-                  {plan.price ?? 'Free'}
-                </span>
-                {plan.period ? <span className="text-caption text-text-muted">{plan.period}</span> : null}
-              </div>
-
-              <p className="mb-5 text-caption text-text-muted">{plan.tagline}</p>
-
-              {plan.id === 'starter' ? (
-                isCurrent ? (
-                  <div className="mb-4 h-9 text-caption text-text-subtle">No action</div>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => action(plan.id)}
-                    loading={redirecting === plan.id}
-                    className="mb-4 w-full"
+    <section className="rounded-card border border-border bg-surface">
+      <div className="overflow-x-auto">
+        <table className="w-full text-body">
+          <thead>
+            <tr className="border-b border-border">
+              <th className="sticky left-0 bg-surface px-5 py-3 text-left text-caption font-medium uppercase tracking-wide text-text-muted">
+                Feature
+              </th>
+              {PLANS.map((plan) => {
+                const isCurrent = plan.id === currentPlan;
+                return (
+                  <th
+                    key={plan.id}
+                    className={`px-5 py-3 text-left font-medium ${
+                      isCurrent ? 'bg-surface-muted' : ''
+                    }`}
                   >
-                    Downgrade
-                  </Button>
-                )
-              ) : isCurrent ? (
-                <div className="mb-4 h-9 text-caption text-text-subtle">No action</div>
-              ) : (
-                <Button
-                  variant={isSubscribed ? 'secondary' : 'primary'}
-                  size="sm"
-                  onClick={() => action(plan.id)}
-                  loading={redirecting === plan.id}
-                  className="mb-4 w-full"
-                >
-                  {isSubscribed ? 'Switch to ' + plan.name : 'Subscribe to ' + plan.name}
-                </Button>
-              )}
-
-              <ul className="space-y-2">
-                {plan.features.map((f) => (
-                  <li key={f.label} className="flex items-start gap-2 text-caption">
-                    {f.included ? (
-                      <Check size={14} strokeWidth={1.5} className="mt-0.5 shrink-0 text-text" />
-                    ) : (
-                      <Minus size={14} strokeWidth={1.5} className="mt-0.5 shrink-0 text-text-subtle" />
-                    )}
-                    <span className={f.included ? 'text-text' : 'text-text-subtle'}>
-                      {f.label}
-                      {f.soon ? (
-                        <span className="ml-1.5 rounded-pill border border-border px-1.5 py-0.5 text-[10px] text-text-muted">
-                          Soon
+                    <div className="flex items-center gap-2">
+                      <span className="text-text">{plan.name}</span>
+                      {isCurrent ? (
+                        <span className="rounded-pill bg-text px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-text-inverse">
+                          Current
                         </span>
                       ) : null}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
+                    </div>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {COMPARISON_ROWS.map((row, i) => (
+              <tr
+                key={row.label}
+                className={i < COMPARISON_ROWS.length - 1 ? 'border-b border-border/60' : ''}
+              >
+                <th
+                  scope="row"
+                  className="sticky left-0 bg-surface px-5 py-2.5 text-left text-body font-normal text-text-muted"
+                >
+                  {row.label}
+                </th>
+                {PLANS.map((plan) => {
+                  const cell = row.values[plan.id];
+                  const isCurrent = plan.id === currentPlan;
+                  return (
+                    <td
+                      key={plan.id}
+                      className={`px-5 py-2.5 ${isCurrent ? 'bg-surface-muted' : ''}`}
+                    >
+                      <CellView cell={cell} />
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            {/* Action row */}
+            <tr className="border-t border-border">
+              <th className="sticky left-0 bg-surface px-5 py-3" aria-hidden />
+              {PLANS.map((plan) => {
+                const isCurrent = plan.id === currentPlan;
+                const isStarter = plan.id === 'starter';
+                if (isCurrent) {
+                  return (
+                    <td
+                      key={plan.id}
+                      className={`px-5 py-3 text-caption text-text-subtle ${
+                        isCurrent ? 'bg-surface-muted' : ''
+                      }`}
+                    >
+                      —
+                    </td>
+                  );
+                }
+                return (
+                  <td key={plan.id} className="px-5 py-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => action(plan.id)}
+                      loading={redirecting === plan.id}
+                      className="border border-border"
+                    >
+                      {isStarter
+                        ? 'Downgrade'
+                        : isSubscribed
+                          ? `Switch to ${plan.name}`
+                          : `Subscribe to ${plan.name}`}
+                    </Button>
+                  </td>
+                );
+              })}
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
   );
+}
+
+function CellView({ cell }: { cell: ComparisonCell }) {
+  if (cell === true) {
+    return <Check size={14} strokeWidth={1.5} className="text-text" aria-label="Included" />;
+  }
+  if (cell === false) {
+    return <Minus size={14} strokeWidth={1.5} className="text-text-subtle" aria-label="Not included" />;
+  }
+  if (cell === 'soon') {
+    return (
+      <span className="rounded-pill border border-border px-1.5 py-0.5 text-[10px] text-text-muted">
+        Soon
+      </span>
+    );
+  }
+  return <span className="text-text">{cell}</span>;
 }

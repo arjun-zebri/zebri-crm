@@ -27,7 +27,6 @@ export type AlertEvent =
       email: string;
       displayName: string;
       businessName?: string;
-      trialEnd: string;
     })
   | (BaseEvent & {
       type: 'subscription_created';
