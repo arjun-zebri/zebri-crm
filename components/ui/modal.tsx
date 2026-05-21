@@ -19,8 +19,15 @@ interface ModalProps {
   children: React.ReactNode
   footer?: React.ReactNode
   headerActions?: React.ReactNode
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   nested?: boolean
+}
+
+const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
+  sm: 'max-w-sm',
+  md: 'max-w-lg',
+  lg: 'max-w-2xl',
+  xl: 'max-w-3xl',
 }
 
 export function Modal({ isOpen, onClose, title, children, footer, headerActions, size = 'md', nested = false }: ModalProps) {
@@ -55,7 +62,7 @@ export function Modal({ isOpen, onClose, title, children, footer, headerActions,
         onClick={onClose}
       >
         <div
-          className={`bg-white rounded-2xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-modal-in ${size === 'sm' ? 'max-w-sm' : 'max-w-lg'}`}
+          className={`bg-white rounded-2xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]}`}
           onClick={(e) => e.stopPropagation()}
         >
           <div className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}>

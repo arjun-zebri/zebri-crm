@@ -1,14 +1,11 @@
 /**
- * Plan comparison — compact feature table.
+ * Plan comparison dialog — focused modal that opens from the
+ * "Compare plans" link on the current-plan card.
  *
- * Replaces the previous 3-column feature-list grid. Each tier is a
- * column, each feature a row; cells render boolean ✓ / —,
- * "Soon" pill, or a literal string ("$49/mo", "5", "Unlimited").
- *
- * Tighter than the previous 3-card layout; the user's current plan
- * column is highlighted with a soft surface tint + "CURRENT" pill.
- * Switch-plan actions live in a row at the bottom as quiet ghost
- * buttons — no shouty colour CTAs.
+ * Compact 3-column feature table with the user's current column
+ * highlighted. Switch-plan actions live in a row at the bottom as
+ * quiet ghost buttons. Closing the modal returns to the calm main
+ * flow.
  *
  * @module app/(dashboard)/settings/billing/plan-comparison
  */
@@ -18,17 +15,26 @@ import { Check, Minus } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 
 import { COMPARISON_ROWS, PLANS, type ComparisonCell, type PlanId } from './plans';
 
-export interface PlanComparisonProps {
+export interface PlanComparisonDialogProps {
+  open: boolean;
+  onClose: () => void;
   currentPlan: PlanId | null;
   isSubscribed: boolean;
   cancelAtPeriodEnd: boolean;
 }
 
-export function PlanComparison({ currentPlan, isSubscribed, cancelAtPeriodEnd }: PlanComparisonProps) {
+export function PlanComparisonDialog({
+  open,
+  onClose,
+  currentPlan,
+  isSubscribed,
+  cancelAtPeriodEnd,
+}: PlanComparisonDialogProps) {
   const { toast } = useToast();
   const [redirecting, setRedirecting] = useState<PlanId | null>(null);
 
@@ -56,12 +62,12 @@ export function PlanComparison({ currentPlan, isSubscribed, cancelAtPeriodEnd }:
   }
 
   return (
-    <section className="rounded-card border border-border bg-surface">
+    <Modal isOpen={open} onClose={onClose} title="Compare plans" size="xl">
       <div className="overflow-x-auto">
         <table className="w-full text-body">
           <thead>
             <tr className="border-b border-border">
-              <th className="sticky left-0 bg-surface px-5 py-3 text-left text-caption font-medium uppercase tracking-wide text-text-muted">
+              <th className="px-2 py-3 text-left text-caption font-medium uppercase tracking-wide text-text-muted">
                 Feature
               </th>
               {PLANS.map((plan) => {
@@ -69,17 +75,22 @@ export function PlanComparison({ currentPlan, isSubscribed, cancelAtPeriodEnd }:
                 return (
                   <th
                     key={plan.id}
-                    className={`px-5 py-3 text-left font-medium ${
+                    className={`px-4 py-3 text-left font-medium ${
                       isCurrent ? 'bg-surface-muted' : ''
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-text">{plan.name}</span>
-                      {isCurrent ? (
-                        <span className="rounded-pill bg-text px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-text-inverse">
-                          Current
-                        </span>
-                      ) : null}
+                    <div className="flex flex-col gap-0.5">
+                      <span className="flex items-center gap-2 text-text">
+                        {plan.name}
+                        {isCurrent ? (
+                          <span className="rounded-pill border border-border bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-text-muted">
+                            Current
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="text-caption font-normal text-text-muted">
+                        {plan.price ? `${plan.price}${plan.period}` : 'Free'}
+                      </span>
                     </div>
                   </th>
                 );
@@ -87,14 +98,14 @@ export function PlanComparison({ currentPlan, isSubscribed, cancelAtPeriodEnd }:
             </tr>
           </thead>
           <tbody>
-            {COMPARISON_ROWS.map((row, i) => (
+            {COMPARISON_ROWS.filter((r) => r.label !== 'Price').map((row, i, arr) => (
               <tr
                 key={row.label}
-                className={i < COMPARISON_ROWS.length - 1 ? 'border-b border-border/60' : ''}
+                className={i < arr.length - 1 ? 'border-b border-border/50' : ''}
               >
                 <th
                   scope="row"
-                  className="sticky left-0 bg-surface px-5 py-2.5 text-left text-body font-normal text-text-muted"
+                  className="px-2 py-2.5 text-left text-body font-normal text-text-muted"
                 >
                   {row.label}
                 </th>
@@ -104,7 +115,7 @@ export function PlanComparison({ currentPlan, isSubscribed, cancelAtPeriodEnd }:
                   return (
                     <td
                       key={plan.id}
-                      className={`px-5 py-2.5 ${isCurrent ? 'bg-surface-muted' : ''}`}
+                      className={`px-4 py-2.5 ${isCurrent ? 'bg-surface-muted' : ''}`}
                     >
                       <CellView cell={cell} />
                     </td>
@@ -114,36 +125,26 @@ export function PlanComparison({ currentPlan, isSubscribed, cancelAtPeriodEnd }:
             ))}
             {/* Action row */}
             <tr className="border-t border-border">
-              <th className="sticky left-0 bg-surface px-5 py-3" aria-hidden />
+              <th className="px-2 py-4" aria-hidden />
               {PLANS.map((plan) => {
                 const isCurrent = plan.id === currentPlan;
-                const isStarter = plan.id === 'starter';
                 if (isCurrent) {
                   return (
-                    <td
-                      key={plan.id}
-                      className={`px-5 py-3 text-caption text-text-subtle ${
-                        isCurrent ? 'bg-surface-muted' : ''
-                      }`}
-                    >
-                      —
+                    <td key={plan.id} className="bg-surface-muted px-4 py-4 text-body text-text-muted">
+                      Your plan
                     </td>
                   );
                 }
+                const isStarter = plan.id === 'starter';
                 return (
-                  <td key={plan.id} className="px-5 py-3">
+                  <td key={plan.id} className="px-4 py-4">
                     <Button
-                      variant="ghost"
+                      variant="secondary"
                       size="sm"
                       onClick={() => action(plan.id)}
                       loading={redirecting === plan.id}
-                      className="border border-border"
                     >
-                      {isStarter
-                        ? 'Downgrade'
-                        : isSubscribed
-                          ? `Switch to ${plan.name}`
-                          : `Subscribe to ${plan.name}`}
+                      {isStarter ? 'Downgrade' : `Switch to ${plan.name}`}
                     </Button>
                   </td>
                 );
@@ -152,23 +153,23 @@ export function PlanComparison({ currentPlan, isSubscribed, cancelAtPeriodEnd }:
           </tbody>
         </table>
       </div>
-    </section>
+    </Modal>
   );
 }
 
 function CellView({ cell }: { cell: ComparisonCell }) {
   if (cell === true) {
-    return <Check size={14} strokeWidth={1.5} className="text-text" aria-label="Included" />;
+    return <Check size={16} strokeWidth={1.5} className="text-text" aria-label="Included" />;
   }
   if (cell === false) {
-    return <Minus size={14} strokeWidth={1.5} className="text-text-subtle" aria-label="Not included" />;
+    return <Minus size={16} strokeWidth={1.5} className="text-text-subtle" aria-label="Not included" />;
   }
   if (cell === 'soon') {
     return (
-      <span className="rounded-pill border border-border px-1.5 py-0.5 text-[10px] text-text-muted">
+      <span className="rounded-pill border border-border bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-text-muted">
         Soon
       </span>
     );
   }
-  return <span className="text-text">{cell}</span>;
+  return <span className="text-body text-text">{cell}</span>;
 }

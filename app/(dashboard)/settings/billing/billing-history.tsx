@@ -80,72 +80,62 @@ export function BillingHistory() {
   }, []);
 
   if (loading) {
-    return (
-      <section>
-        <h3 className="mb-3 text-body font-medium text-text">Billing history</h3>
-        <div className="rounded-card border border-border bg-surface px-5 py-6">
-          <Loading label="Loading billing history…" />
-        </div>
-      </section>
-    );
+    return <Loading label="Loading billing history…" />;
   }
 
   if (error || !invoices) return null;
   if (invoices.length === 0 && !upcoming) return null;
 
   return (
-    <section>
-      <h3 className="mb-3 text-body font-medium text-text">Billing history</h3>
-      <div className="rounded-card border border-border bg-surface">
-        {invoices.length > 0 ? (
-          <ul className="divide-y divide-border">
-            {invoices.map((inv) => (
-              <li key={inv.id} className="flex items-center gap-4 px-5 py-3 text-body">
-                <span className="w-28 shrink-0 text-text-muted">
-                  {formatUnixDate(inv.created)}
-                </span>
-                <span className="w-20 shrink-0 font-medium text-text">{fmtAmount(inv.amount)}</span>
-                <span className="flex-1 text-text-muted">{statusLabel(inv.status)}</span>
-                <span className="flex shrink-0 items-center gap-4 text-caption text-text-muted">
-                  {inv.hostedUrl ? (
-                    <a
-                      href={inv.hostedUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 hover:text-text"
-                    >
-                      View <ExternalLink size={11} strokeWidth={1.5} />
-                    </a>
-                  ) : null}
-                  {inv.pdfUrl ? (
-                    <a
-                      href={inv.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 hover:text-text"
-                    >
-                      PDF <Download size={11} strokeWidth={1.5} />
-                    </a>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+    <div>
+      {invoices.length > 0 ? (
+        <ul className="divide-y divide-border/60">
+          {invoices.map((inv) => (
+            <li key={inv.id} className="flex items-center gap-4 py-3 text-body">
+              <span className="w-28 shrink-0 text-text-muted">
+                {formatUnixDate(inv.created)}
+              </span>
+              <span className="w-20 shrink-0 font-medium text-text">{fmtAmount(inv.amount)}</span>
+              <span className="flex-1 text-text-muted">{statusLabel(inv.status)}</span>
+              <span className="flex shrink-0 items-center gap-4 text-caption text-text-muted">
+                {inv.hostedUrl ? (
+                  <a
+                    href={inv.hostedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 hover:text-text"
+                  >
+                    View <ExternalLink size={11} strokeWidth={1.5} />
+                  </a>
+                ) : null}
+                {inv.pdfUrl ? (
+                  <a
+                    href={inv.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 hover:text-text"
+                  >
+                    PDF <Download size={11} strokeWidth={1.5} />
+                  </a>
+                ) : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
-        {upcoming ? (
-          <div className="border-t border-border px-5 py-3 text-caption text-text-muted">
-            Next charge: <span className="text-text">{fmtAmount(upcoming.amount)}</span>
-            {upcoming.nextChargeAt > 0 ? (
-              <>
-                {' '}
-                on <span className="text-text">{formatUnixDate(upcoming.nextChargeAt)}</span>
-              </>
-            ) : null}
-            .
-          </div>
-        ) : null}
-      </div>
-    </section>
+      {upcoming ? (
+        <p className="mt-4 text-caption text-text-muted">
+          Next charge: <span className="text-text">{fmtAmount(upcoming.amount)}</span>
+          {upcoming.nextChargeAt > 0 ? (
+            <>
+              {' '}
+              on <span className="text-text">{formatUnixDate(upcoming.nextChargeAt)}</span>
+            </>
+          ) : null}
+          .
+        </p>
+      ) : null}
+    </div>
   );
 }

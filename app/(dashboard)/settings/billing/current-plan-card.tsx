@@ -1,19 +1,10 @@
 /**
- * Current-plan card — integrated billing surface for the Plans &
- * Billing tab.
+ * Current-plan surface — no outer border, document-style layout.
  *
- * One bordered surface holding: plan name + price + state badge +
- * inline "what's included" highlights + primary action ("Manage
- * subscription" → Stripe portal) + a quiet "Change plan" link that
- * expands the comparison table below + a tertiary "Cancel" link
- * (also via the Stripe portal).
- *
- * Starter users see "X of 5 couples used" inline so the cap is
- * visible before they hit it.
- *
- * Free trial removed — Starter (5-couple cap) is the only free
- * tier. CTA text for Starter / past-due / expired states reads
- * "Subscribe" / "Upgrade", never "Start free trial".
+ * Big confident header (plan name + price). Status indicator with a
+ * coloured dot. "What's included" grid as supporting info. One
+ * primary CTA + two text links (Compare plans · Cancel/Resubscribe).
+ * Starter users see a prominent usage indicator.
  *
  * @module app/(dashboard)/settings/billing/current-plan-card
  */
@@ -37,10 +28,8 @@ export interface CurrentPlanCardProps {
   cancelAtPeriodEnd: boolean;
   isSubscribed: boolean;
   isComped: boolean;
-  /** Toggles the expandable plan-comparison panel below the card. */
-  onToggleCompare: () => void;
-  /** Whether the comparison panel is currently open (for the chevron). */
-  compareOpen: boolean;
+  /** Opens the plan-comparison modal. */
+  onCompare: () => void;
 }
 
 type CardState =
@@ -51,12 +40,6 @@ type CardState =
   | 'expired'
   | 'comped';
 
-/**
- * Classify the user into a render state. The 14-day trial is gone
- * — `trialing` is no longer written at signup, so we treat any
- * remaining `trialing` value as "active subscription" (admins
- * comping a user might still set it).
- */
 function classify(p: CurrentPlanCardProps): CardState {
   if (p.isComped && p.status === 'active') return 'comped';
   if (p.status === 'past_due') return 'past_due';
@@ -76,7 +59,6 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
       ? 'starter'
       : (props.subscriptionPlan as PlanId) ?? 'pro';
   const plan = planById(planId);
-  const highlights = PLAN_HIGHLIGHTS[planId];
 
   async function openPortal() {
     setRedirecting('portal');
@@ -114,85 +96,55 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
     }
   }
 
-  // ── Per-state copy ───────────────────────────────────────────────
-  const statusLabel: { tone: 'success' | 'warning' | 'danger' | 'muted'; text: string } = (() => {
-    switch (state) {
-      case 'starter':
-        return { tone: 'muted', text: 'Free' };
-      case 'active':
-        return {
-          tone: 'success',
-          text: props.subscriptionEnd
-            ? `Renews ${formatDate(props.subscriptionEnd)}`
-            : 'Active',
-        };
-      case 'cancelling_in_grace':
-        return {
-          tone: 'warning',
-          text: props.subscriptionEnd
-            ? `Cancels ${formatDate(props.subscriptionEnd)}`
-            : 'Cancellation scheduled',
-        };
-      case 'past_due':
-        return { tone: 'danger', text: 'Payment failed' };
-      case 'expired':
-        return { tone: 'muted', text: 'Subscription ended' };
-      case 'comped':
-        return { tone: 'success', text: 'Comped' };
-    }
-  })();
-
-  const toneClass = {
-    success: 'text-success',
-    warning: 'text-warning',
-    danger: 'text-danger',
-    muted: 'text-text-muted',
-  }[statusLabel.tone];
-
   return (
-    <section className="rounded-card border border-border bg-surface p-6 sm:p-8">
-      {/* Header: plan name + price + state */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-        <div className="flex items-baseline gap-3">
-          <h2 className="text-section font-semibold text-text">{plan.name} plan</h2>
-          <span className={`text-caption ${toneClass}`}>{statusLabel.text}</span>
+    <div>
+      {/* Header — plan name + price, big and confident */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-section font-semibold text-text">{plan.name}</h2>
+          <StatusLine state={state} subscriptionEnd={props.subscriptionEnd} />
         </div>
-        <div className="text-body text-text-muted">
+        <div className="text-right">
           {plan.price ? (
             <>
-              <span className="text-text font-medium">{plan.price}</span>
-              {plan.period}
+              <div className="text-section font-semibold text-text">{plan.price}</div>
+              <div className="text-caption text-text-muted">per month</div>
             </>
           ) : (
-            'Free'
+            <div className="text-section font-semibold text-text">Free</div>
           )}
         </div>
       </div>
 
-      {/* Inline what's included */}
-      <ul className="mt-5 grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
-        {highlights.map((h) => (
-          <li key={h} className="flex items-start gap-2 text-body text-text">
-            <Check size={14} strokeWidth={1.5} className="mt-0.5 shrink-0 text-text-muted" />
-            {h}
-          </li>
-        ))}
-      </ul>
-
-      {/* Starter-specific usage indicator */}
-      {state === 'starter' ? <StarterUsage /> : null}
-
-      {/* Past-due banner — full-width tone-shaded notice */}
+      {/* Past-due notice */}
       {state === 'past_due' ? (
-        <p className="mt-5 inline-flex items-center gap-2 rounded-control border border-danger/40 bg-danger/5 px-3 py-2 text-caption text-danger">
+        <div className="mt-6 inline-flex items-center gap-2 rounded-card border border-danger/40 bg-danger/5 px-3 py-2 text-body text-danger">
           <AlertCircle size={14} strokeWidth={1.5} />
           Update your payment method in the billing portal to restore access.
-        </p>
+        </div>
       ) : null}
 
-      {/* Comped — no actions row */}
+      {/* What's included */}
+      <div className="mt-8">
+        <h4 className="mb-3 text-caption font-medium uppercase tracking-wide text-text-muted">
+          Includes
+        </h4>
+        <ul className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
+          {PLAN_HIGHLIGHTS[planId].map((h) => (
+            <li key={h} className="flex items-start gap-2 text-body text-text">
+              <Check size={14} strokeWidth={1.5} className="mt-1 shrink-0 text-text-subtle" />
+              {h}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Starter usage */}
+      {state === 'starter' ? <StarterUsage onUpgrade={() => subscribe('pro')} redirecting={redirecting === 'pro'} /> : null}
+
+      {/* Actions */}
       {state === 'comped' ? null : (
-        <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
           <PrimaryAction
             state={state}
             redirecting={redirecting}
@@ -201,15 +153,11 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
           />
           <button
             type="button"
-            onClick={props.onToggleCompare}
+            onClick={props.onCompare}
             className="inline-flex items-center gap-1 text-body text-text-muted hover:text-text"
           >
-            {props.compareOpen ? 'Hide comparison' : 'Compare plans'}
-            <ArrowRight
-              size={14}
-              strokeWidth={1.5}
-              className={`transition-transform ${props.compareOpen ? 'rotate-90' : ''}`}
-            />
+            Compare plans
+            <ArrowRight size={14} strokeWidth={1.5} />
           </button>
           {state === 'active' || state === 'cancelling_in_grace' ? (
             <button
@@ -223,7 +171,58 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
           ) : null}
         </div>
       )}
-    </section>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────── */
+
+function StatusLine({
+  state,
+  subscriptionEnd,
+}: {
+  state: CardState;
+  subscriptionEnd: string | null;
+}) {
+  const tone =
+    state === 'past_due'
+      ? 'danger'
+      : state === 'cancelling_in_grace'
+        ? 'warning'
+        : state === 'starter' || state === 'expired'
+          ? 'muted'
+          : 'success';
+  const dotClass = {
+    success: 'bg-success',
+    warning: 'bg-warning',
+    danger: 'bg-danger',
+    muted: 'bg-text-subtle',
+  }[tone];
+
+  const text = (() => {
+    switch (state) {
+      case 'starter':
+        return 'Free plan';
+      case 'active':
+        return subscriptionEnd ? `Active · Renews ${formatDate(subscriptionEnd)}` : 'Active';
+      case 'cancelling_in_grace':
+        return subscriptionEnd
+          ? `Cancels ${formatDate(subscriptionEnd)}`
+          : 'Cancellation scheduled';
+      case 'past_due':
+        return 'Payment failed';
+      case 'expired':
+        return 'Subscription ended';
+      case 'comped':
+        return 'Comped account';
+    }
+  })();
+
+  return (
+    <div className="mt-1 flex items-center gap-2 text-body text-text-muted">
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${dotClass}`} aria-hidden />
+      {text}
+    </div>
   );
 }
 
@@ -263,7 +262,7 @@ function PrimaryAction({
 
 /* ────────────────────────────────────────────────────────────── */
 
-function StarterUsage() {
+function StarterUsage({ onUpgrade, redirecting }: { onUpgrade: () => void; redirecting: boolean }) {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -283,30 +282,32 @@ function StarterUsage() {
   if (count === null) return null;
   const remaining = Math.max(0, 5 - count);
   const atCap = count >= 5;
+  const pct = Math.min(100, (count / 5) * 100);
+
   return (
-    <div className="mt-5 flex items-center justify-between gap-3 rounded-control border border-border bg-surface-muted px-3 py-2">
-      <div className="flex items-center gap-3">
-        <CoupleMeter used={count} cap={5} />
-        <span className="text-caption text-text-muted">
-          <span className="font-medium text-text">{count} of 5</span> couples used
-          {atCap ? ' — upgrade to add more' : remaining === 1 ? ' — 1 left' : null}
-        </span>
+    <div className="mt-8">
+      <h4 className="mb-3 text-caption font-medium uppercase tracking-wide text-text-muted">
+        Usage
+      </h4>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 items-center gap-4">
+          <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-border">
+            <div
+              className={`h-full transition-all ${atCap ? 'bg-warning' : 'bg-text'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="shrink-0 whitespace-nowrap text-body text-text-muted">
+            <span className="font-medium text-text">{count} of 5</span> couples
+            {atCap ? null : remaining === 1 ? ' · 1 left' : null}
+          </div>
+        </div>
+        {atCap ? (
+          <Button size="sm" variant="secondary" onClick={onUpgrade} loading={redirecting}>
+            Upgrade to add more
+          </Button>
+        ) : null}
       </div>
-      {atCap ? <AlertCircle size={14} strokeWidth={1.5} className="shrink-0 text-warning" /> : null}
     </div>
   );
 }
-
-function CoupleMeter({ used, cap }: { used: number; cap: number }) {
-  const pct = Math.min(100, (used / cap) * 100);
-  const overCap = used >= cap;
-  return (
-    <div className="h-1.5 w-24 overflow-hidden rounded-full bg-border">
-      <div
-        className={`h-full transition-all ${overCap ? 'bg-warning' : 'bg-text'}`}
-        style={{ width: `${pct}%` }}
-      />
-    </div>
-  );
-}
-
