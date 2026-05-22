@@ -69,8 +69,14 @@ export function Modal({
 
   return (
     <>
+      {/* `h-screen` looks redundant alongside `inset-0` but is load-
+          bearing on mobile: iOS Safari's dynamic browser chrome
+          can leave `fixed inset-0` short of the visual viewport.
+          Forcing `100vh` guarantees full-screen backdrop coverage
+          (notably the bottom edge of the compare-plans modal —
+          regression caught during Phase 2B UI verification). */}
       <div
-        className={`fixed inset-0 bg-black/40 backdrop-blur-sm animate-fade-in ${nested ? 'z-[75]' : 'z-50'}`}
+        className={`fixed inset-0 h-screen bg-black/40 backdrop-blur-sm animate-fade-in ${nested ? 'z-[75]' : 'z-50'}`}
         onClick={onClose}
       />
       <div
