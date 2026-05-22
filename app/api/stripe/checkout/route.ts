@@ -112,8 +112,12 @@ export async function POST(request: NextRequest) {
       customerId = (existing?.stripe_customer_id as string | undefined) ?? undefined;
     }
     if (!customerId) {
+      // Strict TS: Stripe's CustomerCreateParams declares optional
+      // properties without `| undefined`. Strip the undefined here
+      // so `exactOptionalPropertyTypes` is happy without weakening
+      // the rest of the surface.
       const customer = await stripe.customers.create({
-        email: user.email,
+        ...(user.email ? { email: user.email } : {}),
         metadata: { supabase_user_id: user.id },
       });
       customerId = customer.id;

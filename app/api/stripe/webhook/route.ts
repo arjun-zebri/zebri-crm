@@ -584,7 +584,7 @@ function planFromPrice(priceId: string | null | undefined): 'pro' | 'max' | null
 }
 
 function planFromMetadata(
-  metadata: { plan?: string } | null | undefined,
+  metadata: { plan?: string | undefined } | null | undefined,
 ): 'pro' | 'max' | null {
   const p = metadata?.plan
   return p === 'pro' || p === 'max' ? p : null

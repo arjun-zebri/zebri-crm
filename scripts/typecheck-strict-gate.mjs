@@ -14,9 +14,11 @@
  */
 import { execSync } from 'node:child_process';
 
-// Baseline 295 set in Phase 0.2b (re-baselined when typed clients
-// exposed strict sites `any` had masked). Only ever decrease.
-const STRICT_BUDGET = 295;
+// Baseline 294 set in Phase 2A (-1 after the Stripe routes +
+// webhook-events refactor). Original 295 set in Phase 0.2b
+// (re-baselined when typed clients exposed strict sites `any`
+// had masked). Only ever decrease.
+const STRICT_BUDGET = 294;
 
 function runTscStrict() {
   try {

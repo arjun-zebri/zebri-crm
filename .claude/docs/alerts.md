@@ -46,7 +46,10 @@ default emoji and routing.
 | `subscription_cancelled` | warn | Sub cancelled | `/api/stripe/webhook` |
 | `subscription_churn` | warn | Paid → free / lapsed | `/api/stripe/webhook` |
 | `payment_failed` | error | Charge / invoice failure | `/api/stripe/webhook` |
-| `stripe_webhook_failed` | error | Signature invalid / handler threw | `/api/stripe/webhook` |
+| `stripe_webhook_failed` | error | Signature invalid / handler threw / payload schema fails | `/api/stripe/webhook` |
+| `stripe_webhook_replay` | warn | Same event ID delivered ≥ 3× within 60s (Phase 2A) | `/api/stripe/webhook` |
+| `stripe_rate_limit_hit` | warn | Per-route rate limit hit (checkout/portal/billingHistory/invoicePayment) | `/api/stripe/*` (Phase 2A) |
+| `stripe_events_prune_high` | warn | Daily prune deleted > 5,000 ledger rows (Phase 2A) | `/api/cron/prune-stripe-events` |
 | `stripe_connect_onboarding_failed` | warn | Connect onboarding errored | `/api/stripe/connect/*` |
 | `resend_send_failed` | error | Resend API rejected / errored | `/api/email/*` |
 | `resend_bounced` | warn | Bounce reported | `/api/resend/webhook` |

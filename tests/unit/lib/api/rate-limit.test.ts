@@ -1,6 +1,11 @@
 import { vi } from 'vitest';
 
-import { inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
+import {
+  AUTH_RATE_LIMITS,
+  inMemoryLimiter,
+  ipOf,
+  STRIPE_RATE_LIMITS,
+} from '@/lib/api/rate-limit';
 
 describe('inMemoryLimiter', () => {
   it('allows up to max, then blocks subsequent calls in the same window', async () => {
@@ -50,5 +55,44 @@ describe('ipOf', () => {
 
   it("returns 'unknown' when no header is present", () => {
     expect(ipOf(req({}))).toBe('unknown');
+  });
+});
+
+describe('AUTH_RATE_LIMITS', () => {
+  it('exports a positive window + max for every action', () => {
+    for (const [key, opts] of Object.entries(AUTH_RATE_LIMITS)) {
+      expect(opts.windowMs, key).toBeGreaterThan(0);
+      expect(opts.max, key).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('STRIPE_RATE_LIMITS', () => {
+  it('covers the 4 hardened routes', () => {
+    expect(Object.keys(STRIPE_RATE_LIMITS).sort()).toEqual([
+      'billingHistory',
+      'checkout',
+      'invoicePayment',
+      'portal',
+    ]);
+  });
+
+  it('uses 60-second windows for all routes', () => {
+    for (const [key, opts] of Object.entries(STRIPE_RATE_LIMITS)) {
+      expect(opts.windowMs, key).toBe(60_000);
+    }
+  });
+
+  it('exports a positive max for every route', () => {
+    for (const [key, opts] of Object.entries(STRIPE_RATE_LIMITS)) {
+      expect(opts.max, key).toBeGreaterThan(0);
+    }
+  });
+
+  it('uses checkout max ≤ portal max ≤ billingHistory max (cheapest read = highest cap)', () => {
+    expect(STRIPE_RATE_LIMITS.checkout.max).toBeLessThanOrEqual(STRIPE_RATE_LIMITS.portal.max);
+    expect(STRIPE_RATE_LIMITS.portal.max).toBeLessThanOrEqual(
+      STRIPE_RATE_LIMITS.billingHistory.max,
+    );
   });
 });
