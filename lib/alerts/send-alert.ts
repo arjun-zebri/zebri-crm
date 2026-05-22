@@ -56,6 +56,12 @@ function describe(event: AlertEvent): string {
       return `${event.email ?? 'unknown'} ${event.invoiceId ? `· invoice ${event.invoiceId} ` : ''}— ${event.reason}`;
     case 'stripe_webhook_failed':
       return `event=${event.eventType} — ${event.errorMessage}`;
+    case 'stripe_webhook_replay':
+      return `event=${event.eventType} · id=${event.eventId} · replays=${event.replayCount}`;
+    case 'stripe_rate_limit_hit':
+      return `action=${event.action} · ip=${event.ip}${event.userId ? ` · user=${event.userId}` : ''}`;
+    case 'stripe_events_prune_high':
+      return `deleted=${event.deletedCount} rows older than ${event.olderThanDays}d`;
     case 'stripe_connect_onboarding_failed':
       return `user=${event.userId} — ${event.reason}`;
     case 'resend_send_failed':

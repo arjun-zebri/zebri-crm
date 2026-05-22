@@ -1,15 +1,3 @@
-/**
- * Generated Supabase database types — DO NOT EDIT BY HAND.
- *
- * Regenerate after any schema/migration change with:
- *   supabase gen types typescript --local --schema public > types/database.ts
- *
- * Consumed by the typed Supabase clients (`lib/supabase/*`) via
- * `createClient<Database>()`. See CONTRIBUTING.md and roadmap §0.2.
- *
- * @module types/database
- */
-
 export type Json =
   | string
   | number
@@ -19,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       contacts: {
@@ -964,6 +977,24 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_events: {
+        Row: {
+          id: string
+          received_at: string
+          type: string
+        }
+        Insert: {
+          id: string
+          received_at?: string
+          type: string
+        }
+        Update: {
+          id?: string
+          received_at?: string
+          type?: string
+        }
+        Relationships: []
+      }
       task_groups: {
         Row: {
           color: string
@@ -1516,6 +1547,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
