@@ -164,6 +164,14 @@ export const STRIPE_RATE_LIMITS = {
   portal: { windowMs: 60_000, max: 10 },
   billingHistory: { windowMs: 60_000, max: 30 },
   invoicePayment: { windowMs: 60_000, max: 10 },
+  // Billing-tab server actions (Phase 2B). All four are
+  // intentional, per-session user actions — a healthy human fires
+  // them maybe once or twice in a session. 5/min/user is generous
+  // for typos and double-clicks but stops scripted abuse.
+  cancelSubscription: { windowMs: 60_000, max: 5 },
+  resumeSubscription: { windowMs: 60_000, max: 5 },
+  changePlan: { windowMs: 60_000, max: 5 },
+  paymentMethod: { windowMs: 60_000, max: 5 },
 } as const satisfies Record<string, LimiterOptions>;
 
 export type StripeRateLimitKey = keyof typeof STRIPE_RATE_LIMITS;

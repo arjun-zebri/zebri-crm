@@ -70,7 +70,7 @@ export function Modal({
   return (
     <>
       <div
-        className={`fixed inset-0 h-screen bg-black/40 backdrop-blur-sm animate-fade-in ${nested ? 'z-[75]' : 'z-50'}`}
+        className={`fixed inset-0 bg-black/40 backdrop-blur-sm animate-fade-in ${nested ? 'z-[75]' : 'z-50'}`}
         onClick={onClose}
       />
       <div
@@ -81,6 +81,11 @@ export function Modal({
           className={`bg-white rounded-2xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]}`}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Header — height ≈ 4rem (py-4 + text-xl content). The
+              `flushBottom` body below subtracts that from 85vh to
+              cap its scroll height. If you change the header
+              padding or content size, update the calc() in the
+              body's maxHeight to match. */}
           <div
             className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}
           >

@@ -1,6 +1,42 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** + **Phase 1 (Auth & account) shipped** — 0.0 → 0.9 ✅ · Phase 1 ✅. Per-page hardening continues with Phase 2 (Payments & invoices + Stripe webhooks/Connect) per §4.
+> Status: **Phase 0 (Foundation) COMPLETE** + **Phase 1 (Auth & account) shipped** + **Phase 2A (Stripe routes + webhook idempotency) shipped to staging** — 0.0 → 0.9 ✅ · Phase 1 ✅ · Phase 2A ✅ (on staging). Phase 2B (Billing UI DoD) in flight. Full plan: `.claude/docs/phase-2-payments.md`.
+>
+> Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+
+### Stripe route + webhook hardening (Phase 2A)
+
+First per-page hardening PR of Phase 2. Locks down every money
+path against retries, bad input, and abuse.
+
+- **`stripe_events` idempotency ledger** — webhook handler INSERTs
+  the event ID first; PK conflict = already processed → 200 no-op.
+  Stripe can retry freely and we never double-fire side effects.
+  90-day retention via the new daily prune cron at 03:00 UTC.
+- **Per-event Zod schemas** in `lib/payments/webhook-events.ts`
+  validate `event.data.object` against the fields we read. Stripe
+  API drift (e.g. `current_period_end` moving onto items) can't
+  silently break us. `readPeriodEndIso` helper centralises the
+  items-first / root-fallback read.
+- **Replay alerting** — single retries silent; ≥ 3 replays of the
+  same event ID within 60s fires `stripe_webhook_replay` exactly
+  once per breach (§11.2 lock-in).
+- **Rate-limits** on all 3 auth-gated Stripe routes via
+  `STRIPE_RATE_LIMITS` — checkout 5/min, portal 10/min,
+  billing-history 30/min, all per-user. Hits fire
+  `stripe_rate_limit_hit`.
+- **Zod-validated bodies** + structured logger throughout — no
+  more `console.error` in money paths.
+- **3 new typed alerts**: `stripe_webhook_replay`,
+  `stripe_rate_limit_hit`, `stripe_events_prune_high`.
+- **Strict ratchet** -1 (295 → 294). Test suite +35 (145 unit /
+  38 integration). Plan doc `.claude/docs/phase-2-payments.md`
+  shipped alongside this PR as the canonical reference for 2A→2D.
+
+**Out of Phase 2A** (explicit): the Billing UI DoD, the
+`/payments` page + builder modals, Stripe Connect, and the public
+invoice payment surfaces — moving as PRs 2B / 2C / 2D per the
+plan doc.
 
 ### Auth & account hardening (Phase 1)
 

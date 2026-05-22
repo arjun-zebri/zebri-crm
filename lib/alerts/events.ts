@@ -77,8 +77,16 @@ export type AlertEvent =
   | (BaseEvent & {
       type: 'stripe_rate_limit_hit';
       severity: 'warn';
-      /** Route key from STRIPE_RATE_LIMITS — `checkout`, `portal`, etc. */
-      action: 'checkout' | 'portal' | 'billingHistory' | 'invoicePayment';
+      /** Route or server-action key from STRIPE_RATE_LIMITS. */
+      action:
+        | 'checkout'
+        | 'portal'
+        | 'billingHistory'
+        | 'invoicePayment'
+        | 'cancelSubscription'
+        | 'resumeSubscription'
+        | 'changePlan'
+        | 'paymentMethod';
       ip: string;
       userId?: string;
     })
