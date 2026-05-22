@@ -68,22 +68,26 @@ describe('AUTH_RATE_LIMITS', () => {
 });
 
 describe('STRIPE_RATE_LIMITS', () => {
-  it('covers the 4 hardened routes', () => {
+  it('covers the 4 routes from Phase 2A + the 4 billing actions from Phase 2B', () => {
     expect(Object.keys(STRIPE_RATE_LIMITS).sort()).toEqual([
       'billingHistory',
+      'cancelSubscription',
+      'changePlan',
       'checkout',
       'invoicePayment',
+      'paymentMethod',
       'portal',
+      'resumeSubscription',
     ]);
   });
 
-  it('uses 60-second windows for all routes', () => {
+  it('uses 60-second windows for all routes/actions', () => {
     for (const [key, opts] of Object.entries(STRIPE_RATE_LIMITS)) {
       expect(opts.windowMs, key).toBe(60_000);
     }
   });
 
-  it('exports a positive max for every route', () => {
+  it('exports a positive max for every route/action', () => {
     for (const [key, opts] of Object.entries(STRIPE_RATE_LIMITS)) {
       expect(opts.max, key).toBeGreaterThan(0);
     }

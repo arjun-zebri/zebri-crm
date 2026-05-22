@@ -14,14 +14,31 @@
  * `payment_method_update` flow so the user doesn't see the full
  * portal home.
  *
+ * Phase 2B: all four actions are now rate-limited per-user via
+ * {@link STRIPE_RATE_LIMITS}. Hits fire `stripe_rate_limit_hit`
+ * with the specific action name so we can tell scripted abuse from
+ * a stuck retry loop in our own UI.
+ *
+ * `current_period_end` reads go through {@link readPeriodEndIso}
+ * (single source of truth for the items-first / root-fallback
+ * pattern Stripe forces on us).
+ *
  * @module app/(dashboard)/settings/billing/actions
  */
 'use server';
 
+import { headers } from 'next/headers';
 import { z } from 'zod';
 
+import { sendAlert } from '@/lib/alerts';
+import {
+  inMemoryLimiter,
+  ipOfHeaders,
+  STRIPE_RATE_LIMITS,
+} from '@/lib/api/rate-limit';
 import { stripeCustomerId, stripeSubscriptionId, updateEntitlements } from '@/lib/auth/entitlements';
 import { stripe } from '@/lib/payments/stripe';
+import { readPeriodEndIso } from '@/lib/payments/webhook-events';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
@@ -35,6 +52,46 @@ export interface BillingActionResult {
 export interface BillingRedirectResult {
   url?: string;
   error?: string;
+}
+
+/**
+ * Limiters live at module scope so the bucket persists across
+ * action invocations within the same Node process (Vercel keeps
+ * a function warm for ~15 min). Cold-start drops the bucket;
+ * that's acceptable — the limiter exists to stop accidental
+ * loops + naive abuse, not determined attackers (who'd hit the
+ * Stripe API rate-limit before our cap mattered anyway).
+ */
+const limiters = {
+  cancelSubscription: inMemoryLimiter(STRIPE_RATE_LIMITS.cancelSubscription),
+  resumeSubscription: inMemoryLimiter(STRIPE_RATE_LIMITS.resumeSubscription),
+  changePlan: inMemoryLimiter(STRIPE_RATE_LIMITS.changePlan),
+  paymentMethod: inMemoryLimiter(STRIPE_RATE_LIMITS.paymentMethod),
+} as const;
+
+type LimiterKey = keyof typeof limiters;
+
+/**
+ * Apply the per-user limit for `action`. Returns the error string
+ * to surface when blocked, or `null` when allowed. Fires
+ * `stripe_rate_limit_hit` on a hit (fire-and-forget; alert errors
+ * must not break the billing flow).
+ */
+async function applyBillingRateLimit(
+  action: LimiterKey,
+  userId: string,
+): Promise<string | null> {
+  const result = await limiters[action].check(`${action}:${userId}`);
+  if (result.allowed) return null;
+  const hdrs = await headers();
+  void sendAlert({
+    type: 'stripe_rate_limit_hit',
+    severity: 'warn',
+    action,
+    ip: ipOfHeaders(hdrs),
+    userId,
+  });
+  return 'Too many requests. Please wait a moment and try again.';
 }
 
 function priceFor(plan: 'pro' | 'max'): string | undefined {
@@ -65,6 +122,9 @@ export async function createPlanChangeSessionAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not signed in.' };
+
+  const limitError = await applyBillingRateLimit('changePlan', user.id);
+  if (limitError) return { error: limitError };
 
   const customerId = stripeCustomerId(user);
   if (!customerId) return { error: 'No billing account found.' };
@@ -119,6 +179,9 @@ export async function cancelSubscriptionAction(): Promise<BillingActionResult> {
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not signed in.' };
 
+  const limitError = await applyBillingRateLimit('cancelSubscription', user.id);
+  if (limitError) return { error: limitError };
+
   const subId = stripeSubscriptionId(user);
   if (!subId) return { error: 'No active subscription to cancel.' };
 
@@ -127,16 +190,9 @@ export async function cancelSubscriptionAction(): Promise<BillingActionResult> {
       cancel_at_period_end: true,
     });
 
-    // `current_period_end` is on the SubscriptionItem in current
-    // Stripe API versions (it used to be a top-level field on the
-    // Subscription itself). Read from the first item with a
-    // fallback to the top-level field for older API versions; the
-    // cast is the cheapest cross-version read.
-    type WithPeriodEnd = { current_period_end?: number };
-    const firstItem = updated.items.data[0] as unknown as WithPeriodEnd | undefined;
-    const periodEnd =
-      firstItem?.current_period_end ?? (updated as unknown as WithPeriodEnd).current_period_end;
-    const subscriptionEnd = periodEnd ? new Date(periodEnd * 1000).toISOString() : undefined;
+    const subscriptionEnd = readPeriodEndIso(
+      updated as unknown as Parameters<typeof readPeriodEndIso>[0],
+    );
 
     const admin = createAdminClient();
     await updateEntitlements(admin.auth.admin, user.id, {
@@ -151,7 +207,7 @@ export async function cancelSubscriptionAction(): Promise<BillingActionResult> {
 
 /**
  * Undo a scheduled cancellation. Clears `cancel_at_period_end` and
- * `subscription_end` in `app_metadata` synchronously.
+ * re-populates `subscription_end` with the next renewal date.
  */
 export async function resumeSubscriptionAction(): Promise<BillingActionResult> {
   const supabase = await createClient();
@@ -160,19 +216,20 @@ export async function resumeSubscriptionAction(): Promise<BillingActionResult> {
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not signed in.' };
 
+  const limitError = await applyBillingRateLimit('resumeSubscription', user.id);
+  if (limitError) return { error: limitError };
+
   const subId = stripeSubscriptionId(user);
   if (!subId) return { error: 'No subscription to resume.' };
 
   try {
     const updated = await stripe.subscriptions.update(subId, { cancel_at_period_end: false });
 
-    // Keep subscription_end populated — for an active sub it
-    // represents the next renewal date now.
-    type WithPeriodEnd = { current_period_end?: number };
-    const firstItem = updated.items.data[0] as unknown as WithPeriodEnd | undefined;
-    const periodEnd =
-      firstItem?.current_period_end ?? (updated as unknown as WithPeriodEnd).current_period_end;
-    const subscriptionEnd = periodEnd ? new Date(periodEnd * 1000).toISOString() : undefined;
+    // For an active sub, subscription_end now represents the next
+    // renewal date (shown on the plan card as "Renews on …").
+    const subscriptionEnd = readPeriodEndIso(
+      updated as unknown as Parameters<typeof readPeriodEndIso>[0],
+    );
 
     const admin = createAdminClient();
     await updateEntitlements(admin.auth.admin, user.id, {
@@ -197,6 +254,9 @@ export async function paymentMethodPortalAction(): Promise<BillingRedirectResult
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not signed in.' };
+
+  const limitError = await applyBillingRateLimit('paymentMethod', user.id);
+  if (limitError) return { error: limitError };
 
   const customerId = stripeCustomerId(user);
   if (!customerId) return { error: 'No billing account found.' };

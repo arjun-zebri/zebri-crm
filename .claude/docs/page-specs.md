@@ -766,25 +766,60 @@ Action: Change Password
 
 ### Plans & Billing (`?tab=billing`)
 
-Document-style layout (Phase 1 redesign): section labels + thin
-dividers, no nested cards. The "Compare plans" link opens a focused
-modal with the 3-tier feature table. See `payments.md` for the full
-state matrix.
+Document-style layout. Section labels + thin dividers, no nested
+cards. Composition:
 
-| Status                       | Message                              | CTA                                  |
-| ---------------------------- | ------------------------------------ | ------------------------------------ |
-| Starter (no subscription)    | "Starter · Free plan"                | Upgrade to Pro (Checkout)            |
-| active                       | "Active · Renews {date}"             | Manage subscription · Cancel (Portal)|
-| active + cancel_at_period_end| "Cancels {date}"                     | Resubscribe (Portal)                 |
-| past_due                     | "Payment failed" + inline banner     | Update payment (Portal)              |
-| expired                      | "Subscription ended"                 | Upgrade to Pro (Checkout)            |
-| comped (admin-set)           | "Comped account"                     | No action row                        |
+- **Plan section** — `CurrentPlanCard` (plan name + state pill +
+  inline price + meta line + prose summary + action row + Starter
+  usage when applicable).
+- **Billing history** section — `BillingHistory` (last 12 invoices
+  via `/api/stripe/billing-history`; skeleton on load, hidden when
+  empty + no upcoming charge).
+- **Plan comparison** — `PlanComparisonDialog`, opened from
+  "Change plan" / "Upgrade". 3-column feature table with absolute-
+  positioned tint behind the current plan's column.
+- **Cancel confirmation** — `CancelConfirmModal`, state hoisted to
+  `BillingSection` so both the card and the comparison dialog
+  trigger it via `onRequestCancel`.
 
-**Note (Phase 1):** the 14-day free trial was removed. The Starter
-tier (5-couple cap, long-term free) is the only free path. Paid
-plans charge from day 1.
+| CardState                  | StatePill          | Primary action          | Meta line          | Cancel link |
+| -------------------------- | ------------------ | ----------------------- | ------------------ | ----------- |
+| `starter`                  | "Free plan"        | Upgrade to Pro          | "Joined {date}"    | —           |
+| `active`                   | "Active" (green)   | Change plan             | "Renews {date}"    | ✅          |
+| `cancelling_in_grace`      | "Cancelling"       | Resubscribe             | "Access until {d}" | —           |
+| `past_due`                 | "Payment failed"   | Update payment          | "Joined {date}"    | —           |
+| `expired`                  | "Ended"            | Upgrade to Pro          | "Ended {date}"     | —           |
+| `comped`                   | "Comped" (green)   | (no action row)         | "Joined {date}"    | —           |
 
-Starter users see a "X of 5 couples used" usage indicator inline.
+Server actions in `app/(dashboard)/settings/billing/actions.ts`:
+
+- `createPlanChangeSessionAction(plan)` — Stripe Portal deep-link
+  `subscription_update_confirm`.
+- `cancelSubscriptionAction()` — Stripe API `cancel_at_period_end:
+  true` + synchronous `app_metadata` write of
+  `subscription_end` (UI doesn't wait on the webhook).
+- `resumeSubscriptionAction()` — symmetric undo.
+- `paymentMethodPortalAction()` — Stripe Portal deep-link
+  `payment_method_update`.
+
+All four actions are rate-limited per-user (5/min/user) via
+`STRIPE_RATE_LIMITS`. Hits fire `stripe_rate_limit_hit` with the
+specific action name.
+
+After every cancel/resume, `BillingSection`'s polling effect (the
+same one used after Stripe Checkout) watches `app_metadata` and
+reloads when the webhook lands. Manual "Refresh" escape hatch
+appears after 60s — covers the local-dev "did you start
+`stripe listen`?" case.
+
+**Note:** the 14-day free trial was removed in Phase 1. The
+Starter tier (5-couple cap, long-term free) is the only free
+path. Paid plans charge from day 1.
+
+Starter users see a "X of 5 couples used" usage indicator inline
+on the card. At-cap users get an inline "Upgrade to add more"
+button + the same Starter-cap UX block surfaces on couple-modal
+opens.
 
 ### Payments (`?tab=payments`)
 
