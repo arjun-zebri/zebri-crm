@@ -47,7 +47,8 @@ lets us promote to staging between increments.
 |-----|---------------------------------|----------------------------------------------------------------------------------|----------|
 | 2A  | `phase-2a-stripe-routes`        | Stripe checkout/portal/billing-history/webhook hardening + fixture replay tests  | ~800     |
 | 2B  | `phase-2b-billing-ui`           | Settings → Billing tab DoD (tests + docs + RLS proofs + cleanup carry-overs)     | ~600     |
-| 2C  | `phase-2c-payments-page`        | `/payments` page + Quote/Invoice builder modals — port to DoD + decompose        | ~2500    |
+| 2C  | `phase-2c-payments-page`        | `/payments` page decomposition + email-send hardening + RLS proofs + RPC audit   | ~1500    |
+| 2C.2 | `phase-2c2-builder-parts`      | Quote + Invoice builder modal decomposition into `components/builders/parts/`    | ~2000    |
 | 2D  | `phase-2d-connect-public`       | Stripe Connect routes + public invoice/quote surfaces + payment-success page     | ~900     |
 
 Each PR branches off `staging`, merges back to `staging`, and is
@@ -198,37 +199,68 @@ P3 items left from the post-cb650bb review:
 
 ---
 
-## 5. PR 2C — `/payments` page + builder modals
+## 5. PR 2C — `/payments` page decomposition + email-send hardening
 
-**Goal:** the `/payments` page becomes an orchestrator; each builder
-modal hits the DoD bar; cross-tenant RLS proven for every payments
-table.
+**Goal:** the `/payments` page becomes an orchestrator; cross-tenant
+RLS proven for every payments table; the email-send routes get the
+same Zod + rate-limit treatment as the Stripe routes; public RPCs
+get a security audit.
 
-### The decomposition
+Mid-flight scope decision: **builder-modal decomposition moved to
+PR 2C.2** (see §5b). The Quote modal (1047 LOC) + Invoice modal
+(1465 LOC) are money paths where a structural refactor wants its
+own focused review — bundling it with the page work pushed PR 2C
+past the reviewable LOC budget. 2C ships the page + security work;
+2C.2 ships the modal decomposition on top.
 
-`app/(dashboard)/payments/page.tsx` (851 LOC) → ~150 LOC orchestrator
+### The decomposition (shipped)
+
+`app/(dashboard)/payments/page.tsx` (851 LOC) → 262-LOC orchestrator
 + co-located sections:
 
 ```
 app/(dashboard)/payments/
-  page.tsx                       (~120 LOC — fetch + compose)
-  payments-header.tsx            (tabs + filters + search)
-  quotes-list.tsx                (table + row actions)
-  invoices-list.tsx              (table + row actions)
-  quote-row.tsx                  (single-row presentation)
-  invoice-row.tsx                (single-row presentation)
-  empty-states.tsx               (per-tab empty UI)
+  page.tsx                       (~262 LOC — state + composition)
+  payments-header.tsx            (title + search + tab strip + New)
+  payments-table.tsx             (shared desktop-table / mobile-list)
+  payments-footer.tsx            (fixed bottom count + total)
+  quotes-list.tsx                (quote-specific row mapping)
+  invoices-list.tsx              (invoice rows + deriveInvoices)
+  contracts-list.tsx             (contract rows — kept light per Phase 3 boundary)
+  new-contract-popover.tsx       (inline "pick a couple" popover)
+  use-payments-data.ts           (React Query hooks)
+  use-payments-shortcut.ts       ("/" focus + Escape clear)
 ```
 
-Each section ≤ 150 LOC. The page-level state (active tab, search
-filter) lives in URL search params so back-button works.
+Each section ≤ ~270 LOC (payments-table.tsx, the shared primitive).
+URL-search-param-backed state is deferred (the current keyed
+useState is fine; converting is a follow-up).
 
-### Builder modal restructure
+### Email-send route hardening (shipped)
 
-The two big builders share ~70% of their structure (line-items
-table, totals box, customer/couple picker, attachments panel). The
-goal is **shared subcomponents under `components/builders/parts/`**,
-not a single mega-component. Concrete extractions:
+`/api/email/send-quote` and `/api/email/send-invoice` now:
+- Validate the body via Zod (`{ quoteId | invoiceId: uuid }`)
+- Rate-limit to 5/min/user via `EMAIL_RATE_LIMITS`
+- Fire `email_rate_limit_hit` on a 429
+- Use the structured logger for error paths
+
+These are the highest-risk paths after the Stripe surface — they
+blast a couple's inbox. `send-contract` stays Phase 3.
+
+### Public RPC audit (shipped — see security.md)
+
+Findings: token entropy + field selection ✅. Stale `user_metadata`
+read of `stripe_connect_enabled` in `get_public_invoice` is a low-
+impact §7.4 residual, fix scheduled for PR 2D alongside the Connect
+state-param HMAC work.
+
+## 5b. PR 2C.2 — Builder modal decomposition (deferred from 2C)
+
+**Goal:** decompose Quote (1047 LOC) + Invoice (1465 LOC) modals
+into shared `components/builders/parts/` subcomponents + move
+inline mutations to server actions.
+
+### Extractions (planned)
 
 ```
 components/builders/parts/
@@ -246,30 +278,34 @@ components/builders/
 
 Each `parts/` file: ≤ 200 LOC, primitive-clean, TSDoc'd. No business
 rules in the modals themselves — they delegate to existing
-`lib/payments/*` modules. Anything more complex (server actions for
-save, validation Zod schemas) lives in
-`app/(dashboard)/payments/actions.ts`.
+`lib/payments/*` modules.
 
-### Server actions for save
-
-The modals currently do mutations inline via the Supabase browser
-client (read with `createClient()` + raw inserts). Phase 2C moves
-that to a server action:
+### Server actions (planned)
 
 ```ts
 // app/(dashboard)/payments/actions.ts
 'use server';
 export async function saveQuoteAction(input: SaveQuoteInput): ActionResult<{ id: string }>;
 export async function saveInvoiceAction(input: SaveInvoiceInput): ActionResult<{ id: string }>;
-export async function sendQuoteAction(quoteId: string): ActionResult<{ shareUrl: string }>;
-export async function sendInvoiceAction(invoiceId: string): ActionResult<{ shareUrl: string }>;
 export async function deleteQuoteAction(quoteId: string): ActionResult<void>;
 export async function deleteInvoiceAction(invoiceId: string): ActionResult<void>;
 ```
 
 Each action: Zod-validate input, RLS-protected SQL (no service-role
-escape), rate-limit on send (5/min/user — avoids accidental
-multi-send spamming the couple's inbox), TSDoc.
+escape), TSDoc. The send-via-email path is already a server-side
+route (`/api/email/send-{quote,invoice}`) and was hardened in 2C
+— it does not need a server action wrapper.
+
+### Why this split
+
+Total Phase 2C+2C.2 surface is ~3500 LOC of change. Bundling it
+into one PR would be unreviewable on money-critical code.
+Splitting at the page/modal boundary keeps each PR ≤ ~2000 LOC
+and lets the reviewer focus on one concern at a time:
+
+- **2C**: page structure + the money-paths-already-on-the-server
+  (email-send routes, RLS proofs, RPC audit).
+- **2C.2**: pure structural refactor of the two big modals.
 
 ### RLS proofs (the matrix tick)
 

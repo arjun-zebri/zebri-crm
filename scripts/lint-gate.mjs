@@ -28,8 +28,9 @@ import { execSync } from 'node:child_process';
 const ERROR_BUDGET = 86;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
-// management + couples-page autofix sweep).
-const WARNING_BUDGET = 607;
+// management + couples-page autofix sweep). Phase 2C
+// (/payments page decomposition) dropped another 11: 607 → 596.
+const WARNING_BUDGET = 596;
 
 function runEslintJson() {
   try {

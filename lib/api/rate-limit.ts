@@ -175,3 +175,21 @@ export const STRIPE_RATE_LIMITS = {
 } as const satisfies Record<string, LimiterOptions>;
 
 export type StripeRateLimitKey = keyof typeof STRIPE_RATE_LIMITS;
+
+/**
+ * Email-send rate-limits (Phase 2C). These cap how often an MC
+ * can blast their couple's inbox — the real risk is an accidental
+ * loop from a misbehaving client (or a compromised session) firing
+ * the "send invoice" button on repeat.
+ *
+ * - **sendQuote / sendInvoice**: 5/min/user. Resends are normal
+ *   (the modal exposes a "Resend email" button); we just stop
+ *   runaway loops.
+ * - Per-user keys, not per-IP — these are authenticated routes.
+ */
+export const EMAIL_RATE_LIMITS = {
+  sendQuote: { windowMs: 60_000, max: 5 },
+  sendInvoice: { windowMs: 60_000, max: 5 },
+} as const satisfies Record<string, LimiterOptions>;
+
+export type EmailRateLimitKey = keyof typeof EMAIL_RATE_LIMITS;

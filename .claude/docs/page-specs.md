@@ -526,7 +526,19 @@ Route group: `(dashboard)`
 
 Purpose: Unified hub for managing quotes and invoices. The MC can view, create, and edit all financial documents (quotes and invoices) in one place with tab-based navigation.
 
-Header: Title "Payments" + two tabs: **Quotes** | **Invoices**. Search bar + "New Quote" / "New Invoice" button (label changes based on active tab).
+Header: Title "Payments" + three tabs: **Quotes** | **Invoices** | **Contracts** (Contracts only renders when the user has Pro/Max via `hasContractsAccess(user)`). Search bar + "New Quote" / "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
+
+**Composition (Phase 2C decomposition):** `app/(dashboard)/payments/page.tsx` is a 262-LOC orchestrator that composes the following co-located sections:
+
+- `payments-header.tsx` — title row, search toolbar, tab strip.
+- `payments-table.tsx` — shared desktop-table / mobile-list primitive consumed by every tab.
+- `payments-footer.tsx` — fixed bottom count + (for quotes/invoices) money total.
+- `quotes-list.tsx`, `invoices-list.tsx`, `contracts-list.tsx` — per-tab row mapping + status pill catalogues.
+- `new-contract-popover.tsx` — inline "pick a couple" popover for the Contracts tab New button.
+- `use-payments-data.ts` — React Query hooks for the three lists.
+- `use-payments-shortcut.ts` — `/` keyboard shortcut + Escape-to-clear.
+
+The Quote/Invoice/Contract builder modals are unchanged in 2C — their decomposition into `components/builders/parts/` is deferred to **PR 2C.2** (the modals are 1047 + 1465 LOC each; structurally reviewable in isolation).
 
 ## Quotes Tab
 

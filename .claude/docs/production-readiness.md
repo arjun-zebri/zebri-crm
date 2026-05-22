@@ -1,8 +1,42 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** + **Phase 1 (Auth & account) shipped** + **Phase 2A (Stripe routes + webhook idempotency) shipped to staging** — 0.0 → 0.9 ✅ · Phase 1 ✅ · Phase 2A ✅ (on staging). Phase 2B (Billing UI DoD) in flight. Full plan: `.claude/docs/phase-2-payments.md`.
+> Status: **Phase 0 (Foundation) COMPLETE** + **Phase 1 (Auth & account) shipped** + **Phase 2A (Stripe routes + webhook idempotency) shipped to staging** — 0.0 → 0.9 ✅ · Phase 1 ✅ · Phase 2A ✅ (on staging) · Phase 2B (Billing UI DoD) on staging · Phase 2C (/payments decomposition + email-send hardening + RLS proofs) in flight. Phase 2C.2 (builder modal decomposition) follows. Full plan: `.claude/docs/phase-2-payments.md`.
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+
+### Payments page decomposition + email-send hardening (Phase 2C)
+
+`/payments` and the email-send routes lifted through the §5 DoD.
+Builder modal decomposition split out to PR 2C.2 (separate review
+of money-critical structural refactor).
+
+- **`/payments` page (851 LOC) → 10 files** under
+  `app/(dashboard)/payments/`. Orchestrator (262 LOC) composes
+  `payments-header` + `payments-table` + per-tab list components
+  (`quotes-list`, `invoices-list`, `contracts-list`) + footer +
+  data hooks + keyboard-shortcut hook. Contracts tab kept fully
+  functional per the Phase 3 scope boundary.
+- **Email-send routes hardened** —
+  `/api/email/send-{quote,invoice}` now use Zod (`{ id: uuid }`)
+  + 5/min/user via `EMAIL_RATE_LIMITS` + structured logger. Hits
+  fire `email_rate_limit_hit`. `/api/email/send-contract` stays
+  Phase 3.
+- **7 RLS proofs added** —
+  `tests/integration/rls/payments-tables.test.ts` proves
+  cross-tenant denial for `quotes`, `quote_items`, `quote_templates`,
+  `quote_template_items`, `invoices`, `invoice_items`,
+  `stripe_customers`. Matrix ticked in `security.md`.
+- **Public RPC audit** of `get_public_quote` / `get_public_invoice`
+  — tokens ✅, field selection ✅, one §7.4 stale `user_metadata`
+  read of `stripe_connect_enabled` flagged for PR 2D fix. Findings
+  in `security.md`.
+- **+29 unit tests** for the new page sections
+  (`PaymentsTable`, `PaymentsHeader`, `PaymentsFooter`,
+  `InvoicesList` + the pure `deriveInvoices` helper).
+
+**Out of Phase 2C**: builder modal decomposition (PR 2C.2);
+public invoice payment surfaces + Connect (PR 2D); URL-search-
+param-backed tab state (follow-up).
 
 ### Stripe route + webhook hardening (Phase 2A)
 

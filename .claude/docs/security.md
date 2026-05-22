@@ -98,6 +98,66 @@ happen in a later tightening phase.
 | `app/api/stripe/portal/route.ts` | n/a — no body | ✅ 10/min/user | 400 when `stripeCustomerId(user)` returns null |
 | `app/api/stripe/billing-history/route.ts` | n/a — GET, no params yet | ✅ 30/min/user | Cursor-based pagination deferred to PR 2D |
 
+### Email-send routes — validation + rate-limit audit (Phase 2C)
+
+These routes blast a couple's inbox. The risk is loop / spam from a
+buggy client or compromised session — Resend will rate-limit us
+anyway, but we cap on our side so the alert fires on our schedule.
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/email/send-quote/route.ts` | ✅ `z.object({ quoteId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendQuote`; hit fires `email_rate_limit_hit` | RLS scopes the quote SELECT to the authenticated user |
+| `app/api/email/send-invoice/route.ts` | ✅ `z.object({ invoiceId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendInvoice` | Same RLS scoping |
+| `app/api/email/send-contract/route.ts` | ☐ Phase 3 (Contracts) | ☐ Phase 3 | Not in 2C scope |
+| `app/api/email/send-contract-reminders/route.ts` | n/a (cron) | n/a (cron-secret gated) | Already uses `isCronAuthorized` |
+
+### Public RPC audit — `get_public_quote` / `get_public_invoice` (Phase 2C)
+
+These two `security definer` functions back the public-facing
+`/quote/[token]` and `/invoice/[token]` pages. Couples aren't
+authenticated; the share token IS the capability. Findings:
+
+**Tokens (✅ acceptable):**
+- `share_token` column is `uuid` with `gen_random_uuid()` default —
+  UUID v4 ≈ 122 bits of entropy, unguessable in practice (10⁹ guesses/s
+  would take ~10²¹ years to hit a single token).
+- Not sequential, not predictable.
+- Revocation via `share_token_enabled = false` (RPC `where` clause
+  requires it true). The original token stays in the DB so an
+  enable/disable toggle works without re-issuing URLs.
+
+**Field selection (✅ minimal):**
+- `get_public_quote` returns: id, title, quote_number, status,
+  subtotal, tax_rate, discount_*, notes, expires_at, accepted_at,
+  couple_name, items. No user_id, no stripe_customer_id, no
+  internal flags leaked.
+- `get_public_invoice` returns the same shape + due_date / payment
+  schedule fields + bank details (account_name, bsb, account_number)
+  + `stripe_connect_enabled`. Bank details are intentional — the
+  couple needs them to pay via bank transfer. No stripe_customer_id,
+  no Stripe account ID, no other-couple data.
+
+**🟨 §7.4 stale read — tracked for PR 2D:**
+
+`get_public_invoice` currently reads `stripe_connect_enabled` and
+the bank fields from `auth.users.raw_user_meta_data`. Post §7.4,
+trust-level entitlement fields (`stripe_connect_*`) live in
+`raw_app_meta_data` — the RPC is reading the old location.
+
+Impact: **low**. The worst case is a user writing
+`stripe_connect_enabled=true` to their own `user_metadata` and
+seeing the "Pay with card" button render on a public invoice.
+Clicking it calls `/api/stripe/invoice-payment` which reads from
+`app_metadata` via the entitlements helper — the payment would
+fail there. So the misleading UX is real; the security boundary
+holds.
+
+**Fix lands in PR 2D** (Stripe Connect + public surfaces): switch
+the RPC's `stripe_connect_enabled` read to `raw_app_meta_data`
+alongside the Connect state-param HMAC work. Bank-detail reads
+stay on `user_metadata` — those are user-owned PII, not
+entitlement fields.
+
 ### Cron-secret enforcement
 
 Three cron-triggered routes:
@@ -174,12 +234,12 @@ DELETE (sampled clean across the migrations).
 | `events` | ✅ | `user_id` | ☐ | Couples & Events |
 | `contacts` | ✅ | `user_id` | ☐ | Contacts |
 | `tasks` | ✅ | `user_id` | ☐ | Tasks |
-| `quotes` | ✅ | `user_id` | ☐ | Payments |
-| `quote_items` | ✅ | `user_id` | ☐ | Payments |
-| `quote_templates` | ✅ | `user_id` | ☐ | Payments |
-| `quote_template_items` | ✅ | `user_id` | ☐ | Payments |
-| `invoices` | ✅ | `user_id` | ☐ | Payments |
-| `invoice_items` | ✅ | `user_id` | ☐ | Payments |
+| `quotes` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `quote_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `quote_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `quote_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `invoices` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `invoice_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `contracts` | ✅ | `user_id` | ☐ | Contracts |
 | `contract_templates` | ✅ | `user_id` | ☐ | Contracts |
 | `couple_statuses` | ✅ | `user_id` | ☐ | Couples & Events |
@@ -195,7 +255,8 @@ DELETE (sampled clean across the migrations).
 | `portal_people` | ✅ | `user_id` | ☐ | Client Portal |
 | `portal_songs` | ✅ | `user_id` | ☐ | Client Portal |
 | `portal_song_categories` | ✅ | `user_id` | ☐ | Client Portal |
-| `stripe_customers` | ✅ | `user_id` | ☐ | Payments |
+| `stripe_customers` | ✅ (RLS enabled, no policy — service-role only) | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
 | `user_branding` | ✅ | `user_id` | ☐ | Branding |
 
 **Per-page DoD requires** an integration test of the

@@ -106,6 +106,13 @@ export type AlertEvent =
 
   // ───── Email / Resend ──────────────────────────────────────────────
   | (BaseEvent & {
+      type: 'email_rate_limit_hit';
+      severity: 'warn';
+      action: 'sendQuote' | 'sendInvoice';
+      userId: string;
+      ip: string;
+    })
+  | (BaseEvent & {
       type: 'resend_send_failed';
       severity: 'error';
       to: string;
