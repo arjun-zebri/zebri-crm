@@ -67,6 +67,29 @@ export type AlertEvent =
       errorMessage: string;
     })
   | (BaseEvent & {
+      type: 'stripe_webhook_replay';
+      severity: 'warn';
+      eventId: string;
+      eventType: string;
+      /** Number of replays within the 60s window (≥ 3 triggers this). */
+      replayCount: number;
+    })
+  | (BaseEvent & {
+      type: 'stripe_rate_limit_hit';
+      severity: 'warn';
+      /** Route key from STRIPE_RATE_LIMITS — `checkout`, `portal`, etc. */
+      action: 'checkout' | 'portal' | 'billingHistory' | 'invoicePayment';
+      ip: string;
+      userId?: string;
+    })
+  | (BaseEvent & {
+      type: 'stripe_events_prune_high';
+      severity: 'warn';
+      /** Number of rows the daily prune deleted. Alerts above ~5k. */
+      deletedCount: number;
+      olderThanDays: number;
+    })
+  | (BaseEvent & {
       type: 'stripe_connect_onboarding_failed';
       severity: 'warn';
       userId: string;

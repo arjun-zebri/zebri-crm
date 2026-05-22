@@ -85,19 +85,28 @@ happen in a later tightening phase.
 
 | Route | Status | Notes |
 |---|---|---|
-| `app/api/stripe/webhook/route.ts` | ✅ Verifies `stripe-signature` via `stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET`. |
-| `app/api/stripe/connect/callback/route.ts` | n/a — Stripe Connect OAuth callback (user-initiated redirect, not server-signed webhook). State-param verification belongs to the Payments page-hardening phase. |
-| `app/api/stripe/invoice-payment/route.ts` | n/a — public payment-link route; auth via `share_token` (capability URL). Rate-limit added per-page in Payments hardening. |
+| `app/api/stripe/webhook/route.ts` | ✅ Verifies `stripe-signature` via `stripe.webhooks.constructEvent` with `STRIPE_WEBHOOK_SECRET` (or `STRIPE_CONNECT_WEBHOOK_SECRET` when `stripe-account` header is present). **Phase 2A:** idempotent via `stripe_events` ledger, per-event Zod validation, replay alerting at 3+/60s. |
+| `app/api/stripe/connect/callback/route.ts` | n/a — Stripe Connect OAuth callback (user-initiated redirect, not server-signed webhook). **PR 2D** adds state-param HMAC signing + single-use nonce + expiry. |
+| `app/api/stripe/invoice-payment/route.ts` | n/a — public payment-link route; auth via `share_token` (capability URL). Rate-limit + signed return URLs added in PR 2D. |
 | `app/api/resend/webhook/route.ts` | **Does not exist** — Resend bounce/delivery webhooks not wired. Tracked in `alerts.md` matrix as a planned alert source. |
+
+### Authenticated Stripe routes — validation + rate-limit audit (Phase 2A)
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/stripe/checkout/route.ts` | ✅ `z.object({ plan: z.enum(['pro','max']) })` | ✅ 5/min/user via `STRIPE_RATE_LIMITS.checkout`; hit fires `stripe_rate_limit_hit` | Beta users get `STRIPE_BETA_PRICE_ID` via `isBetaUser(user)` |
+| `app/api/stripe/portal/route.ts` | n/a — no body | ✅ 10/min/user | 400 when `stripeCustomerId(user)` returns null |
+| `app/api/stripe/billing-history/route.ts` | n/a — GET, no params yet | ✅ 30/min/user | Cursor-based pagination deferred to PR 2D |
 
 ### Cron-secret enforcement
 
-Two cron-triggered routes:
+Three cron-triggered routes:
 
 | Route | Schedule (`vercel.json`) |
 |---|---|
 | `/api/cron/expire-contracts` | `0 22 * * *` |
 | `/api/email/send-contract-reminders` | `15 22 * * *` |
+| `/api/cron/prune-stripe-events` | `0 3 * * *` (Phase 2A) |
 
 Both now use the shared helper **`@/lib/api/cron-auth`** —
 `isCronAuthorized(request)` — which:

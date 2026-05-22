@@ -180,8 +180,46 @@ live mode — there is no automatic copy.
 Handles Stripe webhook events.
 
 - Verifies webhook signature using `STRIPE_WEBHOOK_SECRET`
-- Uses `SUPABASE_SERVICE_ROLE_KEY` to update user metadata via the admin API
-- Resolves user via the `stripe_customers` lookup table
+  (platform events) or `STRIPE_CONNECT_WEBHOOK_SECRET` (when
+  `stripe-account` header is present, i.e. Connect events — full
+  Connect handling lands in PR 2D).
+- **Idempotent via the `stripe_events` ledger** (Phase 2A) — the
+  handler INSERTs the event ID first; a primary-key conflict means
+  Stripe has retried an event we've already processed, so we
+  return 200 without re-running side effects.
+- **Per-event Zod schemas** in `lib/payments/webhook-events.ts`
+  validate `event.data.object` against only the fields we read,
+  so Stripe-side API evolution doesn't silently break us. Schema
+  failures fire `stripe_webhook_failed` and ack with 200 (no
+  retry on malformed events).
+- **Replay alerting** — single retries are normal and silent;
+  3+ replays of the same event ID within 60 seconds fires
+  `stripe_webhook_replay` exactly once per breach.
+- Uses `SUPABASE_SERVICE_ROLE_KEY` to update user metadata via
+  the admin API. Resolves user via the `stripe_customers` lookup
+  table.
+
+#### `stripe_events` idempotency ledger
+
+Migration: `20260522000000_create_stripe_events_ledger.sql`.
+
+```sql
+create table public.stripe_events (
+  id text primary key,           -- Stripe event ID (evt_…)
+  type text not null,
+  received_at timestamptz not null default now()
+);
+```
+
+- RLS enabled with **no permissive policy** — service-role only.
+  The webhook handler is the sole reader/writer.
+- Retention: **90 days**, daily prune via
+  `/api/cron/prune-stripe-events` at 03:00 UTC. 3× Stripe's
+  30-day replay window; beyond that Stripe can't redeliver so
+  retaining is pointless. See [[phase_2_payments]] §11.1.
+- The cron fires `stripe_events_prune_high` if it deletes
+  > 5,000 rows in a single run (signal of either backfill
+  recovery or event spam).
 
 ---
 
@@ -189,11 +227,47 @@ Handles Stripe webhook events.
 
 | Event | Action |
 |---|---|
-| `checkout.session.completed` (no `metadata.invoice_id`) | Create `stripe_customers` row, set `is_subscribed: true`, `subscription_status: 'trialing'` or `'active'`, store `stripe_customer_id` |
-| `customer.subscription.updated` | Update `subscription_status`, `subscription_end`, `is_subscribed` based on new status |
-| `customer.subscription.deleted` | Set `subscription_status: 'expired'`, `is_subscribed: false` |
+| `checkout.session.completed` (subscription) | Create `stripe_customers` row, set `is_subscribed: true`, `subscription_status`, store `stripe_customer_id` + `stripe_subscription_id` + `subscription_end` |
+| `checkout.session.completed` (`metadata.invoice_id` set) | Mark the linked invoice paid (deposit / final / full) + mirror total back to `events.price` |
+| `customer.subscription.created` | Mirror lifecycle into `app_metadata` |
+| `customer.subscription.updated` | Update `subscription_status`, `subscription_end`, `is_subscribed`, `cancel_at_period_end` based on new status |
+| `customer.subscription.deleted` | Set `subscription_status: 'cancelled'`, `is_subscribed: false` |
 | `invoice.payment_failed` | Set `subscription_status: 'past_due'` |
-| `invoice.payment_succeeded` | Set `subscription_status: 'active'`, `is_subscribed: true` |
+| `invoice.payment_succeeded` (recurring cycle only) | Recover past_due → active; surface recurring-payment Slack alert |
+
+The webhook handler validates each event's `data.object` against
+the per-event Zod schema in `lib/payments/webhook-events.ts`;
+unknown event types are acked with 200 and a structured log line
+(Stripe sends a wide spectrum, we only do work for what we've
+subscribed to in the Dashboard).
+
+### Rate-limits on the Stripe routes (Phase 2A)
+
+Exported from `lib/api/rate-limit.ts` as `STRIPE_RATE_LIMITS`:
+
+| Route | Window | Max | Key | Hit alert |
+|---|---|---|---|---|
+| `POST /api/stripe/checkout` | 60s | 5 | per user | `stripe_rate_limit_hit` (action=checkout) |
+| `POST /api/stripe/portal` | 60s | 10 | per user | `stripe_rate_limit_hit` (action=portal) |
+| `GET /api/stripe/billing-history` | 60s | 30 | per user | `stripe_rate_limit_hit` (action=billingHistory) |
+| `POST /api/stripe/invoice-payment` | 60s | 10 | per IP | `stripe_rate_limit_hit` (action=invoicePayment) (added in PR 2D) |
+
+Keyed on `user.id` for authenticated routes, IP for the public
+invoice-payment endpoint (which has no session).
+
+### Customer lifecycle (§11.5 lock-in)
+
+Stripe **Customer** records for the COUPLE side (Connect — paying
+the MC's invoice) are created **lazily, on first payment attempt**
+— never at quote-send or invoice-send time. Rationale: most quotes
+never get paid (declined / ghosted / replaced); pre-creating
+customers pollutes the MC's Stripe dashboard with strangers. The
+trade-off is the MC can't pre-populate the couple in Stripe; we
+don't expose that workflow today.
+
+MC-side Customer records (for paying Zebri the subscription) are
+created up-front in `/api/stripe/checkout`, since we need the
+`customer` ID to attach the subscription to.
 
 ---
 

@@ -139,3 +139,31 @@ export const AUTH_RATE_LIMITS = {
 } as const satisfies Record<string, LimiterOptions>;
 
 export type AuthRateLimitKey = keyof typeof AUTH_RATE_LIMITS;
+
+/**
+ * Canonical rate-limit thresholds for the Stripe API surface
+ * (Phase 2A). Money paths are protected by per-user limits (cheap
+ * for normal use, but stops accidental loops + naive abuse). The
+ * public `invoicePayment` route uses per-IP since payers aren't
+ * logged in.
+ *
+ * - **checkout**: 5/min/user — checkout sessions are expensive to
+ *   create on Stripe's side and humans don't legitimately fire
+ *   them more than a couple of times per minute.
+ * - **portal**: 10/min/user — clicking around the in-app billing
+ *   flows generates a few of these per session.
+ * - **billingHistory**: 30/min/user — read-only and cheap on our
+ *   side, but Stripe's invoice list API does have its own limits;
+ *   30 covers any reasonable UI without burning their quota.
+ * - **invoicePayment**: 10/min/IP — public surface, no session to
+ *   key on. Tighter than the others because guessable tokens are
+ *   the threat we're defending against.
+ */
+export const STRIPE_RATE_LIMITS = {
+  checkout: { windowMs: 60_000, max: 5 },
+  portal: { windowMs: 60_000, max: 10 },
+  billingHistory: { windowMs: 60_000, max: 30 },
+  invoicePayment: { windowMs: 60_000, max: 10 },
+} as const satisfies Record<string, LimiterOptions>;
+
+export type StripeRateLimitKey = keyof typeof STRIPE_RATE_LIMITS;
