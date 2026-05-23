@@ -14,11 +14,13 @@
  */
 import { execSync } from 'node:child_process';
 
-// Baseline 294 set in Phase 2A (-1 after the Stripe routes +
-// webhook-events refactor). Original 295 set in Phase 0.2b
-// (re-baselined when typed clients exposed strict sites `any`
-// had masked). Only ever decrease.
-const STRICT_BUDGET = 294;
+// Baseline 293 set in Phase 2C (-1 after the /payments page
+// decomposition + email-route hardening). Previous: 294 (Phase
+// 2A, -1 after the Stripe routes + webhook-events refactor).
+// Original 295 set in Phase 0.2b (re-baselined when typed
+// clients exposed strict sites `any` had masked). Only ever
+// decrease.
+const STRICT_BUDGET = 293;
 
 function runTscStrict() {
   try {

@@ -64,6 +64,8 @@ function describe(event: AlertEvent): string {
       return `deleted=${event.deletedCount} rows older than ${event.olderThanDays}d`;
     case 'stripe_connect_onboarding_failed':
       return `user=${event.userId} — ${event.reason}`;
+    case 'email_rate_limit_hit':
+      return `action=${event.action} · user=${event.userId} · ip=${event.ip}`;
     case 'resend_send_failed':
       return `to=${event.to} · "${event.subject}" — ${event.errorMessage}`;
     case 'resend_bounced':

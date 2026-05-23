@@ -51,6 +51,7 @@ default emoji and routing.
 | `stripe_rate_limit_hit` | warn | Per-route rate limit hit (checkout/portal/billingHistory/invoicePayment) | `/api/stripe/*` (Phase 2A) |
 | `stripe_events_prune_high` | warn | Daily prune deleted > 5,000 ledger rows (Phase 2A) | `/api/cron/prune-stripe-events` |
 | `stripe_connect_onboarding_failed` | warn | Connect onboarding errored | `/api/stripe/connect/*` |
+| `email_rate_limit_hit` | warn | Per-user send-quote / send-invoice limit hit (Phase 2C) | `/api/email/send-{quote,invoice}` |
 | `resend_send_failed` | error | Resend API rejected / errored | `/api/email/*` |
 | `resend_bounced` | warn | Bounce reported | `/api/resend/webhook` |
 | `cron_job_failed` | error | Cron handler threw | `/api/cron/*` |
