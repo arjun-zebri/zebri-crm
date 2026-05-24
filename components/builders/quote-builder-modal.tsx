@@ -347,7 +347,7 @@ export function QuoteBuilderModal({
       });
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 7);
-      const dueStr = dueDate.toISOString().split('T')[0];
+      const dueStr = dueDate.toISOString().split('T')[0]!;
       const { data: inv, error } = await supabase
         .from('invoices')
         .insert({

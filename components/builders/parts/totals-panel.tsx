@@ -22,11 +22,11 @@ function formatCurrency(amount: number): string {
 export interface TotalsPanelProps {
   subtotal: number;
   /** When set, rendered as "Discount  -$X". Negative number is fine. */
-  discount?: number;
+  discount?: number | undefined;
   /** When set, renders the matching GST line. */
-  tax?: number;
+  tax?: number | undefined;
   /** Override the tax label. Defaults to "GST 10%". */
-  taxLabel?: string;
+  taxLabel?: string | undefined;
   total: number;
 }
 

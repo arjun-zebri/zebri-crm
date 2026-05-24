@@ -1,8 +1,55 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** + **Phase 1 (Auth & account) shipped** + **Phase 2A (Stripe routes + webhook idempotency) shipped to staging** — 0.0 → 0.9 ✅ · Phase 1 ✅ · Phase 2A ✅ (on staging) · Phase 2B (Billing UI DoD) on staging · Phase 2C (/payments decomposition + email-send hardening + RLS proofs) in flight. Phase 2C.2 (builder modal decomposition) follows. Full plan: `.claude/docs/phase-2-payments.md`.
+> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A (Stripe routes + webhook idempotency)** ✅ on staging · **Phase 2B (Billing UI DoD)** ✅ on staging · **Phase 2C (/payments decomposition + RLS proofs + email-send)** ✅ on staging · **Phase 2C.2 (builder modal decomposition + UI redesign)** ✅ in flight. **Phase 2D (Stripe Connect + public surfaces)** next. Full plan: `.claude/docs/phase-2-payments.md`.
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+
+### Builder modal decomposition + UI redesign (Phase 2C.2)
+
+The Quote + Invoice builder modals — the biggest files in the
+repo before this PR — refactored into composition over shared
+parts, with the UI redesigned to match the calm document-style
+aesthetic the user signed off on for the Billing tab.
+
+- **10 new shared parts** under `components/builders/parts/*`:
+  builder-modal-shell, builder-meta-row, line-items-table,
+  totals-panel, discount-control, tax-control, notes-field,
+  share-and-send, payment-schedule, template-picker. Each ≤ 200
+  LOC, TSDoc'd, primitive-clean.
+- **Shared `StatePill`** extracted to `components/ui/state-pill.tsx`.
+  Used by Billing tab + both builders + payment-schedule stages.
+  5 tones + optional filled/hollow dot. Replaces the pastel pill
+  badges across the app.
+- **`/payments/actions.ts`** server actions —
+  `saveQuoteAction` / `saveInvoiceAction` / `deleteQuoteAction` /
+  `deleteInvoiceAction`. Zod-validated, RLS-scoped via the session
+  Supabase client. Modal files no longer carry inline
+  `supabase.from('quotes').update(...)` calls.
+- **UI redesign**: hero title input + status pill at the top;
+  document-style section flow (meta → items → totals → schedule
+  → notes); `Send to couple` as a single primary CTA (saves +
+  enables share + sends email in one click); contextual
+  status-aware header CTA on invoices (Mark deposit paid → Mark
+  final paid → none when paid); destructive actions tucked into
+  a `⋯` overflow menu.
+- **Line items**: `quantity` removed entirely. Both quotes and
+  invoices now show `description + amount` only.
+  `saveInvoiceAction` writes `quantity = 1, unit_price = amount`
+  for forward-compat with the existing schema. Column drop
+  scheduled for Phase 9.
+- **Payment schedule (invoice)**: vertical timeline (deposit ┊
+  final) with state pill + amount + due date + inline "Mark paid"
+  per stage. Replaces the previous two-card layout.
+- **Quote templates**: "Start from template" picker shown
+  prominently on empty quotes; collapses to a smaller "Apply
+  template" link in the items header once items exist.
+- **47 new tests** — +41 unit (StatePill 10, parts 31) + 6
+  integration (saveQuoteAction + saveInvoiceAction against local
+  Supabase, including cross-tenant denial + the `quantity = 1`
+  invariant).
+- **Stats**: Quote modal 1047 → 623 LOC (-40%). Invoice modal
+  1465 → 780 LOC (-47%). Strict ratchet 293 → 288 (-5). Lint
+  errors 86 → 78 (-8), warnings 596 → 559 (-37).
 
 ### Payments page decomposition + email-send hardening (Phase 2C)
 

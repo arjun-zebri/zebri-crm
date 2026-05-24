@@ -39,9 +39,9 @@ export interface BuilderModalPrimaryAction {
   label: string;
   onClick: () => void;
   /** Loading state propagates to a spinner + disables the button. */
-  loading?: boolean;
+  loading?: boolean | undefined;
   /** Render the button in danger tone (for "Mark paid" on an overdue invoice). */
-  variant?: 'primary' | 'danger';
+  variant?: 'primary' | 'danger' | undefined;
 }
 
 export interface BuilderModalShellProps {
@@ -50,20 +50,20 @@ export interface BuilderModalShellProps {
   /** e.g. "Q-001" or "INV-001". Loading: pass `null`. */
   documentNumber: ReactNode;
   /** Renders inline with the document number. Omit for "new" docs. */
-  statePill?: StatePillProps;
+  statePill?: StatePillProps | undefined;
   /** Status-aware single primary CTA. Omit when not applicable. */
-  primaryAction?: BuilderModalPrimaryAction;
+  primaryAction?: BuilderModalPrimaryAction | undefined;
   /** Items in the ⋯ overflow menu. Omit when the menu is empty (or
    *  when only `primaryAction` is offered). */
-  overflowItems?: OverflowMenuItem[];
+  overflowItems?: OverflowMenuItem[] | undefined;
   /** The big editable title that lives at the top of the modal body. */
   title: string;
   /** Updates while the user types the title. */
   onTitleChange: (next: string) => void;
   /** Placeholder when the title is empty. */
-  titlePlaceholder?: string;
+  titlePlaceholder?: string | undefined;
   /** Locks title editing (e.g. paid invoice). */
-  titleReadOnly?: boolean;
+  titleReadOnly?: boolean | undefined;
   /** Modal body content (meta row + items + totals + …). */
   children: ReactNode;
   /** Sticky footer row (share + save + send). */
@@ -102,7 +102,7 @@ export function BuilderModalShell({
               size="sm"
               variant={primaryAction.variant === 'danger' ? 'danger' : 'primary'}
               onClick={primaryAction.onClick}
-              loading={primaryAction.loading}
+              {...(primaryAction.loading ? { loading: true } : {})}
             >
               {primaryAction.label}
             </Button>

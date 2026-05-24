@@ -14,13 +14,13 @@
  */
 import { execSync } from 'node:child_process';
 
-// Baseline 293 set in Phase 2C (-1 after the /payments page
-// decomposition + email-route hardening). Previous: 294 (Phase
-// 2A, -1 after the Stripe routes + webhook-events refactor).
-// Original 295 set in Phase 0.2b (re-baselined when typed
-// clients exposed strict sites `any` had masked). Only ever
-// decrease.
-const STRICT_BUDGET = 293;
+// Baseline 288 set in Phase 2C.2 (-5 after the builder modal
+// decomposition replaced two big files of legacy strict
+// violations with token-clean parts). Previous: 293 (Phase
+// 2C), 294 (Phase 2A), 295 (Phase 0.2b — initial baseline
+// when typed clients exposed strict sites `any` had masked).
+// Only ever decrease.
+const STRICT_BUDGET = 288;
 
 function runTscStrict() {
   try {

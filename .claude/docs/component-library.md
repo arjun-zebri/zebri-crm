@@ -61,10 +61,43 @@ always include a recovery path via `onRetry` (default "Try again" button) or
 a custom `action`. **Never** render `error.stack` — only `.message`, and
 only when it is human-safe (no PII).
 
+### `<StatePill />` — `@/components/ui/state-pill` (Phase 2C.2)
+Shared tonal pill used wherever a "what state is this thing in?"
+badge appears (Billing tab, Quote modal, Invoice modal, payment-
+schedule stages). 5 tones (`neutral` / `info` / `success` / `warning`
+/ `danger`) + optional leading dot (`'filled'` for active states,
+`'hollow'` for due states). Tonal background via `bg-{tone}/10
+text-{tone}`. Never use raw `bg-emerald-50 text-emerald-600` etc. —
+the pill is the canonical surface.
+
 Conventions:
-- All three honour the design tokens (`text-text`, `text-text-muted`,
-  `text-danger`, `text-body`, `text-section`). Don't override with raw hex.
-- Unit-tested under `tests/unit/components/ui/{loading,empty,error-state}.test.tsx`.
+- All four honour the design tokens (`text-text`, `text-text-muted`,
+  `text-danger`, `text-body`, `text-section`, `bg-success/10`, …).
+  Don't override with raw hex.
+- Unit-tested under `tests/unit/components/ui/{loading,empty,
+  error-state,state-pill}.test.tsx`.
+
+## Builder parts — `components/builders/parts/*` (Phase 2C.2)
+
+Shared subcomponents used to compose the Quote + Invoice builder
+modals. Each one is purely presentational with callbacks for state
+changes; the parent modals own the actual form state + mutations.
+
+| Part | Used by |
+|---|---|
+| `builder-modal-shell.tsx` | Modal frame + hero title input + state pill + ⋯ overflow menu + contextual primary CTA |
+| `builder-meta-row.tsx` | Couple picker + payment terms (invoice) + expiry / due date |
+| `line-items-table.tsx` | description + amount table; dnd-kit reorder; empty-state CTA |
+| `totals-panel.tsx` | Subtotal / (optional) Discount / (optional) GST / Total |
+| `discount-control.tsx` | Collapsed "+ Add discount" link → inline editor with % / $ switch |
+| `tax-control.tsx` | "+ Apply 10% GST" toggle |
+| `notes-field.tsx` | Tokenised textarea wrapper |
+| `share-and-send.tsx` | Footer: share-link affordance + Save + primary "Send to couple" CTA |
+| `payment-schedule.tsx` | Vertical-timeline schedule for invoices (deposit ┊ final) |
+| `template-picker.tsx` | Quote templates — empty-state card + inline popover variants |
+
+All parts are ≤200 LOC, TSDoc'd, and unit-tested under
+`tests/unit/components/builders/parts/*.test.tsx`.
 
 ---
 
