@@ -524,11 +524,13 @@ export function InvoiceBuilderModal({
       loading: markFinalPaid.isPending,
     };
   } else if (rawStatus === 'sent' || isOverdue) {
+    // Status pill already signals overdue in danger tone — the action
+    // button stays brand (lime) regardless so the affirmative CTA
+    // doesn't read as a destructive action.
     primaryAction = {
       label: 'Mark paid',
       onClick: () => markPaid.mutate(),
       loading: markPaid.isPending,
-      ...(isOverdue ? { variant: 'danger' as const } : {}),
     };
   }
 
