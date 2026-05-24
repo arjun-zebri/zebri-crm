@@ -127,7 +127,7 @@ export function QuoteBuilderModal({
   const [items, setItems] = useState<LineItem[]>([]);
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [coupleName, setCoupleName] = useState<string | null>(null);
-  const [taxEnabled, setTaxEnabled] = useState(true);
+  const [taxRate, setTaxRate] = useState<number | null>(10);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | null>(null);
   const [discountValue, setDiscountValue] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -218,7 +218,7 @@ export function QuoteBuilderModal({
       setCoupleName(
         initialCoupleId ? couples?.find((c) => c.id === initialCoupleId)?.name ?? null : null,
       );
-      setTaxEnabled(true);
+      setTaxRate(10);
       setDiscountType(null);
       setDiscountValue(null);
       setDirty(false);
@@ -230,7 +230,7 @@ export function QuoteBuilderModal({
       setExpiresAt(quote.expires_at);
       setCoupleId(quote.couple_id);
       setCoupleName(quote.couple_name);
-      setTaxEnabled((quote.tax_rate ?? 10) > 0);
+      setTaxRate(quote.tax_rate != null && quote.tax_rate > 0 ? quote.tax_rate : null);
       setDiscountType(quote.discount_type);
       setDiscountValue(quote.discount_value);
       setDirty(false);
@@ -250,8 +250,8 @@ export function QuoteBuilderModal({
         : discountValue
       : 0;
   const taxableAmount = subtotal - discountAmount;
-  const taxRate = taxEnabled ? 10 : 0;
-  const tax = taxableAmount * (taxRate / 100);
+  const effectiveTaxRate = taxRate ?? 0;
+  const tax = taxableAmount * (effectiveTaxRate / 100);
   const total = taxableAmount + tax;
 
   const status = quote?.status ?? 'draft';
@@ -273,7 +273,7 @@ export function QuoteBuilderModal({
         title,
         notes: notes || null,
         expiresAt: expiresAt,
-        taxRate,
+        taxRate: effectiveTaxRate,
         discount:
           discountType && discountValue != null && discountValue > 0
             ? { type: discountType, value: discountValue }
@@ -477,7 +477,7 @@ export function QuoteBuilderModal({
       description: item.description,
       amount: Number(item.amount || 0),
     })),
-    taxRate: taxEnabled ? 10 : 0,
+    taxRate: effectiveTaxRate,
     discount:
       discountType && discountValue != null && discountValue > 0
         ? { type: discountType, value: discountValue }
@@ -606,14 +606,10 @@ export function QuoteBuilderModal({
               }}
             />
             <TaxControl
-              applied={taxEnabled}
+              rate={taxRate}
               canEdit={canEdit}
-              onApply={() => {
-                setTaxEnabled(true);
-                setDirty(true);
-              }}
-              onRemove={() => {
-                setTaxEnabled(false);
+              onChange={(next) => {
+                setTaxRate(next);
                 setDirty(true);
               }}
             />
@@ -622,6 +618,7 @@ export function QuoteBuilderModal({
             subtotal={subtotal}
             discount={discountAmount > 0 ? discountAmount : undefined}
             tax={tax > 0 ? tax : undefined}
+            taxLabel={`GST ${Math.round(effectiveTaxRate)}%`}
             total={total}
           />
         </div>

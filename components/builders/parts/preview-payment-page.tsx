@@ -98,9 +98,12 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
         {/* Notes — the block renderer doesn't include a notes
             block by default (the public pages render notes
             outside the renderer), so the preview mirrors that
-            by appending the notes section here. */}
+            by appending the notes section here. The cardSection
+            padding matches the horizontal/vertical padding the
+            renderer's blocks use, so notes line up with the
+            footer / line-items / totals above. */}
         {doc.notes ? (
-          <div style={{ marginTop: 24 }}>
+          <div className={`mt-6 ${padding.cardSection}`}>
             <p
               style={{
                 fontSize: 12,

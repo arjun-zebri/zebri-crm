@@ -135,7 +135,7 @@ export function InvoiceBuilderModal({
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [coupleName, setCoupleName] = useState<string | null>(null);
   const [eventId] = useState<string | null>(null);
-  const [taxEnabled, setTaxEnabled] = useState(false);
+  const [taxRate, setTaxRate] = useState<number | null>(null);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | null>(null);
   const [discountValue, setDiscountValue] = useState<number | null>(null);
   const [depositEnabled, setDepositEnabled] = useState(false);
@@ -233,7 +233,7 @@ export function InvoiceBuilderModal({
       setCoupleName(
         initialCoupleId ? couples?.find((c) => c.id === initialCoupleId)?.name ?? null : null,
       );
-      setTaxEnabled(false);
+      setTaxRate(null);
       setDiscountType(null);
       setDiscountValue(null);
       setDepositEnabled(false);
@@ -251,7 +251,7 @@ export function InvoiceBuilderModal({
       setPaymentTerms((invoice.payment_terms ?? '') as PaymentTerms);
       setCoupleId(invoice.couple_id);
       setCoupleName(invoice.couple_name);
-      setTaxEnabled((invoice.tax_rate ?? 0) > 0);
+      setTaxRate(invoice.tax_rate != null && invoice.tax_rate > 0 ? invoice.tax_rate : null);
       setDiscountType(invoice.discount_type);
       setDiscountValue(invoice.discount_value);
       const hasSched = invoice.deposit_percent != null && invoice.deposit_due_date != null;
@@ -277,8 +277,8 @@ export function InvoiceBuilderModal({
         : discountValue
       : 0;
   const taxableAmount = subtotal - discountAmount;
-  const taxRate = taxEnabled ? 10 : 0;
-  const tax = taxableAmount * (taxRate / 100);
+  const effectiveTaxRate = taxRate ?? 0;
+  const tax = taxableAmount * (effectiveTaxRate / 100);
   const total = taxableAmount + tax;
   const depositAmount = total * (depositPercent / 100);
   const finalAmount = total - depositAmount;
@@ -333,7 +333,7 @@ export function InvoiceBuilderModal({
         notes: notes || null,
         paymentTerms: paymentTerms || null,
         dueDate,
-        taxRate,
+        taxRate: effectiveTaxRate,
         discount:
           discountType && discountValue != null && discountValue > 0
             ? { type: discountType, value: discountValue }
@@ -563,7 +563,7 @@ export function InvoiceBuilderModal({
       description: item.description,
       amount: Number(item.amount || 0),
     })),
-    taxRate: taxEnabled ? 10 : 0,
+    taxRate: effectiveTaxRate,
     discount:
       discountType && discountValue != null && discountValue > 0
         ? { type: discountType, value: discountValue }
@@ -668,14 +668,10 @@ export function InvoiceBuilderModal({
               }}
             />
             <TaxControl
-              applied={taxEnabled}
+              rate={taxRate}
               canEdit={canEdit}
-              onApply={() => {
-                setTaxEnabled(true);
-                setDirty(true);
-              }}
-              onRemove={() => {
-                setTaxEnabled(false);
+              onChange={(next) => {
+                setTaxRate(next);
                 setDirty(true);
               }}
             />
@@ -684,6 +680,7 @@ export function InvoiceBuilderModal({
             subtotal={subtotal}
             discount={discountAmount > 0 ? discountAmount : undefined}
             tax={tax > 0 ? tax : undefined}
+            taxLabel={`GST ${Math.round(effectiveTaxRate)}%`}
             total={total}
           />
         </div>

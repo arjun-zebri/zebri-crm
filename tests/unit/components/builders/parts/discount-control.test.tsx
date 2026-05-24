@@ -1,5 +1,6 @@
 /**
- * Unit tests for DiscountControl — collapsed chip + expanded pill.
+ * Unit tests for DiscountControl — popover-driven chip with segmented
+ * type switcher + value input + Remove/Done buttons.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -10,7 +11,7 @@ import { DiscountControl } from '@/components/builders/parts/discount-control';
 const noop = () => undefined;
 
 describe('DiscountControl', () => {
-  it('renders the collapsed chip when type is null', () => {
+  it('renders the bare "Discount" trigger when nothing is configured', () => {
     render(
       <DiscountControl
         type={null}
@@ -22,10 +23,40 @@ describe('DiscountControl', () => {
         onValueChange={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /^Discount$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add discount/i })).toHaveTextContent('Discount');
   });
 
-  it('calls onAdd when the collapsed chip is clicked', async () => {
+  it('renders the configured value in the trigger when type=percentage', () => {
+    render(
+      <DiscountControl
+        type="percentage"
+        value={15}
+        canEdit
+        onAdd={noop}
+        onRemove={noop}
+        onTypeChange={noop}
+        onValueChange={noop}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Edit discount/i })).toHaveTextContent('Discount 15%');
+  });
+
+  it('renders a fixed dollar value in the trigger when type=fixed', () => {
+    render(
+      <DiscountControl
+        type="fixed"
+        value={250}
+        canEdit
+        onAdd={noop}
+        onRemove={noop}
+        onTypeChange={noop}
+        onValueChange={noop}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Edit discount/i })).toHaveTextContent('Discount $250.00');
+  });
+
+  it('seeds a default discount when the trigger is clicked in the empty state', async () => {
     const onAdd = vi.fn();
     render(
       <DiscountControl
@@ -38,84 +69,15 @@ describe('DiscountControl', () => {
         onValueChange={noop}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /^Discount$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Add discount/i }));
     expect(onAdd).toHaveBeenCalledOnce();
   });
 
-  it('renders the expanded pill with label + value input + type toggle', () => {
+  it('disables the trigger when canEdit=false', () => {
     render(
       <DiscountControl
-        type="percentage"
-        value={10}
-        canEdit
-        onAdd={noop}
-        onRemove={noop}
-        onTypeChange={noop}
-        onValueChange={noop}
-      />,
-    );
-    expect(screen.getByText('Discount')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('10')).toBeInTheDocument();
-    // Single toggle button cycles between % and $ — shows current type as label.
-    expect(screen.getByRole('button', { name: /Switch to fixed amount/i })).toBeInTheDocument();
-  });
-
-  it('cycles type when the toggle is clicked', async () => {
-    const onTypeChange = vi.fn();
-    render(
-      <DiscountControl
-        type="percentage"
-        value={10}
-        canEdit
-        onAdd={noop}
-        onRemove={noop}
-        onTypeChange={onTypeChange}
-        onValueChange={noop}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: /Switch to fixed amount/i }));
-    expect(onTypeChange).toHaveBeenCalledWith('fixed');
-  });
-
-  it('cycles back from fixed to percentage', async () => {
-    const onTypeChange = vi.fn();
-    render(
-      <DiscountControl
-        type="fixed"
-        value={100}
-        canEdit
-        onAdd={noop}
-        onRemove={noop}
-        onTypeChange={onTypeChange}
-        onValueChange={noop}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: /Switch to percentage/i }));
-    expect(onTypeChange).toHaveBeenCalledWith('percentage');
-  });
-
-  it('calls onRemove when the × button is clicked', async () => {
-    const onRemove = vi.fn();
-    render(
-      <DiscountControl
-        type="percentage"
-        value={10}
-        canEdit
-        onAdd={noop}
-        onRemove={onRemove}
-        onTypeChange={noop}
-        onValueChange={noop}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: /Remove discount/i }));
-    expect(onRemove).toHaveBeenCalledOnce();
-  });
-
-  it('disables the value input when canEdit=false', () => {
-    render(
-      <DiscountControl
-        type="percentage"
-        value={10}
+        type={null}
+        value={null}
         canEdit={false}
         onAdd={noop}
         onRemove={noop}
@@ -123,6 +85,6 @@ describe('DiscountControl', () => {
         onValueChange={noop}
       />,
     );
-    expect(screen.getByDisplayValue('10')).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Add discount/i })).toBeDisabled();
   });
 });
