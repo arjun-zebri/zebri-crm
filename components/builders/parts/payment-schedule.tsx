@@ -155,12 +155,16 @@ export function PaymentSchedule({
                 />
                 <span className="text-sm text-text-muted">%</span>
               </div>
-              <DatePicker value={depositDueDate} onChange={onDepositDueDateChange} />
+              <DatePicker
+                value={depositDueDate}
+                onChange={onDepositDueDateChange}
+                iconPosition="left"
+              />
               <button
                 type="button"
                 onClick={onMarkDepositPaid}
                 disabled={markDepositPending}
-                className={`${FIELD_CLS} text-text-muted hover:bg-surface-muted hover:text-text disabled:opacity-50 cursor-pointer`}
+                className="h-9 inline-flex items-center rounded-xl px-3 text-sm font-medium bg-brand-fg text-text-inverse hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {markDepositPending ? 'Saving…' : 'Mark paid'}
               </button>
@@ -185,12 +189,16 @@ export function PaymentSchedule({
           >
             {!finalPaid && canEdit && depositPaid ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <DatePicker value={finalDueDate} onChange={onFinalDueDateChange} />
+                <DatePicker
+                  value={finalDueDate}
+                  onChange={onFinalDueDateChange}
+                  iconPosition="left"
+                />
                 <button
                   type="button"
                   onClick={onMarkFinalPaid}
                   disabled={markFinalPending}
-                  className={`${FIELD_CLS} text-text-muted hover:bg-surface-muted hover:text-text disabled:opacity-50 cursor-pointer`}
+                  className="h-9 inline-flex items-center rounded-xl px-3 text-sm font-medium bg-brand-fg text-text-inverse hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {markFinalPending ? 'Saving…' : 'Mark paid'}
                 </button>

@@ -147,9 +147,11 @@ export function InvoiceBuilderModal({
   const [dirty, setDirty] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // Auto-animate refs for the totals area + chip container.
+  // Auto-animate refs for the totals area + chip container, and
+  // the payment-schedule slot so add / remove glides.
   const [chipsRef] = useAutoAnimate<HTMLDivElement>();
   const [totalsAreaRef] = useAutoAnimate<HTMLDivElement>();
+  const [scheduleSlotRef] = useAutoAnimate<HTMLDivElement>();
 
   /* ─── data ──────────────────────────────────────────────────── */
   const { data: invoice, isLoading: invoiceLoading } = useQuery({
@@ -685,8 +687,9 @@ export function InvoiceBuilderModal({
           />
         </div>
 
-        {/* Payment schedule */}
-        <div className="mt-8">
+        {/* Payment schedule — auto-animate swaps between the schedule
+            timeline and the "+ Add payment schedule" affordance. */}
+        <div ref={scheduleSlotRef} className="mt-8">
           {depositEnabled ? (
             <PaymentSchedule
               canEdit={canEdit}
