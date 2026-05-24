@@ -1,12 +1,13 @@
 /**
- * Discount affordance — collapsed link + expanded inline editor.
+ * Discount affordance — collapsed chip that expands into an inline
+ * compact pill (still one element wide).
  *
- * Reduces visual noise: when no discount is set, only a small
- * "+ Add discount" link button shows. Click expands to a single
- * row with `[ % | $ ] [ value input ]   [× remove]`.
- *
- * The "type" switch is a segmented control (two pill buttons) — not
- * a select. Two options don't deserve a dropdown.
+ * Two states, both rendered as a single self-contained pill:
+ * - **Collapsed**: `[+ Discount]` — subtle tonal chip.
+ * - **Configured**: `[ Discount  10  %  × ]` — same pill, slightly
+ *   emphasised, with an inline number input + a small % / $ toggle
+ *   + a remove × icon. The pill stays compact so it doesn't push
+ *   sibling controls onto a new row.
  *
  * @module components/builders/parts/discount-control
  */
@@ -38,9 +39,7 @@ export function DiscountControl({
   onTypeChange,
   onValueChange,
 }: DiscountControlProps) {
-  // Not configured: subtle inline-action chip — no border, no
-  // shadow. Linear/Notion-style affordance that reads as an
-  // optional action rather than a primary button.
+  // Collapsed: subtle inline-action chip.
   if (type === null) {
     return (
       <button
@@ -55,61 +54,47 @@ export function DiscountControl({
     );
   }
 
-  // Configured: render the inline editor.
+  // Configured: same chip shape, slightly stronger background to
+  // signal "active". Inline number input + a single %/$ toggle
+  // (clicking it cycles, no separate buttons) + remove ×. The
+  // whole thing fits on one line so click-to-expand doesn't push
+  // siblings onto a new row.
+  function toggleType() {
+    onTypeChange(type === 'percentage' ? 'fixed' : 'percentage');
+  }
   return (
-    <div className="flex items-center gap-2 text-body">
-      <span className="text-text-muted">Discount</span>
-
-      {/* Type switch (% / $) */}
-      <div className="inline-flex rounded-control border border-border bg-surface overflow-hidden">
-        <button
-          type="button"
-          onClick={() => onTypeChange('percentage')}
-          disabled={!canEdit}
-          className={`px-2.5 py-1 text-caption font-medium transition-colors ${
-            type === 'percentage'
-              ? 'bg-surface-emphasis text-text'
-              : 'text-text-muted hover:text-text'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          %
-        </button>
-        <button
-          type="button"
-          onClick={() => onTypeChange('fixed')}
-          disabled={!canEdit}
-          className={`px-2.5 py-1 text-caption font-medium transition-colors border-l border-border ${
-            type === 'fixed'
-              ? 'bg-surface-emphasis text-text'
-              : 'text-text-muted hover:text-text'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          $
-        </button>
-      </div>
-
+    <span className="inline-flex items-center gap-1 rounded-control bg-surface-emphasis pl-2.5 pr-1 py-1 text-caption font-medium text-text">
+      <span>Discount</span>
       <input
         type="number"
         value={value ?? ''}
         onChange={(e) => onValueChange(parseFloat(e.target.value) || 0)}
-        placeholder={type === 'percentage' ? '10' : '0.00'}
         min="0"
         step={type === 'percentage' ? '1' : '0.01'}
         readOnly={!canEdit}
         disabled={!canEdit}
-        className="w-20 rounded-control border border-border bg-surface px-2 py-1 text-body text-text tabular-nums focus:outline-none focus:border-border-strong disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-10 bg-transparent text-right text-caption font-medium text-text tabular-nums focus:outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        aria-label="Discount value"
       />
-
+      <button
+        type="button"
+        onClick={toggleType}
+        disabled={!canEdit}
+        aria-label={`Switch to ${type === 'percentage' ? 'fixed amount' : 'percentage'}`}
+        className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-text-muted hover:bg-surface-muted hover:text-text transition-colors disabled:opacity-50 cursor-pointer"
+      >
+        {type === 'percentage' ? '%' : '$'}
+      </button>
       {canEdit ? (
         <button
           type="button"
           onClick={onRemove}
-          className="p-1 text-text-subtle hover:text-danger transition-colors cursor-pointer"
           aria-label="Remove discount"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-text-muted hover:bg-danger/10 hover:text-danger transition-colors cursor-pointer"
         >
-          <X size={14} strokeWidth={1.5} />
+          <X size={11} strokeWidth={1.5} />
         </button>
       ) : null}
-    </div>
+    </span>
   );
 }

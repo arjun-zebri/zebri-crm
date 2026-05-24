@@ -568,9 +568,11 @@ export function QuoteBuilderModal({
           />
         </div>
 
-        {/* Discount + Tax + Totals row */}
+        {/* Discount + Tax + Totals row. Chips stack vertically
+            (each on its own line) so clicking Discount can't push
+            GST onto a new line — no layout shift on expand. */}
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-col items-start gap-2">
             <DiscountControl
               type={discountType}
               value={discountValue}

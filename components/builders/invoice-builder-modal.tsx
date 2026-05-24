@@ -635,8 +635,10 @@ export function InvoiceBuilderModal({
           />
         </div>
 
+        {/* Chips stack vertically so expanding discount can't push
+            GST onto a new line — no layout shift on click. */}
         <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-col items-start gap-2">
             <DiscountControl
               type={discountType}
               value={discountValue}
