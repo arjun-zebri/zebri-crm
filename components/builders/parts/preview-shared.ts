@@ -41,4 +41,7 @@ export interface PreviewDoc {
   bankAccountNumber?: string | null;
   /** Used for the Payment-page email subject + share-link preview. */
   shareUrl: string;
+  /** Invoice-only: whether the Pay-with-card action will render on
+   *  the public page. Controls the action block in the preview. */
+  stripePaymentEnabled?: boolean;
 }

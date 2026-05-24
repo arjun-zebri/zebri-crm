@@ -256,7 +256,15 @@ export function InvoiceBuilderModal({
       setTaxRate(invoice.tax_rate != null && invoice.tax_rate > 0 ? invoice.tax_rate : null);
       setDiscountType(invoice.discount_type);
       setDiscountValue(invoice.discount_value);
-      const hasSched = invoice.deposit_percent != null && invoice.deposit_due_date != null;
+      // The schedule is "enabled" if we have the percent + due dates
+      // stored, OR if a payment has actually been recorded against
+      // it (covers the case where mark-paid fired before the schedule
+      // was persisted via Save changes — see the auto-save in
+      // markDepositPaid/markFinalPaid below).
+      const hasSched =
+        (invoice.deposit_percent != null && invoice.deposit_due_date != null) ||
+        invoice.deposit_paid_at != null ||
+        invoice.final_paid_at != null;
       setDepositEnabled(hasSched);
       setDepositPercent(invoice.deposit_percent ?? 50);
       setDepositDueDate(invoice.deposit_due_date ?? '');
@@ -393,14 +401,25 @@ export function InvoiceBuilderModal({
 
   // Status mutations stay inline — one-line UPDATEs not worth a
   // dedicated server action each. RLS scopes them to the user.
+  // Each mark mutation auto-saves pending form edits first so the
+  // schedule (or any other dirty field) is persisted before the
+  // status flips — otherwise refresh would lose, e.g., the schedule
+  // fields and the UI would re-hydrate with depositEnabled=false.
+  async function ensureSaved(): Promise<string> {
+    if (dirty || !effectiveId) {
+      return await save.mutateAsync();
+    }
+    return effectiveId;
+  }
+
   const markPaid = useMutation({
     mutationFn: async () => {
-      if (!effectiveId) return;
+      const id = await ensureSaved();
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('invoices')
         .update({ status: 'paid', paid_at: now, final_paid_at: hasDepositSchedule ? now : null })
-        .eq('id', effectiveId);
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -413,11 +432,11 @@ export function InvoiceBuilderModal({
 
   const markDepositPaid = useMutation({
     mutationFn: async () => {
-      if (!effectiveId) return;
+      const id = await ensureSaved();
       const { error } = await supabase
         .from('invoices')
         .update({ status: 'deposit_paid', deposit_paid_at: new Date().toISOString() })
-        .eq('id', effectiveId);
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -430,12 +449,12 @@ export function InvoiceBuilderModal({
 
   const markFinalPaid = useMutation({
     mutationFn: async () => {
-      if (!effectiveId) return;
+      const id = await ensureSaved();
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('invoices')
         .update({ status: 'paid', paid_at: now, final_paid_at: now })
-        .eq('id', effectiveId);
+        .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -579,6 +598,7 @@ export function InvoiceBuilderModal({
     notes: notes || null,
     dueDate: dueDate,
     shareUrl: shareUrl ?? `https://example.com/invoice/${invoice?.share_token ?? 'preview'}`,
+    stripePaymentEnabled,
   };
 
   return (

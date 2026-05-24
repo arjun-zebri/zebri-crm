@@ -92,7 +92,12 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
           blocks={blocks}
           branding={branding}
           doc={publicDoc}
-          hideAction
+          // Invoices hide the action block only when card payments
+          // are off — when on, the action block's "Pay with card"
+          // button is exactly what the couple will see. Quotes
+          // always show the action so the MC can preview the
+          // Accept-quote affordance.
+          hideAction={surface === 'invoice' && !doc.stripePaymentEnabled}
         />
 
         {/* Notes — the block renderer doesn't include a notes
