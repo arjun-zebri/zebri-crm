@@ -144,6 +144,42 @@ Billing tab uses server actions in
   deep-linked to `flow_data.type: 'payment_method_update'` for
   managing the card on Stripe's PCI surface.
 
+### Quote + Invoice builder server actions (Phase 2C.2)
+
+The Quote + Invoice builder modals route all mutations through
+typed server actions in
+`app/(dashboard)/payments/actions.ts`:
+
+- **`saveQuoteAction(input)`** — Zod-validates the input, RLS-scopes
+  the writes via the session Supabase client, and replaces line
+  items in a single call (delete + insert). For new quotes, calls
+  `generate_quote_number(p_user_id)` first.
+- **`saveInvoiceAction(input)`** — same shape with invoice-specific
+  fields (payment terms, due date, deposit schedule,
+  `stripe_payment_enabled`). **Every inserted `invoice_items` row
+  gets `quantity = 1, unit_price = amount`** as a forward-compat
+  invariant — the new 2C.2 UI removed the quantity field, but the
+  schema columns stay until a Phase 9 follow-up. The
+  `get_public_invoice` RPC still returns qty/unit/amount; the
+  public invoice page renders them harmlessly.
+- **`deleteQuoteAction(quoteId)` / `deleteInvoiceAction(invoiceId)`**
+  — RLS-scoped destructive deletes. Cascade handles items.
+
+Status-changing mutations (mark deposit/final/full paid, revert,
+cancel) stay inline in the modals as one-line UPDATEs — they're
+RLS-protected by the session client and don't justify their own
+server actions.
+
+### `invoice_items.quantity` + `unit_price` deprecation
+
+The two columns remain in the schema for forward-compat. New writes
+default `quantity = 1` and mirror `amount` into `unit_price`. The
+public invoice RPC + PDF generator both still read them. A clean
+column drop is scheduled for a Phase 9 (Quotes) follow-up once the
+new UI has soaked for a release; it'll need a
+`@ALLOW_DESTRUCTIVE` marker + a one-time backfill for any historic
+rows where `quantity > 1`.
+
 ## Stripe Dashboard configuration (REQUIRED for plan changes)
 
 The `subscription_update_confirm` flow used by

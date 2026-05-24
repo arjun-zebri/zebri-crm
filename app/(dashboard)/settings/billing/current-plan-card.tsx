@@ -18,6 +18,7 @@ import { AlertCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { StatePill as SharedStatePill, type StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 
@@ -198,25 +199,15 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
 /* ────────────────────────────────────────────────────────────── */
 
 function StatePill({ state }: { state: CardState }) {
-  const config: Record<CardState, { label: string; tone: string }> = {
-    starter: { label: 'Free plan', tone: 'bg-surface-muted text-text-muted' },
-    active: { label: 'Active', tone: 'bg-success/10 text-success' },
-    cancelling_in_grace: { label: 'Cancelling', tone: 'bg-warning/10 text-warning' },
-    past_due: { label: 'Payment failed', tone: 'bg-danger/10 text-danger' },
-    expired: { label: 'Ended', tone: 'bg-surface-muted text-text-muted' },
-    comped: { label: 'Comped', tone: 'bg-success/10 text-success' },
+  const config: Record<CardState, StatePillProps> = {
+    starter: { label: 'Free plan', tone: 'neutral' },
+    active: { label: 'Active', tone: 'success', dot: 'filled' },
+    cancelling_in_grace: { label: 'Cancelling', tone: 'warning' },
+    past_due: { label: 'Payment failed', tone: 'danger' },
+    expired: { label: 'Ended', tone: 'neutral' },
+    comped: { label: 'Comped', tone: 'success', dot: 'filled' },
   };
-  const cfg = config[state];
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-pill px-2 py-0.5 text-caption font-medium ${cfg.tone}`}
-    >
-      {state === 'active' || state === 'comped' ? (
-        <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
-      ) : null}
-      {cfg.label}
-    </span>
-  );
+  return <SharedStatePill {...config[state]} />;
 }
 
 function MetaLine({

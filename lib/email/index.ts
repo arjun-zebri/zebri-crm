@@ -21,7 +21,7 @@ function resend(): Resend {
 
 const FROM = "Zebri <noreply@app.zebri.com.au>";
 
-function quoteHtml(opts: {
+export function quoteHtml(opts: {
   coupleName: string;
   quoteNumber: string;
   quoteTitle: string;
@@ -63,7 +63,7 @@ function quoteHtml(opts: {
 </html>`;
 }
 
-function invoiceHtml(opts: {
+export function invoiceHtml(opts: {
   coupleName: string;
   invoiceNumber: string;
   invoiceTitle: string;

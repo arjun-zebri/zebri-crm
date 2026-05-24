@@ -121,17 +121,64 @@ function generateContractHtml(doc: PdfDocumentData): string {
 </html>`
 }
 
-export function generateAndPrintPdf(doc: PdfDocumentData) {
+/**
+ * Optional branding context — when supplied, the PDF picks up the
+ * user's heading + body font, brand colour accent on the title,
+ * logo at the top, and tonal table headers.
+ *
+ * Caller is responsible for fetching the branding values (the
+ * builder preview uses `useCurrentBranding`). When omitted, the
+ * PDF renders in the legacy black-and-white style.
+ */
+export interface PdfBrandingOpts {
+  brandColor?: string
+  textColor?: string
+  mutedColor?: string
+  /** CSS font-family string for headings (e.g. `'Inter', sans-serif`). */
+  headingFontFamily?: string
+  /** CSS font-family string for body. */
+  bodyFontFamily?: string
+  /** Google-Fonts CSS link href (so the print window loads the font). */
+  fontsHref?: string
+  /** Public logo URL (top-left of the document). */
+  logoUrl?: string
+}
+
+/**
+ * Build the HTML string that `generateAndPrintPdf` would print.
+ *
+ * Exported separately so the Quote / Invoice builder preview pane
+ * (Phase 2C.2) can render the same HTML inline inside an iframe
+ * without opening a new window. Same output bytes — the preview
+ * and the eventual print stay in lockstep.
+ *
+ * @param doc      The document data (quote / invoice / contract).
+ * @param branding Optional branding overrides (colours + fonts +
+ *                 logo). When omitted, the PDF renders in the
+ *                 legacy black-and-white style.
+ */
+export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): string {
   if (doc.type === 'contract') {
-    const html = generateContractHtml(doc)
-    const win = window.open('', '_blank')
-    if (!win) return
-    win.document.write(html)
-    win.document.close()
-    win.focus()
-    setTimeout(() => win.print(), 500)
-    return
+    return generateContractHtml(doc)
   }
+
+  // Resolve branding with safe defaults so the templating below
+  // doesn't need to handle nulls inline.
+  const brandColor = branding?.brandColor ?? '#111111'
+  const textColor = branding?.textColor ?? '#111111'
+  const mutedColor = branding?.mutedColor ?? '#666666'
+  const headingFont =
+    branding?.headingFontFamily ??
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  const bodyFont =
+    branding?.bodyFontFamily ??
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  const fontsLink = branding?.fontsHref
+    ? `<link rel="stylesheet" href="${branding.fontsHref}" />`
+    : ''
+  const logoTag = branding?.logoUrl
+    ? `<img src="${branding.logoUrl}" alt="" style="max-height:48px;max-width:200px;display:block;margin-bottom:12px" />`
+    : ''
 
   const discountAmount =
     doc.discountType && doc.discountValue && doc.discountValue > 0
@@ -148,37 +195,37 @@ export function generateAndPrintPdf(doc: PdfDocumentData) {
       if (doc.type === 'invoice' && item.quantity != null && item.unit_price != null) {
         return `
           <tr>
-            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111">${item.description || '-'}</td>
-            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111;text-align:right;width:60px">${item.quantity}</td>
-            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111;text-align:right;width:100px">${formatCurrency(item.unit_price)}</td>
-            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111;text-align:right;width:100px">${formatCurrency(item.amount ?? item.unit_price * item.quantity)}</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor}">${item.description || '-'}</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor};text-align:right;width:60px">${item.quantity}</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor};text-align:right;width:100px">${formatCurrency(item.unit_price)}</td>
+            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor};text-align:right;width:100px">${formatCurrency(item.amount ?? item.unit_price * item.quantity)}</td>
           </tr>`
       }
       return `
         <tr>
-          <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111">${item.description || '-'}</td>
-          <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#111;text-align:right;width:120px">${formatCurrency(item.amount ?? 0)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor}">${item.description || '-'}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor};text-align:right;width:120px">${formatCurrency(item.amount ?? 0)}</td>
         </tr>`
     })
     .join('')
 
   const headerRow =
     doc.type === 'invoice'
-      ? `<tr style="border-bottom:2px solid #e5e5e5">
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:#666;text-align:left">Description</th>
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:#666;text-align:right;width:60px">Qty</th>
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:#666;text-align:right;width:100px">Unit price</th>
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:#666;text-align:right;width:100px">Amount</th>
+      ? `<tr style="border-bottom:2px solid ${brandColor}">
+          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:left;font-family:${headingFont}">Description</th>
+          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:right;width:60px;font-family:${headingFont}">Qty</th>
+          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:right;width:100px;font-family:${headingFont}">Unit price</th>
+          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:right;width:100px;font-family:${headingFont}">Amount</th>
         </tr>`
-      : `<tr style="border-bottom:2px solid #e5e5e5">
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:#666;text-align:left">Description</th>
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:#666;text-align:right;width:120px">Amount</th>
+      : `<tr style="border-bottom:2px solid ${brandColor}">
+          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:left;font-family:${headingFont}">Description</th>
+          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:right;width:120px;font-family:${headingFont}">Amount</th>
         </tr>`
 
   const discountRow =
     discountAmount > 0
       ? `<tr>
-          <td style="padding:6px 0;font-size:13px;color:#666">Discount${doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}</td>
+          <td style="padding:6px 0;font-size:13px;color:${mutedColor}">Discount${doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}</td>
           <td style="padding:6px 0;font-size:13px;color:#ef4444;text-align:right">-${formatCurrency(discountAmount)}</td>
         </tr>`
       : ''
@@ -186,31 +233,31 @@ export function generateAndPrintPdf(doc: PdfDocumentData) {
   const taxRow =
     taxRate > 0
       ? `<tr>
-          <td style="padding:6px 0;font-size:13px;color:#666">GST (${taxRate}%)</td>
-          <td style="padding:6px 0;font-size:13px;color:#333;text-align:right">${formatCurrency(tax)}</td>
+          <td style="padding:6px 0;font-size:13px;color:${mutedColor}">GST (${taxRate}%)</td>
+          <td style="padding:6px 0;font-size:13px;color:${textColor};text-align:right">${formatCurrency(tax)}</td>
         </tr>`
       : ''
 
   const metaLine = doc.type === 'quote' && doc.expiresAt
-    ? `<p style="margin:4px 0 0;font-size:13px;color:#888">Expires: ${formatDate(doc.expiresAt)}</p>`
+    ? `<p style="margin:4px 0 0;font-size:13px;color:${mutedColor}">Expires: ${formatDate(doc.expiresAt)}</p>`
     : doc.type === 'invoice' && doc.dueDate
-    ? `<p style="margin:4px 0 0;font-size:13px;color:#888">Due: ${formatDate(doc.dueDate)}</p>`
+    ? `<p style="margin:4px 0 0;font-size:13px;color:${mutedColor}">Due: ${formatDate(doc.dueDate)}</p>`
     : ''
 
   const bankDetails =
     doc.type === 'invoice' && (doc.bankAccountName || doc.bankBsb || doc.bankAccountNumber)
       ? `<div style="margin-top:32px;padding:16px;background:#f9f9f9;border-radius:8px">
-          <p style="font-size:12px;font-weight:600;color:#666;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em">Bank transfer details</p>
-          ${doc.bankAccountName ? `<p style="font-size:13px;color:#333;margin:4px 0">Account name: ${doc.bankAccountName}</p>` : ''}
-          ${doc.bankBsb ? `<p style="font-size:13px;color:#333;margin:4px 0">BSB: ${doc.bankBsb}</p>` : ''}
-          ${doc.bankAccountNumber ? `<p style="font-size:13px;color:#333;margin:4px 0">Account number: ${doc.bankAccountNumber}</p>` : ''}
+          <p style="font-size:12px;font-weight:600;color:${mutedColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Bank transfer details</p>
+          ${doc.bankAccountName ? `<p style="font-size:13px;color:${textColor};margin:4px 0">Account name: ${doc.bankAccountName}</p>` : ''}
+          ${doc.bankBsb ? `<p style="font-size:13px;color:${textColor};margin:4px 0">BSB: ${doc.bankBsb}</p>` : ''}
+          ${doc.bankAccountNumber ? `<p style="font-size:13px;color:${textColor};margin:4px 0">Account number: ${doc.bankAccountNumber}</p>` : ''}
         </div>`
       : ''
 
   const notesSection = doc.notes
     ? `<div style="margin-top:24px">
-        <p style="font-size:12px;font-weight:600;color:#666;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em">Notes</p>
-        <p style="font-size:13px;color:#555;white-space:pre-line;line-height:1.6">${doc.notes}</p>
+        <p style="font-size:12px;font-weight:600;color:${mutedColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Notes</p>
+        <p style="font-size:13px;color:${mutedColor};white-space:pre-line;line-height:1.6">${doc.notes}</p>
       </div>`
     : ''
 
@@ -219,9 +266,11 @@ export function generateAndPrintPdf(doc: PdfDocumentData) {
 <head>
   <meta charset="utf-8" />
   <title>${doc.type === 'quote' ? 'Quote' : 'Invoice'} ${doc.documentNumber}</title>
+  ${fontsLink}
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px; color: #111; max-width: 700px; margin: 0 auto; }
+    body { font-family: ${bodyFont}; padding: 48px; color: ${textColor}; max-width: 700px; margin: 0 auto; }
+    h1, h2, h3, .heading { font-family: ${headingFont}; }
     @media print {
       body { padding: 0; }
       @page { margin: 20mm; }
@@ -231,34 +280,35 @@ export function generateAndPrintPdf(doc: PdfDocumentData) {
 <body>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:48px">
     <div>
-      ${doc.businessName ? `<p style="font-size:20px;font-weight:700;color:#111;margin-bottom:4px">${doc.businessName}</p>` : ''}
-      <p style="font-size:14px;color:#666">${doc.coupleName}</p>
+      ${logoTag}
+      ${doc.businessName ? `<p class="heading" style="font-size:20px;font-weight:700;color:${textColor};margin-bottom:4px">${doc.businessName}</p>` : ''}
+      <p style="font-size:14px;color:${mutedColor}">${doc.coupleName}</p>
     </div>
     <div style="text-align:right">
-      <p style="font-size:22px;font-weight:700;color:#111;text-transform:capitalize">${doc.type === 'quote' ? 'Quote' : 'Invoice'}</p>
-      <p style="font-size:14px;color:#888;margin-top:4px">#${doc.documentNumber}</p>
+      <p class="heading" style="font-size:22px;font-weight:700;color:${brandColor};text-transform:capitalize">${doc.type === 'quote' ? 'Quote' : 'Invoice'}</p>
+      <p style="font-size:14px;color:${mutedColor};margin-top:4px">#${doc.documentNumber}</p>
       ${metaLine}
     </div>
   </div>
 
-  ${doc.title ? `<p style="font-size:16px;font-weight:600;color:#111;margin-bottom:32px">${doc.title}</p>` : ''}
+  ${doc.title ? `<p class="heading" style="font-size:16px;font-weight:600;color:${textColor};margin-bottom:32px">${doc.title}</p>` : ''}
 
   <table style="width:100%;border-collapse:collapse">
     <thead>${headerRow}</thead>
     <tbody>${itemRows}</tbody>
   </table>
 
-  <div style="margin-top:24px;border-top:2px solid #e5e5e5;padding-top:16px">
+  <div style="margin-top:24px;border-top:2px solid ${brandColor};padding-top:16px">
     <table style="width:100%;border-collapse:collapse;margin-left:auto;max-width:280px">
       <tr>
-        <td style="padding:6px 0;font-size:13px;color:#666">Subtotal</td>
-        <td style="padding:6px 0;font-size:13px;color:#333;text-align:right">${formatCurrency(doc.subtotal)}</td>
+        <td style="padding:6px 0;font-size:13px;color:${mutedColor}">Subtotal</td>
+        <td style="padding:6px 0;font-size:13px;color:${textColor};text-align:right">${formatCurrency(doc.subtotal)}</td>
       </tr>
       ${discountRow}
       ${taxRow}
       <tr style="border-top:1px solid #e5e5e5">
-        <td style="padding:10px 0 6px;font-size:15px;font-weight:700;color:#111">Total</td>
-        <td style="padding:10px 0 6px;font-size:15px;font-weight:700;color:#111;text-align:right">${formatCurrency(doc.total)}</td>
+        <td class="heading" style="padding:10px 0 6px;font-size:15px;font-weight:700;color:${brandColor}">Total</td>
+        <td class="heading" style="padding:10px 0 6px;font-size:15px;font-weight:700;color:${brandColor};text-align:right">${formatCurrency(doc.total)}</td>
       </tr>
     </table>
   </div>
@@ -268,10 +318,15 @@ export function generateAndPrintPdf(doc: PdfDocumentData) {
 </body>
 </html>`
 
+  return html
+}
+
+export function generateAndPrintPdf(doc: PdfDocumentData) {
+  const html = buildPdfHtml(doc)
   const win = window.open('', '_blank')
   if (!win) return
   win.document.write(html)
   win.document.close()
   win.focus()
-  setTimeout(() => win.print(), 300)
+  setTimeout(() => win.print(), doc.type === 'contract' ? 500 : 300)
 }

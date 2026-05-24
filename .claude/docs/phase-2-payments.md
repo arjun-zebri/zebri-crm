@@ -254,7 +254,7 @@ read of `stripe_connect_enabled` in `get_public_invoice` is a low-
 impact §7.4 residual, fix scheduled for PR 2D alongside the Connect
 state-param HMAC work.
 
-## 5b. PR 2C.2 — Builder modal decomposition (deferred from 2C)
+## 5b. PR 2C.2 — Builder modal decomposition + UI redesign (✅ shipped)
 
 **Goal:** decompose Quote (1047 LOC) + Invoice (1465 LOC) modals
 into shared `components/builders/parts/` subcomponents + move

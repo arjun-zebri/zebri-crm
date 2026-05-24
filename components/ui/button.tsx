@@ -21,7 +21,7 @@ import type { ButtonHTMLAttributes, Ref } from 'react';
  */
 
 /** Visual variant. */
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
 
 /** Size. */
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -48,6 +48,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
     'bg-transparent text-text-muted hover:bg-surface-emphasis hover:text-text focus-visible:ring-2 focus-visible:ring-border-strong',
   danger:
     'bg-danger text-text-inverse hover:opacity-90 focus-visible:ring-2 focus-visible:ring-danger',
+  success:
+    'bg-success text-text-inverse hover:opacity-90 focus-visible:ring-2 focus-visible:ring-success',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {

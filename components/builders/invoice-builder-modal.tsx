@@ -1,1465 +1,842 @@
-'use client'
+/**
+ * Invoice builder modal.
+ *
+ * Composition over the new `components/builders/parts/*` set, plus
+ * the invoice-only pieces: payment schedule timeline, payment terms,
+ * status-aware contextual header CTA, and the Stripe card-payments
+ * toggle.
+ *
+ * Status machine surfaced on the header:
+ * - `draft` → no contextual CTA (Send button in the footer is the
+ *   primary action).
+ * - `sent` (no schedule) → "Mark paid" CTA.
+ * - `sent` (with deposit schedule) → "Mark deposit paid" CTA.
+ * - `deposit_paid` → "Mark final paid" CTA.
+ * - `paid` → no CTA (status pill only).
+ * - `overdue` → "Mark paid" (danger-toned).
+ * - `cancelled` → no CTA.
+ *
+ * Overflow menu:
+ * - "Revert to sent" — when paid.
+ * - "Cancel invoice" — when editable.
+ * - "Delete invoice" — always.
+ *
+ * Saves flow through `saveInvoiceAction` (server action with Zod +
+ * RLS). Mark-paid / revert / cancel mutations stay inline (one-line
+ * status updates that don't justify their own server actions).
+ *
+ * @module components/builders/invoice-builder-modal
+ */
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
-import { DatePicker } from '@/components/ui/date-picker'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { InvoicePaymentSchedule } from '@/components/builders/invoice-payment-schedule'
-import { X, Copy, Check, Trash2, Plus, ChevronDown, Search, ExternalLink, GripVertical, Download, Mail, Loader2 } from 'lucide-react'
-import * as Popover from '@radix-ui/react-popover'
-import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf'
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
-import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { useAutoAnimate } from '@formkit/auto-animate/react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 
-interface InvoiceItem {
-  id: string
-  description: string
-  quantity: number
-  unit_price: number
-  amount: number
-  position: number
-}
+import {
+  deleteInvoiceAction,
+  saveInvoiceAction,
+  type SaveInvoiceInput,
+} from '@/app/(dashboard)/payments/actions';
+import { BuilderMetaRow, type PaymentTerms } from '@/components/builders/parts/builder-meta-row';
+import {
+  type BuilderModalPrimaryAction,
+  BuilderModalShell,
+  type OverflowMenuItem,
+} from '@/components/builders/parts/builder-modal-shell';
+import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-pane';
+import { DiscountControl } from '@/components/builders/parts/discount-control';
+import {
+  type LineItem,
+  LineItemsTable,
+} from '@/components/builders/parts/line-items-table';
+import { NotesField } from '@/components/builders/parts/notes-field';
+import { PaymentSchedule } from '@/components/builders/parts/payment-schedule';
+import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
+import { ShareAndSend } from '@/components/builders/parts/share-and-send';
+import { TaxControl } from '@/components/builders/parts/tax-control';
+import { TotalsPanel } from '@/components/builders/parts/totals-panel';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import type { StatePillProps } from '@/components/ui/state-pill';
+import { useToast } from '@/components/ui/toast';
+import { stripeConnectEnabled } from '@/lib/auth/entitlements';
+import { createClient } from '@/lib/supabase/client';
 
 interface Invoice {
-  id: string
-  title: string
-  invoice_number: string
-  status: string
-  subtotal: number
-  notes: string
-  due_date: string | null
-  payment_terms: string | null
-  tax_rate: number
-  discount_type: 'percentage' | 'fixed' | null
-  discount_value: number | null
-  deposit_percent: number | null
-  deposit_due_date: string | null
-  deposit_paid_at: string | null
-  final_due_date: string | null
-  final_paid_at: string | null
-  stripe_payment_enabled: boolean
-  paid_at: string | null
-  share_token: string
-  share_token_enabled: boolean
-  email_sent_at: string | null
-  couple_id: string
-  couple_name: string
-  event_id: string | null
+  id: string;
+  title: string;
+  invoice_number: string;
+  status: string;
+  subtotal: number;
+  notes: string | null;
+  due_date: string | null;
+  payment_terms: string | null;
+  tax_rate: number | null;
+  discount_type: 'percentage' | 'fixed' | null;
+  discount_value: number | null;
+  deposit_percent: number | null;
+  deposit_due_date: string | null;
+  deposit_paid_at: string | null;
+  final_due_date: string | null;
+  final_paid_at: string | null;
+  paid_at: string | null;
+  stripe_payment_enabled: boolean;
+  share_token: string;
+  share_token_enabled: boolean;
+  email_sent_at: string | null;
+  couple_id: string;
+  couple_name: string;
+  event_id: string | null;
 }
 
-interface CoupleEvent {
-  id: string
-  date: string
-  venue: string | null
+export interface InvoiceBuilderModalProps {
+  invoiceId: string | null;
+  initialCoupleId?: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onDelete?: () => void;
 }
 
-interface Couple {
-  id: string
-  name: string
-}
-
-interface QuoteForImport {
-  id: string
-  title: string
-  status: string
-  couple_id: string
-}
-
-interface InvoiceBuilderModalProps {
-  invoiceId: string | null
-  initialCoupleId?: string
-  isOpen: boolean
-  onClose: () => void
-  onDelete?: () => void
-}
-
-const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-600',
-  sent: 'bg-blue-50 text-blue-600',
-  deposit_paid: 'bg-amber-50 text-amber-600',
-  paid: 'bg-emerald-50 text-emerald-600',
-  overdue: 'bg-red-50 text-red-600',
-  cancelled: 'bg-gray-100 text-gray-400',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  sent: 'Sent',
-  deposit_paid: 'Deposit Paid',
-  paid: 'Paid',
-  overdue: 'Overdue',
-  cancelled: 'Cancelled',
-}
-
-const PAYMENT_TERMS_OPTIONS = [
-  { value: '', label: 'No payment terms' },
-  { value: 'due_on_receipt', label: 'Due on receipt' },
-  { value: 'net_7', label: 'Net 7' },
-  { value: 'net_14', label: 'Net 14' },
-  { value: 'net_30', label: 'Net 30' },
-  { value: 'custom', label: 'Custom' },
-]
-
-function formatCurrency(n: number) {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
-}
+const STATE_PILL: Record<string, StatePillProps> = {
+  draft: { label: 'Draft', tone: 'neutral' },
+  sent: { label: 'Sent', tone: 'info', dot: 'hollow' },
+  deposit_paid: { label: 'Deposit paid', tone: 'warning', dot: 'filled' },
+  paid: { label: 'Paid', tone: 'success', dot: 'filled' },
+  overdue: { label: 'Overdue', tone: 'danger', dot: 'hollow' },
+  cancelled: { label: 'Cancelled', tone: 'neutral' },
+};
 
 function addDays(days: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0]!;
 }
 
-function SortableInvoiceItem({ item, canEdit, onUpdate, onRemove }: {
-  item: InvoiceItem
-  canEdit: boolean
-  onUpdate: (id: string, field: 'description' | 'quantity' | 'unit_price', value: string | number) => void
-  onRemove: (id: string) => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition ? transition.replace('all', 'transform') : undefined,
-    opacity: isDragging ? 0.5 : 1,
-  }
+export function InvoiceBuilderModal({
+  invoiceId,
+  initialCoupleId,
+  isOpen,
+  onClose,
+  onDelete,
+}: InvoiceBuilderModalProps) {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  return (
-    <div ref={setNodeRef} style={style} className="flex flex-col sm:grid sm:grid-cols-[24px_1fr_72px_96px_80px_36px] gap-1 sm:gap-2 px-4 py-2.5 sm:py-2 border-b border-gray-100 last:border-0 sm:items-center">
-      {/* Mobile row 1: description + amount preview + delete */}
-      <div className="flex items-center gap-2 sm:contents">
-        {canEdit ? (
-          <button {...attributes} {...listeners} className="hidden sm:flex cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 touch-none">
-            <GripVertical size={14} strokeWidth={1.5} />
-          </button>
-        ) : <span className="hidden sm:inline" />}
-        <input
-          type="text"
-          value={item.description}
-          onChange={(e) => onUpdate(item.id, 'description', e.target.value)}
-          placeholder="Description"
-          disabled={!canEdit}
-          className="flex-1 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent disabled:text-gray-400"
-        />
-        <span className="sm:hidden text-sm text-gray-700 tabular-nums shrink-0">
-          {formatCurrency(item.amount)}
-        </span>
-        {canEdit ? (
-          <button onClick={() => onRemove(item.id)} className="sm:hidden p-1 text-gray-300 hover:text-red-400 transition cursor-pointer">
-            <Trash2 size={14} strokeWidth={1.5} />
-          </button>
-        ) : null}
-      </div>
+  const isNewInvoice = invoiceId === 'new' || invoiceId === null;
+  const effectiveId = isNewInvoice ? null : invoiceId;
 
-      {/* Mobile row 2: qty × unit price */}
-      <div className="sm:hidden flex items-center gap-2">
-        <input
-          type="number"
-          value={item.quantity || ''}
-          onChange={(e) => onUpdate(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-          placeholder="1"
-          min="0"
-          step="0.01"
-          disabled={!canEdit}
-          className="w-12 text-right text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        />
-        <span className="text-xs text-gray-400">×</span>
-        <div className="relative flex-1">
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">$</span>
-          <input
-            type="number"
-            value={item.unit_price || ''}
-            onChange={(e) => onUpdate(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-            disabled={!canEdit}
-            className="w-full pl-3 text-right text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
-        </div>
-      </div>
+  /* ─── form state ────────────────────────────────────────────── */
+  const [title, setTitle] = useState('');
+  const [notes, setNotes] = useState('');
+  const [dueDate, setDueDate] = useState<string | null>(null);
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>('');
+  const [items, setItems] = useState<LineItem[]>([]);
+  const [coupleId, setCoupleId] = useState<string | null>(null);
+  const [coupleName, setCoupleName] = useState<string | null>(null);
+  const [eventId] = useState<string | null>(null);
+  const [taxRate, setTaxRate] = useState<number | null>(null);
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | null>(null);
+  const [discountValue, setDiscountValue] = useState<number | null>(null);
+  const [depositEnabled, setDepositEnabled] = useState(false);
+  const [depositPercent, setDepositPercent] = useState(50);
+  const [depositDueDate, setDepositDueDate] = useState('');
+  const [finalDueDate, setFinalDueDate] = useState('');
+  const [stripePaymentEnabled, setStripePaymentEnabled] = useState(false);
+  const [stripeConnectOn, setStripeConnectOn] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Auto-animate refs for the totals area + chip container, and
+  // the payment-schedule slot so add / remove glides.
+  const [chipsRef] = useAutoAnimate<HTMLDivElement>();
+  const [totalsAreaRef] = useAutoAnimate<HTMLDivElement>();
+  const [scheduleSlotRef] = useAutoAnimate<HTMLDivElement>();
 
-      {/* Desktop-only: qty, unit price, amount, delete */}
-      <input
-        type="number"
-        value={item.quantity || ''}
-        onChange={(e) => onUpdate(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-        placeholder="1"
-        min="0"
-        step="0.01"
-        disabled={!canEdit}
-        className="hidden sm:block text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-      />
-      <div className="relative hidden sm:block">
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 text-sm text-gray-400 pointer-events-none">$</span>
-        <input
-          type="number"
-          value={item.unit_price || ''}
-          onChange={(e) => onUpdate(item.id, 'unit_price', parseFloat(e.target.value) || 0)}
-          placeholder="0.00"
-          min="0"
-          step="0.01"
-          disabled={!canEdit}
-          className="text-sm text-gray-900 text-right placeholder:text-gray-400 focus:outline-none bg-transparent tabular-nums disabled:text-gray-400 pl-3 w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        />
-      </div>
-      <span className="hidden sm:inline text-sm text-gray-700 text-right tabular-nums">
-        {formatCurrency(item.amount)}
-      </span>
-      {canEdit ? (
-        <button onClick={() => onRemove(item.id)} className="hidden sm:flex p-1 text-gray-300 hover:text-red-400 transition cursor-pointer justify-self-center">
-          <Trash2 size={14} strokeWidth={1.5} />
-        </button>
-      ) : <span className="hidden sm:inline" />}
-    </div>
-  )
-}
-
-export function InvoiceBuilderModal({ invoiceId, initialCoupleId, isOpen, onClose, onDelete }: InvoiceBuilderModalProps) {
-  const supabase = createClient()
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
-
-  const [title, setTitle] = useState('')
-  const [notes, setNotes] = useState('')
-  const [dueDate, setDueDate] = useState('')
-  const [paymentTerms, setPaymentTerms] = useState('')
-  const [taxEnabled, setTaxEnabled] = useState(false)
-  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage')
-  const [discountValue, setDiscountValue] = useState(0)
-  const [showDiscount, setShowDiscount] = useState(false)
-  const [depositEnabled, setDepositEnabled] = useState(false)
-  const [depositPercent, setDepositPercent] = useState(50)
-  const [depositDueDate, setDepositDueDate] = useState('')
-  const [finalDueDate, setFinalDueDate] = useState('')
-  const [stripePaymentEnabled, setStripePaymentEnabled] = useState(false)
-  const [stripeConnectEnabled, setStripeConnectEnabled] = useState(false)
-  const [eventId, setEventId] = useState<string | null>(null)
-  const [items, setItems] = useState<InvoiceItem[]>([])
-  const [copied, setCopied] = useState(false)
-  const [dirty, setDirty] = useState(false)
-  const [eventOpen, setEventOpen] = useState(false)
-  const [cancelConfirm, setCancelConfirm] = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState(false)
-  const [coupleSearch, setCoupleSearch] = useState('')
-  const [couplePopoverOpen, setCouplePopoverOpen] = useState(false)
-  const [coupleId, setCoupleId] = useState<string | null>(null)
-  const [coupleNameForNew, setcoupleNameForNew] = useState<string>('')
-  const [quoteSearch, setQuoteSearch] = useState('')
-  const [quotePopoverOpen, setQuotePopoverOpen] = useState(false)
-  const [termsOpen, setTermsOpen] = useState(false)
-  const [actualInvoiceId, setActualInvoiceId] = useState<string | null>(null)
-  const [draftSaved, setDraftSaved] = useState(false)
-  const [draftShareToken, setDraftShareToken] = useState<string | null>(null)
-  const [draftShareEnabled, setDraftShareEnabled] = useState(false)
-
-  const isNewInvoice = invoiceId === 'new'
-  const effectiveInvoiceId = isNewInvoice ? actualInvoiceId : invoiceId
-  const taxRate = taxEnabled ? 10 : 0
-
-  const { data: invoice, isLoading } = useQuery({
-    queryKey: ['invoice', effectiveInvoiceId],
-    enabled: !isNewInvoice && !!effectiveInvoiceId,
+  /* ─── data ──────────────────────────────────────────────────── */
+  const { data: invoice, isLoading: invoiceLoading } = useQuery({
+    queryKey: ['invoice', effectiveId],
+    enabled: !!effectiveId,
     queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('Not authenticated')
-
       const { data, error } = await supabase
         .from('invoices')
         .select('*, couple:couple_id(name)')
-        .eq('id', effectiveInvoiceId!)
-        .eq('user_id', user.user.id)
-        .single()
-
-      if (error) throw error
-      return { ...data, couple_name: (data.couple as { name: string })?.name ?? '' } as Invoice
+        .eq('id', effectiveId!)
+        .single();
+      if (error) throw error;
+      const couple = (data.couple as { name: string } | null) ?? null;
+      return { ...data, couple_name: couple?.name ?? '' } as Invoice;
     },
-  })
+  });
 
-  const { data: invoiceItems } = useQuery({
-    queryKey: ['invoice-items', effectiveInvoiceId],
-    enabled: !!effectiveInvoiceId,
+  const { data: dbItems } = useQuery({
+    queryKey: ['invoice-items', effectiveId],
+    enabled: !!effectiveId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoice_items')
-        .select('*')
-        .eq('invoice_id', effectiveInvoiceId!)
-        .order('position', { ascending: true })
-      if (error) throw error
-      return (data as InvoiceItem[]) || []
+        .select('id, description, amount, position')
+        .eq('invoice_id', effectiveId!)
+        .order('position', { ascending: true });
+      if (error) throw error;
+      return (data as LineItem[]) ?? [];
     },
-  })
-
-  const { data: coupleEvents } = useQuery({
-    queryKey: ['couple-events-for-invoice', invoice?.couple_id],
-    enabled: !!invoice?.couple_id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('id, date, venue')
-        .eq('couple_id', invoice!.couple_id)
-        .order('date', { ascending: true })
-      if (error) throw error
-      return (data as CoupleEvent[]) || []
-    },
-  })
+  });
 
   const { data: couples } = useQuery({
     queryKey: ['all-couples-for-invoice'],
     queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('Not authenticated')
-
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return [];
       const { data, error } = await supabase
         .from('couples')
         .select('id, name')
         .eq('user_id', user.user.id)
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      return (data as Couple[]) || []
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string }[];
     },
-  })
+  });
 
-  const effectiveCouple_id = isNewInvoice ? coupleId : invoice?.couple_id
+  /* ─── derived effective status (handles overdue) ───────────── */
+  const rawStatus = invoice?.status ?? 'draft';
+  const isOverdue =
+    rawStatus === 'sent' &&
+    dueDate &&
+    new Date(dueDate + 'T00:00:00') < new Date();
+  const status = isOverdue ? 'overdue' : rawStatus;
+  const canEdit = !['paid', 'cancelled'].includes(rawStatus);
+  const hasDepositSchedule = depositEnabled && !!depositDueDate;
+  const shareEnabled = invoice?.share_token_enabled ?? false;
+  const shareUrl =
+    typeof window !== 'undefined' && invoice?.share_token
+      ? `${window.location.origin}/invoice/${invoice.share_token}`
+      : null;
 
-  const { data: quotesForImport } = useQuery({
-    queryKey: ['quotes-for-import', effectiveCouple_id],
-    enabled: !!effectiveCouple_id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('id, title, status, couple_id, quote_items(description, amount)')
-        .eq('couple_id', effectiveCouple_id!)
-        .in('status', ['draft', 'sent', 'accepted'])
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return (data as any[]) || []
-    },
-  })
+  /* ─── hydrate from DB / initial defaults ────────────────────── */
+  useEffect(() => {
+    async function loadStripeConnect() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setStripeConnectOn(stripeConnectEnabled(user));
+    }
+    void loadStripeConnect();
+  }, [supabase, isOpen]);
 
-  // Load invoice state when editing
   useEffect(() => {
     if (isNewInvoice) {
-      setTitle('')
-      setNotes('')
-      setDueDate('')
-      setPaymentTerms('')
-      setTaxEnabled(false)
-      setDiscountType('percentage')
-      setDiscountValue(0)
-      setShowDiscount(false)
-      setDepositEnabled(false)
-      setDepositPercent(50)
-      setDepositDueDate('')
-      setFinalDueDate('')
-      setStripePaymentEnabled(false)
-      setEventId(null)
-      setCoupleId(null)
-      setcoupleNameForNew('')
-      setDirty(false)
-      const loadSettings = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const meta = user.user_metadata
-        setStripeConnectEnabled(!!meta?.stripe_connect_enabled)
-      }
-      loadSettings()
-    } else if (invoice) {
-      setTitle(invoice.title)
-      setNotes(invoice.notes ?? '')
-      setDueDate(invoice.due_date ?? '')
-      setPaymentTerms(invoice.payment_terms ?? '')
-      setTaxEnabled((invoice.tax_rate ?? 0) > 0)
-      setDiscountType((invoice.discount_type as 'percentage' | 'fixed') ?? 'percentage')
-      setDiscountValue(invoice.discount_value ?? 0)
-      setShowDiscount(!!invoice.discount_type && (invoice.discount_value ?? 0) > 0)
-      setDepositPercent(invoice.deposit_percent ?? 50)
-      setDepositDueDate(invoice.deposit_due_date ?? '')
-      setFinalDueDate(invoice.final_due_date ?? '')
-      setStripePaymentEnabled(invoice.stripe_payment_enabled ?? false)
-      setEventId(invoice.event_id)
-      setCoupleId(invoice.couple_id)
-      setDirty(false)
-      // Load stripe connect status
-      const loadStripeConnect = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        setStripeConnectEnabled(!!user.user_metadata?.stripe_connect_enabled)
-      }
-      loadStripeConnect()
+      setTitle('');
+      setNotes('');
+      setDueDate(null);
+      setPaymentTerms('');
+      setItems([]);
+      setCoupleId(initialCoupleId ?? null);
+      setCoupleName(
+        initialCoupleId ? couples?.find((c) => c.id === initialCoupleId)?.name ?? null : null,
+      );
+      setTaxRate(null);
+      setDiscountType(null);
+      setDiscountValue(null);
+      setDepositEnabled(false);
+      setDepositPercent(50);
+      setDepositDueDate('');
+      setFinalDueDate('');
+      setStripePaymentEnabled(false);
+      setDirty(false);
+      return;
     }
-  }, [invoice?.id, isNewInvoice, isOpen])
+    if (invoice) {
+      setTitle(invoice.title);
+      setNotes(invoice.notes ?? '');
+      setDueDate(invoice.due_date);
+      setPaymentTerms((invoice.payment_terms ?? '') as PaymentTerms);
+      setCoupleId(invoice.couple_id);
+      setCoupleName(invoice.couple_name);
+      setTaxRate(invoice.tax_rate != null && invoice.tax_rate > 0 ? invoice.tax_rate : null);
+      setDiscountType(invoice.discount_type);
+      setDiscountValue(invoice.discount_value);
+      // The schedule is "enabled" if we have the percent + due dates
+      // stored, OR if a payment has actually been recorded against
+      // it (covers the case where mark-paid fired before the schedule
+      // was persisted via Save changes — see the auto-save in
+      // markDepositPaid/markFinalPaid below).
+      const hasSched =
+        (invoice.deposit_percent != null && invoice.deposit_due_date != null) ||
+        invoice.deposit_paid_at != null ||
+        invoice.final_paid_at != null;
+      setDepositEnabled(hasSched);
+      setDepositPercent(invoice.deposit_percent ?? 50);
+      setDepositDueDate(invoice.deposit_due_date ?? '');
+      setFinalDueDate(invoice.final_due_date ?? '');
+      setStripePaymentEnabled(invoice.stripe_payment_enabled);
+      setDirty(false);
+    }
+  }, [invoice?.id, isNewInvoice, initialCoupleId, couples]);
 
   useEffect(() => {
-    if (invoiceItems) setItems(invoiceItems)
-  }, [invoiceItems])
+    if (dbItems) setItems(dbItems);
+  }, [dbItems]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      if (isNewInvoice && actualInvoiceId && !draftSaved) {
-        supabase.from('invoices').delete().eq('id', actualInvoiceId)
-      }
-      setActualInvoiceId(null)
-      setDraftSaved(false)
-      setDraftShareToken(null)
-      setDraftShareEnabled(false)
-      setDirty(false)
-      setCopied(false)
-      setCancelConfirm(false)
-    }
-  }, [isOpen])
+  /* ─── computed money ────────────────────────────────────────── */
+  const subtotal = items.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+  const discountAmount =
+    discountType && discountValue != null && discountValue > 0
+      ? discountType === 'percentage'
+        ? (subtotal * discountValue) / 100
+        : discountValue
+      : 0;
+  const taxableAmount = subtotal - discountAmount;
+  const effectiveTaxRate = taxRate ?? 0;
+  const tax = taxableAmount * (effectiveTaxRate / 100);
+  const total = taxableAmount + tax;
+  const depositAmount = total * (depositPercent / 100);
+  const finalAmount = total - depositAmount;
 
-  // Auto-set due date when payment terms change
-  const handlePaymentTermsChange = (value: string) => {
-    setPaymentTerms(value)
-    setDirty(true)
-    if (value === 'net_7') setDueDate(addDays(7))
-    else if (value === 'net_14') setDueDate(addDays(14))
-    else if (value === 'net_30') setDueDate(addDays(30))
-    else if (value === 'due_on_receipt') setDueDate('')
+  /* ─── handlers ──────────────────────────────────────────────── */
+
+  function setPaymentTermsAndDate(next: PaymentTerms) {
+    setPaymentTerms(next);
+    setDirty(true);
+    if (next === 'net_7') setDueDate(addDays(7));
+    else if (next === 'net_14') setDueDate(addDays(14));
+    else if (next === 'net_30') setDueDate(addDays(30));
+    else if (next === 'due_on_receipt') setDueDate(null);
     // 'custom' and '' leave dueDate as-is
   }
 
-  const subtotal = items.reduce((sum, item) => sum + Number(item.amount), 0)
-  const discountAmount = showDiscount && discountValue > 0
-    ? (discountType === 'percentage' ? subtotal * discountValue / 100 : discountValue)
-    : 0
-  const taxableAmount = subtotal - discountAmount
-  const tax = taxableAmount * (taxRate / 100)
-  const total = taxableAmount + tax
-
-  const depositAmount = total * (depositPercent / 100)
-  const finalAmount = total - depositAmount
-
-  const updateCouple = useMutation({
-    mutationFn: async (newCoupleId: string) => {
-      const selectedCouple = couples?.find((c) => c.id === newCoupleId)
-      if (isNewInvoice) {
-        if (!actualInvoiceId) {
-          // First couple selection - generate real number and create draft row
-          const id = crypto.randomUUID()
-          const shareToken = crypto.randomUUID()
-          const { data: user } = await supabase.auth.getUser()
-          if (!user.user) throw new Error('Not authenticated')
-          const { data: numData, error: numError } = await supabase.rpc('generate_invoice_number', { p_user_id: user.user.id })
-          if (numError) throw numError
-          const { error } = await supabase.from('invoices').insert({
-            id,
-            user_id: user.user.id,
-            couple_id: newCoupleId,
-            invoice_number: numData as string,
-            title: '',
-            notes: null,
-            due_date: null,
-            payment_terms: null,
-            subtotal: 0,
-            tax_rate: 0,
-            discount_type: null,
-            discount_value: null,
-            deposit_percent: null,
-            deposit_due_date: null,
-            final_due_date: null,
-            status: 'draft',
-            share_token: shareToken,
-            share_token_enabled: false,
-            stripe_payment_enabled: false,
-            event_id: null,
-          })
-          if (error) throw error
-          setActualInvoiceId(id)
-          setDraftShareToken(shareToken)
-        } else {
-          // Changing couple on existing draft
-          const { error } = await supabase.from('invoices').update({ couple_id: newCoupleId }).eq('id', actualInvoiceId)
-          if (error) throw error
-        }
-        setCoupleId(newCoupleId)
-        if (selectedCouple) setcoupleNameForNew(selectedCouple.name)
-      } else {
-        const { error } = await supabase
-          .from('invoices')
-          .update({ couple_id: newCoupleId })
-          .eq('id', effectiveInvoiceId!)
-        if (error) throw error
-      }
-    },
-    onSuccess: () => {
-      if (!isNewInvoice) {
-        queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
-        queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-        queryClient.invalidateQueries({ queryKey: ['quotes-for-import', invoice?.couple_id] })
-      }
-      setCouplePopoverOpen(false)
-    },
-    onError: () => toast('Failed to update couple'),
-  })
-
-  // Auto-create draft when opened from couple profile with known coupleId
-  useEffect(() => {
-    if (isOpen && isNewInvoice && initialCoupleId && !actualInvoiceId && !coupleId && couples) {
-      updateCouple.mutate(initialCoupleId)
-    }
-  }, [isOpen, isNewInvoice, initialCoupleId, actualInvoiceId, coupleId, couples])
-
-  const importFromQuote = (quote: any) => {
-    setTitle(quote.title)
-    const newItems = (quote.quote_items || []).map((qi: any, i: number) => ({
-      id: `new-${Date.now()}-${i}`,
-      description: qi.description,
-      quantity: 1,
-      unit_price: qi.amount,
-      amount: qi.amount,
-      position: (i + 1) * 1000,
-    }))
-    setItems(newItems)
-    setDirty(true)
-    setQuotePopoverOpen(false)
-    setQuoteSearch('')
-    toast('Quote imported')
+  function addItem() {
+    setItems((prev) => [
+      ...prev,
+      { id: `new-${crypto.randomUUID()}`, description: '', amount: 0, position: prev.length },
+    ]);
+    setDirty(true);
   }
+
+  function updateItem(id: string, field: 'description' | 'amount', value: string | number) {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
+    );
+    setDirty(true);
+  }
+
+  function removeItem(id: string) {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    setDirty(true);
+  }
+
+  function reorderItems(next: LineItem[]) {
+    setItems(next);
+    setDirty(true);
+  }
+
+  /* ─── mutations ─────────────────────────────────────────────── */
 
   const save = useMutation({
     mutationFn: async () => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('Not authenticated')
-
-      const finalInvoiceId = effectiveInvoiceId
-
-      if (isNewInvoice) {
-        if (!coupleId) throw new Error('Please select a couple')
-
-        // Update the draft invoice with actual data (invoice_number already set at draft creation)
-        const { error: invErr } = await supabase
-          .from('invoices')
-          .update({
-            title,
-            notes: notes || null,
-            due_date: dueDate || null,
-            payment_terms: paymentTerms || null,
-            tax_rate: taxRate,
-            discount_type: showDiscount && discountValue > 0 ? discountType : null,
-            discount_value: showDiscount && discountValue > 0 ? discountValue : null,
-            deposit_percent: depositPercent,
-            deposit_due_date: depositDueDate || null,
-            final_due_date: finalDueDate || null,
-            event_id: eventId || null,
-            subtotal,
-          })
-          .eq('id', finalInvoiceId!)
-        if (invErr) throw invErr
-      } else {
-        const { error: invErr } = await supabase
-          .from('invoices')
-          .update({
-            title,
-            notes: notes || null,
-            due_date: dueDate || null,
-            payment_terms: paymentTerms || null,
-            tax_rate: taxRate,
-            discount_type: showDiscount && discountValue > 0 ? discountType : null,
-            discount_value: showDiscount && discountValue > 0 ? discountValue : null,
-            deposit_percent: depositPercent,
-            deposit_due_date: depositDueDate || null,
-            final_due_date: finalDueDate || null,
-            event_id: eventId || null,
-            subtotal,
-          })
-          .eq('id', effectiveInvoiceId!)
-        if (invErr) throw invErr
-      }
-
-      await supabase.from('invoice_items').delete().eq('invoice_id', finalInvoiceId!)
-      if (items.length > 0) {
-        const inserts = items.map((item, i) => {
-          const insert: any = {
-            invoice_id: finalInvoiceId!,
-            user_id: user.user!.id,
-            description: item.description,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            amount: item.amount,
-            position: (i + 1) * 1000,
-          }
-          if (!item.id.startsWith('new-')) {
-            insert.id = item.id
-          }
-          return insert
-        })
-        const { error: iErr } = await supabase.from('invoice_items').insert(inserts)
-        if (iErr) throw iErr
-      }
-
-      return finalInvoiceId
+      if (!coupleId) throw new Error('Please select a couple first');
+      const input: SaveInvoiceInput = {
+        invoiceId: effectiveId,
+        coupleId,
+        eventId,
+        title,
+        notes: notes || null,
+        paymentTerms: paymentTerms || null,
+        dueDate,
+        taxRate: effectiveTaxRate,
+        discount:
+          discountType && discountValue != null && discountValue > 0
+            ? { type: discountType, value: discountValue }
+            : null,
+        depositPercent: depositEnabled ? depositPercent : null,
+        depositDueDate: depositEnabled ? depositDueDate || null : null,
+        finalDueDate: depositEnabled ? finalDueDate || null : null,
+        stripePaymentEnabled,
+        items: items.map((item, idx) => ({
+          id: item.id,
+          description: item.description,
+          amount: Number(item.amount || 0),
+          position: idx,
+        })),
+      };
+      const result = await saveInvoiceAction(input);
+      if (!result.ok) throw new Error(result.error);
+      return result.data.id;
     },
-    onSuccess: (newInvoiceId) => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', newInvoiceId] })
-      queryClient.invalidateQueries({ queryKey: ['invoice-items', newInvoiceId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-      toast('Invoice saved')
-      setDraftSaved(true)
-      setDirty(false)
+    onSuccess: (newId) => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', newId] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-items', newId] });
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] });
+      toast('Invoice saved');
+      setDirty(false);
     },
-    onError: () => toast('Failed to save invoice'),
-  })
-
-  const toggleShare = useMutation({
-    mutationFn: async (enable: boolean) => {
-      const update: Record<string, unknown> = { share_token_enabled: enable }
-      if (enable && !isNewInvoice && invoice?.status === 'draft') update.status = 'sent'
-      const { error } = await supabase.from('invoices').update(update).eq('id', effectiveInvoiceId!)
-      if (error) throw error
-      return enable
-    },
-    onSuccess: (enable) => {
-      if (isNewInvoice) {
-        setDraftShareEnabled(enable)
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
-        queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
-        queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-      }
-    },
-    onError: () => toast('Failed to update share link'),
-  })
-
-  const markPaid = useMutation({
-    mutationFn: async () => {
-      if (!invoice) return
-      const { error } = await supabase
-        .from('invoices')
-        .update({ status: 'paid', paid_at: new Date().toISOString() })
-        .eq('id', effectiveInvoiceId!)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-      toast('Invoice marked as paid')
-    },
-    onError: () => toast('Failed to mark as paid'),
-  })
-
-  const revertPaid = useMutation({
-    mutationFn: async () => {
-      if (!invoice) return
-      const { error } = await supabase
-        .from('invoices')
-        .update({ status: 'sent', paid_at: null, final_paid_at: null })
-        .eq('id', effectiveInvoiceId!)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-      toast('Invoice reverted to sent')
-    },
-    onError: () => toast('Failed to revert invoice'),
-  })
-
-  const markDepositPaid = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from('invoices')
-        .update({ deposit_paid_at: new Date().toISOString(), status: 'deposit_paid' })
-        .eq('id', effectiveInvoiceId!)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-      toast('Deposit marked as paid')
-    },
-    onError: () => toast('Failed to mark deposit as paid'),
-  })
-
-  const markFinalPaid = useMutation({
-    mutationFn: async () => {
-      if (!invoice) return
-      const { error } = await supabase
-        .from('invoices')
-        .update({ final_paid_at: new Date().toISOString(), status: 'paid', paid_at: new Date().toISOString() })
-        .eq('id', effectiveInvoiceId!)
-      if (error) throw error
-      // (events.price was removed from the schema — pricing lives on
-      // quotes/invoices now; the old event-price sync is obsolete.)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-      if (invoice?.event_id) {
-        queryClient.invalidateQueries({ queryKey: ['couple-events', invoice?.couple_id] })
-      }
-      toast('Final payment marked as paid')
-    },
-    onError: () => toast('Failed to mark final payment as paid'),
-  })
+    onError: (err) =>
+      toast(err instanceof Error ? err.message : 'Could not save the invoice', 'error'),
+  });
 
   const sendEmail = useMutation({
     mutationFn: async () => {
-      if (!effectiveInvoiceId) throw new Error('Save the invoice first')
+      let targetId = effectiveId;
+      if (dirty || !targetId) {
+        targetId = await save.mutateAsync();
+      }
+      if (!targetId) throw new Error('No invoice to send');
       const res = await fetch('/api/email/send-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoiceId: effectiveInvoiceId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to send email')
-      return data
+        body: JSON.stringify({ invoiceId: targetId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send email');
+      return targetId;
     },
-    onSuccess: () => {
-      toast('Email sent to couple')
-      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
+    onSuccess: (id) => {
+      toast('Sent to couple');
+      queryClient.invalidateQueries({ queryKey: ['invoice', id] });
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
     },
-    onError: (err) => toast(err instanceof Error ? err.message : 'Failed to send email'),
-  })
+    onError: (err) => toast(err instanceof Error ? err.message : 'Failed to send', 'error'),
+  });
 
-  const toggleStripePayment = useMutation({
-    mutationFn: async (enable: boolean) => {
+  // Status mutations stay inline — one-line UPDATEs not worth a
+  // dedicated server action each. RLS scopes them to the user.
+  // Each mark mutation auto-saves pending form edits first so the
+  // schedule (or any other dirty field) is persisted before the
+  // status flips — otherwise refresh would lose, e.g., the schedule
+  // fields and the UI would re-hydrate with depositEnabled=false.
+  async function ensureSaved(): Promise<string> {
+    if (dirty || !effectiveId) {
+      return await save.mutateAsync();
+    }
+    return effectiveId;
+  }
+
+  const markPaid = useMutation({
+    mutationFn: async () => {
+      const id = await ensureSaved();
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from('invoices')
-        .update({ stripe_payment_enabled: enable })
-        .eq('id', effectiveInvoiceId!)
-      if (error) throw error
+        .update({ status: 'paid', paid_at: now, final_paid_at: hasDepositSchedule ? now : null })
+        .eq('id', id);
+      if (error) throw error;
     },
-    onSuccess: (_, enable) => {
-      setStripePaymentEnabled(enable)
-      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      toast('Marked as paid');
     },
-    onError: () => toast('Failed to update card payments'),
-  })
+    onError: () => toast('Failed to mark as paid', 'error'),
+  });
+
+  const markDepositPaid = useMutation({
+    mutationFn: async () => {
+      const id = await ensureSaved();
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'deposit_paid', deposit_paid_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      toast('Deposit marked as paid');
+    },
+    onError: () => toast('Failed to mark deposit as paid', 'error'),
+  });
+
+  const markFinalPaid = useMutation({
+    mutationFn: async () => {
+      const id = await ensureSaved();
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'paid', paid_at: now, final_paid_at: now })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      toast('Final payment marked as paid');
+    },
+    onError: () => toast('Failed to mark final payment as paid', 'error'),
+  });
+
+  const revertPaid = useMutation({
+    mutationFn: async () => {
+      if (!effectiveId) return;
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'sent', paid_at: null, final_paid_at: null })
+        .eq('id', effectiveId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      toast('Reverted to sent');
+    },
+    onError: () => toast('Failed to revert', 'error'),
+  });
 
   const cancelInvoice = useMutation({
     mutationFn: async () => {
+      if (!effectiveId) return;
       const { error } = await supabase
         .from('invoices')
         .update({ status: 'cancelled', share_token_enabled: false })
-        .eq('id', effectiveInvoiceId!)
-      if (error) throw error
+        .eq('id', effectiveId);
+      if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveInvoiceId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-      setCancelConfirm(false)
-      toast('Invoice cancelled')
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      toast('Invoice cancelled');
+      setConfirmCancel(false);
     },
-    onError: () => toast('Failed to cancel invoice'),
-  })
+    onError: () => {
+      toast('Failed to cancel invoice', 'error');
+      setConfirmCancel(false);
+    },
+  });
 
-  const deleteInvoice = useMutation({
+  const remove = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', effectiveInvoiceId!)
-      if (error) throw error
+      if (!effectiveId) return;
+      const result = await deleteInvoiceAction(effectiveId);
+      if (!result.ok) throw new Error(result.error);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] })
-      toast('Invoice deleted')
-      onClose()
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] });
+      toast('Invoice deleted');
+      setConfirmDelete(false);
+      onDelete?.();
+      onClose();
     },
-    onError: () => toast('Failed to delete invoice'),
-  })
+    onError: (err) => {
+      toast(err instanceof Error ? err.message : 'Could not delete the invoice', 'error');
+      setConfirmDelete(false);
+    },
+  });
 
-  const addItem = () => {
-    setItems((prev) => [
-      ...prev,
-      { id: `new-${Date.now()}`, description: '', quantity: 1, unit_price: 0, amount: 0, position: (prev.length + 1) * 1000 },
-    ])
-    setDirty(true)
+  /* ─── shell wiring ──────────────────────────────────────────── */
+
+  const pillKey = (status in STATE_PILL ? status : 'draft') as keyof typeof STATE_PILL;
+  const documentNumber = invoice?.invoice_number ?? 'Invoice';
+
+  // Status-aware contextual CTA in the header.
+  let primaryAction: BuilderModalPrimaryAction | undefined;
+  // All "mark paid" actions render in the success variant (lime) —
+  // they're affirmative state transitions, not destructive ones, so
+  // even an overdue invoice gets a success-toned CTA. The status
+  // pill alone communicates the overdue state.
+  if (rawStatus === 'sent' && hasDepositSchedule) {
+    primaryAction = {
+      label: 'Mark deposit paid',
+      onClick: () => markDepositPaid.mutate(),
+      loading: markDepositPaid.isPending,
+      variant: 'success',
+    };
+  } else if (rawStatus === 'deposit_paid') {
+    primaryAction = {
+      label: 'Mark final paid',
+      onClick: () => markFinalPaid.mutate(),
+      loading: markFinalPaid.isPending,
+      variant: 'success',
+    };
+  } else if (rawStatus === 'sent' || isOverdue) {
+    primaryAction = {
+      label: 'Mark paid',
+      onClick: () => markPaid.mutate(),
+      loading: markPaid.isPending,
+      variant: 'success',
+    };
   }
 
-  const updateItem = (id: string, field: 'description' | 'quantity' | 'unit_price', value: string | number) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item
-        const updated = { ...item, [field]: value }
-        updated.amount = Number(updated.quantity) * Number(updated.unit_price)
-        return updated
-      })
-    )
-    setDirty(true)
+  // Overflow menu — destructive + revert actions.
+  const overflowItems: OverflowMenuItem[] = [];
+  if (rawStatus === 'paid') {
+    overflowItems.push({
+      label: 'Revert to sent',
+      onClick: () => revertPaid.mutate(),
+    });
   }
-
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id))
-    setDirty(true)
+  if (canEdit && effectiveId) {
+    overflowItems.push({
+      label: 'Cancel invoice',
+      danger: true,
+      onClick: () => setConfirmCancel(true),
+    });
   }
+  // Delete is surfaced as a dedicated trash icon (passed via
+  // `onDelete` below), not as a menu item.
 
-  const copyLink = async () => {
-    if (!invoice) return
-    await navigator.clipboard.writeText(`${window.location.origin}/invoice/${invoice.share_token}`)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const downloadPdf = async () => {
-    if (!invoice) return
-    const { data: { user } } = await supabase.auth.getUser()
-    const meta = user?.user_metadata
-    generateAndPrintPdf({
-      type: 'invoice',
-      documentNumber: invoice.invoice_number,
-      title,
-      status: invoice.status,
-      coupleName: invoice.couple_name,
-      businessName: meta?.business_name as string | undefined,
-      items: items.map((item) => ({
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        amount: item.amount,
-      })),
-      subtotal,
-      discountType: showDiscount ? discountType : null,
-      discountValue: showDiscount ? discountValue : null,
-      taxRate,
-      total,
-      notes: notes || null,
-      dueDate: invoice.due_date,
-      bankAccountName: meta?.bank_account_name as string | undefined,
-      bankBsb: meta?.bank_bsb as string | undefined,
-      bankAccountNumber: meta?.bank_account_number as string | undefined,
-    })
-  }
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
-
-  if (!isOpen || !invoiceId) return null
-
-  const isOverdue =
-    invoice?.due_date &&
-    new Date(invoice.due_date + 'T00:00:00') < new Date() &&
-    !['paid', 'cancelled'].includes(invoice?.status ?? '')
-  const effectiveStatus = isOverdue ? 'overdue' : (invoice?.status ?? 'draft')
-  const canEdit = !['paid', 'cancelled'].includes(invoice?.status ?? '')
-  const activeShareToken = isNewInvoice ? draftShareToken : invoice?.share_token
-  const activeShareEnabled = isNewInvoice ? draftShareEnabled : (invoice?.share_token_enabled ?? false)
-  const shareUrl = activeShareToken ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invoice/${activeShareToken}` : ''
-  const selectedEvent = coupleEvents?.find((e) => e.id === eventId)
-  const hasDepositSchedule = !isNewInvoice && !!invoice
-
-  const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition'
-
-  const selectedTermsLabel = PAYMENT_TERMS_OPTIONS.find((o) => o.value === paymentTerms)?.label || 'No payment terms'
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (over && active.id !== over.id) {
-      setItems((prev) => {
-        const oldIndex = prev.findIndex((i) => i.id === active.id)
-        const newIndex = prev.findIndex((i) => i.id === over.id)
-        return arrayMove(prev, oldIndex, newIndex)
-      })
-      setDirty(true)
-    }
-  }
+  // Live preview doc — fed to the right pane on every render so the
+  // PDF / Email / Payment-page previews track form edits without a
+  // save round-trip.
+  const previewDoc: PreviewDoc = {
+    kind: 'invoice',
+    documentNumber: invoice?.invoice_number ?? 'DRAFT',
+    title: title || 'Wedding Invoice',
+    status,
+    coupleName,
+    businessName: null,
+    items: items.map((item) => ({
+      id: item.id,
+      description: item.description,
+      amount: Number(item.amount || 0),
+    })),
+    taxRate: effectiveTaxRate,
+    discount:
+      discountType && discountValue != null && discountValue > 0
+        ? { type: discountType, value: discountValue }
+        : null,
+    notes: notes || null,
+    dueDate: dueDate,
+    shareUrl: shareUrl ?? `https://example.com/invoice/${invoice?.share_token ?? 'preview'}`,
+    stripePaymentEnabled,
+  };
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[75]" onClick={onClose} />
+      <BuilderModalShell
+        isOpen={isOpen}
+        onClose={onClose}
+        documentNumber={documentNumber}
+        statePill={STATE_PILL[pillKey]}
+        primaryAction={primaryAction}
+        overflowItems={overflowItems}
+        {...(effectiveId ? { onDelete: () => setConfirmDelete(true), deleteLabel: 'Delete invoice' } : {})}
+        loading={!!effectiveId && invoiceLoading && !invoice}
+        title={title}
+        onTitleChange={(v) => {
+          setTitle(v);
+          setDirty(true);
+        }}
+        titlePlaceholder={coupleName ? `Invoice for ${coupleName}` : 'Wedding invoice title'}
+        titleReadOnly={!canEdit}
+        previewPane={<BuilderPreviewPane doc={previewDoc} surface="invoice" />}
+        footer={
+          <ShareAndSend
+            dirty={dirty}
+            shareEnabled={shareEnabled}
+            shareUrl={shareUrl}
+            lastSentAt={invoice?.email_sent_at ?? null}
+            locked={!canEdit}
+            saving={save.isPending}
+            sending={sendEmail.isPending}
+            hasCouple={!!coupleId}
+            onSave={() => save.mutate()}
+            onSend={() => sendEmail.mutate()}
+          />
+        }
+      >
+        <BuilderMetaRow
+          selectedCoupleId={coupleId}
+          selectedCoupleName={coupleName}
+          coupleOptions={couples ?? []}
+          canEditCouple={canEdit}
+          onSelectCouple={(c) => {
+            setCoupleId(c.id);
+            setCoupleName(c.name);
+            setDirty(true);
+          }}
+          paymentTerms={paymentTerms}
+          onPaymentTermsChange={setPaymentTermsAndDate}
+          dateValue={dueDate}
+          dateLabel="Set due date"
+          datePrefix="Due"
+          onDateChange={(d) => {
+            setDueDate(d);
+            setDirty(true);
+          }}
+          canEdit={canEdit}
+        />
 
-      <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-        <div
-          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
-        >
-          {/* Header */}
-          <div className="sticky top-0 z-10 bg-white shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
-            <div className="min-w-0">
-              {isLoading && !isNewInvoice ? (
-                <div className="space-y-1.5">
-                  <div className="h-5 w-48 bg-gray-100 rounded animate-pulse" />
-                  <div className="h-3.5 w-32 bg-gray-100 rounded animate-pulse" />
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-gray-900 truncate">
-                    {isNewInvoice ? 'New Invoice' : (title || 'Untitled Invoice')}
-                  </p>
-                  <div className="flex items-center gap-2 flex-wrap mt-1">
-                    {invoice?.invoice_number && <span className="text-xs text-gray-400">{invoice.invoice_number}</span>}
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${STATUS_STYLES[effectiveStatus] || STATUS_STYLES.draft}`}>
-                      {STATUS_LABELS[effectiveStatus] || effectiveStatus}
-                    </span>
-                    {(invoice?.couple_name || coupleNameForNew) && (
-                      <>
-                        <span className="text-xs text-gray-400">·</span>
-                        <span className="text-xs text-gray-500 truncate">{invoice?.couple_name || coupleNameForNew}</span>
-                      </>
-                    )}
-                    {invoice?.paid_at && (
-                      <span className="text-xs text-gray-400">
-                        · Paid {new Date(invoice.paid_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </span>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0 ml-3">
-              {canEdit && invoice?.status !== 'cancelled' && !hasDepositSchedule && (
-                <button
-                  onClick={() => markPaid.mutate()}
-                  disabled={markPaid.isPending}
-                  className="text-xs text-emerald-600 hover:text-emerald-700 transition cursor-pointer disabled:opacity-50 font-medium px-2 py-1"
-                >
-                  {markPaid.isPending ? 'Marking...' : 'Mark as Paid'}
-                </button>
-              )}
-              {invoice?.status === 'paid' && (
-                <button
-                  onClick={() => revertPaid.mutate()}
-                  disabled={revertPaid.isPending}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50 px-2 py-1"
-                >
-                  {revertPaid.isPending ? 'Reverting...' : 'Revert to Sent'}
-                </button>
-              )}
-              {canEdit && !isNewInvoice && (
-                <button
-                  onClick={() => setCancelConfirm(true)}
-                  className="text-xs text-gray-400 hover:text-red-500 transition cursor-pointer px-2 py-1"
-                >
-                  Cancel
-                </button>
-              )}
-              <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer">
-                <X size={20} strokeWidth={1.5} />
-              </button>
-            </div>
-          </div>
-
-          {/* Scrollable body */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-5">
-            {isLoading ? (
-              <div className="space-y-5">
-                <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
-                <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
-                <div className="flex gap-3">
-                  <div className="flex-1 h-10 bg-gray-100 rounded-xl animate-pulse" />
-                  <div className="w-44 h-10 bg-gray-100 rounded-xl animate-pulse" />
-                </div>
-                <div className="border border-gray-100 rounded-xl overflow-hidden">
-                  <div className="h-8 bg-gray-50" />
-                  <div className="h-12 border-b border-gray-100 bg-white" />
-                  <div className="h-12 border-b border-gray-100 bg-white" />
-                  <div className="h-12 border-b border-gray-100 bg-white" />
-                  <div className="h-12 bg-white" />
-                  <div className="h-24 bg-gray-50 border-t border-gray-100" />
-                </div>
-                <div className="h-32 bg-gray-100 rounded-xl animate-pulse" />
-                <div className="h-40 bg-gray-100 rounded-xl animate-pulse" />
-                <div className="border border-gray-100 rounded-xl p-4 h-32 bg-white" />
-              </div>
-            ) : (
-              <>
-                {/* Couple selector */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Couple</label>
-                  <Popover.Root open={couplePopoverOpen} onOpenChange={setCouplePopoverOpen}>
-                    <Popover.Trigger asChild>
-                      <button
-                        type="button"
-                        disabled={!isNewInvoice && !canEdit}
-                        className={`${inputClass} flex items-center justify-between text-left disabled:bg-gray-50 disabled:text-gray-400`}
-                      >
-                        <span className={invoice?.couple_name || coupleNameForNew ? 'text-gray-900' : 'text-gray-400'}>
-                          {invoice?.couple_name || coupleNameForNew || 'Select a couple'}
-                        </span>
-                        <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400 shrink-0 ml-2" />
-                      </button>
-                    </Popover.Trigger>
-                    <Popover.Portal>
-                      <Popover.Content className="z-[90] bg-white border border-gray-200 rounded-xl shadow-lg w-[var(--radix-popover-trigger-width)] p-0" sideOffset={4}>
-                        <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
-                          <Search size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-                          <input
-                            autoFocus
-                            type="text"
-                            placeholder="Search couples..."
-                            value={coupleSearch}
-                            onChange={(e) => setCoupleSearch(e.target.value)}
-                            className="flex-1 min-w-0 text-sm focus:outline-none placeholder:text-gray-400"
-                          />
-                        </div>
-                        <div className="max-h-60 overflow-y-auto p-1">
-                          {(couples || [])
-                            .filter((c) => !coupleSearch || c.name.toLowerCase().includes(coupleSearch.toLowerCase()))
-                            .map((couple) => (
-                              <button
-                                key={couple.id}
-                                onClick={() => updateCouple.mutate(couple.id)}
-                                disabled={updateCouple.isPending}
-                                className="w-full text-left px-3 py-2.5 text-sm text-gray-900 hover:bg-gray-50 rounded-lg transition cursor-pointer disabled:opacity-50"
-                              >
-                                {couple.name}
-                              </button>
-                            ))}
-                        </div>
-                      </Popover.Content>
-                    </Popover.Portal>
-                  </Popover.Root>
-                </div>
-
-                {/* Import from quote */}
-                {quotesForImport && quotesForImport.length > 0 && (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Import from quote (optional)</label>
-                    <Popover.Root open={quotePopoverOpen} onOpenChange={setQuotePopoverOpen}>
-                      <Popover.Trigger asChild>
-                        <button
-                          type="button"
-                          disabled={!canEdit}
-                          className={`${inputClass} flex items-center justify-between text-left disabled:bg-gray-50 disabled:text-gray-400`}
-                        >
-                          <span className="text-gray-400">Select a quote...</span>
-                          <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400 shrink-0 ml-2" />
-                        </button>
-                      </Popover.Trigger>
-                      <Popover.Portal>
-                        <Popover.Content className="z-[90] bg-white border border-gray-200 rounded-xl shadow-lg w-[var(--radix-popover-trigger-width)] p-0" sideOffset={4}>
-                          <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
-                            <Search size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-                            <input
-                              autoFocus
-                              type="text"
-                              placeholder="Search quotes..."
-                              value={quoteSearch}
-                              onChange={(e) => setQuoteSearch(e.target.value)}
-                              className="flex-1 min-w-0 text-sm focus:outline-none placeholder:text-gray-400"
-                            />
-                          </div>
-                          <div className="max-h-60 overflow-y-auto p-1">
-                            {(quotesForImport || [])
-                              .filter((q) => !quoteSearch || q.title.toLowerCase().includes(quoteSearch.toLowerCase()))
-                              .map((quote) => (
-                                <button
-                                  key={quote.id}
-                                  onClick={() => importFromQuote(quote)}
-                                  className="w-full text-left px-3 py-2.5 text-sm text-gray-900 hover:bg-gray-50 rounded-lg transition cursor-pointer"
-                                >
-                                  <div className="font-medium">{quote.title}</div>
-                                  <div className="text-xs text-gray-400 capitalize">{quote.status}</div>
-                                </button>
-                              ))}
-                          </div>
-                        </Popover.Content>
-                      </Popover.Portal>
-                    </Popover.Root>
-                  </div>
-                )}
-
-                {/* Title */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Title</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
-                    placeholder="e.g. Wedding MC Services - Smith Wedding"
-                    disabled={!canEdit}
-                    className={`${inputClass} disabled:bg-gray-50 disabled:text-gray-400`}
-                  />
-                </div>
-
-                {/* Payment terms + Due date */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1 min-w-0">
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Payment terms</label>
-                    <Popover.Root open={termsOpen} onOpenChange={setTermsOpen}>
-                      <Popover.Trigger asChild>
-                        <button
-                          type="button"
-                          disabled={!canEdit}
-                          className={`${inputClass} flex items-center justify-between text-left disabled:bg-gray-50 disabled:text-gray-400`}
-                        >
-                          <span className={paymentTerms ? 'text-gray-900' : 'text-gray-400'}>
-                            {selectedTermsLabel}
-                          </span>
-                          <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400 shrink-0 ml-2" />
-                        </button>
-                      </Popover.Trigger>
-                      <Popover.Portal>
-                        <Popover.Content className="z-[90] bg-white border border-gray-200 rounded-xl shadow-lg w-[var(--radix-popover-trigger-width)] p-1" sideOffset={4}>
-                          {PAYMENT_TERMS_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              onClick={() => { handlePaymentTermsChange(opt.value); setTermsOpen(false) }}
-                              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition cursor-pointer hover:bg-gray-50 ${paymentTerms === opt.value ? 'text-gray-900 font-medium' : 'text-gray-700'}`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </Popover.Content>
-                      </Popover.Portal>
-                    </Popover.Root>
-                  </div>
-                  <div className="sm:w-44 sm:shrink-0">
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Due date</label>
-                    {canEdit && paymentTerms !== 'due_on_receipt' ? (
-                      <DatePicker
-                        value={dueDate}
-                        onChange={(date) => {
-                          setDueDate(date)
-                          if (paymentTerms !== 'custom') setPaymentTerms('custom')
-                          setDirty(true)
-                        }}
-                        placeholder="Select date"
-                      />
-                    ) : (
-                      <p className={`text-sm py-2 ${isOverdue ? 'text-red-500 font-medium' : paymentTerms === 'due_on_receipt' ? 'text-gray-400' : 'text-gray-900'}`}>
-                        {paymentTerms === 'due_on_receipt'
-                          ? 'Due on receipt'
-                          : dueDate
-                          ? new Date(dueDate + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : '-'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Event link */}
-                {coupleEvents && coupleEvents.length > 0 && (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Link to event (optional)</label>
-                    <Popover.Root open={eventOpen} onOpenChange={setEventOpen}>
-                      <Popover.Trigger asChild>
-                        <button
-                          type="button"
-                          disabled={!canEdit}
-                          className={`${inputClass} flex items-center justify-between text-left disabled:bg-gray-50 disabled:text-gray-400`}
-                        >
-                          <span className={selectedEvent ? 'text-gray-900' : 'text-gray-400'}>
-                            {selectedEvent
-                              ? `${new Date(selectedEvent.date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}${selectedEvent.venue ? ` · ${selectedEvent.venue}` : ''}`
-                              : 'No event linked'}
-                          </span>
-                          <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400 shrink-0 ml-2" />
-                        </button>
-                      </Popover.Trigger>
-                      <Popover.Portal>
-                        <Popover.Content
-                          className="z-[90] bg-white border border-gray-200 rounded-xl shadow-lg p-1 w-[var(--radix-popover-trigger-width)]"
-                          sideOffset={4}
-                        >
-                          <button
-                            className="w-full text-left px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 rounded-lg transition cursor-pointer"
-                            onClick={() => { setEventId(null); setEventOpen(false); setDirty(true) }}
-                          >
-                            No event
-                          </button>
-                          {coupleEvents.map((event) => (
-                            <button
-                              key={event.id}
-                              className="w-full text-left px-3 py-2 text-sm text-gray-900 hover:bg-gray-50 rounded-lg transition cursor-pointer"
-                              onClick={() => { setEventId(event.id); setEventOpen(false); setDirty(true) }}
-                            >
-                              {new Date(event.date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              {event.venue && <span className="text-gray-400"> · {event.venue}</span>}
-                            </button>
-                          ))}
-                        </Popover.Content>
-                      </Popover.Portal>
-                    </Popover.Root>
-                  </div>
-                )}
-
-                {/* Line items */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Line items</label>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-[1fr_auto] sm:grid-cols-[24px_1fr_72px_96px_80px_36px] gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200">
-                      <span className="hidden sm:inline" />
-                      <span className="text-xs font-medium text-gray-500">Description</span>
-                      <span className="hidden sm:inline text-xs font-medium text-gray-500 text-right">Qty</span>
-                      <span className="hidden sm:inline text-xs font-medium text-gray-500 text-right">Unit price</span>
-                      <span className="text-xs font-medium text-gray-500 text-right">Amount</span>
-                      <span className="hidden sm:inline" />
-                    </div>
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                      <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                        {items.map((item) => (
-                          <SortableInvoiceItem key={item.id} item={item} canEdit={canEdit} onUpdate={updateItem} onRemove={removeItem} />
-                        ))}
-                      </SortableContext>
-                    </DndContext>
-                    {canEdit && (
-                      <div className="px-4 py-2.5 border-b border-gray-100">
-                        <button
-                          onClick={addItem}
-                          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
-                        >
-                          <Plus size={14} strokeWidth={1.5} /> Add line item
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Totals */}
-                    <div className="space-y-2 px-4 py-3 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-600">Subtotal</span>
-                        <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(subtotal)}</span>
-                      </div>
-                      {showDiscount ? (
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                            {canEdit && (
-                              <div className="flex border border-gray-200 rounded-lg overflow-hidden text-xs shrink-0">
-                                <button
-                                  onClick={() => { setDiscountType('percentage'); setDirty(true) }}
-                                  className={`px-2 py-1 transition cursor-pointer ${discountType === 'percentage' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                                >%</button>
-                                <button
-                                  onClick={() => { setDiscountType('fixed'); setDirty(true) }}
-                                  className={`px-2 py-1 transition cursor-pointer ${discountType === 'fixed' ? 'bg-gray-800 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-                                >$</button>
-                              </div>
-                            )}
-                            {canEdit && (
-                              <div className="relative flex-1 max-w-[80px]">
-                                {discountType === 'fixed' && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">$</span>}
-                                <input
-                                  type="number"
-                                  value={discountValue || ''}
-                                  onChange={(e) => { setDiscountValue(parseFloat(e.target.value) || 0); setDirty(true) }}
-                                  placeholder="0"
-                                  min="0"
-                                  step="0.01"
-                                  className={`w-full text-xs border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-green-300 focus:ring-1 focus:ring-green-100 transition tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${discountType === 'fixed' ? 'pl-5 pr-2' : 'px-2'}`}
-                                />
-                                {discountType === 'percentage' && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">%</span>}
-                              </div>
-                            )}
-                            <span className="text-xs text-gray-400">Discount</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-sm font-semibold text-red-500 tabular-nums">-{formatCurrency(discountAmount)}</span>
-                            {canEdit && (
-                              <button
-                                onClick={() => { setShowDiscount(false); setDiscountValue(0); setDirty(true) }}
-                                className="text-gray-300 hover:text-gray-500 transition cursor-pointer"
-                              >
-                                <X size={13} strokeWidth={1.5} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ) : canEdit && (
-                        <button
-                          onClick={() => { setShowDiscount(true); setDirty(true) }}
-                          className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer flex items-center gap-1"
-                        >
-                          <Plus size={12} strokeWidth={1.5} /> Add discount
-                        </button>
-                      )}
-                      {/* GST toggle */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-600">GST (10%)</span>
-                          {canEdit && (
-                            <button
-                              onClick={() => { setTaxEnabled((v) => !v); setDirty(true) }}
-                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${taxEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
-                            >
-                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${taxEnabled ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
-                            </button>
-                          )}
-                        </div>
-                        <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(tax)}</span>
-                      </div>
-                      <div className="border-t border-gray-200 pt-2 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-gray-900">Total</span>
-                        <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(total)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Notes (optional)</label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => { setNotes(e.target.value); setDirty(true) }}
-                    placeholder="Payment instructions, BSB, account number..."
-                    rows={4}
-                    disabled={!canEdit}
-                    className={`${inputClass} resize-none disabled:bg-gray-50 disabled:text-gray-400`}
-                  />
-                </div>
-
-                {/* Payment schedule */}
-                {!isNewInvoice && invoice && (
-                  <InvoicePaymentSchedule
-                    invoiceId={invoiceId!}
-                    canEdit={canEdit}
-                    depositPercent={depositPercent}
-                    depositDueDate={depositDueDate}
-                    finalDueDate={finalDueDate}
-                    depositPaidAt={invoice.deposit_paid_at}
-                    finalPaidAt={invoice.final_paid_at}
-                    depositAmount={depositAmount}
-                    finalAmount={finalAmount}
-                    onDepositPercentChange={(v) => { setDepositPercent(v); setDirty(true) }}
-                    onDepositDueDateChange={(v) => { setDepositDueDate(v); setDirty(true) }}
-                    onFinalDueDateChange={(v) => { setFinalDueDate(v); setDirty(true) }}
-                    onMarkDepositPaid={() => markDepositPaid.mutate()}
-                    onMarkFinalPaid={() => markFinalPaid.mutate()}
-                    markDepositPending={markDepositPaid.isPending}
-                    markFinalPending={markFinalPaid.isPending}
-                  />
-                )}
-
-                {/* Send to couple */}
-                <div className="border border-gray-200 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Send to couple</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {activeShareEnabled ? 'Link active - couple can view this invoice' : 'Enable a shareable link for the couple'}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => !dirty && toggleShare.mutate(!activeShareEnabled)}
-                      disabled={toggleShare.isPending || dirty || (!isNewInvoice && !canEdit) || (isNewInvoice && !actualInvoiceId)}
-                      title={dirty ? 'Save your changes first' : undefined}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${activeShareEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${activeShareEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                  </div>
-
-                  {activeShareEnabled && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={shareUrl}
-                        className="flex-1 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none truncate"
-                      />
-                      <button
-                        onClick={copyLink}
-                        className="flex items-center gap-1.5 px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer shrink-0"
-                      >
-                        {copied ? <><Check size={13} strokeWidth={2} className="text-emerald-500" /> Copied</> : <><Copy size={13} strokeWidth={1.5} /> Copy</>}
-                      </button>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <button
-                      onClick={() => sendEmail.mutate()}
-                      disabled={sendEmail.isPending || !effectiveInvoiceId || dirty}
-                      title={dirty ? 'Save your changes first' : undefined}
-                      className="flex items-center justify-center gap-1.5 min-w-[7.5rem] px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-40"
-                    >
-                      <Mail size={13} strokeWidth={1.5} />
-                      {sendEmail.isPending ? 'Sending...' : invoice?.email_sent_at ? 'Resend email' : 'Send email'}
-                    </button>
-                    {!isNewInvoice && (
-                      <button onClick={downloadPdf}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer">
-                        <Download size={13} strokeWidth={1.5} /> Download PDF
-                      </button>
-                    )}
-                  </div>
-
-                  {dirty && (
-                    <p className="text-xs text-amber-600">Save your changes before sharing or sending.</p>
-                  )}
-
-                  {/* Stripe card payments toggle */}
-                  {!isNewInvoice && (
-                    <div className="pt-1 border-t border-gray-100">
-                      {stripeConnectEnabled ? (
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">Accept card payments</p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              Couples can pay each installment by card
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => toggleStripePayment.mutate(!stripePaymentEnabled)}
-                            disabled={toggleStripePayment.isPending || !canEdit}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${stripePaymentEnabled ? 'bg-green-500' : 'bg-gray-200'}`}
-                          >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${stripePaymentEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">Accept card payments</p>
-                            <p className="text-xs text-gray-400 mt-0.5">Connect Stripe to enable card payments</p>
-                          </div>
-                          <a
-                            href="/settings?tab=payments"
-                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 transition"
-                          >
-                            Set up <ExternalLink size={12} strokeWidth={1.5} />
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Footer */}
-          {(!isNewInvoice || canEdit) && (
-            <div className="shrink-0 border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-              {!isNewInvoice ? (
-                <button
-                  onClick={() => setDeleteConfirm(true)}
-                  className="w-full sm:w-auto text-xs px-3 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
-                >
-                  Delete
-                </button>
-              ) : <span />}
-              {canEdit && (
-                <button
-                  onClick={() => save.mutate()}
-                  disabled={save.isPending}
-                  className={`self-end sm:self-auto flex items-center justify-center gap-1.5 w-auto min-w-[7rem] px-3 py-2 text-xs bg-black text-white rounded-xl transition cursor-pointer disabled:opacity-50 ${dirty ? 'hover:bg-neutral-800' : 'opacity-30 pointer-events-none'}`}
-                >
-                  {save.isPending ? <><Loader2 size={12} className="animate-spin" /> Saving...</> : 'Save changes'}
-                </button>
-              )}
-            </div>
-          )}
+        <div className="mt-6">
+          <LineItemsTable
+            items={items}
+            canEdit={canEdit}
+            onUpdate={updateItem}
+            onRemove={removeItem}
+            onReorder={reorderItems}
+            onAdd={addItem}
+          />
         </div>
-      </div>
+
+        {/* Totals area. Auto-animate refs so layout changes
+            (discount expansion, GST line appearing) glide. */}
+        <div ref={totalsAreaRef} className="mt-6 flex flex-col items-end gap-3">
+          <div ref={chipsRef} className="flex flex-col items-end gap-2">
+            <DiscountControl
+              type={discountType}
+              value={discountValue}
+              canEdit={canEdit}
+              onAdd={() => {
+                setDiscountType('percentage');
+                setDiscountValue(10);
+                setDirty(true);
+              }}
+              onRemove={() => {
+                setDiscountType(null);
+                setDiscountValue(null);
+                setDirty(true);
+              }}
+              onTypeChange={(t) => {
+                setDiscountType(t);
+                setDirty(true);
+              }}
+              onValueChange={(v) => {
+                setDiscountValue(v);
+                setDirty(true);
+              }}
+            />
+            <TaxControl
+              rate={taxRate}
+              canEdit={canEdit}
+              onChange={(next) => {
+                setTaxRate(next);
+                setDirty(true);
+              }}
+            />
+          </div>
+          <TotalsPanel
+            subtotal={subtotal}
+            discount={discountAmount > 0 ? discountAmount : undefined}
+            tax={tax > 0 ? tax : undefined}
+            taxLabel={`GST ${Math.round(effectiveTaxRate)}%`}
+            total={total}
+          />
+        </div>
+
+        {/* Payment schedule — auto-animate swaps between the schedule
+            timeline and the "+ Add payment schedule" affordance.
+            Each branch is wrapped in a keyed div so auto-animate
+            consistently sees a sibling add/remove on every toggle
+            (without the wrappers, the second toggle skips the
+            animation because the observer doesn't pick up the type
+            change cleanly). */}
+        <div ref={scheduleSlotRef} className="mt-8">
+          {depositEnabled ? (
+            <div key="schedule">
+              <PaymentSchedule
+                canEdit={canEdit}
+                depositPercent={depositPercent}
+                depositDueDate={depositDueDate}
+                finalDueDate={finalDueDate}
+                depositPaidAt={invoice?.deposit_paid_at ?? null}
+                finalPaidAt={invoice?.final_paid_at ?? null}
+                depositAmount={depositAmount}
+                finalAmount={finalAmount}
+                onDepositPercentChange={(v) => {
+                  setDepositPercent(v);
+                  setDirty(true);
+                }}
+                onDepositDueDateChange={(v) => {
+                  setDepositDueDate(v);
+                  setDirty(true);
+                }}
+                onFinalDueDateChange={(v) => {
+                  setFinalDueDate(v);
+                  setDirty(true);
+                }}
+                onMarkDepositPaid={() => markDepositPaid.mutate()}
+                onMarkFinalPaid={() => markFinalPaid.mutate()}
+                onRemove={() => {
+                  setDepositEnabled(false);
+                  setDepositDueDate('');
+                  setFinalDueDate('');
+                  setDirty(true);
+                }}
+                markDepositPending={markDepositPaid.isPending}
+                markFinalPending={markFinalPaid.isPending}
+              />
+            </div>
+          ) : canEdit ? (
+            <button
+              key="add-schedule"
+              type="button"
+              onClick={() => {
+                setDepositEnabled(true);
+                setDepositDueDate(addDays(0));
+                setFinalDueDate(dueDate ?? addDays(60));
+                setDirty(true);
+              }}
+              className="inline-flex items-center gap-1.5 text-body text-text-muted hover:text-text transition-colors cursor-pointer"
+            >
+              + Add payment schedule
+            </button>
+          ) : null}
+        </div>
+
+        {/* Card payments toggle — only when Stripe Connect is on */}
+        {stripeConnectOn && canEdit ? (
+          <div className="mt-6 flex items-center justify-between rounded-card border border-border bg-surface px-3 py-2.5">
+            <div>
+              <p className="text-body text-text">Accept card payments</p>
+              <p className="text-caption text-text-muted">
+                Adds a Pay with card button on the public invoice page.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setStripePaymentEnabled((v) => !v);
+                setDirty(true);
+              }}
+              role="switch"
+              aria-checked={stripePaymentEnabled}
+              className={`inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                stripePaymentEnabled ? 'bg-success' : 'bg-surface-emphasis border border-border'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-surface shadow transition-transform ${
+                  stripePaymentEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        ) : null}
+
+        <div className="mt-6">
+          <NotesField
+            value={notes}
+            onChange={(v) => {
+              setNotes(v);
+              setDirty(true);
+            }}
+            canEdit={canEdit}
+            label="Notes"
+            placeholder="Bank details, payment terms, or any notes for the couple."
+          />
+        </div>
+      </BuilderModalShell>
 
       <ConfirmDialog
-        open={cancelConfirm}
-        title="Cancel invoice?"
-        description="This will cancel the invoice and disable the share link. This cannot be undone."
+        open={confirmCancel}
+        title="Cancel this invoice?"
+        description="The invoice will be marked as cancelled and its share link will stop working. This can't be undone."
         confirmLabel="Cancel invoice"
+        loading={cancelInvoice.isPending}
         onConfirm={() => cancelInvoice.mutate()}
-        onCancel={() => setCancelConfirm(false)}
+        onCancel={() => setConfirmCancel(false)}
       />
 
       <ConfirmDialog
-        open={deleteConfirm}
-        title="Delete invoice?"
-        description="This will permanently delete the invoice and cannot be undone."
+        open={confirmDelete}
+        title="Delete this invoice?"
+        description="The invoice and all its line items will be removed. This can't be undone."
         confirmLabel="Delete"
-        onConfirm={() => deleteInvoice.mutate()}
-        onCancel={() => setDeleteConfirm(false)}
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate()}
+        onCancel={() => setConfirmDelete(false)}
       />
     </>
-  )
+  );
 }
+

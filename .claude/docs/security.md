@@ -98,6 +98,26 @@ happen in a later tightening phase.
 | `app/api/stripe/portal/route.ts` | n/a — no body | ✅ 10/min/user | 400 when `stripeCustomerId(user)` returns null |
 | `app/api/stripe/billing-history/route.ts` | n/a — GET, no params yet | ✅ 30/min/user | Cursor-based pagination deferred to PR 2D |
 
+### Payments server actions — validation audit (Phase 2C.2)
+
+The Quote + Invoice builder modals now route every mutation through
+typed server actions in `app/(dashboard)/payments/actions.ts`. RLS
+provides cross-tenant denial; the Zod schemas reject malformed
+inputs at the boundary. No rate-limit needed (authenticated,
+single-user, no public abuse vector — and money paths into Stripe
+already carry their own limits in `STRIPE_RATE_LIMITS`).
+
+| Action | Zod | Notes |
+|---|---|---|
+| `saveQuoteAction` | ✅ `saveQuoteSchema` (quoteId nullable, coupleId uuid, items[]) | Transactional: update quote + replace quote_items |
+| `saveInvoiceAction` | ✅ `saveInvoiceSchema` (invoiceId nullable, coupleId uuid, payment schedule, items[]) | Writes `quantity=1, unit_price=amount` for forward-compat with existing invoice_items columns |
+| `deleteQuoteAction` | ✅ `z.uuid()` | Cascade handles items |
+| `deleteInvoiceAction` | ✅ `z.uuid()` | Cascade handles items |
+
+Status-change mutations (mark paid / revert / cancel) stay inline
+in the modals as one-line UPDATEs — they're RLS-protected by the
+session client and don't justify their own server actions.
+
 ### Email-send routes — validation + rate-limit audit (Phase 2C)
 
 These routes blast a couple's inbox. The risk is loop / spam from a

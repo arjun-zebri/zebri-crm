@@ -46,6 +46,10 @@
   --animate-fade-in: fade-in 150ms ease-out;
   --animate-modal-in: modal-in 200ms ease-out;
   --animate-slide-in-right: slide-in-right 250ms ease-out;
+  /* Subtle scale-in for chips morphing between states — used by
+     the builder discount / tax pills so the state change feels
+     deliberate rather than abrupt. */
+  --animate-chip-expand: chip-expand 200ms ease-out;
 
   /* Colour utilities reference the runtime CSS vars above so the same
      class name resolves to the right value per theme automatically. */
@@ -103,6 +107,17 @@
   }
   to {
     transform: translateX(0);
+  }
+}
+
+@keyframes chip-expand {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

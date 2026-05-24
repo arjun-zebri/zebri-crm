@@ -25,12 +25,18 @@ import { execSync } from 'node:child_process';
 // raw HTML inputs with `<Input>` / `<Button>` primitives (849 → 826
 // warnings, 91 → 86 errors).
 // Only ever decrease these.
-const ERROR_BUDGET = 86;
+// Phase 2C.2 builder modal decomposition cut both: 86→78 errors,
+// 596→559 warnings (the two big builder files carried a lot of
+// legacy `any` + unused-imports noise).
+const ERROR_BUDGET = 78;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
 // (/payments page decomposition) dropped another 11: 607 → 596.
-const WARNING_BUDGET = 596;
+// Phase 2C.2 (builder modal decomposition): 596 → 559.
+// Phase 2C.2 two-pane preview: 559 → 557 (cleaned up unused
+// useRef + import-order in components/ui/modal.tsx).
+const WARNING_BUDGET = 557;
 
 function runEslintJson() {
   try {

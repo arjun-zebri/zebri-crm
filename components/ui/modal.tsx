@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useEffect } from 'react';
 
 // Tracks how many Modal instances are currently open so only the topmost
 // one responds to Escape - prevents nested modals from closing their parent.
@@ -17,11 +17,13 @@ export function getOpenModalDepth() {
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
+  /** Title slot. Accepts ReactNode so callers can render a mix of
+   *  text + inline components (e.g. document number + state pill). */
+  title?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
   headerActions?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'fullscreen';
   nested?: boolean;
   /** Drop the body's default bottom padding so children can bleed
    *  to the modal's rounded bottom edge. Used by full-bleed tables
@@ -34,6 +36,13 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-3xl',
+  // `2xl` is for medium-wide tables (~960px max) — not yet used.
+  '2xl': 'max-w-5xl',
+  // `fullscreen` matches the couple-profile overlay dimensions
+  // (90vw / max 1400px / 90vh) so the two top-level overlays feel
+  // like the same surface. Below the sm breakpoint it stretches
+  // to the viewport edges (p-2 on the wrapper).
+  fullscreen: 'sm:w-[90vw] sm:max-w-[1400px]',
 };
 
 export function Modal({
@@ -47,8 +56,6 @@ export function Modal({
   nested = false,
   flushBottom = false,
 }: ModalProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
   useEffect(() => {
     if (!isOpen) return;
     _openModalDepth++;
@@ -84,7 +91,13 @@ export function Modal({
         onClick={onClose}
       >
         <div
-          className={`bg-white rounded-2xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]}`}
+          className={`bg-white rounded-2xl shadow-xl w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
+            // Fullscreen modals lock to 90vh so the size doesn't
+            // shrink while content is loading. Matches the couple-
+            // profile overlay's vertical sizing. Other sizes keep
+            // their max-h behaviour so short modals stay compact.
+            size === 'fullscreen' ? 'h-full sm:h-[90vh]' : 'max-h-[85vh]'
+          }`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header — height ≈ 4rem (py-4 + text-xl content). The
@@ -95,7 +108,11 @@ export function Modal({
           <div
             className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}
           >
-            {title && <h2 className="text-xl font-semibold text-gray-900">{title}</h2>}
+            {title && (
+              <div className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                {title}
+              </div>
+            )}
             <div className={`flex items-center gap-1 ${!title ? 'ml-auto' : ''}`}>
               {headerActions && (
                 <>

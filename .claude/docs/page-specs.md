@@ -576,36 +576,62 @@ Table Columns (matching couples/vendors style):
 
 ## Modals
 
-Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page.
+Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phase 2C.2** redesigned both into a **two-pane layout**: edit form on the left, live preview on the right. The modal uses the `fullscreen` size (`max-w-7xl`) on desktop; below the `lg:` breakpoint (1024px) the panes stack vertically with the preview as a collapsible section below the form.
 
-**QuoteBuilderModal:**
-- Fixed height with scroll on overflow
-- Couple selector dropdown at top (searchable combobox)
-- Item list with add/edit/delete actions
-- Amount field (no spinners)
-- Expiry date (native date input, compact)
-- Notes textarea (rows=4)
-- Tax display: Subtotal + GST (10%) = Total (display-only)
-- Share token toggle (green, bg-green-500) with instant save
-- Save button refreshes quote list
+### Shared shell (`builder-modal-shell.tsx`)
+- Top of the modal: document number (e.g. `Q-001` / `INV-001`) + inline `StatePill` (the same tonal pill used on the Billing tab).
+- Right side of the header: status-aware contextual primary CTA + `⋯` overflow menu for destructive / revert actions.
+- Body: hero title input (large unbordered text — Notion-style) followed by the composed parts.
+- Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple).
+- New `previewPane` prop carries the right-side preview content. When provided, the shell switches to a 2-column grid (`grid-cols-1 lg:grid-cols-2`) and the modal upgrades to `fullscreen` size.
 
-**InvoiceBuilderModal:**
-- Fixed height with scroll on overflow
-- Couple selector dropdown at top (searchable combobox)
-- Quote import option: popover showing accepted/sent quotes for selected couple, copies title + items on selection
-- Item list with add/edit/delete actions
-- Quantity/unit price fields (no spinners)
-- Payment terms dropdown (net_7, net_14, net_30, due_on_receipt, custom). Net terms auto-fill due_date. Due on receipt clears it.
-- Due date (compact DatePicker)  -  only shown when payment_terms is `custom` or empty
-- Notes textarea (rows=4)  -  auto-populated from MC's saved bank details on new invoice creation
-- GST toggle: off by default; when on, shows "GST (10%)" row in totals with calculated amount
-- Totals block: Subtotal → GST (if enabled) → Total
-- Payment schedule toggle: when on, reveals deposit % input + deposit due date + final balance due date. Each installment has a "Mark paid" button (replaced by "Paid" badge once paid). When schedule is active, the main "Mark as Paid" button is hidden.
-- Share token toggle (green, bg-green-500) with instant save
-- Stripe "Accept card payments" toggle  -  only visible if `stripeConnectEnabled(user)` is true (read via `@/lib/auth/entitlements` — `app_metadata.stripe_connect_enabled`; never the user-writable `user_metadata`). Hidden when payment schedule is active. If not connected: shows "Connect Stripe" link to `/settings?tab=payments`.
-- Save button refreshes invoice list
+### Preview pane (`builder-preview-pane.tsx`)
+- Header row: `<` collapse toggle + "Preview ⓘ" + tabs (PDF · Email · Payment page).
+- Sub-header: "Branded as {Business Name} · Update branding ↗" — the link opens `/branding` in a new tab so the user can tweak + come back without losing the modal.
+- Three tabs, each rendering live (the form state flows directly into the preview every render):
+  - **PDF**: `<PreviewPdf>` — renders the same HTML that `buildPdfHtml()` produces for the print dialog, inside a sandboxed iframe.
+  - **Email**: `<PreviewEmail>` — `From/To/Subject` envelope above a sandboxed iframe carrying the templated email body (`quoteHtml()` / `invoiceHtml()` from `@/lib/email`).
+  - **Payment page**: `<PreviewPaymentPage>` — uses the same `PublicBlockRenderer` the public `/quote/[token]` and `/invoice/[token]` routes use, fed by `useCurrentBranding(surface)`. Pixel-faithful preview of what the couple sees.
+- The pane is collapsible — clicking the `<` chevron toggles a slim vertical bar with a `>` chevron to expand again. Useful when the MC wants to focus on just the form.
 
-Payment schedule sub-component: `invoice-payment-schedule.tsx` (co-located)
+### Branding integration (`useCurrentBranding`)
+- New hook at `lib/branding/use-current-branding.ts` fetches the user's branding from `user_metadata` + the `user_branding` table, assembles a `PublicBranding`-shaped object the renderer consumes.
+- Falls back to the `minimal` theme preset for any unset fields.
+- `buildPublicBranding(metadata)` is pure + exported for tests.
+
+### `QuoteBuilderModal`
+- Meta row: couple picker + expiry date.
+- **Template picker**: prominent "Start from template" card above the items area when the quote is empty; collapses to a smaller "Apply template" link in the items header once items exist.
+- Line items table: description + amount columns only. Drag-reorder via dnd-kit. "+ Add item" inline.
+- "+ Add discount" / "+ Apply 10% GST" link buttons below the items — expand inline when configured.
+- Totals panel: Subtotal · (optional Discount) · (optional GST 10%) · **Total** (bold).
+- Notes & terms textarea at the bottom.
+- Overflow menu: "Convert to invoice" (when accepted) · "Delete quote".
+- Save flow: `Save changes` (footer, secondary) + `Send to couple` (footer, primary). Send saves any dirty changes, enables the share token, and fires the email in one click. After first send, the primary becomes `Resend` + a small "Sent {date}" timestamp.
+- State pill map: Draft (muted) · Sent (info + hollow dot) · Accepted (success + filled dot) · Declined (danger) · Expired (muted).
+
+### `InvoiceBuilderModal`
+Same shell + meta row pattern, plus:
+- Meta row adds: payment terms (Net 7/14/30/due-on-receipt/custom) + due date. Net terms auto-fill the due date.
+- Line items table: description + amount only (quantity removed in 2C.2 — `saveInvoiceAction` writes `quantity = 1, unit_price = amount` for forward compat with the existing schema).
+- Discount + GST controls identical to the quote modal.
+- **Payment schedule**: vertical timeline. `● Deposit ─┊─ ○ Final` with state pill + amount + due date + inline "Mark paid" affordance per stage. Filled dot when paid, hollow when due. "+ Add payment schedule" link button when none is configured.
+- **Card payments toggle**: only visible if `stripeConnectEnabled(user)` is true (read via `@/lib/auth/entitlements` — `app_metadata.stripe_connect_enabled`; never the user-writable `user_metadata`). Toggle + helper text in a token-styled row.
+- **Contextual header CTA** (status-aware):
+  - Sent (no schedule) → "Mark paid"
+  - Sent (with schedule) → "Mark deposit paid"
+  - Deposit paid → "Mark final paid"
+  - Paid → no CTA (status pill only)
+  - Overdue → "Mark paid" (danger-toned)
+- Overflow menu: "Revert to sent" (when paid) · "Cancel invoice" (when editable) · "Delete invoice".
+- State pill map: Draft · Sent (info + hollow) · Deposit paid (warning + filled) · Paid (success + filled) · Overdue (danger + hollow) · Cancelled (muted).
+
+### Server actions (`app/(dashboard)/payments/actions.ts`)
+Mutations no longer happen inline. Saves flow through:
+- `saveQuoteAction(input)` — Zod-validated, RLS-scoped, transactional (replace-line-items pattern).
+- `saveInvoiceAction(input)` — same shape, plus payment schedule fields + `quantity=1`/`unit_price=amount` invariant.
+- `deleteQuoteAction(id)` / `deleteInvoiceAction(id)` — RLS-scoped destructive.
+- Status mutations (mark paid / revert / cancel) remain inline one-line UPDATEs in the modal — they don't justify their own server actions.
 
 ## Couple Profile Integration
 
