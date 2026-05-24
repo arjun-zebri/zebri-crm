@@ -51,7 +51,10 @@ export function DiscountControl({
         type="button"
         onClick={onAdd}
         disabled={!canEdit}
-        className="inline-flex items-center gap-1.5 rounded-control bg-surface-muted px-2.5 py-1 text-caption font-medium text-text-muted hover:bg-surface-emphasis hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        // `animate-chip-expand` runs on every mount, so when the
+        // user removes the discount the chip fades back in. The
+        // transition-colors keeps hover transitions smooth.
+        className="inline-flex items-center gap-1.5 rounded-control bg-surface-muted px-2.5 py-1 text-caption font-medium text-text-muted hover:bg-surface-emphasis hover:text-text transition-colors animate-chip-expand disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         <Plus size={12} strokeWidth={1.5} />
         Discount
@@ -64,7 +67,10 @@ export function DiscountControl({
   }
 
   return (
-    <span className="inline-flex items-center gap-2 rounded-control bg-surface-emphasis pl-2.5 pr-1 py-1 text-caption font-medium text-text">
+    // Same animation on the expanded pill — when the user clicks
+    // the collapsed chip, this fades-and-scales in (~200ms).
+    // `transition-colors` covers hover + type-switch state changes.
+    <span className="inline-flex items-center gap-2 rounded-control bg-surface-emphasis pl-2.5 pr-1 py-1 text-caption font-medium text-text transition-colors animate-chip-expand origin-left">
       <span className="text-text-muted">Discount</span>
 
       {type === 'percentage' ? (
@@ -78,7 +84,9 @@ export function DiscountControl({
             onChange={(e) => onValueChange(parseInt(e.target.value, 10) || 0)}
             disabled={!canEdit}
             aria-label="Discount percentage"
-            className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-border accent-brand-fg disabled:opacity-50 disabled:cursor-not-allowed"
+            // `transition-all` smooths the thumb scaling on hover +
+            // active (added via the accent + browser defaults).
+            className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-border accent-brand-fg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <span className="w-8 text-right tabular-nums">
             {Math.round(value ?? 0)}%

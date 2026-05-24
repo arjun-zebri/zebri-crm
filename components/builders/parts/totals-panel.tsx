@@ -41,9 +41,16 @@ export function TotalsPanel({
     <div className="w-full max-w-xs space-y-2 text-body">
       <Row label="Subtotal" value={formatCurrency(subtotal)} />
       {discount !== undefined && discount !== 0 ? (
-        <Row label="Discount" value={`-${formatCurrency(Math.abs(discount))}`} muted />
+        <Row
+          label="Discount"
+          value={`-${formatCurrency(Math.abs(discount))}`}
+          muted
+          animate
+        />
       ) : null}
-      {tax !== undefined && tax !== 0 ? <Row label={taxLabel} value={formatCurrency(tax)} muted /> : null}
+      {tax !== undefined && tax !== 0 ? (
+        <Row label={taxLabel} value={formatCurrency(tax)} muted animate />
+      ) : null}
       <div className="border-t border-border pt-2 flex items-center justify-between">
         <span className="text-section font-semibold text-text">Total</span>
         <span className="text-section font-semibold text-text tabular-nums">
@@ -54,9 +61,23 @@ export function TotalsPanel({
   );
 }
 
-function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+function Row({
+  label,
+  value,
+  muted,
+  animate,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+  /** Use the fade-in animation for newly-appearing rows
+   *  (Discount, GST) so they don't snap in. */
+  animate?: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between">
+    <div
+      className={`flex items-center justify-between ${animate ? 'animate-fade-in' : ''}`}
+    >
       <span className={muted ? 'text-text-muted' : 'text-text'}>{label}</span>
       <span className={`tabular-nums ${muted ? 'text-text-muted' : 'text-text'}`}>{value}</span>
     </div>

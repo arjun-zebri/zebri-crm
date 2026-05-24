@@ -159,7 +159,9 @@ function SortableRow({ item, canEdit, onUpdate, onRemove }: SortableRowProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className="grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 border-t border-border items-center bg-surface"
+      // animate-fade-in smooths the "Add item" insert; dragging
+      // suppresses it via the isDragging branch above.
+      className="grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 border-t border-border items-center bg-surface animate-fade-in"
     >
       {/* Drag handle — desktop only */}
       {canEdit ? (

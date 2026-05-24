@@ -1,9 +1,11 @@
 /**
- * GST/tax affordance — subtle inline chip.
+ * GST/tax affordance — single chip that smoothly transitions
+ * between the unapplied and applied states.
  *
- * Shows a "+ GST 10%" chip when no tax is applied. Once applied,
- * the same chip flips to its emphasised state with a × icon; click
- * to remove.
+ * The button itself stays mounted; its background tone and the
+ * leading icon (Plus ↔ X) crossfade based on `applied`. Both
+ * transitions use ~200ms CSS so the state change reads as a
+ * deliberate morph rather than an abrupt swap.
  *
  * @module components/builders/parts/tax-control
  */
@@ -21,30 +23,37 @@ export interface TaxControlProps {
 }
 
 export function TaxControl({ applied, canEdit, onApply, onRemove }: TaxControlProps) {
-  if (!applied) {
-    return (
-      <button
-        type="button"
-        onClick={onApply}
-        disabled={!canEdit}
-        className="inline-flex items-center gap-1.5 rounded-control bg-surface-muted px-2.5 py-1 text-caption font-medium text-text-muted hover:bg-surface-emphasis hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-      >
-        <Plus size={12} strokeWidth={1.5} />
-        GST 10%
-      </button>
-    );
-  }
-
-  // Applied: same shape, slightly stronger background to signal
-  // "active". Hover surfaces the danger tone to telegraph removal.
   return (
     <button
       type="button"
-      onClick={onRemove}
+      onClick={applied ? onRemove : onApply}
       disabled={!canEdit}
-      className="inline-flex items-center gap-1.5 rounded-control bg-surface-emphasis px-2.5 py-1 text-caption font-medium text-text hover:bg-danger/10 hover:text-danger transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      aria-label={applied ? 'Remove GST' : 'Apply 10% GST'}
+      className={`inline-flex items-center gap-1.5 rounded-control px-2.5 py-1 text-caption font-medium transition-colors duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+        applied
+          ? 'bg-surface-emphasis text-text hover:bg-danger/10 hover:text-danger'
+          : 'bg-surface-muted text-text-muted hover:bg-surface-emphasis hover:text-text'
+      }`}
     >
-      <X size={12} strokeWidth={1.5} />
+      {/* Icon crossfade: both icons share the same slot, opacity
+          drives which one shows. ~200ms transition matches the
+          background colour change. */}
+      <span className="relative inline-flex h-3 w-3 items-center justify-center">
+        <Plus
+          size={12}
+          strokeWidth={1.5}
+          className={`absolute inset-0 transition-opacity duration-200 ${
+            applied ? 'opacity-0' : 'opacity-100'
+          }`}
+        />
+        <X
+          size={12}
+          strokeWidth={1.5}
+          className={`absolute inset-0 transition-opacity duration-200 ${
+            applied ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      </span>
       GST 10%
     </button>
   );

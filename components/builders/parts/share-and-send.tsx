@@ -75,8 +75,14 @@ export function ShareAndSend({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {/* Status + actions (left) */}
-      <div className="flex flex-wrap items-center gap-3 text-caption text-text-muted">
+      {/* Status + actions (left). `animate-fade-in` runs whenever
+          the children re-render with a new conditional branch —
+          smooths the draft→live transition the moment the first
+          send lands. */}
+      <div
+        key={isLive ? 'live' : 'draft'}
+        className="flex flex-wrap items-center gap-3 text-caption text-text-muted animate-fade-in"
+      >
         {isLive ? (
           <>
             {lastSentAt ? (
