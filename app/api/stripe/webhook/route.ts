@@ -21,9 +21,11 @@
  *   — Stripe moved this field off the subscription root onto items
  *   in newer API versions.
  *
- * Connect events (`stripe-account` header present) are out of scope
- * for Phase 2A. They're acknowledged with 200 and a log line. Full
- * Connect handling lands in PR 2D.
+ * Connect events (`stripe-account` header present) are dispatched
+ * to `lib/payments/connect-events.ts` (added in Phase 2D.1). They
+ * mirror the connected account's state into `connect_accounts` +
+ * flip `app_metadata.stripe_connect_enabled` based on
+ * `charges_enabled` + fire Slack alerts on capability changes.
  *
  * @module app/api/stripe/webhook/route
  */
@@ -38,6 +40,11 @@ import {
   subscriptionStatus,
   updateEntitlements,
 } from '@/lib/auth/entitlements'
+import {
+  applyConnectEvent,
+  defaultAuthAdmin,
+  parseConnectEvent,
+} from '@/lib/payments/connect-events'
 import { stripe } from '@/lib/payments/stripe'
 import {
   type ParsedStripeEvent,
@@ -125,15 +132,75 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  // ─── Connect events: out of Phase-2A scope ────────────────────
-  // Acknowledge with 200 + log. PR 2D wires up Connect handling.
+  // ─── Connect events: parse + dispatch ─────────────────────────
+  // Phase 2D.1: parse with the Connect-specific schemas and run the
+  // mirror sync + entitlement updates + Slack alerts. The
+  // idempotency ledger above already gated this branch — a replay
+  // returns early before we reach here.
   if (stripeAccount) {
-    logger.info('[stripe/webhook] Connect event acknowledged (handler pending PR 2D)', {
-      eventId: event.id,
-      eventType: event.type,
-      stripeAccount,
-    })
-    return NextResponse.json({ received: true })
+    const parsedConnect = parseConnectEvent(event.type, event.data.object)
+    if (!parsedConnect.ok) {
+      const unhandledOnly = parsedConnect.issues.every(
+        (i) => i.code === 'unhandled_event_type',
+      )
+      if (unhandledOnly) {
+        logger.info('[stripe/webhook] unhandled connect event type acked', {
+          eventId: event.id,
+          eventType: event.type,
+          stripeAccount,
+        })
+        return NextResponse.json({ received: true, unhandled: true })
+      }
+      logger.error('[stripe/webhook] connect payload validation failed', {
+        eventId: event.id,
+        eventType: event.type,
+        issues: parsedConnect.issues,
+      })
+      await sendAlert({
+        type: 'stripe_webhook_failed',
+        severity: 'error',
+        eventType: event.type,
+        errorMessage: `Connect payload validation failed: ${parsedConnect.issues
+          .map((i) => `${i.path}: ${i.message}`)
+          .join('; ')}`,
+      })
+      return NextResponse.json({ received: true, validationFailed: true })
+    }
+
+    try {
+      const result = await applyConnectEvent(parsedConnect.event, {
+        stripe,
+        authAdmin: defaultAuthAdmin(),
+      })
+      logger.info('[stripe/webhook] connect event handled', {
+        eventId: event.id,
+        eventType: event.type,
+        stripeAccount,
+        result,
+      })
+      return NextResponse.json({ received: true })
+    } catch (err) {
+      // Infra failure (Stripe API, Supabase write, etc.) — 500 so
+      // Stripe retries. The idempotency ledger's INSERT already
+      // ran, but the retry will hit the conflict path and short-
+      // circuit before doing anything twice (the ledger row IS
+      // the "we accepted responsibility" commit-point — see
+      // `stripe_events_ledger` migration).
+      const message = err instanceof Error ? err.message : 'unknown'
+      logger.error('[stripe/webhook] connect handler threw', {
+        eventId: event.id,
+        eventType: event.type,
+        stripeAccount,
+        error: message,
+      })
+      await sendAlert({
+        type: 'stripe_webhook_failed',
+        severity: 'error',
+        eventType: event.type,
+        errorMessage: `Connect handler failed: ${message}`,
+      })
+      return NextResponse.json({ error: message }, { status: 500 })
+    }
   }
 
   // ─── Validate payload + dispatch ─────────────────────────────

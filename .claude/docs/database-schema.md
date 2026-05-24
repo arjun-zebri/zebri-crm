@@ -477,3 +477,32 @@ save_portal_file(p_token, p_id, p_name, p_file_url, p_file_size)  -  insert
 delete_portal_file(p_token, p_id)
 
 All RPCs validate portal_token_enabled=true before proceeding.
+
+------------------------------------------------------------------------
+
+## connect_accounts (Phase 2D.1)
+
+Per-user mirror of Stripe Connect account state — capabilities,
+requirements, disabled_reason. Populated by `account.updated` /
+`capability.updated` / `account.application.deauthorized` webhooks
+in `lib/payments/connect-events.ts`. Read by the settings page's
+status panel + the entitlements helpers.
+
+Columns:
+user_id (uuid, primary key, FK to auth.users.id, on delete cascade)
+account_id (text, unique, nullable)  -  Stripe Express account ID; null after disconnect
+charges_enabled (boolean, default false)
+payouts_enabled (boolean, default false)
+details_submitted (boolean, default false)
+requirements_currently_due (jsonb, default '[]')
+requirements_past_due (jsonb, default '[]')
+disabled_reason (text, nullable)
+default_currency (text, nullable)
+country (text, nullable)
+business_type (text, nullable)
+last_account_id (text, nullable)  -  preserved on server-initiated disconnect for rebind; cleared on Stripe-initiated deauth
+created_at, updated_at (timestamptz, auto-managed)
+
+RLS: SELECT-only for the owner. No INSERT/UPDATE/DELETE policies —
+writes only via service-role webhook handler + disconnect server
+action. Migration: `20260524000000_create_connect_accounts.sql`.

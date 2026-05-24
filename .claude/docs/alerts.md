@@ -51,6 +51,8 @@ default emoji and routing.
 | `stripe_rate_limit_hit` | warn | Per-route rate limit hit (checkout/portal/billingHistory/invoicePayment) | `/api/stripe/*` (Phase 2A) |
 | `stripe_events_prune_high` | warn | Daily prune deleted > 5,000 ledger rows (Phase 2A) | `/api/cron/prune-stripe-events` |
 | `stripe_connect_onboarding_failed` | warn | Connect onboarding errored | `/api/stripe/connect/*` |
+| `stripe_connect_disabled` | warn | `account.updated` webhook reported a non-null `requirements.disabled_reason` — Stripe paused some capability and the MC needs to action it (Phase 2D.1) | `/api/stripe/webhook` (Connect branch) |
+| `stripe_connect_deauthorized` | warn | MC removed our platform from their Stripe account via the Stripe Dashboard (Phase 2D.1) | `/api/stripe/webhook` (Connect branch) |
 | `email_rate_limit_hit` | warn | Per-user send-quote / send-invoice limit hit (Phase 2C) | `/api/email/send-{quote,invoice}` |
 | `resend_send_failed` | error | Resend API rejected / errored | `/api/email/*` |
 | `resend_bounced` | warn | Bounce reported | `/api/resend/webhook` |

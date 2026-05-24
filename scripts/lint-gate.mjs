@@ -36,7 +36,10 @@ const ERROR_BUDGET = 78;
 // Phase 2C.2 (builder modal decomposition): 596 → 559.
 // Phase 2C.2 two-pane preview: 559 → 557 (cleaned up unused
 // useRef + import-order in components/ui/modal.tsx).
-const WARNING_BUDGET = 557;
+// Phase 2D.1 embedded Connect: 557 → 556 (rewrite of
+// payment-settings-section eliminated a stale lint-suppressed
+// re-render path).
+const WARNING_BUDGET = 556;
 
 function runEslintJson() {
   try {
