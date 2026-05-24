@@ -38,19 +38,19 @@ export function DiscountControl({
   onTypeChange,
   onValueChange,
 }: DiscountControlProps) {
-  // Not configured: show the "+ Add discount" affordance as a
-  // dashed-outline pill button — more obviously clickable than a
-  // plain text link.
+  // Not configured: subtle inline-action chip — no border, no
+  // shadow. Linear/Notion-style affordance that reads as an
+  // optional action rather than a primary button.
   if (type === null) {
     return (
       <button
         type="button"
         onClick={onAdd}
         disabled={!canEdit}
-        className="inline-flex items-center gap-1.5 rounded-pill border border-dashed border-border-strong bg-transparent px-3 py-1.5 text-caption font-medium text-text-muted hover:border-text-muted hover:bg-surface-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="inline-flex items-center gap-1.5 rounded-control bg-surface-muted px-2.5 py-1 text-caption font-medium text-text-muted hover:bg-surface-emphasis hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
-        <Plus size={14} strokeWidth={1.5} />
-        Add discount
+        <Plus size={12} strokeWidth={1.5} />
+        Discount
       </button>
     );
   }

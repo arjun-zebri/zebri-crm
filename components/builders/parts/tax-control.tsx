@@ -1,9 +1,9 @@
 /**
- * GST/tax affordance — collapsed link or "Remove" affordance.
+ * GST/tax affordance — subtle inline chip.
  *
- * Shows "+ Apply 10% GST" when no tax is applied. Once applied, the
- * tax line appears in the totals panel; this control morphs into a
- * small "Remove GST" link.
+ * Shows a "+ GST 10%" chip when no tax is applied. Once applied,
+ * the same chip flips to its emphasised state with a × icon; click
+ * to remove.
  *
  * @module components/builders/parts/tax-control
  */
@@ -27,25 +27,24 @@ export function TaxControl({ applied, canEdit, onApply, onRemove }: TaxControlPr
         type="button"
         onClick={onApply}
         disabled={!canEdit}
-        className="inline-flex items-center gap-1.5 rounded-pill border border-dashed border-border-strong bg-transparent px-3 py-1.5 text-caption font-medium text-text-muted hover:border-text-muted hover:bg-surface-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="inline-flex items-center gap-1.5 rounded-control bg-surface-muted px-2.5 py-1 text-caption font-medium text-text-muted hover:bg-surface-emphasis hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
-        <Plus size={14} strokeWidth={1.5} />
-        Apply 10% GST
+        <Plus size={12} strokeWidth={1.5} />
+        GST 10%
       </button>
     );
   }
 
-  // Applied: solid pill with a clear "Remove" affordance. Background
-  // mirrors the success tone of the GST line in the totals so the
-  // visual link is obvious.
+  // Applied: same shape, slightly stronger background to signal
+  // "active". Hover surfaces the danger tone to telegraph removal.
   return (
     <button
       type="button"
       onClick={onRemove}
       disabled={!canEdit}
-      className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-surface-muted px-3 py-1.5 text-caption font-medium text-text hover:border-danger hover:text-danger transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      className="inline-flex items-center gap-1.5 rounded-control bg-surface-emphasis px-2.5 py-1 text-caption font-medium text-text hover:bg-danger/10 hover:text-danger transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
     >
-      <X size={14} strokeWidth={1.5} />
+      <X size={12} strokeWidth={1.5} />
       GST 10%
     </button>
   );

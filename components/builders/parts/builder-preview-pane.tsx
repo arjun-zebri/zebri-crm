@@ -18,7 +18,7 @@
  */
 'use client';
 
-import { ExternalLink, FileText, Globe, Info, Mail, Palette } from 'lucide-react';
+import { ExternalLink, FileText, Globe, Mail, Palette } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { createClient } from '@/lib/supabase/client';
@@ -43,7 +43,9 @@ export interface BuilderPreviewPaneProps {
 const TABS: { id: PreviewTab; label: string; icon: typeof FileText }[] = [
   { id: 'pdf', label: 'PDF', icon: FileText },
   { id: 'email', label: 'Email', icon: Mail },
-  { id: 'payment_page', label: 'Payment page', icon: Globe },
+  // The "Link" tab is the branded public-page preview — what the
+  // couple sees when they click the share link from the email.
+  { id: 'payment_page', label: 'Link', icon: Globe },
 ];
 
 export function BuilderPreviewPane({ doc, surface, coupleEmail }: BuilderPreviewPaneProps) {
@@ -66,15 +68,14 @@ export function BuilderPreviewPane({ doc, surface, coupleEmail }: BuilderPreview
   }, []);
 
   return (
-    <div className="flex h-full flex-col gap-3 rounded-card border border-border bg-surface-muted/40 p-3">
+    // Bordless tonal wrapper — the bg-surface-muted is enough to
+    // separate the preview pane from the editor without a border.
+    // Padding grows on lg so the inner preview card has breathing
+    // room.
+    <div className="flex h-full flex-col gap-3 rounded-card bg-surface-muted/60 p-4 sm:p-5">
       {/* Header: Preview label + tabs */}
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-        <div className="inline-flex items-center gap-1.5">
-          <h2 className="text-section font-semibold text-text">Preview</h2>
-          <span title="Preview reflects unsaved changes" className="inline-flex">
-            <Info size={14} strokeWidth={1.5} className="text-text-subtle" />
-          </span>
-        </div>
+        <h2 className="text-section font-semibold text-text">Preview</h2>
 
         <div className="ml-auto flex items-center gap-1 rounded-card border border-border bg-surface p-1">
           {TABS.map((tab) => (

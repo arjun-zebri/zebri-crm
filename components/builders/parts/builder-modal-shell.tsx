@@ -152,7 +152,10 @@ export function BuilderModalShell({
         // on the right (lg:col-2). Below the lg breakpoint they
         // stack vertically — preview comes after the form.
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 h-full">
-          <div className="flex flex-col min-w-0">
+          {/* Left pane scrolls internally so the modal's footer +
+              the right-pane preview stay anchored regardless of
+              form height. */}
+          <div className="flex flex-col min-w-0 min-h-0 overflow-y-auto pr-1">
             <input
               type="text"
               value={title}
@@ -227,7 +230,7 @@ function EditorSkeleton() {
 
 function PreviewSkeleton() {
   return (
-    <div className="flex h-full flex-col gap-3 rounded-card border border-border bg-surface-muted/40 p-3 animate-pulse">
+    <div className="flex h-full flex-col gap-3 rounded-card bg-surface-muted/60 p-4 sm:p-5 animate-pulse">
       {/* Header row */}
       <div className="flex items-center justify-between">
         <div className="h-6 w-24 rounded bg-surface-muted" />

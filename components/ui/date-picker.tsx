@@ -14,6 +14,10 @@ interface DatePickerProps {
   /** Render only the calendar body without trigger or portal */
   calendarOnly?: boolean
   disabled?: boolean
+  /** Where the calendar icon sits inside the trigger. Defaults to
+   *  'right' for backward-compat; the builder modals pass 'left' to
+   *  match their other meta-row controls. */
+  iconPosition?: 'left' | 'right'
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -78,7 +82,7 @@ function buildCalendarGrid(year: number, month: number): Date[][] {
 
 const DROPDOWN_HEIGHT = 330
 
-export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right' }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
@@ -197,13 +201,28 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     return `${base} text-gray-900 hover:bg-gray-50`
   }
 
-  const triggerClass = `flex items-center justify-between w-full border rounded-xl px-3 py-2 text-sm focus:outline-none transition cursor-pointer ${
+  const triggerLayout =
+    iconPosition === 'left' ? 'justify-start gap-2' : 'justify-between'
+  const triggerClass = `flex items-center ${triggerLayout} w-full border rounded-xl px-3 py-2 text-sm focus:outline-none transition cursor-pointer ${
     disabled
       ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
       : open && inline
       ? 'border-green-300 ring-2 ring-green-100 bg-white hover:bg-white'
       : 'border-gray-200 hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
   } ${className ?? ''}`
+
+  const calendarIcon = (
+    <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
+  )
+  const triggerContent = (
+    <>
+      {iconPosition === 'left' ? calendarIcon : null}
+      <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+        {value ? formatDisplay(value) : (placeholder ?? 'Select date')}
+      </span>
+      {iconPosition === 'right' ? calendarIcon : null}
+    </>
+  )
 
   const calendarBody = (
     <>
@@ -257,10 +276,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     return (
       <div ref={containerRef} className="relative">
         <button ref={triggerRef} type="button" onClick={() => !disabled && setOpen(o => !o)} disabled={disabled} className={triggerClass}>
-          <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-            {value ? formatDisplay(value) : (placeholder ?? 'Select date')}
-          </span>
-          <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
+          {triggerContent}
         </button>
         {open && (
           <div className="absolute top-full right-0 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20">
@@ -292,10 +308,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
         disabled={disabled}
         className={triggerClass}
       >
-        <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-          {value ? formatDisplay(value) : (placeholder ?? 'Select date')}
-        </span>
-        <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
+        {triggerContent}
       </button>
 
       {dropdown}

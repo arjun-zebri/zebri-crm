@@ -94,13 +94,14 @@ export function BuilderMetaRow({
         />
       ) : null}
 
-      {/* Date — DatePicker already renders its own calendar icon
-          via the native date input, so no leading icon here. */}
+      {/* Date — calendar icon sits on the left to match the
+          couple picker / terms picker icons. */}
       <DatePicker
         value={dateValue ?? ''}
         onChange={(next) => onDateChange(next || null)}
         placeholder={dateLabel}
         disabled={!canEdit}
+        iconPosition="left"
       />
     </div>
   );
@@ -134,20 +135,26 @@ function CouplePicker({
         <button
           type="button"
           disabled={!canEdit}
-          className="inline-flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-body text-text hover:bg-surface-muted transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+          // Fixed width so swapping couples doesn't reflow the row.
+          // Matches the popover width below for visual continuity.
+          className="inline-flex w-56 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-body text-text hover:bg-surface-muted transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
         >
-          <User size={14} strokeWidth={1.5} className="text-text-subtle" />
-          {selectedCoupleName ?? (
-            <span className="text-text-subtle">Select couple</span>
-          )}
-          <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle" />
+          <User size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
+          <span className="flex-1 truncate text-left">
+            {selectedCoupleName ?? (
+              <span className="text-text-subtle">Select couple</span>
+            )}
+          </span>
+          <ChevronDown size={14} strokeWidth={1.5} className="text-text-subtle shrink-0" />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
           align="start"
           sideOffset={4}
-          className="z-[90] w-64 rounded-card border border-border bg-surface shadow-lg p-2 animate-fade-in"
+          // `w-56` matches the trigger so the popover doesn't "jump"
+          // wider than the button.
+          className="z-[90] w-56 rounded-card border border-border bg-surface shadow-lg p-2 animate-fade-in"
         >
           <div className="relative mb-2">
             <Search

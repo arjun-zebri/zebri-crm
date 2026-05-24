@@ -38,11 +38,11 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
   xl: 'max-w-3xl',
   // `2xl` is for medium-wide tables (~960px max) — not yet used.
   '2xl': 'max-w-5xl',
-  // `fullscreen` is intentionally not literally full-screen — it's
-  // a wide two-pane layout (~1280px) that fits the editor + preview
-  // side by side on desktop. Below the lg breakpoint the modal still
-  // stretches to the viewport edges (p-2 on the wrapper).
-  fullscreen: 'max-w-7xl',
+  // `fullscreen` matches the couple-profile overlay dimensions
+  // (90vw / max 1400px / 90vh) so the two top-level overlays feel
+  // like the same surface. Below the sm breakpoint it stretches
+  // to the viewport edges (p-2 on the wrapper).
+  fullscreen: 'sm:w-[90vw] sm:max-w-[1400px]',
 };
 
 export function Modal({
@@ -92,10 +92,11 @@ export function Modal({
       >
         <div
           className={`bg-white rounded-2xl shadow-xl w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
-            // Fullscreen modals lock to 85vh so the size doesn't
-            // shrink while content is loading. Other sizes keep
+            // Fullscreen modals lock to 90vh so the size doesn't
+            // shrink while content is loading. Matches the couple-
+            // profile overlay's vertical sizing. Other sizes keep
             // their max-h behaviour so short modals stay compact.
-            size === 'fullscreen' ? 'h-[85vh]' : 'max-h-[85vh]'
+            size === 'fullscreen' ? 'h-full sm:h-[90vh]' : 'max-h-[85vh]'
           }`}
           onClick={(e) => e.stopPropagation()}
         >

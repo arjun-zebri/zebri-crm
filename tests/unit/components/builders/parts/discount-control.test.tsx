@@ -22,7 +22,7 @@ describe('DiscountControl', () => {
         onValueChange={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /Add discount/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Discount$/i })).toBeInTheDocument();
   });
 
   it('calls onAdd when the link is clicked', async () => {
@@ -38,7 +38,7 @@ describe('DiscountControl', () => {
         onValueChange={noop}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: /Add discount/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^Discount$/i }));
     expect(onAdd).toHaveBeenCalledOnce();
   });
 

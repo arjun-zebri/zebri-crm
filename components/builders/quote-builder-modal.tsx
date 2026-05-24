@@ -627,7 +627,7 @@ export function QuoteBuilderModal({
             }}
             canEdit={canEdit}
             label="Notes & terms"
-            placeholder="Anything you want the couple to see — payment terms, what's included, etc."
+            placeholder="Anything you want the couple to see. Payment terms, what's included, etc."
           />
         </div>
       </BuilderModalShell>
