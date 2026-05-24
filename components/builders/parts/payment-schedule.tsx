@@ -26,6 +26,13 @@ import { useEffect, useState } from 'react';
 import { DatePicker } from '@/components/ui/date-picker';
 import { StatePill } from '@/components/ui/state-pill';
 
+// Shared field styling so the % input + DatePicker + Mark paid
+// button all line up at the same height + corner radius. Matches
+// the DatePicker primitive (`rounded-xl px-3 py-2 text-sm`) so we
+// don't have to override the primitive in this one spot.
+const FIELD_CLS =
+  'h-9 inline-flex items-center rounded-xl border border-border bg-surface px-3 text-sm text-text transition-colors';
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(amount);
 }
@@ -49,6 +56,8 @@ export interface PaymentScheduleProps {
   onFinalDueDateChange: (v: string) => void;
   onMarkDepositPaid: () => void;
   onMarkFinalPaid: () => void;
+  /** Removes the schedule entirely (back to single due-date invoice). */
+  onRemove?: () => void;
   markDepositPending: boolean;
   markFinalPending: boolean;
 }
@@ -67,6 +76,7 @@ export function PaymentSchedule({
   onFinalDueDateChange,
   onMarkDepositPaid,
   onMarkFinalPaid,
+  onRemove,
   markDepositPending,
   markFinalPending,
 }: PaymentScheduleProps) {
@@ -81,11 +91,26 @@ export function PaymentSchedule({
   const depositPaid = Boolean(depositPaidAt);
   const finalPaid = Boolean(finalPaidAt);
 
+  // Removal is only sensible while nothing has been paid — once a
+  // payment is recorded the schedule must stay on the invoice.
+  const canRemove = canEdit && !depositPaid && !finalPaid && Boolean(onRemove);
+
   return (
     <div className="space-y-3">
-      <h4 className="text-caption font-medium uppercase tracking-wide text-text-muted">
-        Payment schedule
-      </h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+          Payment schedule
+        </h4>
+        {canRemove ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-caption text-text-muted hover:text-danger transition-colors cursor-pointer"
+          >
+            Remove schedule
+          </button>
+        ) : null}
+      </div>
 
       <div className="relative pl-7">
         {/* Vertical connector between the two dots */}
@@ -111,7 +136,7 @@ export function PaymentSchedule({
           {/* Editor row — only visible when actionable. */}
           {!depositPaid && canEdit ? (
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-1 rounded-control border border-border bg-surface px-2 py-1">
+              <div className={`${FIELD_CLS} gap-1`}>
                 <input
                   type="number"
                   min={1}
@@ -125,20 +150,17 @@ export function PaymentSchedule({
                     setPercentStr(String(v));
                     onDepositPercentChange(v);
                   }}
-                  className="w-12 bg-transparent text-body text-text tabular-nums focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  aria-label="Deposit percentage"
+                  className="w-10 bg-transparent text-sm text-text tabular-nums focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
-                <span className="text-body text-text-muted">%</span>
+                <span className="text-sm text-text-muted">%</span>
               </div>
-              <DatePicker
-                value={depositDueDate}
-                onChange={onDepositDueDateChange}
-                className="text-body"
-              />
+              <DatePicker value={depositDueDate} onChange={onDepositDueDateChange} />
               <button
                 type="button"
                 onClick={onMarkDepositPaid}
                 disabled={markDepositPending}
-                className="inline-flex items-center gap-1 rounded-control border border-border bg-surface px-2.5 py-1 text-caption text-text-muted hover:text-text hover:bg-surface-muted transition-colors disabled:opacity-50 cursor-pointer"
+                className={`${FIELD_CLS} text-text-muted hover:bg-surface-muted hover:text-text disabled:opacity-50 cursor-pointer`}
               >
                 {markDepositPending ? 'Saving…' : 'Mark paid'}
               </button>
@@ -163,16 +185,12 @@ export function PaymentSchedule({
           >
             {!finalPaid && canEdit && depositPaid ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <DatePicker
-                  value={finalDueDate}
-                  onChange={onFinalDueDateChange}
-                  className="text-body"
-                />
+                <DatePicker value={finalDueDate} onChange={onFinalDueDateChange} />
                 <button
                   type="button"
                   onClick={onMarkFinalPaid}
                   disabled={markFinalPending}
-                  className="inline-flex items-center gap-1 rounded-control border border-border bg-surface px-2.5 py-1 text-caption text-text-muted hover:text-text hover:bg-surface-muted transition-colors disabled:opacity-50 cursor-pointer"
+                  className={`${FIELD_CLS} text-text-muted hover:bg-surface-muted hover:text-text disabled:opacity-50 cursor-pointer`}
                 >
                   {markFinalPending ? 'Saving…' : 'Mark paid'}
                 </button>

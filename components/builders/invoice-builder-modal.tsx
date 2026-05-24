@@ -711,6 +711,12 @@ export function InvoiceBuilderModal({
               }}
               onMarkDepositPaid={() => markDepositPaid.mutate()}
               onMarkFinalPaid={() => markFinalPaid.mutate()}
+              onRemove={() => {
+                setDepositEnabled(false);
+                setDepositDueDate('');
+                setFinalDueDate('');
+                setDirty(true);
+              }}
               markDepositPending={markDepositPaid.isPending}
               markFinalPending={markFinalPaid.isPending}
             />
