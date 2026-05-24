@@ -271,6 +271,34 @@ export function PaymentSettingsSection({
                 </div>
               </ConnectComponentsProvider>
             ) : null}
+
+            {/* Always-visible reset affordance. The status panel's
+                disconnect button is the primary path, but it only
+                renders when the mirror row exists. If the bound
+                Stripe account is stale (created against a different
+                API key, deleted on Stripe's side, etc.) the
+                embedded SDK shows its own "Something went wrong"
+                error and the status panel never loads — leaving
+                the MC stuck. This footer link is the escape hatch:
+                clears `app_metadata.stripe_connect_*` server-side
+                so the section flips back to the empty-state CTA
+                and a fresh account can be created. */}
+            {!connectState && !statusLoading ? (
+              <div className="flex items-center justify-between rounded-card border border-border bg-surface-muted/40 p-3">
+                <p className="text-caption text-text-muted">
+                  Stuck? If the form above shows an error, the connected
+                  Stripe account may be stale. Reset to start fresh.
+                </p>
+                <button
+                  type="button"
+                  onClick={disconnectStripe}
+                  disabled={disconnecting}
+                  className="text-caption font-medium text-text-muted hover:text-danger transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {disconnecting ? 'Resetting…' : 'Reset connection'}
+                </button>
+              </div>
+            ) : null}
           </div>
         )}
       </Section>
