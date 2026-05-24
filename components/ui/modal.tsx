@@ -17,7 +17,9 @@ export function getOpenModalDepth() {
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
+  /** Title slot. Accepts ReactNode so callers can render a mix of
+   *  text + inline components (e.g. document number + state pill). */
+  title?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
   headerActions?: React.ReactNode;
@@ -95,7 +97,11 @@ export function Modal({
           <div
             className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}
           >
-            {title && <h2 className="text-xl font-semibold text-gray-900">{title}</h2>}
+            {title && (
+              <div className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                {title}
+              </div>
+            )}
             <div className={`flex items-center gap-1 ${!title ? 'ml-auto' : ''}`}>
               {headerActions && (
                 <>
