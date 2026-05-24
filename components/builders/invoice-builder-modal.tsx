@@ -511,26 +511,30 @@ export function InvoiceBuilderModal({
 
   // Status-aware contextual CTA in the header.
   let primaryAction: BuilderModalPrimaryAction | undefined;
+  // All "mark paid" actions render in the success variant (lime) —
+  // they're affirmative state transitions, not destructive ones, so
+  // even an overdue invoice gets a success-toned CTA. The status
+  // pill alone communicates the overdue state.
   if (rawStatus === 'sent' && hasDepositSchedule) {
     primaryAction = {
       label: 'Mark deposit paid',
       onClick: () => markDepositPaid.mutate(),
       loading: markDepositPaid.isPending,
+      variant: 'success',
     };
   } else if (rawStatus === 'deposit_paid') {
     primaryAction = {
       label: 'Mark final paid',
       onClick: () => markFinalPaid.mutate(),
       loading: markFinalPaid.isPending,
+      variant: 'success',
     };
   } else if (rawStatus === 'sent' || isOverdue) {
-    // Status pill already signals overdue in danger tone — the action
-    // button stays brand (lime) regardless so the affirmative CTA
-    // doesn't read as a destructive action.
     primaryAction = {
       label: 'Mark paid',
       onClick: () => markPaid.mutate(),
       loading: markPaid.isPending,
+      variant: 'success',
     };
   }
 
@@ -690,43 +694,51 @@ export function InvoiceBuilderModal({
         </div>
 
         {/* Payment schedule — auto-animate swaps between the schedule
-            timeline and the "+ Add payment schedule" affordance. */}
+            timeline and the "+ Add payment schedule" affordance.
+            Each branch is wrapped in a keyed div so auto-animate
+            consistently sees a sibling add/remove on every toggle
+            (without the wrappers, the second toggle skips the
+            animation because the observer doesn't pick up the type
+            change cleanly). */}
         <div ref={scheduleSlotRef} className="mt-8">
           {depositEnabled ? (
-            <PaymentSchedule
-              canEdit={canEdit}
-              depositPercent={depositPercent}
-              depositDueDate={depositDueDate}
-              finalDueDate={finalDueDate}
-              depositPaidAt={invoice?.deposit_paid_at ?? null}
-              finalPaidAt={invoice?.final_paid_at ?? null}
-              depositAmount={depositAmount}
-              finalAmount={finalAmount}
-              onDepositPercentChange={(v) => {
-                setDepositPercent(v);
-                setDirty(true);
-              }}
-              onDepositDueDateChange={(v) => {
-                setDepositDueDate(v);
-                setDirty(true);
-              }}
-              onFinalDueDateChange={(v) => {
-                setFinalDueDate(v);
-                setDirty(true);
-              }}
-              onMarkDepositPaid={() => markDepositPaid.mutate()}
-              onMarkFinalPaid={() => markFinalPaid.mutate()}
-              onRemove={() => {
-                setDepositEnabled(false);
-                setDepositDueDate('');
-                setFinalDueDate('');
-                setDirty(true);
-              }}
-              markDepositPending={markDepositPaid.isPending}
-              markFinalPending={markFinalPaid.isPending}
-            />
+            <div key="schedule">
+              <PaymentSchedule
+                canEdit={canEdit}
+                depositPercent={depositPercent}
+                depositDueDate={depositDueDate}
+                finalDueDate={finalDueDate}
+                depositPaidAt={invoice?.deposit_paid_at ?? null}
+                finalPaidAt={invoice?.final_paid_at ?? null}
+                depositAmount={depositAmount}
+                finalAmount={finalAmount}
+                onDepositPercentChange={(v) => {
+                  setDepositPercent(v);
+                  setDirty(true);
+                }}
+                onDepositDueDateChange={(v) => {
+                  setDepositDueDate(v);
+                  setDirty(true);
+                }}
+                onFinalDueDateChange={(v) => {
+                  setFinalDueDate(v);
+                  setDirty(true);
+                }}
+                onMarkDepositPaid={() => markDepositPaid.mutate()}
+                onMarkFinalPaid={() => markFinalPaid.mutate()}
+                onRemove={() => {
+                  setDepositEnabled(false);
+                  setDepositDueDate('');
+                  setFinalDueDate('');
+                  setDirty(true);
+                }}
+                markDepositPending={markDepositPaid.isPending}
+                markFinalPending={markFinalPaid.isPending}
+              />
+            </div>
           ) : canEdit ? (
             <button
+              key="add-schedule"
               type="button"
               onClick={() => {
                 setDepositEnabled(true);

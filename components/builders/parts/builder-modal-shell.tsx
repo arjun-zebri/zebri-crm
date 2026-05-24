@@ -41,7 +41,7 @@ export interface BuilderModalPrimaryAction {
   /** Loading state propagates to a spinner + disables the button. */
   loading?: boolean | undefined;
   /** Render the button in danger tone (for "Mark paid" on an overdue invoice). */
-  variant?: 'primary' | 'danger' | undefined;
+  variant?: 'primary' | 'danger' | 'success' | undefined;
 }
 
 export interface BuilderModalShellProps {
@@ -122,7 +122,7 @@ export function BuilderModalShell({
           {primaryAction ? (
             <Button
               size="sm"
-              variant={primaryAction.variant === 'danger' ? 'danger' : 'primary'}
+              variant={primaryAction.variant ?? 'primary'}
               onClick={primaryAction.onClick}
               {...(primaryAction.loading ? { loading: true } : {})}
             >

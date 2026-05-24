@@ -164,7 +164,7 @@ export function PaymentSchedule({
                 type="button"
                 onClick={onMarkDepositPaid}
                 disabled={markDepositPending}
-                className="h-9 inline-flex items-center rounded-xl px-3 text-sm font-medium bg-brand-fg text-text-inverse hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
+                className="h-9 inline-flex items-center rounded-xl px-3 text-sm font-medium bg-success text-text-inverse hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {markDepositPending ? 'Saving…' : 'Mark paid'}
               </button>
@@ -198,7 +198,7 @@ export function PaymentSchedule({
                   type="button"
                   onClick={onMarkFinalPaid}
                   disabled={markFinalPending}
-                  className="h-9 inline-flex items-center rounded-xl px-3 text-sm font-medium bg-brand-fg text-text-inverse hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="h-9 inline-flex items-center rounded-xl px-3 text-sm font-medium bg-success text-text-inverse hover:opacity-90 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {markFinalPending ? 'Saving…' : 'Mark paid'}
                 </button>
