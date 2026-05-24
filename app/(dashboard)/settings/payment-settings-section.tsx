@@ -173,12 +173,24 @@ export function PaymentSettingsSection({
       const res = await fetch('/api/stripe/connect/disconnect', {
         method: 'POST',
       });
-      if (!res.ok) throw new Error('disconnect failed');
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          detail?: string;
+        };
+        // Surface the real reason — generic "Could not disconnect"
+        // hides the underlying Supabase / Stripe error and makes
+        // dev debugging impossible.
+        const reason = body.detail ?? body.error ?? `HTTP ${res.status}`;
+        console.error('[settings/payments] disconnect failed', body);
+        throw new Error(reason);
+      }
       setAccountId(null);
       setConnectState(null);
       toast('Stripe disconnected.');
-    } catch {
-      toast('Could not disconnect', 'error');
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : 'unknown';
+      toast(`Could not disconnect: ${reason}`, 'error');
     } finally {
       setDisconnecting(false);
     }

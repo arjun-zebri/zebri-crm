@@ -61,16 +61,31 @@ export async function POST(request: Request) {
     });
   }
 
+  const accountId = stripeConnectAccountId(user);
+  console.warn('[stripe/connect/disconnect] start', {
+    userId: user.id,
+    accountIdFromAppMetadata: accountId ?? null,
+  });
+
+  // Phase: clear the mirror row (if any).
   try {
-    const accountId = stripeConnectAccountId(user);
     if (accountId) {
-      // Preserve the previous binding so a re-connect can rebind
-      // without creating a new Stripe account. The
-      // `account.application.deauthorized` webhook clears it if
-      // the vendor explicitly removes our platform.
       await clearConnectBinding(user.id, { preserveLastAccountId: true });
     }
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : 'unknown';
+    console.error('[stripe/connect/disconnect] clearConnectBinding failed', {
+      userId: user.id,
+      detail,
+    });
+    return NextResponse.json(
+      { error: 'Could not clear connect_accounts row', detail },
+      { status: 500 },
+    );
+  }
 
+  // Phase: clear entitlements in app_metadata.
+  try {
     await updateEntitlements(
       createAdminClient().auth.admin as never,
       user.id,
@@ -79,15 +94,18 @@ export async function POST(request: Request) {
         stripe_connect_enabled: false,
       },
     );
-
-    return NextResponse.json({ ok: true });
   } catch (err) {
+    const detail = err instanceof Error ? err.message : 'unknown';
+    console.error('[stripe/connect/disconnect] updateEntitlements failed', {
+      userId: user.id,
+      detail,
+    });
     return NextResponse.json(
-      {
-        error: 'Could not disconnect',
-        detail: err instanceof Error ? err.message : 'unknown',
-      },
+      { error: 'Could not clear app_metadata entitlements', detail },
       { status: 500 },
     );
   }
+
+  console.warn('[stripe/connect/disconnect] success', { userId: user.id });
+  return NextResponse.json({ ok: true });
 }
