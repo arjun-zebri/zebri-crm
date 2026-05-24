@@ -38,14 +38,16 @@ export function DiscountControl({
   onTypeChange,
   onValueChange,
 }: DiscountControlProps) {
-  // Not configured: show the "+ Add discount" affordance.
+  // Not configured: show the "+ Add discount" affordance as a
+  // dashed-outline pill button — more obviously clickable than a
+  // plain text link.
   if (type === null) {
     return (
       <button
         type="button"
         onClick={onAdd}
         disabled={!canEdit}
-        className="inline-flex items-center gap-1.5 text-body text-text-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="inline-flex items-center gap-1.5 rounded-pill border border-dashed border-border-strong bg-transparent px-3 py-1.5 text-caption font-medium text-text-muted hover:border-text-muted hover:bg-surface-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         <Plus size={14} strokeWidth={1.5} />
         Add discount

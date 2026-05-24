@@ -131,10 +131,9 @@ export function QuoteBuilderModal({
   const [discountValue, setDiscountValue] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [previewCollapsed, setPreviewCollapsed] = useState(false);
 
   /* ─── data ──────────────────────────────────────────────────── */
-  const { data: quote } = useQuery({
+  const { data: quote, isLoading: quoteLoading } = useQuery({
     queryKey: ['quote', effectiveId],
     enabled: !!effectiveId,
     queryFn: async () => {
@@ -444,13 +443,8 @@ export function QuoteBuilderModal({
       onClick: () => convertToInvoice.mutate(),
     });
   }
-  if (effectiveId && canEdit) {
-    overflowItems.push({
-      label: 'Delete quote',
-      danger: true,
-      onClick: () => setConfirmingDelete(true),
-    });
-  }
+  // Delete is surfaced as a dedicated trash icon next to the
+  // overflow menu (passed via `onDelete` below), not as a menu item.
 
   // No contextual primary CTA on quotes — the Send button in the
   // footer is the main action.
@@ -496,6 +490,8 @@ export function QuoteBuilderModal({
         statePill={STATE_PILL[pillKey]}
         primaryAction={primaryAction}
         overflowItems={overflowItems}
+        {...(effectiveId && canEdit ? { onDelete: () => setConfirmingDelete(true), deleteLabel: 'Delete quote' } : {})}
+        loading={!!effectiveId && quoteLoading && !quote}
         title={title}
         onTitleChange={(v) => {
           setTitle(v);
@@ -505,14 +501,7 @@ export function QuoteBuilderModal({
           coupleName ? `Quote for ${coupleName}` : 'Wedding quote title'
         }
         titleReadOnly={!canEdit}
-        previewPane={
-          <BuilderPreviewPane
-            doc={previewDoc}
-            surface="quote"
-            collapsed={previewCollapsed}
-            onToggleCollapsed={setPreviewCollapsed}
-          />
-        }
+        previewPane={<BuilderPreviewPane doc={previewDoc} surface="quote" />}
         footer={
           <ShareAndSend
             dirty={dirty}

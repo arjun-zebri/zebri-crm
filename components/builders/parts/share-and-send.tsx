@@ -7,14 +7,14 @@
  * 3. Fire the templated email (via `onSend`).
  *
  * After first send, the CTA flips to "Resend" + a small "Sent {date}"
- * timestamp underneath. The share link is always inline (collapsed
- * by default — click to expand the URL + copy button).
+ * timestamp underneath. The share link is **always visible** once
+ * the document has been sent — no toggle / dropdown to find it.
  *
  * @module components/builders/parts/share-and-send
  */
 'use client';
 
-import { Check, ChevronDown, ChevronUp, Copy, Link2 } from 'lucide-react';
+import { Check, Copy, Link2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -61,7 +61,6 @@ export function ShareAndSend({
   onSave,
   onSend,
 }: ShareAndSendProps) {
-  const [linkOpen, setLinkOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   function copyLink() {
@@ -77,65 +76,51 @@ export function ShareAndSend({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {/* Share link affordance (left) */}
-      <div className="flex flex-col gap-1">
+      {/* Share link (left) — always visible once enabled */}
+      <div className="flex flex-col gap-1 min-w-0 sm:max-w-md flex-1">
         {shareEnabled && shareUrl ? (
-          <button
-            type="button"
-            onClick={() => setLinkOpen((o) => !o)}
-            className="inline-flex items-center gap-1.5 text-caption text-text-muted hover:text-text transition-colors cursor-pointer self-start"
-          >
-            <Link2 size={12} strokeWidth={1.5} />
-            Share link
-            {linkOpen ? (
-              <ChevronUp size={12} strokeWidth={1.5} />
-            ) : (
-              <ChevronDown size={12} strokeWidth={1.5} />
-            )}
-          </button>
+          <>
+            <div className="flex items-center gap-1.5 rounded-control border border-border bg-surface px-2 py-1">
+              <Link2 size={12} strokeWidth={1.5} className="text-text-subtle shrink-0" />
+              <input
+                readOnly
+                value={shareUrl}
+                className="flex-1 min-w-0 bg-transparent text-caption text-text-muted focus:outline-none"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <button
+                type="button"
+                onClick={copyLink}
+                className="inline-flex shrink-0 items-center gap-1 rounded-control px-1.5 py-0.5 text-caption text-text-muted hover:text-text hover:bg-surface-muted cursor-pointer"
+                aria-label="Copy share link"
+              >
+                {copied ? (
+                  <>
+                    <Check size={11} strokeWidth={1.5} /> Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy size={11} strokeWidth={1.5} /> Copy
+                  </>
+                )}
+              </button>
+            </div>
+            {lastSentAt ? (
+              <span className="text-caption text-text-muted">
+                Sent {formatDateShort(lastSentAt)}
+              </span>
+            ) : null}
+          </>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-caption text-text-subtle self-start">
+          <span className="inline-flex items-center gap-1.5 text-caption text-text-subtle">
             <Link2 size={12} strokeWidth={1.5} />
             Send to enable share link
           </span>
         )}
-
-        {shareEnabled && shareUrl && linkOpen ? (
-          <div className="flex items-center gap-1.5 rounded-control border border-border bg-surface px-2 py-1 max-w-md">
-            <input
-              readOnly
-              value={shareUrl}
-              className="flex-1 bg-transparent text-caption text-text-muted focus:outline-none"
-              onFocus={(e) => e.currentTarget.select()}
-            />
-            <button
-              type="button"
-              onClick={copyLink}
-              className="inline-flex items-center gap-1 rounded-control px-1.5 py-0.5 text-caption text-text-muted hover:text-text hover:bg-surface-muted cursor-pointer"
-              aria-label="Copy share link"
-            >
-              {copied ? (
-                <>
-                  <Check size={11} strokeWidth={1.5} /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy size={11} strokeWidth={1.5} /> Copy
-                </>
-              )}
-            </button>
-          </div>
-        ) : null}
-
-        {lastSentAt ? (
-          <span className="text-caption text-text-muted">
-            Sent {formatDateShort(lastSentAt)}
-          </span>
-        ) : null}
       </div>
 
       {/* Save + Send (right) */}
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         <Button
           variant="secondary"
           onClick={onSave}

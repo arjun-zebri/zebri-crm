@@ -15,9 +15,10 @@ describe('TaxControl', () => {
     expect(screen.getByRole('button', { name: /Apply 10% GST/i })).toBeInTheDocument();
   });
 
-  it('renders "Remove GST" when applied', () => {
+  it('renders the applied-state "GST 10%" pill when applied', () => {
     render(<TaxControl applied canEdit onApply={noop} onRemove={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /Remove GST/i })).toBeInTheDocument();
+    // The applied state shows the GST 10% label as a removable pill.
+    expect(screen.getByRole('button', { name: /GST 10%/i })).toBeInTheDocument();
   });
 
   it('calls onApply when applying', async () => {
@@ -30,7 +31,7 @@ describe('TaxControl', () => {
   it('calls onRemove when removing', async () => {
     const onRemove = vi.fn();
     render(<TaxControl applied canEdit onApply={noop} onRemove={onRemove} />);
-    await userEvent.click(screen.getByRole('button', { name: /Remove GST/i }));
+    await userEvent.click(screen.getByRole('button', { name: /GST 10%/i }));
     expect(onRemove).toHaveBeenCalledOnce();
   });
 

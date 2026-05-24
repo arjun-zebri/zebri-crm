@@ -1,6 +1,6 @@
 /**
  * Unit tests for BuilderPreviewPane — tab switching, branding label,
- * Update branding link, collapse/expand.
+ * Update branding link.
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,8 +9,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-pane';
 import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
 
-// Stub the supabase client + branding hook (the actual hook hits
-// the network; for unit tests we mock the layer).
+// Stub the supabase client (the actual hook hits the network; for
+// unit tests we mock the layer).
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
@@ -56,95 +56,33 @@ function baseDoc(): PreviewDoc {
 
 describe('BuilderPreviewPane', () => {
   it('defaults to the Payment page tab', () => {
-    render(
-      <BuilderPreviewPane
-        doc={baseDoc()}
-        surface="quote"
-        collapsed={false}
-        onToggleCollapsed={vi.fn()}
-      />,
-    );
+    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
     expect(screen.getByTestId('preview-payment-page')).toBeInTheDocument();
   });
 
   it('switches to PDF tab when clicked', async () => {
-    render(
-      <BuilderPreviewPane
-        doc={baseDoc()}
-        surface="quote"
-        collapsed={false}
-        onToggleCollapsed={vi.fn()}
-      />,
-    );
+    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
     await userEvent.click(screen.getByRole('button', { name: /PDF/i }));
     expect(screen.getByTestId('preview-pdf')).toBeInTheDocument();
     expect(screen.queryByTestId('preview-payment-page')).toBeNull();
   });
 
   it('switches to Email tab when clicked', async () => {
-    render(
-      <BuilderPreviewPane
-        doc={baseDoc()}
-        surface="quote"
-        collapsed={false}
-        onToggleCollapsed={vi.fn()}
-      />,
-    );
+    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
     await userEvent.click(screen.getByRole('button', { name: /Email/i }));
     expect(screen.getByTestId('preview-email')).toBeInTheDocument();
   });
 
   it('shows the business name fetched from user_metadata', async () => {
-    render(
-      <BuilderPreviewPane
-        doc={baseDoc()}
-        surface="quote"
-        collapsed={false}
-        onToggleCollapsed={vi.fn()}
-      />,
-    );
+    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
     await waitFor(() => expect(screen.getByText('Acme Weddings')).toBeInTheDocument());
   });
 
   it('renders the "Update branding" link pointing at /branding', () => {
-    render(
-      <BuilderPreviewPane
-        doc={baseDoc()}
-        surface="quote"
-        collapsed={false}
-        onToggleCollapsed={vi.fn()}
-      />,
-    );
+    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
     const link = screen.getByRole('link', { name: /Update branding/i });
     expect(link).toHaveAttribute('href', '/branding');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-  });
-
-  it('calls onToggleCollapsed when the collapse chevron is clicked', async () => {
-    const onToggle = vi.fn();
-    render(
-      <BuilderPreviewPane
-        doc={baseDoc()}
-        surface="quote"
-        collapsed={false}
-        onToggleCollapsed={onToggle}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Hide preview' }));
-    expect(onToggle).toHaveBeenCalledWith(true);
-  });
-
-  it('renders only the expand chevron when collapsed', () => {
-    render(
-      <BuilderPreviewPane
-        doc={baseDoc()}
-        surface="quote"
-        collapsed
-        onToggleCollapsed={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole('button', { name: 'Show preview' })).toBeInTheDocument();
-    expect(screen.queryByText('Preview')).toBeNull();
   });
 });

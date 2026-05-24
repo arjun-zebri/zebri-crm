@@ -91,7 +91,12 @@ export function Modal({
         onClick={onClose}
       >
         <div
-          className={`bg-white rounded-2xl shadow-xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]}`}
+          className={`bg-white rounded-2xl shadow-xl w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
+            // Fullscreen modals lock to 85vh so the size doesn't
+            // shrink while content is loading. Other sizes keep
+            // their max-h behaviour so short modals stay compact.
+            size === 'fullscreen' ? 'h-[85vh]' : 'max-h-[85vh]'
+          }`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header — height ≈ 4rem (py-4 + text-xl content). The

@@ -3,6 +3,10 @@
  * for printing, inside a sandboxed iframe so its styles don't bleed
  * into the modal.
  *
+ * Applies the user's branding (heading/body font, brand colour
+ * accent on totals + table headers, logo) so the preview reflects
+ * what the eventual PDF will look like once they hit Download PDF.
+ *
  * Re-renders whenever the live form state changes. No debounce —
  * the HTML build is pure + cheap; React's batching handles the rest.
  *
@@ -12,16 +16,48 @@
 
 import { useMemo } from 'react';
 
-import { buildPdfHtml, type PdfDocumentData } from '@/lib/pdf/generate-pdf';
+import { googleFontsHref } from '@/lib/branding/fonts';
+import { bodyFontFamily, headingFontFamily } from '@/lib/branding/public-surface';
+import {
+  type BuilderSurface,
+  useCurrentBranding,
+} from '@/lib/branding/use-current-branding';
+import {
+  buildPdfHtml,
+  type PdfBrandingOpts,
+  type PdfDocumentData,
+} from '@/lib/pdf/generate-pdf';
 
 import type { PreviewDoc } from './preview-shared';
 
 export interface PreviewPdfProps {
   doc: PreviewDoc;
+  /** Used to load the right branding (same one the public page
+   *  surfaces use). Quote / Invoice. Default 'quote'. */
+  surface?: BuilderSurface | undefined;
 }
 
-export function PreviewPdf({ doc }: PreviewPdfProps) {
-  const html = useMemo(() => buildPdfHtml(toPdfDoc(doc)), [doc]);
+export function PreviewPdf({ doc, surface = 'quote' }: PreviewPdfProps) {
+  const { branding } = useCurrentBranding(surface);
+
+  const brandingOpts = useMemo<PdfBrandingOpts | undefined>(() => {
+    if (!branding) return undefined;
+    return {
+      brandColor: branding.brand_color,
+      textColor: branding.text_color,
+      mutedColor: branding.muted_color,
+      headingFontFamily: headingFontFamily(branding),
+      bodyFontFamily: bodyFontFamily(branding),
+      fontsHref: googleFontsHref([branding.font_heading, branding.font_body]),
+      ...(branding.logo_url ? { logoUrl: branding.logo_url } : {}),
+    };
+  }, [branding]);
+
+  const html = useMemo(
+    () => buildPdfHtml(toPdfDoc(doc), brandingOpts),
+    [doc, brandingOpts],
+  );
+
   return (
     <iframe
       srcDoc={html}

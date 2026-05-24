@@ -27,7 +27,7 @@ export function TaxControl({ applied, canEdit, onApply, onRemove }: TaxControlPr
         type="button"
         onClick={onApply}
         disabled={!canEdit}
-        className="inline-flex items-center gap-1.5 text-body text-text-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="inline-flex items-center gap-1.5 rounded-pill border border-dashed border-border-strong bg-transparent px-3 py-1.5 text-caption font-medium text-text-muted hover:border-text-muted hover:bg-surface-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         <Plus size={14} strokeWidth={1.5} />
         Apply 10% GST
@@ -35,15 +35,18 @@ export function TaxControl({ applied, canEdit, onApply, onRemove }: TaxControlPr
     );
   }
 
+  // Applied: solid pill with a clear "Remove" affordance. Background
+  // mirrors the success tone of the GST line in the totals so the
+  // visual link is obvious.
   return (
     <button
       type="button"
       onClick={onRemove}
       disabled={!canEdit}
-      className="inline-flex items-center gap-1.5 text-body text-text-muted hover:text-danger transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-surface-muted px-3 py-1.5 text-caption font-medium text-text hover:border-danger hover:text-danger transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
     >
       <X size={14} strokeWidth={1.5} />
-      Remove GST
+      GST 10%
     </button>
   );
 }

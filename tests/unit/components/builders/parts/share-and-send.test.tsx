@@ -54,9 +54,9 @@ describe('ShareAndSend', () => {
     expect(screen.getByText(/Send to enable share link/i)).toBeInTheDocument();
   });
 
-  it('reveals the URL when the share-link affordance is clicked', async () => {
+  it('renders the share URL inline (always visible) when shareEnabled', () => {
     render(<ShareAndSend {...base()} shareEnabled shareUrl="https://x/y" />);
-    await userEvent.click(screen.getByRole('button', { name: /Share link/i }));
+    // No collapse — the URL is shown directly in a readonly input.
     expect(screen.getByDisplayValue('https://x/y')).toBeInTheDocument();
   });
 

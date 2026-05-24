@@ -146,10 +146,9 @@ export function InvoiceBuilderModal({
   const [dirty, setDirty] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [previewCollapsed, setPreviewCollapsed] = useState(false);
 
   /* ─── data ──────────────────────────────────────────────────── */
-  const { data: invoice } = useQuery({
+  const { data: invoice, isLoading: invoiceLoading } = useQuery({
     queryKey: ['invoice', effectiveId],
     enabled: !!effectiveId,
     queryFn: async () => {
@@ -542,13 +541,8 @@ export function InvoiceBuilderModal({
       onClick: () => setConfirmCancel(true),
     });
   }
-  if (effectiveId) {
-    overflowItems.push({
-      label: 'Delete invoice',
-      danger: true,
-      onClick: () => setConfirmDelete(true),
-    });
-  }
+  // Delete is surfaced as a dedicated trash icon (passed via
+  // `onDelete` below), not as a menu item.
 
   // Live preview doc — fed to the right pane on every render so the
   // PDF / Email / Payment-page previews track form edits without a
@@ -584,6 +578,8 @@ export function InvoiceBuilderModal({
         statePill={STATE_PILL[pillKey]}
         primaryAction={primaryAction}
         overflowItems={overflowItems}
+        {...(effectiveId ? { onDelete: () => setConfirmDelete(true), deleteLabel: 'Delete invoice' } : {})}
+        loading={!!effectiveId && invoiceLoading && !invoice}
         title={title}
         onTitleChange={(v) => {
           setTitle(v);
@@ -591,14 +587,7 @@ export function InvoiceBuilderModal({
         }}
         titlePlaceholder={coupleName ? `Invoice for ${coupleName}` : 'Wedding invoice title'}
         titleReadOnly={!canEdit}
-        previewPane={
-          <BuilderPreviewPane
-            doc={previewDoc}
-            surface="invoice"
-            collapsed={previewCollapsed}
-            onToggleCollapsed={setPreviewCollapsed}
-          />
-        }
+        previewPane={<BuilderPreviewPane doc={previewDoc} surface="invoice" />}
         footer={
           <ShareAndSend
             dirty={dirty}

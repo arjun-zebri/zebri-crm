@@ -19,7 +19,7 @@
 'use client';
 
 import * as Popover from '@radix-ui/react-popover';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Trash2 } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,12 @@ export interface BuilderModalShellProps {
   /** Items in the ⋯ overflow menu. Omit when the menu is empty (or
    *  when only `primaryAction` is offered). */
   overflowItems?: OverflowMenuItem[] | undefined;
+  /** Click handler for the dedicated trash-icon button in the
+   *  header. Surfaced separately from the overflow menu so deleting
+   *  is one click + visible — not buried behind a ⋯. */
+  onDelete?: (() => void) | undefined;
+  /** Label for the delete button's aria-label / tooltip. */
+  deleteLabel?: string | undefined;
   /** The big editable title that lives at the top of the modal body. */
   title: string;
   /** Updates while the user types the title. */
@@ -74,6 +80,11 @@ export interface BuilderModalShellProps {
    *  the right. Below `lg:` the preview becomes a collapsible
    *  section below the form. */
   previewPane?: ReactNode | undefined;
+  /** When true: render skeleton placeholders in place of the form
+   *  body + the preview pane while the parent is fetching. Modal
+   *  shell, title bar, and footer stay rendered so the modal's
+   *  size doesn't change while loading. */
+  loading?: boolean | undefined;
 }
 
 export function BuilderModalShell({
@@ -90,6 +101,9 @@ export function BuilderModalShell({
   children,
   footer,
   previewPane,
+  onDelete,
+  deleteLabel = 'Delete',
+  loading = false,
 }: BuilderModalShellProps) {
   const twoPane = Boolean(previewPane);
   return (
@@ -115,6 +129,17 @@ export function BuilderModalShell({
               {primaryAction.label}
             </Button>
           ) : null}
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={deleteLabel}
+              title={deleteLabel}
+              className="p-1.5 text-text-muted hover:text-danger transition cursor-pointer rounded-control"
+            >
+              <Trash2 size={18} strokeWidth={1.5} />
+            </button>
+          ) : null}
           {overflowItems && overflowItems.length > 0 ? (
             <OverflowMenu items={overflowItems} />
           ) : null}
@@ -133,13 +158,15 @@ export function BuilderModalShell({
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
               placeholder={titlePlaceholder}
-              readOnly={titleReadOnly}
-              disabled={titleReadOnly}
+              readOnly={titleReadOnly || loading}
+              disabled={titleReadOnly || loading}
               className="w-full bg-transparent text-section font-semibold text-text placeholder:text-text-subtle focus:outline-none disabled:opacity-70"
             />
-            <div className="mt-6 flex-1">{children}</div>
+            <div className="mt-6 flex-1">{loading ? <EditorSkeleton /> : children}</div>
           </div>
-          <div className="min-w-0 min-h-[60vh] lg:min-h-0">{previewPane}</div>
+          <div className="min-w-0 min-h-[60vh] lg:min-h-0">
+            {loading ? <PreviewSkeleton /> : previewPane}
+          </div>
         </div>
       ) : (
         // Single-column layout (legacy callers).
@@ -149,14 +176,79 @@ export function BuilderModalShell({
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder={titlePlaceholder}
-            readOnly={titleReadOnly}
-            disabled={titleReadOnly}
+            readOnly={titleReadOnly || loading}
+            disabled={titleReadOnly || loading}
             className="w-full bg-transparent text-section font-semibold text-text placeholder:text-text-subtle focus:outline-none disabled:opacity-70"
           />
-          <div className="mt-6">{children}</div>
+          <div className="mt-6">{loading ? <EditorSkeleton /> : children}</div>
         </>
       )}
     </Modal>
+  );
+}
+
+/* ─── Loading skeletons ────────────────────────────────────────── */
+
+function EditorSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Meta row */}
+      <div className="flex gap-2">
+        <div className="h-8 w-40 rounded-control bg-surface-muted" />
+        <div className="h-8 w-32 rounded-control bg-surface-muted" />
+      </div>
+      {/* Items header */}
+      <div className="space-y-2">
+        <div className="h-9 w-full rounded-card bg-surface-muted" />
+        <div className="h-12 w-full rounded-card bg-surface-muted/60" />
+        <div className="h-12 w-full rounded-card bg-surface-muted/60" />
+        <div className="h-12 w-full rounded-card bg-surface-muted/60" />
+      </div>
+      {/* Discount + tax + totals */}
+      <div className="flex justify-between gap-4">
+        <div className="flex gap-2">
+          <div className="h-7 w-24 rounded-pill bg-surface-muted" />
+          <div className="h-7 w-28 rounded-pill bg-surface-muted" />
+        </div>
+        <div className="w-48 space-y-2">
+          <div className="h-3 w-full rounded bg-surface-muted" />
+          <div className="h-3 w-full rounded bg-surface-muted" />
+          <div className="h-4 w-full rounded bg-surface-muted" />
+        </div>
+      </div>
+      {/* Notes */}
+      <div className="space-y-2">
+        <div className="h-3 w-16 rounded bg-surface-muted" />
+        <div className="h-24 w-full rounded-card bg-surface-muted/60" />
+      </div>
+    </div>
+  );
+}
+
+function PreviewSkeleton() {
+  return (
+    <div className="flex h-full flex-col gap-3 rounded-card border border-border bg-surface-muted/40 p-3 animate-pulse">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <div className="h-6 w-24 rounded bg-surface-muted" />
+        <div className="h-7 w-60 rounded-card bg-surface" />
+      </div>
+      <div className="h-3 w-40 rounded bg-surface-muted" />
+      {/* Document body placeholder */}
+      <div className="flex-1 rounded-card border border-border bg-surface p-6 space-y-4">
+        <div className="h-5 w-32 rounded bg-surface-muted" />
+        <div className="space-y-2">
+          <div className="h-3 w-full rounded bg-surface-muted/60" />
+          <div className="h-3 w-3/4 rounded bg-surface-muted/60" />
+        </div>
+        <div className="h-px w-full bg-border" />
+        <div className="space-y-2">
+          <div className="h-3 w-full rounded bg-surface-muted/60" />
+          <div className="h-3 w-full rounded bg-surface-muted/60" />
+          <div className="h-3 w-2/3 rounded bg-surface-muted/60" />
+        </div>
+      </div>
+    </div>
   );
 }
 

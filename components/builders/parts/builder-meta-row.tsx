@@ -14,7 +14,7 @@
 'use client';
 
 import * as Popover from '@radix-ui/react-popover';
-import { Calendar, ChevronDown, Search, User } from 'lucide-react';
+import { ChevronDown, Search, User } from 'lucide-react';
 import { useState } from 'react';
 
 import { DatePicker } from '@/components/ui/date-picker';
@@ -94,17 +94,14 @@ export function BuilderMetaRow({
         />
       ) : null}
 
-      {/* Date */}
-      <div className="inline-flex items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5">
-        <Calendar size={14} strokeWidth={1.5} className="text-text-subtle" />
-        <DatePicker
-          value={dateValue ?? ''}
-          onChange={(next) => onDateChange(next || null)}
-          placeholder={dateLabel}
-          disabled={!canEdit}
-          className="border-0 bg-transparent p-0 text-body text-text focus:ring-0"
-        />
-      </div>
+      {/* Date — DatePicker already renders its own calendar icon
+          via the native date input, so no leading icon here. */}
+      <DatePicker
+        value={dateValue ?? ''}
+        onChange={(next) => onDateChange(next || null)}
+        placeholder={dateLabel}
+        disabled={!canEdit}
+      />
     </div>
   );
 }
