@@ -1,29 +1,29 @@
 /**
- * Settings → Payments tab.
+ * Settings → Receive Payments tab.
  *
- * Two sections:
+ * Document-style composition matching the Plans & Billing tab — small
+ * UPPERCASE section labels + thin dividers, no nested bordered cards
+ * for top-level layout. Two sections:
  *
  * 1. **Bank details** — auto-filled into invoice notes. Stored in
- *    `user_metadata` (not trust-level entitlement data — safe to be
- *    user-writable).
+ *    `user_metadata`. The Save button lives at the section footer
+ *    (right-aligned), not in the middle of the form.
  *
- * 2. **Card payments via Stripe Connect** — Phase 2D.1 redesign.
- *    Replaces the old "Connect Stripe" → redirect-to-Stripe flow
- *    with Stripe's embedded Connect components rendered inline.
+ * 2. **Card payments via Stripe Connect** — Phase 2D.1. Mounts the
+ *    Stripe embedded Connect components (`<ConnectAccountOnboarding>`
+ *    / `<ConnectAccountManagement>` + `<ConnectNotificationBanner>`)
+ *    inline. The MC never leaves Zebri.
  *
- *    Flow:
- *    - First time → "Set up card payments" button POSTs to
- *      `/api/stripe/connect`, which creates the Express account
- *      (or re-binds `last_account_id`) and seeds the mirror row.
- *    - Account bound → mount `<ConnectAccountOnboarding>` until
- *      `chargesEnabled` is true, then swap to
- *      `<ConnectAccountManagement>`.
- *    - Always mount `<ConnectNotificationBanner>` so Stripe's
- *      verification + identity prompts surface inline.
+ *    Three UI states once an account is bound:
+ *    - **Status panel loaded** → shows capabilities + requirements
+ *      from `connect_accounts`.
+ *    - **Embedded SDK ready** → shows the appropriate onboarding /
+ *      management component below the panel.
+ *    - **Publishable key missing** → shows a clear error explaining
+ *      the env-var gap so dev setups don't render an empty section.
  *
- *    The disconnect button now hits `/api/stripe/connect/disconnect`
- *    (server action) instead of writing to `user_metadata` directly
- *    — closes the §7.4 hole.
+ *    Disconnect routes through `/api/stripe/connect/disconnect` —
+ *    the §7.4 client-side `user_metadata` write is closed.
  *
  * @module app/(dashboard)/settings/payment-settings-section
  */
@@ -37,9 +37,11 @@ import {
   ConnectComponentsProvider,
   ConnectNotificationBanner,
 } from '@stripe/react-connect-js';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, CreditCard } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { ConnectStatusPanel } from '@/components/settings/connect-status-panel';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import type { ConnectAccountState } from '@/lib/payments/connect-account';
 import { createClient } from '@/lib/supabase/client';
@@ -70,9 +72,6 @@ export function PaymentSettingsSection({
   const [bankSaving, setBankSaving] = useState(false);
 
   /* ─── Connect state ─────────────────────────────────────────── */
-  // Local mirror of the bound account id — flips after the kickoff
-  // call so the embedded components can mount on the next render
-  // without a full reload.
   const [accountId, setAccountId] = useState<string | null>(
     stripeConnectAccountId,
   );
@@ -83,9 +82,6 @@ export function PaymentSettingsSection({
   const [kicking, setKicking] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  // Re-fetch status on mount + whenever the bound accountId changes
-  // (kickoff or disconnect). Webhook-driven changes during the
-  // session need a manual refresh today — fine for v1.
   const refreshStatus = useCallback(async () => {
     setStatusLoading(true);
     const res = await fetch('/api/stripe/connect/status');
@@ -102,18 +98,13 @@ export function PaymentSettingsSection({
     }
   }, [accountId, refreshStatus]);
 
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
   /* ─── Stripe Connect SDK instance ───────────────────────────── */
-  // `loadConnectAndInitialize` is idempotent per `publishableKey`
-  // but the SDK warns when called more than once on the same page.
-  // useMemo keeps a single instance for the lifetime of this
-  // component. The `fetchClientSecret` callback hits our route on
-  // every embedded-component render — sessions are short-lived.
   const connectInstance: StripeConnectInstance | null = useMemo(() => {
-    if (!accountId) return null;
-    const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-    if (!pk) return null;
+    if (!accountId || !publishableKey) return null;
     return loadConnectAndInitialize({
-      publishableKey: pk,
+      publishableKey,
       fetchClientSecret: async () => {
         const res = await fetch('/api/stripe/connect/account-session', {
           method: 'POST',
@@ -124,9 +115,6 @@ export function PaymentSettingsSection({
         };
         return client_secret;
       },
-      // Light theming so the embedded components feel native. The
-      // primary colour matches the brand-fg token; radii match
-      // `rounded-control`.
       appearance: {
         variables: {
           colorPrimary: '#000000',
@@ -135,9 +123,9 @@ export function PaymentSettingsSection({
         },
       },
     });
-  }, [accountId]);
+  }, [accountId, publishableKey]);
 
-  /* ─── Bank details save (unchanged from previous design) ────── */
+  /* ─── Bank details save ─────────────────────────────────────── */
   const saveBankDetails = async () => {
     setBankSaving(true);
     const {
@@ -171,6 +159,7 @@ export function PaymentSettingsSection({
       if (!res.ok) throw new Error('kickoff failed');
       const { accountId: newId } = (await res.json()) as { accountId: string };
       setAccountId(newId);
+      toast('Stripe account created — complete the verification below.');
     } catch {
       toast('Could not start Stripe setup', 'error');
     } finally {
@@ -195,20 +184,15 @@ export function PaymentSettingsSection({
     }
   };
 
-  /* ─── Render ────────────────────────────────────────────────── */
-  // The fully-charged "card payments work" state — `chargesEnabled`
-  // is the cheap-read flag flipped by the `account.updated` webhook
-  // once Stripe finishes verifying the account. `stripeConnectEnabled`
-  // is the legacy mirror of the same flag in `app_metadata`; we
-  // prefer the live mirror when it's loaded.
-  const live = connectState?.chargesEnabled ?? stripeConnectEnabled;
+  // `charges_enabled` flag from the live mirror. Falls back to the
+  // server-managed entitlement bool when the mirror hasn't loaded yet.
+  const chargesLive = connectState?.chargesEnabled ?? stripeConnectEnabled;
 
   return (
-    <div className="max-w-2xl space-y-8">
-      {/* Bank details */}
-      <div>
-        <h2 className="text-xl font-semibold text-text mb-1">Bank details</h2>
-        <p className="text-sm text-text-muted mb-5">
+    <div className="max-w-3xl space-y-12">
+      {/* ─── Bank details ─────────────────────────────────────── */}
+      <Section label="Bank details">
+        <p className="mb-5 text-body text-text-muted">
           Auto-filled into invoice notes when you create a new invoice.
         </p>
         <div className="space-y-4">
@@ -230,39 +214,30 @@ export function PaymentSettingsSection({
             value={bankAccountNumber}
             onChange={setBankAccountNumber}
           />
-          <button
-            type="button"
-            onClick={saveBankDetails}
-            disabled={bankSaving}
-            className="px-4 py-2 bg-brand-fg text-text-inverse text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition cursor-pointer"
-          >
-            {bankSaving ? 'Saving…' : 'Save bank details'}
-          </button>
         </div>
-      </div>
+        <div className="mt-5 flex justify-end">
+          <Button onClick={saveBankDetails} loading={bankSaving}>
+            Save bank details
+          </Button>
+        </div>
+      </Section>
 
-      <hr className="border-border" />
-
-      {/* Stripe Connect */}
-      <div>
-        <h2 className="text-xl font-semibold text-text mb-1">Card payments</h2>
-        <p className="text-sm text-text-muted mb-5">
+      {/* ─── Card payments ───────────────────────────────────── */}
+      <Section label="Card payments">
+        <p className="mb-5 text-body text-text-muted">
           Accept credit-card payments on invoices. Stripe handles
           verification + payouts; everything happens inside Zebri.
         </p>
 
         {!accountId ? (
-          <button
-            type="button"
-            onClick={startOnboarding}
-            disabled={kicking}
-            className="inline-flex px-4 py-2 bg-brand-fg text-text-inverse text-sm font-medium rounded-xl hover:opacity-90 disabled:opacity-50 transition cursor-pointer"
-          >
-            {kicking ? 'Setting up…' : 'Set up card payments'}
-          </button>
+          <EmptyCardPaymentsCard
+            onSetUp={startOnboarding}
+            loading={kicking}
+          />
+        ) : !publishableKey ? (
+          <PublishableKeyMissingCard />
         ) : (
           <div className="space-y-4">
-            {/* Status panel — always rendered once a connection exists. */}
             {connectState ? (
               <ConnectStatusPanel
                 state={connectState}
@@ -270,29 +245,25 @@ export function PaymentSettingsSection({
                 disconnecting={disconnecting}
               />
             ) : statusLoading ? (
-              <div className="rounded-card border border-border bg-surface p-4 text-sm text-text-muted">
+              <div className="rounded-card border border-border bg-surface p-4 text-body text-text-muted">
                 Loading account status…
               </div>
             ) : null}
 
-            {/* Embedded Stripe components. Wrapped in a single
-                ConnectComponentsProvider so all three share the
-                same instance. */}
             {connectInstance ? (
               <ConnectComponentsProvider connectInstance={connectInstance}>
                 <div className="rounded-card border border-border bg-surface p-4 space-y-3">
                   <ConnectNotificationBanner />
-                  {live ? (
+                  {chargesLive ? (
                     <ConnectAccountManagement />
                   ) : (
                     <ConnectAccountOnboarding
                       onExit={() => {
                         // Re-fetch our mirror — the embedded SDK
                         // doesn't proactively notify us when the
-                        // user closes the flow; the webhook is
-                        // the durable signal but a manual refresh
-                        // here closes the gap if the webhook is
-                        // delayed.
+                        // user closes the flow; the webhook is the
+                        // durable signal but a manual refresh here
+                        // closes the gap if the webhook is delayed.
                         void refreshStatus();
                       }}
                     />
@@ -302,8 +273,29 @@ export function PaymentSettingsSection({
             ) : null}
           </div>
         )}
-      </div>
+      </Section>
     </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────── */
+
+/**
+ * Document-style section header — matches the Billing tab pattern
+ * (small UPPERCASE label on the left + a thin divider line filling
+ * the rest of the row).
+ */
+function Section({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section>
+      <div className="mb-6 flex items-center gap-4">
+        <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+          {label}
+        </h3>
+        <div className="flex-1 border-t border-border" />
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -320,14 +312,83 @@ function BankField({
 }) {
   return (
     <div>
-      <label className="block text-sm text-text mb-1">{label}</label>
+      <label className="block text-body text-text mb-1.5">{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full border border-border rounded-xl px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
+        className="w-full border border-border rounded-xl px-3 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
       />
+    </div>
+  );
+}
+
+/**
+ * The "no Stripe account yet" hero card. Mirrors the layout language
+ * of CurrentPlanCard on the Billing tab — a single rounded surface
+ * with an icon, a one-line value prop, and a primary CTA.
+ */
+function EmptyCardPaymentsCard({
+  onSetUp,
+  loading,
+}: {
+  onSetUp: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="rounded-card border border-border bg-surface p-5">
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-surface-muted">
+          <CreditCard
+            size={18}
+            strokeWidth={1.5}
+            className="text-text-muted"
+          />
+        </div>
+        <div className="flex-1">
+          <p className="text-body font-medium text-text">
+            Set up card payments
+          </p>
+          <p className="mt-1 text-caption text-text-muted">
+            Connect a Stripe account so couples can pay invoices by card.
+            Verification happens inside Zebri — Stripe handles ID checks,
+            documents, and payouts.
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 flex justify-end">
+        <Button onClick={onSetUp} loading={loading}>
+          {loading ? 'Setting up…' : 'Set up card payments'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Dev-config error UI — shown when an MC has a connected Stripe
+ * account but the embedded SDK can't initialise because
+ * NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY isn't set. Without this
+ * fallback the section would silently render empty.
+ */
+function PublishableKeyMissingCard() {
+  return (
+    <div className="flex items-start gap-3 rounded-card border border-warning/40 bg-warning/5 p-4">
+      <AlertTriangle
+        size={18}
+        strokeWidth={1.5}
+        className="shrink-0 text-warning mt-0.5"
+      />
+      <div className="text-body text-text">
+        <p className="font-medium">Stripe publishable key missing</p>
+        <p className="mt-1 text-caption text-text-muted">
+          The embedded Connect onboarding component needs
+          <code className="font-mono px-1">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>
+          in your <code className="font-mono">.env.local</code>. Set it and
+          reload — the onboarding form will mount here.
+        </p>
+      </div>
     </div>
   );
 }
