@@ -18,6 +18,8 @@
  */
 'use client';
 
+import { useAutoAnimate } from '@formkit/auto-animate/react';
+
 import {
   type PublicDocData,
   PublicBlockRenderer,
@@ -43,6 +45,10 @@ export interface PreviewPaymentPageProps {
 export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
   const { branding, blocks, loading } = useCurrentBranding(surface);
   useBrandingHead(branding);
+  // Auto-animate the block stack so block-level changes (e.g. the
+  // action block appearing / disappearing when the MC toggles
+  // "Accept card payments") glide instead of snapping.
+  const [blockStackRef] = useAutoAnimate<HTMLDivElement>();
 
   if (loading || !branding) {
     return (
@@ -81,6 +87,7 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
       }}
     >
       <div
+        ref={blockStackRef}
         className="mx-auto"
         style={{
           maxWidth: 640,
