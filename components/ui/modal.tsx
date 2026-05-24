@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useEffect } from 'react';
 
 // Tracks how many Modal instances are currently open so only the topmost
 // one responds to Escape - prevents nested modals from closing their parent.
@@ -23,7 +23,7 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   headerActions?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'fullscreen';
   nested?: boolean;
   /** Drop the body's default bottom padding so children can bleed
    *  to the modal's rounded bottom edge. Used by full-bleed tables
@@ -36,6 +36,13 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-3xl',
+  // `2xl` is for medium-wide tables (~960px max) — not yet used.
+  '2xl': 'max-w-5xl',
+  // `fullscreen` is intentionally not literally full-screen — it's
+  // a wide two-pane layout (~1280px) that fits the editor + preview
+  // side by side on desktop. Below the lg breakpoint the modal still
+  // stretches to the viewport edges (p-2 on the wrapper).
+  fullscreen: 'max-w-7xl',
 };
 
 export function Modal({
@@ -49,8 +56,6 @@ export function Modal({
   nested = false,
   flushBottom = false,
 }: ModalProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
   useEffect(() => {
     if (!isOpen) return;
     _openModalDepth++;

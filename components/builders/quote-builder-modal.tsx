@@ -35,12 +35,14 @@ import {
   BuilderModalShell,
   type OverflowMenuItem,
 } from '@/components/builders/parts/builder-modal-shell';
+import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-pane';
 import { DiscountControl } from '@/components/builders/parts/discount-control';
 import {
   type LineItem,
   LineItemsTable,
 } from '@/components/builders/parts/line-items-table';
 import { NotesField } from '@/components/builders/parts/notes-field';
+import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { TaxControl } from '@/components/builders/parts/tax-control';
 import {
@@ -129,6 +131,7 @@ export function QuoteBuilderModal({
   const [discountValue, setDiscountValue] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [previewCollapsed, setPreviewCollapsed] = useState(false);
 
   /* ─── data ──────────────────────────────────────────────────── */
   const { data: quote } = useQuery({
@@ -460,6 +463,30 @@ export function QuoteBuilderModal({
     itemCount: templates?.items[t.id]?.length ?? 0,
   }));
 
+  // Live preview doc — re-derived on every render from the local
+  // form state so the right pane updates without a save round-trip.
+  const previewDoc: PreviewDoc = {
+    kind: 'quote',
+    documentNumber: quote?.quote_number ?? 'DRAFT',
+    title: title || 'Wedding Quote',
+    status,
+    coupleName,
+    businessName: null, // hydrated by the preview pane itself from user_metadata
+    items: items.map((item) => ({
+      id: item.id,
+      description: item.description,
+      amount: Number(item.amount || 0),
+    })),
+    taxRate: taxEnabled ? 10 : 0,
+    discount:
+      discountType && discountValue != null && discountValue > 0
+        ? { type: discountType, value: discountValue }
+        : null,
+    notes: notes || null,
+    expiresAt: expiresAt,
+    shareUrl: shareUrl ?? `https://example.com/quote/${quote?.share_token ?? 'preview'}`,
+  };
+
   return (
     <>
       <BuilderModalShell
@@ -478,6 +505,14 @@ export function QuoteBuilderModal({
           coupleName ? `Quote for ${coupleName}` : 'Wedding quote title'
         }
         titleReadOnly={!canEdit}
+        previewPane={
+          <BuilderPreviewPane
+            doc={previewDoc}
+            surface="quote"
+            collapsed={previewCollapsed}
+            onToggleCollapsed={setPreviewCollapsed}
+          />
+        }
         footer={
           <ShareAndSend
             dirty={dirty}

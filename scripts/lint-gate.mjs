@@ -34,7 +34,9 @@ const ERROR_BUDGET = 78;
 // management + couples-page autofix sweep). Phase 2C
 // (/payments page decomposition) dropped another 11: 607 → 596.
 // Phase 2C.2 (builder modal decomposition): 596 → 559.
-const WARNING_BUDGET = 559;
+// Phase 2C.2 two-pane preview: 559 → 557 (cleaned up unused
+// useRef + import-order in components/ui/modal.tsx).
+const WARNING_BUDGET = 557;
 
 function runEslintJson() {
   try {

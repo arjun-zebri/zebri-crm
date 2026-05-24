@@ -95,6 +95,11 @@ changes; the parent modals own the actual form state + mutations.
 | `share-and-send.tsx` | Footer: share-link affordance + Save + primary "Send to couple" CTA |
 | `payment-schedule.tsx` | Vertical-timeline schedule for invoices (deposit ┊ final) |
 | `template-picker.tsx` | Quote templates — empty-state card + inline popover variants |
+| `builder-preview-pane.tsx` | Right pane: PDF / Email / Payment page tabs + "Update branding" link (Phase 2C.2 redesign) |
+| `preview-pdf.tsx` | PDF preview — renders `buildPdfHtml()` output in a sandboxed iframe |
+| `preview-email.tsx` | Email preview — `From/To/Subject` envelope + `quoteHtml()`/`invoiceHtml()` body in a sandboxed iframe |
+| `preview-payment-page.tsx` | Payment-page preview — uses `PublicBlockRenderer` with `useCurrentBranding(surface)` for pixel-faithful render |
+| `preview-shared.ts` | The `PreviewDoc` shape the parent modals pass into every preview tab |
 
 All parts are ≤200 LOC, TSDoc'd, and unit-tested under
 `tests/unit/components/builders/parts/*.test.tsx`.

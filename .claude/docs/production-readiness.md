@@ -4,6 +4,44 @@
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
 
+### Builder modal two-pane redesign (Phase 2C.2 — second pass)
+
+Mid-PR pivot: the user requested a two-pane layout (editor left,
+live preview right with PDF / Email / Payment-page tabs) instead
+of the single-column document-style layout from the first pass.
+All the decomposition work from the first pass stays — the parts
+are now the LEFT-pane editor — and the preview pane is built on
+top.
+
+- **Two-pane Modal** — new `'fullscreen'` size variant
+  (`max-w-7xl`). Below the `lg:` breakpoint (1024px) panes stack
+  vertically with the preview collapsible. Existing modals keep
+  their previous sizes via backward-compat.
+- **`builder-preview-pane`** — right-pane orchestrator. Three
+  tabs: PDF, Email, Payment page. "Branded as {Business Name} ·
+  Update branding ↗" link in the header opens `/branding` in a
+  new tab.
+- **Three preview renderers**:
+  - `preview-pdf` — refactored `buildPdfHtml()` export from
+    `lib/pdf/generate-pdf` reused in a sandboxed iframe.
+  - `preview-email` — `From/To/Subject` envelope + `quoteHtml()` /
+    `invoiceHtml()` body in a sandboxed iframe.
+  - `preview-payment-page` — full `PublicBlockRenderer` with
+    branded fonts, colors, density, and block tree. Pixel-faithful.
+- **`useCurrentBranding(surface)`** — new lib hook at
+  `lib/branding/use-current-branding`. Fetches the user's
+  `user_metadata` + `user_branding.branding_blocks`, assembles a
+  `PublicBranding` object the renderer consumes. Falls back to
+  the Minimal theme. `buildPublicBranding(metadata)` is pure +
+  exported for tests.
+- **Re-uses existing infra**: `PublicBlockRenderer`,
+  `useBrandingHead`, theme presets, density padding, font stacks.
+  No new branding system invented.
+- **+13 new unit tests** — 7 for `builder-preview-pane` (tab
+  switching + collapse + Update branding link), 6 for
+  `buildPublicBranding` (theme fallback + sanitisation).
+- Ratchets: strict 288/288 held; lint warnings 559 → 557.
+
 ### Builder modal decomposition + UI redesign (Phase 2C.2)
 
 The Quote + Invoice builder modals — the biggest files in the

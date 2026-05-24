@@ -576,13 +576,28 @@ Table Columns (matching couples/vendors style):
 
 ## Modals
 
-Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phase 2C.2** redesigned both into a calm, document-style layout composed from `components/builders/parts/*` shared subcomponents.
+Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phase 2C.2** redesigned both into a **two-pane layout**: edit form on the left, live preview on the right. The modal uses the `fullscreen` size (`max-w-7xl`) on desktop; below the `lg:` breakpoint (1024px) the panes stack vertically with the preview as a collapsible section below the form.
 
 ### Shared shell (`builder-modal-shell.tsx`)
 - Top of the modal: document number (e.g. `Q-001` / `INV-001`) + inline `StatePill` (the same tonal pill used on the Billing tab).
 - Right side of the header: status-aware contextual primary CTA + `⋯` overflow menu for destructive / revert actions.
 - Body: hero title input (large unbordered text — Notion-style) followed by the composed parts.
-- Footer: `share-and-send` row (link affordance + Save + primary Send to couple).
+- Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple).
+- New `previewPane` prop carries the right-side preview content. When provided, the shell switches to a 2-column grid (`grid-cols-1 lg:grid-cols-2`) and the modal upgrades to `fullscreen` size.
+
+### Preview pane (`builder-preview-pane.tsx`)
+- Header row: `<` collapse toggle + "Preview ⓘ" + tabs (PDF · Email · Payment page).
+- Sub-header: "Branded as {Business Name} · Update branding ↗" — the link opens `/branding` in a new tab so the user can tweak + come back without losing the modal.
+- Three tabs, each rendering live (the form state flows directly into the preview every render):
+  - **PDF**: `<PreviewPdf>` — renders the same HTML that `buildPdfHtml()` produces for the print dialog, inside a sandboxed iframe.
+  - **Email**: `<PreviewEmail>` — `From/To/Subject` envelope above a sandboxed iframe carrying the templated email body (`quoteHtml()` / `invoiceHtml()` from `@/lib/email`).
+  - **Payment page**: `<PreviewPaymentPage>` — uses the same `PublicBlockRenderer` the public `/quote/[token]` and `/invoice/[token]` routes use, fed by `useCurrentBranding(surface)`. Pixel-faithful preview of what the couple sees.
+- The pane is collapsible — clicking the `<` chevron toggles a slim vertical bar with a `>` chevron to expand again. Useful when the MC wants to focus on just the form.
+
+### Branding integration (`useCurrentBranding`)
+- New hook at `lib/branding/use-current-branding.ts` fetches the user's branding from `user_metadata` + the `user_branding` table, assembles a `PublicBranding`-shaped object the renderer consumes.
+- Falls back to the `minimal` theme preset for any unset fields.
+- `buildPublicBranding(metadata)` is pure + exported for tests.
 
 ### `QuoteBuilderModal`
 - Meta row: couple picker + expiry date.

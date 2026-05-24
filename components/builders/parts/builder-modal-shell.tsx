@@ -68,6 +68,12 @@ export interface BuilderModalShellProps {
   children: ReactNode;
   /** Sticky footer row (share + save + send). */
   footer: ReactNode;
+  /** Optional right-pane preview (Phase 2C.2). When provided, the
+   *  modal switches to a two-column grid on `lg:` and `fullscreen`
+   *  modal size — the form takes the left column, the preview takes
+   *  the right. Below `lg:` the preview becomes a collapsible
+   *  section below the form. */
+  previewPane?: ReactNode | undefined;
 }
 
 export function BuilderModalShell({
@@ -83,12 +89,14 @@ export function BuilderModalShell({
   titleReadOnly = false,
   children,
   footer,
+  previewPane,
 }: BuilderModalShellProps) {
+  const twoPane = Boolean(previewPane);
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      size="xl"
+      size={twoPane ? 'fullscreen' : 'xl'}
       title={
         <>
           <span className="text-text">{documentNumber}</span>
@@ -114,19 +122,40 @@ export function BuilderModalShell({
       }
       footer={footer}
     >
-      {/* Hero title input — large unbordered text field at the top
-          of the modal body. Click/tab away commits the value (it's
-          saved with the rest of the form). */}
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => onTitleChange(e.target.value)}
-        placeholder={titlePlaceholder}
-        readOnly={titleReadOnly}
-        disabled={titleReadOnly}
-        className="w-full bg-transparent text-section font-semibold text-text placeholder:text-text-subtle focus:outline-none disabled:opacity-70"
-      />
-      <div className="mt-6">{children}</div>
+      {twoPane ? (
+        // Two-pane layout: editor on the left (lg:col-1), preview
+        // on the right (lg:col-2). Below the lg breakpoint they
+        // stack vertically — preview comes after the form.
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 h-full">
+          <div className="flex flex-col min-w-0">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => onTitleChange(e.target.value)}
+              placeholder={titlePlaceholder}
+              readOnly={titleReadOnly}
+              disabled={titleReadOnly}
+              className="w-full bg-transparent text-section font-semibold text-text placeholder:text-text-subtle focus:outline-none disabled:opacity-70"
+            />
+            <div className="mt-6 flex-1">{children}</div>
+          </div>
+          <div className="min-w-0 min-h-[60vh] lg:min-h-0">{previewPane}</div>
+        </div>
+      ) : (
+        // Single-column layout (legacy callers).
+        <>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            placeholder={titlePlaceholder}
+            readOnly={titleReadOnly}
+            disabled={titleReadOnly}
+            className="w-full bg-transparent text-section font-semibold text-text placeholder:text-text-subtle focus:outline-none disabled:opacity-70"
+          />
+          <div className="mt-6">{children}</div>
+        </>
+      )}
     </Modal>
   );
 }

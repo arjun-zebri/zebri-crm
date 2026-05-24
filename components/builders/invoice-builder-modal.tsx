@@ -43,6 +43,7 @@ import {
   BuilderModalShell,
   type OverflowMenuItem,
 } from '@/components/builders/parts/builder-modal-shell';
+import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-pane';
 import { DiscountControl } from '@/components/builders/parts/discount-control';
 import {
   type LineItem,
@@ -50,6 +51,7 @@ import {
 } from '@/components/builders/parts/line-items-table';
 import { NotesField } from '@/components/builders/parts/notes-field';
 import { PaymentSchedule } from '@/components/builders/parts/payment-schedule';
+import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { TaxControl } from '@/components/builders/parts/tax-control';
 import { TotalsPanel } from '@/components/builders/parts/totals-panel';
@@ -144,6 +146,7 @@ export function InvoiceBuilderModal({
   const [dirty, setDirty] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [previewCollapsed, setPreviewCollapsed] = useState(false);
 
   /* ─── data ──────────────────────────────────────────────────── */
   const { data: invoice } = useQuery({
@@ -547,6 +550,31 @@ export function InvoiceBuilderModal({
     });
   }
 
+  // Live preview doc — fed to the right pane on every render so the
+  // PDF / Email / Payment-page previews track form edits without a
+  // save round-trip.
+  const previewDoc: PreviewDoc = {
+    kind: 'invoice',
+    documentNumber: invoice?.invoice_number ?? 'DRAFT',
+    title: title || 'Wedding Invoice',
+    status,
+    coupleName,
+    businessName: null,
+    items: items.map((item) => ({
+      id: item.id,
+      description: item.description,
+      amount: Number(item.amount || 0),
+    })),
+    taxRate: taxEnabled ? 10 : 0,
+    discount:
+      discountType && discountValue != null && discountValue > 0
+        ? { type: discountType, value: discountValue }
+        : null,
+    notes: notes || null,
+    dueDate: dueDate,
+    shareUrl: shareUrl ?? `https://example.com/invoice/${invoice?.share_token ?? 'preview'}`,
+  };
+
   return (
     <>
       <BuilderModalShell
@@ -563,6 +591,14 @@ export function InvoiceBuilderModal({
         }}
         titlePlaceholder={coupleName ? `Invoice for ${coupleName}` : 'Wedding invoice title'}
         titleReadOnly={!canEdit}
+        previewPane={
+          <BuilderPreviewPane
+            doc={previewDoc}
+            surface="invoice"
+            collapsed={previewCollapsed}
+            onToggleCollapsed={setPreviewCollapsed}
+          />
+        }
         footer={
           <ShareAndSend
             dirty={dirty}

@@ -121,16 +121,17 @@ function generateContractHtml(doc: PdfDocumentData): string {
 </html>`
 }
 
-export function generateAndPrintPdf(doc: PdfDocumentData) {
+/**
+ * Build the HTML string that `generateAndPrintPdf` would print.
+ *
+ * Exported separately so the Quote / Invoice builder preview pane
+ * (Phase 2C.2) can render the same HTML inline inside an iframe
+ * without opening a new window. Same output bytes — the preview
+ * and the eventual print stay in lockstep.
+ */
+export function buildPdfHtml(doc: PdfDocumentData): string {
   if (doc.type === 'contract') {
-    const html = generateContractHtml(doc)
-    const win = window.open('', '_blank')
-    if (!win) return
-    win.document.write(html)
-    win.document.close()
-    win.focus()
-    setTimeout(() => win.print(), 500)
-    return
+    return generateContractHtml(doc)
   }
 
   const discountAmount =
@@ -268,10 +269,15 @@ export function generateAndPrintPdf(doc: PdfDocumentData) {
 </body>
 </html>`
 
+  return html
+}
+
+export function generateAndPrintPdf(doc: PdfDocumentData) {
+  const html = buildPdfHtml(doc)
   const win = window.open('', '_blank')
   if (!win) return
   win.document.write(html)
   win.document.close()
   win.focus()
-  setTimeout(() => win.print(), 300)
+  setTimeout(() => win.print(), doc.type === 'contract' ? 500 : 300)
 }
