@@ -616,7 +616,8 @@ export function InvoiceBuilderModal({
           paymentTerms={paymentTerms}
           onPaymentTermsChange={setPaymentTermsAndDate}
           dateValue={dueDate}
-          dateLabel="Due date"
+          dateLabel="Set due date"
+          datePrefix="Due"
           onDateChange={(d) => {
             setDueDate(d);
             setDirty(true);
@@ -635,10 +636,10 @@ export function InvoiceBuilderModal({
           />
         </div>
 
-        {/* Chips stack vertically so expanding discount can't push
-            GST onto a new line — no layout shift on click. */}
-        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-col items-start gap-2">
+        {/* Totals area. Chips stack at the top; Subtotal/Total
+            summary sits below them on the right. */}
+        <div className="mt-6 flex flex-col items-end gap-3">
+          <div className="flex flex-col items-end gap-2">
             <DiscountControl
               type={discountType}
               value={discountValue}
@@ -675,14 +676,12 @@ export function InvoiceBuilderModal({
               }}
             />
           </div>
-          <div className="sm:max-w-xs sm:w-full">
-            <TotalsPanel
-              subtotal={subtotal}
-              discount={discountAmount > 0 ? discountAmount : undefined}
-              tax={tax > 0 ? tax : undefined}
-              total={total}
-            />
-          </div>
+          <TotalsPanel
+            subtotal={subtotal}
+            discount={discountAmount > 0 ? discountAmount : undefined}
+            tax={tax > 0 ? tax : undefined}
+            total={total}
+          />
         </div>
 
         {/* Payment schedule */}

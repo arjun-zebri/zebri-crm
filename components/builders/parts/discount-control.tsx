@@ -1,13 +1,14 @@
 /**
  * Discount affordance — collapsed chip that expands into an inline
- * compact pill (still one element wide).
+ * compact pill.
  *
- * Two states, both rendered as a single self-contained pill:
- * - **Collapsed**: `[+ Discount]` — subtle tonal chip.
- * - **Configured**: `[ Discount  10  %  × ]` — same pill, slightly
- *   emphasised, with an inline number input + a small % / $ toggle
- *   + a remove × icon. The pill stays compact so it doesn't push
- *   sibling controls onto a new row.
+ * - **Collapsed**: `[+ Discount]` subtle tonal chip.
+ * - **Configured (percentage)**: pill with an inline range slider
+ *   (0-50%), the current value, a %/$ toggle, and a remove ×.
+ *   The slider doesn't push siblings around because the pill keeps
+ *   a fixed footprint.
+ * - **Configured (fixed)**: same shape but a small number input
+ *   replaces the slider (fixed-amount has no natural upper bound).
  *
  * @module components/builders/parts/discount-control
  */
@@ -29,6 +30,10 @@ export interface DiscountControlProps {
   onTypeChange: (next: DiscountType) => void;
   onValueChange: (next: number) => void;
 }
+
+/** Maximum the percentage slider accepts. 50% covers every realistic
+ *  wedding discount (early-bird, deposit deals, etc.). */
+const PERCENTAGE_MAX = 50;
 
 export function DiscountControl({
   type,
@@ -54,28 +59,48 @@ export function DiscountControl({
     );
   }
 
-  // Configured: same chip shape, slightly stronger background to
-  // signal "active". Inline number input + a single %/$ toggle
-  // (clicking it cycles, no separate buttons) + remove ×. The
-  // whole thing fits on one line so click-to-expand doesn't push
-  // siblings onto a new row.
   function toggleType() {
     onTypeChange(type === 'percentage' ? 'fixed' : 'percentage');
   }
+
   return (
-    <span className="inline-flex items-center gap-1 rounded-control bg-surface-emphasis pl-2.5 pr-1 py-1 text-caption font-medium text-text">
-      <span>Discount</span>
-      <input
-        type="number"
-        value={value ?? ''}
-        onChange={(e) => onValueChange(parseFloat(e.target.value) || 0)}
-        min="0"
-        step={type === 'percentage' ? '1' : '0.01'}
-        readOnly={!canEdit}
-        disabled={!canEdit}
-        className="w-10 bg-transparent text-right text-caption font-medium text-text tabular-nums focus:outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        aria-label="Discount value"
-      />
+    <span className="inline-flex items-center gap-2 rounded-control bg-surface-emphasis pl-2.5 pr-1 py-1 text-caption font-medium text-text">
+      <span className="text-text-muted">Discount</span>
+
+      {type === 'percentage' ? (
+        <>
+          <input
+            type="range"
+            min="0"
+            max={PERCENTAGE_MAX}
+            step="1"
+            value={value ?? 0}
+            onChange={(e) => onValueChange(parseInt(e.target.value, 10) || 0)}
+            disabled={!canEdit}
+            aria-label="Discount percentage"
+            className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-border accent-brand-fg disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <span className="w-8 text-right tabular-nums">
+            {Math.round(value ?? 0)}%
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="text-text-muted">$</span>
+          <input
+            type="number"
+            value={value ?? ''}
+            onChange={(e) => onValueChange(parseFloat(e.target.value) || 0)}
+            min="0"
+            step="0.01"
+            readOnly={!canEdit}
+            disabled={!canEdit}
+            className="w-14 bg-transparent text-right text-caption font-medium text-text tabular-nums focus:outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            aria-label="Discount amount"
+          />
+        </>
+      )}
+
       <button
         type="button"
         onClick={toggleType}
@@ -85,6 +110,7 @@ export function DiscountControl({
       >
         {type === 'percentage' ? '%' : '$'}
       </button>
+
       {canEdit ? (
         <button
           type="button"

@@ -54,10 +54,15 @@ describe('ShareAndSend', () => {
     expect(screen.getByText(/Send to enable share link/i)).toBeInTheDocument();
   });
 
-  it('renders the share URL inline (always visible) when shareEnabled', () => {
+  it('exposes Copy link + Open buttons when shareEnabled', () => {
     render(<ShareAndSend {...base()} shareEnabled shareUrl="https://x/y" />);
-    // No collapse — the URL is shown directly in a readonly input.
-    expect(screen.getByDisplayValue('https://x/y')).toBeInTheDocument();
+    // URL is no longer rendered as a visible input — it lives behind
+    // a Copy button + an Open link (new tab).
+    expect(screen.queryByDisplayValue('https://x/y')).toBeNull();
+    expect(screen.getByRole('button', { name: /Copy share link/i })).toBeInTheDocument();
+    const open = screen.getByRole('link', { name: /Open/i });
+    expect(open).toHaveAttribute('href', 'https://x/y');
+    expect(open).toHaveAttribute('target', '_blank');
   });
 
   it('calls onSave when Save is clicked', async () => {

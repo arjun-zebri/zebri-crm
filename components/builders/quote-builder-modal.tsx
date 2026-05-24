@@ -529,7 +529,8 @@ export function QuoteBuilderModal({
             setDirty(true);
           }}
           dateValue={expiresAt}
-          dateLabel="Expiry"
+          dateLabel="Set expiry date"
+          datePrefix="Expires"
           onDateChange={(d) => {
             setExpiresAt(d);
             setDirty(true);
@@ -568,11 +569,10 @@ export function QuoteBuilderModal({
           />
         </div>
 
-        {/* Discount + Tax + Totals row. Chips stack vertically
-            (each on its own line) so clicking Discount can't push
-            GST onto a new line — no layout shift on expand. */}
-        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-col items-start gap-2">
+        {/* Totals area. Chips stack at the top; the Subtotal/Total
+            summary sits below them on the right. */}
+        <div className="mt-6 flex flex-col items-end gap-3">
+          <div className="flex flex-col items-end gap-2">
             <DiscountControl
               type={discountType}
               value={discountValue}
@@ -609,14 +609,12 @@ export function QuoteBuilderModal({
               }}
             />
           </div>
-          <div className="sm:max-w-xs sm:w-full">
-            <TotalsPanel
-              subtotal={subtotal}
-              discount={discountAmount > 0 ? discountAmount : undefined}
-              tax={tax > 0 ? tax : undefined}
-              total={total}
-            />
-          </div>
+          <TotalsPanel
+            subtotal={subtotal}
+            discount={discountAmount > 0 ? discountAmount : undefined}
+            tax={tax > 0 ? tax : undefined}
+            total={total}
+          />
         </div>
 
         {/* Notes */}

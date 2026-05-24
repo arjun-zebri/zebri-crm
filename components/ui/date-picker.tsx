@@ -18,6 +18,10 @@ interface DatePickerProps {
    *  'right' for backward-compat; the builder modals pass 'left' to
    *  match their other meta-row controls. */
   iconPosition?: 'left' | 'right'
+  /** Optional prefix prepended to the formatted date when a value
+   *  is set (e.g. 'Expires' → "Expires 31 May 2026"). Used by the
+   *  builder modals to make the date's purpose obvious at a glance. */
+  displayPrefix?: string
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -82,7 +86,7 @@ function buildCalendarGrid(year: number, month: number): Date[][] {
 
 const DROPDOWN_HEIGHT = 330
 
-export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right' }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right', displayPrefix }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
@@ -214,11 +218,16 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
   const calendarIcon = (
     <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
   )
+  const displayedValue = value
+    ? displayPrefix
+      ? `${displayPrefix} ${formatDisplay(value)}`
+      : formatDisplay(value)
+    : (placeholder ?? 'Select date')
   const triggerContent = (
     <>
       {iconPosition === 'left' ? calendarIcon : null}
       <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-        {value ? formatDisplay(value) : (placeholder ?? 'Select date')}
+        {displayedValue}
       </span>
       {iconPosition === 'right' ? calendarIcon : null}
     </>

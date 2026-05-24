@@ -73,7 +73,7 @@ describe('BuilderPreviewPane', () => {
     expect(screen.getByTestId('preview-email')).toBeInTheDocument();
   });
 
-  it('shows the business name fetched from user_metadata', async () => {
+  it('falls back to the business name when no brand-kit is named', async () => {
     render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
     await waitFor(() => expect(screen.getByText('Acme Weddings')).toBeInTheDocument());
   });

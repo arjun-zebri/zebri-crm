@@ -44,10 +44,13 @@ export interface BuilderMetaRowProps {
    *  hidden on quotes. */
   paymentTerms?: PaymentTerms;
   onPaymentTermsChange?: (next: PaymentTerms) => void;
-  /** Trailing date field. Renders as "Expiry" on quotes, "Due date"
-   *  on invoices. */
+  /** Trailing date field. `dateLabel` is the empty-state placeholder
+   *  (e.g. "Set expiry date"). `datePrefix` (optional) prepends to
+   *  the formatted date when a value is set (e.g. "Expires 31 May
+   *  2026") so the field's purpose stays obvious. */
   dateValue: string | null;
   dateLabel: string;
+  datePrefix?: string;
   onDateChange: (next: string | null) => void;
   canEdit: boolean;
 }
@@ -71,6 +74,7 @@ export function BuilderMetaRow({
   onPaymentTermsChange,
   dateValue,
   dateLabel,
+  datePrefix,
   onDateChange,
   canEdit,
 }: BuilderMetaRowProps) {
@@ -102,6 +106,7 @@ export function BuilderMetaRow({
         placeholder={dateLabel}
         disabled={!canEdit}
         iconPosition="left"
+        {...(datePrefix ? { displayPrefix: datePrefix } : {})}
       />
     </div>
   );

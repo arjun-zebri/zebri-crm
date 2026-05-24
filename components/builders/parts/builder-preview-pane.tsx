@@ -52,15 +52,33 @@ export function BuilderPreviewPane({ doc, surface, coupleEmail }: BuilderPreview
   const [activeTab, setActiveTab] = useState<PreviewTab>('payment_page');
   const [brandingLabel, setBrandingLabel] = useState<string | null>(null);
 
-  // Fetch the user's business name for the "Branded as …" header
-  // link. Cheap (single auth call) — only hits once per session.
+  // Resolve the active brand-kit name for the "Branded as …" link.
+  // Preference order:
+  //   1. `active_kit_id` → match in `brand_kits[]` by id → kit.name
+  //   2. `brand_kit_name` (legacy default-kit field)
+  //   3. `business_name` (fallback while a kit isn't named)
+  // Null when none of these are set — the label renders as
+  // "Using default branding".
   useEffect(() => {
     let cancelled = false;
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
       if (cancelled) return;
-      const meta = (data.user?.user_metadata ?? {}) as { business_name?: string };
-      setBrandingLabel(meta.business_name?.trim() || null);
+      const meta = (data.user?.user_metadata ?? {}) as {
+        active_kit_id?: string | null;
+        brand_kits?: { id: string; name?: string }[];
+        brand_kit_name?: string;
+        business_name?: string;
+      };
+      const kit = meta.active_kit_id
+        ? meta.brand_kits?.find((k) => k.id === meta.active_kit_id)
+        : undefined;
+      const label =
+        kit?.name?.trim() ||
+        meta.brand_kit_name?.trim() ||
+        meta.business_name?.trim() ||
+        null;
+      setBrandingLabel(label);
     });
     return () => {
       cancelled = true;
