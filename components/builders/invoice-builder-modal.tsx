@@ -29,6 +29,7 @@
  */
 'use client';
 
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
@@ -146,6 +147,9 @@ export function InvoiceBuilderModal({
   const [dirty, setDirty] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Auto-animate refs for the totals area + chip container.
+  const [chipsRef] = useAutoAnimate<HTMLDivElement>();
+  const [totalsAreaRef] = useAutoAnimate<HTMLDivElement>();
 
   /* ─── data ──────────────────────────────────────────────────── */
   const { data: invoice, isLoading: invoiceLoading } = useQuery({
@@ -636,10 +640,10 @@ export function InvoiceBuilderModal({
           />
         </div>
 
-        {/* Totals area. Chips stack at the top; Subtotal/Total
-            summary sits below them on the right. */}
-        <div className="mt-6 flex flex-col items-end gap-3">
-          <div className="flex flex-col items-end gap-2">
+        {/* Totals area. Auto-animate refs so layout changes
+            (discount expansion, GST line appearing) glide. */}
+        <div ref={totalsAreaRef} className="mt-6 flex flex-col items-end gap-3">
+          <div ref={chipsRef} className="flex flex-col items-end gap-2">
             <DiscountControl
               type={discountType}
               value={discountValue}
@@ -767,7 +771,7 @@ export function InvoiceBuilderModal({
               setDirty(true);
             }}
             canEdit={canEdit}
-            label="Payment instructions"
+            label="Notes"
             placeholder="Bank details, payment terms, or any notes for the couple."
           />
         </div>

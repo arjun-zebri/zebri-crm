@@ -94,6 +94,38 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
           doc={publicDoc}
           hideAction
         />
+
+        {/* Notes — the block renderer doesn't include a notes
+            block by default (the public pages render notes
+            outside the renderer), so the preview mirrors that
+            by appending the notes section here. */}
+        {doc.notes ? (
+          <div style={{ marginTop: 24 }}>
+            <p
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: branding.muted_color,
+                margin: '0 0 8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontFamily: headingFontFamily(branding),
+              }}
+            >
+              Notes
+            </p>
+            <p
+              style={{
+                fontSize: 13,
+                color: branding.muted_color,
+                whiteSpace: 'pre-line',
+                lineHeight: 1.6,
+              }}
+            >
+              {doc.notes}
+            </p>
+          </div>
+        ) : null}
       </div>
     </div>
   );

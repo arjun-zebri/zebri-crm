@@ -21,6 +21,7 @@
  */
 'use client';
 
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
@@ -131,6 +132,11 @@ export function QuoteBuilderModal({
   const [discountValue, setDiscountValue] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Auto-animate refs for the totals area + chip container, so any
+  // child layout shift (discount chip expanding, GST line appearing
+  // in the totals panel) animates instead of snapping.
+  const [chipsRef] = useAutoAnimate<HTMLDivElement>();
+  const [totalsAreaRef] = useAutoAnimate<HTMLDivElement>();
 
   /* ─── data ──────────────────────────────────────────────────── */
   const { data: quote, isLoading: quoteLoading } = useQuery({
@@ -570,9 +576,12 @@ export function QuoteBuilderModal({
         </div>
 
         {/* Totals area. Chips stack at the top; the Subtotal/Total
-            summary sits below them on the right. */}
-        <div className="mt-6 flex flex-col items-end gap-3">
-          <div className="flex flex-col items-end gap-2">
+            summary sits below them on the right. The chip container
+            + totals panel both use autoAnimate so width/layout
+            changes (discount expansion, GST line appearing) glide
+            into place instead of snapping. */}
+        <div ref={totalsAreaRef} className="mt-6 flex flex-col items-end gap-3">
+          <div ref={chipsRef} className="flex flex-col items-end gap-2">
             <DiscountControl
               type={discountType}
               value={discountValue}
@@ -626,7 +635,7 @@ export function QuoteBuilderModal({
               setDirty(true);
             }}
             canEdit={canEdit}
-            label="Notes & terms"
+            label="Notes"
             placeholder="Anything you want the couple to see. Payment terms, what's included, etc."
           />
         </div>

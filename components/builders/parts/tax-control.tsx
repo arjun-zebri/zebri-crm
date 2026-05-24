@@ -1,17 +1,15 @@
 /**
- * GST/tax affordance — single chip that smoothly transitions
- * between the unapplied and applied states.
+ * GST/tax chip — text-only label that toggles between neutral and
+ * applied (mint green) states.
  *
- * The button itself stays mounted; its background tone and the
- * leading icon (Plus ↔ X) crossfade based on `applied`. Both
- * transitions use ~200ms CSS so the state change reads as a
- * deliberate morph rather than an abrupt swap.
+ * The button stays mounted; only its background tone changes. The
+ * parent wraps the chip container with `useAutoAnimate()` so any
+ * sibling-chip width changes (e.g. discount expanding) animate
+ * smoothly.
  *
  * @module components/builders/parts/tax-control
  */
 'use client';
-
-import { Plus, X } from 'lucide-react';
 
 export interface TaxControlProps {
   /** Whether the 10% GST line is currently applied. */
@@ -29,31 +27,12 @@ export function TaxControl({ applied, canEdit, onApply, onRemove }: TaxControlPr
       onClick={applied ? onRemove : onApply}
       disabled={!canEdit}
       aria-label={applied ? 'Remove GST' : 'Apply 10% GST'}
-      className={`inline-flex items-center gap-1.5 rounded-control px-2.5 py-1 text-caption font-medium transition-colors duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+      className={`inline-flex items-center rounded-control px-2.5 py-1 text-caption font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
         applied
-          ? 'bg-surface-emphasis text-text hover:bg-danger/10 hover:text-danger'
+          ? 'bg-success/10 text-success hover:bg-danger/10 hover:text-danger'
           : 'bg-surface-muted text-text-muted hover:bg-surface-emphasis hover:text-text'
       }`}
     >
-      {/* Icon crossfade: both icons share the same slot, opacity
-          drives which one shows. ~200ms transition matches the
-          background colour change. */}
-      <span className="relative inline-flex h-3 w-3 items-center justify-center">
-        <Plus
-          size={12}
-          strokeWidth={1.5}
-          className={`absolute inset-0 transition-opacity duration-200 ${
-            applied ? 'opacity-0' : 'opacity-100'
-          }`}
-        />
-        <X
-          size={12}
-          strokeWidth={1.5}
-          className={`absolute inset-0 transition-opacity duration-200 ${
-            applied ? 'opacity-100' : 'opacity-0'
-          }`}
-        />
-      </span>
       GST 10%
     </button>
   );

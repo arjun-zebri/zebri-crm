@@ -1,20 +1,20 @@
 /**
- * Discount affordance — collapsed chip that expands into an inline
- * compact pill.
+ * Discount chip — text-only label that expands inline when clicked.
  *
- * - **Collapsed**: `[+ Discount]` subtle tonal chip.
- * - **Configured (percentage)**: pill with an inline range slider
- *   (0-50%), the current value, a %/$ toggle, and a remove ×.
- *   The slider doesn't push siblings around because the pill keeps
- *   a fixed footprint.
- * - **Configured (fixed)**: same shape but a small number input
- *   replaces the slider (fixed-amount has no natural upper bound).
+ * - **Not configured**: subtle "Discount" chip (neutral tone, no icons).
+ * - **Configured**: same chip but in the success tone (mint green) with
+ *   an inline number input + a %/$ toggle + a remove ×. No icon
+ *   prefix on either state.
+ *
+ * The parent wraps this + sibling chips in a `useAutoAnimate()`
+ * container so the width change between states is interpolated
+ * smoothly by FormKit's drop-in layout animation.
  *
  * @module components/builders/parts/discount-control
  */
 'use client';
 
-import { Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 export type DiscountType = 'percentage' | 'fixed';
 
@@ -31,10 +31,6 @@ export interface DiscountControlProps {
   onValueChange: (next: number) => void;
 }
 
-/** Maximum the percentage slider accepts. 50% covers every realistic
- *  wedding discount (early-bird, deposit deals, etc.). */
-const PERCENTAGE_MAX = 50;
-
 export function DiscountControl({
   type,
   value,
@@ -44,19 +40,15 @@ export function DiscountControl({
   onTypeChange,
   onValueChange,
 }: DiscountControlProps) {
-  // Collapsed: subtle inline-action chip.
+  // Not configured: subtle text-only chip.
   if (type === null) {
     return (
       <button
         type="button"
         onClick={onAdd}
         disabled={!canEdit}
-        // `animate-chip-expand` runs on every mount, so when the
-        // user removes the discount the chip fades back in. The
-        // transition-colors keeps hover transitions smooth.
-        className="inline-flex items-center gap-1.5 rounded-control bg-surface-muted px-2.5 py-1 text-caption font-medium text-text-muted hover:bg-surface-emphasis hover:text-text transition-colors animate-chip-expand disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="inline-flex items-center rounded-control bg-surface-muted px-2.5 py-1 text-caption font-medium text-text-muted transition-colors duration-200 hover:bg-surface-emphasis hover:text-text disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
-        <Plus size={12} strokeWidth={1.5} />
         Discount
       </button>
     );
@@ -66,65 +58,36 @@ export function DiscountControl({
     onTypeChange(type === 'percentage' ? 'fixed' : 'percentage');
   }
 
+  // Configured: success tone (mint green) chip with inline editor.
   return (
-    // Same animation on the expanded pill — when the user clicks
-    // the collapsed chip, this fades-and-scales in (~200ms).
-    // `transition-colors` covers hover + type-switch state changes.
-    <span className="inline-flex items-center gap-2 rounded-control bg-surface-emphasis pl-2.5 pr-1 py-1 text-caption font-medium text-text transition-colors animate-chip-expand origin-left">
-      <span className="text-text-muted">Discount</span>
-
-      {type === 'percentage' ? (
-        <>
-          <input
-            type="range"
-            min="0"
-            max={PERCENTAGE_MAX}
-            step="1"
-            value={value ?? 0}
-            onChange={(e) => onValueChange(parseInt(e.target.value, 10) || 0)}
-            disabled={!canEdit}
-            aria-label="Discount percentage"
-            // `transition-all` smooths the thumb scaling on hover +
-            // active (added via the accent + browser defaults).
-            className="h-1 w-24 cursor-pointer appearance-none rounded-full bg-border accent-brand-fg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-          <span className="w-8 text-right tabular-nums">
-            {Math.round(value ?? 0)}%
-          </span>
-        </>
-      ) : (
-        <>
-          <span className="text-text-muted">$</span>
-          <input
-            type="number"
-            value={value ?? ''}
-            onChange={(e) => onValueChange(parseFloat(e.target.value) || 0)}
-            min="0"
-            step="0.01"
-            readOnly={!canEdit}
-            disabled={!canEdit}
-            className="w-14 bg-transparent text-right text-caption font-medium text-text tabular-nums focus:outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            aria-label="Discount amount"
-          />
-        </>
-      )}
-
+    <span className="inline-flex items-center gap-1.5 rounded-control bg-success/10 pl-2.5 pr-1 py-1 text-caption font-medium text-success transition-colors duration-200">
+      <span>Discount</span>
+      <input
+        type="number"
+        value={value ?? ''}
+        onChange={(e) => onValueChange(parseFloat(e.target.value) || 0)}
+        min="0"
+        step={type === 'percentage' ? '1' : '0.01'}
+        readOnly={!canEdit}
+        disabled={!canEdit}
+        aria-label="Discount value"
+        className="w-10 bg-transparent text-right text-caption font-medium text-success tabular-nums focus:outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      />
       <button
         type="button"
         onClick={toggleType}
         disabled={!canEdit}
         aria-label={`Switch to ${type === 'percentage' ? 'fixed amount' : 'percentage'}`}
-        className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-text-muted hover:bg-surface-muted hover:text-text transition-colors disabled:opacity-50 cursor-pointer"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-success/70 transition-colors hover:bg-success/10 hover:text-success disabled:opacity-50 cursor-pointer"
       >
         {type === 'percentage' ? '%' : '$'}
       </button>
-
       {canEdit ? (
         <button
           type="button"
           onClick={onRemove}
           aria-label="Remove discount"
-          className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-text-muted hover:bg-danger/10 hover:text-danger transition-colors cursor-pointer"
+          className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-success/70 transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
         >
           <X size={11} strokeWidth={1.5} />
         </button>
