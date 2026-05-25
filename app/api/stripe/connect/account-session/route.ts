@@ -67,8 +67,28 @@ export async function POST(request: Request) {
         notification_banner: { enabled: true },
       },
     });
+    console.warn('[stripe/connect/account-session] created', {
+      userId: user.id,
+      accountId,
+      sessionId: session.client_secret?.slice(0, 12) + '…',
+      expiresAt: session.expires_at,
+      // If this is null the session is dead on arrival.
+      hasClientSecret: !!session.client_secret,
+    });
     return NextResponse.json({ client_secret: session.client_secret });
   } catch (err) {
+    console.error('[stripe/connect/account-session] create failed', {
+      userId: user.id,
+      accountId,
+      detail: err instanceof Error ? err.message : 'unknown',
+      // Stripe errors carry a `raw` field with the upstream response —
+      // surface the type + param so we can tell the user what the
+      // platform config gap is.
+      type:
+        err && typeof err === 'object' && 'type' in err ? err.type : undefined,
+      code:
+        err && typeof err === 'object' && 'code' in err ? err.code : undefined,
+    });
     return NextResponse.json(
       {
         error: 'Could not create account session',
