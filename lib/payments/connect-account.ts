@@ -151,6 +151,32 @@ export async function clearConnectBinding(
 }
 
 /**
+ * Hard-delete the mirror row for a user. Used by the disconnect
+ * server action when we want a true reset (no `last_account_id`
+ * preserved). Distinct from {@link clearConnectBinding} which keeps
+ * the row but zeroes the fields.
+ *
+ * Why both? Most disconnects can leave the row in place — the
+ * unique constraint on `account_id` is nullable so this isn't
+ * required for correctness. But a full delete is the only way to
+ * guarantee a re-kickoff creates a brand-new Stripe account
+ * (instead of rebinding to a stale `last_account_id`), so we use
+ * this from the disconnect route. The `account.application.deauthorized`
+ * webhook also uses this when the vendor cuts the platform off
+ * outright.
+ */
+export async function deleteConnectBinding(userId: string): Promise<void> {
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from('connect_accounts')
+    .delete()
+    .eq('user_id', userId);
+  if (error) {
+    throw new Error(`connect_accounts delete failed: ${error.message}`);
+  }
+}
+
+/**
  * Look up the user_id that owns a given Stripe account ID. Used by
  * the webhook handler — Stripe events identify the Connect account
  * via `event.account` (the platform receives the event on behalf of

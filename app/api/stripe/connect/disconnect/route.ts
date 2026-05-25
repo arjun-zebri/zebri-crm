@@ -37,7 +37,7 @@ import {
   stripeConnectAccountId,
   updateEntitlements,
 } from '@/lib/auth/entitlements';
-import { clearConnectBinding } from '@/lib/payments/connect-account';
+import { deleteConnectBinding } from '@/lib/payments/connect-account';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
@@ -67,14 +67,17 @@ export async function POST(request: Request) {
     accountIdFromAppMetadata: accountId ?? null,
   });
 
-  // Phase: clear the mirror row (if any).
+  // Phase: hard-delete the mirror row so the next /api/stripe/connect
+  // kickoff creates a brand-new Express account. Preserving
+  // last_account_id turned out to be a footgun — accounts created
+  // against an un-activated platform stayed bound and rejected
+  // auth forever after activation. Express accounts are disposable
+  // + free, so deleting on disconnect is the safer default.
   try {
-    if (accountId) {
-      await clearConnectBinding(user.id, { preserveLastAccountId: true });
-    }
+    await deleteConnectBinding(user.id);
   } catch (err) {
     const detail = err instanceof Error ? err.message : 'unknown';
-    console.error('[stripe/connect/disconnect] clearConnectBinding failed', {
+    console.error('[stripe/connect/disconnect] deleteConnectBinding failed', {
       userId: user.id,
       detail,
     });
