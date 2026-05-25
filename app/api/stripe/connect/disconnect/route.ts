@@ -85,15 +85,43 @@ export async function POST(request: Request) {
   }
 
   // Phase: clear entitlements in app_metadata.
+  const adminClient = createAdminClient();
   try {
+    // BEFORE state — log the keys we're about to mutate so we can
+    // see what the admin API sees pre-write.
+    const { data: before } = await adminClient.auth.admin.getUserById(user.id);
+    console.warn('[stripe/connect/disconnect] before updateEntitlements', {
+      userId: user.id,
+      app_metadata_keys: Object.keys(before.user?.app_metadata ?? {}),
+      stripe_connect_account_id:
+        (before.user?.app_metadata as { stripe_connect_account_id?: string })
+          ?.stripe_connect_account_id ?? null,
+      stripe_connect_enabled:
+        (before.user?.app_metadata as { stripe_connect_enabled?: boolean })
+          ?.stripe_connect_enabled ?? null,
+    });
+
     await updateEntitlements(
-      createAdminClient().auth.admin as never,
+      adminClient.auth.admin as never,
       user.id,
       {
         stripe_connect_account_id: undefined,
         stripe_connect_enabled: false,
       },
     );
+
+    // AFTER state — read it back to confirm the write landed.
+    const { data: after } = await adminClient.auth.admin.getUserById(user.id);
+    console.warn('[stripe/connect/disconnect] after updateEntitlements', {
+      userId: user.id,
+      app_metadata_keys: Object.keys(after.user?.app_metadata ?? {}),
+      stripe_connect_account_id:
+        (after.user?.app_metadata as { stripe_connect_account_id?: string })
+          ?.stripe_connect_account_id ?? null,
+      stripe_connect_enabled:
+        (after.user?.app_metadata as { stripe_connect_enabled?: boolean })
+          ?.stripe_connect_enabled ?? null,
+    });
   } catch (err) {
     const detail = err instanceof Error ? err.message : 'unknown';
     console.error('[stripe/connect/disconnect] updateEntitlements failed', {
