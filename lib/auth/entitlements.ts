@@ -199,22 +199,24 @@ export async function updateEntitlements(
   // type system to clear a field.
   //
   // Clearing semantics: a patch entry with value `undefined` or `null`
-  // **deletes** the corresponding key from `app_metadata` rather than
-  // leaving the existing value in place. JSON serialisation strips
-  // `undefined` keys, so the naive `{ ...existing, ...patch }` merge
-  // wouldn't actually clear them — we explicitly delete here so callers
-  // can write `field: undefined` to mean "clear this field".
+  // clears the corresponding key. Both map to a server-side `null`
+  // write (NOT a delete) because Supabase's
+  // `auth.admin.updateUserById` *merges* `app_metadata` — sending an
+  // object without the key leaves the existing value untouched; only
+  // an explicit `null` value will overwrite. Our `read()` helper
+  // treats `null` as absent, so callers see "cleared" behaviour
+  // either way.
   patch: Record<string, unknown>,
 ): Promise<void> {
-  const { data, error: getErr } = await admin.getUserById(userId);
-  if (getErr) throw getErr;
-  const existing = (data.user?.app_metadata ?? {}) as Record<string, unknown>;
-  const merged: Record<string, unknown> = { ...existing, ...patch };
-  for (const key of Object.keys(patch)) {
-    if (patch[key] === undefined || patch[key] === null) delete merged[key];
+  // Normalise `undefined` → `null` so the Supabase merge actually
+  // overwrites. JSON.stringify drops `undefined` keys, which is what
+  // historically caused clears to silently no-op.
+  const normalized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(patch)) {
+    normalized[key] = value === undefined ? null : value;
   }
   const { error } = await admin.updateUserById(userId, {
-    app_metadata: merged,
+    app_metadata: normalized,
   });
   if (error) throw error;
 }
