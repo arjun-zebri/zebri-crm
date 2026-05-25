@@ -16,7 +16,8 @@
  */
 'use client';
 
-import { CheckCircle, Clock, OctagonAlert } from 'lucide-react';
+import { CheckCircle, Clock, OctagonAlert, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 
 import type { ConnectAccountState } from '@/lib/payments/connect-account';
 
@@ -25,13 +26,28 @@ export interface ConnectStatusPanelProps {
   /** Trigger from the parent so disconnect/refresh actions can hook. */
   onDisconnect?: () => void;
   disconnecting?: boolean;
+  /** Pull fresh state from Stripe + write to mirror. Manual escape
+   *  hatch for local-dev setups without webhook forwarding, and a
+   *  general "give me the latest" button for everyone else. */
+  onSync?: () => Promise<void> | void;
 }
 
 export function ConnectStatusPanel({
   state,
   onDisconnect,
   disconnecting,
+  onSync,
 }: ConnectStatusPanelProps) {
+  const [syncing, setSyncing] = useState(false);
+  async function handleSync() {
+    if (!onSync) return;
+    setSyncing(true);
+    try {
+      await onSync();
+    } finally {
+      setSyncing(false);
+    }
+  }
   const maskedId = state.accountId
     ? `${state.accountId.slice(0, 8)}…${state.accountId.slice(-4)}`
     : '—';
@@ -53,16 +69,35 @@ export function ConnectStatusPanel({
           </span>
           <span className="text-caption text-text-subtle">· {maskedId}</span>
         </div>
-        {onDisconnect ? (
-          <button
-            type="button"
-            onClick={onDisconnect}
-            disabled={disconnecting}
-            className="text-caption text-text-muted hover:text-danger transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {disconnecting ? 'Disconnecting…' : 'Disconnect'}
-          </button>
-        ) : null}
+        <div className="flex items-center gap-3">
+          {onSync ? (
+            <button
+              type="button"
+              onClick={handleSync}
+              disabled={syncing}
+              aria-label="Refresh status from Stripe"
+              title="Refresh status from Stripe"
+              className="inline-flex items-center gap-1 text-caption text-text-muted hover:text-text transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw
+                size={13}
+                strokeWidth={1.5}
+                className={syncing ? 'animate-spin' : ''}
+              />
+              {syncing ? 'Refreshing…' : 'Refresh'}
+            </button>
+          ) : null}
+          {onDisconnect ? (
+            <button
+              type="button"
+              onClick={onDisconnect}
+              disabled={disconnecting}
+              className="text-caption text-text-muted hover:text-danger transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-caption">

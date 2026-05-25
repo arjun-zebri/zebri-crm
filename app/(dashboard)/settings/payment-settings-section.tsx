@@ -92,6 +92,26 @@ export function PaymentSettingsSection({
     setStatusLoading(false);
   }, []);
 
+  /**
+   * Sync the mirror directly from Stripe (bypassing the webhook).
+   * The webhook is the source of truth in production, but it has
+   * lag — and in local dev without `stripe listen`, it never fires
+   * at all. Calling this on embedded-component exit closes both
+   * gaps. Followed by a status refresh to pick up the new mirror.
+   */
+  const syncFromStripe = useCallback(async () => {
+    const res = await fetch('/api/stripe/connect/sync', { method: 'POST' });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as {
+        detail?: string;
+        error?: string;
+      };
+      console.error('[settings/payments] sync failed', body);
+      return;
+    }
+    await refreshStatus();
+  }, [refreshStatus]);
+
   useEffect(() => {
     if (accountId) {
       void refreshStatus();
@@ -267,6 +287,7 @@ export function PaymentSettingsSection({
                 state={connectState}
                 onDisconnect={disconnectStripe}
                 disconnecting={disconnecting}
+                onSync={syncFromStripe}
               />
             ) : statusLoading ? (
               <div className="rounded-card border border-border bg-surface p-4 text-body text-text-muted">
@@ -283,12 +304,12 @@ export function PaymentSettingsSection({
                   ) : (
                     <ConnectAccountOnboarding
                       onExit={() => {
-                        // Re-fetch our mirror — the embedded SDK
-                        // doesn't proactively notify us when the
-                        // user closes the flow; the webhook is the
-                        // durable signal but a manual refresh here
-                        // closes the gap if the webhook is delayed.
-                        void refreshStatus();
+                        // The webhook is the durable signal, but it
+                        // has lag (and never fires at all in local
+                        // dev without `stripe listen`). Pull
+                        // directly from Stripe → mirror so the
+                        // status panel can flip immediately.
+                        void syncFromStripe();
                       }}
                     />
                   )}
