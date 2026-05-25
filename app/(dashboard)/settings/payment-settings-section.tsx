@@ -158,6 +158,12 @@ export function PaymentSettingsSection({
       const res = await fetch('/api/stripe/connect', { method: 'POST' });
       if (!res.ok) throw new Error('kickoff failed');
       const { accountId: newId } = (await res.json()) as { accountId: string };
+      // Same JWT-staleness issue as disconnect: the server-side
+      // updateEntitlements wrote the new accountId to app_metadata
+      // but the client JWT still doesn't carry it. Refresh the
+      // session before we render the embedded onboarding so the
+      // settings page sees the binding consistently.
+      await supabase.auth.refreshSession();
       setAccountId(newId);
       toast('Stripe account created — complete the verification below.');
     } catch {
@@ -185,9 +191,15 @@ export function PaymentSettingsSection({
         console.error('[settings/payments] disconnect failed', body);
         throw new Error(reason);
       }
-      setAccountId(null);
-      setConnectState(null);
+      // The server cleared app_metadata but the user's JWT still
+      // carries the stale `stripe_connect_account_id` — Supabase
+      // doesn't auto-refresh JWTs when admin updates app_metadata.
+      // Refresh the session so the next render sees the cleared
+      // entitlement, then reload so the parent settings page
+      // re-fetches user data and our props are fresh.
+      await supabase.auth.refreshSession();
       toast('Stripe disconnected.');
+      window.location.assign('/settings?tab=payments');
     } catch (err) {
       const reason = err instanceof Error ? err.message : 'unknown';
       toast(`Could not disconnect: ${reason}`, 'error');
