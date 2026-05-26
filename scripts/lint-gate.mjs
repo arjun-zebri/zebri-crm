@@ -45,7 +45,9 @@ const ERROR_BUDGET = 78;
 // 577-line page).
 // Phase 2D.2 quote/[token] decomposition: 541 → 533 (same pattern
 // applied to the quote surface — 436-line page split into 7 files).
-const WARNING_BUDGET = 533;
+// Phase 2D.2 portal token-limiter + token swaps: 533 → 527 (smaller
+// touch — added imports + cleaned up the not-active fallback).
+const WARNING_BUDGET = 527;
 
 function runEslintJson() {
   try {
