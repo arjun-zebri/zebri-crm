@@ -554,8 +554,8 @@ Each page/section is its own small PR(s) and must meet the §5 DoD before it's "
 
 1. **Auth & account** (login, signup, reset/update-password, middleware, paywall) — gates everything
 2. **Payments & invoices** + Stripe webhooks/Connect — money, highest risk
-3. **Contracts** (e-sign) — legal/money
-4. **Couples + Events** — core CRM
+3. **Couples + Events** — core CRM
+4. **Contracts** (e-sign) — legal/money
 5. **Contacts**
 6. **Tasks**
 7. **Dashboard**
