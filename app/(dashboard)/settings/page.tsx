@@ -214,7 +214,6 @@ function SettingsContent() {
                 appMetadata?.stripe_connect_account_id || null
               }
               stripeConnectEnabled={appMetadata?.stripe_connect_enabled || false}
-              justConnected={searchParams.get("connected") === "true"}
             />
           )}
           {activeTab === "templates" && <TemplatesSection />}

@@ -58,7 +58,6 @@ interface PaymentSettingsSectionProps {
   initialBankAccountNumber: string;
   stripeConnectAccountId: string | null;
   stripeConnectEnabled: boolean;
-  justConnected?: boolean;
 }
 
 export function PaymentSettingsSection({

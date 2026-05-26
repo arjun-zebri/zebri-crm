@@ -6,18 +6,19 @@
  *   subsequent calls (idempotent upsert).
  * - `readConnectAccount` projects DB columns into the
  *   {@link ConnectAccountState} shape.
- * - `clearConnectBinding({ preserveLastAccountId: true })` moves
- *   account_id → last_account_id and zeroes the capability flags
- *   (the server-initiated disconnect path).
- * - `clearConnectBinding({ preserveLastAccountId: false })` clears
- *   last_account_id too (the `account.application.deauthorized`
- *   path).
+ * - `clearConnectBinding` tombstones the row (clears account_id +
+ *   last_account_id + capability flags) — the path used by the
+ *   `account.application.deauthorized` webhook.
+ * - `deleteConnectBinding` hard-deletes the row — the path used by
+ *   the interactive disconnect server action so each reconnect
+ *   creates a brand-new Stripe account.
  * - **Cross-tenant: RLS denies one user reading another user's row.**
  */
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   clearConnectBinding,
+  deleteConnectBinding,
   findUserIdByAccountId,
   readConnectAccount,
   syncConnectAccount,
@@ -99,30 +100,34 @@ describe('syncConnectAccount', () => {
   });
 });
 
-describe('clearConnectBinding', () => {
-  it('with preserveLastAccountId: moves account_id → last_account_id', async () => {
-    const u = await newUser();
-    await syncConnectAccount(u.id, {
-      id: 'acct_save',
-      charges_enabled: true,
-    });
-    await clearConnectBinding(u.id, { preserveLastAccountId: true });
-    const state = await readConnectAccount(u.id);
-    expect(state?.accountId).toBeNull();
-    expect(state?.lastAccountId).toBe('acct_save');
-    expect(state?.chargesEnabled).toBe(false);
-  });
-
-  it('without preserveLastAccountId: clears the last_account_id too', async () => {
+describe('clearConnectBinding (deauth tombstone path)', () => {
+  it('tombstones the row — clears account_id + last_account_id + capability flags', async () => {
     const u = await newUser();
     await syncConnectAccount(u.id, {
       id: 'acct_drop',
       charges_enabled: true,
     });
-    await clearConnectBinding(u.id, { preserveLastAccountId: false });
+    await clearConnectBinding(u.id);
     const state = await readConnectAccount(u.id);
     expect(state?.accountId).toBeNull();
     expect(state?.lastAccountId).toBeNull();
+    expect(state?.chargesEnabled).toBe(false);
+    expect(state?.payoutsEnabled).toBe(false);
+  });
+});
+
+describe('deleteConnectBinding (interactive disconnect path)', () => {
+  it('hard-deletes the mirror row so the next reconnect creates a fresh account', async () => {
+    const u = await newUser();
+    await syncConnectAccount(u.id, { id: 'acct_to_delete' });
+    await deleteConnectBinding(u.id);
+    const state = await readConnectAccount(u.id);
+    expect(state).toBeNull();
+  });
+
+  it('is idempotent — deleting a non-existent row is a no-op', async () => {
+    const u = await newUser();
+    await expect(deleteConnectBinding(u.id)).resolves.toBeUndefined();
   });
 });
 

@@ -244,6 +244,38 @@ interface stays stable so call sites don't change.
 `/api/contract/{sign,decline}`, `/api/portal/upload`, auth routes
 (login/signup/reset).
 
+### Public token-attempt limiter — `@/lib/api/public-token-limiter` (Phase 2D.2)
+
+Sits in front of the unauthenticated share-token surfaces
+(`/invoice/[token]`, `/quote/[token]`, `/portal/[token]`). Counts
+**invalid** token attempts per IP — successful loads of a valid
+token are free. Two cooperating bands:
+
+- **Long window** — 60 invalid attempts / hour. Past that:
+  `recordInvalidTokenAttempt` returns `allowed: false`; the caller
+  renders `notFound()` instead of the friendly "unavailable" copy.
+- **Burst window** — 10 invalid attempts / 60s. Crosses the
+  threshold → one Slack alert (`public_token_attempt_burst`) per
+  burst (deduped via an internal one-shot bucket — no spam on
+  attempts 12, 13, 14, …).
+
+Wired today: `/portal/[token]` (server component, easy hookup).
+**Not yet wired** on `/invoice/[token]` / `/quote/[token]` — those
+pages are client components that call `get_public_invoice` /
+`get_public_quote` directly from the browser, so the limiter would
+need a server-fetch refactor (convert to RSC + Client component
+child for interactivity). Tracked as a follow-up. The
+unique-share-token capability model is the primary defence; the
+limiter is defence-in-depth and covers the highest-traffic public
+surface (the portal) today.
+
+### Authenticated Stripe routes — Phase 2D.2 additions
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/stripe/invoice-payment/route.ts` | ✅ `bodySchema` (invoiceId UUID, shareToken min/max, paymentType enum) | ✅ 10/min/IP via `inMemoryLimiter` | Generic 404 on missing-or-mismatched-token (no info leak). `success_url` carries `session_id={CHECKOUT_SESSION_ID}` for the payment-success re-verification. `metadata.connected_account_id` cross-checked on the success page. Stripe-failure path uses `logger.error`; raw error message NOT returned to the couple (returns generic 502). |
+| `app/invoice/payment-success/page.tsx` | n/a (server component) | n/a | Server-side `stripe.checkout.sessions.retrieve(session_id, { expand: ['payment_intent'] })`. Five-check verification: invoice exists + MC has Connect account + session.metadata.invoice_id matches + session.metadata.connected_account_id matches + payment_intent.status === 'succeeded'. Any mismatch → notFound() + `payment_success_param_tampered` Slack alert. Idempotent. |
+
 ---
 
 ## RLS coverage matrix

@@ -101,34 +101,26 @@ export async function syncConnectAccount(
 }
 
 /**
- * Disconnect path — moves the live `account_id` to `last_account_id`
- * and zeroes the capability flags. The Stripe account itself isn't
- * touched; if the MC re-connects later, the new onboarding flow can
- * pre-fill from `last_account_id` to avoid creating a duplicate.
+ * Tombstone the mirror row — sets all capability flags to false
+ * and clears `account_id` + `last_account_id`. The row stays in
+ * place as a record that this user previously had a binding.
  *
- * Called from:
- * - The disconnect server action (`/api/stripe/connect/disconnect`).
- * - The `account.application.deauthorized` webhook (in that case
- *   we also clear `last_account_id` — see {@link handleDeauthorized}
- *   in connect-events.ts — because the MC explicitly removed our
- *   platform's access and we shouldn't try to rebind silently).
+ * Currently only called by the `account.application.deauthorized`
+ * webhook in `connect-events.ts`. The interactive disconnect server
+ * action uses {@link deleteConnectBinding} instead because we want
+ * each reconnect to create a fresh Express account.
+ *
+ * (Originally this function had a `preserveLastAccountId` option to
+ * support a "rebind on reconnect" workflow. That turned into a
+ * footgun — accounts created against an un-activated platform
+ * stayed bound and rejected auth forever after activation — and was
+ * removed in Phase 2D.1 follow-up. The cleanup is preserved here
+ * for the deauth path because Stripe might send tail events after
+ * deauthorization and the mirror row needs to exist for those to
+ * resolve cleanly via {@link findUserIdByAccountId}.)
  */
-export async function clearConnectBinding(
-  userId: string,
-  opts: { preserveLastAccountId: boolean },
-): Promise<void> {
+export async function clearConnectBinding(userId: string): Promise<void> {
   const admin = createAdminClient();
-  // Read current account_id so we can move it to last_account_id.
-  const { data: existing, error: readErr } = await admin
-    .from('connect_accounts')
-    .select('account_id')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (readErr) {
-    throw new Error(`connect_accounts read failed: ${readErr.message}`);
-  }
-  const previousAccountId = existing?.account_id ?? null;
-
   const { error } = await admin
     .from('connect_accounts')
     .upsert(
@@ -141,7 +133,7 @@ export async function clearConnectBinding(
         requirements_currently_due: [],
         requirements_past_due: [],
         disabled_reason: null,
-        last_account_id: opts.preserveLastAccountId ? previousAccountId : null,
+        last_account_id: null,
       },
       { onConflict: 'user_id' },
     );

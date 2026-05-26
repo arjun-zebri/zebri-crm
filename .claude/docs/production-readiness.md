@@ -1,8 +1,72 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A (Stripe routes + webhook idempotency)** ✅ on staging · **Phase 2B (Billing UI DoD)** ✅ on staging · **Phase 2C (/payments decomposition + RLS proofs + email-send)** ✅ on staging · **Phase 2C.2 (builder modal decomposition + UI redesign)** ✅ in flight. **Phase 2D.1 (embedded Connect onboarding + status mirror)** ✅ in flight on `phase-2d1-connect-embedded`. **2D.2 (public surface hardening)** next. Full plan: `.claude/docs/phase-2d-stripe-connect-embedded.md` (supersedes `phase-2-payments.md` §6).
+> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A (Stripe routes + webhook idempotency)** ✅ on staging · **Phase 2B (Billing UI DoD)** ✅ on staging · **Phase 2C (/payments decomposition + RLS proofs + email-send)** ✅ on staging · **Phase 2C.2 (builder modal decomposition + UI redesign)** ✅ in flight. **Phase 2D.1 (embedded Connect onboarding + status mirror)** ✅ on staging. **Phase 2D.2 (public surface hardening)** ✅ in flight on `phase-2d2-public-surfaces`. Full plan: `.claude/docs/phase-2d-stripe-connect-embedded.md` (supersedes `phase-2-payments.md` §6).
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+
+### Public payment surfaces hardening (Phase 2D.2)
+
+Couple-facing public surfaces (`/invoice/[token]`, `/quote/[token]`,
+`/portal/[token]`) lifted through the §5 DoD. The vendor's
+onboarding (2D.1) already shipped; 2D.2 covers what the couple sees
+after the MC sends them a link.
+
+- **`lib/api/public-token-limiter.ts`** — per-IP limiter for
+  invalid share-token attempts. Two cooperating bands (60/hr hard
+  cap → notFound(); 10/60s burst → `public_token_attempt_burst`
+  Slack alert). Burst alert deduped via an internal one-shot
+  bucket — one Slack ping per {IP, 60s} not one per attempt.
+  +6 unit tests.
+- **`/api/stripe/invoice-payment` hardened** — Zod-validated body
+  (UUID + share-token bounds + paymentType enum), rate-limited
+  10/min/IP, structured logger replaces console.error, generic
+  502 + no raw Stripe error returned to the couple. Success URL
+  now carries `session_id={CHECKOUT_SESSION_ID}` +
+  `metadata.connected_account_id` for the success-page
+  cross-check.
+- **`/invoice/payment-success` re-verification** — was a static
+  "thanks" view; now a server component running 6 checks against
+  Stripe (`sessions.retrieve` with payment_intent expanded;
+  metadata cross-checks; payment_intent.status === 'succeeded').
+  Any mismatch → notFound() + `payment_success_param_tampered`
+  Slack alert with a specific `reason`.
+- **`/invoice/[token]` decomposed** — 577 LOC → orchestrator
+  (234 LOC) + 7 co-located `_components/` under `_components/`.
+  Payment schedule was previously duplicated inline in both
+  render paths — extracted to one truth. Token swaps on
+  Zebri-rendered chrome only (loading skeleton, status banners,
+  unavailable state); user-branded surfaces untouched.
+- **`/quote/[token]` decomposed** — 436 LOC → orchestrator
+  (211 LOC) + 7 components. `computeQuoteTotals()` extracted —
+  the discount + tax + total math was duplicated three times in
+  the original file with slightly different code paths.
+- **`/portal/[token]`** — token-limiter wired on the invalid-token
+  path + Zebri chrome tokenised. The sections were already
+  decomposed; deeper §5 DoD on the section files deferred.
+- **Two new Slack alert types**: `public_token_attempt_burst`,
+  `payment_success_param_tampered`.
+
+Deferred 2D.1 review items folded in:
+- Dropped the dead `preserveLastAccountId: true` path on
+  `clearConnectBinding` (one caller, always false now).
+- Removed unused `justConnected` prop from
+  `PaymentSettingsSection`.
+- Added 15 route-level unit tests for the 4 new Connect routes
+  (auth gate, rate-limit, happy path, error branches).
+
+Out of 2D.2:
+- Limiter wiring on `/invoice/[token]` + `/quote/[token]` — they're
+  client components calling Supabase RPCs directly from the
+  browser; needs a server-fetch refactor (convert to RSC + Client
+  component child for interactivity). Tracked as a follow-up.
+- Server-component conversion of invoice/quote pages — see above.
+- Section-level decomposition of `app/portal/[token]/contacts-section.tsx`
+  (736 LOC), `timeline-section.tsx` (599 LOC), `run-sheet-section.tsx`
+  (474 LOC) — separate refactor surface; the orchestrator
+  + token-limiter wiring satisfies the page-level DoD.
+
+Stats: 291 unit + 8 integration green. Strict ratchet 288/288.
+Lint warnings 556 → 527.
 
 ### Builder modal two-pane redesign (Phase 2C.2 — second pass)
 
