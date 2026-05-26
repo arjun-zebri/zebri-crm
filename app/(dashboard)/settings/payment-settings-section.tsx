@@ -29,7 +29,13 @@
  */
 'use client';
 
-import { loadConnectAndInitialize } from '@stripe/connect-js';
+// `/pure` skips the side-effectful auto-load of ConnectJS at module
+// eval time, which Next.js triggers during SSR / static page gen
+// and which Stripe explicitly warns against. The runtime behaviour
+// is identical — the script loads on first call to
+// `loadConnectAndInitialize`. See
+// https://github.com/stripe/connect-js#importing-loadconnect-without-side-effects
+import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
 import type { StripeConnectInstance } from '@stripe/connect-js';
 import {
   ConnectAccountManagement,
