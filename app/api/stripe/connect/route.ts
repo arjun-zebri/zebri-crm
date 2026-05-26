@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       details_submitted: false,
     });
     await updateEntitlements(
-      createAdminClient().auth.admin as never,
+      createAdminClient().auth.admin,
       user.id,
       {
         stripe_connect_account_id: accountId,

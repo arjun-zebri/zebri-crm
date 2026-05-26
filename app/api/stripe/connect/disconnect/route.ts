@@ -12,31 +12,34 @@
  * convention.
  *
  * The fix:
- * 1. Server-side `updateEntitlements()` to clear
+ * 1. Hard-delete the `connect_accounts` mirror row via
+ *    {@link deleteConnectBinding}. We don't preserve a
+ *    `last_account_id` — that was an over-engineered convenience
+ *    that turned into a footgun (accounts created against an
+ *    un-activated platform stayed bound and rejected auth forever
+ *    after activation). Express accounts are disposable + free; the
+ *    next reconnect calls `accounts.create()` against the current
+ *    platform state.
+ * 2. Server-side `updateEntitlements()` to clear
  *    `stripe_connect_account_id` + `stripe_connect_enabled` from
  *    `app_metadata`.
- * 2. Move the live account_id to `last_account_id` in the
- *    `connect_accounts` mirror so a future re-connect can rebind
- *    the same Stripe account.
  * 3. **The Stripe account itself is not deleted.** Stripe doesn't
- *    expose programmatic deletion for Express accounts; we just
- *    drop the binding. The vendor can fully remove our access
+ *    expose programmatic deletion for Express accounts; we drop
+ *    the binding only. The vendor can fully remove our access
  *    inside their Stripe Dashboard, which triggers
- *    `account.application.deauthorized` and the webhook clears
- *    `last_account_id`.
+ *    `account.application.deauthorized` and the webhook handler in
+ *    `lib/payments/connect-events.ts` runs the same cleanup.
  *
- * Auth: required. Rate-limited at the auth-route level (disconnect
- * is disruptive enough that rapid-fire toggles deserve a brake).
+ * Auth: required. Rate-limited (5/min/IP — disconnect is disruptive
+ * enough that rapid-fire toggles deserve a brake).
  *
  * @module app/api/stripe/connect/disconnect/route
  */
 import { NextResponse } from 'next/server';
 
+import { logger } from '@/lib/alerts/logger';
 import { inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
-import {
-  stripeConnectAccountId,
-  updateEntitlements,
-} from '@/lib/auth/entitlements';
+import { updateEntitlements } from '@/lib/auth/entitlements';
 import { deleteConnectBinding } from '@/lib/payments/connect-account';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
@@ -61,23 +64,13 @@ export async function POST(request: Request) {
     });
   }
 
-  const accountId = stripeConnectAccountId(user);
-  console.warn('[stripe/connect/disconnect] start', {
-    userId: user.id,
-    accountIdFromAppMetadata: accountId ?? null,
-  });
-
   // Phase: hard-delete the mirror row so the next /api/stripe/connect
-  // kickoff creates a brand-new Express account. Preserving
-  // last_account_id turned out to be a footgun — accounts created
-  // against an un-activated platform stayed bound and rejected
-  // auth forever after activation. Express accounts are disposable
-  // + free, so deleting on disconnect is the safer default.
+  // kickoff creates a brand-new Express account.
   try {
     await deleteConnectBinding(user.id);
   } catch (err) {
     const detail = err instanceof Error ? err.message : 'unknown';
-    console.error('[stripe/connect/disconnect] deleteConnectBinding failed', {
+    logger.error('[stripe/connect/disconnect] deleteConnectBinding failed', undefined, {
       userId: user.id,
       detail,
     });
@@ -88,46 +81,14 @@ export async function POST(request: Request) {
   }
 
   // Phase: clear entitlements in app_metadata.
-  const adminClient = createAdminClient();
   try {
-    // BEFORE state — log the keys we're about to mutate so we can
-    // see what the admin API sees pre-write.
-    const { data: before } = await adminClient.auth.admin.getUserById(user.id);
-    console.warn('[stripe/connect/disconnect] before updateEntitlements', {
-      userId: user.id,
-      app_metadata_keys: Object.keys(before.user?.app_metadata ?? {}),
-      stripe_connect_account_id:
-        (before.user?.app_metadata as { stripe_connect_account_id?: string })
-          ?.stripe_connect_account_id ?? null,
-      stripe_connect_enabled:
-        (before.user?.app_metadata as { stripe_connect_enabled?: boolean })
-          ?.stripe_connect_enabled ?? null,
-    });
-
-    await updateEntitlements(
-      adminClient.auth.admin as never,
-      user.id,
-      {
-        stripe_connect_account_id: undefined,
-        stripe_connect_enabled: false,
-      },
-    );
-
-    // AFTER state — read it back to confirm the write landed.
-    const { data: after } = await adminClient.auth.admin.getUserById(user.id);
-    console.warn('[stripe/connect/disconnect] after updateEntitlements', {
-      userId: user.id,
-      app_metadata_keys: Object.keys(after.user?.app_metadata ?? {}),
-      stripe_connect_account_id:
-        (after.user?.app_metadata as { stripe_connect_account_id?: string })
-          ?.stripe_connect_account_id ?? null,
-      stripe_connect_enabled:
-        (after.user?.app_metadata as { stripe_connect_enabled?: boolean })
-          ?.stripe_connect_enabled ?? null,
+    await updateEntitlements(createAdminClient().auth.admin, user.id, {
+      stripe_connect_account_id: undefined,
+      stripe_connect_enabled: false,
     });
   } catch (err) {
     const detail = err instanceof Error ? err.message : 'unknown';
-    console.error('[stripe/connect/disconnect] updateEntitlements failed', {
+    logger.error('[stripe/connect/disconnect] updateEntitlements failed', undefined, {
       userId: user.id,
       detail,
     });
@@ -137,6 +98,5 @@ export async function POST(request: Request) {
     );
   }
 
-  console.warn('[stripe/connect/disconnect] success', { userId: user.id });
   return NextResponse.json({ ok: true });
 }
