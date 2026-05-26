@@ -404,31 +404,74 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 Couples can pay MC invoices by credit card. Each MC connects their own Stripe Express account  -  funds flow directly to the MC. Zebri is the platform.
 
-### Stripe Connect Setup
+### Stripe Connect Setup (Phase 2D.1 — embedded onboarding)
 
-Uses **Stripe Connect Express accounts** (not the legacy OAuth flow). Express is the recommended approach for platforms  -  Stripe handles identity verification and onboarding UI.
+Uses **Stripe Connect Express accounts** + Stripe's **embedded
+Connect components** (`<ConnectAccountOnboarding>` +
+`<ConnectAccountManagement>` + `<ConnectNotificationBanner>` via
+`@stripe/react-connect-js`). MC never leaves Zebri — Stripe-hosted
+iframes render inline at `/settings?tab=payments`. Stripe still
+owns KYC verification + document collection; we just host the UI.
+
+Replaces the prior hosted-AccountLink redirect flow (Phase 2D.1
+2026-05-24). Full plan: `.claude/docs/phase-2d-stripe-connect-embedded.md`.
 
 **MC onboarding flow:**
-1. MC clicks "Connect Stripe" in Settings → Payments tab
-2. Frontend hits `GET /api/stripe/connect`
-3. API creates a Stripe Express account: `stripe.accounts.create({ type: 'express' })`
-4. API creates an Account Link: `stripe.accountLinks.create({ account, refresh_url, return_url, type: 'account_onboarding' })`
-   - `return_url` includes `?account_id=${account.id}` so the callback knows which account was connected
-   - `refresh_url` points back to the initiation route to restart if the link expires
-5. MC is redirected to Stripe's hosted onboarding UI
-6. On completion, Stripe redirects to `return_url` → `/api/stripe/connect/callback?account_id=xxx`
-7. Callback reads `account_id` from query params, updates MC's `user_metadata` with `stripe_connect_account_id` and `stripe_connect_enabled: true`
-8. MC is redirected to `/settings?tab=payments&connected=true`
+1. MC clicks "Set up card payments" in Settings → Payments tab
+2. Client POSTs to `/api/stripe/connect` — server creates the
+   Express account (or rebinds `last_account_id` if one exists),
+   writes `app_metadata.stripe_connect_account_id`, seeds the
+   `connect_accounts` mirror row with capability flags = false.
+3. Client mounts `<ConnectAccountOnboarding>` inline. The component
+   calls back to `/api/stripe/connect/account-session` for a fresh
+   `client_secret` on each render. Stripe handles identity
+   verification + document upload + bank-account verification
+   inside the embedded iframe.
+4. Stripe fires `account.updated` webhook → handler in
+   `lib/payments/connect-events.ts` mirrors the snapshot into
+   `connect_accounts` and flips `app_metadata.stripe_connect_enabled`
+   based on `charges_enabled`.
+5. Once `charges_enabled = true`, the client swaps to
+   `<ConnectAccountManagement>` for ongoing account changes.
 
 **MC disconnect:**
-- Client-side only. `supabase.auth.updateUser({ data: { stripe_connect_account_id: null, stripe_connect_enabled: false } })`
+- Client POSTs to `/api/stripe/connect/disconnect` (auth-route
+  rate-limited, 5/min/IP). Server-side `updateEntitlements()`
+  clears `app_metadata.stripe_connect_*` and moves the live
+  `account_id` to `last_account_id` in `connect_accounts` (so a
+  future re-connect can rebind without creating a new Stripe
+  account). Closes the §7.4 hole where the previous flow wrote
+  to `user_metadata` from the client.
 
-### Stripe Connect user_metadata fields
+### Stripe Connect — durable state
 
-| Field | Type | Description |
-|---|---|---|
-| `stripe_connect_account_id` | text | Stripe Express account ID (e.g. `acct_1PxXXX`) |
-| `stripe_connect_enabled` | boolean | `true` once MC has completed Stripe onboarding |
+Two-tier:
+
+- **`app_metadata`** (fast-path entitlement read):
+  | Field | Type | Description |
+  |---|---|---|
+  | `stripe_connect_account_id` | text | Stripe Express account ID (e.g. `acct_1Q...`) |
+  | `stripe_connect_enabled` | boolean | Mirror of `charges_enabled`; flipped by the `account.updated` webhook handler |
+
+- **`connect_accounts` table** (detail, populated by webhooks):
+  account_id, charges_enabled, payouts_enabled, details_submitted,
+  requirements_currently_due, requirements_past_due, disabled_reason,
+  default_currency, country, business_type, last_account_id.
+  See migration `20260524000000_create_connect_accounts.sql` +
+  `lib/payments/connect-account.ts` for the schema + reader/writer.
+
+### Connect webhook handlers (Phase 2D.1)
+
+| Event | Action |
+|---|---|
+| `account.updated` | Mirror snapshot into `connect_accounts`; flip `app_metadata.stripe_connect_enabled` based on `charges_enabled`; Slack alert (`stripe_connect_disabled`) if `requirements.disabled_reason` is non-null. |
+| `capability.updated` | Re-fetch the account from Stripe (the event payload doesn't carry the full requirements list) and run the same handler as `account.updated`. |
+| `account.application.deauthorized` | Clear `app_metadata.stripe_connect_*` + `connect_accounts.account_id` *and* `last_account_id` (vendor explicitly cut us off — no silent rebind). Slack alert (`stripe_connect_deauthorized`). |
+
+All three dispatch from the Connect branch of `app/api/stripe/webhook/route.ts`
+through `applyConnectEvent()` in `lib/payments/connect-events.ts`.
+Idempotency is enforced by the `stripe_events` ledger from Phase 2A —
+same retry semantics as platform events.
 
 ### Invoice payment flow
 
@@ -444,24 +487,47 @@ Uses **Stripe Connect Express accounts** (not the legacy OAuth flow). Express is
 
 ### Invoice Payment API routes
 
-#### `GET /api/stripe/connect`
+#### `POST /api/stripe/connect`
 
-Initiates Stripe Connect onboarding for the authenticated MC.
+Create-or-bind the MC's Connect account (Phase 2D.1).
 
-- Requires authenticated user
-- Creates Stripe Express account
-- Creates Account Link with `return_url` containing `account_id`
-- Redirects to Stripe onboarding URL
+- Auth required; rate-limited 5/min/IP.
+- First call: `stripe.accounts.create({ type: 'express' })` + seeds mirror row + writes `app_metadata.stripe_connect_account_id`.
+- Repeat call when already bound: idempotent, returns existing `accountId`.
+- Repeat call after server-initiated disconnect: rebinds `last_account_id` instead of creating a new Stripe account.
+- Returns `{ accountId }` — client mounts `<ConnectAccountOnboarding>` next.
 
-#### `GET /api/stripe/connect/callback`
+#### `POST /api/stripe/connect/account-session`
 
-Handles return from Stripe onboarding.
+Mints a fresh Account Session `client_secret` for the embedded
+components (Phase 2D.1).
 
-- Reads `account_id` from query string
-- Updates MC's `user_metadata`: `stripe_connect_account_id`, `stripe_connect_enabled: true`
-- Uses Supabase Admin client (service role) to update auth user
-- Redirects to `/settings?tab=payments&connected=true`
-- On error: redirects to `/settings?tab=payments&error=connect_failed`
+- Auth required; rate-limited 30/min/IP (embedded SDK re-fetches on each render).
+- 400 if no Connect account bound yet (caller should kick off via `/api/stripe/connect` first).
+- Components enabled: `account_onboarding`, `account_management`, `notification_banner`.
+
+#### `POST /api/stripe/connect/disconnect`
+
+Server-side disconnect — closes the §7.4 client-write hole.
+
+- Auth required; rate-limited 5/min/IP.
+- Moves `account_id` → `last_account_id` in `connect_accounts` (so a future re-connect can rebind).
+- `updateEntitlements()` clears `app_metadata.stripe_connect_*`.
+- The Stripe account itself is NOT deleted (Express accounts don't support programmatic deletion).
+
+#### `GET /api/stripe/connect/status`
+
+Reads the current user's `connect_accounts` mirror row.
+
+- Auth required.
+- Returns `{ state: ConnectAccountState | null }`.
+- Used by the settings page to render the Zebri-side status panel
+  (capabilities, requirements, disabled_reason) above the embedded
+  Stripe components.
+
+#### ~~`GET /api/stripe/connect/callback`~~ — deleted in Phase 2D.1
+
+Embedded onboarding has no redirect. The route file is removed.
 
 #### `POST /api/stripe/invoice-payment`
 

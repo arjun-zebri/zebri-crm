@@ -103,6 +103,32 @@ export type AlertEvent =
       userId: string;
       reason: string;
     })
+  | (BaseEvent & {
+      // Connect account.updated webhook reported a non-null
+      // `requirements.disabled_reason` — Stripe has paused some
+      // capability and the MC needs to take action (re-verify,
+      // upload a document, etc.). Surfaced inside Zebri via
+      // <ConnectNotificationBanner>, but the alert also flags it
+      // operationally so we know which MCs are stuck.
+      type: 'stripe_connect_disabled';
+      severity: 'warn';
+      userId: string;
+      accountId: string;
+      disabledReason: string;
+      currentlyDue: string[];
+      pastDue: string[];
+    })
+  | (BaseEvent & {
+      // Vendor removed our platform from their Stripe account via
+      // the Stripe Dashboard. We can no longer charge on their
+      // behalf — invoices with `stripe_payment_enabled` will start
+      // failing until they re-connect. Worth a Slack ping so we
+      // can reach out.
+      type: 'stripe_connect_deauthorized';
+      severity: 'warn';
+      userId: string;
+      accountId: string;
+    })
 
   // ───── Email / Resend ──────────────────────────────────────────────
   | (BaseEvent & {

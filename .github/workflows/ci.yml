@@ -14,6 +14,11 @@ on:
     branches: [main, staging]
   push:
     branches: [main, staging]
+  # Manual fallback — if a webhook delivery gets dropped on the
+  # floor, anyone with write access can re-fire the workflow from
+  # the Actions tab via "Run workflow". Doesn't affect normal PR
+  # behaviour.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

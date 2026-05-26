@@ -7,33 +7,59 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      connect_accounts: {
+        Row: {
+          account_id: string | null
+          business_type: string | null
+          charges_enabled: boolean
+          country: string | null
+          created_at: string
+          default_currency: string | null
+          details_submitted: boolean
+          disabled_reason: string | null
+          last_account_id: string | null
+          payouts_enabled: boolean
+          requirements_currently_due: Json
+          requirements_past_due: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          business_type?: string | null
+          charges_enabled?: boolean
+          country?: string | null
+          created_at?: string
+          default_currency?: string | null
+          details_submitted?: boolean
+          disabled_reason?: string | null
+          last_account_id?: string | null
+          payouts_enabled?: boolean
+          requirements_currently_due?: Json
+          requirements_past_due?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          business_type?: string | null
+          charges_enabled?: boolean
+          country?: string | null
+          created_at?: string
+          default_currency?: string | null
+          details_submitted?: boolean
+          disabled_reason?: string | null
+          last_account_id?: string | null
+          payouts_enabled?: boolean
+          requirements_currently_due?: Json
+          requirements_past_due?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           category: string
@@ -1547,9 +1573,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

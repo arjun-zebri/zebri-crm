@@ -1,6 +1,6 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A (Stripe routes + webhook idempotency)** ✅ on staging · **Phase 2B (Billing UI DoD)** ✅ on staging · **Phase 2C (/payments decomposition + RLS proofs + email-send)** ✅ on staging · **Phase 2C.2 (builder modal decomposition + UI redesign)** ✅ in flight. **Phase 2D (Stripe Connect + public surfaces)** next. Full plan: `.claude/docs/phase-2-payments.md`.
+> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A (Stripe routes + webhook idempotency)** ✅ on staging · **Phase 2B (Billing UI DoD)** ✅ on staging · **Phase 2C (/payments decomposition + RLS proofs + email-send)** ✅ on staging · **Phase 2C.2 (builder modal decomposition + UI redesign)** ✅ in flight. **Phase 2D.1 (embedded Connect onboarding + status mirror)** ✅ in flight on `phase-2d1-connect-embedded`. **2D.2 (public surface hardening)** next. Full plan: `.claude/docs/phase-2d-stripe-connect-embedded.md` (supersedes `phase-2-payments.md` §6).
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
 
@@ -554,8 +554,8 @@ Each page/section is its own small PR(s) and must meet the §5 DoD before it's "
 
 1. **Auth & account** (login, signup, reset/update-password, middleware, paywall) — gates everything
 2. **Payments & invoices** + Stripe webhooks/Connect — money, highest risk
-3. **Contracts** (e-sign) — legal/money
-4. **Couples + Events** — core CRM
+3. **Couples + Events** — core CRM
+4. **Contracts** (e-sign) — legal/money
 5. **Contacts**
 6. **Tasks**
 7. **Dashboard**

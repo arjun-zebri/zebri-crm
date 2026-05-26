@@ -377,7 +377,15 @@ Phase 2C audit:
 
 ## 6. PR 2D — Stripe Connect + public payment surfaces
 
-**Goal:** the OAuth-style Connect flow + the public invoice payment
+> **Superseded 2026-05-24.** This section's hosted-AccountLink
+> hardening plan was replaced by the **embedded Connect components**
+> model — see `.claude/docs/phase-2d-stripe-connect-embedded.md` for
+> the locked plan. The state-HMAC / return-URL / token-limiter work
+> moved into PR **2D.2**; the OAuth-style callback hardening below
+> is obsolete because the callback route itself is being deleted
+> (embedded flow has no redirect).
+
+**Goal (legacy):** the OAuth-style Connect flow + the public invoice payment
 page are both hardened against tampering, replay, and brute force.
 
 ### Files

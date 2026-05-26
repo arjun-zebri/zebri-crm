@@ -1,5 +1,8 @@
+import { describe, expect, it, vi } from 'vitest';
+
 import {
   accountType,
+  type AuthAdmin,
   currentPlan,
   hasContractsAccess,
   isActive,
@@ -11,6 +14,7 @@ import {
   stripeCustomerId,
   subscriptionPlan,
   subscriptionStatus,
+  updateEntitlements,
 } from '@/lib/auth/entitlements';
 
 /**
@@ -139,5 +143,135 @@ describe('entitlements — paywall edge cases', () => {
 
   it('unknown plan with active status falls back to starter', () => {
     expect(currentPlan({ app_metadata: { subscription_status: 'active', subscription_plan: 'enterprise' } })).toBe('starter');
+  });
+});
+
+/**
+ * `updateEntitlements` clear semantics — the load-bearing fix from
+ * Phase 2D.1. Supabase's `auth.admin.updateUserById` MERGES
+ * `app_metadata`, so to actually clear a key we must send an
+ * explicit `null` value (sending `undefined` makes JSON.stringify
+ * drop the key entirely, leaving the existing value untouched).
+ * These tests pin the invariant that:
+ *
+ * 1. `undefined` and `null` patch values both reach the admin API
+ *    as literal `null` (which Supabase will then merge in,
+ *    overwriting the existing value).
+ * 2. Non-null primitives — including `false` and `0` — pass through
+ *    unmodified.
+ *
+ * Without these, the silent-no-op clear regression that bit Phase
+ * 2D.1 disconnect could re-land and we wouldn't catch it until a
+ * customer reported a stuck Stripe binding.
+ */
+describe('updateEntitlements — clear semantics', () => {
+  function makeFakeAdmin(): AuthAdmin & { calls: { id: string; attrs: { app_metadata?: Record<string, unknown> } }[] } {
+    const calls: { id: string; attrs: { app_metadata?: Record<string, unknown> } }[] = [];
+    return {
+      calls,
+      getUserById: vi.fn(async () => ({
+        data: { user: { app_metadata: { existing: 'stays' }, user_metadata: null } },
+        error: null,
+      })),
+      updateUserById: vi.fn(async (id, attrs) => {
+        calls.push({ id, attrs });
+        return { data: null, error: null };
+      }),
+    };
+  }
+
+  it('undefined patch value sends null to admin.updateUserById', async () => {
+    const admin = makeFakeAdmin();
+    await updateEntitlements(admin, 'user-1', {
+      stripe_connect_account_id: undefined,
+    });
+    expect(admin.calls).toHaveLength(1);
+    expect(admin.calls[0]?.attrs.app_metadata).toEqual({
+      stripe_connect_account_id: null,
+    });
+  });
+
+  it('null patch value sends null to admin.updateUserById', async () => {
+    const admin = makeFakeAdmin();
+    await updateEntitlements(admin, 'user-1', {
+      stripe_connect_account_id: null,
+    });
+    expect(admin.calls[0]?.attrs.app_metadata).toEqual({
+      stripe_connect_account_id: null,
+    });
+  });
+
+  it('boolean `false` passes through (not coerced to null — the regression that bit 2D.1)', async () => {
+    const admin = makeFakeAdmin();
+    await updateEntitlements(admin, 'user-1', {
+      stripe_connect_enabled: false,
+    });
+    expect(admin.calls[0]?.attrs.app_metadata).toEqual({
+      stripe_connect_enabled: false,
+    });
+  });
+
+  it('numeric `0` passes through', async () => {
+    const admin = makeFakeAdmin();
+    await updateEntitlements(admin, 'user-1', {
+      trial_credits: 0,
+    });
+    expect(admin.calls[0]?.attrs.app_metadata).toEqual({
+      trial_credits: 0,
+    });
+  });
+
+  it('empty string passes through', async () => {
+    const admin = makeFakeAdmin();
+    await updateEntitlements(admin, 'user-1', {
+      display_name: '',
+    });
+    expect(admin.calls[0]?.attrs.app_metadata).toEqual({
+      display_name: '',
+    });
+  });
+
+  it('mixed patch — sets one, clears another — produces the right merged payload', async () => {
+    const admin = makeFakeAdmin();
+    await updateEntitlements(admin, 'user-1', {
+      stripe_connect_account_id: undefined,
+      stripe_connect_enabled: false,
+      subscription_plan: 'pro',
+    });
+    expect(admin.calls[0]?.attrs.app_metadata).toEqual({
+      stripe_connect_account_id: null,
+      stripe_connect_enabled: false,
+      subscription_plan: 'pro',
+    });
+  });
+
+  it('only writes the keys in the patch — does NOT re-send existing app_metadata fields', async () => {
+    // Regression guard: the original implementation read existing
+    // app_metadata, merged the patch on top, and wrote the whole
+    // merged object back. That gave the appearance of "REPLACE"
+    // semantics but actually let Supabase silently no-op clears.
+    // The new implementation relies on Supabase's documented MERGE
+    // behaviour: we send only the keys we want to mutate, and any
+    // other existing keys stay untouched on the server.
+    const admin = makeFakeAdmin();
+    await updateEntitlements(admin, 'user-1', {
+      subscription_plan: 'max',
+    });
+    expect(admin.calls[0]?.attrs.app_metadata).toEqual({
+      subscription_plan: 'max',
+    });
+    // The fake `existing.app_metadata.existing = 'stays'` must NOT
+    // appear in the write payload.
+    expect(admin.calls[0]?.attrs.app_metadata).not.toHaveProperty('existing');
+  });
+
+  it('throws when admin.updateUserById returns an error', async () => {
+    const admin: AuthAdmin = {
+      getUserById: vi.fn(async () => ({ data: { user: null }, error: null })),
+      updateUserById: vi.fn(async () => ({ data: null, error: new Error('boom') })),
+    };
+    await expect(
+      updateEntitlements(admin, 'user-1', { subscription_plan: 'pro' }),
+    ).rejects.toThrow('boom');
   });
 });

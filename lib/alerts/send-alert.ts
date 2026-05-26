@@ -64,6 +64,12 @@ function describe(event: AlertEvent): string {
       return `deleted=${event.deletedCount} rows older than ${event.olderThanDays}d`;
     case 'stripe_connect_onboarding_failed':
       return `user=${event.userId} — ${event.reason}`;
+    case 'stripe_connect_disabled':
+      return `user=${event.userId} · acct=${event.accountId} — ${event.disabledReason}${
+        event.pastDue.length > 0 ? ` · past_due=${event.pastDue.length}` : ''
+      }${event.currentlyDue.length > 0 ? ` · due=${event.currentlyDue.length}` : ''}`;
+    case 'stripe_connect_deauthorized':
+      return `user=${event.userId} · acct=${event.accountId}`;
     case 'email_rate_limit_hit':
       return `action=${event.action} · user=${event.userId} · ip=${event.ip}`;
     case 'resend_send_failed':
