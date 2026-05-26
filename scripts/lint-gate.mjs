@@ -43,7 +43,9 @@ const ERROR_BUDGET = 78;
 // orchestrator + 6 components, import-order auto-fixes across the
 // new files dropped a cluster of warnings vs. the old single
 // 577-line page).
-const WARNING_BUDGET = 541;
+// Phase 2D.2 quote/[token] decomposition: 541 → 533 (same pattern
+// applied to the quote surface — 436-line page split into 7 files).
+const WARNING_BUDGET = 533;
 
 function runEslintJson() {
   try {
