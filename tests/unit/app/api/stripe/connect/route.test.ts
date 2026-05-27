@@ -67,9 +67,12 @@ async function loadRoute() {
 }
 
 function req(headers?: Record<string, string>): NextRequest {
+  // Conditional spread keeps `headers` out of the init object when
+  // not supplied — `RequestInit.headers` rejects `undefined` under
+  // `exactOptionalPropertyTypes`.
   return new NextRequest('http://localhost/api/stripe/connect', {
     method: 'POST',
-    headers,
+    ...(headers ? { headers } : {}),
   });
 }
 

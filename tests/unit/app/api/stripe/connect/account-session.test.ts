@@ -35,7 +35,7 @@ async function loadRoute() {
 function req(headers?: Record<string, string>): NextRequest {
   return new NextRequest('http://localhost/api/stripe/connect/account-session', {
     method: 'POST',
-    headers,
+    ...(headers ? { headers } : {}),
   });
 }
 
