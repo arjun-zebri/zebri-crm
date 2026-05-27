@@ -339,14 +339,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     if (state.themePreset !== 'custom') applyTheme(state.themePreset)
   }
 
-  const resetCurrentSurface = () => {
-    setState((prev) => ({
-      ...prev,
-      blocks: { ...prev.blocks, [surface]: defaultBlocksFor(surface) },
-    }))
-    setSelectedBlockIds([])
-  }
-
   const uploadAsset = async (file: File, kind: 'logo' | 'favicon' | 'header'): Promise<string> => {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
@@ -698,11 +690,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   const visibleBlocks = state.blocks[docSurface]
 
-  // Heuristic: contracts saved before the rewrite were tiny (3-line stubs).
-  // When we detect one, offer a one-click swap to the new template.
-  const looksLikeStaleContract =
-    docSurface === 'contract' && state.blocks.contract.filter((b) => b.type === 'text').length < 5
-
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden">
       <EditorTopbar
@@ -789,23 +776,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         />
 
         <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
-          {looksLikeStaleContract && (
-            <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-900">Refreshed contract template available</p>
-                <p className="text-[11px] text-gray-600">
-                  We&apos;ve added 13 industry-standard clauses with signature placeholders. Replace the current contract?
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={resetCurrentSurface}
-                className="shrink-0 inline-flex items-center justify-center h-8 px-3 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-black cursor-pointer transition"
-              >
-                Use new template
-              </button>
-            </div>
-          )}
           {visibleBlocks.length > 0 && (
             <div className="flex justify-end mb-2">
               <button

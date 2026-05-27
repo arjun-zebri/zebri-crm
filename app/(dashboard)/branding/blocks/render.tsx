@@ -935,64 +935,109 @@ const PORTAL_SECTIONS: Array<{ label: string; icon: typeof LayoutDashboard; coun
 
 export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
   const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
+  const muted = state.mutedColor || '#6B7280'
+  const text = state.textColor || '#111827'
+  const surface = state.surfaceColor || '#FFFFFF'
   const visibleSections = PORTAL_SECTIONS.filter(
     (s) => !s.key || state.portalSections?.[s.key] !== false,
   )
   return (
     <div className="border-t border-gray-100">
-      <div className="px-8 pt-8 pb-8 border-b border-gray-100">
-        <p
-          className="text-3xl mb-1"
-          style={{ color: state.textColor || '#111827', fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }}
+      <div className="px-8 py-6">
+        {/* Locked-slot affordance — dashed border + muted "Locked"
+            pill so MCs see at a glance that this is a fixed portal
+            preview, not editable chrome. Same wrapper as
+            RenderContractBody. */}
+        <div
+          className="rounded-xl border-2 border-dashed p-5"
+          style={{
+            borderColor: muted + '60',
+            backgroundColor: surface,
+          }}
         >
-          Couple name
-        </p>
-        <p className="mt-3 text-sm" style={{ color: state.mutedColor || '#6B7280' }}>
-          Fill in your details below. Everything saves automatically. You can come back anytime.
-        </p>
-      </div>
-      <div className="flex gap-8 px-8 py-7 min-h-[420px]">
-      <nav className="w-52 shrink-0 border-r border-gray-100 pr-4 space-y-0.5">
-        {visibleSections.map((s) => {
-          const Icon = s.icon
-          return (
-            <div key={s.label} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${s.active ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500'}`}>
-              <Icon size={15} strokeWidth={1.5} className="shrink-0" />
-              <span className="flex-1 text-sm">{s.label}</span>
-              <span className="text-[11px] text-gray-400">{s.count}</span>
-            </div>
-          )
-        })}
-      </nav>
-      <div className="flex-1 min-w-0 space-y-6">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900" style={fontHeading}>Overview</h2>
-          <p className="text-sm text-gray-500 mt-1">Your details and upcoming events</p>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <p className="text-xs font-medium text-gray-500 mb-4">Your details</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Name</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>Alex &amp; Jordan</p></div>
-            <div><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Email</p><p className="text-sm text-gray-700">hello@example.com</p></div>
+          <div className="flex items-center justify-between mb-4">
+            <p
+              className="text-xs font-medium uppercase tracking-wider"
+              style={{ color: muted }}
+            >
+              Couple portal
+            </p>
+            <span
+              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: muted + '20',
+                color: muted,
+              }}
+            >
+              Locked
+            </span>
           </div>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-gray-500 mb-2">Your events</p>
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-base font-medium text-gray-900">Saturday, 14 September 2026</p>
-                <p className="text-sm text-gray-500 mt-0.5">The Glasshouse, Sydney</p>
+
+          {/* Portal preview — dimmed + pointer-events-none so it
+              reads as inert, matching the contract-body slot. */}
+          <div className="opacity-60 select-none pointer-events-none">
+            <div className="px-2 pt-2 pb-6 border-b border-gray-100">
+              <p
+                className="text-3xl mb-1"
+                style={{ color: text, ...fontHeading }}
+              >
+                Couple name
+              </p>
+              <p className="mt-3 text-sm" style={{ color: muted }}>
+                Fill in your details below. Everything saves automatically. You can come back anytime.
+              </p>
+            </div>
+            <div className="flex gap-8 px-2 py-6 min-h-[420px]">
+              <nav className="w-52 shrink-0 border-r border-gray-100 pr-4 space-y-0.5">
+                {visibleSections.map((s) => {
+                  const Icon = s.icon
+                  return (
+                    <div key={s.label} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${s.active ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500'}`}>
+                      <Icon size={15} strokeWidth={1.5} className="shrink-0" />
+                      <span className="flex-1 text-sm">{s.label}</span>
+                      <span className="text-[11px] text-gray-400">{s.count}</span>
+                    </div>
+                  )
+                })}
+              </nav>
+              <div className="flex-1 min-w-0 space-y-6">
+                <div>
+                  <h2 className="text-2xl font-semibold text-gray-900" style={fontHeading}>Overview</h2>
+                  <p className="text-sm text-gray-500 mt-1">Your details and upcoming events</p>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-xl p-6">
+                  <p className="text-xs font-medium text-gray-500 mb-4">Your details</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Name</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>Alex &amp; Jordan</p></div>
+                    <div><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Email</p><p className="text-sm text-gray-700">hello@example.com</p></div>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-2">Your events</p>
+                  <div className="bg-white border border-gray-200 rounded-xl p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base font-medium text-gray-900">Saturday, 14 September 2026</p>
+                        <p className="text-sm text-gray-500 mt-0.5">The Glasshouse, Sydney</p>
+                      </div>
+                      <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-full whitespace-nowrap" style={{ background: `${state.accentColor || state.brandColor}26`, color: pillForeground(state.accentColor, state.brandColor, state.surfaceColor || '#FFFFFF') }}>127 days away</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white border border-gray-200 rounded-xl p-5"><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Next payment</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>$1,250</p><p className="text-xs text-gray-500 mt-1">Due 1 August 2026</p></div>
+                  <div className="bg-white border border-gray-200 rounded-xl p-5"><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Contract</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>Signed</p><p className="text-xs text-gray-500 mt-1">12 April 2026</p></div>
+                </div>
               </div>
-              <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-full whitespace-nowrap" style={{ background: `${state.accentColor || state.brandColor}26`, color: pillForeground(state.accentColor, state.brandColor, state.surfaceColor || '#FFFFFF') }}>127 days away</span>
             </div>
           </div>
+
+          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
+            <p className="text-xs" style={{ color: muted }}>
+              This is what the couple sees when they open their portal link. The portal&apos;s structure (navigation, sections, fields) isn&apos;t editable here — couples fill it in themselves. You can drag other blocks above or below this slot to add custom welcome text or notes.
+            </p>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white border border-gray-200 rounded-xl p-5"><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Next payment</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>$1,250</p><p className="text-xs text-gray-500 mt-1">Due 1 August 2026</p></div>
-          <div className="bg-white border border-gray-200 rounded-xl p-5"><p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Contract</p><p className="text-lg font-semibold text-gray-900" style={fontHeading}>Signed</p><p className="text-xs text-gray-500 mt-1">12 April 2026</p></div>
-        </div>
-      </div>
       </div>
     </div>
   )
