@@ -460,7 +460,9 @@ export function ContractBuilderModal({
           <ContractPreviewPane
             html={previewHtml}
             documentNumber={contract?.contract_number ?? 'CTR-…'}
+            title={title || `Contract for ${coupleName}`}
             coupleName={coupleName}
+            expiresAt={expiresAt}
           />
         }
         footer={

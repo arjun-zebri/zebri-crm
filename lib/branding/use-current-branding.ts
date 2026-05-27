@@ -43,7 +43,7 @@ import {
 import { type PublicBranding } from './public-surface';
 import { THEME_PRESETS } from './themes';
 
-export type BuilderSurface = 'quote' | 'invoice';
+export type BuilderSurface = 'quote' | 'invoice' | 'contract';
 
 export interface UseCurrentBrandingResult {
   branding: PublicBranding | null;
