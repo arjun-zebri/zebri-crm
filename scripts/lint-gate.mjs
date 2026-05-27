@@ -39,7 +39,15 @@ const ERROR_BUDGET = 78;
 // Phase 2D.1 embedded Connect: 557 → 556 (rewrite of
 // payment-settings-section eliminated a stale lint-suppressed
 // re-render path).
-const WARNING_BUDGET = 556;
+// Phase 2D.2 invoice/[token] decomposition: 556 → 541 (split into
+// orchestrator + 6 components, import-order auto-fixes across the
+// new files dropped a cluster of warnings vs. the old single
+// 577-line page).
+// Phase 2D.2 quote/[token] decomposition: 541 → 533 (same pattern
+// applied to the quote surface — 436-line page split into 7 files).
+// Phase 2D.2 portal token-limiter + token swaps: 533 → 527 (smaller
+// touch — added imports + cleaned up the not-active fallback).
+const WARNING_BUDGET = 527;
 
 function runEslintJson() {
   try {

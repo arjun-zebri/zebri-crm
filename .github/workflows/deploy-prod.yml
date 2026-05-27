@@ -48,9 +48,10 @@ jobs:
         run: bash scripts/check-migrations.sh "${{ github.event.before }}" "${{ github.sha }}"
 
       - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+        # Install via npm rather than the supabase/setup-cli action —
+        # the action's major-tag resolution started 404ing on
+        # codeload. See ci.yml for the longer rationale.
+        run: npm install -g supabase
 
       # IMPORTANT: secrets are passed via env vars, NEVER interpolated
       # directly into the shell `run:` block. GitHub's `${{ secrets.X }}`

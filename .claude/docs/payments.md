@@ -580,13 +580,53 @@ Register **two webhook endpoints**:
 
 Both endpoints can point to the same route handler (`/api/stripe/webhook`).
 
-### Payment success page
+### Payment success page (Phase 2D.2 — server-side re-verified)
 
-Route: `/invoice/payment-success`
+Route: `/invoice/payment-success?invoice_id=<id>&session_id=<cs_…>`
 
-No auth required. Shows a simple "Payment received" confirmation with a link back to the invoice. Invoice ID passed via `?invoice=[id]` query param (display only  -  actual status is confirmed via webhook).
+No auth required (the session_id from Stripe's redirect IS the
+capability). Server component runs a five-check verification against
+Stripe before showing the success view:
+
+1. Both query params present + minimally well-formed (session ID
+   starts with `cs_`).
+2. The invoice exists + its MC has a bound Connect account.
+3. `stripe.checkout.sessions.retrieve(session_id, { expand:
+   ['payment_intent'] })` succeeds.
+4. `session.metadata.invoice_id` matches the route param.
+5. `session.metadata.connected_account_id` matches the invoice's
+   vendor (so a session from a different vendor's invoice can't
+   satisfy this one).
+6. `payment_intent.status === 'succeeded'`.
+
+Any failure → `notFound()` + `payment_success_param_tampered`
+Slack alert with a `reason` field for incident-response triage.
+Page is idempotent — refreshing re-runs the same checks. The
+actual invoice-status flip lives in the
+`checkout.session.completed` webhook from Phase 2A.
+
+The `?invoice_id` + `?session_id` params are filled in by the
+`success_url` Stripe substitutes when creating the Checkout
+session — see `app/api/stripe/invoice-payment/route.ts`.
 
 File: `app/invoice/payment-success/page.tsx`
+
+### Public surfaces decomposition (Phase 2D.2)
+
+The three public token-gated pages (`/invoice/[token]`,
+`/quote/[token]`, `/portal/[token]`) each hit the §5 DoD:
+
+- `/invoice/[token]` (577 → 234 LOC orchestrator + 7 components
+  under `_components/`).
+- `/quote/[token]` (436 → 211 LOC orchestrator + 7 components).
+- `/portal/[token]` was already decomposed; added token-limiter
+  wiring on the invalid-token path + token swaps on the Zebri-
+  rendered chrome.
+
+Token swaps apply only to Zebri-rendered chrome (loading
+skeletons, status banners, unavailable states). The MC-branded
+surfaces (block-tree renderer, brand-coloured pay buttons,
+inline-style branding inside the cards) are untouched.
 
 ### Middleware
 

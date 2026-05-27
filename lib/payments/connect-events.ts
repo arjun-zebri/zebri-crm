@@ -294,7 +294,7 @@ async function applyDeauthorized(
   // Vendor explicitly removed our platform — don't preserve the
   // account ID for silent re-bind. The MC has to start fresh next
   // time.
-  await clearConnectBinding(userId, { preserveLastAccountId: false });
+  await clearConnectBinding(userId);
   await updateEntitlements(deps.authAdmin, userId, {
     stripe_connect_account_id: undefined,
     stripe_connect_enabled: false,

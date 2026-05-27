@@ -14,13 +14,13 @@
  */
 import { execSync } from 'node:child_process';
 
-// Baseline 288 set in Phase 2C.2 (-5 after the builder modal
-// decomposition replaced two big files of legacy strict
-// violations with token-clean parts). Previous: 293 (Phase
+// Baseline 286 set in Phase 2D.2 (-2 after the public-surface
+// decomposition replaced one big strict-leaky file with token-
+// clean components). Previous: 288 (Phase 2C.2), 293 (Phase
 // 2C), 294 (Phase 2A), 295 (Phase 0.2b — initial baseline
 // when typed clients exposed strict sites `any` had masked).
 // Only ever decrease.
-const STRICT_BUDGET = 288;
+const STRICT_BUDGET = 286;
 
 function runTscStrict() {
   try {

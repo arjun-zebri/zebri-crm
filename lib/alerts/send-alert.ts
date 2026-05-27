@@ -70,6 +70,10 @@ function describe(event: AlertEvent): string {
       }${event.currentlyDue.length > 0 ? ` · due=${event.currentlyDue.length}` : ''}`;
     case 'stripe_connect_deauthorized':
       return `user=${event.userId} · acct=${event.accountId}`;
+    case 'public_token_attempt_burst':
+      return `surface=${event.surface} · ip=${event.ip} · attempts=${event.attempts}`;
+    case 'payment_success_param_tampered':
+      return `invoiceToken=${event.invoiceToken} · session=${event.sessionId} — ${event.reason}`;
     case 'email_rate_limit_hit':
       return `action=${event.action} · user=${event.userId} · ip=${event.ip}`;
     case 'resend_send_failed':

@@ -91,10 +91,16 @@ jobs:
       # Integration tests run against a real local Supabase stack
       # (migrations + seed.sql from a clean DB — proves the chain replays
       # and exercises RLS as production does). Slowest step, so last.
+      #
+      # Install the CLI directly via npm rather than the
+      # `supabase/setup-cli@v1` Marketplace action — that action's
+      # major-tag resolution started 404ing on codeload (likely a
+      # moved tag) and the failure mode is opaque from inside CI.
+      # The npm package is a thin wrapper around the binary +
+      # platform detection; it's the same install path Supabase
+      # itself recommends for local-dev pipelines.
       - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+        run: npm install -g supabase
 
       - name: Start local Supabase
         id: supabase_start

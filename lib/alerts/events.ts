@@ -129,6 +129,31 @@ export type AlertEvent =
       userId: string;
       accountId: string;
     })
+  | (BaseEvent & {
+      // A single IP hit the burst threshold on invalid public-token
+      // attempts (Phase 2D.2 — share-token enumeration / scanning).
+      // The IP is rate-limited from that point; this alert just
+      // surfaces it operationally so we can see if a sustained
+      // attack is in progress.
+      type: 'public_token_attempt_burst';
+      severity: 'warn';
+      ip: string;
+      surface: 'invoice' | 'quote' | 'portal';
+      /** Number of invalid attempts inside the burst window
+       *  (typically 10 in 60s). */
+      attempts: number;
+    })
+  | (BaseEvent & {
+      // Couple-side payment-success page received a session_id that
+      // didn't validate against Stripe (mismatched account, wrong
+      // invoice, payment_intent not succeeded). Almost always a
+      // signal of someone fiddling with the redirect URL.
+      type: 'payment_success_param_tampered';
+      severity: 'warn';
+      invoiceToken: string;
+      sessionId: string;
+      reason: string;
+    })
 
   // ───── Email / Resend ──────────────────────────────────────────────
   | (BaseEvent & {

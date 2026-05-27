@@ -1,16 +1,22 @@
-import Image from 'next/image'
 import { createServerClient } from '@supabase/ssr'
-import { PortalShell } from './portal-shell'
-import { BrandingHead } from './branding-head'
+import Image from 'next/image'
+import { headers } from 'next/headers'
+import { notFound } from 'next/navigation'
+
+import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { ipOfHeaders } from '@/lib/api/rate-limit'
+import { recordInvalidTokenAttempt } from '@/lib/api/public-token-limiter'
+import { DENSITY_PADDING } from '@/lib/branding/density'
 import {
   FONT_STACKS,
-  type HeadingFont,
   type BodyFont,
+  type HeadingFont,
 } from '@/lib/branding/fonts'
-import type { PublicBranding } from '@/lib/branding/public-surface'
-import { DENSITY_PADDING } from '@/lib/branding/density'
-import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+
+import { BrandingHead } from './branding-head'
+import { PortalShell } from './portal-shell'
 
 export interface PortalPerson {
   id: string
@@ -157,11 +163,21 @@ export default async function PortalPage({
   const portal = data as PortalData | null
 
   if (!portal) {
+    // Token-attempt limiter — record this invalid attempt by IP so
+    // bursts (10+ in 60s) fire a Slack alert and sustained scanning
+    // (60+ in an hour) starts returning notFound() instead of the
+    // friendly "not active" copy. Same protection model as
+    // /invoice/[token] / /quote/[token] surfaces.
+    const ip = ipOfHeaders(await headers())
+    const result = await recordInvalidTokenAttempt({ ip, surface: 'portal' })
+    if (!result.allowed) {
+      notFound()
+    }
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 gap-6">
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-4 gap-6">
         <Image src="/zebri-logo.svg" alt="Zebri" width={80} height={29} />
-        <p className="text-sm text-gray-500">This link is not active.</p>
-        <p className="text-xs text-gray-400 text-center max-w-xs">
+        <p className="text-sm text-text-muted">This link is not active.</p>
+        <p className="text-xs text-text-subtle text-center max-w-xs">
           Contact your MC to activate your portal link.
         </p>
       </div>
@@ -273,7 +289,7 @@ export default async function PortalPage({
         )}
 
         {/* Hero */}
-        <div className={`${docX} pt-8 pb-8 border-b border-gray-200`}>
+        <div className={`${docX} pt-8 pb-8 border-b border-border`}>
           <h1
             className="text-3xl mb-1"
             style={{ color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
