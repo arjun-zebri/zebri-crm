@@ -107,9 +107,25 @@ Contextual header CTA (matches the invoice pattern):
 
 ### Tests (3.1)
 
-**Unit (target +16 new)**
-- 10 part tests (body editor / quote link / signature display + state-pill renders / overflow menu interactions).
-- 6 action tests (saveContractAction Zod paths + sendContractAction happy / locked-content path + revoke + delete).
+**Unit (shipped — 31 new)**
+- 12 part tests — `ContractSignatureDisplay` (7) + `ContractQuoteLink` (5). `ContractBodyEditor` deliberately skipped at unit level: its primary behaviour is "pass-through to the TipTap-based `RichTextEditor`"; mocking TipTap deep enough for a meaningful test is high-cost-low-value. Covered by the live preview pane in integration / manual smoke.
+- 9 action tests — `saveContractAction` Zod paths + happy + auth gate + non-UUID rejection; `revokeContractAction` happy + RPC-failure surface; `deleteContractAction` happy + non-UUID.
+- 10 `migrateBlocks` tests — lock the contract-surface migration behaviour: marker insertion, body-content stripping, chrome preservation, idempotency, non-contract surfaces untouched, custom user blocks survive.
+
+**Integration — deferred to 3.2 (intentional)**
+
+`saveContractAction` / `revokeContractAction` / `deleteContractAction`
+don't have integration tests yet against local Supabase. The
+quote/invoice counterparts (Phase 2C.2) do — under
+`tests/integration/payments/`. The deferral is intentional: Phase
+3.2's `sign-flow.test.ts` + `decline-flow.test.ts` +
+`revoke-tombstones-log.test.ts` exercise the same actions end-to-
+end through the signing path, with the new `contract_audit_log`
+table assertions as the load-bearing verification. Pulling them
+forward into 3.1 would duplicate scaffolding for marginal gain.
+
+This is recorded as deliberate scope so it doesn't fall through
+the cracks.
 
 ### Doc updates (3.1)
 
