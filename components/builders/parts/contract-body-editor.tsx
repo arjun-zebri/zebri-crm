@@ -54,7 +54,14 @@ export function ContractBodyEditor({
   if (!canEdit) {
     return (
       <div
-        className="rounded-card border border-border bg-surface-muted/40 p-4 prose prose-sm max-w-none"
+        // `.contract-content` is the canonical class defined in
+        // app/globals.css — same one the public /contract/[token]
+        // page + the right-pane preview use. Spacing, heading
+        // sizes, list markers all match the live couple-facing
+        // surface exactly. Previously this used `prose prose-sm`
+        // which rendered noticeably tighter than what the couple
+        // actually saw.
+        className="contract-content rounded-card border border-border bg-surface-muted/40 p-4 text-sm"
         // Locked HTML is server-rendered from the TipTap JSON at
         // send time via `renderContractHtml` — sanitised on the way
         // out. Safe to dangerouslySetInnerHTML here.

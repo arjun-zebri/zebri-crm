@@ -1027,41 +1027,73 @@ export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
  * MC can never edit the contract body here — that lives in the
  * builder modal's TipTap editor and is set per couple. Same model
  * as `RenderCouplePortal` + `RenderPaymentSchedule`.
+ *
+ * Renders with a dashed border + muted "Locked" badge so it's
+ * visually unambiguous this slot isn't editable here, plus a
+ * short message explaining where the body actually lives.
  */
 export function RenderContractBody({ state }: { state: BrandPreviewState }) {
   const pad = PAD(state)
   const muted = state.mutedColor || '#6B7280'
   const text = state.textColor || '#111827'
+  const surface = state.surfaceColor || '#FFFFFF'
   const heading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
   return (
     <div className="border-t border-gray-100">
       <div className={`${pad.docX} ${pad.blockY}`}>
-        <p
-          className="text-xs font-medium uppercase tracking-wider mb-4"
-          style={{ color: muted }}
+        {/* Locked-slot affordance — dashed border + muted "Locked"
+            badge make it clear at a glance that this block isn't
+            editable on the branding surface. */}
+        <div
+          className="rounded-xl border-2 border-dashed p-5"
+          style={{
+            borderColor: muted + '60',
+            backgroundColor: surface,
+          }}
         >
-          Contract body
-        </p>
-        <div className="space-y-3 max-w-prose">
-          <p className="text-base font-semibold" style={{ color: text, ...heading }}>
-            1. Definitions and interpretation
-          </p>
-          <p className="text-sm leading-6" style={{ color: text }}>
-            <span className="font-semibold">Event</span> means the wedding reception described in clause 2.{' '}
-            <span className="font-semibold">Services</span> means the wedding MC services described in clause 3.{' '}
-            <span className="font-semibold">Fee</span> means the total amount payable under clause 4.
-          </p>
-          <p className="text-base font-semibold mt-4" style={{ color: text, ...heading }}>
-            2. Event details
-          </p>
-          <p className="text-sm leading-6" style={{ color: text }}>
-            Event date: 14 September 2026<br />
-            Venue: The Glasshouse, Sydney
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <p
+              className="text-xs font-medium uppercase tracking-wider"
+              style={{ color: muted }}
+            >
+              Contract body
+            </p>
+            <span
+              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: muted + '20',
+                color: muted,
+              }}
+            >
+              Locked
+            </span>
+          </div>
+
+          <div className="space-y-3 max-w-prose opacity-60 select-none pointer-events-none">
+            <p className="text-base font-semibold" style={{ color: text, ...heading }}>
+              1. Definitions and interpretation
+            </p>
+            <p className="text-sm leading-6" style={{ color: text }}>
+              <span className="font-semibold">Event</span> means the wedding reception described in clause 2.{' '}
+              <span className="font-semibold">Services</span> means the wedding MC services described in clause 3.{' '}
+              <span className="font-semibold">Fee</span> means the total amount payable under clause 4.
+            </p>
+            <p className="text-base font-semibold mt-4" style={{ color: text, ...heading }}>
+              2. Event details
+            </p>
+            <p className="text-sm leading-6" style={{ color: text }}>
+              Event date: 14 September 2026<br />
+              Venue: The Glasshouse, Sydney
+            </p>
+          </div>
+
+          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
+            <p className="text-xs" style={{ color: muted }}>
+              The contract body itself can&apos;t be edited here — you write it per couple inside the contract modal under{' '}
+              <span style={{ color: text, fontWeight: 500 }}>Payments → Contracts</span>. You can drag other blocks (text intros, dividers, signature notes) above or below this slot to wrap the body with extra chrome.
+            </p>
+          </div>
         </div>
-        <p className="mt-4 text-xs italic" style={{ color: muted }}>
-          You set the contract body per couple in the builder modal. This block is the placeholder where it renders.
-        </p>
       </div>
     </div>
   )

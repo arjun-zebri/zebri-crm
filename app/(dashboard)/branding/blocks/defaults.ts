@@ -155,27 +155,17 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'po
       { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.' },
     ]
   }
-  // contract — chrome only. The contract body is written by the MC
-  // per-couple in the builder modal's TipTap editor and renders at
-  // the `contractBody` marker. MCs can still add custom chrome blocks
-  // (text intros, dividers, footer notes) above or below the marker
-  // in the branding editor; the body itself is never editable here.
+  // contract — minimal chrome scaffold. The contract body is
+  // written by the MC per-couple in the builder modal's TipTap
+  // editor and renders at the `contractBody` marker. MCs can add
+  // any other chrome blocks they want (title, custom intro text,
+  // divider, footer, etc) above or below the marker; this default
+  // stays intentionally lean so MCs aren't fighting pre-canned
+  // structure they didn't ask for.
   return [
     { id: newId('hb'), type: 'headerBanner' },
     { id: newId('bn'), type: 'businessName' },
-    {
-      id: newId('tt'),
-      type: 'title',
-      title: 'Wedding MC Service Agreement',
-      subtitle: 'ALEX & JORDAN  ·  14 SEPTEMBER 2026',
-      showRef: true,
-      showExpires: false,
-      showAbn: true,
-      titleStyle: FORMAL_TITLE,
-      subtitleStyle: HERO_SUBTITLE,
-    },
     { id: newId('cb'), type: 'contractBody', locked: true },
-    { id: newId('ft'), type: 'footer', closingNote: 'A counter-signed copy will be returned to you.' },
   ]
 }
 
