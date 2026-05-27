@@ -1,6 +1,6 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A (Stripe routes + webhook idempotency)** ✅ on staging · **Phase 2B (Billing UI DoD)** ✅ on staging · **Phase 2C (/payments decomposition + RLS proofs + email-send)** ✅ on staging · **Phase 2C.2 (builder modal decomposition + UI redesign)** ✅ in flight. **Phase 2D.1 (embedded Connect onboarding + status mirror)** ✅ on staging. **Phase 2D.2 (public surface hardening)** ✅ in flight on `phase-2d2-public-surfaces`. Full plan: `.claude/docs/phase-2d-stripe-connect-embedded.md` (supersedes `phase-2-payments.md` §6).
+> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ all on staging. **Phase 3.1 (Contract builder modal)** ✅ in flight on `phase-3-1-contract-builder`. **Phase 3.2 (Public contract surface + audit log)** next. Plan: `.claude/docs/phase-3-contracts.md`.
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
 

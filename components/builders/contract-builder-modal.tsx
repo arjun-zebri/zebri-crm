@@ -1,86 +1,129 @@
-'use client'
+/**
+ * Contract builder modal.
+ *
+ * Phase 3.1 rewrite — orchestrator over the shared
+ * `components/builders/parts/*` set + the new contract-specific
+ * parts (`contract-body-editor`, `contract-quote-link`,
+ * `contract-signature-display`, `contract-preview-pane`).
+ *
+ * Mirrors the post-2C.2 quote/invoice modal shape:
+ * - `BuilderModalShell` provides the modal frame, hero title input,
+ *   state pill, overflow menu, trash icon.
+ * - Right-pane preview shows the rendered contract HTML (live JSON
+ *   for drafts, locked snapshot for sent+).
+ * - All mutations route through server actions in
+ *   `app/(dashboard)/payments/actions.ts` — no inline supabase
+ *   calls. Send still goes through `/api/email/send-contract`
+ *   (authenticated + plan-gated route from Phase 2C).
+ *
+ * Status state machine:
+ * - draft (neutral) — editable
+ * - sent (info + hollow dot) — locked, can be revoked
+ * - signed (success + filled dot) — locked, PDF available
+ * - declined (danger) — locked, terminal
+ * - expired (neutral) — locked, terminal
+ * - revoked (warning + filled dot) — back to draft semantically; the
+ *   underlying RPC also clears the snapshot so it's identical to
+ *   draft from an edit perspective. The "revoked" label only shows
+ *   transiently after an MC clicks Revoke & Edit before the modal
+ *   re-fetches.
+ *
+ * @module components/builders/contract-builder-modal
+ */
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { JSONContent } from '@tiptap/react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+
 import {
-  X, Loader2, Copy, Check, Mail, Download, RefreshCw, Trash2, FileSignature,
-} from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { DatePicker } from '@/components/ui/date-picker'
-import { RichTextEditor } from '@/components/ui/rich-text-editor'
-import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf'
-import { buildContractVariables, renderContractHtml } from '@/lib/contracts/contract-variables'
-
-const STATUS_STYLES: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-600',
-  sent: 'bg-blue-50 text-blue-600',
-  signed: 'bg-emerald-50 text-emerald-600',
-  declined: 'bg-red-50 text-red-600',
-  expired: 'bg-gray-100 text-gray-500',
-  revoked: 'bg-gray-100 text-gray-500',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  sent: 'Sent',
-  signed: 'Signed',
-  declined: 'Declined',
-  expired: 'Expired',
-  revoked: 'Revoked',
-}
+  deleteContractAction,
+  revokeContractAction,
+  saveContractAction,
+  type SaveContractInput,
+} from '@/app/(dashboard)/payments/actions';
+import { BuilderMetaRow } from '@/components/builders/parts/builder-meta-row';
+import {
+  type BuilderModalPrimaryAction,
+  BuilderModalShell,
+  type OverflowMenuItem,
+} from '@/components/builders/parts/builder-modal-shell';
+import { ContractBodyEditor } from '@/components/builders/parts/contract-body-editor';
+import { ContractPreviewPane } from '@/components/builders/parts/contract-preview-pane';
+import {
+  ContractQuoteLink,
+  type ContractQuoteLinkOption,
+} from '@/components/builders/parts/contract-quote-link';
+import { ContractSignatureDisplay } from '@/components/builders/parts/contract-signature-display';
+import type { JSONContent } from '@/components/builders/parts/contract-types';
+import { ShareAndSend } from '@/components/builders/parts/share-and-send';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import type { StatePillProps } from '@/components/ui/state-pill';
+import { useToast } from '@/components/ui/toast';
+import {
+  buildContractVariables,
+  renderContractHtml,
+} from '@/lib/contracts/contract-variables';
+import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf';
+import { createClient } from '@/lib/supabase/client';
 
 interface Contract {
-  id: string
-  title: string
-  contract_number: string
-  status: string
-  content: JSONContent
-  expires_at: string | null
-  share_token: string
-  share_token_enabled: boolean
-  quote_id: string | null
-  couple_id: string
-  signed_at: string | null
-  signer_name: string | null
-  signer_ip: string | null
-  signer_user_agent: string | null
-  declined_at: string | null
-  declined_reason: string | null
-  mc_signature_name: string | null
-  locked_content_html: string | null
-  email_sent_at: string | null
-}
-
-interface QuoteOption {
-  id: string
-  quote_number: string
-  title: string
-  status: string
-  subtotal: number
+  id: string;
+  title: string;
+  contract_number: string;
+  status: string;
+  content: JSONContent;
+  expires_at: string | null;
+  share_token: string;
+  share_token_enabled: boolean;
+  quote_id: string | null;
+  couple_id: string;
+  signed_at: string | null;
+  signer_name: string | null;
+  signer_ip: string | null;
+  signer_user_agent: string | null;
+  declined_at: string | null;
+  declined_reason: string | null;
+  mc_signature_name: string | null;
+  locked_content_html: string | null;
+  email_sent_at: string | null;
 }
 
 interface ContractTemplate {
-  id: string
-  name: string
-  description: string | null
-  content: JSONContent
+  id: string;
+  name: string;
+  description: string | null;
+  content: JSONContent;
 }
 
-interface ContractBuilderModalProps {
-  contractId: string
-  coupleId: string
-  coupleName: string
-  isOpen: boolean
-  onClose: () => void
+interface FirstEventRow {
+  date: string | null;
+  venue: string | null;
 }
+
+interface LinkedQuoteRow {
+  subtotal: number;
+  tax_rate: number | null;
+  discount_type: 'percentage' | 'fixed' | null;
+  discount_value: number | null;
+}
+
+const STATE_PILL: Record<string, StatePillProps> = {
+  draft: { label: 'Draft', tone: 'neutral' },
+  sent: { label: 'Sent', tone: 'info', dot: 'hollow' },
+  signed: { label: 'Signed', tone: 'success', dot: 'filled' },
+  declined: { label: 'Declined', tone: 'danger' },
+  expired: { label: 'Expired', tone: 'neutral' },
+  revoked: { label: 'Revoked', tone: 'warning', dot: 'filled' },
+};
 
 const DEFAULT_TEMPLATE: JSONContent = {
   type: 'doc',
   content: [
-    { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Wedding MC Service Agreement' }] },
+    {
+      type: 'heading',
+      attrs: { level: 1 },
+      content: [{ type: 'text', text: 'Wedding MC Service Agreement' }],
+    },
     {
       type: 'paragraph',
       content: [
@@ -95,26 +138,15 @@ const DEFAULT_TEMPLATE: JSONContent = {
         { type: 'text', text: '.' },
       ],
     },
-    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '1. Services' }] },
-    { type: 'paragraph', content: [{ type: 'text', text: 'The MC will provide wedding MC services including reception hosting, timeline coordination, announcements, and crowd engagement.' }] },
-    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '2. Fee and payment' }] },
-    {
-      type: 'paragraph',
-      content: [
-        { type: 'text', text: 'Total fee: ' },
-        { type: 'mention', attrs: { id: 'total_amount', label: 'Total amount' } },
-        { type: 'text', text: '. A non-refundable deposit of ' },
-        { type: 'mention', attrs: { id: 'deposit_amount', label: 'Deposit amount' } },
-        { type: 'text', text: ' is payable to secure the booking. The balance is due 14 days before the event.' },
-      ],
-    },
-    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '3. Cancellation and rescheduling' }] },
-    { type: 'paragraph', content: [{ type: 'text', text: 'Deposits are non-refundable. Cancellations within 30 days of the event forfeit the balance. Rescheduling is subject to MC availability.' }] },
-    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '4. Force majeure' }] },
-    { type: 'paragraph', content: [{ type: 'text', text: 'Neither party is liable for failure to perform due to events beyond reasonable control. In such cases, the parties will work in good faith to reschedule.' }] },
-    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '5. Acceptance' }] },
-    { type: 'paragraph', content: [{ type: 'text', text: 'By signing below, the Couple agrees to the terms above.' }] },
   ],
+};
+
+export interface ContractBuilderModalProps {
+  contractId: string;
+  coupleId: string;
+  coupleName: string;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export function ContractBuilderModal({
@@ -124,20 +156,21 @@ export function ContractBuilderModal({
   isOpen,
   onClose,
 }: ContractBuilderModalProps) {
-  const supabase = createClient()
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState<JSONContent>(DEFAULT_TEMPLATE)
-  const [expiresAt, setExpiresAt] = useState('')
-  const [quoteId, setQuoteId] = useState<string | null>(null)
-  const [dirty, setDirty] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [confirmingRevoke, setConfirmingRevoke] = useState(false)
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  /* ─── form state ────────────────────────────────────────────── */
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState<JSONContent>(DEFAULT_TEMPLATE);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [quoteId, setQuoteId] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [confirmingRevoke, setConfirmingRevoke] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  /* ─── data ──────────────────────────────────────────────────── */
   const { data: contract, isLoading } = useQuery({
     queryKey: ['contract', contractId],
     enabled: isOpen && !!contractId,
@@ -146,11 +179,11 @@ export function ContractBuilderModal({
         .from('contracts')
         .select('*')
         .eq('id', contractId)
-        .single()
-      if (error) throw error
-      return data as Contract
+        .single();
+      if (error) throw error;
+      return data as Contract;
     },
-  })
+  });
 
   const { data: quotes } = useQuery({
     queryKey: ['couple-accepted-quotes', coupleId],
@@ -161,11 +194,11 @@ export function ContractBuilderModal({
         .select('id, quote_number, title, status, subtotal')
         .eq('couple_id', coupleId)
         .in('status', ['accepted', 'sent'])
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return (data as QuoteOption[]) || []
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as ContractQuoteLinkOption[]) || [];
     },
-  })
+  });
 
   const { data: templates } = useQuery({
     queryKey: ['contract-templates'],
@@ -174,369 +207,356 @@ export function ContractBuilderModal({
       const { data, error } = await supabase
         .from('contract_templates')
         .select('id, name, description, content')
-        .order('position', { ascending: true })
-      if (error) throw error
-      return (data as ContractTemplate[]) || []
+        .order('position', { ascending: true });
+      if (error) throw error;
+      return (data as ContractTemplate[]) || [];
     },
-  })
+  });
 
+  // Pulled so the preview can substitute the `{{event_date}}` /
+  // `{{venue}}` mentions with real values during draft editing.
+  const { data: firstEvent } = useQuery({
+    queryKey: ['couple-first-event', coupleId],
+    enabled: isOpen && !!coupleId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('events')
+        .select('date, venue')
+        .eq('couple_id', coupleId)
+        .order('date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      return (data as FirstEventRow | null) ?? null;
+    },
+  });
+
+  // Optional: the linked quote — used to substitute the
+  // `{{total_amount}}` / `{{deposit_amount}}` mentions.
+  const { data: linkedQuote } = useQuery({
+    queryKey: ['contract-linked-quote', quoteId],
+    enabled: isOpen && !!quoteId,
+    queryFn: async () => {
+      if (!quoteId) return null;
+      const { data } = await supabase
+        .from('quotes')
+        .select('subtotal, tax_rate, discount_type, discount_value')
+        .eq('id', quoteId)
+        .maybeSingle();
+      return (data as LinkedQuoteRow | null) ?? null;
+    },
+  });
+
+  /* ─── hydrate state from DB ─────────────────────────────────── */
   useEffect(() => {
-    if (!contract) return
-    setTitle(contract.title)
-    setContent(contract.content && Object.keys(contract.content).length > 0 ? contract.content : DEFAULT_TEMPLATE)
-    setExpiresAt(contract.expires_at ?? '')
-    setQuoteId(contract.quote_id)
-    setDirty(false)
-  }, [contract?.id])
+    if (!contract) return;
+    setTitle(contract.title);
+    setContent(
+      contract.content && Object.keys(contract.content).length > 0
+        ? contract.content
+        : DEFAULT_TEMPLATE,
+    );
+    setExpiresAt(contract.expires_at);
+    setQuoteId(contract.quote_id);
+    setDirty(false);
+  }, [contract?.id]);
 
-  const isLocked =
-    contract?.status === 'sent' ||
-    contract?.status === 'signed' ||
-    contract?.status === 'declined' ||
-    contract?.status === 'expired'
+  /* ─── derived ───────────────────────────────────────────────── */
+  const status = contract?.status ?? 'draft';
+  const canEdit = status === 'draft' || status === 'revoked';
+  const isSigned = status === 'signed';
+  const isDeclined = status === 'declined';
 
+  /* ─── preview HTML (substituted) ────────────────────────────── */
+  // Build the preview HTML lazily — for locked statuses we use the
+  // server-side snapshot directly; for draft we substitute against
+  // whatever we can resolve client-side (couple + event + quote +
+  // user_metadata) so the preview reflects the real document.
+  const [userMeta, setUserMeta] = useState<Record<string, unknown>>({});
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUserMeta((user?.user_metadata ?? {}) as Record<string, unknown>);
+    };
+    void fetchUser();
+  }, [supabase]);
+
+  const previewHtml = useMemo(() => {
+    // Locked snapshot wins when present — that's the legally-binding
+    // text the couple actually saw, byte for byte.
+    if (!canEdit && contract?.locked_content_html) {
+      return contract.locked_content_html;
+    }
+    const depositPercent = Number(
+      (userMeta.default_deposit_percent as number | undefined) ?? 25,
+    );
+    const vars = buildContractVariables({
+      couple: { name: coupleName, email: null },
+      firstEvent: firstEvent ?? null,
+      quote: linkedQuote ?? null,
+      userMeta,
+      depositPercent,
+    });
+    return renderContractHtml(content, vars);
+  }, [canEdit, contract?.locked_content_html, content, coupleName, firstEvent, linkedQuote, userMeta]);
+
+  /* ─── mutations ─────────────────────────────────────────────── */
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('contracts')
-        .update({
-          title: title || `Contract for ${coupleName}`,
-          content,
-          expires_at: expiresAt || null,
-          quote_id: quoteId,
-        })
-        .eq('id', contractId)
-      if (error) throw error
+      const input: SaveContractInput = {
+        contractId,
+        title: title || `Contract for ${coupleName}`,
+        content,
+        expiresAt: expiresAt,
+        quoteId,
+      };
+      const result = await saveContractAction(input);
+      if (!result.ok) throw new Error(result.error);
+      return result.data.id;
     },
     onSuccess: () => {
-      setDirty(false)
-      queryClient.invalidateQueries({ queryKey: ['contract', contractId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] })
-      queryClient.invalidateQueries({ queryKey: ['all-contracts'] })
+      setDirty(false);
+      queryClient.invalidateQueries({ queryKey: ['contract', contractId] });
+      queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
+      queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
     },
-    onError: () => toast('Failed to save contract', 'error'),
-  })
+    onError: (err) =>
+      toast(err instanceof Error ? err.message : 'Failed to save contract', 'error'),
+  });
 
   const send = async () => {
-    if (!contract) return
-    if (dirty) await save.mutateAsync()
-    setSending(true)
+    if (!contract) return;
+    if (dirty) await save.mutateAsync();
+    setSending(true);
     try {
       const res = await fetch('/api/email/send-contract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contractId }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (!res.ok) {
-        toast(data.error || 'Failed to send contract', 'error')
+        toast(data.error || 'Failed to send contract', 'error');
       } else {
-        toast('Contract sent')
-        queryClient.invalidateQueries({ queryKey: ['contract', contractId] })
-        queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] })
-        queryClient.invalidateQueries({ queryKey: ['all-contracts'] })
+        toast('Contract sent');
+        queryClient.invalidateQueries({ queryKey: ['contract', contractId] });
+        queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
+        queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
       }
     } finally {
-      setSending(false)
+      setSending(false);
     }
-  }
+  };
 
   const revoke = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc('revoke_contract', { p_contract_id: contractId })
-      if (error) throw error
+      const result = await revokeContractAction(contractId);
+      if (!result.ok) throw new Error(result.error);
     },
     onSuccess: () => {
-      toast('Contract revoked - you can now edit')
-      setConfirmingRevoke(false)
-      queryClient.invalidateQueries({ queryKey: ['contract', contractId] })
-      queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] })
-      queryClient.invalidateQueries({ queryKey: ['all-contracts'] })
+      toast('Contract revoked — you can now edit');
+      setConfirmingRevoke(false);
+      queryClient.invalidateQueries({ queryKey: ['contract', contractId] });
+      queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
+      queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
     },
-    onError: () => toast('Failed to revoke contract', 'error'),
-  })
+    onError: (err) => {
+      toast(
+        err instanceof Error ? err.message : 'Failed to revoke contract',
+        'error',
+      );
+      setConfirmingRevoke(false);
+    },
+  });
 
-  const deleteContract = useMutation({
+  const remove = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('contracts').delete().eq('id', contractId)
-      if (error) throw error
+      const result = await deleteContractAction(contractId);
+      if (!result.ok) throw new Error(result.error);
     },
     onSuccess: () => {
-      toast('Contract deleted')
-      setConfirmingDelete(false)
-      queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] })
-      queryClient.invalidateQueries({ queryKey: ['all-contracts'] })
-      onClose()
+      toast('Contract deleted');
+      setConfirmingDelete(false);
+      queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
+      queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
+      onClose();
     },
-    onError: () => toast('Failed to delete contract', 'error'),
-  })
+    onError: (err) => {
+      toast(
+        err instanceof Error ? err.message : 'Failed to delete contract',
+        'error',
+      );
+      setConfirmingDelete(false);
+    },
+  });
 
-  const copyShareLink = () => {
-    if (!contract) return
-    const url = `${window.location.origin}/contract/${contract.share_token}`
-    navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1600)
-  }
-
-  const downloadPdf = async () => {
-    if (!contract) return
-    // Fetch MC metadata + couple + quote for fresh variable substitution (signed render path)
-    const { data: userRes } = await supabase.auth.getUser()
-    const { data: firstEvent } = await supabase
-      .from('events')
-      .select('date, venue')
-      .eq('couple_id', coupleId)
-      .order('date', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-    const { data: quote } = contract.quote_id
-      ? await supabase
-          .from('quotes')
-          .select('subtotal, tax_rate, discount_type, discount_value')
-          .eq('id', contract.quote_id)
-          .maybeSingle()
-      : { data: null }
-
-    const depositPercent = Number(
-      (userRes.user?.user_metadata?.default_deposit_percent as number | undefined) ?? 25
-    )
-    const vars = buildContractVariables({
-      couple: { name: coupleName, email: null },
-      firstEvent: firstEvent ?? null,
-      // DB discount_type is text|null; helper narrows to a literal union.
-      quote: (quote ?? null) as Parameters<typeof buildContractVariables>[0]['quote'],
-      userMeta: userRes.user?.user_metadata ?? {},
-      depositPercent,
-    })
-
-    const html = contract.locked_content_html ?? renderContractHtml(content, vars)
+  /* ─── PDF download ──────────────────────────────────────────── */
+  const downloadPdf = () => {
+    if (!contract) return;
     generateAndPrintPdf({
       type: 'contract',
       documentNumber: contract.contract_number,
       title: contract.title,
       status: contract.status,
       coupleName,
-      businessName: (userRes.user?.user_metadata?.business_name as string | undefined) ?? '',
+      businessName: (userMeta.business_name as string | undefined) ?? '',
       items: [],
       subtotal: 0,
       total: 0,
-      contractHtml: html,
+      contractHtml: previewHtml,
       signerName: contract.signer_name,
       signedAt: contract.signed_at,
       signerIp: contract.signer_ip,
       signerUserAgent: contract.signer_user_agent,
       mcSignatureName: contract.mc_signature_name,
-    })
+    });
+  };
+
+  /* ─── chrome wiring ─────────────────────────────────────────── */
+  const pillKey = (status in STATE_PILL ? status : 'draft') as keyof typeof STATE_PILL;
+
+  // Header CTA: Download PDF only when signed. Sent uses the overflow
+  // menu's "Revoke & Edit" entry; draft has no header CTA (Send
+  // button in the footer is the primary action).
+  const primaryAction: BuilderModalPrimaryAction | undefined = isSigned
+    ? { label: 'Download PDF', onClick: downloadPdf }
+    : undefined;
+
+  const overflowItems: OverflowMenuItem[] = [];
+  if (status === 'sent') {
+    overflowItems.push({
+      label: 'Revoke & Edit',
+      danger: true,
+      onClick: () => setConfirmingRevoke(true),
+    });
   }
 
-  if (!isOpen) return null
-
-  const shareUrl = contract ? `${typeof window !== 'undefined' ? window.location.origin : ''}/contract/${contract.share_token}` : ''
+  const shareUrl =
+    typeof window !== 'undefined' && contract?.share_token
+      ? `${window.location.origin}/contract/${contract.share_token}`
+      : null;
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" onClick={onClose} />
-      <div className="fixed inset-0 z-[60] flex items-stretch sm:items-center justify-center p-0 sm:p-4">
-        <div className="bg-white w-full sm:max-w-4xl sm:rounded-2xl overflow-hidden flex flex-col max-h-screen sm:max-h-[92vh]">
-          {/* Header */}
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <FileSignature size={18} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-              <div className="min-w-0">
-                <h2 className="text-base font-semibold text-gray-900 truncate">
-                  {contract?.contract_number || 'Contract'}
-                </h2>
-                <p className="text-xs text-gray-500 truncate">{coupleName}</p>
-              </div>
-              {contract && (
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS_STYLES[contract.status]}`}>
-                  {STATUS_LABELS[contract.status]}
-                </span>
-              )}
-            </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition cursor-pointer">
-              <X size={18} strokeWidth={1.5} />
-            </button>
-          </div>
+      <BuilderModalShell
+        isOpen={isOpen}
+        onClose={onClose}
+        documentNumber={contract?.contract_number ?? 'Contract'}
+        statePill={STATE_PILL[pillKey]}
+        primaryAction={primaryAction}
+        overflowItems={overflowItems}
+        onDelete={() => setConfirmingDelete(true)}
+        deleteLabel="Delete contract"
+        loading={isLoading && !contract}
+        title={title}
+        onTitleChange={(v) => {
+          setTitle(v);
+          setDirty(true);
+        }}
+        titlePlaceholder={`Contract for ${coupleName}`}
+        titleReadOnly={!canEdit}
+        previewPane={
+          <ContractPreviewPane
+            html={previewHtml}
+            documentNumber={contract?.contract_number ?? 'CTR-…'}
+          />
+        }
+        footer={
+          <ShareAndSend
+            dirty={dirty}
+            shareEnabled={contract?.share_token_enabled ?? false}
+            shareUrl={shareUrl}
+            lastSentAt={contract?.email_sent_at ?? null}
+            locked={!canEdit}
+            saving={save.isPending}
+            sending={sending}
+            hasCouple={true}
+            onSave={() => save.mutate()}
+            onSend={() => void send()}
+          />
+        }
+      >
+        {/* Meta row — couple is read-only (contract is bound to one
+            couple at creation), expiry is editable. */}
+        <BuilderMetaRow
+          selectedCoupleId={coupleId}
+          selectedCoupleName={coupleName}
+          coupleOptions={[]}
+          canEditCouple={false}
+          onSelectCouple={() => {
+            /* couple isn't editable on contracts */
+          }}
+          dateValue={expiresAt}
+          dateLabel="Set expiry date"
+          datePrefix="Expires"
+          onDateChange={(d) => {
+            setExpiresAt(d);
+            setDirty(true);
+          }}
+          canEdit={canEdit}
+        />
 
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
-              <div className="p-10 flex justify-center">
-                <Loader2 size={18} className="animate-spin text-gray-400" />
-              </div>
-            ) : (
-              <div className="p-5 space-y-5">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Title</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
-                    disabled={isLocked}
-                    placeholder={`Contract for ${coupleName}`}
-                    className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-gray-400 disabled:bg-gray-50"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Expires on (optional)</label>
-                    <DatePicker
-                      value={expiresAt}
-                      onChange={(v) => { setExpiresAt(v); setDirty(true) }}
-                      disabled={isLocked}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Linked quote (optional)</label>
-                    <select
-                      value={quoteId ?? ''}
-                      onChange={(e) => { setQuoteId(e.target.value || null); setDirty(true) }}
-                      disabled={isLocked}
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:border-gray-400 disabled:bg-gray-50 cursor-pointer"
-                    >
-                      <option value="">None</option>
-                      {(quotes || []).map((q) => (
-                        <option key={q.id} value={q.id}>
-                          {q.quote_number} - {q.title || 'Untitled'} ({q.status})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {!isLocked && (templates?.length ?? 0) > 0 && (
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Start from a template</label>
-                    <select
-                      onChange={(e) => {
-                        const t = (templates || []).find((t) => t.id === e.target.value)
-                        if (t) {
-                          setContent(t.content && Object.keys(t.content).length > 0 ? t.content : DEFAULT_TEMPLATE)
-                          setDirty(true)
-                        }
-                        e.target.value = ''
-                      }}
-                      defaultValue=""
-                      className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white cursor-pointer focus:outline-none focus:border-gray-400"
-                    >
-                      <option value="" disabled>Apply a template…</option>
-                      {(templates || []).map((t) => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Contract body</label>
-                  {isLocked && contract?.locked_content_html ? (
-                    <div
-                      className="border border-gray-200 rounded-xl p-4 prose prose-sm max-w-none bg-gray-50"
-                      dangerouslySetInnerHTML={{ __html: contract.locked_content_html }}
-                    />
-                  ) : (
-                    <RichTextEditor
-                      value={content}
-                      onChange={(v) => { setContent(v); setDirty(true) }}
-                      editable={!isLocked}
-                    />
-                  )}
-                  {!isLocked && (
-                    <p className="text-xs text-gray-400 mt-1.5">
-                      Variables like <span className="font-mono">{'{{couple_name}}'}</span> are replaced with real data when you send the contract.
-                    </p>
-                  )}
-                </div>
-
-                {contract?.status === 'signed' && (
-                  <div className="border border-emerald-100 bg-emerald-50 rounded-xl p-4 text-sm text-emerald-900">
-                    Signed by <strong>{contract.signer_name}</strong> on{' '}
-                    {contract.signed_at ? new Date(contract.signed_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
-                    {contract.signer_ip ? <span className="block text-xs text-emerald-700/80 mt-1">From IP {contract.signer_ip}</span> : null}
-                  </div>
-                )}
-
-                {contract?.status === 'declined' && (
-                  <div className="border border-red-100 bg-red-50 rounded-xl p-4 text-sm text-red-900">
-                    Declined{contract.declined_reason ? ` - ${contract.declined_reason}` : ''}.
-                  </div>
-                )}
-
-                {contract && contract.status !== 'draft' && contract.share_token_enabled && (
-                  <div className="border border-gray-200 rounded-xl p-3 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-500 mb-0.5">Share link</p>
-                      <p className="text-xs text-gray-900 truncate font-mono">{shareUrl}</p>
-                    </div>
-                    <button
-                      onClick={copyShareLink}
-                      className="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1.5 border border-gray-200 hover:border-gray-300 rounded-lg px-2.5 py-1.5 transition cursor-pointer shrink-0"
-                    >
-                      {copied ? <Check size={12} strokeWidth={2} /> : <Copy size={12} strokeWidth={1.5} />}
-                      {copied ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between gap-2 flex-wrap flex-shrink-0 bg-white">
-            <button
-              onClick={() => setConfirmingDelete(true)}
-              className="text-xs font-medium text-gray-400 hover:text-red-500 transition cursor-pointer inline-flex items-center gap-1.5"
-            >
-              <Trash2 size={13} strokeWidth={1.5} />
-              Delete
-            </button>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              {contract?.status === 'signed' && (
-                <button
-                  onClick={downloadPdf}
-                  className="text-xs font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl px-3 py-2 inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Download size={13} strokeWidth={1.5} /> Download PDF
-                </button>
-              )}
-
-              {contract?.status === 'sent' && (
-                <button
-                  onClick={() => setConfirmingRevoke(true)}
-                  className="text-xs font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl px-3 py-2 inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <RefreshCw size={13} strokeWidth={1.5} /> Revoke &amp; Edit
-                </button>
-              )}
-
-              {!isLocked && (
-                <>
-                  <button
-                    onClick={() => save.mutate()}
-                    disabled={!dirty || save.isPending}
-                    className="text-xs font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl px-3 py-2 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-default"
-                  >
-                    {save.isPending ? <Loader2 size={13} className="animate-spin" /> : null}
-                    Save draft
-                  </button>
-                  <button
-                    onClick={send}
-                    disabled={sending}
-                    className="text-xs font-semibold text-white bg-gray-900 hover:bg-black rounded-xl px-3.5 py-2 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {sending ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} strokeWidth={1.5} />}
-                    {sending ? 'Sending…' : 'Send to couple'}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+        {/* Linked-quote picker — separate row since it needs more
+            width than the meta-row's date / terms slots. */}
+        <div className="mt-3">
+          <ContractQuoteLink
+            selectedQuoteId={quoteId}
+            options={quotes ?? []}
+            canEdit={canEdit}
+            onSelect={(id) => {
+              setQuoteId(id);
+              setDirty(true);
+            }}
+          />
         </div>
-      </div>
+
+        {/* Body */}
+        <div className="mt-6">
+          <ContractBodyEditor
+            content={content}
+            onChange={(v) => {
+              setContent(v);
+              setDirty(true);
+            }}
+            canEdit={canEdit}
+            lockedHtml={contract?.locked_content_html ?? null}
+            templates={templates ?? []}
+            onApplyTemplate={(tpl) => {
+              setContent(
+                tpl.content && Object.keys(tpl.content).length > 0
+                  ? tpl.content
+                  : DEFAULT_TEMPLATE,
+              );
+              setDirty(true);
+            }}
+          />
+        </div>
+
+        {/* Signature / decline state (terminal states only). */}
+        {isSigned ? (
+          <div className="mt-6">
+            <ContractSignatureDisplay
+              kind="signed"
+              signerName={contract?.signer_name ?? null}
+              signedAt={contract?.signed_at ?? null}
+              signerIp={contract?.signer_ip ?? null}
+              declinedReason={null}
+            />
+          </div>
+        ) : null}
+        {isDeclined ? (
+          <div className="mt-6">
+            <ContractSignatureDisplay
+              kind="declined"
+              signerName={null}
+              signedAt={null}
+              signerIp={null}
+              declinedReason={contract?.declined_reason ?? null}
+            />
+          </div>
+        ) : null}
+      </BuilderModalShell>
 
       <ConfirmDialog
         open={confirmingRevoke}
@@ -552,10 +572,10 @@ export function ContractBuilderModal({
         title="Delete this contract?"
         description="This removes the contract permanently."
         confirmLabel="Delete"
-        loading={deleteContract.isPending}
-        onConfirm={() => deleteContract.mutate()}
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate()}
         onCancel={() => setConfirmingDelete(false)}
       />
     </>
-  )
+  );
 }
