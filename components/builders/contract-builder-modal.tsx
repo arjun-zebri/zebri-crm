@@ -47,14 +47,15 @@ import {
   BuilderModalShell,
   type OverflowMenuItem,
 } from '@/components/builders/parts/builder-modal-shell';
+import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-pane';
 import { ContractBodyEditor } from '@/components/builders/parts/contract-body-editor';
-import { ContractPreviewPane } from '@/components/builders/parts/contract-preview-pane';
 import {
   ContractQuoteLink,
   type ContractQuoteLinkOption,
 } from '@/components/builders/parts/contract-quote-link';
 import { ContractSignatureDisplay } from '@/components/builders/parts/contract-signature-display';
 import type { JSONContent } from '@/components/builders/parts/contract-types';
+import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
@@ -437,6 +438,35 @@ export function ContractBuilderModal({
       ? `${window.location.origin}/contract/${contract.share_token}`
       : null;
 
+  // PreviewDoc fed to the shared BuilderPreviewPane. Contract-only
+  // fields (contractHtml / lockedHtml / signer info) flow through;
+  // the unused quote/invoice slots stay at defaults.
+  const previewDoc: PreviewDoc = {
+    kind: 'contract',
+    documentNumber: contract?.contract_number ?? 'CTR-…',
+    title: title || `Contract for ${coupleName}`,
+    status,
+    coupleName,
+    businessName: (userMeta.business_name as string | undefined) ?? null,
+    items: [],
+    taxRate: 0,
+    discount: null,
+    notes: null,
+    expiresAt: expiresAt,
+    shareUrl: shareUrl ?? '',
+    contractHtml: previewHtml,
+    lockedHtml: contract?.locked_content_html ?? null,
+    signerName: contract?.signer_name ?? null,
+    signedAt: contract?.signed_at ?? null,
+    signerIp: contract?.signer_ip ?? null,
+    signerUserAgent: contract?.signer_user_agent ?? null,
+    mcSignatureName:
+      contract?.mc_signature_name ??
+      (userMeta.mc_signature_name as string | undefined) ??
+      (userMeta.display_name as string | undefined) ??
+      null,
+  };
+
   return (
     <>
       <BuilderModalShell
@@ -457,13 +487,7 @@ export function ContractBuilderModal({
         titlePlaceholder={`Contract for ${coupleName}`}
         titleReadOnly={!canEdit}
         previewPane={
-          <ContractPreviewPane
-            html={previewHtml}
-            documentNumber={contract?.contract_number ?? 'CTR-…'}
-            title={title || `Contract for ${coupleName}`}
-            coupleName={coupleName}
-            expiresAt={expiresAt}
-          />
+          <BuilderPreviewPane doc={previewDoc} surface="contract" />
         }
         footer={
           <ShareAndSend

@@ -33,8 +33,9 @@ export type PreviewTab = 'pdf' | 'email' | 'payment_page';
 export interface BuilderPreviewPaneProps {
   doc: PreviewDoc;
   /** Used by the payment-page tab to load the right block tree +
-   *  default fonts. Quote builder passes 'quote'; invoice 'invoice'. */
-  surface: 'quote' | 'invoice';
+   *  default fonts. Quote builder passes 'quote'; invoice
+   *  'invoice'; contract 'contract'. */
+  surface: 'quote' | 'invoice' | 'contract';
   /** Couple's email for the "To:" line of the email preview.
    *  Optional — when missing the preview shows a placeholder. */
   coupleEmail?: string | null | undefined;

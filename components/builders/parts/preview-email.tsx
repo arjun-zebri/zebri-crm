@@ -13,7 +13,7 @@
 
 import { useMemo } from 'react';
 
-import { invoiceHtml, quoteHtml } from '@/lib/email';
+import { contractHtml, invoiceHtml, quoteHtml } from '@/lib/email';
 
 import type { PreviewDoc } from './preview-shared';
 
@@ -25,6 +25,9 @@ export interface PreviewEmailProps {
 function buildSubject(doc: PreviewDoc): string {
   if (doc.kind === 'quote') {
     return `Quote ${doc.documentNumber} from ${doc.businessName ?? 'your MC'}`;
+  }
+  if (doc.kind === 'contract') {
+    return `Contract ${doc.documentNumber} from ${doc.businessName ?? 'your MC'}`;
   }
   return `Invoice ${doc.documentNumber} from ${doc.businessName ?? 'your MC'}`;
 }
@@ -45,6 +48,16 @@ export function PreviewEmail({ doc, coupleEmail }: PreviewEmailProps) {
         coupleName: doc.coupleName ?? 'there',
         quoteNumber: doc.documentNumber,
         quoteTitle: doc.title || `Quote ${doc.documentNumber}`,
+        shareUrl: doc.shareUrl,
+        mcBusinessName: doc.businessName ?? 'Your MC',
+      });
+    }
+    if (doc.kind === 'contract') {
+      return contractHtml({
+        coupleName: doc.coupleName ?? 'there',
+        contractNumber: doc.documentNumber,
+        contractTitle: doc.title || `Contract ${doc.documentNumber}`,
+        expiresAt: formatDueDate(doc.expiresAt),
         shareUrl: doc.shareUrl,
         mcBusinessName: doc.businessName ?? 'Your MC',
       });

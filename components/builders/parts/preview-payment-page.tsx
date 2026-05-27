@@ -76,6 +76,17 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
   const padding = DENSITY_PAD[branding.density];
   const bg = branding.secondary_color || branding.surface_color;
 
+  // Contract surface — split the block tree at the contractBody
+  // marker. Pre-blocks render above the contract HTML body +
+  // signature sections; post-blocks render below. Mirrors the
+  // public /contract/[token] page exactly.
+  const isContract = doc.kind === 'contract';
+  const markerIdx = isContract
+    ? blocks.findIndex((b) => b.type === 'contractBody')
+    : -1;
+  const preBlocks = isContract && markerIdx >= 0 ? blocks.slice(0, markerIdx) : blocks;
+  const postBlocks = isContract && markerIdx >= 0 ? blocks.slice(markerIdx + 1) : [];
+
   return (
     <div
       className={`h-full overflow-y-auto rounded-card border border-border ${padding.page}`}
@@ -96,16 +107,42 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
         }}
       >
         <PublicBlockRenderer
-          blocks={blocks}
+          blocks={preBlocks}
           branding={branding}
           doc={publicDoc}
           // Invoices hide the action block only when card payments
           // are off — when on, the action block's "Pay with card"
           // button is exactly what the couple will see. Quotes
           // always show the action so the MC can preview the
-          // Accept-quote affordance.
-          hideAction={surface === 'invoice' && !doc.stripePaymentEnabled}
+          // Accept-quote affordance. Contracts hide the action
+          // because the actual signing flow is rendered below
+          // (see ContractSigningPlaceholder).
+          hideAction={
+            (surface === 'invoice' && !doc.stripePaymentEnabled) ||
+            surface === 'contract'
+          }
         />
+
+        {/* Contract body + signature surface (contract surface only).
+            Renders between pre-blocks and post-blocks, matching the
+            public /contract/[token] page's layout exactly. */}
+        {isContract ? (
+          <ContractBodySurface
+            doc={doc}
+            branding={branding}
+            cardSectionPad={padding.cardSection}
+          />
+        ) : null}
+
+        {/* Post-marker blocks (contract surface only). */}
+        {isContract && postBlocks.length > 0 ? (
+          <PublicBlockRenderer
+            blocks={postBlocks}
+            branding={branding}
+            doc={publicDoc}
+            hideAction
+          />
+        ) : null}
 
         {/* Notes — the block renderer doesn't include a notes
             block by default (the public pages render notes
@@ -114,7 +151,7 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
             padding matches the horizontal/vertical padding the
             renderer's blocks use, so notes line up with the
             footer / line-items / totals above. */}
-        {doc.notes ? (
+        {!isContract && doc.notes ? (
           <div className={`mt-6 ${padding.cardSection}`}>
             <p
               style={{
@@ -143,5 +180,129 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
         ) : null}
       </div>
     </div>
+  );
+}
+
+/* ─── Contract body + signature surface ──────────────────────── */
+
+function ContractBodySurface({
+  doc,
+  branding,
+  cardSectionPad,
+}: {
+  doc: PreviewDoc;
+  branding: ReturnType<typeof useCurrentBranding>['branding'];
+  cardSectionPad: string;
+}) {
+  if (!branding) return null;
+  const html = doc.lockedHtml || doc.contractHtml || '';
+  const muted = branding.muted_color;
+  const text = branding.text_color;
+  return (
+    <>
+      {/* Body */}
+      <div className={cardSectionPad}>
+        <div
+          className="contract-content text-sm"
+          style={{ color: text, fontFamily: bodyFontFamily(branding) }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
+
+      {/* MC countersignature */}
+      <div
+        className={`${cardSectionPad} border-t`}
+        style={{ borderColor: muted + '30' }}
+      >
+        <p className="text-xs font-medium mb-1" style={{ color: muted }}>
+          Signed by MC
+        </p>
+        <p
+          className="text-xl"
+          style={{
+            color: text,
+            fontFamily: 'Caveat, "Brush Script MT", cursive',
+          }}
+        >
+          {doc.mcSignatureName || doc.businessName || 'Your MC'}
+        </p>
+        {doc.businessName ? (
+          <p className="text-xs mt-1" style={{ color: muted }}>
+            {doc.businessName}
+          </p>
+        ) : null}
+      </div>
+
+      {/* Couple signature placeholder (non-functional preview) */}
+      <div
+        className={`${cardSectionPad} border-t space-y-4`}
+        style={{ borderColor: muted + '30' }}
+      >
+        <p className="text-xs font-medium" style={{ color: muted }}>
+          Sign to accept
+        </p>
+        <div>
+          <label className="block text-xs font-medium mb-1.5" style={{ color: muted }}>
+            Your full legal name
+          </label>
+          <input
+            type="text"
+            placeholder={doc.coupleName ?? ''}
+            readOnly
+            tabIndex={-1}
+            aria-hidden="true"
+            className="w-full text-sm border px-3 py-2.5 cursor-not-allowed bg-surface-muted/30"
+            style={{
+              borderRadius: branding.corner_radius,
+              borderColor: muted + '30',
+              color: text,
+            }}
+          />
+        </div>
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={false}
+            readOnly
+            tabIndex={-1}
+            aria-hidden="true"
+            className="mt-0.5 w-4 h-4 cursor-not-allowed"
+          />
+          <span className="text-sm" style={{ color: text }}>
+            I agree to the terms above and intend my typed name to serve as my legal signature.
+          </span>
+        </label>
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
+            disabled
+            style={{
+              backgroundColor: branding.brand_color,
+              color: '#ffffff',
+              borderRadius: branding.corner_radius,
+            }}
+            className="text-sm font-semibold px-5 py-2.5 cursor-not-allowed opacity-90"
+          >
+            Sign contract
+          </button>
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-hidden="true"
+            disabled
+            style={{
+              borderRadius: branding.corner_radius,
+              borderColor: muted + '40',
+              color: muted,
+            }}
+            className="text-sm font-medium px-4 py-2.5 border cursor-not-allowed"
+          >
+            Decline
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
