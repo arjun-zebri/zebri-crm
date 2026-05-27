@@ -130,6 +130,8 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
       return null
     case 'paymentSchedule':
       return null
+    case 'contractBody':
+      return null
   }
 }
 

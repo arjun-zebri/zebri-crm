@@ -28,6 +28,7 @@ export type BlockType =
   | 'footer'
   | 'couplePortal'
   | 'paymentSchedule'
+  | 'contractBody'
 
 export interface BaseBlock {
   id: string
@@ -167,6 +168,18 @@ export interface PaymentScheduleBlock extends BaseBlock {
   type: 'paymentSchedule'
 }
 
+/**
+ * Marker block — represents the position where the per-couple
+ * contract body (TipTap content written in the builder modal)
+ * will appear. The MC can drag chrome blocks above and below it
+ * in the branding editor; the contract content itself is never
+ * editable on the branding surface. Same model as `couplePortal`
+ * and `paymentSchedule`.
+ */
+export interface ContractBodyBlock extends BaseBlock {
+  type: 'contractBody'
+}
+
 export type Block =
   | HeaderBannerBlock
   | BusinessNameBlock
@@ -181,6 +194,7 @@ export type Block =
   | FooterBlock
   | CouplePortalBlock
   | PaymentScheduleBlock
+  | ContractBodyBlock
 
 export type BlocksByDoc = Record<'quote' | 'invoice' | 'contract' | 'portal', Block[]>
 
@@ -198,6 +212,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   footer: 'Footer',
   couplePortal: 'Couple portal',
   paymentSchedule: 'Payment schedule',
+  contractBody: 'Contract body',
 }
 
 export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
@@ -214,4 +229,5 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   footer: 'Business contact and closing line',
   couplePortal: 'The couple-facing portal (fixed)',
   paymentSchedule: 'Deposit & final balance (live invoice data)',
+  contractBody: 'The contract body (fixed — edited per couple)',
 }

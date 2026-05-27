@@ -97,6 +97,7 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'footer':       return <RenderFooter block={block} branding={branding} />
     case 'couplePortal': return null
     case 'paymentSchedule': return null
+    case 'contractBody': return null
   }
 }
 

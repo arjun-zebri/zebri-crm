@@ -117,6 +117,17 @@ export function ContractPreviewPane({
     taxRate: 0,
   };
 
+  // Split the block tree at the `contractBody` marker — chrome above
+  // (logo, business name, title), the actual contract body rendered
+  // in Zebri's signature layout in the middle, then any post-blocks
+  // (custom footer text, divider, etc) after. Same pattern the
+  // portal page uses for `couplePortal`. When no marker exists
+  // (legacy data) the entire tree renders before the body so we
+  // never lose blocks the MC set up.
+  const markerIndex = blocks.findIndex((b) => b.type === 'contractBody');
+  const preBlocks = markerIndex >= 0 ? blocks.slice(0, markerIndex) : blocks;
+  const postBlocks = markerIndex >= 0 ? blocks.slice(markerIndex + 1) : [];
+
   const padding = DENSITY_PAD[branding.density];
   const bg = branding.secondary_color || branding.surface_color;
   // PublicBranding doesn't carry a brand-kit name; the closest user-
@@ -170,11 +181,11 @@ export function ContractPreviewPane({
             fontFamily: headingFontFamily(branding),
           }}
         >
-          {/* Block tree — logo, business name, tagline, title block,
-              REF/ABN, any custom blocks the MC has added in the
-              branding editor on the Contract surface. */}
+          {/* Pre-marker blocks — chrome that renders ABOVE the
+              contract body (logo, business name, title block,
+              optional custom intro blocks). */}
           <PublicBlockRenderer
-            blocks={blocks}
+            blocks={preBlocks}
             branding={branding}
             doc={publicDoc}
             hideAction
@@ -302,6 +313,17 @@ export function ContractPreviewPane({
               </button>
             </div>
           </div>
+
+          {/* Post-marker blocks — anything the MC put BELOW the
+              contractBody marker (custom footer text, divider, etc). */}
+          {postBlocks.length > 0 ? (
+            <PublicBlockRenderer
+              blocks={postBlocks}
+              branding={branding}
+              doc={publicDoc}
+              hideAction
+            />
+          ) : null}
         </div>
       </div>
     </div>

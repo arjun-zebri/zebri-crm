@@ -1020,3 +1020,49 @@ export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
     </div>
   )
 }
+
+/**
+ * Placeholder block shown in the branding editor where the
+ * per-couple contract body will render on the public page. The
+ * MC can never edit the contract body here — that lives in the
+ * builder modal's TipTap editor and is set per couple. Same model
+ * as `RenderCouplePortal` + `RenderPaymentSchedule`.
+ */
+export function RenderContractBody({ state }: { state: BrandPreviewState }) {
+  const pad = PAD(state)
+  const muted = state.mutedColor || '#6B7280'
+  const text = state.textColor || '#111827'
+  const heading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
+  return (
+    <div className="border-t border-gray-100">
+      <div className={`${pad.docX} ${pad.blockY}`}>
+        <p
+          className="text-xs font-medium uppercase tracking-wider mb-4"
+          style={{ color: muted }}
+        >
+          Contract body
+        </p>
+        <div className="space-y-3 max-w-prose">
+          <p className="text-base font-semibold" style={{ color: text, ...heading }}>
+            1. Definitions and interpretation
+          </p>
+          <p className="text-sm leading-6" style={{ color: text }}>
+            <span className="font-semibold">Event</span> means the wedding reception described in clause 2.{' '}
+            <span className="font-semibold">Services</span> means the wedding MC services described in clause 3.{' '}
+            <span className="font-semibold">Fee</span> means the total amount payable under clause 4.
+          </p>
+          <p className="text-base font-semibold mt-4" style={{ color: text, ...heading }}>
+            2. Event details
+          </p>
+          <p className="text-sm leading-6" style={{ color: text }}>
+            Event date: 14 September 2026<br />
+            Venue: The Glasshouse, Sydney
+          </p>
+        </div>
+        <p className="mt-4 text-xs italic" style={{ color: muted }}>
+          You set the contract body per couple in the builder modal. This block is the placeholder where it renders.
+        </p>
+      </div>
+    </div>
+  )
+}
