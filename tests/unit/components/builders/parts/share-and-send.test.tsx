@@ -49,9 +49,20 @@ describe('ShareAndSend', () => {
     expect(screen.getByRole('button', { name: 'Send to couple' })).toBeDisabled();
   });
 
-  it('shows the empty share copy when not yet enabled', () => {
+  it('hides the share-status row when shareUrl is not available (e.g. brand-new draft)', () => {
+    // Post-2026-05-27: share_token_enabled defaults to true on
+    // insert, so the only time the left side is empty is when
+    // shareUrl itself is null. The "Send to enable share link"
+    // copy was removed when this stopped being a real state.
     render(<ShareAndSend {...base()} />);
-    expect(screen.getByText(/Send to enable share link/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Send to enable share link/i)).toBeNull();
+    expect(screen.queryByText(/Share link live/i)).toBeNull();
+  });
+
+  it('shows "Share link live" when the URL is available but not yet sent', () => {
+    render(<ShareAndSend {...base()} shareEnabled shareUrl="https://x/y" />);
+    expect(screen.getByText(/Share link live/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Copy share link/i })).toBeInTheDocument();
   });
 
   it('exposes Copy link + Open buttons when shareEnabled', () => {

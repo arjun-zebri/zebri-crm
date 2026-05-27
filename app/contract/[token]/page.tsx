@@ -188,6 +188,17 @@ export default function PublicContractPage() {
   const pad = DENSITY_PAD[contract.density ?? 'cozy']
   // Pull Sign/Decline button styling out of the saved action block when present
   // so the signing UI inherits the user's customised colour + radius.
+  // Split branding blocks at the `contractBody` marker so chrome
+  // renders ABOVE the contract HTML body + signatures, and any
+  // post-marker blocks render AFTER. Mirrors the portal page's
+  // `couplePortal` split. Legacy data without a marker → all
+  // blocks render as pre-blocks (no behaviour change for existing
+  // contracts).
+  const allBlocks = contract.branding_blocks ?? []
+  const bodyMarkerIndex = allBlocks.findIndex((b) => b.type === 'contractBody')
+  const preBlocks = bodyMarkerIndex >= 0 ? allBlocks.slice(0, bodyMarkerIndex) : allBlocks
+  const postBlocks = bodyMarkerIndex >= 0 ? allBlocks.slice(bodyMarkerIndex + 1) : []
+
   const actionStyle = findActionStyle(contract.branding_blocks, {
     brandColor: brand,
     cornerRadius: contract.corner_radius ?? 16,
@@ -211,10 +222,13 @@ export default function PublicContractPage() {
           className="bg-white border border-gray-100 overflow-hidden shadow-sm"
           style={{ borderRadius: radius }}
         >
-          {/* Block-tree header (replaces the branded header band when present) */}
-          {contract.branding_blocks && contract.branding_blocks.length > 0 && (
+          {/* Block-tree header — pre-marker blocks (logo, business
+              name, title block, any custom intro chrome). When a
+              `contractBody` marker is present, post-marker blocks
+              render below the signature section. */}
+          {preBlocks.length > 0 && (
             <PublicBlockRenderer
-              blocks={contract.branding_blocks}
+              blocks={preBlocks}
               branding={contract}
               doc={{
                 title: contract.title,
@@ -384,6 +398,24 @@ export default function PublicContractPage() {
               </div>
             )}
           </div>
+
+          {/* Post-marker blocks — anything below the contractBody
+              marker (custom outro text, divider, footer note). */}
+          {postBlocks.length > 0 && (
+            <PublicBlockRenderer
+              blocks={postBlocks}
+              branding={contract}
+              doc={{
+                title: contract.title,
+                refNumber: contract.contract_number,
+                expiresAt: contract.expires_at,
+                items: [],
+                subtotal: 0,
+                taxRate: 0,
+              }}
+              hideAction
+            />
+          )}
         </div>
 
         <p className="text-xs text-center mt-6" style={{ color: mutedColor }}>

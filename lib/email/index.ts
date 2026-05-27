@@ -134,7 +134,7 @@ export async function sendQuoteEmail(opts: {
   return { ok: true };
 }
 
-function contractHtml(opts: {
+export function contractHtml(opts: {
   coupleName: string;
   contractNumber: string;
   contractTitle: string;

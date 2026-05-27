@@ -83,7 +83,7 @@ export function Modal({
           (notably the bottom edge of the compare-plans modal —
           regression caught during Phase 2B UI verification). */}
       <div
-        className={`fixed inset-0 h-screen bg-black/40 backdrop-blur-sm animate-fade-in ${nested ? 'z-[75]' : 'z-50'}`}
+        className={`fixed inset-0 h-screen bg-black/40 animate-fade-in ${nested ? 'z-[75]' : 'z-50'}`}
         onClick={onClose}
       />
       <div
@@ -91,7 +91,7 @@ export function Modal({
         onClick={onClose}
       >
         <div
-          className={`bg-white rounded-2xl shadow-xl w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
+          className={`bg-white rounded-2xl border border-border w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${
             // Fullscreen modals lock to 90vh so the size doesn't
             // shrink while content is loading. Matches the couple-
             // profile overlay's vertical sizing. Other sizes keep

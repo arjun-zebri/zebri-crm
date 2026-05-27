@@ -33,9 +33,10 @@ import {
   RenderPaymentDetails,
   RenderText,
   RenderAction,
+  RenderContractBody,
+  RenderCouplePortal,
   RenderDivider,
   RenderFooter,
-  RenderCouplePortal,
   RenderPaymentSchedule,
 } from './render'
 
@@ -171,9 +172,15 @@ export function BlockRenderer({
         >
           <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
             {blocks.map((block) => {
-              if (block.type === 'couplePortal' || block.type === 'paymentSchedule') {
+              if (block.type === 'couplePortal' || block.type === 'paymentSchedule' || block.type === 'contractBody') {
+                const fixedLabel =
+                  block.type === 'couplePortal'
+                    ? 'Couple portal (fixed)'
+                    : block.type === 'paymentSchedule'
+                      ? 'Payment schedule (fixed)'
+                      : 'Contract body (fixed)';
                 return (
-                  <div key={block.id} aria-label={block.type === 'couplePortal' ? 'Couple portal (fixed)' : 'Payment schedule (fixed)'} className="group relative">
+                  <div key={block.id} aria-label={fixedLabel} className="group relative">
                     {renderBlock(block, state, updateBlock, {})}
                     <button
                       type="button"
@@ -307,6 +314,8 @@ function renderBlock(
       return <RenderCouplePortal state={state} />
     case 'paymentSchedule':
       return <RenderPaymentSchedule state={state} />
+    case 'contractBody':
+      return <RenderContractBody state={state} />
   }
 }
 

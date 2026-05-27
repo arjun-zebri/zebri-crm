@@ -31,6 +31,7 @@ import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
 import { createClient } from '@/lib/supabase/server';
+import type { Json } from '@/types/database';
 
 export interface ActionSuccess<T> {
   ok: true;
@@ -344,5 +345,132 @@ export async function deleteInvoiceAction(invoiceId: string): Promise<ActionResu
       error: err instanceof Error ? err.message : String(err),
     });
     return { ok: false, error: 'Could not delete the invoice.' };
+  }
+}
+
+/* ─── saveContractAction ────────────────────────────────────────
+   The contract `content` field is a TipTap JSON document — a
+   nested tree of nodes/marks with no fixed shape we want to pin
+   here (changes whenever a node type is added/removed in the
+   editor). We accept it as an unknown record + trust the editor
+   to produce a valid tree; downstream `renderContractHtml` is
+   the integrity gate. ─────────────────────────────────────── */
+
+const saveContractSchema = z.object({
+  contractId: z.uuid(),
+  title: z.string().max(200),
+  content: z.record(z.string(), z.unknown()),
+  expiresAt: z.string().nullable(),
+  quoteId: z.uuid().nullable(),
+});
+
+export type SaveContractInput = z.infer<typeof saveContractSchema>;
+
+export async function saveContractAction(
+  input: SaveContractInput,
+): Promise<ActionResult<{ id: string }>> {
+  const parsed = saveContractSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid contract data.' };
+  }
+  const { contractId, title, content, expiresAt, quoteId } = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  try {
+    const { error } = await supabase
+      .from('contracts')
+      .update({
+        title: title || 'Untitled contract',
+        // content is a TipTap JSONContent tree — opaque to us; the
+        // generated Database type narrows the column to `Json`,
+        // so we cast at the boundary. The Zod schema already
+        // proved this is a record shape.
+        content: content as unknown as Json,
+        expires_at: expiresAt,
+        quote_id: quoteId,
+      })
+      .eq('id', contractId);
+    if (error) throw error;
+    return { ok: true, data: { id: contractId } };
+  } catch (err) {
+    logger.error('[payments/actions] saveContractAction failed', {
+      userId: user.id,
+      contractId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { ok: false, error: 'Could not save the contract.' };
+  }
+}
+
+/* ─── revokeContractAction ─────────────────────────────────────
+   Wraps the `revoke_contract(p_contract_id)` SECURITY INVOKER
+   RPC. The DB-side logic resets status → draft, regenerates the
+   share token, clears the locked content snapshot, and bumps
+   `version` — RLS scopes the call to the authenticated user's
+   own row.
+
+   Phase 3.2 will additionally write a `revoked` row into the
+   forthcoming `contract_audit_log` table BEFORE the RPC clears
+   the inline `signed_at` / `signer_*` columns, so the prior
+   signing trail survives revocation. ───────────────────────── */
+
+export async function revokeContractAction(
+  contractId: string,
+): Promise<ActionResult<void>> {
+  const parsed = z.uuid().safeParse(contractId);
+  if (!parsed.success) return { ok: false, error: 'Invalid contract ID.' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  try {
+    const { error } = await supabase.rpc('revoke_contract', {
+      p_contract_id: parsed.data,
+    });
+    if (error) throw error;
+    return { ok: true, data: undefined };
+  } catch (err) {
+    logger.error('[payments/actions] revokeContractAction failed', {
+      userId: user.id,
+      contractId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { ok: false, error: 'Could not revoke the contract.' };
+  }
+}
+
+/* ─── deleteContractAction ────────────────────────────────────── */
+
+export async function deleteContractAction(
+  contractId: string,
+): Promise<ActionResult<void>> {
+  const parsed = z.uuid().safeParse(contractId);
+  if (!parsed.success) return { ok: false, error: 'Invalid contract ID.' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  try {
+    const { error } = await supabase.from('contracts').delete().eq('id', parsed.data);
+    if (error) throw error;
+    return { ok: true, data: undefined };
+  } catch (err) {
+    logger.error('[payments/actions] deleteContractAction failed', {
+      userId: user.id,
+      contractId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { ok: false, error: 'Could not delete the contract.' };
   }
 }

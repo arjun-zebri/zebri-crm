@@ -4,8 +4,12 @@
  * Layout (sent state):
  *   ✓ Sent 24 May   Copy link   Open ↗               [Save] [Resend]
  *
- * Layout (draft state):
- *   Send to enable share link                        [Save] [Send to couple]
+ * Layout (draft state — share link live by default since
+ * `share_token_enabled` defaults to true on insert):
+ *   🔗 Share link live   Copy link   Open ↗          [Save] [Send to couple]
+ *
+ * Layout (no doc yet — `shareUrl === null`):
+ *   (left side hidden)                               [Save] [Send to couple]
  *
  * No raw URL is rendered — the long share token used to dominate
  * the row. Click "Copy link" to copy; click "Open" to open in a
@@ -23,11 +27,15 @@ import { Button } from '@/components/ui/button';
 export interface ShareAndSendProps {
   /** Whether anything has been edited since the last save. */
   dirty: boolean;
-  /** Whether the share token is enabled (public page live). */
+  /** Whether the share token is enabled (public page live). After
+   *  the 2026-05-27 schema change this is `true` from creation;
+   *  the prop stays so callers can express "this doc is
+   *  explicitly disabled" if a future workflow needs it (e.g. an
+   *  MC pausing public access without deleting). */
   shareEnabled: boolean;
   /** The full URL the share token resolves to. */
   shareUrl: string | null;
-  /** When this is set, the CTA flips to "Resend". */
+  /** When this is set, the status flips to "Sent {date}". */
   lastSentAt: string | null;
   /** Disables every control. */
   locked: boolean;
@@ -38,7 +46,8 @@ export interface ShareAndSendProps {
   hasCouple: boolean;
   /** Save without sending. */
   onSave: () => void;
-  /** First click on a draft: enable share + save + send email. */
+  /** Send email to the couple. The share link is already live
+   *  pre-send; this triggers the email + flips the status. */
   onSend: () => void;
 }
 
@@ -135,12 +144,7 @@ export function ShareAndSend({
               Open
             </a>
           </>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-text-subtle">
-            <Link2 size={12} strokeWidth={1.5} />
-            Send to enable share link
-          </span>
-        )}
+        ) : null}
       </div>
 
       {/* Save + Send (right) */}

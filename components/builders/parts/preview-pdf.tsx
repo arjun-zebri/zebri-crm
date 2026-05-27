@@ -33,7 +33,7 @@ import type { PreviewDoc } from './preview-shared';
 export interface PreviewPdfProps {
   doc: PreviewDoc;
   /** Used to load the right branding (same one the public page
-   *  surfaces use). Quote / Invoice. Default 'quote'. */
+   *  surfaces use). Quote / Invoice / Contract. Default 'quote'. */
   surface?: BuilderSurface | undefined;
 }
 
@@ -105,6 +105,19 @@ function toPdfDoc(doc: PreviewDoc): PdfDocumentData {
     ...(doc.kind === 'invoice' && doc.bankBsb ? { bankBsb: doc.bankBsb } : {}),
     ...(doc.kind === 'invoice' && doc.bankAccountNumber
       ? { bankAccountNumber: doc.bankAccountNumber }
+      : {}),
+    // Contract-only: thread the body HTML (locked snapshot wins
+    // when present, otherwise the live editor render), plus signer
+    // info so the PDF includes the audit trail.
+    ...(doc.kind === 'contract'
+      ? {
+          contractHtml: doc.lockedHtml || doc.contractHtml || '',
+          signerName: doc.signerName ?? null,
+          signedAt: doc.signedAt ?? null,
+          signerIp: doc.signerIp ?? null,
+          signerUserAgent: doc.signerUserAgent ?? null,
+          mcSignatureName: doc.mcSignatureName ?? null,
+        }
       : {}),
   };
 }

@@ -47,7 +47,10 @@ const ERROR_BUDGET = 78;
 // applied to the quote surface — 436-line page split into 7 files).
 // Phase 2D.2 portal token-limiter + token swaps: 533 → 527 (smaller
 // touch — added imports + cleaned up the not-active fallback).
-const WARNING_BUDGET = 527;
+// Phase 3.1 contract builder decomposition: 527 → 522 (single
+// 561-LOC file split into orchestrator + 4 parts; auto-fix sweep
+// dropped a few import-order warnings).
+const WARNING_BUDGET = 522;
 
 function runEslintJson() {
   try {

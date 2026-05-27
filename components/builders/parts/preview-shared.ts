@@ -21,7 +21,7 @@ export interface PreviewDiscount {
 }
 
 export interface PreviewDoc {
-  kind: 'quote' | 'invoice';
+  kind: 'quote' | 'invoice' | 'contract';
   documentNumber: string;
   title: string;
   status: string;
@@ -44,4 +44,20 @@ export interface PreviewDoc {
   /** Invoice-only: whether the Pay-with-card action will render on
    *  the public page. Controls the action block in the preview. */
   stripePaymentEnabled?: boolean;
+
+  /* ── Contract-only fields ─────────────────────────────────── */
+  /** Contract HTML rendered live from the editor (draft) OR the
+   *  locked snapshot (sent+). Used by all three preview tabs. */
+  contractHtml?: string;
+  /** Server-side `locked_content_html` snapshot — when present,
+   *  this is what couples actually see; PDF/Link tabs prefer it
+   *  over the live `contractHtml`. */
+  lockedHtml?: string | null;
+  /** Signer info — surfaced in the PDF + Link tabs once signed. */
+  signerName?: string | null;
+  signedAt?: string | null;
+  signerIp?: string | null;
+  signerUserAgent?: string | null;
+  /** MC's typed countersignature name (Caveat cursive). */
+  mcSignatureName?: string | null;
 }
