@@ -460,6 +460,7 @@ export function ContractBuilderModal({
           <ContractPreviewPane
             html={previewHtml}
             documentNumber={contract?.contract_number ?? 'CTR-…'}
+            coupleName={coupleName}
           />
         }
         footer={
