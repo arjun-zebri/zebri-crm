@@ -15,11 +15,10 @@ import {
 } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 
+import { useCoupleStatuses } from "@/app/(dashboard)/couples/use-couple-statuses";
 import { createClient } from "@/lib/supabase/client";
 import { CoupleStatusRecord, getStatusClasses } from '@/types/couple';
 import { Event } from '@/types/event';
-
-import { useCoupleStatuses } from "./use-couple-statuses";
 
 interface CouplesCalendarProps {
   onSelectCouple: (coupleId: string) => void;

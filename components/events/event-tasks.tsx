@@ -1,14 +1,28 @@
 'use client'
 
-import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
 import { Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
+
+import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section'
 import { TaskRow, TaskRowTask } from '@/app/(dashboard)/tasks/task-row'
 import { TaskSidePanel, TaskFieldUpdate } from '@/app/(dashboard)/tasks/task-side-panel'
-import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section'
+import { useToast } from '@/components/ui/toast'
+import {
+  createEventTaskAction,
+  deleteEventTaskAction,
+  updateEventTaskAction,
+} from '@/lib/events/actions'
+import { createClient } from '@/lib/supabase/client'
 import { TaskPriority, STATUS_ORDER } from '@/types/task'
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
 
 interface EventTasksProps {
   eventId: string
@@ -49,23 +63,14 @@ export function EventTasks({ eventId }: EventTasksProps) {
 
   const patchTask = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: TaskFieldUpdate }) => {
-      const { error } = await supabase.from('tasks').update(patch).eq('id', id)
-      if (error) throw error
+      unwrap(await updateEventTaskAction({ id, patch }))
     },
     onSuccess: invalidate,
   })
 
   const insertTask = useMutation({
     mutationFn: async (input: { title: string }) => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-      const { error } = await supabase.from('tasks').insert({
-        title: input.title,
-        status: 'todo',
-        user_id: user.user.id,
-        related_event_id: eventId,
-      })
-      if (error) throw error
+      unwrap(await createEventTaskAction({ eventId, title: input.title }))
     },
     onSuccess: () => {
       invalidate()
@@ -75,8 +80,7 @@ export function EventTasks({ eventId }: EventTasksProps) {
 
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('tasks').delete().eq('id', id)
-      if (error) throw error
+      unwrap(await deleteEventTaskAction(id))
     },
     onSuccess: () => {
       invalidate()
