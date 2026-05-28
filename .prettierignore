@@ -1,0 +1,13 @@
+# Generated / vendored — never format
+node_modules
+.next
+out
+build
+coverage
+playwright-report
+test-results
+package-lock.json
+types/database.ts
+supabase/migrations
+supabase/seed.sql
+*.md

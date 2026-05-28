@@ -25,7 +25,7 @@ import type {
   HeaderBannerBlock,
   FooterBlock,
 } from './types'
-import type { BrandPreviewState } from '../branding-preview-types'
+import type { BrandPreviewState } from '@/types/branding-preview'
 
 interface BlockToolbarProps {
   block: Block
@@ -129,6 +129,8 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
     case 'couplePortal':
       return null
     case 'paymentSchedule':
+      return null
+    case 'contractBody':
       return null
   }
 }

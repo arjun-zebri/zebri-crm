@@ -1,621 +1,325 @@
-'use client'
+/**
+ * Plans & Billing tab — orchestrator.
+ *
+ * Document-style composition: section labels + thin dividers + clean
+ * sections, instead of stacked bordered cards. The 3-tier comparison
+ * lives in a focused modal — opens only when the user clicks
+ * "Compare plans", so the main flow stays calm.
+ *
+ * @module app/(dashboard)/settings/billing-section
+ */
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { Check, X, Loader2, AlertCircle, CheckCircle2, ExternalLink, Download } from 'lucide-react'
-import { useToast } from '@/components/ui/toast'
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
 
-interface BillingSectionProps {
-  status: string | null
-  trialEnd: string | null
-  subscriptionEnd: string | null
-  subscriptionPlan: string | null
-  hasStripeCustomer: boolean
-  cancelAtPeriodEnd: boolean
-  isSubscribed: boolean
-  isComped: boolean
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/toast';
+import { createClient } from '@/lib/supabase/client';
+
+import { cancelSubscriptionAction } from './billing/actions';
+import { BillingHistory } from './billing/billing-history';
+import { CancelConfirmModal } from './billing/cancel-confirm-modal';
+import { CurrentPlanCard } from './billing/current-plan-card';
+import { PlanComparisonDialog } from './billing/plan-comparison';
+import { type PlanId } from './billing/plans';
+
+export interface BillingSectionProps {
+  status: string | null;
+  trialEnd: string | null;
+  subscriptionEnd: string | null;
+  subscriptionPlan: string | null;
+  hasStripeCustomer: boolean;
+  cancelAtPeriodEnd: boolean;
+  isSubscribed: boolean;
+  isComped: boolean;
+  /** Auth user's `created_at` — surfaced as "Joined {date}" in the
+   *  status line so the card carries a little warmth + history. */
+  userCreatedAt: string | null;
 }
 
-type PlanId = 'starter' | 'pro' | 'max'
+type ActivationState = 'idle' | 'polling' | 'timed_out';
 
-interface Feature {
-  label: string
-  included: boolean
-  soon?: boolean
-}
+export function BillingSection(props: BillingSectionProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const justSubscribed = searchParams.get('checkout') === 'success';
+  const justChanged = searchParams.get('change') === 'success';
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [activation, setActivation] = useState<ActivationState>('idle');
+  const [refreshing, setRefreshing] = useState(false);
+  // A monotonic counter that ticks every time the user takes a
+  // subscription action (cancel / resume). It joins `justSubscribed`
+  // and `justChanged` as triggers for the post-action polling so any
+  // webhook-bound change re-runs the same wait-and-reload flow.
+  const [actionTick, setActionTick] = useState(0);
+  const pollingTrigger = justSubscribed || justChanged || actionTick > 0;
 
-interface Plan {
-  id: PlanId
-  name: string
-  price: string
-  period: string
-  description: string
-  badge?: string
-  features: Feature[]
-}
-
-const allFeatures = [
-  'Up to 5 couples',
-  'Unlimited couples',
-  'CRM & pipeline',
-  'Quotes, invoices & payment links',
-  'Task management',
-  'Couple portal',
-  'Song selection & file transfer',
-  'Timeline Builder',
-  'Pulse',
-  'Event Mode',
-  'Up to 5 team members',
-  'Dedicated account manager & priority support',
-]
-
-const plans: Plan[] = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    price: 'Free',
-    period: '',
-    description: 'For MCs getting started.',
-    features: [
-      { label: 'Up to 5 couples', included: true },
-      { label: 'CRM & pipeline', included: true },
-      { label: 'Quotes, invoices & payment links', included: true },
-      { label: 'Task management', included: true },
-      { label: 'Couple portal', included: false },
-      { label: 'Song selection & file transfer', included: false },
-      { label: 'Timeline Builder', included: false },
-      { label: 'Pulse', included: false },
-      { label: 'Event Mode', included: false },
-      { label: 'Up to 5 team members', included: false },
-      { label: 'Dedicated account manager & priority support', included: false },
-    ],
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '$49',
-    period: '/mo',
-    description: 'For working MCs building their business.',
-    badge: 'MOST POPULAR',
-    features: [
-      { label: 'Unlimited couples', included: true },
-      { label: 'CRM & pipeline', included: true },
-      { label: 'Quotes, invoices & payment links', included: true },
-      { label: 'Task management', included: true },
-      { label: 'Couple portal', included: true },
-      { label: 'Song selection & file transfer', included: true },
-      { label: 'Timeline Builder', included: true },
-      { label: 'Pulse', included: false },
-      { label: 'Event Mode', included: false },
-      { label: 'Up to 5 team members', included: false },
-      { label: 'Dedicated account manager & priority support', included: false },
-    ],
-  },
-  {
-    id: 'max',
-    name: 'Max',
-    price: '$89',
-    period: '/mo',
-    description: 'For full-time MCs running a business.',
-    features: [
-      { label: 'Unlimited couples', included: true },
-      { label: 'CRM & pipeline', included: true },
-      { label: 'Quotes, invoices & payment links', included: true },
-      { label: 'Task management', included: true },
-      { label: 'Couple portal', included: true },
-      { label: 'Song selection & file transfer', included: true },
-      { label: 'Timeline Builder', included: true },
-      { label: 'Pulse', included: true, soon: true },
-      { label: 'Event Mode', included: true, soon: true },
-      { label: 'Up to 5 team members', included: true, soon: true },
-      { label: 'Dedicated account manager & priority support', included: true },
-    ],
-  },
-]
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function formatUnixDate(unix: number) {
-  return new Date(unix * 1000).toLocaleDateString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-interface BillingInvoice {
-  id: string
-  number: string | null
-  status: string | null
-  amount: number
-  created: number
-  hostedUrl: string | null
-  pdfUrl: string | null
-}
-
-interface BillingUpcoming {
-  amount: number
-  nextChargeAt: number
-}
-
-function BillingHistory() {
-  const [invoices, setInvoices] = useState<BillingInvoice[] | null>(null)
-  const [upcoming, setUpcoming] = useState<BillingUpcoming | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-
+  // Stripe webhook updates `app_metadata` asynchronously after a
+  // subscription change. Poll refreshSession() + getUser() until the
+  // refreshed JWT reflects the new state, then do a full reload so
+  // the parent settings page re-fetches user data.
+  //
+  // Polling for 60s gives the webhook a generous window. After that
+  // we surface a manual "Refresh" button — the most common failure in
+  // local dev is "I forgot to start `stripe listen`", and the user
+  // needs an out that doesn't require closing the tab.
   useEffect(() => {
-    let cancelled = false
-    fetch('/api/stripe/billing-history')
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return
-        if (data.error) {
-          setError(true)
-          return
-        }
-        setInvoices(data.invoices ?? [])
-        setUpcoming(data.upcoming ?? null)
-      })
-      .catch(() => {
-        if (!cancelled) setError(true)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
+    if (!pollingTrigger) return;
+    if ((justSubscribed || justChanged) && props.isSubscribed && justChanged) {
+      // Plan change returned but the page already reflects an
+      // updated subscription — drop the query param.
+      router.replace('/settings?tab=billing');
+      return;
     }
-  }, [])
+    if (justSubscribed && props.isSubscribed) {
+      router.replace('/settings?tab=billing');
+      return;
+    }
+    setActivation('polling');
+    // Snapshot the metadata at the moment polling starts. The webhook
+    // will alter at least one of these fields; once we observe a
+    // change we reload.
+    const snapshot = {
+      subscription_status: props.status ?? '',
+      subscription_plan: props.subscriptionPlan ?? '',
+      cancel_at_period_end: props.cancelAtPeriodEnd ? '1' : '0',
+      is_subscribed: props.isSubscribed ? '1' : '0',
+    };
+    const supabase = createClient();
+    let cancelled = false;
+    const start = Date.now();
+    let attempt = 0;
+    async function tick() {
+      if (cancelled) return;
+      attempt += 1;
+      try {
+        await supabase.auth.refreshSession();
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+        if (error) {
+          console.warn('[billing] getUser error during activation poll', error);
+        }
+        const meta = (user?.app_metadata ?? {}) as {
+          is_subscribed?: boolean;
+          subscription_status?: string;
+          subscription_plan?: string;
+          cancel_at_period_end?: boolean;
+        };
+        const subscriptionLanded =
+          meta.is_subscribed === true ||
+          meta.subscription_status === 'active' ||
+          meta.subscription_status === 'trialing';
+        // For checkout completion we wait for active/subscribed. For
+        // post-action polling (cancel/resume/switch) we just wait for
+        // ANY observable change from the snapshot — webhook updates
+        // arrive together so seeing one field flip means the others
+        // are fresh too.
+        const changed =
+          (meta.subscription_status ?? '') !== snapshot.subscription_status ||
+          (meta.subscription_plan ?? '') !== snapshot.subscription_plan ||
+          (meta.cancel_at_period_end ? '1' : '0') !== snapshot.cancel_at_period_end ||
+          (meta.is_subscribed ? '1' : '0') !== snapshot.is_subscribed;
+        const done = justSubscribed ? subscriptionLanded : changed;
+        console.warn('[billing] activation poll', {
+          attempt,
+          elapsedMs: Date.now() - start,
+          subscription_status: meta.subscription_status,
+          subscription_plan: meta.subscription_plan,
+          is_subscribed: meta.is_subscribed,
+          cancel_at_period_end: meta.cancel_at_period_end,
+          done,
+        });
+        if (cancelled) return;
+        if (done) {
+          window.location.assign('/settings?tab=billing');
+          return;
+        }
+      } catch (err) {
+        console.warn('[billing] activation poll threw', err);
+      }
+      if (cancelled) return;
+      if (Date.now() - start > 60_000) {
+        setActivation('timed_out');
+        return;
+      }
+      window.setTimeout(tick, 2000);
+    }
+    void tick();
+    return () => {
+      cancelled = true;
+    };
+    // We deliberately don't include the prop fields in the dep array —
+    // they're captured into `snapshot` once when polling starts, and
+    // we want to keep polling against that snapshot until something
+    // changes (or we time out).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pollingTrigger, actionTick]);
 
-  if (loading) {
-    return (
-      <div className="border border-gray-200 rounded-xl p-4">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Loader2 size={14} className="animate-spin" strokeWidth={1.5} />
-          Loading billing history…
-        </div>
-      </div>
-    )
+  async function manualRefresh() {
+    setRefreshing(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.refreshSession();
+    } finally {
+      // Force a full reload regardless — picks up new app_metadata via
+      // the parent's user fetch.
+      window.location.assign('/settings?tab=billing');
+    }
   }
 
-  if (error || !invoices) return null
+  async function confirmCancel() {
+    setCancelBusy(true);
+    const result = await cancelSubscriptionAction();
+    if (result.error) {
+      toast(result.error, 'error');
+      setCancelBusy(false);
+      return;
+    }
+    toast('Cancellation scheduled — page will refresh shortly.');
+    setCancelOpen(false);
+    setCancelBusy(false);
+    setActionTick((t) => t + 1);
+  }
+
+  // Which plan to highlight as the "current" column in the comparison.
+  const currentPlanForComparison: PlanId =
+    props.isSubscribed && !props.cancelAtPeriodEnd
+      ? ((props.subscriptionPlan as PlanId) ?? 'pro')
+      : 'starter';
+
+  // Banner copy is action-aware: "Payment successful" only makes
+  // sense after a Stripe Checkout (new subscription / resubscribe).
+  // Plan changes + cancel/resume should say "Updating subscription…".
+  const bannerKind: 'payment' | 'change' = justSubscribed ? 'payment' : 'change';
 
   return (
-    <div className="space-y-3">
-      {upcoming && (
-        <div className="border border-gray-200 rounded-xl px-4 py-3 flex items-center justify-between">
-          <p className="text-sm text-gray-700">
-            Next charge:{' '}
-            <span className="font-medium">${(upcoming.amount / 100).toFixed(2)}</span>
-            {upcoming.nextChargeAt > 0 && (
-              <> on <span className="font-medium">{formatUnixDate(upcoming.nextChargeAt)}</span></>
-            )}
-          </p>
-        </div>
-      )}
+    <div className="max-w-3xl space-y-12">
+      {pollingTrigger && activation !== 'idle' ? (
+        <ActivationBanner
+          kind={bannerKind}
+          activation={activation}
+          refreshing={refreshing}
+          onRefresh={manualRefresh}
+        />
+      ) : null}
 
-      {invoices.length > 0 && (
-        <div>
-          <h3 className="text-sm font-medium text-gray-900 mb-3">Billing history</h3>
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left px-4 py-2.5 font-medium text-gray-500">Date</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-gray-500">Amount</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-gray-500">Status</th>
-                  <th className="px-4 py-2.5" />
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((inv) => (
-                  <tr key={inv.id} className="border-b border-gray-100 last:border-0">
-                    <td className="px-4 py-2.5 text-gray-700">{formatUnixDate(inv.created)}</td>
-                    <td className="px-4 py-2.5 text-gray-700">
-                      ${(inv.amount / 100).toFixed(2)}
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-600 capitalize">{inv.status ?? '-'}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <div className="inline-flex items-center gap-3">
-                        {inv.hostedUrl && (
-                          <a
-                            href={inv.hostedUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900"
-                          >
-                            View <ExternalLink size={11} strokeWidth={1.5} />
-                          </a>
-                        )}
-                        {inv.pdfUrl && (
-                          <a
-                            href={inv.pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900"
-                          >
-                            PDF <Download size={11} strokeWidth={1.5} />
-                          </a>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <Section label="Plan">
+        <CurrentPlanCard
+          {...props}
+          onManagePlan={() => setCompareOpen(true)}
+          onRequestCancel={() => setCancelOpen(true)}
+          onAfterAction={() => setActionTick((t) => t + 1)}
+        />
+      </Section>
+
+      {props.hasStripeCustomer ? (
+        <Section label="Billing history">
+          <BillingHistory />
+        </Section>
+      ) : null}
+
+      <PlanComparisonDialog
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        currentPlan={currentPlanForComparison}
+        isSubscribed={props.isSubscribed}
+        cancelAtPeriodEnd={props.cancelAtPeriodEnd}
+        onRequestCancel={() => setCancelOpen(true)}
+      />
+
+      <CancelConfirmModal
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={confirmCancel}
+        busy={cancelBusy}
+        subscriptionEnd={props.subscriptionEnd}
+      />
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────── */
+
+function ActivationBanner({
+  kind,
+  activation,
+  refreshing,
+  onRefresh,
+}: {
+  kind: 'payment' | 'change';
+  activation: ActivationState;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const headline =
+    kind === 'payment'
+      ? 'Payment successful — finalising your subscription…'
+      : 'Updating subscription…';
+
+  if (activation === 'timed_out') {
+    return (
+      <div className="flex flex-col gap-3 rounded-card border border-warning/40 bg-warning/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <AlertCircle size={16} strokeWidth={1.5} className="mt-0.5 shrink-0 text-warning" />
+          <div>
+            <p>
+              {kind === 'payment'
+                ? "Payment successful, but we haven't received the activation event yet."
+                : "Your change went through, but we haven't received the update event yet."}
+            </p>
+            <p className="mt-1 text-caption text-text-muted">
+              This usually clears in a moment — try refreshing. If it persists, the Stripe webhook
+              may not be reaching the app (local dev: ensure <code className="font-mono">stripe
+              listen --forward-to localhost:3000/api/stripe/webhook</code> is running).
+            </p>
           </div>
         </div>
-      )}
-    </div>
-  )
-}
-
-function StatusBanner({
-  status,
-  trialEnd,
-  subscriptionEnd,
-  subscriptionPlan,
-  cancelAtPeriodEnd,
-  isComped,
-  onManageBilling,
-  redirecting,
-}: {
-  status: string
-  trialEnd: string | null
-  subscriptionEnd: string | null
-  subscriptionPlan: string | null
-  cancelAtPeriodEnd: boolean
-  isComped: boolean
-  onManageBilling: () => void
-  redirecting: boolean
-}) {
-  const planLabel = subscriptionPlan === 'max' ? 'Max' : 'Pro'
-
-  if (isComped && status === 'active') {
-    return (
-      <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3">
-        <CheckCircle2 size={16} strokeWidth={1.5} className="text-green-500 shrink-0" />
-        <p className="text-sm text-gray-700">
-          You&apos;re on a comped <span className="font-medium">Zebri {planLabel}</span> account.
-        </p>
+        <Button size="sm" variant="secondary" onClick={onRefresh} loading={refreshing}>
+          Refresh
+        </Button>
       </div>
-    )
+    );
   }
-
-  if (status === 'active' && cancelAtPeriodEnd) {
-    return (
-      <div className="flex items-center justify-between gap-4 border border-amber-200 bg-amber-50 rounded-xl px-4 py-3">
-        <div className="flex items-center gap-3">
-          <AlertCircle size={16} strokeWidth={1.5} className="text-amber-500 shrink-0" />
-          <p className="text-sm text-gray-700">
-            Cancellation scheduled
-            {subscriptionEnd && (
-              <>, access ends <span className="font-medium">{formatDate(subscriptionEnd)}</span></>
-            )}
-          </p>
-        </div>
-        <button
-          onClick={onManageBilling}
-          disabled={redirecting}
-          className="cursor-pointer text-sm font-medium text-gray-900 hover:text-gray-600 transition shrink-0 inline-flex items-center gap-1.5 disabled:opacity-50"
-        >
-          {redirecting ? <Loader2 size={13} strokeWidth={1.5} className="animate-spin" /> : null}
-          Resubscribe
-        </button>
-      </div>
-    )
-  }
-
-  if (status === 'trialing') {
-    return (
-      <div className="flex items-center justify-between gap-4 border border-gray-200 rounded-xl px-4 py-3">
-        <div className="flex items-center gap-3">
-          <CheckCircle2 size={16} strokeWidth={1.5} className="text-green-500 shrink-0" />
-          <p className="text-sm text-gray-700">
-            You&apos;re on a free trial of <span className="font-medium">Zebri {planLabel}</span>
-            {trialEnd && <>, trial ends <span className="font-medium">{formatDate(trialEnd)}</span></>}
-          </p>
-        </div>
-        <button
-          onClick={onManageBilling}
-          disabled={redirecting}
-          className="cursor-pointer text-sm font-medium text-gray-900 hover:text-gray-600 transition shrink-0 inline-flex items-center gap-1.5 disabled:opacity-50"
-        >
-          {redirecting ? <Loader2 size={13} strokeWidth={1.5} className="animate-spin" /> : null}
-          Manage Billing
-        </button>
-      </div>
-    )
-  }
-
-  if (status === 'active') {
-    return (
-      <div className="flex items-center justify-between gap-4 border border-gray-200 rounded-xl px-4 py-3">
-        <div className="flex items-center gap-3">
-          <CheckCircle2 size={16} strokeWidth={1.5} className="text-green-500 shrink-0" />
-          <p className="text-sm text-gray-700">
-            You&apos;re subscribed to <span className="font-medium">Zebri {planLabel}</span>
-          </p>
-        </div>
-        <button
-          onClick={onManageBilling}
-          disabled={redirecting}
-          className="cursor-pointer text-sm font-medium text-gray-900 hover:text-gray-600 transition shrink-0 inline-flex items-center gap-1.5 disabled:opacity-50"
-        >
-          {redirecting ? <Loader2 size={13} strokeWidth={1.5} className="animate-spin" /> : null}
-          Manage Billing
-        </button>
-      </div>
-    )
-  }
-
-  if (status === 'cancelled') {
-    return (
-      <div className="flex items-center justify-between gap-4 border border-amber-200 bg-amber-50 rounded-xl px-4 py-3">
-        <div className="flex items-center gap-3">
-          <AlertCircle size={16} strokeWidth={1.5} className="text-amber-500 shrink-0" />
-          <p className="text-sm text-gray-700">
-            Your subscription is cancelled
-            {subscriptionEnd && <>, access ends <span className="font-medium">{formatDate(subscriptionEnd)}</span></>}
-          </p>
-        </div>
-        <button
-          onClick={onManageBilling}
-          disabled={redirecting}
-          className="cursor-pointer text-sm font-medium text-gray-900 hover:text-gray-600 transition shrink-0 inline-flex items-center gap-1.5 disabled:opacity-50"
-        >
-          {redirecting ? <Loader2 size={13} strokeWidth={1.5} className="animate-spin" /> : null}
-          Resubscribe
-        </button>
-      </div>
-    )
-  }
-
-  if (status === 'past_due') {
-    return (
-      <div className="flex items-center justify-between gap-4 border border-red-200 bg-red-50 rounded-xl px-4 py-3">
-        <div className="flex items-center gap-3">
-          <AlertCircle size={16} strokeWidth={1.5} className="text-red-500 shrink-0" />
-          <p className="text-sm text-gray-700">
-            Payment failed. Please update your payment method to keep access.
-          </p>
-        </div>
-        <button
-          onClick={onManageBilling}
-          disabled={redirecting}
-          className="cursor-pointer text-sm font-medium text-red-600 hover:text-red-700 transition shrink-0 inline-flex items-center gap-1.5 disabled:opacity-50"
-        >
-          {redirecting ? <Loader2 size={13} strokeWidth={1.5} className="animate-spin" /> : null}
-          Update Payment
-        </button>
-      </div>
-    )
-  }
-
-  return null
-}
-
-function PlanCard({
-  plan,
-  isCurrentPlan,
-  isSubscribed,
-  onSubscribe,
-  onManageBilling,
-  redirectingPlan,
-}: {
-  plan: Plan
-  isCurrentPlan: boolean
-  isSubscribed: boolean
-  onSubscribe: (planId: PlanId) => void
-  onManageBilling: () => void
-  redirectingPlan: PlanId | null
-}) {
-  const isPro = plan.id === 'pro'
-  const isRedirecting = redirectingPlan === plan.id
-
   return (
-    <div
-      className={`relative flex flex-col rounded-2xl border p-5 transition shrink-0 w-[90%] sm:w-auto snap-center sm:snap-align-none ${
-        isPro
-          ? 'border-gray-900 ring-1 ring-gray-900'
-          : 'border-gray-200'
-      }`}
-    >
-      {plan.badge && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="bg-[#6EE7B7] text-gray-900 text-[10px] font-semibold tracking-wide px-3 py-1 rounded-full uppercase">
-            {plan.badge}
-          </span>
-        </div>
-      )}
-
-      <div className="mb-1">
-        <span className="text-sm font-semibold text-gray-900">{plan.name}</span>
+    <div className="flex flex-col gap-3 rounded-card border border-success/40 bg-success/5 px-4 py-3 text-body text-text sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-3">
+        {activation === 'polling' ? (
+          <Loader2 size={16} strokeWidth={1.5} className="shrink-0 animate-spin text-success" />
+        ) : (
+          <CheckCircle2 size={16} strokeWidth={1.5} className="shrink-0 text-success" />
+        )}
+        {headline}
       </div>
-
-      <div className="mb-1 flex items-baseline gap-0.5">
-        <span className="text-3xl font-semibold text-gray-900">{plan.price}</span>
-        {plan.period && <span className="text-sm text-gray-500">{plan.period}</span>}
-      </div>
-
-      <p className="text-sm text-gray-500 min-h-[2.5rem] mb-5">{plan.description}</p>
-
-      {plan.id === 'starter' ? (
-        <button
-          onClick={isSubscribed ? onManageBilling : undefined}
-          disabled={!isSubscribed}
-          className={`w-full text-sm font-semibold rounded-xl px-4 py-2.5 ${
-            isSubscribed
-              ? 'bg-gray-100 text-gray-500 hover:bg-gray-200 cursor-pointer'
-              : 'bg-[#6EE7B7] text-gray-900 opacity-60 cursor-default'
-          }`}
-        >
-          {isSubscribed ? 'Downgrade' : 'Get Started Free'}
-        </button>
-      ) : (
-        <button
-          onClick={isCurrentPlan ? undefined : isSubscribed ? onManageBilling : () => onSubscribe(plan.id)}
-          disabled={isCurrentPlan || isRedirecting}
-          className={`w-full text-sm font-semibold rounded-xl px-4 py-2.5 transition inline-flex items-center justify-center gap-2 ${
-            isCurrentPlan
-              ? 'bg-[#6EE7B7] text-gray-900 cursor-default'
-              : isSubscribed
-              ? 'bg-gray-100 text-gray-500 hover:bg-gray-200 cursor-pointer'
-              : 'bg-[#6EE7B7] text-gray-900 hover:bg-[#4ade80] cursor-pointer'
-          }`}
-        >
-          {isRedirecting ? (
-            <><Loader2 size={14} strokeWidth={1.5} className="animate-spin" /> Redirecting…</>
-          ) : isCurrentPlan ? (
-            'Current Plan'
-          ) : isSubscribed ? (
-            'Switch Plan'
-          ) : (
-            'Start Free Trial'
-          )}
-        </button>
-      )}
-
-      {/* Always reserve space for trial text to keep feature lists aligned across cards */}
-      <p className={`text-xs text-gray-400 text-center mt-1.5 mb-4 ${!isCurrentPlan && plan.id !== 'starter' && !isSubscribed ? 'visible' : 'invisible'}`}>
-        14-day free trial · No credit card required
-      </p>
-
-      <ul className="space-y-2.5 flex-1">
-        {plan.features.map((feature) => (
-          <li key={feature.label} className="flex items-start gap-2.5">
-            {feature.included ? (
-              <Check size={13} strokeWidth={2} className="text-green-500 shrink-0 mt-0.5" />
-            ) : (
-              <X size={13} strokeWidth={2} className="text-gray-300 shrink-0 mt-0.5" />
-            )}
-            <span className={`text-sm ${feature.included ? 'text-gray-700' : 'text-gray-400'}`}>
-              {feature.label}
-              {feature.soon && (
-                <span className="ml-1.5 text-[10px] font-medium bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
-                  Soon
-                </span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <Button size="sm" variant="ghost" onClick={onRefresh} loading={refreshing}>
+        Refresh now
+      </Button>
     </div>
-  )
+  );
 }
 
-export function BillingSection({
-  status,
-  trialEnd,
-  subscriptionEnd,
-  subscriptionPlan,
-  hasStripeCustomer,
-  cancelAtPeriodEnd,
-  isSubscribed: isSubscribedFlag,
-  isComped,
-}: BillingSectionProps) {
-  const [redirectingPlan, setRedirectingPlan] = useState<PlanId | null>(null)
-  const [redirectingPortal, setRedirectingPortal] = useState(false)
-  const { toast } = useToast()
-  const searchParams = useSearchParams()
-  const justSubscribed = searchParams.get('checkout') === 'success'
+/* ────────────────────────────────────────────────────────────── */
 
-  // Treat as subscribed if Stripe has a customer OR the user is comped
-  // (active without a Stripe customer). A scheduled cancellation no longer
-  // counts as fully subscribed for plan-card purposes - surface "Resubscribe".
-  const isSubscribed =
-    (hasStripeCustomer && (status === 'trialing' || status === 'active')) ||
-    (isComped && isSubscribedFlag && status === 'active')
-  const treatAsCancelled = cancelAtPeriodEnd
-
-  const handleSubscribe = async (planId: PlanId) => {
-    setRedirectingPlan(planId)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        console.error('[checkout error]', data)
-        toast('Something went wrong starting your trial. Please try again.', 'error')
-        setRedirectingPlan(null)
-      }
-    } catch (err) {
-      console.error('[checkout fetch error]', err)
-      toast('Something went wrong starting your trial. Please try again.', 'error')
-      setRedirectingPlan(null)
-    }
-  }
-
-  const handleManageBilling = async () => {
-    setRedirectingPortal(true)
-    try {
-      const res = await fetch('/api/stripe/portal', { method: 'POST' })
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        toast('Billing portal unavailable. Subscribe to a plan first.', 'error')
-        setRedirectingPortal(false)
-      }
-    } catch {
-      toast('Could not connect to billing. Check your connection and try again.', 'error')
-      setRedirectingPortal(false)
-    }
-  }
-
+/**
+ * Document-style section header — small label on the left + a thin
+ * divider line filling the rest of the row.
+ */
+function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="max-w-4xl space-y-6">
-      {justSubscribed && !isSubscribed && (
-        <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl px-4 py-3">
-          <CheckCircle2 size={16} strokeWidth={1.5} className="text-green-500 shrink-0" />
-          <p className="text-sm text-gray-700">
-            Payment successful - your subscription is being activated. This page will update shortly.
-          </p>
-        </div>
-      )}
-
-      {(hasStripeCustomer || isComped) && status && ['trialing', 'active', 'cancelled', 'past_due'].includes(status) && (
-        <StatusBanner
-          status={status}
-          trialEnd={trialEnd}
-          subscriptionEnd={subscriptionEnd}
-          subscriptionPlan={subscriptionPlan}
-          cancelAtPeriodEnd={cancelAtPeriodEnd}
-          isComped={isComped}
-          onManageBilling={handleManageBilling}
-          redirecting={redirectingPortal}
-        />
-      )}
-
-      {hasStripeCustomer && <BillingHistory />}
-
-      <div>
-        <h3 className="text-sm font-medium text-gray-900 mb-4">Plans</h3>
-        <div className="flex overflow-x-auto sm:overflow-visible snap-x snap-mandatory sm:snap-none gap-4 sm:grid sm:grid-cols-3 pt-4 sm:pt-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {plans.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              isCurrentPlan={
-                (plan.id === 'starter' && !isSubscribed) ||
-                (isSubscribed && !treatAsCancelled && plan.id === (subscriptionPlan ?? 'pro'))
-              }
-              isSubscribed={isSubscribed}
-              onSubscribe={handleSubscribe}
-              onManageBilling={handleManageBilling}
-              redirectingPlan={redirectingPlan}
-            />
-          ))}
-        </div>
+    <section>
+      <div className="mb-6 flex items-center gap-4">
+        <h3 className="text-caption font-medium uppercase tracking-wide text-text-muted">
+          {label}
+        </h3>
+        <div className="flex-1 border-t border-border" />
       </div>
-    </div>
-  )
+      {children}
+    </section>
+  );
 }

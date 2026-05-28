@@ -376,10 +376,11 @@ Deliberately excluded to stay focused:
 
 ## Revenue Model
 
-- **Free trial**: 14 days
-- **Zebri Pro**: $29/month or $290/year (save 2 months)
-- **Future consideration**: Zebri Pro+ with AI script generation, advanced workflows ($49/month)
+- **Starter**: free, 5-couple cap (long-term free tier, not a trial)
+- **Zebri Pro**: $49/month
+- **Zebri Max**: $89/month
 - **Target**: 10k+ celebrants in Australia alone (Nathan's data) + MC market
+- _(Historical: a 14-day free trial was offered at MVP; removed Phase 1 in favour of Starter as the always-free path.)_
 
 ---
 

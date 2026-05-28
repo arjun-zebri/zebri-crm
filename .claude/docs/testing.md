@@ -12,13 +12,44 @@ Never skip a test or suppress a failure without understanding why it's failing. 
 
 ---
 
-## Test Stack
+## Test Stack (3 layers — added Phase 0.3)
 
-- **Playwright**  -  end-to-end testing (desktop + mobile)
-- **Location**: `tests/e2e/`
-- **Config**: `playwright.config.ts`
-- **Helpers**: `tests/e2e/helpers.ts`
-- **Fixtures**: `tests/e2e/fixtures/`
+| Layer | Tool | Location | Env | Run |
+|---|---|---|---|---|
+| **Unit** | Vitest + React Testing Library (jsdom) | `tests/unit/**` | none | `npm run test:unit` |
+| **Integration** | Vitest (node) vs **local Supabase** + real RLS | `tests/integration/**` | local stack | `npm run test:integration` |
+| **E2E** | Playwright (desktop + mobile) | `tests/e2e/**` | running app | `npm run test:e2e` |
+
+- `npm test` runs unit + integration (Vitest, both projects). Playwright is
+  separate (`test:e2e`) and is **not** picked up by Vitest.
+- Config: `vitest.config.ts` (two projects), `playwright.config.ts`.
+- Unit setup: `vitest.setup.ts` (jest-dom matchers + RTL cleanup).
+- `@/…` resolves via `vite-tsconfig-paths` (matches tsconfig — no drift).
+
+### Unit tests
+Pure functions and React components. Fast, isolated, no I/O. Prefer testing
+`lib/**` logic and `components/ui/**` primitives. Example:
+`tests/unit/lib/payments/subscription.test.ts`.
+
+### Integration tests (RLS)
+Run against the **local** Supabase stack only (never cloud). Helpers in
+`tests/integration/helpers/supabase.ts`:
+- `createTestUser(metadata)` → isolated confirmed auth user + a client
+  signed in as them (RLS applies as the app sees it). Always `cleanup()`
+  (use `afterAll`).
+- `serviceClient()` bypasses RLS — setup/teardown only.
+- `anonClient()` — unauthenticated RLS checks.
+- Connection auto-discovered via `supabase status` (env override for CI).
+
+**Every owned table's hardening phase must add a tenant-isolation test**
+following `tests/integration/rls/couples.test.ts`: owner can read/write own
+rows; another tenant cannot SELECT/UPDATE/DELETE them; anon cannot read.
+
+Prereq: `supabase start` (and `supabase db reset` to (re)apply migrations +
+seed). The integration project runs serially in one process (shared DB).
+
+### Regenerating DB types
+After any migration: `supabase gen types typescript --local --schema public > types/database.ts`
 
 ---
 

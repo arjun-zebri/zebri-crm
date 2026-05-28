@@ -9,6 +9,121 @@ Goal: Consistency, speed, and minimal design.
 
 ---
 
+## Core form primitives (Phase 0.5.5)
+
+Use these everywhere instead of raw `<button>` / `<input>` / `<select>` markup —
+they share the same token vocabulary so brand changes propagate
+automatically.
+
+### `<Button />` — `@/components/ui/button`
+Variants: `primary` (brand-fg / inverse text), `secondary` (subtle), `ghost`
+(transparent), `danger`. Sizes: `sm` / `md` / `lg`. `loading` shows a spinner,
+sets `aria-busy`, and disables the click. Defaults `type="button"` to avoid
+accidental form submits.
+
+### `<Input />` — `@/components/ui/input`
+Labelled input with optional `help` and `error`. All accessible wiring
+(`htmlFor`/`id`, `aria-describedby`, `aria-invalid`, `role="alert"` on the
+error) is built in — pass a `label` and trust the primitive.
+
+### `<Select />` — `@/components/ui/select`
+Built on Radix Select for full keyboard + screen-reader support, styled to
+match `<Input />`. Pass an `options: { value, label }[]` array and a
+controlled `value` + `onValueChange` (or uncontrolled `defaultValue`).
+Standalone (no companion components to import).
+
+Conventions:
+- All three use design tokens only — no raw hex / arbitrary values.
+- Unit-tested in `tests/unit/components/ui/{button,input,select}.test.tsx`.
+- Existing raw-button / raw-input call sites stay until each page is
+  hardened (per-page adoption, consistent with the ratchets).
+
+---
+
+## Foundational primitives (Phase 0.5)
+
+Every page's Definition of Done requires an explicit **loading**, **empty**,
+and **error** state. Use these primitives rather than ad-hoc spinners /
+"No data" text / inline error banners.
+
+### `<Loading />` — `@/components/ui/loading`
+Accessible (`role="status"`), centered or inline, optional label. Use for
+any pending fetch / mutation. Drives the loading branch of every data view.
+
+### `<Empty />` — `@/components/ui/empty`
+Empty-state for lists / collections. Always pass an `action` that lets the
+user move forward (the only valid empty state without an action is a
+deliberately read-only surface). Optional `icon` from `lucide-react`.
+
+### `<ErrorState />` — `@/components/ui/error-state`
+Accessible (`role="alert"`). Pass `error` (an `Error`) or `description`;
+always include a recovery path via `onRetry` (default "Try again" button) or
+a custom `action`. **Never** render `error.stack` — only `.message`, and
+only when it is human-safe (no PII).
+
+### `<StatePill />` — `@/components/ui/state-pill` (Phase 2C.2)
+Shared tonal pill used wherever a "what state is this thing in?"
+badge appears (Billing tab, Quote modal, Invoice modal, payment-
+schedule stages). 5 tones (`neutral` / `info` / `success` / `warning`
+/ `danger`) + optional leading dot (`'filled'` for active states,
+`'hollow'` for due states). Tonal background via `bg-{tone}/10
+text-{tone}`. Never use raw `bg-emerald-50 text-emerald-600` etc. —
+the pill is the canonical surface.
+
+Conventions:
+- All four honour the design tokens (`text-text`, `text-text-muted`,
+  `text-danger`, `text-body`, `text-section`, `bg-success/10`, …).
+  Don't override with raw hex.
+- Unit-tested under `tests/unit/components/ui/{loading,empty,
+  error-state,state-pill}.test.tsx`.
+
+## Builder parts — `components/builders/parts/*` (Phase 2C.2)
+
+Shared subcomponents used to compose the Quote + Invoice builder
+modals. Each one is purely presentational with callbacks for state
+changes; the parent modals own the actual form state + mutations.
+
+| Part | Used by |
+|---|---|
+| `builder-modal-shell.tsx` | Modal frame + hero title input + state pill + ⋯ overflow menu + contextual primary CTA |
+| `builder-meta-row.tsx` | Couple picker + payment terms (invoice) + expiry / due date |
+| `line-items-table.tsx` | description + amount table; dnd-kit reorder; empty-state CTA |
+| `totals-panel.tsx` | Subtotal / (optional) Discount / (optional) GST / Total |
+| `discount-control.tsx` | Collapsed "+ Add discount" link → inline editor with % / $ switch |
+| `tax-control.tsx` | "+ Apply 10% GST" toggle |
+| `notes-field.tsx` | Tokenised textarea wrapper |
+| `share-and-send.tsx` | Footer: share-link affordance + Save + primary "Send to couple" CTA |
+| `payment-schedule.tsx` | Vertical-timeline schedule for invoices (deposit ┊ final) |
+| `template-picker.tsx` | Quote templates — empty-state card + inline popover variants |
+| `builder-preview-pane.tsx` | Right pane: PDF / Email / Payment page tabs + "Update branding" link (Phase 2C.2 redesign) |
+| `preview-pdf.tsx` | PDF preview — renders `buildPdfHtml()` output in a sandboxed iframe |
+| `preview-email.tsx` | Email preview — `From/To/Subject` envelope + `quoteHtml()`/`invoiceHtml()` body in a sandboxed iframe |
+| `preview-payment-page.tsx` | Payment-page preview — uses `PublicBlockRenderer` with `useCurrentBranding(surface)` for pixel-faithful render |
+| `preview-shared.ts` | The `PreviewDoc` shape the parent modals pass into every preview tab |
+
+All parts are ≤200 LOC, TSDoc'd, and unit-tested under
+`tests/unit/components/builders/parts/*.test.tsx`.
+
+## Events components — `components/events/*` (Phase 4A)
+
+Shared event-related components used by the couples profile + the
+standalone `app/(dashboard)/events/[id]/timeline` route. Lifted out
+of the `app/(dashboard)/events/` route group in Phase 4A (recon
+§7.7) so the route group no longer holds shared component modules.
+
+| Component | Notes |
+|---|---|
+| `event-overview.tsx` | Read-only summary card for an event row (date / venue / status). |
+| `event-vendors.tsx` | Contact-link manager. Imports `ContactPicker` from `app/(dashboard)/couples/`. |
+| `event-tasks.tsx` | Per-event task list. |
+| `event-timeline.tsx` | TipTap-rich timeline editor for an event. |
+| `event-timeline-modal.tsx` | Create/edit timeline-item modal. Also exports `TimePicker`. |
+| `event-timeline-share.tsx` | Share-link affordance for an event timeline. |
+| `event-day-calendar.tsx` | Day-grid calendar visualisation of timeline items. |
+| `event-profile.tsx` | Full-screen event-detail modal with overview/vendors/tasks/timeline tabs. |
+
+---
+
 # Core Components
 
 ## Button

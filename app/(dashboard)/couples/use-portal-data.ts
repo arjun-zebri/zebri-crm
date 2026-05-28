@@ -1,9 +1,28 @@
 'use client'
 
-import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useCallback } from 'react'
+
 import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
+
+import {
+  addPortalPersonAction,
+  addPortalSongAction,
+  approveTimelineItemAction,
+  deletePortalPersonAction,
+  deletePortalSongAction,
+  updatePortalPersonAction,
+  updatePortalSongAction,
+} from './portal-actions'
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
 
 export interface PortalPerson {
   id: string
@@ -104,8 +123,7 @@ export function usePortalData(coupleId: string) {
   // Mutations
   const approveItem = useMutation({
     mutationFn: async (itemId: string) => {
-      const { error } = await supabase.from('timeline_items').update({ pending_review: false }).eq('id', itemId)
-      if (error) throw error
+      unwrap(await approveTimelineItemAction(itemId))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portal-timeline-pending', coupleId] })
@@ -117,22 +135,33 @@ export function usePortalData(coupleId: string) {
   const savePerson = useCallback(async (data: Partial<PortalPerson>) => {
     setPersonSaving(true)
     try {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) return
-
       if (editingPerson) {
-        const merged = { ...editingPerson, ...data }
-        await supabase.from('portal_people').update({
-          full_name: merged.full_name, phonetic: merged.phonetic, role: merged.role,
-          audio_url: merged.audio_url, notes: merged.notes ?? null,
-        }).eq('id', merged.id)
+        unwrap(
+          await updatePortalPersonAction({
+            id: editingPerson.id,
+            patch: {
+              full_name: data.full_name ?? editingPerson.full_name,
+              phonetic: data.phonetic ?? editingPerson.phonetic,
+              role: data.role ?? editingPerson.role,
+              audio_url: data.audio_url ?? editingPerson.audio_url,
+              notes: data.notes ?? null,
+            },
+          }),
+        )
       } else {
         const categoryPeople = people.filter((p) => p.category === personCategory)
-        await supabase.from('portal_people').insert({
-          couple_id: coupleId, user_id: user.user.id, category: personCategory,
-          full_name: data.full_name ?? '', phonetic: data.phonetic ?? null, role: data.role ?? null,
-          audio_url: data.audio_url ?? null, notes: data.notes ?? null, position: categoryPeople.length * 1000,
-        })
+        unwrap(
+          await addPortalPersonAction({
+            couple_id: coupleId,
+            category: personCategory,
+            full_name: data.full_name ?? '',
+            phonetic: data.phonetic ?? null,
+            role: data.role ?? null,
+            audio_url: data.audio_url ?? null,
+            notes: data.notes ?? null,
+            position: categoryPeople.length * 1000,
+          }),
+        )
       }
 
       queryClient.invalidateQueries({ queryKey: ['portal-people', coupleId] })
@@ -143,13 +172,13 @@ export function usePortalData(coupleId: string) {
       toast('Failed to save person')
     }
     setPersonSaving(false)
-  }, [editingPerson, personCategory, people, coupleId, supabase, queryClient, toast])
+  }, [editingPerson, personCategory, people, coupleId, queryClient, toast])
 
   const deletePerson = useCallback(async () => {
     if (!editingPerson) return
     setPersonSaving(true)
     try {
-      await supabase.from('portal_people').delete().eq('id', editingPerson.id)
+      unwrap(await deletePortalPersonAction(editingPerson.id))
       queryClient.invalidateQueries({ queryKey: ['portal-people', coupleId] })
       toast('Person removed')
       setPersonModal(false)
@@ -158,25 +187,34 @@ export function usePortalData(coupleId: string) {
       toast('Failed to remove person')
     }
     setPersonSaving(false)
-  }, [editingPerson, coupleId, supabase, queryClient, toast])
+  }, [editingPerson, coupleId, queryClient, toast])
 
   const saveSong = useCallback(async (data: Partial<PortalSong>) => {
     setSongSaving(true)
     try {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) return
-
       if (editingSong) {
-        await supabase.from('portal_songs').update({
-          title: data.title ?? editingSong.title, artist: data.artist ?? null, notes: data.notes ?? null,
-        }).eq('id', editingSong.id)
+        unwrap(
+          await updatePortalSongAction({
+            id: editingSong.id,
+            patch: {
+              title: data.title ?? editingSong.title,
+              artist: data.artist ?? null,
+              notes: data.notes ?? null,
+            },
+          }),
+        )
       } else {
         const categorySongs = songs.filter((s) => s.category === songCategoryKey)
-        await supabase.from('portal_songs').insert({
-          couple_id: coupleId, user_id: user.user.id, category: songCategoryKey,
-          title: data.title ?? '', artist: data.artist ?? null, notes: data.notes ?? null,
-          position: categorySongs.length * 1000,
-        })
+        unwrap(
+          await addPortalSongAction({
+            couple_id: coupleId,
+            category: songCategoryKey,
+            title: data.title ?? '',
+            artist: data.artist ?? null,
+            notes: data.notes ?? null,
+            position: categorySongs.length * 1000,
+          }),
+        )
       }
 
       queryClient.invalidateQueries({ queryKey: ['portal-songs', coupleId] })
@@ -187,13 +225,13 @@ export function usePortalData(coupleId: string) {
       toast('Failed to save song')
     }
     setSongSaving(false)
-  }, [editingSong, songCategoryKey, songs, coupleId, supabase, queryClient, toast])
+  }, [editingSong, songCategoryKey, songs, coupleId, queryClient, toast])
 
   const deleteSong = useCallback(async () => {
     if (!editingSong) return
     setSongSaving(true)
     try {
-      await supabase.from('portal_songs').delete().eq('id', editingSong.id)
+      unwrap(await deletePortalSongAction(editingSong.id))
       queryClient.invalidateQueries({ queryKey: ['portal-songs', coupleId] })
       toast('Song removed')
       setSongModal(false)
@@ -202,7 +240,7 @@ export function usePortalData(coupleId: string) {
       toast('Failed to remove song')
     }
     setSongSaving(false)
-  }, [editingSong, coupleId, supabase, queryClient, toast])
+  }, [editingSong, coupleId, queryClient, toast])
 
   const openAddPerson = (category: string, roles: string[]) => {
     setEditingPerson(null)

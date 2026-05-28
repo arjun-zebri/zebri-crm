@@ -1,11 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
-import { Modal } from '@/components/ui/modal'
-import { Plus, Trash2, GripVertical, Pencil } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -21,6 +15,13 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Trash2, GripVertical, Pencil } from 'lucide-react'
+import { useState, useEffect } from 'react'
+
+import { Modal } from '@/components/ui/modal'
+import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
 
 interface TemplateItem {
   id: string

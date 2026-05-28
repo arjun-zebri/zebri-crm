@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
 import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+
 import {
   Couple,
   CoupleStatusRecord,
@@ -9,7 +10,7 @@ import {
   SortField,
   SortDirection,
   SORT_OPTIONS,
-} from './couples-types'
+} from '@/types/couple'
 
 interface CouplesHeaderProps {
   couples: Couple[]

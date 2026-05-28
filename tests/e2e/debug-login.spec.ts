@@ -80,7 +80,7 @@ test('debug: login form submission', async ({ page }) => {
     el.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
-  let passwordReactValue = await passwordInput.evaluate((el: HTMLInputElement) => el.value);
+  const passwordReactValue = await passwordInput.evaluate((el: HTMLInputElement) => el.value);
   console.log(`Password React state after change event: ${'*'.repeat(passwordReactValue.length)}`);
 
   // Check if button is enabled

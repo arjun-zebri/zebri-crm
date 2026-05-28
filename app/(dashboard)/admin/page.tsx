@@ -1,7 +1,7 @@
 import {
   listUsersWithSubscription,
   getGlobalStats,
-} from "@/lib/admin-analytics";
+} from '@/lib/admin/admin-analytics';
 import { AdminTabs } from "./admin-tabs";
 
 export default async function AdminPage() {

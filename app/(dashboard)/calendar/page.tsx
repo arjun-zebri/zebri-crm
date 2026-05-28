@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { useCouples } from "@/app/(dashboard)/couples/use-couples";
-import { CouplesCalendar } from "@/app/(dashboard)/couples/couples-calendar";
+import { CouplesCalendar } from "./_components/couples-calendar";
 import { CoupleProfile } from "@/app/(dashboard)/couples/couple-profile";
 import {
   useUpdateCouple,
   useDeleteCouple,
 } from "@/app/(dashboard)/couples/use-couples";
 import { useToast } from "@/components/ui/toast";
-import { Couple } from "@/app/(dashboard)/couples/couples-types";
+import { Couple } from '@/types/couple';
 
 export default function CalendarPage() {
   const { data: couples } = useCouples();

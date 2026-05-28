@@ -13,7 +13,7 @@ import {
   CATEGORY_LABELS,
   STATUSES,
   STATUS_LABELS,
-} from "./contacts-types";
+} from '@/types/contact';
 
 interface ContactModalProps {
   isOpen: boolean;

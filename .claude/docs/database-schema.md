@@ -8,9 +8,24 @@ The schema is intentionally **simple for the MVP CRM**.
 
 # User Data
 
-There is no `users` table. User profile and subscription data is stored in Supabase Auth `user_metadata`. See `.claude/authentication.md` for the full schema.
+There is no `users` table. User data is stored on the Supabase Auth
+user row in **two** metadata bags:
 
-**Branding fields (stored in `user_metadata`):**
+- **`user_metadata`** — user-writable (`auth.updateUser({ data })`).
+  Holds user-owned fields (display name, business name, bank details,
+  branding, etc.).
+- **`app_metadata`** — **server-only writable**, JWT-readable. Holds
+  all entitlement fields (`account_type`, `subscription_*`,
+  `stripe_*`, `is_beta_user`). The §7.4 / Phase 0.8b fix moved these
+  out of `user_metadata` to close the privilege-escalation surface.
+
+Read entitlements via `@/lib/auth/entitlements`, never directly from
+either bag. Writes go through `updateEntitlements()` (server-only).
+See `.claude/docs/authentication.md` for the full schema of both bags
+and the migration mechanics (backfill migration + `sync_signup_app_
+metadata_on_insert` trigger).
+
+**Branding fields (stored in `user_metadata`, user-owned):**
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
@@ -22,7 +37,7 @@ There is no `users` table. User profile and subscription data is stored in Supab
 
 These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`. See `.claude/docs/branding.md` for full spec.
 
-**Address fields (stored in `user_metadata`):**
+**Address fields (stored in `user_metadata`, user-owned):**
 
 | Field | Type | Notes |
 |---|---|---|
@@ -337,7 +352,7 @@ paid_at (timestamp with time zone, nullable)
 
 created_at (timestamp)
 
-RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER function get_public_invoice (read-only; no couple-side writes on invoices). The function also returns tax_rate, payment schedule fields, stripe_payment_enabled, and stripe_connect_enabled (from auth.users.raw_user_meta_data).
+RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER function get_public_invoice (read-only; no couple-side writes on invoices). The function also returns tax_rate, payment schedule fields, stripe_payment_enabled, and stripe_connect_enabled. The Connect flag is currently read from `raw_user_meta_data` (residual reads documented in `.claude/docs/security.md` §7.4 — UX flip only; Stripe rejects the actual charge if Connect isn't completed). Migration to `raw_app_meta_data` is tracked for the Payments page-hardening phase.
 
 ------------------------------------------------------------------------
 
@@ -462,3 +477,72 @@ save_portal_file(p_token, p_id, p_name, p_file_url, p_file_size)  -  insert
 delete_portal_file(p_token, p_id)
 
 All RPCs validate portal_token_enabled=true before proceeding.
+
+------------------------------------------------------------------------
+
+## connect_accounts (Phase 2D.1)
+
+Per-user mirror of Stripe Connect account state — capabilities,
+requirements, disabled_reason. Populated by `account.updated` /
+`capability.updated` / `account.application.deauthorized` webhooks
+in `lib/payments/connect-events.ts`. Read by the settings page's
+status panel + the entitlements helpers.
+
+Columns:
+user_id (uuid, primary key, FK to auth.users.id, on delete cascade)
+account_id (text, unique, nullable)  -  Stripe Express account ID; null after disconnect
+charges_enabled (boolean, default false)
+payouts_enabled (boolean, default false)
+details_submitted (boolean, default false)
+requirements_currently_due (jsonb, default '[]')
+requirements_past_due (jsonb, default '[]')
+disabled_reason (text, nullable)
+default_currency (text, nullable)
+country (text, nullable)
+business_type (text, nullable)
+last_account_id (text, nullable)  -  preserved on server-initiated disconnect for rebind; cleared on Stripe-initiated deauth
+created_at, updated_at (timestamptz, auto-managed)
+
+RLS: SELECT-only for the owner. No INSERT/UPDATE/DELETE policies —
+writes only via service-role webhook handler + disconnect server
+action. Migration: `20260524000000_create_connect_accounts.sql`.
+
+## contract_audit_log (Phase 3.2)
+
+Durable trail of every state change on a contract. The existing
+inline columns on `contracts` (`signer_name`, `signer_ip`,
+`signer_user_agent`, `signed_at`, `declined_at`, `declined_reason`)
+are the fast-path "current state" snapshot. This table is the
+forensic record behind that — survives `revoke_contract` clearing
+the inline columns; persists per-event IP/UA so we can reconstruct
+"this contract was sent then signed then revoked" from the row
+sequence.
+
+Columns:
+id (uuid, primary key)
+contract_id (uuid, FK to contracts.id, on delete cascade)
+user_id (uuid, FK to auth.users.id, on delete cascade)  -  denormalised owner; RLS key
+event_type (text, check in: sent | viewed | signed | declined | expired | revoked | reminder_sent)
+actor (text, check in: mc | couple | system)
+actor_ip (text, nullable)  -  text for parity with contracts.signer_ip
+actor_user_agent (text, nullable)
+signer_name_typed (text, nullable)  -  only set on 'signed' rows
+decline_reason (text, nullable)  -  only set on 'declined' rows
+reminder_number (integer, nullable)  -  only set on 'reminder_sent' rows (1, 2 per cron cap)
+revoked_from_status (text, nullable)  -  only set on 'revoked' rows; captures the pre-revocation status
+event_at (timestamptz, default now())
+
+Indexes: `(contract_id, event_at desc)` for per-contract reads,
+`(user_id, event_at desc)` for owner-scoped dashboard timelines.
+
+RLS: SELECT-only for the owner. No INSERT/UPDATE/DELETE policies —
+the only sanctioned writer is `emit_contract_audit_event(...)`
+(SECURITY DEFINER), called from inside `sign_contract`,
+`decline_contract`, `revoke_contract`, `expire_contracts`, and
+`mark_contract_reminder_sent`. The `/api/email/send-contract` route
+also calls `emit_contract_audit_event` directly to log the 'sent'
+event when the contract locks.
+
+Migration: `20260528000000_create_contract_audit_log.sql`. Includes
+a back-fill that synthesises one audit row per pre-existing
+contract from its current status + denormalised inline columns.

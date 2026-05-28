@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { ChevronDown, X, Phone, Globe } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import * as Popover from '@radix-ui/react-popover'
-import { Modal } from '@/components/ui/modal'
+import { useQuery } from '@tanstack/react-query'
+import { ChevronDown, X, Phone, Globe } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+
 import { DatePicker } from '@/components/ui/date-picker'
-import { Event, EventStatus, STATUS_LABELS } from '../events/events-types'
-import { CATEGORY_LABELS } from '../contacts/contacts-types'
+import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
+import { CATEGORY_LABELS } from '@/types/contact'
+import { Event, EventStatus, STATUS_LABELS } from '@/types/event'
 
 interface EventModalProps {
   isOpen: boolean

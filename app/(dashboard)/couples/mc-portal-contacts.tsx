@@ -1,16 +1,33 @@
 'use client'
 
-import { useState } from 'react'
-import { Play, Pencil, Plus, Trash2 } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { CATEGORY_LABELS, Contact } from '../contacts/contacts-types'
-import { ContactPicker } from './contact-picker'
-import { ContactModal } from '../contacts/contact-modal'
+import { Play, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+
 import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
+import { CATEGORY_LABELS, Contact } from '@/types/contact'
+
+import { ContactModal } from '../contacts/contact-modal'
+
+import { ContactPicker } from './contact-picker'
+import {
+  addCoupleContactLinkAction,
+  deleteContactAction,
+  deleteCoupleContactLinkAction,
+  updateContactAction,
+} from './portal-actions'
 import type { PortalPerson } from './use-portal-data'
 import { PARTNER_ROLES, BRIDAL_ROLES, FAMILY_ROLES } from './use-portal-data'
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
 
 const OTHER_ROLES = ['Officiant', 'Celebrant', 'Photographer', 'Videographer', 'Performer', 'Speaker', 'Guest', 'Other']
 
@@ -84,8 +101,7 @@ export function McPortalContacts({
 
   const removeVendor = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('couple_contacts').delete().eq('id', id)
-      if (error) throw error
+      unwrap(await deleteCoupleContactLinkAction(id))
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] }),
     onError: () => toast('Failed to remove vendor'),
@@ -93,12 +109,12 @@ export function McPortalContacts({
 
   const addVendor = useMutation({
     mutationFn: async (contactId: string) => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-      const { error } = await supabase.from('couple_contacts').insert({
-        couple_id: coupleId, contact_id: contactId, user_id: user.user.id,
-      })
-      if (error) throw error
+      unwrap(
+        await addCoupleContactLinkAction({
+          couple_id: coupleId,
+          contact_id: contactId,
+        }),
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })
@@ -109,9 +125,13 @@ export function McPortalContacts({
 
   const updateContact = useMutation({
     mutationFn: async (contact: Omit<Contact, 'user_id' | 'created_at'> & { id: string }) => {
-      const { id, ...rest } = contact
-      const { error } = await supabase.from('contacts').update(rest).eq('id', id)
-      if (error) throw error
+      const { id, name, email, phone, contact_name, category, notes } = contact
+      unwrap(
+        await updateContactAction({
+          id,
+          patch: { name, email, phone, contact_name, category, notes },
+        }),
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })
@@ -124,8 +144,7 @@ export function McPortalContacts({
 
   const deleteContact = useMutation({
     mutationFn: async (contactId: string) => {
-      const { error } = await supabase.from('contacts').delete().eq('id', contactId)
-      if (error) throw error
+      unwrap(await deleteContactAction(contactId))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })

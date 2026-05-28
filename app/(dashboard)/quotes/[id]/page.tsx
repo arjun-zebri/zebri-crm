@@ -83,7 +83,7 @@ export default function QuotePage() {
       return {
         ...data,
         couple_name: (data.couple as { name: string })?.name ?? '',
-      } as Quote & { items: QuoteItem[] }
+      } as unknown as Quote & { items: QuoteItem[] }
     },
   })
 

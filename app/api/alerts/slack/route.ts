@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { sendSlackAlert, type SlackPayload } from "@/lib/slack"
+
+import { sendSlackAlert, type SlackPayload } from '@/lib/alerts/slack'
 
 export async function POST(request: NextRequest) {
   try {

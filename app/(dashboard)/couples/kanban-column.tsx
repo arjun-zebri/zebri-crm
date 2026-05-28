@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { Droppable } from "@hello-pangea/dnd";
 import { Plus, ChevronDown } from "lucide-react";
+import { useState } from "react";
+
 import {
   Couple,
   CoupleStatusRecord,
   getStatusClasses,
-} from "./couples-types";
+} from '@/types/couple';
+
 import { KanbanCard } from "./kanban-card";
 
 interface KanbanColumnProps {

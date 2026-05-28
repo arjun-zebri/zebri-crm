@@ -1,10 +1,24 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { FileText, Download, Trash2, Plus, Loader2 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { FileText, Download, Trash2, Plus, Loader2 } from 'lucide-react'
+import { useState, useRef } from 'react'
+
 import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
+
+import {
+  addPortalFileAction,
+  deletePortalFileAction,
+} from './portal-actions'
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
 
 interface PortalFile {
   id: string
@@ -104,7 +118,9 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
         .eq('couple_id', coupleId)
         .order('created_at')
       if (error) throw error
-      return data || []
+      // Generated portal_files Row vs the hand-written PortalFile shape;
+      // runtime shape matches — bridge the nominal difference.
+      return (data ?? []) as PortalFile[]
     },
   })
 
@@ -114,9 +130,9 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
 
     setUploading(true)
     try {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) return
-
+      // Storage upload itself stays client-side — the blob never
+      // round-trips through the server. The DB-row insert that
+      // references the public URL goes through the action.
       const path = `${coupleId}/${Date.now()}-${file.name}`
       const { data: storageData, error: storageError } = await supabase.storage
         .from('portal-files')
@@ -125,14 +141,14 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
       if (storageError) throw storageError
 
       const { data: urlData } = supabase.storage.from('portal-files').getPublicUrl(storageData.path)
-      const { error: dbError } = await supabase.from('portal_files').insert({
-        couple_id: coupleId,
-        user_id: user.user.id,
-        name: file.name,
-        file_url: urlData.publicUrl,
-        file_size: file.size,
-      })
-      if (dbError) throw dbError
+      unwrap(
+        await addPortalFileAction({
+          couple_id: coupleId,
+          name: file.name,
+          file_url: urlData.publicUrl,
+          file_size: file.size,
+        }),
+      )
       queryClient.invalidateQueries({ queryKey: ['portal-files', coupleId] })
     } catch {
       toast('Failed to upload file')
@@ -145,8 +161,9 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
     if (!file) return
     try {
       const storagePath = storagePathFromUrl(file.file_url)
-      const { error } = await supabase.from('portal_files').delete().eq('id', id)
-      if (error) throw error
+      unwrap(await deletePortalFileAction(id))
+      // Best-effort storage cleanup AFTER the DB-row delete commits
+      // — if the storage call fails we still leave a clean DB state.
       if (storagePath) await supabase.storage.from('portal-files').remove([storagePath])
       queryClient.invalidateQueries({ queryKey: ['portal-files', coupleId] })
     } catch {

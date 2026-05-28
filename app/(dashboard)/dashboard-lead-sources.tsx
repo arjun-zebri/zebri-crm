@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useLeadSources, DashboardPeriod } from "./use-dashboard";
-import { LEAD_SOURCES, LEAD_SOURCE_LABELS } from "./couples/couples-types";
+import { LEAD_SOURCES, LEAD_SOURCE_LABELS } from '@/types/couple';
 
 interface DashboardLeadSourcesProps {
   period: DashboardPeriod;

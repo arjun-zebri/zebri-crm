@@ -2,12 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { Event } from "./events/events-types";
+import { Event } from '@/types/event';
 import {
   LeadSource,
   LEAD_SOURCES,
-} from "./couples/couples-types";
-import { CoupleStatusRecord } from "./couples/couples-types";
+} from '@/types/couple';
+import { CoupleStatusRecord } from '@/types/couple';
 
 export type DashboardPeriod = "week" | "month" | "quarter" | "year";
 

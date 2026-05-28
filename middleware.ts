@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isAdmin, subscriptionStatus } from "@/lib/auth/entitlements";
+import { sameOriginPathSchema } from "@/lib/auth/schemas";
+import type { Database } from "@/types/database";
+
 const PUBLIC_ROUTES = [
   "/login",
   "/signup",
@@ -30,7 +34,7 @@ function withCookies(source: NextResponse, target: NextResponse): NextResponse {
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
@@ -72,12 +76,20 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // If no user and not a public route, redirect to login
+  // If no user and not a public route, redirect to login.
+  // Preserve the requested path as `?next=` so the login page can
+  // bounce the user back after they sign in. The `next` value is
+  // validated against {@link sameOriginPathSchema} (same-origin
+  // relative paths only) so a crafted link can't turn the
+  // redirect-after-login into an open redirect — defence in depth on
+  // top of the login server action's own check.
   if (!user && !isPublicRoute) {
-    return withCookies(
-      response,
-      NextResponse.redirect(new URL("/login", request.url))
-    );
+    const loginUrl = new URL("/login", request.url);
+    const nextCandidate = pathname + (request.nextUrl.search ?? "");
+    if (sameOriginPathSchema.safeParse(nextCandidate).success) {
+      loginUrl.searchParams.set("next", nextCandidate);
+    }
+    return withCookies(response, NextResponse.redirect(loginUrl));
   }
 
   // If user exists and on a public route (auth pages), allow access
@@ -86,9 +98,11 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Gate /admin to admins only
+  // Gate /admin to admins only — read via the entitlements helper so
+  // app_metadata is authoritative (user can't self-elevate via the
+  // user-writable user_metadata; §7.4 / Phase 0.8b).
   if (user && pathname.startsWith("/admin")) {
-    if (user.user_metadata?.account_type !== "admin") {
+    if (!isAdmin(user)) {
       return withCookies(
         response,
         NextResponse.redirect(new URL("/", request.url))
@@ -111,9 +125,10 @@ export async function middleware(request: NextRequest) {
     // Starter (free) is a real long-term state. Everyone gets in except
     // users with a failed recurring charge — they need to update their
     // payment method. Feature limits (e.g. 5-couple cap on Starter) are
-    // enforced at the data layer, not here.
-    const subscriptionStatus = (user.user_metadata || {}).subscription_status;
-    if (subscriptionStatus === "past_due") {
+    // enforced at the data layer, not here. The entitlements helper
+    // ignores user-writable user_metadata for migrated users — no self-
+    // bypass via auth.updateUser({ data: { subscription_status: 'active' } }).
+    if (subscriptionStatus(user) === "past_due") {
       return withCookies(
         response,
         NextResponse.redirect(new URL("/settings?tab=billing", request.url))

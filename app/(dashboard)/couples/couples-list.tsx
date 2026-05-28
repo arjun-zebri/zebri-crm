@@ -1,27 +1,44 @@
-"use client";
+/**
+ * Couples list — desktop table + mobile card list orchestrator.
+ *
+ * Composes:
+ * - `<CouplesListMobile>` — viewport ≤ sm.
+ * - Desktop table (this file) — uses `@tanstack/react-table` for
+ *   pagination state; column definitions come from
+ *   `createCouplesListColumns()` so the surface stays declarative.
+ * - `<CouplesListPagination>` — footer with prev/next + page-size.
+ * - `<CouplesListEmpty>` — `couples.length === 0 && !loading`.
+ * - `useCouplesListDragSelect()` — marquee drag-select state.
+ *
+ * Row click semantics:
+ * - Shift-click extends a contiguous selection from the
+ *   last-clicked row.
+ * - Click with an existing multi-select toggles the row in/out of
+ *   the selection.
+ * - Click with no selection opens the couple's profile.
+ *
+ * @module app/(dashboard)/couples/couples-list
+ */
+'use client';
 
 import {
-  createColumnHelper,
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
-  PaginationState,
+  type PaginationState,
   useReactTable,
-} from "@tanstack/react-table";
-import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import {
-  Users,
-  ChevronLeft,
-  ChevronRight,
-  Mail,
-  Phone,
-  Calendar,
-  MapPin,
-  ListChecks,
-} from "lucide-react";
-import { Couple, CoupleStatusRecord, getStatusClasses } from "./couples-types";
-import { formatDate } from "@/lib/utils";
+} from '@tanstack/react-table';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+
+import { Couple, CoupleStatusRecord } from '@/types/couple';
+
+import { createCouplesListColumns, COL_WIDTHS } from './couples-list-columns';
+import { CouplesListEmpty } from './couples-list-empty';
+import { CheckMark, DashMark } from './couples-list-icons';
+import { CouplesListMobile } from './couples-list-mobile';
+import { CouplesListPagination } from './couples-list-pagination';
+import { useCouplesListDragSelect } from './use-couples-list-drag-select';
 
 interface CouplesListProps {
   couples: Couple[];
@@ -32,150 +49,7 @@ interface CouplesListProps {
   onSelectionChange: (ids: Set<string>) => void;
 }
 
-const columnHelper = createColumnHelper<Couple>();
-
-// Column width percentages (total = 100%)
-const COL_WIDTHS: Record<string, string> = {
-  name: "25%",
-  email: "23%",
-  phone: "13%",
-  event_date: "12%",
-  venue: "17%",
-  status: "10%",
-};
-
-function HeaderLabel({
-  icon,
-  label,
-  textOnly,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  textOnly?: string;
-}) {
-  return (
-    <span className="flex items-center gap-1.5">
-      {textOnly ? (
-        <span className="text-[11px]">{textOnly}</span>
-      ) : (
-        icon
-      )}
-      {label}
-    </span>
-  );
-}
-
-function createColumns(statuses: CoupleStatusRecord[]) {
-  return [
-    columnHelper.accessor("name", {
-      header: () => <HeaderLabel textOnly="Aa" label="Name" />,
-      enableSorting: false,
-      cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("email", {
-      header: () => (
-        <HeaderLabel
-          icon={<Mail size={12} strokeWidth={1.5} />}
-          label="Email"
-        />
-      ),
-      enableSorting: false,
-      meta: { hidden: "hidden sm:table-cell" },
-      cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("phone", {
-      header: () => (
-        <HeaderLabel
-          icon={<Phone size={12} strokeWidth={1.5} />}
-          label="Phone"
-        />
-      ),
-      enableSorting: false,
-      meta: { hidden: "hidden lg:table-cell" },
-      cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900">
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("event_date", {
-      header: () => (
-        <HeaderLabel
-          icon={<Calendar size={12} strokeWidth={1.5} />}
-          label="Event date"
-        />
-      ),
-      enableSorting: false,
-      meta: { hidden: "hidden sm:table-cell" },
-      cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900">
-          {formatDate(info.getValue())}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("venue", {
-      header: () => (
-        <HeaderLabel
-          icon={<MapPin size={12} strokeWidth={1.5} />}
-          label="Venue"
-        />
-      ),
-      enableSorting: false,
-      meta: { hidden: "hidden lg:table-cell" },
-      cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    columnHelper.accessor("status", {
-      header: () => (
-        <HeaderLabel
-          icon={<ListChecks size={12} strokeWidth={1.5} />}
-          label="Status"
-        />
-      ),
-      enableSorting: false,
-      cell: (info) => {
-        const statusSlug = info.getValue();
-        const status = statuses.find((s) => s.slug === statusSlug);
-        const classes = status
-          ? getStatusClasses(status.color)
-          : getStatusClasses("gray");
-        const statusName =
-          status?.name ||
-          statusSlug.charAt(0).toUpperCase() + statusSlug.slice(1);
-        return (
-          <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${classes.pill}`}
-          >
-            {statusName}
-          </span>
-        );
-      },
-    }),
-  ];
-}
-
-const skeletonWidths = ["w-32", "w-40", "w-24", "w-20", "w-28", "w-16"];
-
-function getPageNumbers(currentPage: number, totalPages: number): number[] {
-  if (totalPages <= 4) return Array.from({ length: totalPages }, (_, i) => i);
-
-  const windowSize = 4;
-  let windowStart = Math.max(0, currentPage - 3);
-  windowStart = Math.min(totalPages - windowSize, windowStart);
-
-  return Array.from({ length: windowSize }, (_, i) => windowStart + i);
-}
+const skeletonWidths = ['w-32', 'w-40', 'w-24', 'w-20', 'w-28', 'w-16'];
 
 export function CouplesList({
   couples,
@@ -189,137 +63,47 @@ export function CouplesList({
     pageIndex: 0,
     pageSize: 25,
   });
-  const [pageSizeOpen, setPageSizeOpen] = useState(false);
-  const pageSizeRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
-  const isDraggingRef = useRef(false);
-  const justDraggedRef = useRef(false);
   const lastClickedIdxRef = useRef(-1);
-  const [dragRect, setDragRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
-  const dragRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
-  const columns = createColumns(statuses);
+  const columns = useMemo(() => createCouplesListColumns(statuses), [statuses]);
 
+  const { containerRef, dragRect, onContainerMouseDown, justDraggedRef } =
+    useCouplesListDragSelect({ selectedIds, onSelectionChange });
+
+  // Reset to page 1 when the underlying couples list changes (a new
+  // filter or sort fires the same effect since the input array is
+  // a new reference).
   useEffect(() => {
     setPagination({ pageIndex: 0, pageSize: 25 });
   }, [couples]);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        pageSizeRef.current &&
-        !pageSizeRef.current.contains(e.target as Node)
-      ) {
-        setPageSizeOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!dragStartRef.current) return;
-      const dx = e.clientX - dragStartRef.current.x;
-      const dy = e.clientY - dragStartRef.current.y;
-      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-        isDraggingRef.current = true;
-        document.body.style.userSelect = 'none';
-        const newRect = {
-          x: Math.min(e.clientX, dragStartRef.current.x),
-          y: Math.min(e.clientY, dragStartRef.current.y),
-          w: Math.abs(dx),
-          h: Math.abs(dy),
-        };
-        dragRectRef.current = newRect;
-        setDragRect(newRect);
-      }
-    };
-
-    const handleMouseUp = () => {
-      if (isDraggingRef.current && dragRectRef.current) {
-        const r = dragRectRef.current;
-        const rows = containerRef.current?.querySelectorAll<HTMLElement>('tr[data-couple-id]');
-        if (rows) {
-          const newSelected = new Set(selectedIds);
-          rows.forEach((row) => {
-            const rowRect = row.getBoundingClientRect();
-            if (
-              rowRect.left < r.x + r.w &&
-              rowRect.right > r.x &&
-              rowRect.top < r.y + r.h &&
-              rowRect.bottom > r.y
-            ) {
-              const coupleId = row.getAttribute('data-couple-id');
-              if (coupleId) newSelected.add(coupleId);
-            }
-          });
-          onSelectionChange(newSelected);
-        }
-        justDraggedRef.current = true;
-        setTimeout(() => (justDraggedRef.current = false), 100);
-
-        // Swallow the click that fires after the drag - otherwise the page
-        // wrapper's background click handler clears the selection we just made.
-        const suppressNextClick = (e: MouseEvent) => {
-          e.stopImmediatePropagation();
-          window.removeEventListener('click', suppressNextClick, true);
-        };
-        window.addEventListener('click', suppressNextClick, true);
-        setTimeout(() => window.removeEventListener('click', suppressNextClick, true), 250);
-      }
-      dragStartRef.current = null;
-      isDraggingRef.current = false;
-      dragRectRef.current = null;
-      document.body.style.userSelect = '';
-      setDragRect(null);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [selectedIds, onSelectionChange]);
-
   const table = useReactTable({
     data: couples,
     columns,
-    state: {
-      pagination,
-    },
+    state: { pagination },
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
 
   if (couples.length === 0 && !loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Users size={40} strokeWidth={1.5} className="text-gray-300 mb-3" />
-        <p className="text-gray-600 font-medium mb-2">No couples yet.</p>
-        <p className="text-sm text-gray-500 mb-4">
-          Start by adding your first couple.
-        </p>
-      </div>
-    );
+    return <CouplesListEmpty />;
   }
 
-  const currentPageIds = table.getRowModel().rows.map(r => r.original.id);
-  const allPageSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedIds.has(id));
-  const somePageSelected = currentPageIds.some(id => selectedIds.has(id));
+  const rows = table.getRowModel().rows;
+  const currentPageIds = rows.map((r) => r.original.id);
+  const allPageSelected =
+    currentPageIds.length > 0 &&
+    currentPageIds.every((id) => selectedIds.has(id));
+  const somePageSelected = currentPageIds.some((id) => selectedIds.has(id));
 
   const handleSelectAll = () => {
+    const newSelected = new Set(selectedIds);
     if (allPageSelected) {
-      const newSelected = new Set(selectedIds);
-      currentPageIds.forEach(id => newSelected.delete(id));
-      onSelectionChange(newSelected);
+      currentPageIds.forEach((id) => newSelected.delete(id));
     } else {
-      const newSelected = new Set(selectedIds);
-      currentPageIds.forEach(id => newSelected.add(id));
-      onSelectionChange(newSelected);
+      currentPageIds.forEach((id) => newSelected.add(id));
     }
+    onSelectionChange(newSelected);
   };
 
   const handleToggleRow = (id: string, e: React.MouseEvent) => {
@@ -333,18 +117,28 @@ export function CouplesList({
     onSelectionChange(newSelected);
   };
 
-  const handleRowClick = (couple: Couple, idx: number, e: React.MouseEvent) => {
+  const handleRowClick = (
+    couple: Couple,
+    idx: number,
+    e: React.MouseEvent,
+  ) => {
     e.stopPropagation();
     if (justDraggedRef.current) return;
 
     if (e.shiftKey) {
       e.preventDefault();
-      const start = lastClickedIdxRef.current >= 0 ? Math.min(lastClickedIdxRef.current, idx) : idx;
-      const end = lastClickedIdxRef.current >= 0 ? Math.max(lastClickedIdxRef.current, idx) : idx;
-      const rows = table.getRowModel().rows;
+      const start =
+        lastClickedIdxRef.current >= 0
+          ? Math.min(lastClickedIdxRef.current, idx)
+          : idx;
+      const end =
+        lastClickedIdxRef.current >= 0
+          ? Math.max(lastClickedIdxRef.current, idx)
+          : idx;
       const newSelected = new Set(selectedIds);
       for (let i = start; i <= end; i++) {
-        newSelected.add(rows[i].original.id);
+        const row = rows[i];
+        if (row) newSelected.add(row.original.id);
       }
       onSelectionChange(newSelected);
       lastClickedIdxRef.current = idx;
@@ -362,113 +156,66 @@ export function CouplesList({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto" ref={containerRef} onMouseDown={(e) => {
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'BUTTON') return;
-        dragStartRef.current = { x: e.clientX, y: e.clientY };
-      }}>
-        {/* ── Mobile card list ── */}
-        <div className="sm:hidden pb-24">
-          {loading
-            ? Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="animate-pulse flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0"
-                >
-                  <div className="flex-1 pr-3">
-                    <div className="h-4 bg-gray-100 rounded-md w-36 mb-1.5" />
-                    <div className="h-3 bg-gray-100 rounded-md w-24" />
-                  </div>
-                  <div className="h-5 bg-gray-100 rounded-full w-16" />
-                </div>
-              ))
-            : table.getRowModel().rows.map((row) => {
-                const couple = row.original;
-                const status = statuses.find((s) => s.slug === couple.status);
-                const classes = status
-                  ? getStatusClasses(status.color)
-                  : getStatusClasses("gray");
-                const statusName =
-                  status?.name ||
-                  couple.status.charAt(0).toUpperCase() +
-                    couple.status.slice(1);
-                const secondary = [
-                  couple.event_date && formatDate(couple.event_date),
-                  couple.venue,
-                ]
-                  .filter(Boolean)
-                  .join(" · ");
+      <div
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-auto"
+        ref={containerRef}
+        onMouseDown={onContainerMouseDown}
+      >
+        <CouplesListMobile
+          rows={rows}
+          statuses={statuses}
+          loading={loading}
+          onRowClick={onRowClick}
+        />
 
-                return (
-                  <div
-                    key={row.id}
-                    onClick={() => onRowClick(couple)}
-                    className="flex items-start justify-between py-3.5 border-b border-gray-100 last:border-0 cursor-pointer active:bg-gray-50 transition"
-                  >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {couple.name}
-                      </p>
-                      {secondary && (
-                        <p className="text-xs text-gray-400 mt-0.5 truncate">
-                          {secondary}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`flex-none mt-0.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${classes.pill}`}
-                    >
-                      {statusName}
-                    </span>
-                  </div>
-                );
-              })}
-        </div>
-
-        {/* ── Desktop table ── */}
         <table className="hidden sm:table w-full table-fixed border-separate border-spacing-0 min-w-[400px] md:max-w-[1800px] select-none">
           <thead className="sticky top-0 bg-white z-10 [box-shadow:0_1px_0_rgb(229,231,235)]">
             <tr className="group/header">
-              {table.getHeaderGroups()[0]?.headers.map((header, idx) => (
-                <th
-                  key={header.id}
-                  data-couple-checkbox={idx === 0 ? true : undefined}
-                  className={`pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400 ${
-                    idx === 0 ? "relative" : ""
-                  } ${(header.column.columnDef.meta as any)?.hidden || ""}`}
-                  style={{ width: COL_WIDTHS[header.id] }}
-                >
-                  {idx === 0 && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectAll();
-                      }}
-                      className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
-                        allPageSelected || somePageSelected
-                          ? "bg-emerald-500 border-emerald-500 opacity-100"
-                          : "border-gray-300 hover:border-gray-500 opacity-0 group-hover/header:opacity-100"
-                      }`}
-                      aria-label={
-                        allPageSelected ? "Deselect all" : "Select all"
-                      }
-                    >
-                      {allPageSelected ? (
-                        <CheckMark />
-                      ) : somePageSelected ? (
-                        <DashMark />
-                      ) : null}
-                    </button>
-                  )}
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </th>
-              ))}
+              {table.getHeaderGroups()[0]?.headers.map((header, idx) => {
+                const meta = header.column.columnDef.meta as
+                  | { hidden?: string }
+                  | undefined;
+                return (
+                  <th
+                    key={header.id}
+                    data-couple-checkbox={idx === 0 ? true : undefined}
+                    className={`pl-0 pr-2 py-1.5 text-left text-xs font-normal text-gray-400 ${
+                      idx === 0 ? 'relative' : ''
+                    } ${meta?.hidden || ''}`}
+                    style={{ width: COL_WIDTHS[header.id] }}
+                  >
+                    {idx === 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectAll();
+                        }}
+                        className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
+                          allPageSelected || somePageSelected
+                            ? 'bg-emerald-500 border-emerald-500 opacity-100'
+                            : 'border-gray-300 hover:border-gray-500 opacity-0 group-hover/header:opacity-100'
+                        }`}
+                        aria-label={
+                          allPageSelected ? 'Deselect all' : 'Select all'
+                        }
+                      >
+                        {allPageSelected ? (
+                          <CheckMark />
+                        ) : somePageSelected ? (
+                          <DashMark />
+                        ) : null}
+                      </button>
+                    )}
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -476,7 +223,10 @@ export function CouplesList({
               ? Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     {columns.map((_, j) => (
-                      <td key={j} className="pl-0 pr-2 py-2 border-b border-gray-100">
+                      <td
+                        key={j}
+                        className="pl-0 pr-2 py-2 border-b border-gray-100"
+                      >
                         <div
                           className={`h-4 bg-gray-100 rounded-md ${skeletonWidths[j]}`}
                         />
@@ -484,26 +234,33 @@ export function CouplesList({
                     ))}
                   </tr>
                 ))
-              : table.getRowModel().rows.map((row, idx) => {
+              : rows.map((row, idx) => {
                   const isSelected = selectedIds.has(row.original.id);
-                  const isLastRow = idx === table.getRowModel().rows.length - 1;
-                  const borderClass = isLastRow ? '' : 'border-b border-gray-100';
+                  const isLastRow = idx === rows.length - 1;
+                  const borderClass = isLastRow
+                    ? ''
+                    : 'border-b border-gray-100';
                   return (
                     <tr
                       key={row.id}
                       data-couple-id={row.original.id}
                       onClick={(e) => handleRowClick(row.original, idx, e)}
-                      className={`cursor-pointer transition group ${isSelected ? 'bg-emerald-50/40' : 'hover:bg-gray-50/60'}`}
+                      className={`cursor-pointer transition group ${
+                        isSelected ? 'bg-emerald-50/40' : 'hover:bg-gray-50/60'
+                      }`}
                     >
                       {row.getVisibleCells().map((cell, cellIdx, allCells) => {
                         const isLastCell = cellIdx === allCells.length - 1;
                         const isFirstCell = cellIdx === 0;
+                        const meta = cell.column.columnDef.meta as
+                          | { hidden?: string }
+                          | undefined;
                         return (
                           <td
                             key={cell.id}
                             className={`pl-0 pr-2 py-2 text-sm ${borderClass} ${
-                              isFirstCell ? "relative" : "overflow-hidden"
-                            } ${(cell.column.columnDef.meta as any)?.hidden || ""} ${isLastCell ? 'pr-3' : ''}`}
+                              isFirstCell ? 'relative' : 'overflow-hidden'
+                            } ${meta?.hidden || ''} ${isLastCell ? 'pr-3' : ''}`}
                           >
                             {isFirstCell && (
                               <button
@@ -514,19 +271,26 @@ export function CouplesList({
                                 }}
                                 className={`absolute top-1/2 -left-9 -translate-y-1/2 shrink-0 w-4 h-4 rounded border transition cursor-pointer flex items-center justify-center ${
                                   isSelected
-                                    ? "bg-emerald-500 border-emerald-500 opacity-100"
+                                    ? 'bg-emerald-500 border-emerald-500 opacity-100'
                                     : `border-gray-300 hover:border-gray-500 ${
                                         selectedIds.size > 0
-                                          ? "opacity-100"
-                                          : "opacity-0 group-hover:opacity-100"
+                                          ? 'opacity-100'
+                                          : 'opacity-0 group-hover:opacity-100'
                                       }`
                                 }`}
-                                aria-label={isSelected ? "Deselect couple" : "Select couple"}
+                                aria-label={
+                                  isSelected
+                                    ? 'Deselect couple'
+                                    : 'Select couple'
+                                }
                               >
                                 {isSelected && <CheckMark />}
                               </button>
                             )}
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
                           </td>
                         );
                       })}
@@ -537,206 +301,26 @@ export function CouplesList({
         </table>
       </div>
 
-      {/* ── Mobile pagination - simple prev/next ── */}
-      {table.getPageCount() > 1 && (
-        <div className="sm:hidden border-t border-gray-200 bg-white py-3 flex items-center justify-between">
-          <span className="text-sm text-gray-500">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()}
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
-            >
-              <ChevronLeft size={16} strokeWidth={1.5} />
-            </button>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="p-2 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition text-gray-600"
-            >
-              <ChevronRight size={16} strokeWidth={1.5} />
-            </button>
-          </div>
-        </div>
-      )}
+      <CouplesListPagination table={table} />
 
-      {/* ── Desktop pagination ── */}
-      <div className="hidden sm:flex border-t border-gray-200 bg-white px-6 py-3.5 justify-end relative">
-        <div className="flex items-center gap-3">
-          {table.getPageCount() > 1 && (
-            <>
-              <div className="flex items-center w-[280px]">
-                <button
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600 shrink-0"
-                  title="Previous page"
-                >
-                  <ChevronLeft size={16} strokeWidth={1.5} />
-                </button>
-
-                <div className="flex flex-1 items-center justify-center gap-1">
-                  {getPageNumbers(
-                    table.getState().pagination.pageIndex,
-                    table.getPageCount()
-                  ).map((pageNum, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => table.setPageIndex(pageNum)}
-                      className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
-                        table.getState().pagination.pageIndex === pageNum
-                          ? "bg-gray-900 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      {pageNum + 1}
-                    </button>
-                  ))}
-                  {(() => {
-                    const pages = getPageNumbers(
-                      table.getState().pagination.pageIndex,
-                      table.getPageCount()
-                    );
-                    const lastPage = table.getPageCount() - 1;
-                    if (pages[pages.length - 1] >= lastPage) return null;
-                    const adjacent = pages[pages.length - 1] === lastPage - 1;
-                    return (
-                      <>
-                        {!adjacent && (
-                          <span className="px-1 text-xs text-gray-400">…</span>
-                        )}
-                        <button
-                          onClick={() => table.setPageIndex(lastPage)}
-                          className={`px-2.5 py-1 text-xs font-medium rounded transition cursor-pointer ${
-                            table.getState().pagination.pageIndex === lastPage
-                              ? "bg-gray-900 text-white"
-                              : "text-gray-600 hover:bg-gray-100"
-                          }`}
-                        >
-                          {lastPage + 1}
-                        </button>
-                      </>
-                    );
-                  })()}
-                </div>
-
-                <button
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                  className="p-1.5 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition rounded text-gray-600 shrink-0"
-                  title="Next page"
-                >
-                  <ChevronRight size={16} strokeWidth={1.5} />
-                </button>
-              </div>
-
-              <div className="h-5 w-px bg-gray-200" />
-            </>
-          )}
-
-          <div ref={pageSizeRef}>
-            <button
-              onClick={() => setPageSizeOpen(!pageSizeOpen)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-600 hover:border-gray-300 cursor-pointer transition"
-            >
-              {table.getState().pagination.pageSize}/page
-            </button>
-            {pageSizeOpen && (
-              <div
-                className="fixed bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1"
-                style={{
-                  bottom:
-                    window.innerHeight -
-                    (pageSizeRef.current?.getBoundingClientRect().top || 0) +
-                    8,
-                  right:
-                    window.innerWidth -
-                    (pageSizeRef.current?.getBoundingClientRect().right || 0),
-                  width: pageSizeRef.current?.getBoundingClientRect().width,
-                }}
-              >
-                {[10, 25, 50].map((pageSize) => (
-                  <button
-                    key={pageSize}
-                    onClick={() => {
-                      table.setPageSize(pageSize);
-                      setPageSizeOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                      table.getState().pagination.pageSize === pageSize
-                        ? "bg-gray-50 text-gray-900 font-medium"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {pageSize}/page
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {dragRect &&
-          createPortal(
-            <div
-              style={{
-                position: 'fixed',
-                left: dragRect.x,
-                top: dragRect.y,
-                width: dragRect.w,
-                height: dragRect.h,
-                background: 'rgba(0,0,0,0.06)',
-                border: '1px solid rgba(0,0,0,0.2)',
-                borderRadius: 3,
-                pointerEvents: 'none',
-                zIndex: 9999,
-              }}
-            />,
-            document.body
-          )}
-      </div>
+      {dragRect &&
+        createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              left: dragRect.x,
+              top: dragRect.y,
+              width: dragRect.w,
+              height: dragRect.h,
+              background: 'rgba(0,0,0,0.06)',
+              border: '1px solid rgba(0,0,0,0.2)',
+              borderRadius: 3,
+              pointerEvents: 'none',
+              zIndex: 9999,
+            }}
+          />,
+          document.body,
+        )}
     </div>
-  );
-}
-
-function CheckMark() {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M2 5.2L4 7.2L8 3"
-        stroke="white"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function DashMark() {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M2.5 5H7.5"
-        stroke="white"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
   );
 }

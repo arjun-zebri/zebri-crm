@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase/server'
+
+import { isCronAuthorized } from '@/lib/api/cron-auth'
 import { sendContractReminderEmail } from '@/lib/email'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 
 interface ReminderRow {
   id: string
@@ -18,15 +20,9 @@ interface ReminderRow {
   mc_business_name: string
 }
 
-function authorized(request: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false
-  const header = request.headers.get('authorization') || ''
-  return header === `Bearer ${secret}`
-}
-
 async function handle(request: NextRequest) {
-  if (!authorized(request)) {
+  // Constant-time bearer-token check via the shared helper.
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

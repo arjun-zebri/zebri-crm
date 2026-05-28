@@ -1,105 +1,138 @@
-'use client'
+/**
+ * Per-couple Tasks tab inside the Couple Profile.
+ *
+ * Reads via React Query against `tasks` (RLS scopes to the
+ * authenticated user). Writes go through the server actions in
+ * `./actions.ts` — the component is pure composition + the hook
+ * preserves optimistic cache updates.
+ *
+ * Reuses the standalone Tasks page's row + side-panel + column
+ * header so visuals stay consistent.
+ *
+ * @module app/(dashboard)/couples/couple-tasks
+ */
+'use client';
 
-import { useMemo, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
-import { Plus } from 'lucide-react'
-import { TaskRow, TaskRowTask } from '@/app/(dashboard)/tasks/task-row'
-import { TaskSidePanel, TaskFieldUpdate } from '@/app/(dashboard)/tasks/task-side-panel'
-import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section'
-import { TaskPriority, STATUS_ORDER } from '@/app/(dashboard)/tasks/task-types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section';
+import { TaskRow, TaskRowTask } from '@/app/(dashboard)/tasks/task-row';
+import {
+  TaskFieldUpdate,
+  TaskSidePanel,
+} from '@/app/(dashboard)/tasks/task-side-panel';
+import { useToast } from '@/components/ui/toast';
+import { createClient } from '@/lib/supabase/client';
+import { STATUS_ORDER, TaskPriority } from '@/types/task';
+
+import {
+  createCoupleTaskAction,
+  deleteCoupleTaskAction,
+  updateCoupleTaskAction,
+} from './actions';
 
 interface CoupleTasksProps {
-  coupleId: string
+  coupleId: string;
 }
 
 interface Task extends TaskRowTask {
-  position: number
+  position: number;
+}
+
+/** Throw on `ok: false` so React Query treats it as an error and
+ *  the optimistic update can roll back if we add one later. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data;
+  throw new Error(result.error);
 }
 
 export function CoupleTasks({ coupleId }: CoupleTasksProps) {
-  const supabase = createClient()
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['couple-tasks', coupleId],
     queryFn: async () => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
+      const { data: user, error: userError } = await supabase.auth.getUser();
+      if (userError || !user.user) throw new Error('Not authenticated');
       const { data, error } = await supabase
         .from('tasks')
         .select(
-          'id, title, due_date, description, status, related_couple_id, group_id, position, priority, task_type'
+          'id, title, due_date, description, status, related_couple_id, group_id, position, priority, task_type',
         )
         .eq('related_couple_id', coupleId)
         .eq('user_id', user.user.id)
-        .order('due_date', { ascending: true, nullsFirst: false })
-      if (error) throw error
-      return (data as Task[]) || []
+        .order('due_date', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return (data as Task[]) || [];
     },
-  })
+  });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['couple-tasks', coupleId] })
-    queryClient.invalidateQueries({ queryKey: ['all-tasks'] })
-  }
+    queryClient.invalidateQueries({ queryKey: ['couple-tasks', coupleId] });
+    queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
+  };
 
   const patchTask = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: TaskFieldUpdate }) => {
-      const { error } = await supabase.from('tasks').update(patch).eq('id', id)
-      if (error) throw error
+    mutationFn: async ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: TaskFieldUpdate;
+    }) => {
+      unwrap(await updateCoupleTaskAction({ id, patch }));
     },
     onSuccess: invalidate,
-  })
+  });
 
   const insertTask = useMutation({
     mutationFn: async (input: { title: string }) => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-      const { error } = await supabase.from('tasks').insert({
-        title: input.title,
-        status: 'todo',
-        user_id: user.user.id,
-        related_couple_id: coupleId,
-      })
-      if (error) throw error
+      unwrap(
+        await createCoupleTaskAction({
+          coupleId,
+          title: input.title,
+        }),
+      );
     },
     onSuccess: () => {
-      invalidate()
-      toast('Task added')
+      invalidate();
+      toast('Task added');
     },
-  })
+  });
 
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('tasks').delete().eq('id', id)
-      if (error) throw error
+      unwrap(await deleteCoupleTaskAction(id));
     },
     onSuccess: () => {
-      invalidate()
-      toast('Task deleted')
+      invalidate();
+      toast('Task deleted');
     },
-  })
+  });
 
   const knownTypes = useMemo(() => {
-    const set = new Set<string>()
-    for (const t of tasks || []) if (t.task_type) set.add(t.task_type)
-    return [...set].sort()
-  }, [tasks])
+    const set = new Set<string>();
+    for (const t of tasks || []) if (t.task_type) set.add(t.task_type);
+    return [...set].sort();
+  }, [tasks]);
 
   const knownStatuses = useMemo(() => {
-    const custom = new Set<string>()
-    const base = new Set(STATUS_ORDER as string[])
+    const custom = new Set<string>();
+    const base = new Set(STATUS_ORDER as string[]);
     for (const t of tasks ?? []) {
-      if (t.status && !base.has(t.status)) custom.add(t.status)
+      if (t.status && !base.has(t.status)) custom.add(t.status);
     }
-    return [...(STATUS_ORDER as string[]), ...custom]
-  }, [tasks])
+    return [...(STATUS_ORDER as string[]), ...custom];
+  }, [tasks]);
 
-  const editingTask = (tasks || []).find((t) => t.id === editingTaskId)
+  const editingTask = (tasks || []).find((t) => t.id === editingTaskId);
 
   if (isLoading) {
     return (
@@ -108,10 +141,10 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
           <div key={i} className="h-9 bg-gray-100 rounded animate-pulse" />
         ))}
       </div>
-    )
+    );
   }
 
-  const all = tasks || []
+  const all = tasks || [];
 
   return (
     <>
@@ -135,7 +168,9 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
               knownTypes={knownTypes}
               knownStatuses={knownStatuses}
               showCouple={false}
-              onCommitTitle={(title) => patchTask.mutate({ id: t.id, patch: { title } })}
+              onCommitTitle={(title) =>
+                patchTask.mutate({ id: t.id, patch: { title } })
+              }
               onChangeStatus={(status) =>
                 patchTask.mutate({ id: t.id, patch: { status } })
               }
@@ -169,10 +204,10 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
         knownStatuses={knownStatuses}
         onPatch={(id, patch) => patchTask.mutate({ id, patch })}
         onDelete={(id) => {
-          deleteTask.mutate(id)
-          setEditingTaskId(null)
+          deleteTask.mutate(id);
+          setEditingTaskId(null);
         }}
       />
     </>
-  )
+  );
 }

@@ -13,7 +13,7 @@ import {
   SortField,
   SortDirection,
   SORT_OPTIONS,
-} from './contacts-types'
+} from '@/types/contact'
 
 interface ContactsHeaderProps {
   vendors: Contact[]

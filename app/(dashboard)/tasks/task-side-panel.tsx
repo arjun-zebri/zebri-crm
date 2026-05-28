@@ -12,7 +12,7 @@ import {
   StatusCell,
   TaskTypeCell,
 } from './task-cells'
-import { TaskPriority } from './task-types'
+import { TaskPriority } from '@/types/task'
 
 export interface TaskPanelTask {
   id: string

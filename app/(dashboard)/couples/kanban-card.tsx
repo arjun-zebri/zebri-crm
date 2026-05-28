@@ -7,8 +7,9 @@ import {
   DraggableStateSnapshot,
 } from "@hello-pangea/dnd";
 import { GripVertical } from "lucide-react";
-import { Couple } from "./couples-types";
+
 import { formatDate } from "@/lib/utils";
+import { Couple } from '@/types/couple';
 
 interface KanbanCardProps {
   couple: Couple;

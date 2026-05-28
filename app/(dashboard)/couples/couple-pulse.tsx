@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -8,7 +7,9 @@ import {
   Lightbulb,
   XCircle,
 } from "lucide-react";
-import { Couple } from "./couples-types";
+import { useState, useEffect } from "react";
+
+import { Couple } from '@/types/couple';
 
 const SAMPLE = {
   score: 78,

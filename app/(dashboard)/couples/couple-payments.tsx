@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/ui/toast'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { FileText, Receipt, Plus } from 'lucide-react'
-import { QuoteBuilderModal } from '../quotes/quote-builder-modal'
-import { InvoiceBuilderModal } from '../invoices/invoice-builder-modal'
+import { useState } from 'react'
+
+import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal'
+import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { useToast } from '@/components/ui/toast'
+import { createClient } from '@/lib/supabase/client'
 
 interface CouplePaymentsProps {
   coupleId: string

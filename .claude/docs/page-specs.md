@@ -526,7 +526,19 @@ Route group: `(dashboard)`
 
 Purpose: Unified hub for managing quotes and invoices. The MC can view, create, and edit all financial documents (quotes and invoices) in one place with tab-based navigation.
 
-Header: Title "Payments" + two tabs: **Quotes** | **Invoices**. Search bar + "New Quote" / "New Invoice" button (label changes based on active tab).
+Header: Title "Payments" + three tabs: **Quotes** | **Invoices** | **Contracts** (Contracts only renders when the user has Pro/Max via `hasContractsAccess(user)`). Search bar + "New Quote" / "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
+
+**Composition (Phase 2C decomposition):** `app/(dashboard)/payments/page.tsx` is a 262-LOC orchestrator that composes the following co-located sections:
+
+- `payments-header.tsx` — title row, search toolbar, tab strip.
+- `payments-table.tsx` — shared desktop-table / mobile-list primitive consumed by every tab.
+- `payments-footer.tsx` — fixed bottom count + (for quotes/invoices) money total.
+- `quotes-list.tsx`, `invoices-list.tsx`, `contracts-list.tsx` — per-tab row mapping + status pill catalogues.
+- `new-contract-popover.tsx` — inline "pick a couple" popover for the Contracts tab New button.
+- `use-payments-data.ts` — React Query hooks for the three lists.
+- `use-payments-shortcut.ts` — `/` keyboard shortcut + Escape-to-clear.
+
+The Quote/Invoice/Contract builder modals are unchanged in 2C — their decomposition into `components/builders/parts/` is deferred to **PR 2C.2** (the modals are 1047 + 1465 LOC each; structurally reviewable in isolation).
 
 ## Quotes Tab
 
@@ -564,36 +576,62 @@ Table Columns (matching couples/vendors style):
 
 ## Modals
 
-Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page.
+Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phase 2C.2** redesigned both into a **two-pane layout**: edit form on the left, live preview on the right. The modal uses the `fullscreen` size (`max-w-7xl`) on desktop; below the `lg:` breakpoint (1024px) the panes stack vertically with the preview as a collapsible section below the form.
 
-**QuoteBuilderModal:**
-- Fixed height with scroll on overflow
-- Couple selector dropdown at top (searchable combobox)
-- Item list with add/edit/delete actions
-- Amount field (no spinners)
-- Expiry date (native date input, compact)
-- Notes textarea (rows=4)
-- Tax display: Subtotal + GST (10%) = Total (display-only)
-- Share token toggle (green, bg-green-500) with instant save
-- Save button refreshes quote list
+### Shared shell (`builder-modal-shell.tsx`)
+- Top of the modal: document number (e.g. `Q-001` / `INV-001`) + inline `StatePill` (the same tonal pill used on the Billing tab).
+- Right side of the header: status-aware contextual primary CTA + `⋯` overflow menu for destructive / revert actions.
+- Body: hero title input (large unbordered text — Notion-style) followed by the composed parts.
+- Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple).
+- New `previewPane` prop carries the right-side preview content. When provided, the shell switches to a 2-column grid (`grid-cols-1 lg:grid-cols-2`) and the modal upgrades to `fullscreen` size.
 
-**InvoiceBuilderModal:**
-- Fixed height with scroll on overflow
-- Couple selector dropdown at top (searchable combobox)
-- Quote import option: popover showing accepted/sent quotes for selected couple, copies title + items on selection
-- Item list with add/edit/delete actions
-- Quantity/unit price fields (no spinners)
-- Payment terms dropdown (net_7, net_14, net_30, due_on_receipt, custom). Net terms auto-fill due_date. Due on receipt clears it.
-- Due date (compact DatePicker)  -  only shown when payment_terms is `custom` or empty
-- Notes textarea (rows=4)  -  auto-populated from MC's saved bank details on new invoice creation
-- GST toggle: off by default; when on, shows "GST (10%)" row in totals with calculated amount
-- Totals block: Subtotal → GST (if enabled) → Total
-- Payment schedule toggle: when on, reveals deposit % input + deposit due date + final balance due date. Each installment has a "Mark paid" button (replaced by "Paid" badge once paid). When schedule is active, the main "Mark as Paid" button is hidden.
-- Share token toggle (green, bg-green-500) with instant save
-- Stripe "Accept card payments" toggle  -  only visible if MC has Stripe Connect configured (`user_metadata.stripe_connect_enabled = true`). Hidden when payment schedule is active. If not connected: shows "Connect Stripe" link to `/settings?tab=payments`.
-- Save button refreshes invoice list
+### Preview pane (`builder-preview-pane.tsx`)
+- Header row: `<` collapse toggle + "Preview ⓘ" + tabs (PDF · Email · Payment page).
+- Sub-header: "Branded as {Business Name} · Update branding ↗" — the link opens `/branding` in a new tab so the user can tweak + come back without losing the modal.
+- Three tabs, each rendering live (the form state flows directly into the preview every render):
+  - **PDF**: `<PreviewPdf>` — renders the same HTML that `buildPdfHtml()` produces for the print dialog, inside a sandboxed iframe.
+  - **Email**: `<PreviewEmail>` — `From/To/Subject` envelope above a sandboxed iframe carrying the templated email body (`quoteHtml()` / `invoiceHtml()` from `@/lib/email`).
+  - **Payment page**: `<PreviewPaymentPage>` — uses the same `PublicBlockRenderer` the public `/quote/[token]` and `/invoice/[token]` routes use, fed by `useCurrentBranding(surface)`. Pixel-faithful preview of what the couple sees.
+- The pane is collapsible — clicking the `<` chevron toggles a slim vertical bar with a `>` chevron to expand again. Useful when the MC wants to focus on just the form.
 
-Payment schedule sub-component: `invoice-payment-schedule.tsx` (co-located)
+### Branding integration (`useCurrentBranding`)
+- New hook at `lib/branding/use-current-branding.ts` fetches the user's branding from `user_metadata` + the `user_branding` table, assembles a `PublicBranding`-shaped object the renderer consumes.
+- Falls back to the `minimal` theme preset for any unset fields.
+- `buildPublicBranding(metadata)` is pure + exported for tests.
+
+### `QuoteBuilderModal`
+- Meta row: couple picker + expiry date.
+- **Template picker**: prominent "Start from template" card above the items area when the quote is empty; collapses to a smaller "Apply template" link in the items header once items exist.
+- Line items table: description + amount columns only. Drag-reorder via dnd-kit. "+ Add item" inline.
+- "+ Add discount" / "+ Apply 10% GST" link buttons below the items — expand inline when configured.
+- Totals panel: Subtotal · (optional Discount) · (optional GST 10%) · **Total** (bold).
+- Notes & terms textarea at the bottom.
+- Overflow menu: "Convert to invoice" (when accepted) · "Delete quote".
+- Save flow: `Save changes` (footer, secondary) + `Send to couple` (footer, primary). Send saves any dirty changes, enables the share token, and fires the email in one click. After first send, the primary becomes `Resend` + a small "Sent {date}" timestamp.
+- State pill map: Draft (muted) · Sent (info + hollow dot) · Accepted (success + filled dot) · Declined (danger) · Expired (muted).
+
+### `InvoiceBuilderModal`
+Same shell + meta row pattern, plus:
+- Meta row adds: payment terms (Net 7/14/30/due-on-receipt/custom) + due date. Net terms auto-fill the due date.
+- Line items table: description + amount only (quantity removed in 2C.2 — `saveInvoiceAction` writes `quantity = 1, unit_price = amount` for forward compat with the existing schema).
+- Discount + GST controls identical to the quote modal.
+- **Payment schedule**: vertical timeline. `● Deposit ─┊─ ○ Final` with state pill + amount + due date + inline "Mark paid" affordance per stage. Filled dot when paid, hollow when due. "+ Add payment schedule" link button when none is configured.
+- **Card payments toggle**: only visible if `stripeConnectEnabled(user)` is true (read via `@/lib/auth/entitlements` — `app_metadata.stripe_connect_enabled`; never the user-writable `user_metadata`). Toggle + helper text in a token-styled row.
+- **Contextual header CTA** (status-aware):
+  - Sent (no schedule) → "Mark paid"
+  - Sent (with schedule) → "Mark deposit paid"
+  - Deposit paid → "Mark final paid"
+  - Paid → no CTA (status pill only)
+  - Overdue → "Mark paid" (danger-toned)
+- Overflow menu: "Revert to sent" (when paid) · "Cancel invoice" (when editable) · "Delete invoice".
+- State pill map: Draft · Sent (info + hollow) · Deposit paid (warning + filled) · Paid (success + filled) · Overdue (danger + hollow) · Cancelled (muted).
+
+### Server actions (`app/(dashboard)/payments/actions.ts`)
+Mutations no longer happen inline. Saves flow through:
+- `saveQuoteAction(input)` — Zod-validated, RLS-scoped, transactional (replace-line-items pattern).
+- `saveInvoiceAction(input)` — same shape, plus payment schedule fields + `quantity=1`/`unit_price=amount` invariant.
+- `deleteQuoteAction(id)` / `deleteInvoiceAction(id)` — RLS-scoped destructive.
+- Status mutations (mark paid / revert / cancel) remain inline one-line UPDATEs in the modal — they don't justify their own server actions.
 
 ## Couple Profile Integration
 
@@ -756,7 +794,7 @@ Tabs:
 
 Fields: Display Name, Business Name, Phone, Avatar URL
 
-Action: Save Changes (updates user_metadata)
+Action: Save Changes (updates user_metadata — these are user-owned fields, not entitlements; safe to write via `auth.updateUser({ data })`)
 
 ### Account (`?tab=account`)
 
@@ -766,26 +804,68 @@ Action: Change Password
 
 ### Plans & Billing (`?tab=billing`)
 
-Shows state-specific messaging and CTAs based on subscription_status.
+Document-style layout. Section labels + thin dividers, no nested
+cards. Composition:
 
-See `.claude/payments.md` for the full subscription UI table.
+- **Plan section** — `CurrentPlanCard` (plan name + state pill +
+  inline price + meta line + prose summary + action row + Starter
+  usage when applicable).
+- **Billing history** section — `BillingHistory` (last 12 invoices
+  via `/api/stripe/billing-history`; skeleton on load, hidden when
+  empty + no upcoming charge).
+- **Plan comparison** — `PlanComparisonDialog`, opened from
+  "Change plan" / "Upgrade". 3-column feature table with absolute-
+  positioned tint behind the current plan's column.
+- **Cancel confirmation** — `CancelConfirmModal`, state hoisted to
+  `BillingSection` so both the card and the comparison dialog
+  trigger it via `onRequestCancel`.
 
-| Status          | Message                          | CTA              |
-| --------------- | -------------------------------- | ---------------- |
-| No subscription | "Start your 14-day free trial"   | Start Free Trial |
-| trialing        | "Your trial ends on {date}"      | Manage Billing   |
-| active          | "You're subscribed to Zebri Pro" | Manage Billing   |
-| cancelled       | "Your access ends on {date}"     | Resubscribe      |
-| past_due        | "Payment failed"                 | Update Payment   |
-| expired         | "Your subscription has expired"  | Subscribe        |
+| CardState                  | StatePill          | Primary action          | Meta line          | Cancel link |
+| -------------------------- | ------------------ | ----------------------- | ------------------ | ----------- |
+| `starter`                  | "Free plan"        | Upgrade to Pro          | "Joined {date}"    | —           |
+| `active`                   | "Active" (green)   | Change plan             | "Renews {date}"    | ✅          |
+| `cancelling_in_grace`      | "Cancelling"       | Resubscribe             | "Access until {d}" | —           |
+| `past_due`                 | "Payment failed"   | Update payment          | "Joined {date}"    | —           |
+| `expired`                  | "Ended"            | Upgrade to Pro          | "Ended {date}"     | —           |
+| `comped`                   | "Comped" (green)   | (no action row)         | "Joined {date}"    | —           |
+
+Server actions in `app/(dashboard)/settings/billing/actions.ts`:
+
+- `createPlanChangeSessionAction(plan)` — Stripe Portal deep-link
+  `subscription_update_confirm`.
+- `cancelSubscriptionAction()` — Stripe API `cancel_at_period_end:
+  true` + synchronous `app_metadata` write of
+  `subscription_end` (UI doesn't wait on the webhook).
+- `resumeSubscriptionAction()` — symmetric undo.
+- `paymentMethodPortalAction()` — Stripe Portal deep-link
+  `payment_method_update`.
+
+All four actions are rate-limited per-user (5/min/user) via
+`STRIPE_RATE_LIMITS`. Hits fire `stripe_rate_limit_hit` with the
+specific action name.
+
+After every cancel/resume, `BillingSection`'s polling effect (the
+same one used after Stripe Checkout) watches `app_metadata` and
+reloads when the webhook lands. Manual "Refresh" escape hatch
+appears after 60s — covers the local-dev "did you start
+`stripe listen`?" case.
+
+**Note:** the 14-day free trial was removed in Phase 1. The
+Starter tier (5-couple cap, long-term free) is the only free
+path. Paid plans charge from day 1.
+
+Starter users see a "X of 5 couples used" usage indicator inline
+on the card. At-cap users get an inline "Upgrade to add more"
+button + the same Starter-cap UX block surfaces on couple-modal
+opens.
 
 ### Payments (`?tab=payments`)
 
 Two sections:
 
-**Bank details**  -  Account name, BSB, Account number inputs. Save button updates `user_metadata` with `bank_account_name`, `bank_bsb`, `bank_account_number`. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
+**Bank details**  -  Account name, BSB, Account number inputs. Save button updates `user_metadata` (user-owned fields — `bank_account_name`, `bank_bsb`, `bank_account_number`). Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
 
-**Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. Disconnect clears `stripe_connect_account_id` and `stripe_connect_enabled` from `user_metadata`.
+**Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. The Connect callback writes `stripe_connect_account_id` and `stripe_connect_enabled` to **`app_metadata`** via `updateEntitlements()` (entitlements, not user-owned — they govern access to the public Pay button). Disconnect clears those fields the same way.
 
 ### Packages (`?tab=packages`)
 

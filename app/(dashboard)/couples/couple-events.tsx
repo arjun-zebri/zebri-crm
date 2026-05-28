@@ -1,16 +1,33 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient, QueryClient } from '@tanstack/react-query'
+import { Pencil, Trash2, Plus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+
+import { useToast } from '@/components/ui/toast'
+import {
+  bulkLinkContactsToEventAction,
+  createEventAction,
+  createTimelineItemAction,
+  deleteEventAction,
+  updateEventAction,
+} from '@/lib/events/actions'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
-import { useToast } from '@/components/ui/toast'
-import { Pencil, Trash2, Plus } from 'lucide-react'
-import { Event } from '../events/events-types'
+import { Couple } from '@/types/couple'
+import { Event } from '@/types/event'
+
+import { EventModal } from './event-modal'
 
 type EventWithTime = Event & { start_time?: string | null }
-import { EventModal } from './event-modal'
-import { Couple } from './couples-types'
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
 
 interface CoupleEventsProps {
   couple: Couple
@@ -148,7 +165,9 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
 
       if (error) throw error
 
-      return (data || []).map((row: Event & { timeline_items?: { start_time: string | null }[] }) => {
+      // Let the row type infer from the typed query (the manual annotation
+      // shadowed the generated events Row); final shape cast below.
+      return (data || []).map((row) => {
         const times = (row.timeline_items ?? [])
           .map((t) => t.start_time)
           .filter((t): t is string => !!t)
@@ -169,16 +188,29 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
       if (userError || !user.user) throw new Error('Not authenticated')
 
       const { vendorIds, ...rest } = eventData
-      const { data, error } = await supabase
+      const created = unwrap(
+        await createEventAction({
+          couple_id: rest.couple_id,
+          date: rest.date,
+          venue: rest.venue,
+          venue_phone: rest.venue_phone ?? null,
+          venue_website: rest.venue_website ?? null,
+          venue_lat: rest.venue_lat ?? null,
+          venue_lng: rest.venue_lng ?? null,
+          timeline_notes: rest.timeline_notes ?? '',
+          status: rest.status,
+        }),
+      )
+      // Re-fetch the full event row so downstream side-effects can
+      // read the auto-generated columns the action only returned the
+      // id for (share_token, created_at, etc.). The action is the
+      // authority for the write; this read uses RLS.
+      const { data: fullRow } = await supabase
         .from('events')
-        .insert({
-          ...rest,
-          user_id: user.user.id,
-        })
-        .select()
-
-      if (error) throw error
-      const newEvent = data?.[0] as Event
+        .select('*')
+        .eq('id', created.id)
+        .single()
+      const newEvent = fullRow as Event | null
 
       // Auto-create venue as a contact and link to event if it came from Places
       const extraContactIds: string[] = []
@@ -232,15 +264,16 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
       // Link contacts if any selected (manual + auto-created venue)
       const allContactIds = [...(vendorIds ?? []), ...extraContactIds.filter(id => !(vendorIds ?? []).includes(id))]
       if (allContactIds.length > 0 && newEvent) {
-        const contactLinks = allContactIds.map((contactId) => ({
-          event_id: newEvent.id,
-          contact_id: contactId,
-          user_id: user.user.id,
-        }))
-        await supabase.from('event_contacts').insert(contactLinks)
+        unwrap(
+          await bulkLinkContactsToEventAction({
+            event_id: newEvent.id,
+            contact_ids: allContactIds,
+          }),
+        )
       }
 
-      // Auto-insert sunset timeline item if we have coordinates
+      // Auto-insert sunset timeline item if we have coordinates.
+      // Best-effort: API failures don't fail the event creation.
       if (newEvent && rest.venue_lat && rest.venue_lng && rest.date) {
         try {
           const sunsetRes = await fetch(
@@ -255,9 +288,10 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
               hour12: false,
               timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             })
-            await supabase.from('timeline_items').insert({
+            // Don't fail the whole flow if the action rejects — sunset
+            // is a "would be nice" detail, not core data.
+            await createTimelineItemAction({
               event_id: newEvent.id,
-              user_id: user.user.id,
               title: 'Sunset',
               start_time: localTime,
               duration_min: 30,
@@ -296,42 +330,40 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
 
   const updateEvent = useMutation({
     mutationFn: async (eventData: Event & { vendorIds?: string[] }) => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-
       const { vendorIds, ...rest } = eventData
-      const { error } = await supabase
-        .from('events')
-        .update({
+      unwrap(
+        await updateEventAction({
+          id: rest.id,
+          couple_id: rest.couple_id,
           date: rest.date,
           venue: rest.venue,
-          venue_phone: rest.venue_phone,
-          venue_website: rest.venue_website,
-          venue_lat: rest.venue_lat,
-          venue_lng: rest.venue_lng,
+          venue_phone: rest.venue_phone ?? null,
+          venue_website: rest.venue_website ?? null,
+          venue_lat: rest.venue_lat ?? null,
+          venue_lng: rest.venue_lng ?? null,
+          timeline_notes: rest.timeline_notes ?? '',
           status: rest.status,
-          timeline_notes: rest.timeline_notes,
-        })
-        .eq('id', rest.id)
+        }),
+      )
 
-      if (error) throw error
-
-      // Sync contacts if provided
+      // Sync contacts if provided. Wipe-and-rewrite — `event_contacts`
+      // is a join table without natural ordering, so it's cheaper to
+      // delete-then-insert than to diff. Done with the RLS-scoped
+      // client because the action set doesn't expose "delete all
+      // links for event X" (most flows want per-pair unlink, which
+      // the action covers).
       if (vendorIds !== undefined) {
-        // Remove existing links
         await supabase
           .from('event_contacts')
           .delete()
           .eq('event_id', rest.id)
-
-        // Insert new links
         if (vendorIds.length > 0) {
-          const contactLinks = vendorIds.map((contactId) => ({
-            event_id: rest.id,
-            contact_id: contactId,
-            user_id: user.user.id,
-          }))
-          await supabase.from('event_contacts').insert(contactLinks)
+          unwrap(
+            await bulkLinkContactsToEventAction({
+              event_id: rest.id,
+              contact_ids: vendorIds,
+            }),
+          )
         }
       }
     },
@@ -369,19 +401,15 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
 
   const deleteEvent = useMutation({
     mutationFn: async (eventId: string) => {
-      // Fetch date before deleting so we can recalculate afterwards
+      // Fetch date before deleting so we can recalculate afterwards.
+      // RLS-scoped client; the delete itself goes through the action.
       const { data: toDelete } = await supabase
         .from('events')
         .select('date')
         .eq('id', eventId)
         .single()
 
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId)
-
-      if (error) throw error
+      unwrap(await deleteEventAction(eventId))
 
       return toDelete?.date ?? null
     },

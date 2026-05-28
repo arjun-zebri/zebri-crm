@@ -7,7 +7,7 @@ import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import type { Block } from './blocks/types'
-import type { BrandKit } from './branding-preview-types'
+import type { BrandKit } from '@/types/branding-preview'
 
 interface UserMetadata {
   display_name?: string

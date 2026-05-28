@@ -1,15 +1,17 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+
 import { createClient } from "@/lib/supabase/client";
-import { PersonalInfoSection } from "./personal-info-section";
+
 import { AccountSection } from "./account-section";
 import { BillingSection } from "./billing-section";
-import { TemplatesSection } from "./templates-section";
 import { NotificationsSection } from "./notifications-section";
-import { StatusesSection } from "./statuses-section";
 import { PaymentSettingsSection } from "./payment-settings-section";
+import { PersonalInfoSection } from "./personal-info-section";
+import { StatusesSection } from "./statuses-section";
+import { TemplatesSection } from "./templates-section";
 
 interface EmailPreferencesData {
   product_updates?: boolean;
@@ -26,20 +28,10 @@ interface UserMetadata {
   instagram_url?: string;
   facebook_url?: string;
   business_type?: string | string[];
-  subscription_status?: string;
-  subscription_plan?: string;
-  stripe_customer_id?: string;
-  trial_end?: string;
-  subscription_end?: string;
-  cancel_at_period_end?: boolean;
-  is_subscribed?: boolean;
-  is_comped?: boolean;
   email_preferences?: EmailPreferencesData;
   bank_account_name?: string;
   bank_bsb?: string;
   bank_account_number?: string;
-  stripe_connect_account_id?: string;
-  stripe_connect_enabled?: boolean;
   logo_url?: string;
   brand_color?: string;
   tagline?: string;
@@ -49,6 +41,24 @@ interface UserMetadata {
   address_text?: string;
   address_lat?: number;
   address_lng?: number;
+}
+
+/**
+ * Subset of `app_metadata` the settings page reads. Entitlement
+ * fields live here (server-only writable) post §7.4 — read via the
+ * entitlements helper, never via `user_metadata`.
+ */
+interface AppMetadata {
+  subscription_status?: string;
+  subscription_plan?: string;
+  stripe_customer_id?: string;
+  stripe_connect_account_id?: string;
+  stripe_connect_enabled?: boolean;
+  trial_end?: string;
+  subscription_end?: string;
+  cancel_at_period_end?: boolean;
+  is_subscribed?: boolean;
+  is_comped?: boolean;
 }
 
 const tabs = [
@@ -67,7 +77,9 @@ function SettingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [metadata, setMetadata] = useState<UserMetadata | null>(null);
+  const [appMetadata, setAppMetadata] = useState<AppMetadata | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [userCreatedAt, setUserCreatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const activeTab = (searchParams.get("tab") as TabId) || "personal-info";
@@ -88,7 +100,9 @@ function SettingsContent() {
       } = await supabase.auth.getUser();
       if (user) {
         setMetadata(user.user_metadata as UserMetadata);
+        setAppMetadata((user.app_metadata ?? {}) as AppMetadata);
         setEmail(user.email ?? null);
+        setUserCreatedAt(user.created_at ?? null);
       }
       setLoading(false);
     };
@@ -180,14 +194,15 @@ function SettingsContent() {
           )}
           {activeTab === "billing" && (
             <BillingSection
-              status={metadata?.subscription_status || null}
-              trialEnd={metadata?.trial_end || null}
-              subscriptionEnd={metadata?.subscription_end || null}
-              subscriptionPlan={metadata?.subscription_plan || null}
-              hasStripeCustomer={!!metadata?.stripe_customer_id}
-              cancelAtPeriodEnd={!!metadata?.cancel_at_period_end}
-              isSubscribed={!!metadata?.is_subscribed}
-              isComped={!!metadata?.is_comped}
+              status={appMetadata?.subscription_status || null}
+              trialEnd={appMetadata?.trial_end || null}
+              subscriptionEnd={appMetadata?.subscription_end || null}
+              subscriptionPlan={appMetadata?.subscription_plan || null}
+              hasStripeCustomer={!!appMetadata?.stripe_customer_id}
+              cancelAtPeriodEnd={!!appMetadata?.cancel_at_period_end}
+              isSubscribed={!!appMetadata?.is_subscribed}
+              isComped={!!appMetadata?.is_comped}
+              userCreatedAt={userCreatedAt}
             />
           )}
           {activeTab === "payments" && (
@@ -196,10 +211,9 @@ function SettingsContent() {
               initialBankBsb={metadata?.bank_bsb || ""}
               initialBankAccountNumber={metadata?.bank_account_number || ""}
               stripeConnectAccountId={
-                metadata?.stripe_connect_account_id || null
+                appMetadata?.stripe_connect_account_id || null
               }
-              stripeConnectEnabled={metadata?.stripe_connect_enabled || false}
-              justConnected={searchParams.get("connected") === "true"}
+              stripeConnectEnabled={appMetadata?.stripe_connect_enabled || false}
             />
           )}
           {activeTab === "templates" && <TemplatesSection />}

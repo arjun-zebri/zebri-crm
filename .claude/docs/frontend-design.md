@@ -7,6 +7,101 @@ Goal: minimal, calm, modern SaaS design.
 
 ------------------------------------------------------------------------
 
+## Design tokens (Phase 0.5) — source of truth
+
+Tokens live in `app/globals.css` as Tailwind 4 `@theme` CSS variables; each
+becomes a Tailwind utility automatically. **Always prefer the semantic
+token over a raw hex or arbitrary value** — ESLint warns on `bg-[#…]` etc.
+The branding system in `lib/branding/*` is end-user-facing brand
+customisation, intentionally separate from these internal tokens.
+
+### Colour
+
+| Token | Utility | Hex | Use |
+|---|---|---|---|
+| `--color-surface` | `bg-surface` | `#ffffff` | Primary panel background |
+| `--color-surface-muted` | `bg-surface-muted` | `#fafafa` | Card background |
+| `--color-surface-emphasis` | `bg-surface-emphasis` | `#f3f4f6` | Hovered / selected row |
+| `--color-text` | `text-text` | `#111827` | Body text |
+| `--color-text-muted` | `text-text-muted` | `#6b7280` | Secondary text |
+| `--color-text-subtle` | `text-text-subtle` | `#9ca3af` | Placeholder / meta |
+| `--color-text-inverse` | `text-text-inverse` | `#ffffff` | On dark / brand background |
+| `--color-border` | `border-border` | `#e5e7eb` | Default divider |
+| `--color-border-strong` | `border-border-strong` | `#d1d5db` | Emphasised border |
+| `--color-brand-fg` | `bg-brand-fg`, `text-brand-fg` | `#000000` | Primary CTA / mark |
+| `--color-brand-bg` | `bg-brand-bg` | `#ffffff` | Brand inverse |
+| `--color-success` | `bg-success`, `text-success` | `#059669` | Success / paid |
+| `--color-danger` | `bg-danger`, `text-danger` | `#dc2626` | Destructive / error |
+| `--color-warning` | `bg-warning`, `text-warning` | `#f59e0b` | Caution |
+| `--color-info` | `bg-info`, `text-info` | `#2563eb` | Informational |
+
+### Typography
+
+CLAUDE.md anchors are preserved (`text-3xl font-semibold` page titles,
+`text-xl font-semibold` section titles, `text-sm` body) — the semantic
+tokens below are equivalent and preferred in new code:
+
+| Token | Utility | Size | Use |
+|---|---|---|---|
+| `--text-display` | `text-display` | 1.875rem | Page titles (pair with `font-semibold`) |
+| `--text-section` | `text-section` | 1.25rem | Section titles (pair with `font-semibold`) |
+| `--text-body` | `text-body` | 0.875rem | Default body / form fields |
+| `--text-caption` | `text-caption` | 0.75rem | Captions, meta, helper |
+
+### Radius
+
+| Token | Utility | Value | Use |
+|---|---|---|---|
+| `--radius-control` | `rounded-control` | 6px | Buttons, inputs, selects |
+| `--radius-card` | `rounded-card` | 8px | Cards, panels, modals |
+| `--radius-pill` | `rounded-pill` | 9999px | Badges, pill chips |
+
+Spacing uses the Tailwind default scale; no custom spacing tokens.
+
+### Dark mode (Phase 0.5b)
+
+Class-based dark variant (`<html class="dark">`), scoped to the
+authenticated CRM. The token *names* don't change — the SAME utility
+(`bg-surface`, `text-text`, …) resolves to a different colour per theme via
+the underlying CSS variables. No `dark:` modifier required at call sites.
+
+Dark-mode token values:
+
+| Token | Light | Dark |
+|---|---|---|
+| `bg-surface` | `#ffffff` | `#0a0a0a` |
+| `bg-surface-muted` | `#fafafa` | `#171717` |
+| `bg-surface-emphasis` | `#f3f4f6` | `#262626` |
+| `text-text` | `#111827` | `#fafafa` |
+| `text-text-muted` | `#6b7280` | `#a1a1aa` |
+| `text-text-subtle` | `#9ca3af` | `#71717a` |
+| `border-border` | `#e5e7eb` | `#27272a` |
+| `border-border-strong` | `#d1d5db` | `#3f3f46` |
+| `bg-brand-fg` / `text-brand-fg` | `#000000` | `#ffffff` (flips) |
+| `bg-success` | `#059669` | `#10b981` |
+| `bg-danger` | `#dc2626` | `#ef4444` |
+| `bg-info` | `#2563eb` | `#3b82f6` |
+
+Activation:
+- A synchronous bootstrap in `app/layout.tsx` reads `localStorage.zebri-theme`
+  before paint (no FOUC). Defaults to the OS `prefers-color-scheme`.
+- `<ThemeToggle />` (`components/ui/theme-toggle.tsx`) flips the `dark` class
+  on `<html>` and persists the choice. Place it once, typically in the
+  sidebar / settings.
+
+Out of scope:
+- **Public surfaces** (portal / quote / invoice / contract / timeline) follow
+  each MC's brand kit, not the dashboard theme — they currently use raw
+  colours via `lib/branding/*` and remain visually unchanged.
+- **Auth pages** (login / signup / reset) use raw colours today; they pick
+  up dark mode automatically only after migration to tokens.
+
+> The hex / hard-coded colour values **below** are the pre-0.5 reference and
+> are kept for context; new code uses the token utilities above. Legacy
+> off-token usage is burned down per page.
+
+------------------------------------------------------------------------
+
 # Colours
 
 Primary (CTA): #111111

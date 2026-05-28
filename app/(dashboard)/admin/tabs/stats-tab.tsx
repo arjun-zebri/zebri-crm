@@ -1,6 +1,6 @@
 "use client";
 
-import type { GlobalStats } from "@/lib/admin-analytics";
+import type { GlobalStats } from '@/lib/admin/admin-analytics';
 
 export function StatsTab({ stats }: { stats: GlobalStats }) {
   const { health, planDistribution, funnel, activity } = stats;
