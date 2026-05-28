@@ -60,7 +60,11 @@ const ERROR_BUDGET = 75;
 // swept import-order across moved files).
 // Phase 4B couple-profile decomposition: 504 → 496 (deleted three
 // dead-code tabs carrying unused-imports + import-order noise).
-const WARNING_BUDGET = 496;
+// Phase 4C events actions + mutation lifts: 496 → 480 (removed
+// inline supabase auth.getUser() noise + unused vars across 5 files
+// once mutations routed through actions; calendar relocation
+// cleared a stale colocation warning).
+const WARNING_BUDGET = 480;
 
 function runEslintJson() {
   try {

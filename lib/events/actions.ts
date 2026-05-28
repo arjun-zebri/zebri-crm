@@ -26,6 +26,23 @@ import { z } from 'zod';
 import { logger } from '@/lib/alerts/logger';
 import { createClient } from '@/lib/supabase/server';
 
+/**
+ * Strip undefined-valued keys from a parsed Zod patch object. Zod
+ * `.optional()` produces `T | undefined`; the generated Supabase
+ * `Update<Row>` types reject `undefined` under exactOptionalPropertyTypes
+ * (only missing keys are valid). This helper drops them so the spread
+ * matches.
+ */
+function compactPatch<T extends Record<string, unknown>>(
+  patch: T,
+): { [K in keyof T]: Exclude<T[K], undefined> } {
+  const result = {} as Record<string, unknown>;
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== undefined) result[k] = v;
+  }
+  return result as { [K in keyof T]: Exclude<T[K], undefined> };
+}
+
 /* ─── Tagged result type ───────────────────────────────────────── */
 
 export interface ActionSuccess<T> {
@@ -63,15 +80,22 @@ const eventInputSchema = z.object({
   couple_id: uuidSchema,
   date: dateSchema,
   venue: z.string().trim().max(300).default(''),
-  venue_phone: z.string().trim().max(50).nullable().optional(),
-  venue_website: z.string().trim().max(500).nullable().optional(),
-  venue_lat: z.number().nullable().optional(),
-  venue_lng: z.number().nullable().optional(),
+  // `.nullable().default(null)` (not `.nullable().optional()`) so the
+  // parsed shape always has the key. Avoids exactOptionalPropertyTypes
+  // mismatches when spreading into the Supabase Insert<'events'> arg.
+  venue_phone: z.string().trim().max(50).nullable().default(null),
+  venue_website: z.string().trim().max(500).nullable().default(null),
+  venue_lat: z.number().nullable().default(null),
+  venue_lng: z.number().nullable().default(null),
   timeline_notes: z.string().max(10_000).default(''),
   status: eventStatusSchema.default('upcoming'),
 });
 
-export type EventInput = z.infer<typeof eventInputSchema>;
+// Use z.input (not z.infer/z.output) so .default(null) fields stay
+// optional on the *call signature*. After parsing, the output has
+// every default applied — so the spread into Supabase Insert is
+// always complete.
+export type EventInput = z.input<typeof eventInputSchema>;
 
 export async function createEventAction(
   input: EventInput,
@@ -107,7 +131,7 @@ const updateEventSchema = eventInputSchema.extend({
   id: uuidSchema,
 });
 
-export type UpdateEventInput = z.infer<typeof updateEventSchema>;
+export type UpdateEventInput = z.input<typeof updateEventSchema>;
 
 export async function updateEventAction(
   input: UpdateEventInput,
@@ -255,7 +279,7 @@ const createEventTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(500),
 });
 
-export type CreateEventTaskInput = z.infer<typeof createEventTaskSchema>;
+export type CreateEventTaskInput = z.input<typeof createEventTaskSchema>;
 
 export async function createEventTaskAction(
   input: CreateEventTaskInput,
@@ -309,7 +333,7 @@ const updateTaskSchema = z.object({
     }),
 });
 
-export type UpdateEventTaskInput = z.infer<typeof updateTaskSchema>;
+export type UpdateEventTaskInput = z.input<typeof updateTaskSchema>;
 
 export async function updateEventTaskAction(
   input: UpdateEventTaskInput,
@@ -326,7 +350,10 @@ export async function updateEventTaskAction(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
-  const { error } = await supabase.from('tasks').update(patch).eq('id', id);
+  const { error } = await supabase
+    .from('tasks')
+    .update(compactPatch(patch))
+    .eq('id', id);
 
   if (error) {
     logger.error('[events/actions] updateEventTaskAction failed', error, {
@@ -371,15 +398,15 @@ export async function deleteEventTaskAction(
 const createTimelineItemSchema = z.object({
   event_id: uuidSchema,
   title: z.string().trim().min(1, 'Title is required').max(500),
-  start_time: timeSchema.nullable().optional(),
-  description: z.string().max(5000).nullable().optional(),
-  duration_min: z.number().int().min(0).max(1440).nullable().optional(),
-  contact_id: uuidSchema.nullable().optional(),
+  start_time: timeSchema.nullable().default(null),
+  description: z.string().max(5000).nullable().default(null),
+  duration_min: z.number().int().min(0).max(1440).nullable().default(null),
+  contact_id: uuidSchema.nullable().default(null),
   position: z.number().int().default(0),
-  pending_review: z.boolean().optional(),
+  pending_review: z.boolean().default(false),
 });
 
-export type CreateTimelineItemInput = z.infer<typeof createTimelineItemSchema>;
+export type CreateTimelineItemInput = z.input<typeof createTimelineItemSchema>;
 
 export async function createTimelineItemAction(
   input: CreateTimelineItemInput,
@@ -430,7 +457,7 @@ const updateTimelineItemSchema = z.object({
     }),
 });
 
-export type UpdateTimelineItemInput = z.infer<typeof updateTimelineItemSchema>;
+export type UpdateTimelineItemInput = z.input<typeof updateTimelineItemSchema>;
 
 export async function updateTimelineItemAction(
   input: UpdateTimelineItemInput,
@@ -449,7 +476,7 @@ export async function updateTimelineItemAction(
 
   const { error } = await supabase
     .from('timeline_items')
-    .update(patch)
+    .update(compactPatch(patch))
     .eq('id', id);
 
   if (error) {
@@ -542,7 +569,7 @@ const linkContactSchema = z.object({
   contact_id: uuidSchema,
 });
 
-export type LinkContactToEventInput = z.infer<typeof linkContactSchema>;
+export type LinkContactToEventInput = z.input<typeof linkContactSchema>;
 
 export async function linkContactToEventAction(
   input: LinkContactToEventInput,
@@ -617,7 +644,7 @@ const bulkLinkContactsSchema = z.object({
   contact_ids: z.array(uuidSchema).min(1),
 });
 
-export type BulkLinkContactsInput = z.infer<typeof bulkLinkContactsSchema>;
+export type BulkLinkContactsInput = z.input<typeof bulkLinkContactsSchema>;
 
 /**
  * Used when creating a new event with a pre-selected vendor team —
