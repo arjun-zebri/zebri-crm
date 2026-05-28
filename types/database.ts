@@ -99,6 +99,59 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_audit_log: {
+        Row: {
+          actor: string
+          actor_ip: string | null
+          actor_user_agent: string | null
+          contract_id: string
+          decline_reason: string | null
+          event_at: string
+          event_type: string
+          id: string
+          reminder_number: number | null
+          revoked_from_status: string | null
+          signer_name_typed: string | null
+          user_id: string
+        }
+        Insert: {
+          actor: string
+          actor_ip?: string | null
+          actor_user_agent?: string | null
+          contract_id: string
+          decline_reason?: string | null
+          event_at?: string
+          event_type: string
+          id?: string
+          reminder_number?: number | null
+          revoked_from_status?: string | null
+          signer_name_typed?: string | null
+          user_id: string
+        }
+        Update: {
+          actor?: string
+          actor_ip?: string | null
+          actor_user_agent?: string | null
+          contract_id?: string
+          decline_reason?: string | null
+          event_at?: string
+          event_type?: string
+          id?: string
+          reminder_number?: number | null
+          revoked_from_status?: string | null
+          signer_name_typed?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_audit_log_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_templates: {
         Row: {
           content: Json
@@ -1306,10 +1359,17 @@ export type Database = {
           user_id: string
         }[]
       }
-      decline_contract: {
-        Args: { p_reason: string; token: string }
-        Returns: Json
-      }
+      decline_contract:
+        | {
+            Args: {
+              p_actor_ip?: string
+              p_actor_user_agent?: string
+              p_reason: string
+              token: string
+            }
+            Returns: Json
+          }
+        | { Args: { p_reason: string; token: string }; Returns: Json }
       decline_quote: { Args: { token: string }; Returns: Json }
       delete_portal_file: {
         Args: { p_id: string; p_token: string }
@@ -1325,6 +1385,20 @@ export type Database = {
       }
       delete_portal_timeline_item: {
         Args: { p_id: string; p_token: string }
+        Returns: undefined
+      }
+      emit_contract_audit_event: {
+        Args: {
+          p_actor: string
+          p_actor_ip?: string
+          p_actor_user_agent?: string
+          p_contract_id: string
+          p_decline_reason?: string
+          p_event_type: string
+          p_reminder_number?: number
+          p_revoked_from_status?: string
+          p_signer_name_typed?: string
+        }
         Returns: undefined
       }
       expire_contracts: { Args: never; Returns: string[] }
@@ -1577,4 +1651,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

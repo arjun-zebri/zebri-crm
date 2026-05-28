@@ -138,7 +138,7 @@ export type AlertEvent =
       type: 'public_token_attempt_burst';
       severity: 'warn';
       ip: string;
-      surface: 'invoice' | 'quote' | 'portal';
+      surface: 'invoice' | 'quote' | 'portal' | 'contract';
       /** Number of invalid attempts inside the burst window
        *  (typically 10 in 60s). */
       attempts: number;

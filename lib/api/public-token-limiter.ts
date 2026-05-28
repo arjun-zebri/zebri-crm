@@ -1,6 +1,7 @@
 /**
  * Token-attempt limiter for public-surface routes
- * (`/invoice/[token]`, `/quote/[token]`, `/portal/[token]`).
+ * (`/invoice/[token]`, `/quote/[token]`, `/portal/[token]`,
+ * `/contract/[token]`).
  *
  * Why a separate module from `rate-limit.ts`?
  *
@@ -55,7 +56,7 @@ import { sendAlert } from '@/lib/alerts/send-alert';
 import { inMemoryLimiter, type Limiter } from './rate-limit';
 
 /** Surfaces gated by this limiter. Identifies the route in alerts. */
-export type PublicSurface = 'invoice' | 'quote' | 'portal';
+export type PublicSurface = 'invoice' | 'quote' | 'portal' | 'contract';
 
 export interface RecordResult {
   /** True if the request is under both thresholds. */
