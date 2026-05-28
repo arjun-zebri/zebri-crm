@@ -296,8 +296,9 @@ DELETE (sampled clean across the migrations).
 | `quote_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `invoices` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `invoice_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
-| `contracts` | ✅ | `user_id` | ☐ | Contracts |
+| `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
 | `contract_templates` | ✅ | `user_id` | ☐ | Contracts |
+| `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
 | `couple_statuses` | ✅ | `user_id` | ☐ | Couples & Events |
 | `couple_contacts` | ✅ | (join via `couple_id`) | ☐ | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`) | ☐ | Couples & Events |

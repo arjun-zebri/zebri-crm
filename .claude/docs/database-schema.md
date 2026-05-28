@@ -506,3 +506,43 @@ created_at, updated_at (timestamptz, auto-managed)
 RLS: SELECT-only for the owner. No INSERT/UPDATE/DELETE policies —
 writes only via service-role webhook handler + disconnect server
 action. Migration: `20260524000000_create_connect_accounts.sql`.
+
+## contract_audit_log (Phase 3.2)
+
+Durable trail of every state change on a contract. The existing
+inline columns on `contracts` (`signer_name`, `signer_ip`,
+`signer_user_agent`, `signed_at`, `declined_at`, `declined_reason`)
+are the fast-path "current state" snapshot. This table is the
+forensic record behind that — survives `revoke_contract` clearing
+the inline columns; persists per-event IP/UA so we can reconstruct
+"this contract was sent then signed then revoked" from the row
+sequence.
+
+Columns:
+id (uuid, primary key)
+contract_id (uuid, FK to contracts.id, on delete cascade)
+user_id (uuid, FK to auth.users.id, on delete cascade)  -  denormalised owner; RLS key
+event_type (text, check in: sent | viewed | signed | declined | expired | revoked | reminder_sent)
+actor (text, check in: mc | couple | system)
+actor_ip (text, nullable)  -  text for parity with contracts.signer_ip
+actor_user_agent (text, nullable)
+signer_name_typed (text, nullable)  -  only set on 'signed' rows
+decline_reason (text, nullable)  -  only set on 'declined' rows
+reminder_number (integer, nullable)  -  only set on 'reminder_sent' rows (1, 2 per cron cap)
+revoked_from_status (text, nullable)  -  only set on 'revoked' rows; captures the pre-revocation status
+event_at (timestamptz, default now())
+
+Indexes: `(contract_id, event_at desc)` for per-contract reads,
+`(user_id, event_at desc)` for owner-scoped dashboard timelines.
+
+RLS: SELECT-only for the owner. No INSERT/UPDATE/DELETE policies —
+the only sanctioned writer is `emit_contract_audit_event(...)`
+(SECURITY DEFINER), called from inside `sign_contract`,
+`decline_contract`, `revoke_contract`, `expire_contracts`, and
+`mark_contract_reminder_sent`. The `/api/email/send-contract` route
+also calls `emit_contract_audit_event` directly to log the 'sent'
+event when the contract locks.
+
+Migration: `20260528000000_create_contract_audit_log.sql`. Includes
+a back-fill that synthesises one audit row per pre-existing
+contract from its current status + denormalised inline columns.

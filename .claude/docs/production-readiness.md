@@ -1,8 +1,58 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ all on staging. **Phase 3.1 (Contract builder modal)** ✅ in flight on `phase-3-1-contract-builder`. **Phase 3.2 (Public contract surface + audit log)** next. Plan: `.claude/docs/phase-3-contracts.md`.
+> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ all on staging · **Phase 3.1 (Contract builder modal)** ✅ on staging · **Phase 3.2 (Public contract surface + audit log)** ✅ in flight on `phase-3-2-contract-surface`. Plan: `.claude/docs/phase-3-contracts.md`.
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+
+### Public contract surface + audit log (Phase 3.2)
+
+Couple-facing `/contract/[token]` lifted through the §5 DoD with a
+durable audit trail for every state change. Closes Phase 3.
+
+- **`supabase/migrations/20260528000000_create_contract_audit_log.sql`** —
+  new `contract_audit_log` table (id, contract_id, user_id, event_type,
+  actor, actor_ip, actor_user_agent, signer_name_typed,
+  decline_reason, reminder_number, revoked_from_status, event_at).
+  RLS: SELECT-only for owner; no INSERT/UPDATE/DELETE policies.
+  Writes go exclusively through `emit_contract_audit_event(...)`
+  (SECURITY DEFINER). The existing `sign_contract`,
+  `decline_contract`, `revoke_contract`, `expire_contracts`, and
+  `mark_contract_reminder_sent` RPCs all emit audit rows now.
+  Decline RPC gains optional IP/UA params for forensic parity with
+  sign. Back-fill row generated for every pre-existing contract.
+
+- **Hardened public-facing routes:**
+  - `/api/contract/sign` — Zod (`{ token: z.uuid(), signer_name }`)
+    + 3/min/IP rate-limit + structured logger + sanitised error
+    response (no DB error leakage). The `sign_contract` RPC writes
+    the 'signed' audit row before flipping status — survives any
+    later revoke.
+  - `/api/contract/decline` — same shape with optional
+    `reason: string<=1000`.
+  - `/api/email/send-contract` (MC-side) — Zod-validated UUID +
+    10/min/IP limiter + emits the 'sent' audit row on lock.
+
+- **`lib/api/public-token-limiter.ts`** — `'contract'` added to the
+  `PublicSurface` union, threaded into the `public_token_attempt_burst`
+  alert payload.
+
+- **`app/contract/[token]/page.tsx` decomposition** — 471-LOC single
+  file split into orchestrator + 8 `_components/` (`public-contract.ts`
+  types/helpers, `contract-loading`, `contract-unavailable`,
+  `contract-status-banner` (signed/declined/expired),
+  `contract-sign-actions`, `contract-decline-dialog`,
+  `contract-body-section` shared, `contract-branded-card`,
+  `contract-fallback-card`). Token-clean chrome with user-branded
+  inline styles preserved.
+
+- **Integration coverage (+5):** `contract-audit-log.test.ts` proves
+  sign/decline/revoke each write the expected audit row, RLS scopes
+  reads to the owner, and the table has no anon-client write path
+  (INSERT/UPDATE/DELETE all silently no-op via RLS while
+  `emit_contract_audit_event` remains the only sanctioned writer).
+
+- **Gates ratcheted:** strict typecheck 286 → 285. Lint warnings
+  522 → 505. Errors 78/78 unchanged.
 
 ### Public payment surfaces hardening (Phase 2D.2)
 

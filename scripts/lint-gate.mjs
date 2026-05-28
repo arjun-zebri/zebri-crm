@@ -50,7 +50,10 @@ const ERROR_BUDGET = 78;
 // Phase 3.1 contract builder decomposition: 527 → 522 (single
 // 561-LOC file split into orchestrator + 4 parts; auto-fix sweep
 // dropped a few import-order warnings).
-const WARNING_BUDGET = 522;
+// Phase 3.2 contract public-surface decomposition: 522 → 505
+// (471-LOC page split into orchestrator + 8 _components/ files;
+// hardened sign/decline routes + send-contract route).
+const WARNING_BUDGET = 505;
 
 function runEslintJson() {
   try {

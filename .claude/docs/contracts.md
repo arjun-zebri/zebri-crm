@@ -44,6 +44,38 @@ See `lib/contract-variables.ts` for the catalog and rendering helpers.
 - Server route `/api/contract/sign` captures `x-forwarded-for` IP + `user-agent` before calling the `sign_contract()` RPC.
 - Audit trail is shown on the public page after signing and stamped onto the PDF.
 
+### Audit log (Phase 3.2)
+
+Every state change writes a row to `public.contract_audit_log` —
+the durable trail behind the fast-path snapshot in the `contracts`
+columns. Triggered by these RPCs (each one calls
+`emit_contract_audit_event(...)` internally):
+
+| RPC | event_type | actor | Notes |
+|---|---|---|---|
+| `sign_contract` | `signed` | `couple` | Captures `actor_ip`, `actor_user_agent`, `signer_name_typed`. Written BEFORE status flip so a later revoke can't erase it. |
+| `decline_contract` | `declined` | `couple` | Captures `decline_reason` + IP/UA. |
+| `revoke_contract` | `revoked` | `mc` | Captures `revoked_from_status` so the trail records "this was sent then revoked" (signing is non-revocable — guarded server-side). |
+| `expire_contracts` (cron) | `expired` | `system` | One row per contract the cron flips. |
+| `mark_contract_reminder_sent` | `reminder_sent` | `system` | Captures `reminder_number` (1 or 2). |
+| `/api/email/send-contract` (route) | `sent` | `mc` | Written on the locking step (status → 'sent'). |
+
+The `'viewed'` event_type is reserved for future use (we don't
+currently log public-page renders).
+
+### Public-route hardening (Phase 3.2)
+
+`/api/contract/sign` and `/api/contract/decline`:
+- Zod-validated body (`token: z.uuid()`, name length-bounded with no regex — international names like O'Brien / Anh Nguyễn must pass).
+- 3 / min / IP rate-limit via `inMemoryLimiter` (signing is one-shot; bursts are abuse).
+- Structured logger; sanitised error responses (no DB-internal leakage).
+- `'contract'` added to the `PublicSurface` union on `public-token-limiter`.
+
+`/api/email/send-contract` (MC-side, authenticated):
+- Zod-validated `{ contractId: z.uuid() }`.
+- 10 / min / IP rate-limit (looser — MCs do send batches).
+- Calls `emit_contract_audit_event` directly to log the 'sent' event when locking the contract.
+
 ## MC countersignature
 
 - Automatic. MC sets their typed `mc_signature_name` in Settings → Personal Info once.
