@@ -6,6 +6,20 @@ import { useState, useEffect, useRef } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
 
+import {
+  addPortalSongCategoryAction,
+  deletePortalSongCategoryAction,
+  updatePortalSongCategoryAction,
+} from './portal-actions'
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
+
 interface PortalSong {
   id: string
   category: string
@@ -188,57 +202,55 @@ export function McPortalSongs({ coupleId, onEditSong, onAddSong }: McPortalSongs
     },
   })
 
-  // Seed defaults on first load
+  // Seed defaults on first load. The N parallel inserts route
+  // through the action so each one is validated; same outcome as
+  // the prior single bulk insert (the table has no unique on
+  // (couple_id, key) past the migration's UNIQUE).
   useEffect(() => {
     if (isCategoriesLoading || categories.length > 0) return
     const seed = async () => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) return
-      await supabase.from('portal_song_categories').insert(
-        DEFAULT_CATEGORIES.map((cat, i) => ({
-          couple_id: coupleId,
-          user_id: user.user!.id,
-          key: cat.key,
-          label: cat.label,
-          description: null,
-          position: i * 1000,
-        }))
+      await Promise.all(
+        DEFAULT_CATEGORIES.map((cat, i) =>
+          addPortalSongCategoryAction({
+            couple_id: coupleId,
+            key: cat.key,
+            label: cat.label,
+            description: null,
+            position: i * 1000,
+          }),
+        ),
       )
       queryClient.invalidateQueries({ queryKey: ['portal-song-categories', coupleId] })
     }
     seed()
-  }, [isCategoriesLoading, categories.length, coupleId, supabase, queryClient])
+  }, [isCategoriesLoading, categories.length, coupleId, queryClient])
 
   const renameCategory = useMutation({
     mutationFn: async ({ id, label }: { id: string; label: string }) => {
-      const { error } = await supabase.from('portal_song_categories').update({ label }).eq('id', id)
-      if (error) throw error
+      unwrap(await updatePortalSongCategoryAction(id, label))
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['portal-song-categories', coupleId] }),
   })
 
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('portal_song_categories').delete().eq('id', id)
-      if (error) throw error
+      unwrap(await deletePortalSongCategoryAction(id))
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['portal-song-categories', coupleId] }),
   })
 
   const addCategory = useMutation({
     mutationFn: async (label: string) => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('Not authenticated')
       const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
-      const { error } = await supabase.from('portal_song_categories').insert({
-        couple_id: coupleId,
-        user_id: user.user.id,
-        key,
-        label,
-        description: null,
-        position: categories.length * 1000,
-      })
-      if (error) throw error
+      unwrap(
+        await addPortalSongCategoryAction({
+          couple_id: coupleId,
+          key,
+          label,
+          description: null,
+          position: categories.length * 1000,
+        }),
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['portal-song-categories', coupleId] })
