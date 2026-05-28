@@ -1,12 +1,24 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { X } from 'lucide-react'
 import { useState } from 'react'
+
+import { ContactPicker } from '@/app/(dashboard)/couples/contact-picker'
+import {
+  linkContactToEventAction,
+  unlinkContactFromEventAction,
+} from '@/lib/events/actions'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS } from '@/types/contact'
-import { Badge } from '@/components/ui/badge'
-import { X } from 'lucide-react'
-import { ContactPicker } from '@/app/(dashboard)/couples/contact-picker'
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
 
 interface EventVendorsProps {
   eventId: string
@@ -47,13 +59,13 @@ export function EventVendors({ eventId }: EventVendorsProps) {
   })
 
   const removeVendor = useMutation({
-    mutationFn: async (contactLinkId: string) => {
-      const { error } = await supabase
-        .from('event_contacts')
-        .delete()
-        .eq('id', contactLinkId)
-
-      if (error) throw error
+    mutationFn: async (contactId: string) => {
+      unwrap(
+        await unlinkContactFromEventAction({
+          event_id: eventId,
+          contact_id: contactId,
+        }),
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-contacts', eventId] })
@@ -62,18 +74,12 @@ export function EventVendors({ eventId }: EventVendorsProps) {
 
   const addVendor = useMutation({
     mutationFn: async (contactId: string) => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-
-      const { error } = await supabase
-        .from('event_contacts')
-        .insert({
+      unwrap(
+        await linkContactToEventAction({
           event_id: eventId,
           contact_id: contactId,
-          user_id: user.user.id,
-        })
-
-      if (error) throw error
+        }),
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-contacts', eventId] })
@@ -116,7 +122,7 @@ export function EventVendors({ eventId }: EventVendorsProps) {
                   <p className="text-xs text-gray-500">{CATEGORY_LABELS[link.vendor.category as keyof typeof CATEGORY_LABELS] || link.vendor.category}</p>
                 </div>
                 <button
-                  onClick={() => removeVendor.mutate(link.id)}
+                  onClick={() => removeVendor.mutate(link.contact_id)}
                   disabled={removeVendor.isPending}
                   className="p-1 text-gray-400 hover:text-red-600 transition disabled:opacity-50"
                 >

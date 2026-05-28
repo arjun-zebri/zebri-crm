@@ -18,12 +18,28 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, Check } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/toast'
-import { TimelineItem } from '@/types/event'
+import {
+  createTimelineItemAction,
+  deleteTimelineItemAction,
+  rotateEventShareTokenAction,
+  setEventShareEnabledAction,
+  updateTimelineItemAction,
+} from '@/lib/events/actions'
+import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS } from '@/types/contact'
+import { TimelineItem } from '@/types/event'
+
 import { EventTimelineModal } from './event-timeline-modal'
 import { EventTimelineShare } from './event-timeline-share'
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
 
 interface EventContact {
   contact_id: string
@@ -228,19 +244,19 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
     mutationFn: async (
       itemData: Omit<TimelineItem, 'id' | 'event_id' | 'user_id' | 'created_at' | 'contact'>
     ) => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('Not authenticated')
-
       const maxPosition = items.length > 0 ? Math.max(...items.map((i) => i.position)) : 0
-
-      const { error } = await supabase.from('timeline_items').insert({
-        ...itemData,
-        event_id: eventId,
-        user_id: user.user.id,
-        position: maxPosition + 1000,
-      })
-
-      if (error) throw error
+      unwrap(
+        await createTimelineItemAction({
+          event_id: eventId,
+          title: itemData.title,
+          start_time: itemData.start_time ?? null,
+          description: itemData.description ?? null,
+          duration_min: itemData.duration_min ?? null,
+          contact_id: itemData.contact_id ?? null,
+          position: maxPosition + 1000,
+          pending_review: itemData.pending_review,
+        }),
+      )
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-timeline', eventId] })
@@ -254,12 +270,17 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
       id,
       ...data
     }: Partial<TimelineItem> & { id: string }) => {
-      const { error } = await supabase
-        .from('timeline_items')
-        .update(data)
-        .eq('id', id)
-
-      if (error) throw error
+      // Only forward fields the timeline-item patch schema accepts.
+      const { title, start_time, description, duration_min, contact_id, position, pending_review } = data
+      const patch: Record<string, unknown> = {}
+      if (title !== undefined) patch.title = title
+      if (start_time !== undefined) patch.start_time = start_time
+      if (description !== undefined) patch.description = description
+      if (duration_min !== undefined) patch.duration_min = duration_min
+      if (contact_id !== undefined) patch.contact_id = contact_id
+      if (position !== undefined) patch.position = position
+      if (pending_review !== undefined) patch.pending_review = pending_review
+      unwrap(await updateTimelineItemAction({ id, patch }))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-timeline', eventId] })
@@ -271,8 +292,7 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
 
   const deleteItem = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('timeline_items').delete().eq('id', id)
-      if (error) throw error
+      unwrap(await deleteTimelineItemAction(id))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-timeline', eventId] })
@@ -284,12 +304,7 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
 
   const toggleShare = useMutation({
     mutationFn: async (enabled: boolean) => {
-      const { error } = await supabase
-        .from('events')
-        .update({ share_token_enabled: enabled })
-        .eq('id', eventId)
-
-      if (error) throw error
+      unwrap(await setEventShareEnabledAction(eventId, enabled))
     },
     onSuccess: (_, enabled) => {
       queryClient.invalidateQueries({ queryKey: ['event-share', eventId] })
@@ -299,12 +314,7 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
 
   const regenerateToken = useMutation({
     mutationFn: async () => {
-      const newToken = crypto.randomUUID()
-      const { error } = await supabase
-        .from('events')
-        .update({ share_token: newToken })
-        .eq('id', eventId)
-      if (error) throw error
+      unwrap(await rotateEventShareTokenAction(eventId))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-share', eventId] })
@@ -314,11 +324,7 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
 
   const approveItem = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('timeline_items')
-        .update({ pending_review: false })
-        .eq('id', id)
-      if (error) throw error
+      unwrap(await updateTimelineItemAction({ id, patch: { pending_review: false } }))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-timeline', eventId] })

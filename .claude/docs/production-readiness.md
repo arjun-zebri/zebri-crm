@@ -1,8 +1,63 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ · **Phase 4A (Couples list + events relocation)** ✅ all on staging · **Phase 4B (Couple Profile + tasks)** ✅ in flight on `phase-4b-couple-profile`. Plan: `.claude/docs/phase-4-couples-events.md`.
+> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ · **Phase 4A (Couples list + events relocation)** ✅ · **Phase 4B (Couple Profile + tasks)** ✅ all on staging · **Phase 4C (Events module + calendar relocation)** ✅ in flight on `phase-4c-events-calendar`. Plan: `.claude/docs/phase-4-couples-events.md`.
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+
+### Events module hardening + calendar relocation (Phase 4C)
+
+Third sub-phase of the Couples + Events hardening. Foundation
+work: new server-action module, mutation lift across every event-
+related component, calendar route relocation. Per-view
+decomposition of the 1122-LOC calendar + 870-LOC
+event-day-calendar deferred to a follow-up.
+
+- **New `lib/events/actions.ts`** (≈ 600 LOC) with 13 server
+  actions covering Event CRUD, share-token controls, per-event
+  task CRUD, timeline-item CRUD + bulk insert, and event-contact
+  link/unlink (single + bulk). All Zod-validated, RLS-scoped,
+  tagged `ActionResult<T>`. Schemas use `.nullable().default(null)`
+  for optional fields + `z.input` for exported types so the call
+  site stays optional while the parsed shape is always complete —
+  avoids exactOptionalPropertyTypes mismatches when spreading into
+  Supabase Insert types.
+
+- **Mutation lifts across 5 files:**
+  - `components/events/event-tasks.tsx` — task CRUD inline writes
+    → action calls.
+  - `components/events/event-vendors.tsx` — link/unlink inline
+    writes → actions. Delete now keyed by `contact_id` (not the
+    join-row `id`) so unlink composes cleanly with the action shape.
+  - `components/events/event-timeline.tsx` — timeline-item CRUD +
+    share-toggle + token-rotation + approveItem all route through
+    actions.
+  - `app/(dashboard)/couples/couple-events.tsx` — createEvent /
+    updateEvent / deleteEvent use the actions. The best-effort
+    side-effects (auto-venue-contact creation, sunset timeline
+    item) are preserved; the venue-contact path stays on the
+    RLS-scoped client because the contacts table is Phase 5
+    territory.
+  - `app/(dashboard)/couples/couple-timeline.tsx` — timeline-item
+    CRUD + applyTemplate lift to actions.
+
+- **Calendar relocated**: `app/(dashboard)/couples/couples-calendar.tsx`
+  → `app/(dashboard)/calendar/_components/couples-calendar.tsx`.
+  `calendar/page.tsx` import re-pointed. Pure relocation; per-view
+  decomposition stays as a follow-up.
+
+- **Integration coverage (+13):**
+  - `tests/integration/rls/event-contacts.test.ts` (4)
+  - `tests/integration/rls/timeline-items.test.ts` (5)
+  - `tests/integration/events/save-event-action.test.ts` (4) —
+    Event CRUD happy paths + cross-tenant delete denial.
+
+- **Unit coverage (+18)** for the events actions: Zod rejection
+  branches, auth-gate failures, happy paths, and the `start_time`
+  format constraint (rejecting `"5:00 PM"` while accepting `"17:00"`
+  and `"17:00:00"`).
+
+- **Gates ratcheted:** strict typecheck 280 → 279, lint warnings
+  496 → 480.
 
 ### Couple Profile overlay (modal) decomposition (Phase 4B)
 

@@ -18,8 +18,21 @@ import { useState, useEffect, useCallback } from 'react'
 import { EventDayCalendar } from '@/components/events/event-day-calendar'
 import { EventTimelineModal } from '@/components/events/event-timeline-modal'
 import { useToast } from '@/components/ui/toast'
+import {
+  bulkInsertTimelineItemsAction,
+  deleteTimelineItemAction,
+  updateTimelineItemAction,
+} from '@/lib/events/actions'
 import { createClient } from '@/lib/supabase/client'
 import { TimelineItem } from '@/types/event'
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
 
 
 
@@ -169,16 +182,22 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
   const updateItem = useMutation({
     mutationFn: async (data: Partial<TimelineItem> & { id: string }) => {
       const { id, ...rest } = data
-      const { error } = await supabase.from('timeline_items').update(rest).eq('id', id)
-      if (error) throw error
+      const patch: Record<string, unknown> = {}
+      if (rest.title !== undefined) patch.title = rest.title
+      if (rest.start_time !== undefined) patch.start_time = rest.start_time
+      if (rest.description !== undefined) patch.description = rest.description
+      if (rest.duration_min !== undefined) patch.duration_min = rest.duration_min
+      if (rest.contact_id !== undefined) patch.contact_id = rest.contact_id
+      if (rest.position !== undefined) patch.position = rest.position
+      if (rest.pending_review !== undefined) patch.pending_review = rest.pending_review
+      unwrap(await updateTimelineItemAction({ id, patch }))
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['event-timeline', activeEventId] }),
   })
 
   const deleteItem = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('timeline_items').delete().eq('id', id)
-      if (error) throw error
+      unwrap(await deleteTimelineItemAction(id))
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['event-timeline', activeEventId] }),
   })
@@ -242,6 +261,9 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
       if (!user.user || !activeEventId) throw new Error('Not authenticated')
       setApplyingTemplateId(templateId)
 
+      // The template_items read stays on the RLS-scoped client —
+      // there's no write here, just a fetch for the bulk insert
+      // below.
       const { data: templateItems, error } = await supabase
         .from('timeline_template_items')
         .select('title, start_time, duration_min, description, position')
@@ -251,19 +273,21 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
       if (error) throw error
 
       const basePosition = (items.length) * 1000
-      const { error: insertErr } = await supabase.from('timeline_items').insert(
-        (templateItems || []).map((item: TimelineTemplateItem, i: number) => ({
-          event_id: activeEventId,
-          user_id: user.user!.id,
-          title: item.title,
-          start_time: item.start_time ?? null,
-          duration_min: item.duration_min,
-          description: item.description,
-          position: basePosition + (i + 1) * 1000,
-          pending_review: false,
-        }))
-      )
-      if (insertErr) throw insertErr
+      if (templateItems && templateItems.length > 0) {
+        unwrap(
+          await bulkInsertTimelineItemsAction(
+            templateItems.map((item: TimelineTemplateItem, i: number) => ({
+              event_id: activeEventId,
+              title: item.title,
+              start_time: item.start_time ?? null,
+              duration_min: item.duration_min,
+              description: item.description,
+              position: basePosition + (i + 1) * 1000,
+              pending_review: false,
+            })),
+          ),
+        )
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-timeline', activeEventId] })

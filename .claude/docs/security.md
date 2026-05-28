@@ -301,11 +301,11 @@ DELETE (sampled clean across the migrations).
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
-| `event_contacts` | ✅ | (join via `event_id`) | ☐ | Couples & Events |
+| `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |
 | `event_vendors` (legacy) | ✅ | (join) | ☐ | Contacts |
 | `task_groups` | ✅ | `user_id` | ☐ | Tasks |
-| `timeline_items` | ✅ | `user_id` | ☐ | Timeline |
+| `timeline_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-items.test.ts` (Phase 4C, 5 tests) | Timeline |
 | `timeline_templates` | ✅ | `user_id` | ☐ | Timeline |
 | `timeline_template_items` | ✅ | `user_id` | ☐ | Timeline |
 | `portal_files` | ✅ | `user_id` | ☐ | Client Portal |
