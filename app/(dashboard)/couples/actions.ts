@@ -1,0 +1,352 @@
+/**
+ * Server actions for the Couples surface.
+ *
+ * Lifts the previously-inline `supabase.from('couples')...` calls out
+ * of `use-couples.ts` so the hooks become thin React Query wrappers
+ * around server-validated mutations. Every action:
+ *
+ * - **Zod-validates** the input (clients can't be trusted with the
+ *   shape — `kanban_position` as a string would corrupt sort order;
+ *   an unknown `status` slug would silently break the kanban).
+ * - **RLS-scoped** Supabase client — the user is the authenticated
+ *   session; we never escape to the service-role key here.
+ * - Returns a tagged `{ ok, data } | { ok: false, error, code? }`
+ *   result the hook can pattern-match on. The `code` slot carries
+ *   typed error tags (`'starter_limit'`) so the UI can branch on
+ *   them (e.g. redirect to billing) without parsing English.
+ *
+ * The Starter-cap trigger (`enforce_starter_couple_limit`) lives in
+ * Postgres and raises a specific error string on insert. Actions
+ * translate it to `code: 'starter_limit'` so the UI can keep its
+ * existing redirect-to-billing behaviour.
+ *
+ * Optimistic UI continues to live in `use-couples.ts` — the actions
+ * are the canonical writes; the hook keeps the cache update.
+ *
+ * @module app/(dashboard)/couples/actions
+ */
+'use server';
+
+import { z } from 'zod';
+
+import { logger } from '@/lib/alerts/logger';
+import { createClient } from '@/lib/supabase/server';
+import type { Couple } from '@/types/couple';
+
+/* ─── Tagged result type ───────────────────────────────────────── */
+
+export interface ActionSuccess<T> {
+  ok: true;
+  data: T;
+}
+
+export interface ActionFailure {
+  ok: false;
+  error: string;
+  /** Typed error tag — present for branches the UI handles specially
+   *  (currently just `'starter_limit'`). Absent on generic failures. */
+  code?: 'starter_limit';
+}
+
+export type ActionResult<T> = ActionSuccess<T> | ActionFailure;
+
+/* ─── Shared shapes ────────────────────────────────────────────── */
+
+// `event_date` is a Postgres `date` — null when not yet set. We
+// accept ISO date strings (`YYYY-MM-DD`) or null; full-format
+// validation lives in the Zod schema below.
+const dateOrNull = z
+  .string()
+  .nullable()
+  .refine(
+    (v) => v === null || /^\d{4}-\d{2}-\d{2}$/.test(v),
+    'event_date must be a YYYY-MM-DD string or null',
+  );
+
+const coupleInputSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required').max(200),
+  email: z.string().trim().max(200).default(''),
+  phone: z.string().trim().max(50).default(''),
+  event_date: dateOrNull,
+  venue: z.string().trim().max(300).default(''),
+  notes: z.string().max(5000).default(''),
+  // Status is a user-customisable slug (via `couple_statuses`).
+  // We don't enum it here — that would break MCs who renamed the
+  // default 4 statuses. The DB CHECK constraint backs us up for
+  // out-of-band values.
+  status: z.string().trim().min(1).max(100),
+  lead_source: z.string().trim().max(100).nullable().default(null),
+  kanban_position: z.number().default(0),
+});
+
+export type CoupleInput = z.infer<typeof coupleInputSchema>;
+
+/**
+ * Detect the Starter-cap trigger error. The trigger raises with the
+ * exact string `STARTER_COUPLE_LIMIT` in the message so we don't
+ * have to parse English from a fragile error.
+ */
+function isStarterLimit(err: { message?: string } | null): boolean {
+  return Boolean(err?.message?.includes('STARTER_COUPLE_LIMIT'));
+}
+
+/* ─── createCoupleAction ──────────────────────────────────────── */
+
+export async function createCoupleAction(
+  input: CoupleInput,
+): Promise<ActionResult<Couple>> {
+  const parsed = coupleInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid couple data.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { data, error } = await supabase
+    .from('couples')
+    .insert({ ...parsed.data, user_id: user.id })
+    .select()
+    .single();
+
+  if (error) {
+    if (isStarterLimit(error)) {
+      return {
+        ok: false,
+        error:
+          "You've hit the couple limit on Starter. Upgrade to Pro or Max for unlimited couples.",
+        code: 'starter_limit',
+      };
+    }
+    logger.error('[couples/actions] createCoupleAction failed', error, {
+      userId: user.id,
+    });
+    return { ok: false, error: 'Could not create couple.' };
+  }
+
+  return { ok: true, data: data as Couple };
+}
+
+/* ─── updateCoupleAction ──────────────────────────────────────── */
+
+const updateCoupleSchema = coupleInputSchema.extend({
+  id: z.uuid('Couple id must be a UUID'),
+});
+
+export type UpdateCoupleInput = z.infer<typeof updateCoupleSchema>;
+
+export async function updateCoupleAction(
+  input: UpdateCoupleInput,
+): Promise<ActionResult<Couple>> {
+  const parsed = updateCoupleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid couple data.' };
+  }
+  const { id, ...rest } = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { data, error } = await supabase
+    .from('couples')
+    .update(rest)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    logger.error('[couples/actions] updateCoupleAction failed', error, {
+      userId: user.id,
+      coupleId: id,
+    });
+    return { ok: false, error: 'Could not update couple.' };
+  }
+
+  return { ok: true, data: data as Couple };
+}
+
+/* ─── deleteCoupleAction ──────────────────────────────────────── */
+
+const idSchema = z.uuid('Couple id must be a UUID');
+
+export async function deleteCoupleAction(
+  coupleId: string,
+): Promise<ActionResult<void>> {
+  const parsed = idSchema.safeParse(coupleId);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid couple ID.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { error } = await supabase
+    .from('couples')
+    .delete()
+    .eq('id', parsed.data);
+
+  if (error) {
+    logger.error('[couples/actions] deleteCoupleAction failed', error, {
+      userId: user.id,
+      coupleId,
+    });
+    return { ok: false, error: 'Could not delete couple.' };
+  }
+
+  return { ok: true, data: undefined };
+}
+
+/* ─── bulkMoveCouplesAction ───────────────────────────────────── */
+
+const bulkMoveSchema = z.array(
+  z.object({
+    id: z.uuid(),
+    status: z.string().trim().min(1).max(100),
+    kanban_position: z.number(),
+  }),
+);
+
+export type BulkMoveInput = z.infer<typeof bulkMoveSchema>;
+
+/**
+ * Apply kanban move/reorder updates. Each row is updated separately
+ * because Supabase doesn't expose a single SQL statement for
+ * heterogeneous per-row updates without a UNNEST trick. Parallelised
+ * via Promise.all so latency is one round-trip equivalent for the
+ * common multi-drag case.
+ *
+ * Returns the IDs that succeeded so the UI can reconcile if some
+ * subset of the bulk hit a row-level RLS or constraint failure
+ * (e.g. an MC tried to drag into a status they don't own).
+ */
+export async function bulkMoveCouplesAction(
+  updates: BulkMoveInput,
+): Promise<ActionResult<{ updatedIds: string[] }>> {
+  const parsed = bulkMoveSchema.safeParse(updates);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid bulk-move payload.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const results = await Promise.all(
+    parsed.data.map((u) =>
+      supabase
+        .from('couples')
+        .update({
+          status: u.status,
+          kanban_position: u.kanban_position,
+        })
+        .eq('id', u.id)
+        .select('id')
+        .single(),
+    ),
+  );
+
+  const updatedIds: string[] = [];
+  let firstError: { message?: string } | null = null;
+  for (const r of results) {
+    if (r.error) {
+      firstError = firstError ?? r.error;
+    } else if (r.data) {
+      updatedIds.push(r.data.id);
+    }
+  }
+
+  if (firstError) {
+    logger.error('[couples/actions] bulkMoveCouplesAction partial failure',
+      firstError,
+      { userId: user.id, attempted: parsed.data.length, updated: updatedIds.length },
+    );
+    return { ok: false, error: 'Could not move couples.' };
+  }
+
+  return { ok: true, data: { updatedIds } };
+}
+
+/* ─── bulkUpdateCouplesStatusAction ───────────────────────────── */
+
+const bulkUpdateStatusSchema = z.object({
+  ids: z.array(z.uuid()).min(1, 'No couples selected'),
+  status: z.string().trim().min(1).max(100),
+});
+
+export type BulkUpdateStatusInput = z.infer<typeof bulkUpdateStatusSchema>;
+
+export async function bulkUpdateCouplesStatusAction(
+  input: BulkUpdateStatusInput,
+): Promise<ActionResult<void>> {
+  const parsed = bulkUpdateStatusSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid bulk-status payload.' };
+  }
+  const { ids, status } = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { error } = await supabase
+    .from('couples')
+    .update({ status })
+    .in('id', ids);
+
+  if (error) {
+    logger.error('[couples/actions] bulkUpdateCouplesStatusAction failed',
+      error,
+      { userId: user.id, count: ids.length },
+    );
+    return { ok: false, error: 'Could not update couples.' };
+  }
+
+  return { ok: true, data: undefined };
+}
+
+/* ─── bulkDeleteCouplesAction ─────────────────────────────────── */
+
+const bulkDeleteSchema = z.array(z.uuid()).min(1, 'No couples selected');
+
+export async function bulkDeleteCouplesAction(
+  ids: string[],
+): Promise<ActionResult<void>> {
+  const parsed = bulkDeleteSchema.safeParse(ids);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid bulk-delete payload.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { error } = await supabase
+    .from('couples')
+    .delete()
+    .in('id', parsed.data);
+
+  if (error) {
+    logger.error('[couples/actions] bulkDeleteCouplesAction failed', error, {
+      userId: user.id,
+      count: parsed.data.length,
+    });
+    return { ok: false, error: 'Could not delete couples.' };
+  }
+
+  return { ok: true, data: undefined };
+}

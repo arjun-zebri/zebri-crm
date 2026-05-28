@@ -15,9 +15,9 @@ interface CoupleModalProps {
     couple: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
   ) => void;
   onDelete: (id: string) => void;
-  couple?: Couple;
+  couple?: Couple | undefined;
   statuses: CoupleStatusRecord[];
-  defaultStatus?: string;
+  defaultStatus?: string | undefined;
   loading: boolean;
 }
 

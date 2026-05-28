@@ -1,20 +1,46 @@
-"use client";
+/**
+ * `/couples` — list/kanban orchestrator.
+ *
+ * The page is a thin composition of:
+ * - `<CouplesHeader>` (toolbar + view-mode toggle + filters + sort)
+ * - `<CouplesList>` / `<CouplesKanban>` (the two view modes)
+ * - `<CoupleProfile>` (the centered full-screen modal that opens
+ *    when a couple is clicked — **not** a slide-in drawer; see
+ *    Phase 4 plan §2 decision 6a)
+ * - `<CoupleModal>` (the create/edit form)
+ * - `<BulkActionBar>` (multi-select operations)
+ * - `<StarterCapLockModal>` (paywall when the user is at the Starter
+ *    couple cap)
+ *
+ * View state (search/filter/sort) lives in `useCouplesView()`.
+ * Profile selection + deep-link sync in `useCoupleProfileSync()`.
+ * Keyboard shortcuts in `useCouplesShortcuts()`. Kanban drop math
+ * in `lib/couples/kanban-positions.ts`. Mutations in
+ * `use-couples.ts` (React Query) → `actions.ts` (server actions).
+ * No business logic lives inline.
+ *
+ * @module app/(dashboard)/couples/page
+ */
+'use client';
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
 
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useToast } from "@/components/ui/toast";
-import { Couple, ViewMode, SortField, SortDirection } from '@/types/couple';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
+import { computeKanbanUpdates } from '@/lib/couples/kanban-positions';
+import { downloadCsv } from '@/lib/utils/csv';
+import { Couple, ViewMode } from '@/types/couple';
 
-import { BulkActionBar } from "./bulk-action-bar";
-import { CoupleModal } from "./couple-modal";
-import { CoupleProfile } from "./couple-profile";
-import { CouplesHeader } from "./couples-header";
-import { CouplesKanban } from "./couples-kanban";
-import { CouplesList } from "./couples-list";
-import { StarterCapLockModal } from "./starter-cap-lock-modal";
-import { useCoupleStatuses } from "./use-couple-statuses";
+import { BulkActionBar } from './bulk-action-bar';
+import { CoupleModal } from './couple-modal';
+import { CoupleProfile } from './couple-profile';
+import { CouplesHeader } from './couples-header';
+import { CouplesKanban } from './couples-kanban';
+import { CouplesList } from './couples-list';
+import { StarterCapLockModal } from './starter-cap-lock-modal';
+import { useCoupleProfileSync } from './use-couple-profile-sync';
+import { useCoupleStatuses } from './use-couple-statuses';
 import {
   useCouples,
   useCreateCouple,
@@ -24,15 +50,16 @@ import {
   useBulkUpdateCouplesStatus,
   useBulkDeleteCouples,
   StarterLimitError,
-} from "./use-couples";
-import { useStarterCapLock } from "./use-starter-cap-lock";
-
+} from './use-couples';
+import { useCouplesShortcuts } from './use-couples-shortcuts';
+import { useCouplesView } from './use-couples-view';
+import { useStarterCapLock } from './use-starter-cap-lock';
 
 function CouplesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const viewParam = searchParams.get("view");
-  const viewMode: ViewMode = viewParam === "list" ? "list" : "kanban";
+  const viewParam = searchParams.get('view');
+  const viewMode: ViewMode = viewParam === 'list' ? 'list' : 'kanban';
 
   const { data: couples, isLoading } = useCouples();
   const { data: statuses } = useCoupleStatuses();
@@ -42,22 +69,31 @@ function CouplesPageContent() {
   const bulkMoveCouples = useBulkMoveCouples();
   const bulkUpdateStatus = useBulkUpdateCouplesStatus();
   const bulkDeleteCouples = useBulkDeleteCouples();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | "all">("all");
-  const [sortField, setSortField] = useState<SortField>("created_at");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const {
+    search,
+    setSearch,
+    statusFilter,
+    setStatusFilter,
+    sortField,
+    sortDirection,
+    setSort,
+    filteredCouples,
+    kanbanCouples,
+  } = useCouplesView(couples);
+
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [capLockOpen, setCapLockOpen] = useState(false);
   const { toast } = useToast();
   const capLock = useStarterCapLock(couples.length);
+  const { selectedCouple, setSelectedCouple } = useCoupleProfileSync(couples);
 
-  // Intercept couple-modal opens when the user is over the Starter
-  // cap. The DB trigger already blocks new INSERTs; this guards the
-  // existing-couple edit + add-modal paths in the UI.
+  // The Starter-cap trigger in Postgres rejects new INSERTs; this
+  // guard mirrors the rule on the modal-open paths so we don't even
+  // surface the form for an MC who's already at the cap.
   function tryOpenCouple(couple: Couple) {
     if (capLock.locked) {
       setCapLockOpen(true);
@@ -74,112 +110,47 @@ function CouplesPageContent() {
     setAddModalOpen(true);
   }
 
-  // Redirect bare /couples to /couples?view=board
+  // Redirect bare /couples to /couples?view=board (the kanban
+  // default). Pure side effect; doesn't write component state, so
+  // no setState-in-effect issue.
   useEffect(() => {
     if (!viewParam) {
-      router.replace("/couples?view=board");
+      router.replace('/couples?view=board');
     }
   }, [viewParam, router]);
 
-  // Open a couple from a deep link (?openCouple=<id>) - syncs URL → React state
-  useEffect(() => {
-    if (!couples.length || typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const openId = params.get("openCouple");
-    if (!openId) return;
-    const match = couples.find((c) => c.id === openId);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (match) setSelectedCouple(match);
-    params.delete("openCouple");
-    const qs = params.toString();
-    window.history.replaceState(null, "", qs ? `/couples?${qs}` : "/couples");
-  }, [couples]);
-
-  // Keep the open profile drawer in sync with the couples cache so mutations
-  // (e.g. rotating the portal token) reflect immediately without a re-open.
-  useEffect(() => {
-    if (!selectedCouple) return;
-    const fresh = couples.find((c) => c.id === selectedCouple.id);
-    if (fresh && fresh !== selectedCouple) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedCouple(fresh);
-    }
-  }, [couples, selectedCouple]);
-
   const handleViewModeChange = (mode: ViewMode) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("view", mode === "kanban" ? "board" : mode);
+    params.set('view', mode === 'kanban' ? 'board' : mode);
     router.replace(`/couples?${params.toString()}`);
     setSelectedIds(new Set());
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && selectedIds.size > 0) {
-        setSelectedIds(new Set());
-        return;
-      }
-      if (e.key === "n" && !e.ctrlKey && !e.metaKey) {
-        const target = e.target as HTMLElement;
-        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
-          e.preventDefault();
-          tryOpenAdd();
-        }
-      }
-    };
+  useCouplesShortcuts({
+    hasSelection: selectedIds.size > 0,
+    onClearSelection: () => setSelectedIds(new Set()),
+    onAdd: () => tryOpenAdd(),
+  });
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedIds]);
-
+  // Clicking the page background (not on a card / bulk-bar / modal)
+  // clears the multi-selection.
   const handleBackgroundClick = (e: React.MouseEvent) => {
     if (selectedIds.size === 0) return;
     const target = e.target as HTMLElement;
     if (
-      target.closest("[data-couple-id]") ||
-      target.closest("[data-bulk-action-bar]") ||
-      target.closest("[data-couple-checkbox]") ||
+      target.closest('[data-couple-id]') ||
+      target.closest('[data-bulk-action-bar]') ||
+      target.closest('[data-couple-checkbox]') ||
       target.closest("[role='dialog']") ||
-      target.closest("[data-modal]")
+      target.closest('[data-modal]')
     ) {
       return;
     }
     setSelectedIds(new Set());
   };
 
-  const baseFiltered = useMemo(() => {
-    return couples.filter((couple) => {
-      const matchesSearch =
-        search === "" ||
-        couple.name.toLowerCase().includes(search.toLowerCase()) ||
-        couple.email.toLowerCase().includes(search.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "all" || couple.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [couples, search, statusFilter]);
-
-  const filteredCouples = useMemo(() => {
-    return [...baseFiltered].sort((a, b) => {
-      const dir = sortDirection === "asc" ? 1 : -1;
-      const valA = a[sortField] ?? "";
-      const valB = b[sortField] ?? "";
-      if (valA < valB) return -1 * dir;
-      if (valA > valB) return 1 * dir;
-      return 0;
-    });
-  }, [baseFiltered, sortField, sortDirection]);
-
-  const kanbanCouples = useMemo(() => {
-    return [...baseFiltered].sort(
-      (a, b) => (a.kanban_position ?? 0) - (b.kanban_position ?? 0)
-    );
-  }, [baseFiltered]);
-
   const handleAddCouple = async (
-    data: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
+    data: Omit<Couple, 'id' | 'user_id' | 'created_at'> & { id?: string },
   ) => {
     const positionsInStatus = couples
       .filter((c) => c.status === data.status)
@@ -188,33 +159,33 @@ function CouplesPageContent() {
       positionsInStatus.length > 0 ? Math.max(...positionsInStatus) + 1 : 0;
     try {
       await createCouple.mutateAsync({ ...data, kanban_position: nextPosition });
-      toast("Couple added");
+      toast('Couple added');
       setAddModalOpen(false);
     } catch (e) {
       if (e instanceof StarterLimitError) {
-        toast(e.message, "error");
-        router.push("/settings?tab=billing");
+        toast(e.message, 'error');
+        router.push('/settings?tab=billing');
         return;
       }
-      toast(e instanceof Error ? e.message : "Failed to add couple", "error");
+      toast(e instanceof Error ? e.message : 'Failed to add couple', 'error');
     }
   };
 
   const handleUpdateCouple = async (
-    data: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
+    data: Omit<Couple, 'id' | 'user_id' | 'created_at'> & { id?: string },
   ) => {
     const existing = couples.find((c) => c.id === data.id);
     if (!existing) return;
     const updated = { ...existing, ...data } as Couple;
     await updateCouple.mutateAsync(updated);
     setSelectedCouple(updated);
-    toast("Couple updated");
+    toast('Couple updated');
   };
 
   const handleDeleteCouple = async (id: string) => {
     await deleteCouple.mutateAsync(id);
     setSelectedCouple(null);
-    toast("Couple deleted");
+    toast('Couple deleted');
   };
 
   const handleDragEnd = async (
@@ -222,70 +193,34 @@ function CouplesPageContent() {
     destination: string,
     destinationIndex: number,
     coupleId: string,
-    selectedAtStart: Set<string>
+    selectedAtStart: Set<string>,
   ) => {
-    const couple = couples.find((c) => c.id === coupleId);
-    if (!couple) return;
-
-    const isMultiDrag = selectedAtStart.has(coupleId) && selectedAtStart.size > 1;
-    const movingIds = isMultiDrag ? new Set(selectedAtStart) : new Set([coupleId]);
-
-    const draggedCouples = couples.filter((c) => movingIds.has(c.id));
-    const orderedDragged = [...draggedCouples].sort((a, b) => {
-      const aStatusIdx = statuses.findIndex((s) => s.slug === a.status);
-      const bStatusIdx = statuses.findIndex((s) => s.slug === b.status);
-      if (aStatusIdx !== bStatusIdx) return aStatusIdx - bStatusIdx;
-      return (a.kanban_position ?? 0) - (b.kanban_position ?? 0);
+    const updates = computeKanbanUpdates({
+      couples,
+      statuses,
+      source,
+      destination,
+      destinationIndex,
+      coupleId,
+      selectedAtStart,
     });
+    if (updates.length === 0) return;
 
-    const destColumn = couples
-      .filter((c) => c.status === destination && !movingIds.has(c.id))
-      .sort((a, b) => (a.kanban_position ?? 0) - (b.kanban_position ?? 0));
-
-    const count = orderedDragged.length;
-    let basePosition: number;
-    let stepSize: number;
-    if (destColumn.length === 0) {
-      basePosition = 0;
-      stepSize = 1;
-    } else if (destinationIndex <= 0) {
-      const firstPos = destColumn[0].kanban_position ?? 0;
-      basePosition = firstPos - count;
-      stepSize = 1;
-    } else if (destinationIndex >= destColumn.length) {
-      const lastPos = destColumn[destColumn.length - 1].kanban_position ?? 0;
-      basePosition = lastPos + 1;
-      stepSize = 1;
-    } else {
-      const prev = destColumn[destinationIndex - 1].kanban_position ?? 0;
-      const next = destColumn[destinationIndex].kanban_position ?? 0;
-      stepSize = (next - prev) / (count + 1);
-      basePosition = prev + stepSize;
-    }
-
-    if (
-      !isMultiDrag &&
-      source === destination &&
-      couple.kanban_position === basePosition
-    ) {
-      return;
-    }
-
-    const updates = orderedDragged.map((c, idx) => ({
-      id: c.id,
-      status: destination,
-      kanban_position: basePosition + idx * stepSize,
-    }));
+    const isMultiDrag =
+      selectedAtStart.has(coupleId) && selectedAtStart.size > 1;
 
     if (isMultiDrag) {
       await bulkMoveCouples.mutateAsync(updates);
       setSelectedIds(new Set());
-      toast(`${count} couples moved`);
+      toast(`${updates.length} couples moved`);
     } else {
+      const couple = couples.find((c) => c.id === coupleId);
+      const update = updates[0];
+      if (!couple || !update) return;
       await updateCouple.mutateAsync({
         ...couple,
-        status: destination,
-        kanban_position: basePosition,
+        status: update.status,
+        kanban_position: update.kanban_position,
       });
     }
   };
@@ -293,7 +228,7 @@ function CouplesPageContent() {
   const handleBulkStatusChange = async (status: string) => {
     await bulkUpdateStatus.mutateAsync({ ids: [...selectedIds], status });
     setSelectedIds(new Set());
-    toast("Status updated");
+    toast('Status updated');
   };
 
   const handleBulkDelete = async () => {
@@ -306,33 +241,25 @@ function CouplesPageContent() {
 
   const handleExportCSV = () => {
     const selected = couples.filter((c) => selectedIds.has(c.id));
-    const headers = ["Name", "Email", "Phone", "Event Date", "Venue", "Status"];
-    const rows = selected.map((c) => [
-      c.name,
-      c.email || "",
-      c.phone || "",
-      c.event_date || "",
-      c.venue || "",
-      c.status,
-    ]);
-    const csv = [headers, ...rows]
-      .map((row) =>
-        row
-          .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
-          .join(",")
-      )
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "couples.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv({
+      headers: ['Name', 'Email', 'Phone', 'Event Date', 'Venue', 'Status'],
+      rows: selected.map((c) => [
+        c.name,
+        c.email || '',
+        c.phone || '',
+        c.event_date || '',
+        c.venue || '',
+        c.status,
+      ]),
+      filename: 'couples',
+    });
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" onClick={handleBackgroundClick}>
+    <div
+      className="flex flex-col h-full overflow-hidden"
+      onClick={handleBackgroundClick}
+    >
       <div className="px-6 sm:px-[3.75rem] pt-6 pb-2 flex-shrink-0">
         <CouplesHeader
           couples={couples}
@@ -346,19 +273,16 @@ function CouplesPageContent() {
           onStatusFilterChange={setStatusFilter}
           sortField={sortField}
           sortDirection={sortDirection}
-          onSortChange={(field, direction) => {
-            setSortField(field);
-            setSortDirection(direction);
-          }}
+          onSortChange={setSort}
         />
       </div>
 
       <div
         className={`flex-1 min-h-0 overflow-hidden pl-6 pr-6 sm:pr-[3.75rem] ${
-          viewMode === "list" ? "sm:pl-[3.75rem]" : "sm:pl-12 pb-14"
+          viewMode === 'list' ? 'sm:pl-[3.75rem]' : 'sm:pl-12 pb-14'
         }`}
       >
-        {viewMode === "list" ? (
+        {viewMode === 'list' ? (
           <CouplesList
             couples={filteredCouples}
             statuses={statuses}
@@ -413,7 +337,7 @@ function CouplesPageContent() {
 
       <ConfirmDialog
         open={bulkDeleteOpen}
-        title={`Delete ${selectedIds.size} ${selectedIds.size === 1 ? "couple" : "couples"}?`}
+        title={`Delete ${selectedIds.size} ${selectedIds.size === 1 ? 'couple' : 'couples'}?`}
         description="This action cannot be undone."
         loading={bulkDeleteCouples.isPending}
         onCancel={() => setBulkDeleteOpen(false)}

@@ -1,195 +1,200 @@
-'use client'
+/**
+ * React Query hooks for the Couples surface.
+ *
+ * Reads stay client-side (RLS scopes them automatically). Mutations
+ * are thin wrappers around the server actions in `./actions.ts` —
+ * the action does the validated, RLS-scoped write; the hook keeps
+ * the optimistic cache update + invalidation.
+ *
+ * `StarterLimitError` is preserved as the typed exception thrown
+ * from `useCreateCouple` so the page's existing `catch (e instanceof
+ * StarterLimitError)` redirect-to-billing branch keeps working.
+ *
+ * @module app/(dashboard)/couples/use-couples
+ */
+'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { createClient } from '@/lib/supabase/client'
-import { Couple } from '@/types/couple'
+import { createClient } from '@/lib/supabase/client';
+import { Couple } from '@/types/couple';
+
+import {
+  bulkDeleteCouplesAction,
+  bulkMoveCouplesAction,
+  bulkUpdateCouplesStatusAction,
+  createCoupleAction,
+  deleteCoupleAction,
+  updateCoupleAction,
+  type CoupleInput,
+} from './actions';
+
+export class StarterLimitError extends Error {
+  constructor(message?: string) {
+    super(
+      message ??
+        "You've hit the couple limit on Starter. Upgrade to Pro or Max for unlimited couples.",
+    );
+    this.name = 'StarterLimitError';
+  }
+}
+
+/** Throw on `ok: false` so React Query treats it as an error and the
+ *  hook's `onError` rollback runs. Translate the typed
+ *  `starter_limit` tag into the historical typed exception. */
+function unwrap<T>(result: { ok: true; data: T } | { ok: false; error: string; code?: 'starter_limit' }): T {
+  if (result.ok) return result.data;
+  if (result.code === 'starter_limit') {
+    throw new StarterLimitError(result.error);
+  }
+  throw new Error(result.error);
+}
 
 export function useCouples() {
-  const queryClient = useQueryClient()
-  const supabase = createClient()
+  const supabase = createClient();
 
   const query = useQuery({
     queryKey: ['couples'],
     queryFn: async () => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
+      const { data: user, error: userError } = await supabase.auth.getUser();
+      if (userError || !user.user) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
         .from('couples')
         .select('*')
         .eq('user_id', user.user.id)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      if (error) throw error
-      return (data as Couple[]) || []
+      if (error) throw error;
+      return (data as Couple[]) || [];
     },
-  })
+  });
 
-  return { ...query, data: query.data || [] }
-}
-
-export class StarterLimitError extends Error {
-  constructor() {
-    super("You've hit the 5-couple limit on Starter. Upgrade to Pro or Max for unlimited couples.")
-    this.name = 'StarterLimitError'
-  }
+  return { ...query, data: query.data || [] };
 }
 
 export function useCreateCouple() {
-  const queryClient = useQueryClient()
-  const supabase = createClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (couple: Omit<Couple, 'id' | 'user_id' | 'created_at'>) => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-
-      const { data, error } = await supabase
-        .from('couples')
-        .insert({
-          ...couple,
-          user_id: user.user.id,
-        })
-        .select()
-
-      if (error) {
-        if (error.message?.includes('STARTER_COUPLE_LIMIT')) {
-          throw new StarterLimitError()
-        }
-        throw error
-      }
-      return data[0] as Couple
-    },
+    mutationFn: async (couple: CoupleInput) => unwrap(await createCoupleAction(couple)),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['couples'] })
+      queryClient.invalidateQueries({ queryKey: ['couples'] });
     },
-  })
+  });
 }
 
 export function useUpdateCouple() {
-  const queryClient = useQueryClient()
-  const supabase = createClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (couple: Couple) => {
-      const { data, error } = await supabase
-        .from('couples')
-        .update(couple)
-        .eq('id', couple.id)
-        .select()
-
-      if (error) throw error
-      return data[0] as Couple
-    },
+    mutationFn: async (couple: Couple) =>
+      unwrap(
+        await updateCoupleAction({
+          id: couple.id,
+          name: couple.name,
+          email: couple.email,
+          phone: couple.phone,
+          event_date: couple.event_date,
+          venue: couple.venue,
+          notes: couple.notes,
+          status: couple.status,
+          lead_source: couple.lead_source,
+          kanban_position: couple.kanban_position,
+        }),
+      ),
     onMutate: async (couple: Couple) => {
-      queryClient.cancelQueries({ queryKey: ['couples'] })
-      const previousCouples = queryClient.getQueryData<Couple[]>(['couples'])
+      queryClient.cancelQueries({ queryKey: ['couples'] });
+      const previousCouples = queryClient.getQueryData<Couple[]>(['couples']);
 
       queryClient.setQueryData<Couple[]>(['couples'], (old) => {
-        if (!old) return [couple]
-        return old.map((c) => (c.id === couple.id ? couple : c))
-      })
+        if (!old) return [couple];
+        return old.map((c) => (c.id === couple.id ? couple : c));
+      });
 
-      return { previousCouples }
+      return { previousCouples };
     },
-    onError: (err, couple, context: any) => {
-      if (context?.previousCouples) {
-        queryClient.setQueryData(['couples'], context.previousCouples)
+    onError: (_err, _couple, context) => {
+      const ctx = context as { previousCouples?: Couple[] } | undefined;
+      if (ctx?.previousCouples) {
+        queryClient.setQueryData(['couples'], ctx.previousCouples);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['couples'] })
+      queryClient.invalidateQueries({ queryKey: ['couples'] });
     },
-  })
+  });
 }
 
 export function useDeleteCouple() {
-  const queryClient = useQueryClient()
-  const supabase = createClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('couples').delete().eq('id', id)
-      if (error) throw error
+      unwrap(await deleteCoupleAction(id));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['couples'] })
+      queryClient.invalidateQueries({ queryKey: ['couples'] });
     },
-  })
+  });
 }
 
 export function useBulkMoveCouples() {
-  const queryClient = useQueryClient()
-  const supabase = createClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (
-      updates: Array<{ id: string; status: string; kanban_position: number }>
-    ) => {
-      const results = await Promise.all(
-        updates.map((u) =>
-          supabase
-            .from('couples')
-            .update({ status: u.status, kanban_position: u.kanban_position })
-            .eq('id', u.id)
-        )
-      )
-      const failed = results.find((r) => r.error)
-      if (failed?.error) throw failed.error
-    },
+      updates: Array<{ id: string; status: string; kanban_position: number }>,
+    ) => unwrap(await bulkMoveCouplesAction(updates)),
     onMutate: async (updates) => {
-      await queryClient.cancelQueries({ queryKey: ['couples'] })
-      const previousCouples = queryClient.getQueryData<Couple[]>(['couples'])
-      const updateMap = new Map(updates.map((u) => [u.id, u]))
+      await queryClient.cancelQueries({ queryKey: ['couples'] });
+      const previousCouples = queryClient.getQueryData<Couple[]>(['couples']);
+      const updateMap = new Map(updates.map((u) => [u.id, u]));
       queryClient.setQueryData<Couple[]>(['couples'], (old) => {
-        if (!old) return old
+        if (!old) return old;
         return old.map((c) => {
-          const u = updateMap.get(c.id)
+          const u = updateMap.get(c.id);
           return u
             ? { ...c, status: u.status, kanban_position: u.kanban_position }
-            : c
-        })
-      })
-      return { previousCouples }
+            : c;
+        });
+      });
+      return { previousCouples };
     },
-    onError: (_err, _vars, context: any) => {
-      if (context?.previousCouples) {
-        queryClient.setQueryData(['couples'], context.previousCouples)
+    onError: (_err, _vars, context) => {
+      const ctx = context as { previousCouples?: Couple[] } | undefined;
+      if (ctx?.previousCouples) {
+        queryClient.setQueryData(['couples'], ctx.previousCouples);
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['couples'] })
+      queryClient.invalidateQueries({ queryKey: ['couples'] });
     },
-  })
+  });
 }
 
 export function useBulkUpdateCouplesStatus() {
-  const queryClient = useQueryClient()
-  const supabase = createClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
-      const { error } = await supabase.from('couples').update({ status }).in('id', ids)
-      if (error) throw error
+      unwrap(await bulkUpdateCouplesStatusAction({ ids, status }));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['couples'] })
+      queryClient.invalidateQueries({ queryKey: ['couples'] });
     },
-  })
+  });
 }
 
 export function useBulkDeleteCouples() {
-  const queryClient = useQueryClient()
-  const supabase = createClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from('couples').delete().in('id', ids)
-      if (error) throw error
+      unwrap(await bulkDeleteCouplesAction(ids));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['couples'] })
+      queryClient.invalidateQueries({ queryKey: ['couples'] });
     },
-  })
+  });
 }
