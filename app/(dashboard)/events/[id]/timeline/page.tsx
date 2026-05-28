@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft } from "lucide-react";
-import { EventDayCalendar } from "../../event-day-calendar";
+import { EventDayCalendar } from "@/components/events/event-day-calendar";
 import { formatDate } from "@/lib/utils";
 
 export default function EventTimelinePage() {

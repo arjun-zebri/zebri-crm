@@ -9,7 +9,7 @@ import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 
 
-import { TimePicker } from '../events/event-timeline-modal'
+import { TimePicker } from '@/components/events/event-timeline-modal'
 
 interface TemplateItem {
   id: string
