@@ -41,8 +41,6 @@ import { CouplesList } from './couples-list';
 import { StarterCapLockModal } from './starter-cap-lock-modal';
 import { useCoupleProfileSync } from './use-couple-profile-sync';
 import { useCoupleStatuses } from './use-couple-statuses';
-import { useCouplesShortcuts } from './use-couples-shortcuts';
-import { useCouplesView } from './use-couples-view';
 import {
   useCouples,
   useCreateCouple,
@@ -53,6 +51,8 @@ import {
   useBulkDeleteCouples,
   StarterLimitError,
 } from './use-couples';
+import { useCouplesShortcuts } from './use-couples-shortcuts';
+import { useCouplesView } from './use-couples-view';
 import { useStarterCapLock } from './use-starter-cap-lock';
 
 function CouplesPageContent() {

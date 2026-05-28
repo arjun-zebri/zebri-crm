@@ -28,7 +28,10 @@ import { execSync } from 'node:child_process';
 // Phase 2C.2 builder modal decomposition cut both: 86→78 errors,
 // 596→559 warnings (the two big builder files carried a lot of
 // legacy `any` + unused-imports noise).
-const ERROR_BUDGET = 78;
+// Phase 4A couples-list decomposition: 78→75 errors (replaced
+// `(meta as any)?.hidden` casts with typed `{ hidden?: string }`
+// during the rewrite).
+const ERROR_BUDGET = 75;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -53,7 +56,9 @@ const ERROR_BUDGET = 78;
 // Phase 3.2 contract public-surface decomposition: 522 → 505
 // (471-LOC page split into orchestrator + 8 _components/ files;
 // hardened sign/decline routes + send-contract route).
-const WARNING_BUDGET = 505;
+// Phase 4A page + couples-list decomposition: 505 → 504 (auto-fix
+// swept import-order across moved files).
+const WARNING_BUDGET = 504;
 
 function runEslintJson() {
   try {
