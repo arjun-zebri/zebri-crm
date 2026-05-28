@@ -167,6 +167,119 @@ describe('deleteCoupleAction', () => {
   });
 });
 
+describe('createCoupleTaskAction', () => {
+  it('returns ok=false on a non-UUID coupleId', async () => {
+    const { createCoupleTaskAction } = await loadActions();
+    const result = await createCoupleTaskAction({
+      coupleId: 'not-a-uuid',
+      title: 'x',
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('returns ok=false on an empty title', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { createCoupleTaskAction } = await loadActions();
+    const result = await createCoupleTaskAction({
+      coupleId: validUuid,
+      title: '   ',
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('returns the new id on the happy path', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { createCoupleTaskAction } = await loadActions();
+    const result = await createCoupleTaskAction({
+      coupleId: validUuid,
+      title: 'Send venue floor-plan',
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.data.id).toBe(validUuid);
+  });
+});
+
+describe('updateCoupleTaskAction', () => {
+  it('returns ok=false on an empty patch', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { updateCoupleTaskAction } = await loadActions();
+    const result = await updateCoupleTaskAction({
+      id: validUuid,
+      patch: {},
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('returns ok=false on a malformed due_date', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { updateCoupleTaskAction } = await loadActions();
+    const result = await updateCoupleTaskAction({
+      id: validUuid,
+      patch: { due_date: '14/09/2026' },
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('calls supabase update on the happy path', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { updateCoupleTaskAction } = await loadActions();
+    const result = await updateCoupleTaskAction({
+      id: validUuid,
+      patch: { title: 'New', status: 'in_progress' },
+    });
+    expect(result.ok).toBe(true);
+    expect(fromMock).toHaveBeenCalledWith('tasks');
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'New', status: 'in_progress' }),
+    );
+  });
+});
+
+describe('rotateCouplePortalTokenAction', () => {
+  it('returns ok=false on a non-UUID id', async () => {
+    const { rotateCouplePortalTokenAction } = await loadActions();
+    const result = await rotateCouplePortalTokenAction('not-a-uuid');
+    expect(result).toEqual({ ok: false, error: 'Invalid couple ID.' });
+  });
+
+  it('returns the new portal_token on the happy path', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { rotateCouplePortalTokenAction } = await loadActions();
+    const result = await rotateCouplePortalTokenAction(validUuid);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error);
+    expect(result.data.portal_token).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+  });
+});
+
+describe('linkContactToCoupleAction', () => {
+  it('returns ok=false on a non-UUID coupleId', async () => {
+    const { linkContactToCoupleAction } = await loadActions();
+    const result = await linkContactToCoupleAction({
+      coupleId: 'not-a-uuid',
+      contactId: validUuid,
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it('calls supabase insert with user_id + ids on happy path', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    // The action calls `.insert(...)` and resolves directly (no
+    // `.select()` chain). Switch the insert mock to resolve.
+    insertMock.mockReset().mockResolvedValue({ error: null });
+    const { linkContactToCoupleAction } = await loadActions();
+    const result = await linkContactToCoupleAction({
+      coupleId: validUuid,
+      contactId: validUuid,
+    });
+    expect(result.ok).toBe(true);
+    expect(fromMock).toHaveBeenCalledWith('couple_contacts');
+  });
+});
+
 describe('bulk actions', () => {
   it('bulkMoveCouplesAction accepts an empty payload and returns empty updatedIds', async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });

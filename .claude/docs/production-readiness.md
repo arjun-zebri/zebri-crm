@@ -1,8 +1,63 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ all on staging · **Phase 4A (Couples list + events relocation)** ✅ in flight on `phase-4a-couples-list`. Plan: `.claude/docs/phase-4-couples-events.md`.
+> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ · **Phase 4A (Couples list + events relocation)** ✅ all on staging · **Phase 4B (Couple Profile + tasks)** ✅ in flight on `phase-4b-couple-profile`. Plan: `.claude/docs/phase-4-couples-events.md`.
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+
+### Couple Profile overlay (modal) decomposition (Phase 4B)
+
+Second sub-phase of the Couples + Events hardening. The 650-LOC
+Couple Profile drawer (renamed "overlay (modal)" per plan §2
+decision 6a) splits into composition + focused chrome files;
+inline task mutations lift into the actions module.
+
+- **Dead-code cleanup.** Three tab files with zero callsites
+  removed: `couple-quotes.tsx`, `couple-invoices.tsx`,
+  `couple-vendors.tsx`. The first two were superseded by
+  `couple-payments.tsx` (Phase 2C consolidation); the third by
+  `mc-portal-contacts.tsx` (the contacts/vendors rename).
+
+- **Couple Profile decomposed** (650 → 289 LOC orchestrator):
+  - `couple-profile-header.tsx` — name editor + status pill picker
+    + mobile actions overflow + desktop inline action row
+    (call / email / WhatsApp / portal-links popover / rotate /
+    delete / close).
+  - `couple-profile-nav.tsx` — mobile horizontal pill bar +
+    desktop vertical sidebar.
+  - `couple-profile-body.tsx` — pure switch over the 9 tab
+    components.
+  - `couple-profile-types.ts` — shared section + nav-item types.
+
+- **`couples/actions.ts` extended** with:
+  - `createCoupleTaskAction`, `updateCoupleTaskAction`,
+    `deleteCoupleTaskAction` — used by the Tasks tab.
+  - `rotateCouplePortalTokenAction` — replaces the inline
+    `crypto.randomUUID()` + supabase update in the header. Server-
+    validated; the UI just commits the new token.
+  - `linkContactToCoupleAction`,
+    `unlinkContactFromCoupleAction` — surfaces the
+    `couple_contacts` join writes for the 4D MC-portal-contacts
+    harden (the Contacts tab itself stays Phase-4D scope).
+
+- **`couple-tasks.tsx` hardened** — inline
+  `supabase.from('tasks').insert/update/delete` replaced by action
+  calls. Optimistic React Query cache updates preserved.
+
+- **Integration coverage (+14):**
+  - `tests/integration/rls/tasks.test.ts` (5) — owner reads,
+    cross-tenant SELECT/UPDATE/DELETE denied.
+  - `tests/integration/rls/couple-contacts.test.ts` (4) — same
+    for the join table.
+  - `tests/integration/couples/task-actions.test.ts` (5) —
+    create/update Zod paths + cross-tenant delete denial.
+
+- **Unit coverage (+10):** Zod rejection + happy paths for
+  `createCoupleTaskAction`, `updateCoupleTaskAction`,
+  `rotateCouplePortalTokenAction`, `linkContactToCoupleAction`.
+
+- **Gates ratcheted:** strict typecheck 281 → 280, lint warnings
+  504 → 496 (dead-code cleanup removed unused-imports + import-
+  order noise).
 
 ### Couples list page + events relocation (Phase 4A)
 

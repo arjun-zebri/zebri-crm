@@ -58,7 +58,9 @@ const ERROR_BUDGET = 75;
 // hardened sign/decline routes + send-contract route).
 // Phase 4A page + couples-list decomposition: 505 → 504 (auto-fix
 // swept import-order across moved files).
-const WARNING_BUDGET = 504;
+// Phase 4B couple-profile decomposition: 504 → 496 (deleted three
+// dead-code tabs carrying unused-imports + import-order noise).
+const WARNING_BUDGET = 496;
 
 function runEslintJson() {
   try {
