@@ -308,10 +308,10 @@ DELETE (sampled clean across the migrations).
 | `timeline_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-items.test.ts` (Phase 4C, 5 tests) | Timeline |
 | `timeline_templates` | ✅ | `user_id` | ☐ | Timeline |
 | `timeline_template_items` | ✅ | `user_id` | ☐ | Timeline |
-| `portal_files` | ✅ | `user_id` | ☐ | Client Portal |
-| `portal_people` | ✅ | `user_id` | ☐ | Client Portal |
-| `portal_songs` | ✅ | `user_id` | ☐ | Client Portal |
-| `portal_song_categories` | ✅ | `user_id` | ☐ | Client Portal |
+| `portal_files` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-files.test.ts` (Phase 4D, 4 tests) | Client Portal |
+| `portal_people` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-people.test.ts` (Phase 4D, 5 tests) | Client Portal |
+| `portal_songs` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-songs.test.ts` (Phase 4D, 7 tests — also covers `portal_song_categories`) | Client Portal |
+| `portal_song_categories` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-songs.test.ts` (Phase 4D) | Client Portal |
 | `stripe_customers` | ✅ (RLS enabled, no policy — service-role only) | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
 | `user_branding` | ✅ | `user_id` | ☐ | Branding |

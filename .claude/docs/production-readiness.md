@@ -1,8 +1,61 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ · **Phase 4A (Couples list + events relocation)** ✅ · **Phase 4B (Couple Profile + tasks)** ✅ all on staging · **Phase 4C (Events module + calendar relocation)** ✅ in flight on `phase-4c-events-calendar`. Plan: `.claude/docs/phase-4-couples-events.md`.
+> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ · **Phase 4A (Couples list + events relocation)** ✅ · **Phase 4B (Couple Profile + tasks)** ✅ · **Phase 4C (Events module + calendar relocation)** ✅ all on staging · **Phase 4D (MC Portal sections)** ✅ in flight on `phase-4d-mc-portal-sections`. **Closes Phase 4** — all couple + event mutations now route through validated server actions. Plan: `.claude/docs/phase-4-couples-events.md`.
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+
+### MC Portal sections (Phase 4D) — closes Phase 4
+
+Fourth and final sub-phase of the Couples + Events hardening.
+Every database write touching a couple, event, or portal-section
+table now routes through a validated server action.
+
+- **New `app/(dashboard)/couples/portal-actions.ts`** (≈ 700 LOC)
+  with 14 server actions:
+  - Portal people: add / update / delete.
+  - Portal songs: add / update / delete.
+  - Portal song categories: add / update / delete.
+  - Portal files: add (DB-row metadata; storage upload itself
+    stays client-side — the file blob never round-trips through
+    the server) / delete.
+  - Couple ⇄ contact link: add / delete (by join-row id).
+  - Contact (raw addressbook entity): update / delete.
+  - `approveTimelineItemAction` — flips `pending_review = false`
+    for the portal-review surface in `use-portal-data`.
+  All Zod-validated, RLS-scoped, tagged `ActionResult<T>`.
+
+- **Mutation lifts across 4 files:**
+  - `use-portal-data.ts` — `savePerson` / `deletePerson` /
+    `saveSong` / `deleteSong` / `approveItem` now call actions.
+  - `mc-portal-contacts.tsx` — vendor link/unlink + contact
+    update/delete route through actions.
+  - `mc-portal-files.tsx` — DB-row insert moves to action;
+    storage upload + storage-delete stay client-side (same trust
+    boundary as today).
+  - `mc-portal-songs.tsx` — seed-defaults, addCategory,
+    renameCategory, deleteCategory route through actions.
+
+- **Integration coverage (+21):**
+  - `tests/integration/rls/portal-people.test.ts` (5)
+  - `tests/integration/rls/portal-songs.test.ts` (7 — covers both
+    `portal_songs` and `portal_song_categories`).
+  - `tests/integration/rls/portal-files.test.ts` (4)
+  - `tests/integration/couples/portal-actions.test.ts` (5) —
+    happy-path inserts for each portal table + cross-tenant
+    delete denial on `portal_people`.
+
+- **Unit coverage (+17)** for portal-actions: Zod rejection +
+  auth-gate + happy paths across every action, plus the 100 MB
+  `file_size` cap on `addPortalFileAction`.
+
+- **Phase 4 closeout.** With 4D landed, every owned table the
+  Couples + Events surface touches has an RLS integration test
+  (`couples`, `events`, `couple_statuses`, `couple_contacts`,
+  `event_contacts`, `tasks`, `timeline_items`, `portal_people`,
+  `portal_songs`, `portal_song_categories`, `portal_files`).
+  Per-view decomposition of the 1122-LOC calendar + 870-LOC
+  event-day-calendar is deferred to a follow-up — those carry
+  visible UI risk and warrant their own focused PRs.
 
 ### Events module hardening + calendar relocation (Phase 4C)
 
