@@ -287,7 +287,7 @@ DELETE (sampled clean across the migrations).
 | Table | RLS enabled | Owner column | Integration test | Per-page phase |
 |---|---|---|---|---|
 | `couples` | ✅ | `user_id` | ✅ `tests/integration/rls/couples.test.ts` (5 tests) + `tests/integration/billing/couple-cap.test.ts` (10 tests — Starter cap enforcement) | Couples & Events |
-| `events` | ✅ | `user_id` | ☐ | Couples & Events |
+| `events` | ✅ | `user_id` | ✅ `tests/integration/rls/events.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `contacts` | ✅ | `user_id` | ☐ | Contacts |
 | `tasks` | ✅ | `user_id` | ☐ | Tasks |
 | `quotes` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
@@ -299,7 +299,7 @@ DELETE (sampled clean across the migrations).
 | `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
 | `contract_templates` | ✅ | `user_id` | ☐ | Contracts |
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
-| `couple_statuses` | ✅ | `user_id` | ☐ | Couples & Events |
+| `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `couple_contacts` | ✅ | (join via `couple_id`) | ☐ | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`) | ☐ | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |

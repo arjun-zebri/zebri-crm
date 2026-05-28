@@ -104,6 +104,24 @@ changes; the parent modals own the actual form state + mutations.
 All parts are ≤200 LOC, TSDoc'd, and unit-tested under
 `tests/unit/components/builders/parts/*.test.tsx`.
 
+## Events components — `components/events/*` (Phase 4A)
+
+Shared event-related components used by the couples profile + the
+standalone `app/(dashboard)/events/[id]/timeline` route. Lifted out
+of the `app/(dashboard)/events/` route group in Phase 4A (recon
+§7.7) so the route group no longer holds shared component modules.
+
+| Component | Notes |
+|---|---|
+| `event-overview.tsx` | Read-only summary card for an event row (date / venue / status). |
+| `event-vendors.tsx` | Contact-link manager. Imports `ContactPicker` from `app/(dashboard)/couples/`. |
+| `event-tasks.tsx` | Per-event task list. |
+| `event-timeline.tsx` | TipTap-rich timeline editor for an event. |
+| `event-timeline-modal.tsx` | Create/edit timeline-item modal. Also exports `TimePicker`. |
+| `event-timeline-share.tsx` | Share-link affordance for an event timeline. |
+| `event-day-calendar.tsx` | Day-grid calendar visualisation of timeline items. |
+| `event-profile.tsx` | Full-screen event-detail modal with overview/vendors/tasks/timeline tabs. |
+
 ---
 
 # Core Components

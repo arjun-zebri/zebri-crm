@@ -138,8 +138,9 @@ export function CouplesListPagination({ table }: CouplesListPaginationProps) {
                       table.getPageCount(),
                     );
                     const lastPage = table.getPageCount() - 1;
-                    if (pages[pages.length - 1] >= lastPage) return null;
-                    const adjacent = pages[pages.length - 1] === lastPage - 1;
+                    const lastInWindow = pages[pages.length - 1] ?? -1;
+                    if (lastInWindow >= lastPage) return null;
+                    const adjacent = lastInWindow === lastPage - 1;
                     return (
                       <>
                         {!adjacent && (

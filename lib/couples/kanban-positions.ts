@@ -69,16 +69,19 @@ export function computeKanbanUpdates(args: {
     basePosition = 0;
     stepSize = 1;
   } else if (destinationIndex <= 0) {
-    const firstPos = destColumn[0].kanban_position ?? 0;
+    // destColumn.length > 0 here, so [0] is defined; the `?? 0`
+    // satisfies noUncheckedIndexedAccess.
+    const firstPos = destColumn[0]?.kanban_position ?? 0;
     basePosition = firstPos - count;
     stepSize = 1;
   } else if (destinationIndex >= destColumn.length) {
-    const lastPos = destColumn[destColumn.length - 1].kanban_position ?? 0;
+    const lastPos =
+      destColumn[destColumn.length - 1]?.kanban_position ?? 0;
     basePosition = lastPos + 1;
     stepSize = 1;
   } else {
-    const prev = destColumn[destinationIndex - 1].kanban_position ?? 0;
-    const next = destColumn[destinationIndex].kanban_position ?? 0;
+    const prev = destColumn[destinationIndex - 1]?.kanban_position ?? 0;
+    const next = destColumn[destinationIndex]?.kanban_position ?? 0;
     stepSize = (next - prev) / (count + 1);
     basePosition = prev + stepSize;
   }

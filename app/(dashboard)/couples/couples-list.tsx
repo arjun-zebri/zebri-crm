@@ -137,7 +137,8 @@ export function CouplesList({
           : idx;
       const newSelected = new Set(selectedIds);
       for (let i = start; i <= end; i++) {
-        newSelected.add(rows[i].original.id);
+        const row = rows[i];
+        if (row) newSelected.add(row.original.id);
       }
       onSelectionChange(newSelected);
       lastClickedIdxRef.current = idx;

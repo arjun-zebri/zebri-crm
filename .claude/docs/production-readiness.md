@@ -1,8 +1,73 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ all on staging · **Phase 3.1 (Contract builder modal)** ✅ on staging · **Phase 3.2 (Public contract surface + audit log)** ✅ in flight on `phase-3-2-contract-surface`. Plan: `.claude/docs/phase-3-contracts.md`.
+> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ all on staging · **Phase 4A (Couples list + events relocation)** ✅ in flight on `phase-4a-couples-list`. Plan: `.claude/docs/phase-4-couples-events.md`.
 >
 > Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+
+### Couples list page + events relocation (Phase 4A)
+
+First sub-phase of the largest surface in the codebase
+(~12.4k LOC across 41 files). Sets up structural foundation —
+new server-action module + events-module relocation — that the
+remaining 4B/4C/4D phases build on.
+
+- **Events module relocated** to `components/events/`. The 8
+  misfiled files (`event-overview`, `event-vendors`, `event-tasks`,
+  `event-timeline`, `event-timeline-modal`, `event-timeline-share`,
+  `event-day-calendar`, `event-profile`) move out of the
+  `app/(dashboard)/events/` route group. The live
+  `events/[id]/timeline/page.tsx` route stays put with its import
+  re-pointed. Pure relocation; no behaviour change. Closes recon
+  §7.7 deferral.
+
+- **New `app/(dashboard)/couples/actions.ts`** with `createCoupleAction`,
+  `updateCoupleAction`, `deleteCoupleAction`, `bulkMoveCouplesAction`,
+  `bulkUpdateCouplesStatusAction`, `bulkDeleteCouplesAction`. All
+  Zod-validated (e.g. `event_date` constrained to `YYYY-MM-DD`),
+  RLS-scoped, tagged `ActionResult<T>`. The Starter-cap Postgres
+  trigger error translates to a typed `code: 'starter_limit'` so
+  the UI's redirect-to-billing branch keeps working.
+  `use-couples.ts` thinned to thin React Query wrappers — optimistic
+  cache updates preserved; mutations route through the actions.
+
+- **`/couples/page.tsx` decomposed** (439 → 363 LOC orchestrator).
+  Four concerns lifted into focused helpers:
+  - `lib/utils/csv.ts` — generic `downloadCsv()` (CSV export).
+  - `lib/couples/kanban-positions.ts` — pure `computeKanbanUpdates()`
+    (the 75-line fractional-position multi-drag math).
+  - `app/(dashboard)/couples/use-couples-view.ts` — search + filter
+    + sort state + derived `filteredCouples` / `kanbanCouples`.
+  - `app/(dashboard)/couples/use-couples-shortcuts.ts` — Esc / "n"
+    keyboard handler.
+  - `app/(dashboard)/couples/use-couple-profile-sync.ts` — selected
+    couple + deep-link + cache re-sync. The two
+    `react-hooks/set-state-in-effect` disables move from the page
+    into this hook so they're scoped + intentional.
+
+- **`couples-list.tsx` decomposed** (743 → 325 LOC orchestrator)
+  into 7 files:
+  - `couples-list-columns.tsx` — `@tanstack/react-table` column
+    factory + Name/Email/Phone/Event date/Venue/Status definitions.
+  - `couples-list-pagination.tsx` — mobile prev/next + desktop page
+    numbers + page-size picker.
+  - `couples-list-mobile.tsx` — viewport `≤ sm` card list.
+  - `couples-list-empty.tsx` — empty state.
+  - `couples-list-icons.tsx` — `CheckMark` + `DashMark` inline SVGs.
+  - `use-couples-list-drag-select.ts` — marquee drag-select state
+    machine.
+
+- **Integration coverage (+17):** RLS denial proofs for `events` (5)
+  and `couple_statuses` (5); server-action happy paths + cross-tenant
+  denials for `createCoupleAction` / `updateCoupleAction` /
+  `deleteCoupleAction` (7) and the bulk actions (5). All against
+  local Supabase.
+
+- **Unit coverage (+13):** Zod-rejection + auth-gate + happy-path
+  tests for every couples action.
+
+- **Gates ratcheted:** lint errors 78 → 75 (replaced two
+  `(meta as any)?.hidden` casts with typed shape during the
+  list rewrite). Lint warnings 505 → 504.
 
 ### Public contract surface + audit log (Phase 3.2)
 

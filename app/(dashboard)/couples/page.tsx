@@ -215,8 +215,8 @@ function CouplesPageContent() {
       toast(`${updates.length} couples moved`);
     } else {
       const couple = couples.find((c) => c.id === coupleId);
-      if (!couple) return;
       const update = updates[0];
+      if (!couple || !update) return;
       await updateCouple.mutateAsync({
         ...couple,
         status: update.status,
