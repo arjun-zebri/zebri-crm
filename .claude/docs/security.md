@@ -289,7 +289,7 @@ DELETE (sampled clean across the migrations).
 | `couples` | ✅ | `user_id` | ✅ `tests/integration/rls/couples.test.ts` (5 tests) + `tests/integration/billing/couple-cap.test.ts` (10 tests — Starter cap enforcement) | Couples & Events |
 | `events` | ✅ | `user_id` | ✅ `tests/integration/rls/events.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `contacts` | ✅ | `user_id` | ☐ | Contacts |
-| `tasks` | ✅ | `user_id` | ☐ | Tasks |
+| `tasks` | ✅ | `user_id` | ✅ `tests/integration/rls/tasks.test.ts` (Phase 4B, 5 tests) | Tasks |
 | `quotes` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `quote_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `quote_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
@@ -300,7 +300,7 @@ DELETE (sampled clean across the migrations).
 | `contract_templates` | ✅ | `user_id` | ☐ | Contracts |
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
-| `couple_contacts` | ✅ | (join via `couple_id`) | ☐ | Couples & Events |
+| `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`) | ☐ | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |
 | `event_vendors` (legacy) | ✅ | (join) | ☐ | Contacts |

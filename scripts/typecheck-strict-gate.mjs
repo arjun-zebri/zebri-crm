@@ -14,15 +14,14 @@
  */
 import { execSync } from 'node:child_process';
 
-// Baseline 281 set in Phase 4A (-4 after the couples-list
-// decomposition replaced raw array-index accesses with guarded
-// reads and tightened CoupleModalProps under
-// exactOptionalPropertyTypes). Previous: 285 (Phase 3.2), 286
-// (Phase 2D.2), 288 (Phase 2C.2), 293 (Phase 2C), 294 (Phase 2A),
-// 295 (Phase 0.2b — initial baseline when typed clients exposed
-// strict sites `any` had masked).
+// Baseline 280 set in Phase 4B (-1 after deleting three dead-code
+// tabs — couple-quotes, couple-invoices, couple-vendors — that
+// carried strict violations). Previous: 281 (Phase 4A), 285 (Phase
+// 3.2), 286 (Phase 2D.2), 288 (Phase 2C.2), 293 (Phase 2C), 294
+// (Phase 2A), 295 (Phase 0.2b — initial baseline when typed
+// clients exposed strict sites `any` had masked).
 // Only ever decrease.
-const STRICT_BUDGET = 281;
+const STRICT_BUDGET = 280;
 
 function runTscStrict() {
   try {
