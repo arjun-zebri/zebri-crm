@@ -1,6 +1,45 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on `phase-5-contacts`. **Phase 6 (Tasks)** ✅ on `phase-6-tasks`. **Phase 7 (Dashboard)** ✅ on `phase-7-dashboard`. **Phase 8 (Client Portal)** ✅ in flight on `phase-8-client-portal`.
+> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ in flight on `phase-9a-builder-decomposition`.
+
+### Quotes — public couple-facing surface (Phase 9)
+
+The Quote builder + invoice builder modal decomposition and the
+`payments/actions.ts` server actions were **already shipped** as
+part of the Phase 2C / 2C.2 work. So Phase 9 is the same shape
+as Phase 8: **proving the existing public surface security holds**
+plus cleaning up dead `[id]` routes that survived the original
+prototype.
+
+- **Deleted dead routes** — `app/(dashboard)/quotes/[id]/page.tsx`
+  (525 LOC) and `app/(dashboard)/invoices/[id]/page.tsx`
+  (637 LOC) were orphaned: no inbound references anywhere in
+  `app/`, `lib/`, or email templates. The only link was
+  `/quotes/[id]` → `/invoices/[id]` forming a closed dead loop.
+  MCs work the Quote/Invoice surface entirely through the
+  `/payments` page + builder modals — these `[id]` pages
+  predated that consolidation. **−1162 LOC**.
+
+- **`tests/integration/payments/public-quote-rpcs.test.ts` (+13)**
+  runs against the anon-key Supabase client (no auth headers,
+  matches the production `/quote/[token]` browser path) to
+  verify every public-quote RPC's `share_token = token AND
+  share_token_enabled = true` guard:
+  - `get_public_quote` returns null for random / disabled tokens.
+  - `accept_quote` returns `{error: "not_found"}` on invalid
+    or disabled tokens; transitions status to `accepted` on
+    valid; rejects with `already_actioned` on second call;
+    rejects with `expired` when `expires_at` is past.
+  - `decline_quote` symmetric.
+  - Cross-couple probe: holding token A and calling
+    `accept_quote(A)` does NOT transition couple B's quote
+    (anti-confused-deputy).
+
+- **No structural code changes.** Builder modals + server
+  actions were already done. No new mutation paths added.
+
+- **No gate movement.** Strict typecheck and lint budgets
+  unchanged.
 
 ### Client Portal — public couple-facing surface (Phase 8)
 
