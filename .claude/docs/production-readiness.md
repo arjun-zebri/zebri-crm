@@ -1,8 +1,48 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ · **Phase 4A (Couples list + events relocation)** ✅ · **Phase 4B (Couple Profile + tasks)** ✅ · **Phase 4C (Events module + calendar relocation)** ✅ all on staging · **Phase 4D (MC Portal sections)** ✅ in flight on `phase-4d-mc-portal-sections`. **Closes Phase 4** — all couple + event mutations now route through validated server actions. Plan: `.claude/docs/phase-4-couples-events.md`.
->
-> Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on `phase-5-contacts`. **Phase 6 (Tasks)** ✅ on `phase-6-tasks`. **Phase 7 (Dashboard)** ✅ in flight on `phase-7-dashboard`.
+
+### Dashboard (Phase 7)
+
+The dashboard surface (`/` after login) is **read-only** — no
+mutations, no actions module. The hardening shape is different
+from Phases 4-6: data correctness, type tightening, and unit
+coverage of the intricate date math.
+
+- **`lib/dashboard/periods.ts`** — extracted three pure helpers
+  (`getRollingWindow`, `getPeriodWindow`, `getChartConfig`) out of
+  `use-dashboard.ts`. The functions now accept an injectable `now`
+  argument so tests can freeze the clock at known boundary cases
+  (Sunday-vs-Monday week starts, end-of-month rollover, Q1-vs-Q4
+  quarter math) without mounting the React Query hooks.
+
+- **23 unit tests** in `tests/unit/lib/dashboard/periods.test.ts`
+  pinning the boundary behaviour. Examples:
+  - Wednesday → current week starts on Monday.
+  - Sunday → current week starts on the LAST Monday, not next.
+  - March 31 → previous-month-end caps at Feb-end (28 days), not
+    a notional Feb 31.
+  - January → previous quarter is Q4 of prior year.
+  - Quarter chart formats render `Q1 '26`-style labels.
+
+- **`(any) =>` casts removed** from `useDashboardInvoices` and
+  `useDashboardTasks`. The Supabase joined `couple` relation
+  comes back as either an object or a single-element array
+  depending on FK cardinality; the new normalizer uses a typed
+  `CoupleRel | CoupleRel[] | null` shape via `unknown` instead of
+  `any`.
+
+- **Removed a dead-code computation** — `useDashboardStats` was
+  computing an all-time `collectedRevenue` value and not returning
+  it; the return shape uses `revenueThisPeriod` for that field.
+  Removed the unused query (saves a round-trip on every dashboard
+  load).
+
+- **All tables the dashboard reads** (`couples`, `invoices`,
+  `tasks`, `events`, `couple_statuses`) have RLS coverage from
+  prior phases. No new RLS test needed for Phase 7.
+
+- **Gates ratcheted:** lint errors 75 → 73, warnings 480 → 476.
 
 ### MC Portal sections (Phase 4D) — closes Phase 4
 

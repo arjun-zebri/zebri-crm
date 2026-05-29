@@ -1,85 +1,20 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
-import { Event } from '@/types/event';
+
 import {
-  LeadSource,
-  LEAD_SOURCES,
-} from '@/types/couple';
+  getChartConfig,
+  getPeriodWindow,
+  getRollingWindow,
+  type DashboardPeriod,
+} from '@/lib/dashboard/periods';
+import { createClient } from "@/lib/supabase/client";
+import { LEAD_SOURCES } from '@/types/couple';
 import { CoupleStatusRecord } from '@/types/couple';
+import { Event } from '@/types/event';
 
-export type DashboardPeriod = "week" | "month" | "quarter" | "year";
 
-// Rolling window for stat cards - avoids start-of-period cliff drops
-function getRollingWindow(period: DashboardPeriod) {
-  const now = new Date();
-  const daysMap: Record<DashboardPeriod, number> = { week: 7, month: 30, quarter: 90, year: 365 };
-  const ms = daysMap[period] * 24 * 60 * 60 * 1000;
-  const currentStart = new Date(now.getTime() - ms).toISOString();
-  const previousStart = new Date(now.getTime() - 2 * ms).toISOString();
-  return { currentStart, previousStart, previousEnd: currentStart };
-}
-
-// Calendar-aligned window for charts - anchors to real week/month/quarter/year boundaries
-function getPeriodWindow(period: DashboardPeriod) {
-  const now = new Date();
-
-  switch (period) {
-    case "week": {
-      const dayOfWeek = now.getDay();
-      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const currentStart = new Date(now);
-      currentStart.setDate(now.getDate() - daysFromMonday);
-      currentStart.setHours(0, 0, 0, 0);
-      const previousStart = new Date(currentStart);
-      previousStart.setDate(previousStart.getDate() - 7);
-      return {
-        currentStart: currentStart.toISOString(),
-        previousStart: previousStart.toISOString(),
-        previousEnd: currentStart.toISOString(),
-      };
-    }
-    case "month": {
-      const currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const daysElapsed = now.getDate() - 1;
-      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-      const previousEnd = new Date(prevMonthStart);
-      previousEnd.setDate(previousEnd.getDate() + daysElapsed + 1);
-      return {
-        currentStart: currentStart.toISOString(),
-        previousStart: prevMonthStart.toISOString(),
-        previousEnd: (previousEnd > prevMonthEnd ? prevMonthEnd : previousEnd).toISOString(),
-      };
-    }
-    case "quarter": {
-      const qMonth = Math.floor(now.getMonth() / 3) * 3;
-      const currentStart = new Date(now.getFullYear(), qMonth, 1);
-      const daysElapsed = Math.floor((now.getTime() - currentStart.getTime()) / 86400000);
-      const prevQStart = new Date(now.getFullYear(), qMonth - 3, 1);
-      const previousEnd = new Date(prevQStart);
-      previousEnd.setDate(previousEnd.getDate() + daysElapsed + 1);
-      return {
-        currentStart: currentStart.toISOString(),
-        previousStart: prevQStart.toISOString(),
-        previousEnd: previousEnd.toISOString(),
-      };
-    }
-    case "year": {
-      const currentStart = new Date(now.getFullYear(), 0, 1);
-      const daysElapsed = Math.floor((now.getTime() - currentStart.getTime()) / 86400000);
-      const prevYearStart = new Date(now.getFullYear() - 1, 0, 1);
-      const previousEnd = new Date(prevYearStart);
-      previousEnd.setDate(previousEnd.getDate() + daysElapsed + 1);
-      return {
-        currentStart: currentStart.toISOString(),
-        previousStart: prevYearStart.toISOString(),
-        previousEnd: previousEnd.toISOString(),
-      };
-    }
-  }
-}
+export type { DashboardPeriod };
 
 export function useDashboardStats(period: DashboardPeriod = "month") {
   const supabase = createClient();
@@ -185,17 +120,12 @@ export function useDashboardStats(period: DashboardPeriod = "month") {
           ? 100
           : 0;
 
-      // Also fetch total all-time collected + invoiced for the collected card subtitle
-      const { data: collectedData } = await supabase
-        .from("invoices")
-        .select("subtotal")
-        .eq("user_id", user.user.id)
-        .eq("status", "paid");
-      const collectedRevenue = (collectedData || []).reduce(
-        (s, i) => s + (Number(i.subtotal) || 0),
-        0
-      );
-
+      // Fetch outstanding (invoiced but not yet paid) for the
+      // collected card subtitle. The "collectedRevenue" field on
+      // the return shape currently uses `revenueThisPeriod` rather
+      // than an all-time total (matches the current UI's per-period
+      // framing). We removed an unused all-time query that was
+      // computed but never returned.
       const { data: invoicedData } = await supabase
         .from("invoices")
         .select("subtotal")
@@ -220,97 +150,6 @@ export function useDashboardStats(period: DashboardPeriod = "month") {
       };
     },
   });
-}
-
-// Returns chart config for trend views:
-// Weekly  → last 7 days (day by day)
-// Monthly → last 12 months (month by month)
-// Quarterly → last 6 quarters (quarter by quarter)
-// Yearly  → last 5 years (year by year)
-function getChartConfig(period: DashboardPeriod): {
-  chartStart: Date;
-  format: (d: Date) => string;
-  initKeys: () => string[];
-} {
-  const now = new Date();
-
-  switch (period) {
-    case "week": {
-      // Last 8 weeks, week by week (Monday-anchored)
-      const dayOfWeek = now.getDay();
-      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const currentMonday = new Date(now);
-      currentMonday.setDate(now.getDate() - daysFromMonday);
-      currentMonday.setHours(0, 0, 0, 0);
-      const chartStart = new Date(currentMonday);
-      chartStart.setDate(chartStart.getDate() - 7 * 7);
-      const getMonday = (d: Date) => {
-        const day = d.getDay();
-        const mon = new Date(d);
-        mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
-        mon.setHours(0, 0, 0, 0);
-        return mon;
-      };
-      const fmt = (d: Date) =>
-        getMonday(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      return {
-        chartStart,
-        format: fmt,
-        initKeys: () =>
-          Array.from({ length: 8 }, (_, i) => {
-            const d = new Date(chartStart);
-            d.setDate(d.getDate() + i * 7);
-            return fmt(d);
-          }),
-      };
-    }
-    case "month": {
-      const chartStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-      const fmt = (d: Date) =>
-        new Date(d.getFullYear(), d.getMonth(), 1).toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        });
-      return {
-        chartStart,
-        format: fmt,
-        initKeys: () =>
-          Array.from({ length: 12 }, (_, i) =>
-            fmt(new Date(chartStart.getFullYear(), chartStart.getMonth() + i, 1))
-          ),
-      };
-    }
-    case "quarter": {
-      const qMonth = Math.floor(now.getMonth() / 3) * 3;
-      const chartStart = new Date(now.getFullYear(), qMonth - 15, 1);
-      const fmtQ = (d: Date) => {
-        const q = Math.floor(d.getMonth() / 3) + 1;
-        return `Q${q} '${String(d.getFullYear()).slice(2)}`;
-      };
-      return {
-        chartStart,
-        format: (d) =>
-          fmtQ(new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1)),
-        initKeys: () =>
-          Array.from({ length: 6 }, (_, i) =>
-            fmtQ(
-              new Date(chartStart.getFullYear(), chartStart.getMonth() + i * 3, 1)
-            )
-          ),
-      };
-    }
-    case "year": {
-      const chartStart = new Date(now.getFullYear() - 4, 0, 1);
-      return {
-        chartStart,
-        format: (d) => String(d.getFullYear()),
-        initKeys: () =>
-          Array.from({ length: 5 }, (_, i) =>
-            String(chartStart.getFullYear() + i)
-          ),
-      };
-    }
-  }
 }
 
 export function useRevenueChart(period: DashboardPeriod = "month") {
@@ -614,11 +453,20 @@ export function useDashboardInvoices() {
         .limit(10);
 
       if (error) throw error;
-      const normalized = (data || []).map((i: any) => ({
-        ...i,
-        couple: Array.isArray(i.couple) ? i.couple[0] || null : i.couple,
-      }));
-      return normalized as DashboardInvoice[];
+      // Supabase returns joined `couple` as an array OR a single
+      // object depending on the foreign-key cardinality. Normalise.
+      type CoupleRel = { id: string; name: string };
+      type InvoiceRow = Omit<DashboardInvoice, 'couple'> & {
+        couple: CoupleRel | CoupleRel[] | null;
+      };
+      const normalized = (data ?? []).map((i) => {
+        const row = i as unknown as InvoiceRow;
+        const couple = Array.isArray(row.couple)
+          ? row.couple[0] ?? null
+          : row.couple;
+        return { ...row, couple } as DashboardInvoice;
+      });
+      return normalized;
     },
   });
 }
@@ -652,12 +500,20 @@ export function useDashboardTasks() {
         .limit(10);
 
       if (error) throw error;
-      // Supabase returns joined relations as arrays; normalize to single object
-      const normalized = (data || []).map((t: any) => ({
-        ...t,
-        couple: Array.isArray(t.couple) ? t.couple[0] || null : t.couple,
-      }));
-      return normalized as DashboardTask[];
+      // Supabase returns joined relations as arrays; normalize to
+      // a single object (or null).
+      type CoupleRel = { id: string; name: string };
+      type TaskRow = Omit<DashboardTask, 'couple'> & {
+        couple: CoupleRel | CoupleRel[] | null;
+      };
+      const normalized = (data ?? []).map((t) => {
+        const row = t as unknown as TaskRow;
+        const couple = Array.isArray(row.couple)
+          ? row.couple[0] ?? null
+          : row.couple;
+        return { ...row, couple } as DashboardTask;
+      });
+      return normalized;
     },
   });
 }
