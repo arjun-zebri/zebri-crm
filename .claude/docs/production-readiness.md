@@ -1,8 +1,63 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ · **Phase 4A (Couples list + events relocation)** ✅ · **Phase 4B (Couple Profile + tasks)** ✅ · **Phase 4C (Events module + calendar relocation)** ✅ all on staging · **Phase 4D (MC Portal sections)** ✅ in flight on `phase-4d-mc-portal-sections`. **Closes Phase 4** — all couple + event mutations now route through validated server actions. Plan: `.claude/docs/phase-4-couples-events.md`.
+> Status: **Phase 0 → 4** ✅ all on main (promoted in the May 28 batch + recovery migration `20260525000000` for ledger drift discovered post-merge). **Phase 5 (Contacts)** ✅ on `phase-5-contacts`. **Phase 6 (Tasks)** ✅ in flight on `phase-6-tasks`.
 >
-> Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+> **Open follow-ups (pre-Phase-7 work):** (a) drift detector CI workflow that runs `supabase db push --dry-run --linked` on every PR + nightly cron, (b) customer comms to the 14 users whose JWTs encoded empty app_metadata between May 21 and the May 28 recovery, (c) post-mortem in §7 covering the ledger-drift incident.
+
+### Tasks (Phase 6)
+
+Standalone `/tasks` page hardening. Bigger surface than Phase 5
+(897-LOC page) but the work is the familiar pattern: lift inline
+mutations into a server-action module, add RLS coverage where
+missing.
+
+- **New `app/(dashboard)/tasks/actions.ts`** with 10 server actions:
+  - Tasks: createTaskAction, updateTaskAction, deleteTaskAction.
+  - Bulk: bulkUpdateTasksAction, bulkDeleteTasksAction,
+    reorderTasksAction.
+  - Task groups: createTaskGroupAction, updateTaskGroupAction,
+    deleteTaskGroupAction, reorderTaskGroupsAction.
+  All Zod-validated, RLS-scoped, tagged `ActionResult<T>`. The
+  task-group color enum is closed (gray/green/blue/amber/red/
+  purple); status and priority are length-bounded strings (free-
+  form so MCs can keep their custom values).
+
+- **`tasks/page.tsx` mutation lift** — six inline
+  `supabase.from('tasks')` calls (patch, insert, delete, two bulks,
+  reorder) routed through actions. Optimistic React Query updates
+  preserved.
+
+- **`use-task-groups.ts` mutation lift** — four inline
+  `supabase.from('task_groups')` calls (create, update, delete,
+  reorder) routed through actions. The "next position" computation
+  for createTaskGroup now happens server-side.
+
+- **Phase 6 deliberately doesn't decompose `tasks/page.tsx`.** The
+  897-LOC file is mostly JSX + filter/sort/drag logic; lifting
+  mutations buys the security + audit-path win without the
+  regression risk of a structural rewrite. Per-view decomposition
+  stays as a separate follow-up.
+
+- **Integration coverage (+12):**
+  - `tests/integration/rls/task-groups.test.ts` (5) — owner reads,
+    cross-tenant SELECT/UPDATE/DELETE denied, anon denied.
+  - `tests/integration/tasks/task-actions.test.ts` (7) — CRUD
+    happy paths + bulk paths + group reorder + cross-tenant
+    delete denial.
+
+- **Unit coverage (+18)** for `tasks/actions.ts`: Zod rejection
+  branches (empty title, malformed date, non-UUID, invalid color)
+  + auth-gate + happy paths.
+
+- **Gates ratcheted:** strict typecheck 279 → 277. Lint budgets
+  unchanged (waiting on Phase 5 merge to avoid order-dependent
+  ratchets).
+
+### Contacts (Phase 5)
+
+Pulled forward from `phase-5-contacts` branch for context. Adds
+`contacts/actions.ts` + RLS test for `contacts`. Smaller scope
+than Phase 6; see `phase-5-contacts` PR for details.
 
 ### MC Portal sections (Phase 4D) — closes Phase 4
 

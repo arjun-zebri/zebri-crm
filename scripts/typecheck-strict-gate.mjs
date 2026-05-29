@@ -14,14 +14,14 @@
  */
 import { execSync } from 'node:child_process';
 
-// Baseline 279 set in Phase 4C (-1 from new lib/events/actions.ts
-// being strict-clean by design — using `.default(null)` + z.input
-// for exported types — while older couple-events.tsx + calendar
-// strict noise stays bounded). Previous: 280 (Phase 4B), 281
-// (Phase 4A), 285 (Phase 3.2), 286 (Phase 2D.2), 288 (Phase 2C.2),
-// 293 (Phase 2C), 294 (Phase 2A), 295 (Phase 0.2b).
+// Baseline 277 set in Phase 6 (-2 from cleanup in use-task-groups.ts
+// + tasks/page.tsx as inline supabase boilerplate moved into the
+// new tasks/actions.ts which is strict-clean by design). Previous:
+// 279 (Phase 4C), 280 (Phase 4B), 281 (Phase 4A), 285 (Phase 3.2),
+// 286 (Phase 2D.2), 288 (Phase 2C.2), 293 (Phase 2C), 294 (Phase
+// 2A), 295 (Phase 0.2b).
 // Only ever decrease.
-const STRICT_BUDGET = 279;
+const STRICT_BUDGET = 277;
 
 function runTscStrict() {
   try {
