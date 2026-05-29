@@ -1,6 +1,42 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ in flight on `phase-9a-builder-decomposition`.
+> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ in flight on `phase-10-timeline`.
+
+### Timeline — public vendor-facing surface (Phase 10)
+
+The `/timeline/[token]` page is the wedding-day run-of-show MCs
+send to vendors (photographers, caterers, etc.). Same shape as
+the Phase 8 portal and Phase 9 quote surfaces: **unauthenticated**,
+share-token-as-capability, one SECURITY DEFINER RPC behind it.
+
+- **`tests/integration/timeline/public-timeline-rpc.test.ts` (+5)**
+  runs against the anon-key Supabase client (no auth headers, matches
+  the production browser path) to verify `get_public_timeline`'s
+  `share_token = token AND share_token_enabled = true` guard:
+  - Random invalid UUID → null.
+  - Valid + enabled token → returns the event's date, venue, couple
+    name, MC contact block, and timeline items.
+  - Valid token but `share_token_enabled = false` → null.
+  - **Cross-event probe** — calling with token A returns only event
+    A's data; event B (enabled at the same time) does not leak.
+  - **MC identity probe** — the `mc` block in the payload is joined
+    from the event owner's `auth.users` row, not anything the
+    anon caller can substitute.
+
+- **Public page design-system cleanup.** `app/timeline/[token]/page.tsx`
+  and `app/timeline/[token]/timeline-item.tsx` migrated from raw
+  `gray-*` / `bg-white` colours to semantic tokens (`bg-surface`,
+  `text-text`, `text-text-muted`, `text-text-subtle`, `border-border`,
+  `bg-border-strong`). The public timeline now adopts the user's
+  branding/theme via the same CSS-variable path as the rest of the
+  app.
+
+- **No structural code changes.** The 139-LOC server component is
+  already a clean orchestrator (one RPC call + render); no
+  decomposition required.
+
+- **No gate movement.** Strict typecheck and lint budgets
+  unchanged.
 
 ### Quotes — public couple-facing surface (Phase 9)
 

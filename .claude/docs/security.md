@@ -334,6 +334,49 @@ attempts/hour. Valid-token loads are free.
   direct RPC calls from the section components). Tracked as a
   follow-up; lower priority than rate-limiting.
 
+### Public Timeline RPC security model (Phase 10)
+
+The `/timeline/[token]` surface is **unauthenticated** — MCs share
+the URL with vendors (photographers, caterers, etc.) so they have
+the wedding-day run-of-show. Like the portal and quote surfaces,
+the share token IS the capability.
+
+The page calls one `SECURITY DEFINER` RPC:
+
+- `get_public_timeline(token uuid) → json` — returns event date,
+  venue, couple name, MC contact info, and timeline items.
+
+The guard is the same shape as the other public-surface RPCs:
+
+```sql
+WHERE e.share_token = token AND e.share_token_enabled = true
+```
+
+Consequences:
+
+- **Invalid token** (random UUID) → returns null.
+- **Disabled token** (`share_token_enabled = false`) → returns null.
+- **Anti-confused-deputy** — the JSON payload is built from the
+  event resolved by the token; the MC contact block (`business_name`,
+  `email`, `phone`) joins from `auth.users` via `e.user_id`, so an
+  anon caller cannot substitute their own identity into the payload.
+
+**Tested guards** — `tests/integration/timeline/public-timeline-rpc.test.ts`
+(Phase 10, 5 tests) runs against the **anon-key Supabase client**
+to match the production browser path:
+
+- Random token → null.
+- Valid + enabled token → returns payload with correct venue +
+  couple + items.
+- Valid + disabled → null.
+- Cross-event probe: token A returns only event A's items, even
+  when event B is enabled simultaneously.
+- MC contact block reflects the event owner, not the caller.
+
+Same follow-up as the quote surface: extending the public token-
+attempt limiter (currently `/portal/[token]` only) to cover
+`/timeline/[token]` is tracked for completeness.
+
 ### Public Quote RPC security model (Phase 9)
 
 The `/quote/[token]` surface is the same shape as the portal:
@@ -412,7 +455,7 @@ DELETE (sampled clean across the migrations).
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |
 | `event_vendors` (legacy) | ✅ | (join) | ☐ | Contacts |
 | `task_groups` | ✅ | `user_id` | ✅ `tests/integration/rls/task-groups.test.ts` (Phase 6, 5 tests) | Tasks |
-| `timeline_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-items.test.ts` (Phase 4C, 5 tests) | Timeline |
+| `timeline_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-items.test.ts` (Phase 4C, 5 tests) + `tests/integration/timeline/public-timeline-rpc.test.ts` (Phase 10 — public RPC guards) | Timeline |
 | `timeline_templates` | ✅ | `user_id` | ☐ | Timeline |
 | `timeline_template_items` | ✅ | `user_id` | ☐ | Timeline |
 | `portal_files` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-files.test.ts` (Phase 4D, 4 tests) | Client Portal |
