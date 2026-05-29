@@ -288,7 +288,7 @@ DELETE (sampled clean across the migrations).
 |---|---|---|---|---|
 | `couples` | ✅ | `user_id` | ✅ `tests/integration/rls/couples.test.ts` (5 tests) + `tests/integration/billing/couple-cap.test.ts` (10 tests — Starter cap enforcement) | Couples & Events |
 | `events` | ✅ | `user_id` | ✅ `tests/integration/rls/events.test.ts` (Phase 4A, 5 tests) | Couples & Events |
-| `contacts` | ✅ | `user_id` | ☐ | Contacts |
+| `contacts` | ✅ | `user_id` | ✅ `tests/integration/rls/contacts.test.ts` (Phase 5, 5 tests) | Contacts |
 | `tasks` | ✅ | `user_id` | ✅ `tests/integration/rls/tasks.test.ts` (Phase 4B, 5 tests) | Tasks |
 | `quotes` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `quote_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
