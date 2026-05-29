@@ -1,6 +1,8 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 → 4** ✅ all on main (promoted in the May 28 batch + recovery migration `20260525000000` for ledger drift discovered post-merge). **Phase 5 (Contacts)** ✅ on `phase-5-contacts`. **Phase 6 (Tasks)** ✅ in flight on `phase-6-tasks`.
+> Status: **Phase 0 → 4** ✅ all on main (promoted in the May 28 batch + recovery migration `20260525000000` for ledger drift discovered post-merge). **Phase 5 (Contacts)** ✅ in flight on `phase-5-contacts`.
+>
+> **Open follow-ups (not phases — pre-Phase-6 work):** (a) drift detector CI workflow that runs `supabase db push --dry-run --linked` on every PR + nightly cron, (b) customer comms to the 14 users whose JWTs encoded empty app_metadata between May 21 and the May 28 recovery, (c) post-mortem write-up in §7 covering the ledger-drift incident.
 >
 > **Open follow-ups (pre-Phase-7 work):** (a) drift detector CI workflow that runs `supabase db push --dry-run --linked` on every PR + nightly cron, (b) customer comms to the 14 users whose JWTs encoded empty app_metadata between May 21 and the May 28 recovery, (c) post-mortem in §7 covering the ledger-drift incident.
 
@@ -58,6 +60,41 @@ missing.
 Pulled forward from `phase-5-contacts` branch for context. Adds
 `contacts/actions.ts` + RLS test for `contacts`. Smaller scope
 than Phase 6; see `phase-5-contacts` PR for details.
+
+### Contacts (Phase 5)
+
+First phase post-Phase-4. Smaller scope — one route, one set of
+hooks — because the action pattern is now well-established and
+the contacts table itself was already touched by Phase 4D's
+portal-actions module.
+
+- **New `app/(dashboard)/contacts/actions.ts`** with 5 server
+  actions: createContactAction, updateContactAction,
+  deleteContactAction, bulkDeleteContactsAction,
+  bulkUpdateContactsStatusAction. All Zod-validated, RLS-scoped,
+  tagged `ActionResult<T>`. The `category` Zod schema is closed
+  on the canonical `CATEGORIES` enum from `@/types/contact` so
+  unknown categories are rejected.
+
+- **`use-contacts.ts` thinned** to React Query wrappers over the
+  actions. Optimistic cache updates preserved. New
+  `useBulkDeleteContacts` + `useBulkUpdateContactsStatus` hooks
+  exposed for future bulk-action UI.
+
+- **Integration coverage (+11):**
+  - `tests/integration/rls/contacts.test.ts` (5) — owner reads,
+    cross-tenant SELECT/UPDATE/DELETE denied, anon denied.
+  - `tests/integration/contacts/contact-actions.test.ts` (6) —
+    create / update / delete / bulk happy paths + invalid-category
+    rejection + cross-tenant delete denial.
+
+- **Unit coverage (+13)** for `contacts/actions.ts`: Zod
+  rejection branches (empty name, invalid category, non-UUID id,
+  invalid status) + auth-gate + happy paths.
+
+- **Gates ratcheted:** lint errors 75 → 74 (typed onError context
+  in use-contacts.ts instead of `any`), lint warnings 480 → 478.
+  Strict typecheck unchanged at 279/279.
 
 ### MC Portal sections (Phase 4D) — closes Phase 4
 

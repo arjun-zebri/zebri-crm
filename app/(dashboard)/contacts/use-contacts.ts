@@ -1,11 +1,39 @@
+/**
+ * React Query hooks for the Contacts surface.
+ *
+ * Reads stay client-side (RLS scopes them automatically). Mutations
+ * are thin wrappers around the server actions in `./actions.ts`.
+ * The optimistic React Query cache update + invalidation pattern is
+ * preserved so the UI stays snappy.
+ *
+ * @module app/(dashboard)/contacts/use-contacts
+ */
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+
 import { createClient } from '@/lib/supabase/client'
 import { Contact } from '@/types/contact'
 
+import {
+  bulkDeleteContactsAction,
+  bulkUpdateContactsStatusAction,
+  createContactAction,
+  deleteContactAction,
+  updateContactAction,
+  type ContactInput,
+} from './actions'
+
+/** Throw on `ok: false` so React Query treats it as an error and
+ *  the optimistic rollback in onError runs. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data
+  throw new Error(result.error)
+}
+
 export function useContacts() {
-  const queryClient = useQueryClient()
   const supabase = createClient()
 
   const query = useQuery({
@@ -30,24 +58,10 @@ export function useContacts() {
 
 export function useCreateContact() {
   const queryClient = useQueryClient()
-  const supabase = createClient()
 
   return useMutation({
-    mutationFn: async (contact: Omit<Contact, 'id' | 'user_id' | 'created_at'>) => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-
-      const { data, error } = await supabase
-        .from('contacts')
-        .insert({
-          ...contact,
-          user_id: user.user.id,
-        })
-        .select()
-
-      if (error) throw error
-      return data[0] as Contact
-    },
+    mutationFn: async (contact: ContactInput) =>
+      unwrap(await createContactAction(contact)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] })
     },
@@ -56,19 +70,21 @@ export function useCreateContact() {
 
 export function useUpdateContact() {
   const queryClient = useQueryClient()
-  const supabase = createClient()
 
   return useMutation({
-    mutationFn: async (contact: Contact) => {
-      const { data, error } = await supabase
-        .from('contacts')
-        .update(contact)
-        .eq('id', contact.id)
-        .select()
-
-      if (error) throw error
-      return data[0] as Contact
-    },
+    mutationFn: async (contact: Contact) =>
+      unwrap(
+        await updateContactAction({
+          id: contact.id,
+          name: contact.name,
+          contact_name: contact.contact_name,
+          email: contact.email,
+          phone: contact.phone,
+          category: contact.category,
+          notes: contact.notes,
+          status: contact.status,
+        }),
+      ),
     onMutate: async (contact: Contact) => {
       await queryClient.cancelQueries({ queryKey: ['contacts'] })
       const previousContacts = queryClient.getQueryData<Contact[]>(['contacts'])
@@ -80,9 +96,10 @@ export function useUpdateContact() {
 
       return { previousContacts }
     },
-    onError: (err, contact, context: any) => {
-      if (context?.previousContacts) {
-        queryClient.setQueryData(['contacts'], context.previousContacts)
+    onError: (_err, _contact, context) => {
+      const ctx = context as { previousContacts?: Contact[] } | undefined
+      if (ctx?.previousContacts) {
+        queryClient.setQueryData(['contacts'], ctx.previousContacts)
       }
     },
     onSuccess: () => {
@@ -93,12 +110,36 @@ export function useUpdateContact() {
 
 export function useDeleteContact() {
   const queryClient = useQueryClient()
-  const supabase = createClient()
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('contacts').delete().eq('id', id)
-      if (error) throw error
+      unwrap(await deleteContactAction(id))
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] })
+    },
+  })
+}
+
+export function useBulkDeleteContacts() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      unwrap(await bulkDeleteContactsAction(ids))
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] })
+    },
+  })
+}
+
+export function useBulkUpdateContactsStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[]; status: 'active' | 'inactive' }) => {
+      unwrap(await bulkUpdateContactsStatusAction({ ids, status }))
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] })
