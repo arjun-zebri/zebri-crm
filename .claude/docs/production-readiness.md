@@ -1,8 +1,44 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 (Foundation) COMPLETE** · **Phase 1 (Auth & account)** ✅ · **Phase 2A → 2D.2** ✅ · **Phase 3.1 + 3.2 (Contracts)** ✅ · **Phase 4A (Couples list + events relocation)** ✅ · **Phase 4B (Couple Profile + tasks)** ✅ · **Phase 4C (Events module + calendar relocation)** ✅ all on staging · **Phase 4D (MC Portal sections)** ✅ in flight on `phase-4d-mc-portal-sections`. **Closes Phase 4** — all couple + event mutations now route through validated server actions. Plan: `.claude/docs/phase-4-couples-events.md`.
->
-> Promotion: current multi-phase batch stays on `staging` only — no per-phase `main` promotion. One big merge at the end of all phases.
+> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on `phase-5-contacts`. **Phase 6 (Tasks)** ✅ on `phase-6-tasks`. **Phase 7 (Dashboard)** ✅ on `phase-7-dashboard`. **Phase 8 (Client Portal)** ✅ in flight on `phase-8-client-portal`.
+
+### Client Portal — public couple-facing surface (Phase 8)
+
+The `/portal/[token]` surface was **already structurally well-
+hardened** when this phase started — writes go through SECURITY
+DEFINER RPCs keyed by the share token, and the public-token-
+limiter is already wired against invalid-attempt bursts. So
+Phase 8 is **proving the existing security holds end-to-end**
+rather than adding new mutation paths.
+
+- **`tests/integration/portal/rpc-security.test.ts` (+13)** runs
+  against the anon-key Supabase client (no auth headers, matches
+  the production browser path) to verify every write RPC's token-
+  guard prologue actually works:
+  - `get_portal_data` returns null for random / disabled tokens.
+  - `save_portal_contact` raises on invalid + disabled tokens.
+  - Cross-couple probe: token A inserts into user A's `contacts`,
+    NOT user B's (anti-confused-deputy).
+  - `save_portal_person` + `save_portal_song` persist with the
+    correct `user_id` + `couple_id` resolved from the token.
+  - `delete_portal_person` with token A cannot delete a row
+    owned by couple B.
+
+- **`security.md` updated** with a "Public Portal RPC security
+  model" section documenting the token-as-capability model, the
+  canonical SECURITY DEFINER prologue, what's tested, and the
+  two deliberate not-yet-covered items: per-token write rate-
+  limit (highest priority follow-up: `save_portal_contact`
+  inserts into the MC's addressbook) and server-side input
+  validation beyond Postgres column constraints.
+
+- **No code changes to the portal page or section files.** The
+  ~3k LOC across `app/portal/[token]/*` is structurally sound
+  (server-rendered shell + client section components calling
+  guarded RPCs). Section decomposition is deferred.
+
+- **No gate movement.** Strict typecheck and lint budgets
+  unchanged.
 
 ### MC Portal sections (Phase 4D) — closes Phase 4
 
