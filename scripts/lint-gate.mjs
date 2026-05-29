@@ -31,9 +31,9 @@ import { execSync } from 'node:child_process';
 // Phase 4A couples-list decomposition: 78→75 errors (replaced
 // `(meta as any)?.hidden` casts with typed `{ hidden?: string }`
 // during the rewrite).
-// Phase 7 dashboard: 75 → 73 errors (typed two `(any) =>`
-// joined-row normalizers in use-dashboard.ts).
-const ERROR_BUDGET = 73;
+// Phase 5 contacts: 75→74 errors (use-contacts.ts onError context
+// typed instead of `any`).
+const ERROR_BUDGET = 74;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -66,10 +66,8 @@ const ERROR_BUDGET = 73;
 // inline supabase auth.getUser() noise + unused vars across 5 files
 // once mutations routed through actions; calendar relocation
 // cleared a stale colocation warning).
-// Phase 7 dashboard: 480 → 476 (extracted helpers to
-// lib/dashboard/periods.ts + removed unused LeadSource import +
-// unused collectedRevenue local).
-const WARNING_BUDGET = 476;
+// Phase 5 contacts: 480 → 478 (lift inline supabase calls + cleanup).
+const WARNING_BUDGET = 478;
 
 function runEslintJson() {
   try {

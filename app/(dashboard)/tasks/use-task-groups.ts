@@ -1,5 +1,22 @@
+/**
+ * React Query hooks for the task-groups surface.
+ *
+ * Reads stay on the RLS-scoped client. Mutations are thin wrappers
+ * around the server actions in `./actions.ts` — the hook keeps the
+ * cache invalidation; the action does the validated DB write.
+ *
+ * @module app/(dashboard)/tasks/use-task-groups
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import { createClient } from "@/lib/supabase/client";
+
+import {
+  createTaskGroupAction,
+  deleteTaskGroupAction,
+  reorderTaskGroupsAction,
+  updateTaskGroupAction,
+} from "./actions";
 
 export type TaskGroupColor = "gray" | "green" | "blue" | "amber" | "red" | "purple";
 
@@ -32,6 +49,14 @@ export interface TaskGroup {
 
 const QUERY_KEY = ["task-groups"] as const;
 
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data;
+  throw new Error(result.error);
+}
+
 export function useTaskGroups() {
   const supabase = createClient();
   return useQuery({
@@ -51,32 +76,15 @@ export function useTaskGroups() {
 }
 
 export function useCreateTaskGroup() {
-  const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; color?: TaskGroupColor }) => {
-      const { data: user, error: userError } = await supabase.auth.getUser();
-      if (userError || !user.user) throw new Error("Not authenticated");
-      const { data: existing } = await supabase
-        .from("task_groups")
-        .select("position")
-        .eq("user_id", user.user.id)
-        .order("position", { ascending: false })
-        .limit(1);
-      const nextPosition = existing && existing.length > 0 ? (existing[0].position ?? 0) + 1 : 0;
-      const { data, error } = await supabase
-        .from("task_groups")
-        .insert({
+    mutationFn: async (input: { name: string; color?: TaskGroupColor }) =>
+      unwrap(
+        await createTaskGroupAction({
           name: input.name,
           color: input.color ?? "gray",
-          position: nextPosition,
-          user_id: user.user.id,
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as TaskGroup;
-    },
+        }),
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
     },
@@ -84,15 +92,13 @@ export function useCreateTaskGroup() {
 }
 
 export function useUpdateTaskGroup() {
-  const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; name?: string; color?: TaskGroupColor }) => {
-      const patch: Record<string, unknown> = {};
+      const patch: { name?: string; color?: TaskGroupColor } = {};
       if (input.name !== undefined) patch.name = input.name;
       if (input.color !== undefined) patch.color = input.color;
-      const { error } = await supabase.from("task_groups").update(patch).eq("id", input.id);
-      if (error) throw error;
+      unwrap(await updateTaskGroupAction({ id: input.id, patch }));
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
@@ -101,17 +107,10 @@ export function useUpdateTaskGroup() {
 }
 
 export function useReorderTaskGroups() {
-  const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (orderedIds: string[]) => {
-      for (let i = 0; i < orderedIds.length; i++) {
-        const { error } = await supabase
-          .from("task_groups")
-          .update({ position: i })
-          .eq("id", orderedIds[i]);
-        if (error) throw error;
-      }
+      unwrap(await reorderTaskGroupsAction(orderedIds));
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
@@ -120,12 +119,10 @@ export function useReorderTaskGroups() {
 }
 
 export function useDeleteTaskGroup() {
-  const supabase = createClient();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("task_groups").delete().eq("id", id);
-      if (error) throw error;
+      unwrap(await deleteTaskGroupAction(id));
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });

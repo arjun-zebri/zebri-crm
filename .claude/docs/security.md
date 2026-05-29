@@ -288,7 +288,7 @@ DELETE (sampled clean across the migrations).
 |---|---|---|---|---|
 | `couples` | ✅ | `user_id` | ✅ `tests/integration/rls/couples.test.ts` (5 tests) + `tests/integration/billing/couple-cap.test.ts` (10 tests — Starter cap enforcement) | Couples & Events |
 | `events` | ✅ | `user_id` | ✅ `tests/integration/rls/events.test.ts` (Phase 4A, 5 tests) | Couples & Events |
-| `contacts` | ✅ | `user_id` | ☐ | Contacts |
+| `contacts` | ✅ | `user_id` | ✅ `tests/integration/rls/contacts.test.ts` (Phase 5, 5 tests) | Contacts |
 | `tasks` | ✅ | `user_id` | ✅ `tests/integration/rls/tasks.test.ts` (Phase 4B, 5 tests) | Tasks |
 | `quotes` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `quote_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
@@ -304,7 +304,7 @@ DELETE (sampled clean across the migrations).
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |
 | `event_vendors` (legacy) | ✅ | (join) | ☐ | Contacts |
-| `task_groups` | ✅ | `user_id` | ☐ | Tasks |
+| `task_groups` | ✅ | `user_id` | ✅ `tests/integration/rls/task-groups.test.ts` (Phase 6, 5 tests) | Tasks |
 | `timeline_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-items.test.ts` (Phase 4C, 5 tests) | Timeline |
 | `timeline_templates` | ✅ | `user_id` | ☐ | Timeline |
 | `timeline_template_items` | ✅ | `user_id` | ☐ | Timeline |

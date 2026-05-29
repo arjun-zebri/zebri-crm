@@ -46,6 +46,23 @@ import {
   TaskStatus,
 } from '@/types/task';
 
+import {
+  bulkDeleteTasksAction,
+  bulkUpdateTasksAction,
+  createTaskAction,
+  deleteTaskAction,
+  reorderTasksAction,
+  updateTaskAction,
+} from './actions';
+
+/** Throw on `ok: false` so React Query treats it as an error. */
+function unwrap<T>(
+  result: { ok: true; data: T } | { ok: false; error: string },
+): T {
+  if (result.ok) return result.data;
+  throw new Error(result.error);
+}
+
 interface Task extends TaskRowTask {
   position: number;
 }
@@ -146,8 +163,7 @@ export default function TasksPage() {
   // ─── Mutations ─────────────────────────────────────────────────────────────
   const patchTask = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: TaskFieldUpdate }) => {
-      const { error } = await supabase.from("tasks").update(patch).eq("id", id);
-      if (error) throw error;
+      unwrap(await updateTaskAction({ id, patch }));
     },
     onMutate: ({ id, patch }) => {
       queryClient.setQueryData(["all-tasks"], (old: Task[] | undefined) =>
@@ -159,19 +175,17 @@ export default function TasksPage() {
 
   const insertTask = useMutation({
     mutationFn: async (input: Partial<Task> & { title: string; _tempId?: string }) => {
-      const { data: user, error: userError } = await supabase.auth.getUser();
-      if (userError || !user.user) throw new Error("Not authenticated");
-      const { error } = await supabase.from("tasks").insert({
-        title: input.title,
-        due_date: input.due_date ?? null,
-        group_id: input.group_id ?? null,
-        related_couple_id: input.related_couple_id ?? null,
-        status: input.status ?? "todo",
-        priority: input.priority ?? null,
-        task_type: input.task_type ?? null,
-        user_id: user.user.id,
-      });
-      if (error) throw error;
+      unwrap(
+        await createTaskAction({
+          title: input.title,
+          due_date: input.due_date ?? null,
+          group_id: input.group_id ?? null,
+          related_couple_id: input.related_couple_id ?? null,
+          status: input.status ?? "todo",
+          priority: input.priority ?? null,
+          task_type: input.task_type ?? null,
+        }),
+      );
     },
     onMutate: (input) => {
       const tempId = input._tempId ?? `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -208,8 +222,7 @@ export default function TasksPage() {
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("tasks").delete().eq("id", id);
-      if (error) throw error;
+      unwrap(await deleteTaskAction(id));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["all-tasks"] }),
   });
@@ -222,32 +235,29 @@ export default function TasksPage() {
       ids: string[];
       patch: Record<string, unknown>;
     }) => {
-      const { error } = await supabase.from("tasks").update(patch).in("id", ids);
-      if (error) throw error;
+      // The action's Zod schema is narrower than `Record<string,
+      // unknown>` — the bulk-bar only emits valid keys (status,
+      // priority, task_type, group_id, due_date) so this is safe.
+      unwrap(
+        await bulkUpdateTasksAction({
+          ids,
+          patch: patch as Parameters<typeof bulkUpdateTasksAction>[0]['patch'],
+        }),
+      );
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["all-tasks"] }),
   });
 
   const bulkDelete = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from("tasks").delete().in("id", ids);
-      if (error) throw error;
+      unwrap(await bulkDeleteTasksAction(ids));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["all-tasks"] }),
   });
 
   const reorderPositions = useMutation({
     mutationFn: async (orderedIds: string[]) => {
-      const results = await Promise.all(
-        orderedIds.map((id, i) =>
-          supabase
-            .from("tasks")
-            .update({ position: (i + 1) * 1000 })
-            .eq("id", id)
-        )
-      );
-      const firstError = results.find((r) => r.error)?.error;
-      if (firstError) throw firstError;
+      unwrap(await reorderTasksAction(orderedIds));
     },
     onMutate: (orderedIds: string[]) => {
       const positionById = new Map<string, number>();
