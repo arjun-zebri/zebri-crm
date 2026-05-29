@@ -269,6 +269,71 @@ unique-share-token capability model is the primary defence; the
 limiter is defence-in-depth and covers the highest-traffic public
 surface (the portal) today.
 
+### Public Portal RPC security model (Phase 8)
+
+The `/portal/[token]` surface is **unauthenticated** — couples and
+bridal-party members open the URL without a Supabase session. The
+share token IS the capability.
+
+Every write originates from a `SECURITY DEFINER` RPC keyed by the
+token. The canonical guard prologue (used by every write RPC in
+`supabase/migrations/…portal…sql`):
+
+```sql
+SELECT id, user_id INTO v_couple_id, v_user_id
+FROM couples
+WHERE portal_token = p_token AND portal_token_enabled = true;
+IF v_couple_id IS NULL THEN RAISE EXCEPTION 'Invalid portal token'; END IF;
+```
+
+Consequences:
+
+- **Invalid token** (random UUID, expired, revoked) → RPC raises.
+- **Disabled token** (`portal_token_enabled = false`) → RPC raises.
+- **Anti-confused-deputy** — even a hostile actor with a valid
+  token for couple A cannot make the RPC write into couple B's
+  rows. The `v_couple_id` + `v_user_id` are resolved from the
+  token, not from caller-supplied params; every INSERT uses
+  those resolved values.
+
+**Public token-attempt limiter** (see prior section) sits in front
+of `/portal/[token]` and returns `notFound()` after 60 invalid
+attempts/hour. Valid-token loads are free.
+
+**Tested guards** — `tests/integration/portal/rpc-security.test.ts`
+(Phase 8, 13 tests) — runs against the **anon-key Supabase client**
+(no auth headers) to match the production browser path. Covers:
+
+- `get_portal_data` — invalid token returns null, disabled token
+  returns null, valid token returns the couple payload.
+- `save_portal_contact` — invalid token raises, disabled raises,
+  valid inserts to the token-issuer's `contacts`. Cross-couple
+  probe verified: token A cannot make the RPC attribute the new
+  contact to user B.
+- `save_portal_person` — invalid token raises, valid persists
+  with the correct `user_id` + `couple_id`.
+- `save_portal_song` — invalid raises, valid persists with the
+  correct ownership.
+- `delete_portal_person` — invalid raises, **cross-portal probe**:
+  a request with token A targeting a `portal_people` id owned by
+  couple B leaves B's row untouched.
+
+**Deliberately not yet covered** (tracked as follow-up):
+
+- Per-token write rate-limit. A caller holding a valid token can
+  spam writes; today the only ceiling is Postgres' connection
+  limit and Supabase's anon-key call quota. The most realistic
+  abuse vector is `save_portal_contact` because it inserts into
+  the MC's addressbook (`contacts`). If observed in production,
+  the fix is a `portal_writes` ledger table + per-couple
+  windowed cap inside the RPC.
+- Server-side input validation (length caps, character whitelists,
+  email format checks) beyond the Postgres column constraints. The
+  RPCs currently accept whatever the client sends. Adding Zod-shaped
+  guards would require API-route wrappers (the current pattern is
+  direct RPC calls from the section components). Tracked as a
+  follow-up; lower priority than rate-limiting.
+
 ### Authenticated Stripe routes — Phase 2D.2 additions
 
 | Route | Zod | Rate-limit | Notes |
