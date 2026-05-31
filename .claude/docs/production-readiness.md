@@ -1,6 +1,57 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ in flight on `phase-11-branding`.
+> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ on staging. **Phase 12 (Settings)** ✅ in flight on `phase-12-settings`.
+
+### Settings — page orchestrator + template RLS coverage (Phase 12)
+
+The `/settings` page is a 7-tab orchestrator (Personal Info,
+Account, Billing, Receive Payments, Templates, Statuses,
+Notifications) backed by per-tab section components. Phase 12
+fills in three RLS coverage gaps from the matrix, closes a
+§7.4 helper-bypass on the page itself, and applies the same
+design-token cleanup pattern Phases 10/11 used.
+
+- **`tests/integration/rls/contract-templates.test.ts` (+6)** —
+  cross-tenant denial on SELECT/UPDATE/DELETE plus a sanity check
+  that an INSERT claiming a different `user_id` is rejected at
+  the policy layer. Closes the `☐` cell in the security matrix.
+
+- **`tests/integration/rls/timeline-templates.test.ts` (+11)** —
+  covers both `timeline_templates` and `timeline_template_items`
+  (a parent/child pair). Beyond the standard CRUD denial probes,
+  one extra anti-confused-deputy test verifies that even if a
+  cross-owned item somehow ends up on a template (service-role
+  insert simulating a worst case), A's RLS-scoped SELECT still
+  only returns the items A actually owns. Closes both `☐` cells.
+
+- **`app/(dashboard)/settings/page.tsx` § entitlements migration**
+  — replaced inline `app_metadata.subscription_status`,
+  `app_metadata.subscription_plan`, `app_metadata.stripe_customer_id`,
+  `app_metadata.stripe_connect_account_id`,
+  `app_metadata.stripe_connect_enabled`,
+  `app_metadata.trial_end`, `app_metadata.subscription_end`,
+  `app_metadata.cancel_at_period_end`, and `app_metadata.is_comped`
+  reads with `subscriptionStatus()`, `subscriptionPlan()`,
+  `stripeCustomerId()`, `stripeConnectAccountId()`,
+  `stripeConnectEnabled()`, `trialEnd()`, `subscriptionEnd()`,
+  `cancelAtPeriodEnd()`, and `isComped()` from
+  `@/lib/auth/entitlements`. Added two new helpers
+  (`cancelAtPeriodEnd`, `isComped`) that hadn't existed yet. The
+  values were already coming from the right storage location
+  (post-§7.4); the page was just bypassing the canonical accessor.
+
+- **Settings page design-token cleanup** — loading skeleton, tab
+  bar, and heading migrated from `bg-gray-100/50`, `border-gray-200`,
+  `text-gray-900/500/700`, `bg-gray-900` to semantic tokens
+  (`bg-surface-emphasis`, `bg-surface-muted`, `border-border`,
+  `text-text`, `text-text-muted`, `bg-text`).
+
+- **No section-component changes.** The 7 tab sections + 4 template
+  managers were not touched. Their internal direct `auth.updateUser`
+  writes for user-metadata fields are intentional under the auth
+  model (`user_metadata` is user-writable by design).
+
+- **No gate movement.** Strict typecheck and lint budgets unchanged.
 
 ### Branding — editor surface + internal helper (Phase 11)
 
