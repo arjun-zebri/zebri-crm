@@ -137,6 +137,25 @@ export function stripeConnectEnabled(source: EntitlementSource | null | undefine
   return read<boolean>(source, 'stripe_connect_enabled') === true;
 }
 
+/**
+ * True when the Stripe subscription is set to cancel at the end of
+ * the current period. The Settings → Billing tab uses this to show
+ * the "Resume subscription" CTA instead of "Cancel subscription".
+ */
+export function cancelAtPeriodEnd(source: EntitlementSource | null | undefined): boolean {
+  return read<boolean>(source, 'cancel_at_period_end') === true;
+}
+
+/**
+ * True when the account has been comped (free plan-level access
+ * granted by admin action, no Stripe subscription). Read separately
+ * from `isSubscribed` because the Billing tab shows different copy
+ * for comped vs paying users.
+ */
+export function isComped(source: EntitlementSource | null | undefined): boolean {
+  return read<boolean>(source, 'is_comped') === true;
+}
+
 /* ────────────────────────────────────────────────────────────────
    The canonical "fields we manage server-side" set — used by the
    signup flow + Stripe webhook + admin actions when WRITING into
