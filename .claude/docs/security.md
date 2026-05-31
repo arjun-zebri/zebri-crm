@@ -449,6 +449,7 @@ DELETE (sampled clean across the migrations).
 | `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
 | `contract_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/contract-templates.test.ts` (Phase 12, 6 tests) | Contracts |
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
+| `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |

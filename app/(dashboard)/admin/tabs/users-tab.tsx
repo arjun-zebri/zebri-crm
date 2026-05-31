@@ -36,10 +36,10 @@ export function UsersTab({
 }) {
   return (
     <div>
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-surface-muted border-b border-border">
               <tr>
                 <Th>Name</Th>
                 <Th>Business</Th>
@@ -53,7 +53,7 @@ export function UsersTab({
             <tbody>
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-text-subtle">
                     No users yet
                   </td>
                 </tr>
@@ -62,30 +62,30 @@ export function UsersTab({
                 <tr
                   key={user.id}
                   onClick={() => onOpenUser(user.id)}
-                  className="border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer"
+                  className="border-b border-border last:border-0 hover:bg-surface-emphasis cursor-pointer"
                 >
-                  <td className="px-4 py-3 font-medium">
+                  <td className="px-4 py-3 font-medium text-text">
                     {user.display_name || " - "}
                     {user.account_type === "admin" && (
-                      <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                      <span className="ml-2 text-xs bg-surface-emphasis text-text-muted px-1.5 py-0.5 rounded">
                         admin
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{user.business_name || " - "}</td>
-                  <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                  <td className="px-4 py-3 text-text-muted">{user.business_name || " - "}</td>
+                  <td className="px-4 py-3 text-text-muted">{user.email}</td>
                   <td className="px-4 py-3">
                     {user.subscription_status ? (
                       <Badge variant={statusVariant[user.subscription_status]}>
                         {user.subscription_status.replace("_", " ")}
                       </Badge>
                     ) : (
-                      <span className="text-gray-400 text-xs"> - </span>
+                      <span className="text-text-subtle text-xs"> - </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{planLabel(user)}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatDate(user.trial_end)}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatDate(user.created_at)}</td>
+                  <td className="px-4 py-3 text-text-muted">{planLabel(user)}</td>
+                  <td className="px-4 py-3 text-text-muted">{formatDate(user.trial_end)}</td>
+                  <td className="px-4 py-3 text-text-muted">{formatDate(user.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -93,14 +93,14 @@ export function UsersTab({
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-gray-400">{users.length} users</p>
+      <p className="mt-4 text-xs text-text-subtle">{users.length} users</p>
     </div>
   );
 }
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="text-left px-4 py-3 font-medium text-gray-500 whitespace-nowrap">
+    <th className="text-left px-4 py-3 font-medium text-text-muted whitespace-nowrap">
       {children}
     </th>
   );

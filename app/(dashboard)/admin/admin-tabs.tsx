@@ -3,14 +3,18 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { AdminUser, GlobalStats } from '@/lib/admin/admin-analytics';
+import type { OpsSnapshot } from '@/lib/admin/ops-signals';
 import { UsersTab } from "./tabs/users-tab";
 import { SubscriptionsTab } from "./tabs/subscriptions-tab";
+import { OpsTab } from "./tabs/ops-tab";
 import { StatsTab } from "./tabs/stats-tab";
 import { UserDetailPanel } from "./components/user-detail-panel";
+import { UserSearchBar } from "./components/user-search-bar";
 
 const tabs = [
   { id: "users", label: "Users" },
   { id: "subscriptions", label: "Subscriptions" },
+  { id: "ops", label: "Ops" },
   { id: "stats", label: "Stats" },
 ] as const;
 
@@ -19,9 +23,11 @@ type TabId = (typeof tabs)[number]["id"];
 export function AdminTabs({
   users,
   stats,
+  ops,
 }: {
   users: AdminUser[];
   stats: GlobalStats;
+  ops: OpsSnapshot;
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -36,23 +42,27 @@ export function AdminTabs({
 
   return (
     <>
+      <div className="px-4 md:px-6 pb-4 flex-shrink-0">
+        <UserSearchBar users={users} onSelect={setOpenUserId} />
+      </div>
+
       <div className="px-4 md:px-6 flex-shrink-0">
-        <div className="relative overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-b border-gray-200">
+        <div className="relative overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] border-b border-border">
           <div className="flex gap-6 mb-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 aria-current={activeTab === tab.id ? "page" : undefined}
-                className={`pb-3 text-sm whitespace-nowrap transition-colors relative ${
+                className={`pb-3 text-sm whitespace-nowrap transition-colors relative cursor-pointer ${
                   activeTab === tab.id
-                    ? "text-gray-900 font-medium"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "text-text font-medium"
+                    : "text-text-muted hover:text-text"
                 }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-text" />
                 )}
               </button>
             ))}
@@ -67,6 +77,9 @@ export function AdminTabs({
           )}
           {activeTab === "subscriptions" && (
             <SubscriptionsTab users={users} onOpenUser={setOpenUserId} />
+          )}
+          {activeTab === "ops" && (
+            <OpsTab snapshot={ops} onOpenUser={setOpenUserId} />
           )}
           {activeTab === "stats" && <StatsTab stats={stats} />}
         </div>

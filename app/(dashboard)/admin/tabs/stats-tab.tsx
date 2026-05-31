@@ -59,7 +59,7 @@ function Section({
 }) {
   return (
     <div>
-      <h2 className="text-sm font-medium text-gray-500 mb-3">{title}</h2>
+      <h2 className="text-sm font-medium text-text-muted mb-3">{title}</h2>
       {children}
     </div>
   );
@@ -83,11 +83,11 @@ function Card({
   accent?: "red";
 }) {
   return (
-    <div className="border border-gray-200 rounded-xl p-4 bg-white">
-      <div className="text-xs text-gray-500 mb-1">{label}</div>
+    <div className="border border-border rounded-xl p-4 bg-surface">
+      <div className="text-xs text-text-muted mb-1">{label}</div>
       <div
         className={`text-2xl font-semibold ${
-          accent === "red" && value !== 0 ? "text-red-600" : "text-gray-900"
+          accent === "red" && value !== 0 ? "text-danger" : "text-text"
         }`}
       >
         {value}
