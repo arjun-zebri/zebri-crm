@@ -1,28 +1,28 @@
-'use client'
+'use client';
 
-import { Loader2 } from 'lucide-react'
-import { formatRelativeDate } from '@/lib/utils'
+import { Loader2 } from 'lucide-react';
+import { formatRelativeDate } from '@/lib/utils';
 
 interface DashboardTask {
-  id: string
-  title: string
-  due_date: string | null
-  status: 'todo' | 'in_progress' | 'done'
-  related_couple_id: string | null
-  couple?: { id: string; name: string } | null
+  id: string;
+  title: string;
+  due_date: string | null;
+  status: 'todo' | 'in_progress' | 'done';
+  related_couple_id: string | null;
+  couple?: { id: string; name: string } | null;
 }
 
 interface DashboardTasksProps {
-  tasks: DashboardTask[]
-  isLoading: boolean
-  onCoupleClick: (couple: { id: string; name: string }) => void
+  tasks: DashboardTask[];
+  isLoading: boolean;
+  onCoupleClick: (couple: { id: string; name: string }) => void;
 }
 
 function isOverdue(dateStr: string | null): boolean {
-  if (!dateStr) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return new Date(dateStr + 'T00:00:00') < today
+  if (!dateStr) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(dateStr + 'T00:00:00') < today;
 }
 
 export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTasksProps) {
@@ -34,7 +34,7 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
           <Loader2 className="w-5 h-5 text-gray-400 animate-spin" strokeWidth={1.5} />
         </div>
       </div>
-    )
+    );
   }
 
   if (tasks.length === 0) {
@@ -45,41 +45,44 @@ export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTas
           <p className="text-gray-500 text-sm">All caught up.</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 flex flex-col">
-      <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4 shrink-0">Outstanding Tasks</h2>
+      <h2 className="text-base sm:text-xl font-semibold text-gray-900 mb-4 shrink-0">
+        Outstanding Tasks
+      </h2>
       <div className="space-y-1 flex-1 max-h-60 overflow-y-auto scrollbar-hover pr-1">
         {tasks.map((task) => {
-          const overdue = isOverdue(task.due_date)
-          const clickable = !!task.couple
+          const overdue = isOverdue(task.due_date);
           return (
             <div
               key={task.id}
-              onClick={() => { if (task.couple) onCoupleClick(task.couple) }}
-              className={`flex items-center gap-2 py-2 transition ${
-                clickable ? 'cursor-pointer group' : 'cursor-default'
-              }`}
+              onClick={() => {
+                if (task.couple) onCoupleClick(task.couple);
+              }}
+              className="flex items-center gap-2 py-2 transition cursor-pointer group"
             >
               <div className="flex-1 min-w-0">
-                <span className={`truncate block text-xs sm:text-sm transition ${clickable ? 'text-gray-900 group-hover:text-black group-hover:underline underline-offset-2 decoration-gray-300' : 'text-gray-900'}`}>{task.title}</span>
+                <span className="truncate block text-xs sm:text-sm text-gray-900 transition-opacity group-hover:opacity-80">
+                  {task.title}
+                </span>
                 {task.couple && (
-                  <span className="text-gray-400 text-xs truncate block">
-                    {task.couple.name}
-                  </span>
+                  <span className="text-gray-400 text-xs truncate block">{task.couple.name}</span>
                 )}
               </div>
               {task.due_date && (
-                <span className={`text-xs shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                <span
+                  className={`text-xs shrink-0 ${overdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}
+                >
                   {formatRelativeDate(task.due_date)}
                 </span>
               )}
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

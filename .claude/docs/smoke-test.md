@@ -1,4 +1,4 @@
-# Zebri smoke test plan
+e# Zebri smoke test plan
 
 > Comprehensive manual sweep before promoting `staging` → `main`.
 > Covers every page, every function, common and rare paths,
@@ -56,27 +56,27 @@
 
 ### 1.1 · Auth pages
 
-- [ ] `/login` — email + password fields, "Forgot password" link.
-- [ ] Wrong password → generic error toast, no nav.
-- [ ] Non-existent email → generic "auth failed" (must NOT leak
+- [y] `/login` — email + password fields, "Forgot password" link.
+- [y] Wrong password → generic error toast, no nav.
+- [y] Non-existent email → generic "auth failed" (must NOT leak
   "user not found").
-- [ ] Successful login → lands on `/`.
-- [ ] `/signup` — fields render, validation on empty submit.
-- [ ] Signup with existing email → graceful error.
-- [ ] Fresh signup → lands on Dashboard. **No 14-day trial,
+- [y] Successful login → lands on `/`.
+- [y] `/signup` — fields render, validation on empty submit.
+- [y] Signup with existing email → graceful error.
+- [y] Fresh signup → lands on Dashboard. **No 14-day trial,
   no countdown.** Account is Starter with 5-couple cap.
-- [ ] `/reset-password` (request) → success message + email
+- [?] `/reset-password` (request) → success message + email
   arrives.
-- [ ] Click reset link → `/update-password` opens.
-- [ ] Set new password → toast + redirect to login.
-- [ ] **Rate limit**: try 6+ failed logins in a row → rate-limit
+- [?] Click reset link → `/update-password` opens.
+- [?] Set new password → toast + redirect to login.
+- [y] **Rate limit**: try 6+ failed logins in a row → rate-limit
   message; check `auth_rate_limit_hit` alert in Slack.
 
 ### 1.2 · Middleware guards
 
-- [ ] Logged out: `/`, `/couples`, `/payments`, `/admin` all
+- [y] Logged out: `/`, `/couples`, `/payments`, `/admin` all
   redirect to `/login`.
-- [ ] §7.4 probe: signed in as non-admin, run in dev console
+- [y] §7.4 probe: signed in as non-admin, run in dev console
   `await supabase.auth.updateUser({ data: { account_type: 'admin' } })`.
   Reload. **Admin link must NOT appear in the sidebar.** Visiting
   `/admin` directly must still redirect.
@@ -85,24 +85,24 @@
 
 ## 2 · Dashboard (`/`)
 
-- [ ] Loads, no console errors.
-- [ ] Period dropdown (Weekly / Monthly / Quarterly / Yearly)
+- [y] Loads, no console errors.
+- [y] Period dropdown (Weekly / Monthly / Quarterly / Yearly)
   updates every card on change.
-- [ ] **Top row** — Leads / Conversion / Revenue. Numbers
+- [y] **Top row** — Leads / Conversion / Revenue. Numbers
   reasonable; diff colours: positive green, negative red.
-- [ ] **Revenue chart** — mint-green area renders. Hover tooltip
+- [y] **Revenue chart** — mint-green area renders. Hover tooltip
   shows AUD value.
-- [ ] Chart dropdown flips Revenue ↔ Leads.
-- [ ] **Calendar widget** — shows upcoming events. Click an event
+- [y] Chart dropdown flips Revenue ↔ Leads.
+- [y] **Calendar widget** — shows upcoming events. Click an event
   → couple profile slide-over opens.
-- [ ] **Leads card** — status bars render, counts add up.
-- [ ] **Lead Sources card** — sources listed with percentages.
-- [ ] **Outstanding Tasks card** — click a task → opens couple
+- [y] **Leads card** — status bars render, counts add up.
+- [y] **Lead Sources card** — sources listed with percentages.
+- [y] **Outstanding Tasks card** — click a task → opens couple
   profile on Tasks tab.
-- [ ] **Outstanding Invoices card** — click → opens couple
+- [y] **Outstanding Invoices card** — click → opens couple
   profile on Payments tab.
-- [ ] Empty states: every card shows "No X yet" not a crash.
-- [ ] **Mobile**: cards stack single-column. Period dropdown +
+- [y] Empty states: every card shows "No X yet" not a crash.
+- [y] **Mobile**: cards stack single-column. Period dropdown +
   Calendar widget remain usable.
 
 ---
