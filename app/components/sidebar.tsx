@@ -85,8 +85,10 @@ export function Sidebar({ mobileOpen, onMobileClose, isExpanded, onToggle }: Sid
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0`}
       >
-        {/* Inner clip wrapper keeps text from overflowing when collapsed */}
-        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+        {/* Inner wrapper scrolls vertically when the viewport is shorter
+            than the full nav + bottom block (e.g. iPhone SE + shadow
+            banner). `min-w-0` keeps text from overflowing when collapsed. */}
+        <div className="flex flex-col flex-1 overflow-y-auto min-w-0">
         <Link
           href="/"
           onClick={onMobileClose}

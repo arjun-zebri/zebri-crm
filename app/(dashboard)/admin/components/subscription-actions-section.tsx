@@ -6,7 +6,6 @@ import { ExternalLink } from 'lucide-react';
 import {
   cancelAtPeriodEnd,
   compUser,
-  extendTrial,
   linkStripeCustomer,
   refundLastInvoice,
 } from '@/app/admin/actions';
@@ -35,23 +34,14 @@ function formatDate(iso: string | null) {
   });
 }
 
-function toDateInput(iso: string | null): string {
-  if (!iso) {
-    const d = new Date();
-    d.setDate(d.getDate() + 14);
-    return d.toISOString().slice(0, 10);
-  }
-  return new Date(iso).toISOString().slice(0, 10);
-}
-
 /**
- * Subscription summary (status / plan / trial dates / Stripe links)
- * + the admin levers that mutate them (extend trial, comp,
- * cancel-at-period-end, link Stripe customer, refund last invoice).
+ * Subscription summary (status / plan / renewal date / Stripe link)
+ * + the admin levers that mutate it: comp, cancel-at-period-end, link
+ * Stripe customer, refund last invoice.
  *
- * Every action calls a server action in `app/admin/actions.ts` which
- * (a) goes through `updateEntitlements()` for entitlement writes
- * and (b) records itself in `admin_audit_log` (Phase 13).
+ * Trials were removed from the signup flow in Phase 1; the
+ * `extendTrial` server action was dropped in Phase 13.1. Comping a
+ * user grants paid-plan access without a fake trial window.
  */
 export function SubscriptionActionsSection({
   user,
@@ -61,24 +51,13 @@ export function SubscriptionActionsSection({
   onRefresh: () => void;
 }) {
   const { toast } = useToast();
-  const [trialEnd, setTrialEnd] = useState(toDateInput(user.trial_end));
   const [refundAmount, setRefundAmount] = useState('');
   const [compPlan, setCompPlan] = useState<'pro' | 'max'>(
     (user.subscription_plan as 'pro' | 'max') ?? 'pro',
   );
   const [linkCustomerId, setLinkCustomerId] = useState('');
   const [confirmCancel, setConfirmCancel] = useState(false);
-
-  const handleExtendTrial = async () => {
-    try {
-      const iso = new Date(trialEnd + 'T00:00:00').toISOString();
-      await extendTrial(user.id, iso);
-      toast('Trial extended');
-      onRefresh();
-    } catch (e) {
-      toast(e instanceof Error ? e.message : 'Failed to extend trial', 'error');
-    }
-  };
+  const [showLinkStripe, setShowLinkStripe] = useState(false);
 
   const handleComp = async () => {
     try {
@@ -129,6 +108,7 @@ export function SubscriptionActionsSection({
           : 'Customer linked, no subscription found',
       );
       setLinkCustomerId('');
+      setShowLinkStripe(false);
       onRefresh();
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Failed to link Stripe customer', 'error');
@@ -136,97 +116,114 @@ export function SubscriptionActionsSection({
   };
 
   return (
-    <>
-      <section>
-        <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted mb-2">
-          Subscription
-        </h3>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <Detail label="Status">
-            {user.subscription_status ? (
-              <Badge variant={statusVariant[user.subscription_status]}>
-                {user.subscription_status.replace('_', ' ')}
-              </Badge>
-            ) : (
-              <span className="text-text-subtle"> - </span>
-            )}
-          </Detail>
-          <Detail label="Plan">
-            <span className="capitalize">{user.subscription_plan ?? 'Starter'}</span>
-            {user.is_beta_user && (
-              <span className="ml-2 text-xs bg-warning/10 text-warning px-1.5 py-0.5 rounded">
-                beta
-              </span>
-            )}
-          </Detail>
-          <Detail label="Trial end">{formatDate(user.trial_end)}</Detail>
-          <Detail label="Subscription end">{formatDate(user.subscription_end)}</Detail>
-          <Detail label="Stripe customer">
-            {user.stripe_customer_id ? (
-              <a
-                href={`https://dashboard.stripe.com/customers/${user.stripe_customer_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-text hover:text-text-muted"
-              >
-                {user.stripe_customer_id.slice(0, 16)}…
-                <ExternalLink size={12} strokeWidth={1.5} />
-              </a>
-            ) : (
-              <span className="text-text-subtle"> - </span>
-            )}
-          </Detail>
-          <Detail label="Signed up">{formatDate(user.created_at)}</Detail>
-        </div>
-      </section>
+    <section>
+      <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted mb-3">
+        Subscription
+      </h3>
 
-      <section>
-        <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted mb-2">
-          Subscription actions
-        </h3>
-        <div className="space-y-3">
-          <ActionRow label="Extend trial">
-            <Input
-              type="date"
-              value={trialEnd}
-              onChange={(e) => setTrialEnd(e.target.value)}
-              size="sm"
-            />
-            <Button onClick={handleExtendTrial} size="sm">
-              Save trial
-            </Button>
-          </ActionRow>
-
-          <ActionRow label="Comp / mark beta">
-            <Select
-              value={compPlan}
-              onValueChange={(v) => setCompPlan(v as 'pro' | 'max')}
-              size="sm"
-              options={[
-                { value: 'pro', label: 'Pro' },
-                { value: 'max', label: 'Max' },
-              ]}
-            />
-            <Button onClick={handleComp} size="sm">
-              Apply comp
-            </Button>
-          </ActionRow>
-
-          <ActionRow label="Cancel at period end">
-            <Button
-              onClick={() => setConfirmCancel(true)}
-              disabled={!user.stripe_subscription_id}
-              variant="secondary"
-              size="sm"
+      {/* Summary — clean 2-column property grid, no boxed inputs. */}
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm mb-5">
+        <Property label="Status">
+          {user.subscription_status ? (
+            <Badge variant={statusVariant[user.subscription_status]}>
+              {user.subscription_status.replace('_', ' ')}
+            </Badge>
+          ) : (
+            <span className="text-text-subtle">—</span>
+          )}
+        </Property>
+        <Property label="Plan">
+          <span className="capitalize text-text">{user.subscription_plan ?? 'Starter'}</span>
+          {user.is_comped && (
+            <span className="ml-2 text-xs text-text-muted">(comped)</span>
+          )}
+          {user.is_beta_user && (
+            <span className="ml-2 text-xs text-text-muted">(beta)</span>
+          )}
+        </Property>
+        <Property label={user.cancel_at_period_end ? 'Access ends' : 'Renews'}>
+          <span className="text-text">{formatDate(user.subscription_end)}</span>
+        </Property>
+        <Property label="Signed up">
+          <span className="text-text">{formatDate(user.created_at)}</span>
+        </Property>
+        <Property label="Stripe customer">
+          {user.stripe_customer_id ? (
+            <a
+              href={`https://dashboard.stripe.com/customers/${user.stripe_customer_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-text hover:text-text-muted text-sm font-mono"
             >
-              Cancel subscription
-            </Button>
-            {!user.stripe_subscription_id && (
-              <span className="text-xs text-text-subtle">No Stripe subscription</span>
-            )}
-          </ActionRow>
+              {user.stripe_customer_id.slice(0, 16)}…
+              <ExternalLink size={12} strokeWidth={1.5} />
+            </a>
+          ) : (
+            <span className="text-text-subtle">—</span>
+          )}
+        </Property>
+      </dl>
 
-          <ActionRow label="Link Stripe customer">
+      {/* Actions — primary safe operations grouped together. */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={compPlan}
+            onValueChange={(v) => setCompPlan(v as 'pro' | 'max')}
+            size="sm"
+            options={[
+              { value: 'pro', label: 'Pro' },
+              { value: 'max', label: 'Max' },
+            ]}
+            className="w-24"
+          />
+          <Button onClick={handleComp} size="sm">
+            Comp user
+          </Button>
+          <Button
+            onClick={() => setConfirmCancel(true)}
+            disabled={!user.stripe_subscription_id}
+            variant="secondary"
+            size="sm"
+          >
+            Cancel at period end
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-text-muted">Refund last invoice</span>
+          <span className="text-xs text-text-muted">$</span>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={refundAmount}
+            onChange={(e) => setRefundAmount(e.target.value)}
+            placeholder="0.00"
+            className="w-24"
+            size="sm"
+          />
+          <Button
+            onClick={handleRefund}
+            disabled={!user.stripe_customer_id}
+            variant="secondary"
+            size="sm"
+          >
+            Refund
+          </Button>
+        </div>
+
+        {/* Link Stripe customer — collapsed; for the legacy reconnection case only. */}
+        {!showLinkStripe ? (
+          <button
+            type="button"
+            onClick={() => setShowLinkStripe(true)}
+            className="text-xs text-text-muted hover:text-text underline cursor-pointer"
+          >
+            Link Stripe customer
+          </button>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               type="text"
               value={linkCustomerId}
@@ -238,33 +235,19 @@ export function SubscriptionActionsSection({
             <Button onClick={handleLinkStripe} size="sm">
               Link
             </Button>
-          </ActionRow>
-
-          <ActionRow label="Refund last invoice">
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-text-muted">$</span>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={refundAmount}
-                onChange={(e) => setRefundAmount(e.target.value)}
-                placeholder="0.00"
-                className="w-24"
-                size="sm"
-              />
-            </div>
-            <Button
-              onClick={handleRefund}
-              disabled={!user.stripe_customer_id}
-              variant="secondary"
-              size="sm"
+            <button
+              type="button"
+              onClick={() => {
+                setShowLinkStripe(false);
+                setLinkCustomerId('');
+              }}
+              className="text-xs text-text-muted hover:text-text cursor-pointer"
             >
-              Refund
-            </Button>
-          </ActionRow>
-        </div>
-      </section>
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
 
       <ConfirmDialog
         open={confirmCancel}
@@ -275,30 +258,15 @@ export function SubscriptionActionsSection({
         onConfirm={handleCancel}
         onCancel={() => setConfirmCancel(false)}
       />
-    </>
+    </section>
   );
 }
 
-function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+function Property({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs text-text-muted mb-0.5">{label}</div>
-      <div className="text-text">{children}</div>
-    </div>
-  );
-}
-
-function ActionRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-xs text-text-muted w-36 flex-shrink-0">{label}</span>
-      {children}
+      <dt className="text-xs text-text-muted mb-0.5">{label}</dt>
+      <dd className="text-text">{children}</dd>
     </div>
   );
 }
