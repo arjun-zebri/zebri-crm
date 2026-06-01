@@ -1,6 +1,134 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ on staging. **Phase 12 (Settings)** ✅ in flight on `phase-12-settings`.
+> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ on staging. **Phase 12 (Settings)** ✅ on staging. **Phase 13 (Admin + Ops)** ✅ in flight on `phase-13-admin-ops`.
+
+### Admin / Shadow mode — audit log + Ops surface (Phase 13)
+
+Three deliverables in one PR — security, UX cleanup, and a new
+Ops surface that makes the admin page actually useful for
+day-to-day support / ops work.
+
+**Safety (Part A)**
+
+- **Sidebar §7.4 fix** — `app/components/sidebar.tsx:133` used to
+  read `user.user_metadata.account_type === 'admin'` to decide
+  whether to render the Admin link. The route itself was
+  middleware-gated, but the link visibility leaked the wrong
+  decision pattern. Now routes through `isAdmin(user)` from
+  `@/lib/auth/entitlements`. The invariant ("user_metadata-claimed
+  admin is ignored") is already locked in by
+  `tests/unit/lib/auth/entitlements.test.ts:115`, so no new
+  component test was added.
+
+- **`supabase/migrations/20260531000000_create_admin_audit_log.sql`**
+  — new `public.admin_audit_log` table. Columns: `actor_id`,
+  `target_user_id`, `action`, `details (jsonb)`, `created_at`.
+  RLS: SELECT-only for admins (policy reads `app_metadata` via
+  `auth.jwt()` — same JWT-claim path middleware uses); no
+  INSERT/UPDATE/DELETE policies — the sole writer is the
+  service-role helper at `lib/admin/audit.ts`. Matches the access
+  model already used for `stripe_events`, `connect_accounts`, and
+  `contract_audit_log`.
+
+- **`lib/admin/audit.ts`** — `recordAdminAction()` writes one row
+  per mutating admin action. Failure-tolerant: on insert error it
+  fires an `app_error` Slack alert and returns `false` rather
+  than throwing — blocking the original admin action because the
+  audit table is unreachable would be worse than shipping the
+  action without a record.
+
+- **`app/admin/actions.ts` audit + alert wiring** — every mutating
+  admin action now calls `recordAdminAction()` after success:
+  `extendTrial`, `compUser`, `linkStripeCustomer`,
+  `cancelAtPeriodEnd`, `refundLastInvoice`, `updateUserProfile`,
+  `sendPasswordReset`, `deleteUser`, `enterShadow`, `exitShadow`.
+  Shadow-mode entries record + alert BEFORE `redirect()` since
+  Next's redirect throws an internal exception.
+
+- **4 new Slack alert types** — `admin_shadow_entered` (warn),
+  `admin_user_deleted` (error), `admin_user_comped` (warn),
+  `admin_refund_issued` (warn). Routine non-destructive admin
+  actions (extendTrial, sendPasswordReset, updateUserProfile,
+  linkStripeCustomer, cancelAtPeriodEnd) are logged to
+  `admin_audit_log` but not Slack-alerted — destructive-only,
+  per the locked decision.
+
+**UX cleanup (Part B)**
+
+- **Decomposed `UserDetailPanel`** (503 LOC → 42 LOC orchestrator
+  + 4 child sections):
+  - `user-profile-section.tsx` (≈63 LOC) — display + business name.
+  - `user-analytics-section.tsx` (≈75 LOC) — couples/events/
+    invoices/contracts counts + last sign-in.
+  - `subscription-actions-section.tsx` (≈250 LOC) — status
+    summary + extend trial / comp / cancel / link Stripe /
+    refund actions.
+  - `account-actions-section.tsx` (≈100 LOC) — shadow / password
+    reset / delete (with confirm dialog).
+
+- **Design-token migration across every admin file** — `gray-*`,
+  `bg-white`, `bg-amber-*`, `text-red-*`, `bg-red-*`,
+  `border-red-*` all gone. Now uses `bg-surface`, `bg-surface-muted`,
+  `bg-surface-emphasis`, `text-text`, `text-text-muted`,
+  `text-text-subtle`, `border-border`, `text-danger`,
+  `bg-warning/10` + `text-warning`.
+
+- **UI primitives swap-in** — native `<button>` / `<input>` /
+  `<select>` inside the user detail panel replaced with
+  `Button` / `Input` / `Select` from `components/ui/*`. Cancel +
+  Delete actions use the `danger` variant.
+
+**Ops surface (Part C)**
+
+- **New `Ops` tab** at `/admin?tab=ops` —
+  `app/(dashboard)/admin/tabs/ops-tab.tsx`. Three actionable
+  cards:
+  1. **Trials ending in 7 days** — filtered by
+     `subscription_status = 'trialing'`, excludes already-comped
+     and Stripe-paying users. Sorted soonest-first. Day-count
+     badge flips to `cancelled` (red) tone at ≤ 2 days.
+  2. **Past-due subscriptions** — `subscription_status =
+     'past_due'`. Shows business + email + plan + a "Stripe"
+     drill-down link to the customer dashboard.
+  3. **Connect account issues** — pulls
+     `disabled_reason IS NOT NULL` OR
+     `requirements_past_due` non-empty from
+     `public.connect_accounts`. Lists the failed capability
+     flags + the past-due field names so support knows what to
+     ask the vendor for.
+
+- **`lib/admin/ops-signals.ts`** — pure helpers
+  (`findTrialsEndingSoon`, `findPastDueUsers`) + service-role
+  query (`findConnectIssues`) + the one-pass `getOpsSnapshot()`
+  the page consumes.
+
+- **Email / business-name quick-jump search**
+  (`app/(dashboard)/admin/components/user-search-bar.tsx`) sits
+  above the tab bar. Type 2+ characters → up to 6 matches
+  appear in a popover; click → opens the user detail panel.
+  Removes the "copy email from Stripe → search in Supabase
+  Studio" loop for inbound support requests.
+
+**Tests**
+
+- `tests/integration/rls/admin-audit-log.test.ts` (8 tests) —
+  admin SELECT works, vendor SELECT is empty, §7.4 escalator
+  probe (admin in user_metadata → still empty), no
+  INSERT/UPDATE/DELETE policy, anon sees nothing.
+- `tests/integration/admin/audit-log-flow.test.ts` (3 tests) —
+  end-to-end `recordAdminAction → admin_audit_log` round-trip,
+  null-target support, failure-tolerance on bad actor id.
+- `tests/unit/lib/admin/ops-signals.test.ts` (8 tests) —
+  filters / sorts / window math for `findTrialsEndingSoon` +
+  `findPastDueUsers`.
+
+**Out of scope (deliberate)**
+
+- Schema drift detector (entitlement ↔ Stripe mismatch) — per
+  user instruction post-John-incident.
+- Per-user 30d activity sparkline — deferred to a follow-up.
+- Decomposing big template managers in Settings (Phase 12
+  leftover, not admin work).
 
 ### Settings — page orchestrator + template RLS coverage (Phase 12)
 

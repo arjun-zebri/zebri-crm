@@ -215,6 +215,39 @@ export type AlertEvent =
       windowMinutes: number;
     })
 
+  // ───── Admin actions (Phase 13) ───────────────────────────────────
+  | (BaseEvent & {
+      type: 'admin_shadow_entered';
+      severity: 'warn';
+      actorId: string;
+      targetUserId: string;
+      targetEmail: string;
+    })
+  | (BaseEvent & {
+      type: 'admin_user_deleted';
+      severity: 'error';
+      actorId: string;
+      targetUserId: string;
+      targetEmail: string;
+    })
+  | (BaseEvent & {
+      type: 'admin_user_comped';
+      severity: 'warn';
+      actorId: string;
+      targetUserId: string;
+      targetEmail: string;
+      plan: 'pro' | 'max';
+    })
+  | (BaseEvent & {
+      type: 'admin_refund_issued';
+      severity: 'warn';
+      actorId: string;
+      targetUserId: string;
+      targetEmail: string;
+      amountCents: number;
+      paymentIntentId?: string;
+    })
+
   // ───── Catch-all ──────────────────────────────────────────────────
   | (BaseEvent & {
       type: 'app_error';

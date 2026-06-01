@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { recordAdminAction } from "@/lib/admin/audit";
+import { sendAlert } from "@/lib/alerts";
 import {
   accountType,
   isAdmin,
@@ -77,11 +79,12 @@ async function patchUserDisplay(
 }
 
 export async function extendTrial(userId: string, newTrialEndISO: string) {
-  await assertAdmin();
+  const adminUser = await assertAdmin();
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
   const currentStatus = subscriptionStatus(existing.user);
   const subId = stripeSubscriptionId(existing.user);
+  const previousTrialEnd = (existing.user?.app_metadata?.trial_end as string | undefined) ?? null;
 
   // Push the new trial_end to Stripe first so it drives the schedule.
   // Otherwise Stripe charges the card on the original trial end date and
@@ -99,14 +102,21 @@ export async function extendTrial(userId: string, newTrialEndISO: string) {
     patch.is_subscribed = true;
   }
   await updateEntitlements(admin.auth.admin, userId, patch);
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId: userId,
+    action: 'extend_trial',
+    details: { from: previousTrialEnd, to: newTrialEndISO },
+  });
   revalidatePath("/admin");
 }
 
 export async function compUser(userId: string, plan: "pro" | "max") {
-  await assertAdmin();
+  const adminUser = await assertAdmin();
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
   const subId = stripeSubscriptionId(existing.user);
+  const targetEmail = existing.user?.email ?? "";
 
   // Cancel any live Stripe subscription so the user isn't double-billed
   // while we mark them as comped.
@@ -130,6 +140,20 @@ export async function compUser(userId: string, plan: "pro" | "max") {
     cancel_at_period_end: false,
     subscription_end: undefined,
   });
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId: userId,
+    action: 'comp_user',
+    details: { plan, cancelledStripeSubId: subId ?? null },
+  });
+  await sendAlert({
+    type: 'admin_user_comped',
+    severity: 'warn',
+    actorId: adminUser.id,
+    targetUserId: userId,
+    targetEmail,
+    plan,
+  });
   revalidatePath("/admin");
 }
 
@@ -138,7 +162,7 @@ export async function compUser(userId: string, plan: "pro" | "max") {
 // Stripe Dashboard, legacy account from before the lookup table existed).
 // Pulls the live state from Stripe and writes everything back to the user.
 export async function linkStripeCustomer(userId: string, stripeCustomerId: string) {
-  await assertAdmin();
+  const adminUser = await assertAdmin();
   const trimmed = stripeCustomerId.trim();
   if (!/^cus_[A-Za-z0-9]+$/.test(trimmed)) {
     throw new Error("Stripe customer ID should start with 'cus_'");
@@ -185,6 +209,12 @@ export async function linkStripeCustomer(userId: string, stripeCustomerId: strin
         : undefined,
   });
 
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId: userId,
+    action: 'link_stripe_customer',
+    details: { stripeCustomerId: trimmed, subscriptionId: sub?.id ?? null, plan },
+  });
   revalidatePath("/admin");
   return {
     subscriptionId: sub?.id ?? null,
@@ -194,24 +224,31 @@ export async function linkStripeCustomer(userId: string, stripeCustomerId: strin
 }
 
 export async function cancelAtPeriodEnd(userId: string) {
-  await assertAdmin();
+  const adminUser = await assertAdmin();
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
   const subId = stripeSubscriptionId(existing.user);
   if (!subId) throw new Error("User has no Stripe subscription");
 
   await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId: userId,
+    action: 'cancel_at_period_end',
+    details: { stripeSubscriptionId: subId },
+  });
   revalidatePath("/admin");
 }
 
 export async function refundLastInvoice(userId: string, amountCents: number) {
-  await assertAdmin();
+  const adminUser = await assertAdmin();
   if (!Number.isInteger(amountCents) || amountCents <= 0) {
     throw new Error("Refund amount must be a positive integer (cents)");
   }
   const admin = createAdminClient();
   const { data: existing } = await admin.auth.admin.getUserById(userId);
   const customerId = stripeCustomerId(existing.user);
+  const targetEmail = existing.user?.email ?? "";
   if (!customerId) throw new Error("User has no Stripe customer");
 
   const intents = await stripe.paymentIntents.list({ customer: customerId, limit: 5 });
@@ -223,6 +260,21 @@ export async function refundLastInvoice(userId: string, amountCents: number) {
     amount: amountCents,
     reason: "requested_by_customer",
   });
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId: userId,
+    action: 'refund_last_invoice',
+    details: { amountCents, paymentIntentId: succeeded.id, refundId: refund.id },
+  });
+  await sendAlert({
+    type: 'admin_refund_issued',
+    severity: 'warn',
+    actorId: adminUser.id,
+    targetUserId: userId,
+    targetEmail,
+    amountCents,
+    paymentIntentId: succeeded.id,
+  });
   return { refundId: refund.id, status: refund.status };
 }
 
@@ -230,17 +282,23 @@ export async function updateUserProfile(
   userId: string,
   fields: { display_name?: string; business_name?: string }
 ) {
-  await assertAdmin();
+  const adminUser = await assertAdmin();
   const patch: Record<string, unknown> = {};
   if (typeof fields.display_name === "string") patch.display_name = fields.display_name;
   if (typeof fields.business_name === "string") patch.business_name = fields.business_name;
   if (Object.keys(patch).length === 0) return;
   await patchUserDisplay(userId, patch);
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId: userId,
+    action: 'update_user_profile',
+    details: patch,
+  });
   revalidatePath("/admin");
 }
 
 export async function sendPasswordReset(userId: string) {
-  await assertAdmin();
+  const adminUser = await assertAdmin();
   const admin = createAdminClient();
   const { data: target, error: getError } = await admin.auth.admin.getUserById(userId);
   if (getError) throw getError;
@@ -251,6 +309,12 @@ export async function sendPasswordReset(userId: string) {
     email: target.user.email,
   });
   if (error) throw error;
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId: userId,
+    action: 'send_password_reset',
+    details: { email: target.user.email },
+  });
   return { recoveryLink: data.properties?.action_link ?? null };
 }
 
@@ -262,6 +326,7 @@ export async function deleteUser(userId: string) {
   const { data: existing } = await admin.auth.admin.getUserById(userId);
   const customerId = stripeCustomerId(existing.user);
   const subId = stripeSubscriptionId(existing.user);
+  const targetEmail = existing.user?.email ?? "";
 
   // Stop billing in Stripe before tearing down the auth user. Cascade on
   // stripe_customers FK will remove our lookup row, so any later webhooks
@@ -283,6 +348,23 @@ export async function deleteUser(userId: string) {
 
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) throw error;
+  // Audit + alert AFTER the delete succeeds. The target_user_id FK uses
+  // ON DELETE SET NULL so the log row survives the user deletion (the
+  // actor link survives, but the target id becomes null on cascade) —
+  // we still capture the email in `details` for post-hoc readability.
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId: null,
+    action: 'delete_user',
+    details: { deletedUserId: userId, deletedEmail: targetEmail },
+  });
+  await sendAlert({
+    type: 'admin_user_deleted',
+    severity: 'error',
+    actorId: adminUser.id,
+    targetUserId: userId,
+    targetEmail,
+  });
   revalidatePath("/admin");
 }
 
@@ -345,6 +427,22 @@ export async function enterShadow(targetUserId: string) {
   });
   if (signInError) throw signInError;
 
+  // Record + alert BEFORE the redirect — Next's redirect() throws an
+  // internal exception, so anything after it never runs.
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId,
+    action: 'enter_shadow',
+    details: { targetEmail: targetUser.email },
+  });
+  await sendAlert({
+    type: 'admin_shadow_entered',
+    severity: 'warn',
+    actorId: adminUser.id,
+    targetUserId,
+    targetEmail: targetUser.email,
+  });
+
   redirect("/");
 }
 
@@ -391,6 +489,14 @@ export async function exitShadow() {
     type: "magiclink",
   });
   if (signInError) throw signInError;
+
+  // Record before redirect; exit is non-destructive so no Slack alert.
+  await recordAdminAction({
+    actorId: adminUser.id,
+    targetUserId: null,
+    action: 'exit_shadow',
+    details: {},
+  });
 
   redirect("/admin");
 }

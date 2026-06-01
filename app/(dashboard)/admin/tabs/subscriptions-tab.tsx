@@ -59,15 +59,15 @@ export function SubscriptionsTab({
   return (
     <div>
       <div className="flex items-center justify-end mb-4">
-        <div className="text-xs text-gray-500">
-          Active MRR <span className="font-medium text-gray-900">${totalMrr.toFixed(0)}</span>
+        <div className="text-xs text-text-muted">
+          Active MRR <span className="font-medium text-text">${totalMrr.toFixed(0)}</span>
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <div className="border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-surface-muted border-b border-border">
               <tr>
                 <Th>User</Th>
                 <Th>Email</Th>
@@ -82,7 +82,7 @@ export function SubscriptionsTab({
             <tbody>
               {subscribers.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={8} className="px-4 py-8 text-center text-text-subtle">
                     No subscriptions yet
                   </td>
                 </tr>
@@ -91,24 +91,24 @@ export function SubscriptionsTab({
                 <tr
                   key={user.id}
                   onClick={() => onOpenUser(user.id)}
-                  className="border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer"
+                  className="border-b border-border last:border-0 hover:bg-surface-muted cursor-pointer"
                 >
                   <td className="px-4 py-3 font-medium">{user.display_name || " - "}</td>
-                  <td className="px-4 py-3 text-gray-600">{user.email}</td>
+                  <td className="px-4 py-3 text-text-muted">{user.email}</td>
                   <td className="px-4 py-3">
                     {user.subscription_status ? (
                       <Badge variant={statusVariant[user.subscription_status]}>
                         {user.subscription_status.replace("_", " ")}
                       </Badge>
                     ) : (
-                      <span className="text-gray-400 text-xs"> - </span>
+                      <span className="text-text-subtle text-xs"> - </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600 capitalize">
+                  <td className="px-4 py-3 text-text-muted capitalize">
                     {user.subscription_plan ?? " - "}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{formatDate(user.trial_end)}</td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-text-muted">{formatDate(user.trial_end)}</td>
+                  <td className="px-4 py-3 text-text-muted">
                     {formatDate(user.subscription_end)}
                   </td>
                   <td className="px-4 py-3">
@@ -118,16 +118,16 @@ export function SubscriptionsTab({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900"
+                        className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text"
                       >
                         {user.stripe_customer_id.slice(0, 14)}…
                         <ExternalLink size={12} strokeWidth={1.5} />
                       </a>
                     ) : (
-                      <span className="text-gray-400 text-xs"> - </span>
+                      <span className="text-text-subtle text-xs"> - </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-text-muted">
                     {mrrFor(user) > 0 ? `$${mrrFor(user)}` : " - "}
                   </td>
                 </tr>
@@ -137,14 +137,14 @@ export function SubscriptionsTab({
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-gray-400">{subscribers.length} subscriptions</p>
+      <p className="mt-4 text-xs text-text-subtle">{subscribers.length} subscriptions</p>
     </div>
   );
 }
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="text-left px-4 py-3 font-medium text-gray-500 whitespace-nowrap">
+    <th className="text-left px-4 py-3 font-medium text-text-muted whitespace-nowrap">
       {children}
     </th>
   );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { isAdmin } from "@/lib/auth/entitlements";
 import { clearShadowCookies } from "@/app/admin/actions";
 import {
   LayoutDashboard,
@@ -130,7 +131,11 @@ export function Sidebar({ mobileOpen, onMobileClose, isExpanded, onToggle }: Sid
           <div className="border-t border-gray-200 pt-3 space-y-2">
             {[
               ...bottomItems,
-              ...(user?.user_metadata?.account_type === "admin"
+              // Admin link visibility goes through the entitlements
+              // helper so it reads app_metadata only (§7.4): a user
+              // writing account_type='admin' to user_metadata via
+              // auth.updateUser({data}) cannot make the link appear.
+              ...(isAdmin(user)
                 ? [{ label: "Admin", href: "/admin", icon: Shield }]
                 : []),
             ].map((item) => {

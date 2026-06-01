@@ -90,6 +90,16 @@ function describe(event: AlertEvent): string {
       return `action=${event.action} · ip=${event.ip}${event.userId ? ` · user=${event.userId}` : ''}`;
     case 'rls_denied_spike':
       return `${event.count} denials on ${event.table} in the last ${event.windowMinutes}m`;
+    case 'admin_shadow_entered':
+      return `admin=${event.actorId} → target=${event.targetEmail} (${event.targetUserId})`;
+    case 'admin_user_deleted':
+      return `admin=${event.actorId} deleted ${event.targetEmail} (${event.targetUserId})`;
+    case 'admin_user_comped':
+      return `admin=${event.actorId} comped ${event.targetEmail} → ${event.plan}`;
+    case 'admin_refund_issued':
+      return `admin=${event.actorId} refunded $${(event.amountCents / 100).toFixed(2)} to ${event.targetEmail}${
+        event.paymentIntentId ? ` · pi=${event.paymentIntentId}` : ''
+      }`;
     case 'app_error':
       return `${event.source ? `${event.source}: ` : ''}${event.message}`;
   }
