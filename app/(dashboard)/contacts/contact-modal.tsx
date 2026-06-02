@@ -76,6 +76,11 @@ export function ContactModal({
     e.preventDefault();
     if (!name.trim()) return;
 
+    // Don't reset the form here - the parent's onSave is async and
+    // the modal stays mounted until it resolves. Clearing locally
+    // makes the form flash to empty while the save is in flight,
+    // and would also wipe the user's input if the save errored.
+    // `useEffect([vendor, isOpen])` resets on next open.
     onSave({
       id: vendor?.id,
       name,
@@ -86,8 +91,6 @@ export function ContactModal({
       status,
       notes,
     });
-
-    resetForm();
   };
 
   const handleDelete = () => {
@@ -199,7 +202,9 @@ export function ContactModal({
             />
           </div>
 
-          {/* Category */}
+          {/* Category + Status share a row on sm+ - both are compact
+              picklists and the modal feels too tall when stacked. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">
               Category
@@ -216,7 +221,10 @@ export function ContactModal({
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  // z-[90] sits above the nested ContactModal content
+                  // (z-[80]); the previous z-[70] sat *under* it, which
+                  // is why the popover items were unclickable.
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -259,7 +267,7 @@ export function ContactModal({
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[90] w-[var(--radix-popover-trigger-width)]"
                   sideOffset={4}
                   align="start"
                 >
@@ -283,6 +291,7 @@ export function ContactModal({
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
+          </div>
           </div>
 
           <div>

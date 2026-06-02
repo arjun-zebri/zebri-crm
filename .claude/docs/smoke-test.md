@@ -111,27 +111,27 @@ e# Zebri smoke test plan
 
 ### 3.1 · List / Kanban / Calendar views
 
-- [ ] Kanban default. Each card shows name + date + status.
-- [ ] Drag a couple between status columns → persists on reload.
-- [ ] Switch List view → table renders.
-- [ ] Switch Calendar view → mini-month sidebar + Day / Week /
+- [y] Kanban default. Each card shows name + date + status.
+- [y] Drag a couple between status columns → persists on reload.
+- [y] Switch List view → table renders.
+- [y] Switch Calendar view → mini-month sidebar + Day / Week /
   Month options.
-- [ ] Calendar **Day** view — 24-hour grid, events at correct
+- [y] Calendar **Day** view — 24-hour grid, events at correct
   times.
-- [ ] Calendar **Week** view (default) — 7-column grid.
-- [ ] Calendar **Month** view — 6-week grid.
-- [ ] Prev/Next nav buttons in Calendar header.
-- [ ] Status filters (sidebar checkboxes) hide/show statuses;
+- [y] Calendar **Week** view (default) — 7-column grid.
+- [y] Calendar **Month** view — 6-week grid.
+- [y] Prev/Next nav buttons in Calendar header.
+- [y] Status filters (sidebar checkboxes) hide/show statuses;
   black `accent-black` checkboxes.
-- [ ] Couple-name search in calendar sidebar filters live.
+- [y] Couple-name search in calendar sidebar filters live.
 
 ### 3.2 · Add couple
 
-- [ ] "Add couple" → modal opens with Name / Email / Phone /
+- [y] "Add couple" → modal opens with Name / Email / Phone /
   Status / Notes only. **No event date or venue field** (those
   live on Events tab).
-- [ ] Submit empty → validation errors.
-- [ ] Submit valid → modal closes, couple appears.
+- [y] Submit empty → validation errors.
+- [y] Submit valid → modal closes, couple appears.
 - [ ] **Starter cap**: at 5 couples on Starter, trying to add a
   6th must fail with a clear "Upgrade to add more couples"
   message.

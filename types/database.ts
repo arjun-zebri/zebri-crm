@@ -427,6 +427,12 @@ export type Database = {
           phone: string | null
           portal_token: string
           portal_token_enabled: boolean
+          primary_email: string | null
+          primary_name: string | null
+          primary_phone: string | null
+          secondary_email: string | null
+          secondary_name: string | null
+          secondary_phone: string | null
           status: string
           user_id: string
           venue: string | null
@@ -443,6 +449,12 @@ export type Database = {
           phone?: string | null
           portal_token?: string
           portal_token_enabled?: boolean
+          primary_email?: string | null
+          primary_name?: string | null
+          primary_phone?: string | null
+          secondary_email?: string | null
+          secondary_name?: string | null
+          secondary_phone?: string | null
           status?: string
           user_id: string
           venue?: string | null
@@ -459,6 +471,12 @@ export type Database = {
           phone?: string | null
           portal_token?: string
           portal_token_enabled?: boolean
+          primary_email?: string | null
+          primary_name?: string | null
+          primary_phone?: string | null
+          secondary_email?: string | null
+          secondary_name?: string | null
+          secondary_phone?: string | null
           status?: string
           user_id?: string
           venue?: string | null
@@ -521,6 +539,7 @@ export type Database = {
           share_token_enabled: boolean
           status: string
           timeline_notes: string | null
+          title: string | null
           user_id: string
           venue: string | null
           venue_lat: number | null
@@ -541,6 +560,7 @@ export type Database = {
           share_token_enabled?: boolean
           status?: string
           timeline_notes?: string | null
+          title?: string | null
           user_id: string
           venue?: string | null
           venue_lat?: number | null
@@ -561,6 +581,7 @@ export type Database = {
           share_token_enabled?: boolean
           status?: string
           timeline_notes?: string | null
+          title?: string | null
           user_id?: string
           venue?: string | null
           venue_lat?: number | null
@@ -1706,3 +1727,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

@@ -192,6 +192,7 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
         await createEventAction({
           couple_id: rest.couple_id,
           date: rest.date,
+          title: rest.title ?? null,
           venue: rest.venue,
           venue_phone: rest.venue_phone ?? null,
           venue_website: rest.venue_website ?? null,
@@ -270,6 +271,21 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
             contact_ids: allContactIds,
           }),
         )
+        // Anyone attached to a couple's event also belongs in the
+        // couple's Contacts tab - otherwise vendors added during
+        // event creation appear nowhere on the couple profile.
+        // Upsert is idempotent so re-attaching to a second event
+        // is harmless.
+        await supabase
+          .from('couple_contacts')
+          .upsert(
+            allContactIds.map((contact_id) => ({
+              couple_id: couple.id,
+              contact_id,
+              user_id: user.user.id,
+            })),
+            { onConflict: 'couple_id,contact_id', ignoreDuplicates: true },
+          )
       }
 
       // Auto-insert sunset timeline item if we have coordinates.
@@ -288,7 +304,7 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
               hour12: false,
               timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             })
-            // Don't fail the whole flow if the action rejects — sunset
+            // Don't fail the whole flow if the action rejects - sunset
             // is a "would be nice" detail, not core data.
             await createTimelineItemAction({
               event_id: newEvent.id,
@@ -336,6 +352,7 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
           id: rest.id,
           couple_id: rest.couple_id,
           date: rest.date,
+          title: rest.title ?? null,
           venue: rest.venue,
           venue_phone: rest.venue_phone ?? null,
           venue_website: rest.venue_website ?? null,
@@ -346,7 +363,7 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
         }),
       )
 
-      // Sync contacts if provided. Wipe-and-rewrite — `event_contacts`
+      // Sync contacts if provided. Wipe-and-rewrite - `event_contacts`
       // is a join table without natural ordering, so it's cheaper to
       // delete-then-insert than to diff. Done with the RLS-scoped
       // client because the action set doesn't expose "delete all
@@ -364,12 +381,33 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
               contact_ids: vendorIds,
             }),
           )
+          // Mirror the create flow: surface event vendors on the
+          // couple's Contacts tab. We never *remove* couple_contacts
+          // here - a vendor attached to one event still belongs to
+          // the couple even if dropped from another.
+          const { data: userData } = await supabase.auth.getUser()
+          if (userData.user) {
+            await supabase
+              .from('couple_contacts')
+              .upsert(
+                vendorIds.map((contact_id) => ({
+                  couple_id: couple.id,
+                  contact_id,
+                  user_id: userData.user!.id,
+                })),
+                {
+                  onConflict: 'couple_id,contact_id',
+                  ignoreDuplicates: true,
+                },
+              )
+          }
         }
       }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['couple-events', couple.id] })
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
+      queryClient.invalidateQueries({ queryKey: ['couple-contacts', couple.id] })
       if (editingEvent) {
         queryClient.invalidateQueries({ queryKey: ['event-contacts', editingEvent.id] })
       }
@@ -515,7 +553,12 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
                           aria-hidden
                         />
                         <div className="flex items-center justify-between">
-                          <p className="text-sm text-gray-700 truncate">{event.venue || 'Untitled'}</p>
+                          <p className="text-sm text-gray-700 truncate">
+                            {event.title || event.venue || 'Untitled'}
+                            {event.title && event.venue && (
+                              <span className="text-gray-400"> · {event.venue}</span>
+                            )}
+                          </p>
                           <Pencil size={11} strokeWidth={1.5} className="text-gray-400 opacity-0 group-hover:opacity-60 shrink-0 ml-2" />
                         </div>
                         {calculatingDriveTime ? (
@@ -550,6 +593,11 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
         onDelete={editingEvent ? handleDeleteFromModal : undefined}
         event={editingEvent}
         coupleId={couple.id}
+        coupleName={couple.name}
+        // Default a new event to the couple's first existing event
+        // date (couples regularly need ceremony + reception on the
+        // same day) or fall back to next Saturday inside the modal.
+        defaultDate={events?.[0]?.date ?? couple.event_date ?? undefined}
         loading={loading}
         initialVendorIds={editingVendorIds}
       />

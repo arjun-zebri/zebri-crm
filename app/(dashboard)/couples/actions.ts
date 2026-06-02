@@ -63,10 +63,23 @@ const dateOrNull = z
     'event_date must be a YYYY-MM-DD string or null',
   );
 
+// Partner contact triple (name + email + phone), each nullable so
+// the user can fill them in over time. Defaulted at the schema
+// level so the Supabase Insert spread always has the keys.
+const partnerName = z.string().trim().max(200).nullable().default(null);
+const partnerEmail = z.string().trim().max(200).nullable().default(null);
+const partnerPhone = z.string().trim().max(50).nullable().default(null);
+
 const coupleInputSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
   email: z.string().trim().max(200).default(''),
   phone: z.string().trim().max(50).default(''),
+  primary_name: partnerName,
+  primary_email: partnerEmail,
+  primary_phone: partnerPhone,
+  secondary_name: partnerName,
+  secondary_email: partnerEmail,
+  secondary_phone: partnerPhone,
   event_date: dateOrNull,
   venue: z.string().trim().max(300).default(''),
   notes: z.string().max(5000).default(''),
@@ -79,7 +92,11 @@ const coupleInputSchema = z.object({
   kanban_position: z.number().default(0),
 });
 
-export type CoupleInput = z.infer<typeof coupleInputSchema>;
+// `z.input` (not `z.infer`) so fields with `.default(...)` stay
+// optional on the *call signature*. After parsing inside the action,
+// defaults are filled in - so the spread into Supabase Insert is
+// always complete.
+export type CoupleInput = z.input<typeof coupleInputSchema>;
 
 /**
  * Detect the Starter-cap trigger error. The trigger raises with the
@@ -136,7 +153,7 @@ const updateCoupleSchema = coupleInputSchema.extend({
   id: z.uuid('Couple id must be a UUID'),
 });
 
-export type UpdateCoupleInput = z.infer<typeof updateCoupleSchema>;
+export type UpdateCoupleInput = z.input<typeof updateCoupleSchema>;
 
 export async function updateCoupleAction(
   input: UpdateCoupleInput,

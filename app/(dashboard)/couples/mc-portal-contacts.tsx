@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS, Contact } from '@/types/contact'
+import type { Couple } from '@/types/couple'
 
 import { ContactModal } from '../contacts/contact-modal'
 
@@ -37,14 +38,17 @@ interface ContactLink {
   vendor: Contact
 }
 
+// Couple partners are now sourced from `couples.primary_*` and
+// `couples.secondary_*` (Phase: Option B). The `partner` portal_people
+// category is left in the type union for legacy data but is no
+// longer surfaced as its own section here or in the add menu.
 const PEOPLE_CATEGORIES = [
-  { label: 'Couple', category: 'partner', roles: PARTNER_ROLES },
   { label: 'Bridal party', category: 'bridal_party', roles: BRIDAL_ROLES },
   { label: 'Family', category: 'family', roles: FAMILY_ROLES },
   { label: 'Other', category: 'other', roles: OTHER_ROLES },
 ]
 
-const MENU_CATEGORIES = PEOPLE_CATEGORIES.slice(0, 3)
+const MENU_CATEGORIES = PEOPLE_CATEGORIES.slice(0, 2)
 
 const AVATAR_COLORS: Record<string, string> = {
   partner: 'bg-emerald-50 text-emerald-600',
@@ -54,6 +58,7 @@ const AVATAR_COLORS: Record<string, string> = {
 }
 
 interface McPortalContactsProps {
+  couple: Couple
   people: PortalPerson[]
   isPeopleLoading: boolean
   coupleId: string
@@ -74,7 +79,7 @@ function CountBadge({ count }: { count: number }) {
 }
 
 export function McPortalContacts({
-  people, isPeopleLoading, coupleId, onEditPerson, onAddPerson,
+  couple, people, isPeopleLoading, coupleId, onEditPerson, onAddPerson,
 }: McPortalContactsProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
@@ -160,25 +165,55 @@ export function McPortalContacts({
   const visibleCategories = PEOPLE_CATEGORIES.filter(({ category }) =>
     people.some((p) => p.category === category)
   )
+  // Couple partners come from the couple row itself (post-Option-B).
+  // Only render a partner if at least one of name/email/phone is set,
+  // so half-filled rows don't show empty placeholders.
+  const couplePartners = (
+    [
+      {
+        role: 'Primary',
+        name: couple.primary_name ?? '',
+        email: couple.primary_email ?? '',
+        phone: couple.primary_phone ?? '',
+      },
+      {
+        role: 'Secondary',
+        name: couple.secondary_name ?? '',
+        email: couple.secondary_email ?? '',
+        phone: couple.secondary_phone ?? '',
+      },
+    ] as const
+  ).filter((p) => p.name || p.email || p.phone)
+  const hasCouplePartners = couplePartners.length > 0
   const hasPeople = visibleCategories.length > 0
-  const isEmpty = !isLoading && !hasPeople && !hasVendors
+  const isEmpty =
+    !isLoading && !hasPeople && !hasVendors && !hasCouplePartners
   const modalLoading = updateContact.isPending || deleteContact.isPending
 
   return (
     <div className="pt-3">
-      <div className="flex justify-end mb-1.5">
+      {/* Left-aligned header-style action, matching the Events tab
+          pattern on the Overview surface. The trailing "+" anchors
+          the popover that branches into Wedding Party / Vendor. */}
+      <div className="mb-3">
         <Popover.Root open={addMenuOpen} onOpenChange={setAddMenuOpen}>
           <Popover.Trigger asChild>
-            <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition cursor-pointer">
-              <Plus size={14} strokeWidth={2} />
-              Add contact
+            <button className="group flex items-center gap-1.5 cursor-pointer">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">
+                Add contact
+              </h3>
+              <Plus
+                size={12}
+                strokeWidth={2}
+                className="text-gray-900 group-hover:text-gray-600 transition"
+              />
             </button>
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Content
               className="bg-white border border-gray-200 rounded-xl shadow-lg z-[70] w-44 py-1"
               sideOffset={6}
-              align="end"
+              align="start"
             >
               <p className="px-3 pt-2 pb-1 text-xs text-gray-400">Wedding party</p>
               {MENU_CATEGORIES.map(({ label, category, roles }) => (
@@ -216,15 +251,48 @@ export function McPortalContacts({
         </div>
       ) : (
         <>
-          {isEmpty && (
+          {isEmpty && !hasCouplePartners && (
             <p className="text-sm text-gray-400">No contacts added yet.</p>
+          )}
+
+          {hasCouplePartners && (
+            <div className="mb-1">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  Couple
+                </h3>
+                <CountBadge count={couplePartners.length} />
+              </div>
+              <div className="space-y-0.5">
+                {couplePartners.map((p) => (
+                  <div
+                    key={p.role}
+                    className="flex items-center gap-3 min-h-[40px] py-1.5 -mx-2 px-2 rounded-lg"
+                  >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0 select-none bg-emerald-50 text-emerald-600">
+                      {p.name ? initials(p.name) : '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900 truncate">
+                        {p.name || `${p.role} (unnamed)`}
+                      </p>
+                      {(p.email || p.phone) && (
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">
+                          {[p.email, p.phone].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {visibleCategories.map(({ label, category, roles }, renderIdx) => {
             const items = people.filter((p) => p.category === category)
             const avatarColor = AVATAR_COLORS[category]
             return (
-              <div key={category} className={renderIdx > 0 ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
+              <div key={category} className={renderIdx > 0 || hasCouplePartners ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
                 <div className="flex items-center gap-2 mb-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</h3>
                   <CountBadge count={items.length} />
@@ -270,7 +338,7 @@ export function McPortalContacts({
           })}
 
           {hasVendors && (
-            <div className={hasPeople ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
+            <div className={hasPeople || hasCouplePartners ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Vendors</h3>
                 <CountBadge count={vendors!.length} />

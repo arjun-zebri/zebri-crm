@@ -2,14 +2,16 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, X, Phone, Globe } from 'lucide-react'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { ChevronDown, Globe, Phone, Plus, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { DatePicker } from '@/components/ui/date-picker'
 import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS } from '@/types/contact'
 import { Event, EventStatus, STATUS_LABELS } from '@/types/event'
+
+import { ContactPopover } from './contact-popover'
 
 interface EventModalProps {
   isOpen: boolean
@@ -18,6 +20,14 @@ interface EventModalProps {
   onDelete?: () => void | Promise<void>
   event?: Event
   coupleId: string
+  /** Shown in the modal header ("Add event for {coupleName}") so the
+   *  user always knows which couple they're editing - matters when
+   *  the modal is opened from search results or cross-couple views. */
+  coupleName?: string
+  /** Pre-fill the date for new events. Caller can pass the couple's
+   *  existing wedding date so a second event on the same day starts
+   *  on the right date. Falls back to next Saturday. */
+  defaultDate?: string
   loading: boolean
   initialVendorIds?: string[]
 }
@@ -26,6 +36,7 @@ interface VendorOption {
   id: string
   name: string
   category: string
+  created_at: string
 }
 
 interface PlaceSuggestion {
@@ -36,6 +47,28 @@ interface PlaceSuggestion {
 
 const EVENT_STATUSES: EventStatus[] = ['upcoming', 'completed', 'cancelled']
 
+// Most weddings are weekends - defaulting the date input to the next
+// Saturday saves a few clicks in the calendar for the common case.
+function nextSaturday(from: Date = new Date()): string {
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate())
+  const dow = d.getDay()
+  const offset = ((6 - dow + 7) % 7) || 7
+  d.setDate(d.getDate() + offset)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+// Underline input style - matches the couple modal vocabulary
+// (`border-b border-gray-200`, transparent background, calm focus
+// state). The event modal opens alongside the couple modal so the
+// two should look like one product, not two visually distinct forms.
+const inputClass =
+  'w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition'
+
+const labelClass = 'block text-sm text-gray-600 mb-1'
+
 export function EventModal({
   isOpen,
   onClose,
@@ -43,11 +76,15 @@ export function EventModal({
   onDelete,
   event,
   coupleId,
+  coupleName,
+  defaultDate,
   loading,
   initialVendorIds,
 }: EventModalProps) {
   const supabase = createClient()
+  const [title, setTitle] = useState('')
   const [date, setDate] = useState('')
+  const [dateError, setDateError] = useState<string | null>(null)
   const [venue, setVenue] = useState('')
   const [venuePhone, setVenuePhone] = useState<string | null>(null)
   const [venueWebsite, setVenueWebsite] = useState<string | null>(null)
@@ -56,13 +93,11 @@ export function EventModal({
   const [venueSuggestions, setVenueSuggestions] = useState<PlaceSuggestion[]>([])
   const [venueDropdownOpen, setVenueDropdownOpen] = useState(false)
   const venueDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const status_state = useState<EventStatus>('upcoming')
-  const [status, setStatus] = status_state
+  const [status, setStatus] = useState<EventStatus>('upcoming')
   const [notes, setNotes] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([])
-  const [vendorSearch, setVendorSearch] = useState('')
 
   const { data: allVendors } = useQuery({
     queryKey: ['all-contacts'],
@@ -70,9 +105,14 @@ export function EventModal({
       const { data: user, error: userError } = await supabase.auth.getUser()
       if (userError || !user.user) throw new Error('Not authenticated')
 
+      // Select the union of fields any `['all-contacts']` consumer
+      // needs (ContactPicker also reads `created_at` to compute its
+      // Recent list) - the cache is shared across pickers, so a
+      // narrower select here would mean ContactPicker reads
+      // undefined for fields it sorts on.
       const { data, error } = await supabase
         .from('contacts')
-        .select('id, name, category')
+        .select('id, name, category, created_at')
         .eq('user_id', user.user.id)
         .eq('status', 'active')
         .order('name', { ascending: true })
@@ -85,6 +125,7 @@ export function EventModal({
 
   useEffect(() => {
     if (event) {
+      setTitle(event.title ?? '')
       setDate(event.date)
       setVenue(event.venue)
       setVenuePhone(event.venue_phone ?? null)
@@ -94,33 +135,27 @@ export function EventModal({
       setStatus(event.status)
       setNotes(event.timeline_notes ?? '')
     } else {
-      resetForm()
+      setTitle('')
+      setDate(defaultDate || nextSaturday())
+      setVenue('')
+      setVenuePhone(null)
+      setVenueWebsite(null)
+      setVenueLat(null)
+      setVenueLng(null)
+      setStatus('upcoming')
+      setNotes('')
     }
+    setDateError(null)
     setSelectedVendorIds(initialVendorIds || [])
     setShowDeleteModal(false)
-    setVendorSearch('')
     setVenueSuggestions([])
     setVenueDropdownOpen(false)
-  }, [event, isOpen, initialVendorIds])
-
-  const resetForm = () => {
-    setDate('')
-    setVenue('')
-    setVenuePhone(null)
-    setVenueWebsite(null)
-    setVenueLat(null)
-    setVenueLng(null)
-    setStatus('upcoming')
-    setNotes('')
-    setSelectedVendorIds([])
-    setVendorSearch('')
-    setVenueSuggestions([])
-    setVenueDropdownOpen(false)
-  }
+  }, [event, isOpen, initialVendorIds, defaultDate])
 
   const handleVenueChange = (value: string) => {
     setVenue(value)
-    // Clear place details when user types manually
+    // Clear place details when the user edits manually so we don't
+    // keep stale phone/website hints from a previous suggestion.
     setVenuePhone(null)
     setVenueWebsite(null)
     setVenueLat(null)
@@ -176,12 +211,17 @@ export function EventModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!date.trim()) return
+    if (!date.trim()) {
+      setDateError('Date is required')
+      return
+    }
+    setDateError(null)
 
     onSave({
-      id: event?.id,
+      ...(event?.id ? { id: event.id } : {}),
       couple_id: coupleId,
       date,
+      title: title.trim() ? title.trim() : null,
       venue,
       venue_phone: venuePhone,
       venue_website: venueWebsite,
@@ -193,92 +233,148 @@ export function EventModal({
     })
   }
 
-  const handleDeleteClick = () => {
-    setShowDeleteModal(true)
-  }
-
   const handleConfirmDelete = async () => {
-    if (onDelete) {
-      await onDelete()
-    }
+    if (onDelete) await onDelete()
     setShowDeleteModal(false)
   }
-
-  const filteredVendors = useMemo(() => {
-    if (!allVendors) return []
-    return allVendors.filter(
-      (v) =>
-        !selectedVendorIds.includes(v.id) &&
-        v.name.toLowerCase().includes(vendorSearch.toLowerCase())
-    )
-  }, [allVendors, vendorSearch, selectedVendorIds])
 
   const selectedVendors = useMemo(() => {
     if (!allVendors) return []
     return allVendors.filter((v) => selectedVendorIds.includes(v.id))
   }, [allVendors, selectedVendorIds])
 
-  const inputClass =
-    'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
+  // Header title: anchor to the couple so the modal never feels
+  // detached from the row it edits. Falls back to a generic label
+  // when callers haven't passed the couple name yet.
+  const headerTitle = event
+    ? 'Edit event'
+    : coupleName
+    ? `Add event for ${coupleName}`
+    : 'Add event'
 
   return (
     <>
       <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={event ? 'Edit Event' : 'Add Event'}
-      footer={
-        <div className="flex items-center justify-between">
-          {event && onDelete && (
-            <button
-              onClick={handleDeleteClick}
-              disabled={loading}
-              className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
-            >
-              Delete
-            </button>
-          )}
-          <div className="flex gap-3 ml-auto">
-            <button
-              onClick={onClose}
-              disabled={loading}
-              className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading || !date.trim()}
-              className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? 'Saving...' : 'Save'}
-            </button>
+        isOpen={isOpen}
+        onClose={onClose}
+        title={headerTitle}
+        footer={
+          <div className="flex items-center justify-between">
+            {event && onDelete && (
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                disabled={loading}
+                className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
+              >
+                Delete
+              </button>
+            )}
+            <div className="flex gap-3 ml-auto">
+              <button
+                onClick={onClose}
+                disabled={loading}
+                className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
-        </div>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Date - 2 cols */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date <span className="text-red-500">*</span>
-            </label>
-            <DatePicker value={date} onChange={setDate} placeholder="Select date" />
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Title - optional short label distinguishing ceremony /
+              reception / engagement party. Goes first because it's
+              the line users will see in the events list. */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g., Ceremony"
+              className={inputClass}
+            />
           </div>
 
-          {/* Venue - 2 cols */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Venue
-            </label>
+          {/* Date + Status share a row - both compact controls. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>
+                Date <span className="text-red-500">*</span>
+              </label>
+              <DatePicker
+                value={date}
+                onChange={(v) => {
+                  setDate(v)
+                  setDateError(null)
+                }}
+                placeholder="Select date"
+                variant="underline"
+                defaultViewDate={defaultDate ?? nextSaturday()}
+              />
+              {dateError && (
+                <p className="text-xs text-red-500 mt-1">{dateError}</p>
+              )}
+            </div>
+
+            <div>
+              <label className={labelClass}>Status</label>
+              <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
+                <Popover.Trigger asChild>
+                  <button
+                    type="button"
+                    className={`${inputClass} flex items-center justify-between text-left`}
+                  >
+                    <span className="text-gray-900">{STATUS_LABELS[status]}</span>
+                    <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-[var(--radix-popover-trigger-width)]"
+                    sideOffset={4}
+                    align="start"
+                  >
+                    {EVENT_STATUSES.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => {
+                          setStatus(s)
+                          setStatusOpen(false)
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm transition ${
+                          status === s
+                            ? 'bg-gray-100 text-gray-900 font-medium'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {STATUS_LABELS[s]}
+                      </button>
+                    ))}
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+            </div>
+          </div>
+
+          {/* Venue - full width with Places autocomplete suggestions. */}
+          <div>
+            <label className={labelClass}>Venue</label>
             <div className="relative">
               <input
                 type="text"
                 value={venue}
                 onChange={(e) => handleVenueChange(e.target.value)}
                 onBlur={() => setTimeout(() => setVenueDropdownOpen(false), 150)}
-                placeholder="e.g., Grand Hotel Ballroom"
+                placeholder="Search a venue or address"
                 className={inputClass}
                 autoComplete="off"
               />
@@ -301,7 +397,7 @@ export function EventModal({
               )}
             </div>
             {(venuePhone || venueWebsite) && (
-              <div className="mt-2 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 flex flex-col gap-1.5">
+              <div className="mt-2 flex flex-col gap-1.5">
                 {venuePhone && (
                   <div className="flex items-center gap-2">
                     <Phone size={11} strokeWidth={1.5} className="text-gray-400 shrink-0" />
@@ -325,68 +421,52 @@ export function EventModal({
             )}
           </div>
 
-          {/* Status - 2 cols */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
-              <Popover.Trigger asChild>
-                <button
-                  type="button"
-                  className={inputClass + ' flex items-center justify-between'}
-                >
-                  {STATUS_LABELS[status]}
-                  <ChevronDown size={16} strokeWidth={1.5} className="text-gray-400" />
-                </button>
-              </Popover.Trigger>
-              <Popover.Content
-                className="z-50 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-1"
-                side="bottom"
-                align="start"
+          {/* Contacts - header-style "Contacts +" trigger opens a
+              search popover; the popover's footer "Create new contact"
+              opens the full ContactModal for proper detail capture. */}
+          <div>
+            <ContactPopover
+              excludeIds={selectedVendorIds}
+              onAdd={(id) =>
+                setSelectedVendorIds((ids) =>
+                  ids.includes(id) ? ids : [...ids, id],
+                )
+              }
+            >
+              <button
+                type="button"
+                className="group flex items-center gap-1.5 mb-2 cursor-pointer"
               >
-                {EVENT_STATUSES.map((stat) => (
-                  <button
-                    key={stat}
-                    type="button"
-                    onClick={() => {
-                      setStatus(stat)
-                      setStatusOpen(false)
-                    }}
-                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition ${
-                      status === stat
-                        ? 'bg-green-50 text-green-700 font-medium'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {STATUS_LABELS[stat]}
-                  </button>
-                ))}
-              </Popover.Content>
-            </Popover.Root>
-          </div>
-
-          {/* Contacts - 2 cols */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contacts
-            </label>
-
-            {/* Selected vendors */}
-            {selectedVendors.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
+                <span className="text-sm text-gray-600 group-hover:text-gray-900 transition">
+                  Vendor Contacts
+                </span>
+                <Plus
+                  size={12}
+                  strokeWidth={2}
+                  className="text-gray-600 group-hover:text-gray-900 transition"
+                />
+              </button>
+            </ContactPopover>
+            {selectedVendors.length === 0 ? (
+              <p className="text-sm text-gray-400">No contacts added</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
                 {selectedVendors.map((v) => (
                   <span
                     key={v.id}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md text-sm text-gray-700"
+                    className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 bg-gray-100 rounded-xl text-sm text-gray-700"
                   >
-                    {v.name}
+                    <span className="truncate max-w-[12rem]">{v.name}</span>
+                    <span className="text-xs text-gray-400">
+                      {CATEGORY_LABELS[v.category as keyof typeof CATEGORY_LABELS] || v.category}
+                    </span>
                     <button
                       type="button"
                       onClick={() =>
                         setSelectedVendorIds((ids) => ids.filter((id) => id !== v.id))
                       }
-                      className="text-gray-400 hover:text-gray-600 transition"
+                      className="text-gray-400 hover:text-gray-600 transition cursor-pointer ml-0.5"
+                      aria-label={`Remove ${v.name}`}
                     >
                       <X size={12} strokeWidth={1.5} />
                     </button>
@@ -394,49 +474,10 @@ export function EventModal({
                 ))}
               </div>
             )}
-
-            {/* Vendor search */}
-            <div className="relative">
-              <input
-                type="text"
-                value={vendorSearch}
-                onChange={(e) => setVendorSearch(e.target.value)}
-                placeholder="Search contacts to add..."
-                className={inputClass}
-              />
-              {vendorSearch && filteredVendors.length > 0 && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
-                  {filteredVendors.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedVendorIds((ids) => [...ids, v.id])
-                        setVendorSearch('')
-                      }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 transition"
-                    >
-                      <p className="text-sm font-medium text-gray-900">{v.name}</p>
-                      <p className="text-xs text-gray-500">
-                        {CATEGORY_LABELS[v.category as keyof typeof CATEGORY_LABELS] || v.category}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {vendorSearch && filteredVendors.length === 0 && (
-                <div className="absolute top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-3">
-                  <p className="text-sm text-gray-500 text-center">No contacts found</p>
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Notes - 2 cols */}
-          <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
+          <div>
+            <label className={labelClass}>Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -445,42 +486,40 @@ export function EventModal({
               className={`${inputClass} resize-none`}
             />
           </div>
-        </div>
-      </form>
-    </Modal>
+        </form>
+      </Modal>
 
-    {/* Delete Confirmation Modal - Outside Modal to appear on top */}
-    {showDeleteModal && (
-      <>
-        <div className="fixed inset-0 bg-black/20 z-[70]" onClick={() => setShowDeleteModal(false)} />
-        <div className="fixed inset-0 z-[80] flex items-center justify-center">
-          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
-            <div className="px-6 py-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Event</h3>
-              <p className="text-sm text-gray-600 mb-6">
-                Are you sure you want to delete this event? This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-xl hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
-                >
-                  {loading ? 'Deleting...' : 'Delete'}
-                </button>
+      {showDeleteModal && (
+        <>
+          <div className="fixed inset-0 bg-black/20 z-[70]" onClick={() => setShowDeleteModal(false)} />
+          <div className="fixed inset-0 z-[80] flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4">
+              <div className="px-6 py-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Event</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Are you sure you want to delete this event? This action cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDelete}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 text-sm bg-red-600 text-white rounded-xl hover:bg-red-700 transition cursor-pointer disabled:opacity-50"
+                  >
+                    {loading ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </>
-    )}
+        </>
+      )}
     </>
   )
 }
