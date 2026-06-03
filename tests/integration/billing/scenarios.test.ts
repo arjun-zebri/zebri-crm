@@ -15,11 +15,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   accountType,
+  contractCoupleLimit,
   currentPlan,
-  hasContractsAccess,
   isActive,
   isAdmin,
   isSubscribed,
+  STARTER_CONTRACT_COUPLE_LIMIT,
   stripeConnectEnabled,
   stripeCustomerId,
   subscriptionPlan,
@@ -52,12 +53,12 @@ describe('billing scenarios — 8-state matrix', () => {
     beforeEach(async () => {
       user = await userInState('never_trialled');
     });
-    it('reads as Starter, no active access, no contracts gate', async () => {
+    it('reads as Starter, no active access, contracts capped at 5 couples', async () => {
       const u = await getServerUser(user);
       expect(subscriptionStatus(u)).toBeUndefined();
       expect(isActive(u)).toBe(false);
       expect(currentPlan(u)).toBe('starter');
-      expect(hasContractsAccess(u)).toBe(false);
+      expect(contractCoupleLimit(u)).toBe(STARTER_CONTRACT_COUPLE_LIMIT);
       expect(isSubscribed(u)).toBe(false);
     });
   });
@@ -66,12 +67,12 @@ describe('billing scenarios — 8-state matrix', () => {
     beforeEach(async () => {
       user = await userInState('trialing', { plan: 'pro' });
     });
-    it('reads as Pro, active, contracts unlocked', async () => {
+    it('reads as Pro, active, contracts uncapped', async () => {
       const u = await getServerUser(user);
       expect(subscriptionStatus(u)).toBe('trialing');
       expect(isActive(u)).toBe(true);
       expect(currentPlan(u)).toBe('pro');
-      expect(hasContractsAccess(u)).toBe(true);
+      expect(contractCoupleLimit(u)).toBeNull();
       expect(isSubscribed(u)).toBe(true);
     });
   });
@@ -121,12 +122,12 @@ describe('billing scenarios — 8-state matrix', () => {
     beforeEach(async () => {
       user = await userInState('past_due', { plan: 'pro' });
     });
-    it('reads as past_due, not active, downgrades plan', async () => {
+    it('reads as past_due, not active, downgrades plan and recaps contracts', async () => {
       const u = await getServerUser(user);
       expect(subscriptionStatus(u)).toBe('past_due');
       expect(isActive(u)).toBe(false);
       expect(currentPlan(u)).toBe('starter');
-      expect(hasContractsAccess(u)).toBe(false);
+      expect(contractCoupleLimit(u)).toBe(STARTER_CONTRACT_COUPLE_LIMIT);
     });
   });
 
@@ -163,15 +164,15 @@ describe('billing scenarios — plan-tier gating', () => {
     await user?.cleanup();
   });
 
-  it.each<[PlanId: 'starter' | 'pro' | 'max', hasContracts: boolean]>([
-    ['starter', false],
-    ['pro', true],
-    ['max', true],
-  ])('plan=%s → hasContractsAccess=%s', async (plan, contracts) => {
+  it.each<[plan: 'starter' | 'pro' | 'max', limit: number | null]>([
+    ['starter', STARTER_CONTRACT_COUPLE_LIMIT],
+    ['pro', null],
+    ['max', null],
+  ])('plan=%s → contractCoupleLimit=%s', async (plan, expected) => {
     user = await userInState('active', { plan });
     const u = await getServerUser(user);
     expect(currentPlan(u)).toBe(plan);
-    expect(hasContractsAccess(u)).toBe(contracts);
+    expect(contractCoupleLimit(u)).toBe(expected);
   });
 
   it('admin role from app_metadata is independent of subscription state', async () => {

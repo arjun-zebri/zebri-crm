@@ -78,39 +78,9 @@ async function patchUserDisplay(
   if (error) throw error;
 }
 
-export async function extendTrial(userId: string, newTrialEndISO: string) {
-  const adminUser = await assertAdmin();
-  const admin = createAdminClient();
-  const { data: existing } = await admin.auth.admin.getUserById(userId);
-  const currentStatus = subscriptionStatus(existing.user);
-  const subId = stripeSubscriptionId(existing.user);
-  const previousTrialEnd = (existing.user?.app_metadata?.trial_end as string | undefined) ?? null;
-
-  // Push the new trial_end to Stripe first so it drives the schedule.
-  // Otherwise Stripe charges the card on the original trial end date and
-  // the next webhook overwrites our metadata extension.
-  if (subId) {
-    const trialEndUnix = Math.floor(new Date(newTrialEndISO).getTime() / 1000);
-    await stripe.subscriptions.update(subId, { trial_end: trialEndUnix });
-    // Webhook will sync trial_end + status back, but patch eagerly so the
-    // admin UI updates immediately.
-  }
-
-  const patch: Record<string, unknown> = { trial_end: newTrialEndISO };
-  if (currentStatus === "expired" || currentStatus === "cancelled" || !currentStatus) {
-    patch.subscription_status = "trialing";
-    patch.is_subscribed = true;
-  }
-  await updateEntitlements(admin.auth.admin, userId, patch);
-  await recordAdminAction({
-    actorId: adminUser.id,
-    targetUserId: userId,
-    action: 'extend_trial',
-    details: { from: previousTrialEnd, to: newTrialEndISO },
-  });
-  revalidatePath("/admin");
-}
-
+// Trials were removed from the signup flow in Phase 1. Comping a user
+// is the supported way to grant paid-plan access — no fake trial window
+// is needed. The `extendTrial` server action was removed in Phase 13.1.
 export async function compUser(userId: string, plan: "pro" | "max") {
   const adminUser = await assertAdmin();
   const admin = createAdminClient();

@@ -33,6 +33,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+import { logger } from '@/lib/alerts/logger';
 import { sendAlert } from '@/lib/alerts/send-alert';
 import {
   AUTH_RATE_LIMITS,
@@ -216,9 +217,27 @@ export async function resetPasswordAction(
 
   const supabase = await createClient();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
-  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${appUrl}/update-password`,
+  const redirectTo = `${appUrl}/update-password`;
+  // Capture and log the result server-side so a misconfigured Supabase
+  // SMTP / redirect-URL allowlist / project rate limit is observable.
+  // The client-facing response stays "always success" to avoid leaking
+  // which accounts exist (enumeration protection).
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo,
   });
+  if (error) {
+    logger.error('reset-password email send failed', error, {
+      flow: 'auth.resetPassword',
+      redirectTo,
+      status: error.status,
+      code: error.code,
+    });
+  } else {
+    logger.info('reset-password email requested', {
+      flow: 'auth.resetPassword',
+      redirectTo,
+    });
+  }
   // Always-success surface — see TSDoc above.
   return {};
 }

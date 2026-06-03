@@ -2,10 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileSignature } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 import { ContractBuilderModal } from '@/components/builders/contract-builder-modal'
 import { useToast } from '@/components/ui/toast'
+import {
+  contractCoupleLimit,
+  STARTER_CONTRACT_COUPLE_LIMIT,
+} from '@/lib/payments/subscription'
 import { createClient } from '@/lib/supabase/client'
 
 interface Contract {
@@ -56,8 +61,45 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
     },
   })
 
+  // Starter-plan cap: max 5 distinct couples with contracts. Pro/Max
+  // are uncapped. Fetch every contract.couple_id for this user and
+  // count distinct values client-side; cheap (one MC has dozens of
+  // contracts, not thousands) and avoids a separate count RPC. The
+  // server-side enforcement (DB trigger) is a follow-up.
+  const { data: limitInfo } = useQuery({
+    queryKey: ['contracts-couple-limit', coupleId],
+    queryFn: async () => {
+      const { data: userRes } = await supabase.auth.getUser()
+      const user = userRes.user
+      if (!user) throw new Error('Not authenticated')
+      const limit = contractCoupleLimit(user)
+      if (limit === null) {
+        return { limit: null, distinctCount: 0, coupleHasContract: false }
+      }
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('couple_id')
+        .eq('user_id', user.id)
+      if (error) throw error
+      const ids = new Set<string>()
+      for (const row of data ?? []) ids.add(row.couple_id as string)
+      return {
+        limit,
+        distinctCount: ids.size,
+        coupleHasContract: ids.has(coupleId),
+      }
+    },
+  })
+
+  const atLimit =
+    !!limitInfo &&
+    limitInfo.limit !== null &&
+    !limitInfo.coupleHasContract &&
+    limitInfo.distinctCount >= limitInfo.limit
+
   const createContract = useMutation({
     mutationFn: async () => {
+      if (atLimit) throw new Error('starter-limit')
       const { data: user } = await supabase.auth.getUser()
       if (!user.user) throw new Error('Not authenticated')
       const { data: num, error: numError } = await supabase.rpc('generate_contract_number', {
@@ -81,9 +123,16 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
     },
     onSuccess: (id) => {
       queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] })
+      queryClient.invalidateQueries({ queryKey: ['contracts-couple-limit'] })
       setActiveContractId(id)
     },
-    onError: () => toast('Failed to create contract', 'error'),
+    onError: (err) => {
+      if (err instanceof Error && err.message === 'starter-limit') {
+        toast('Free plan limit: contracts for 5 couples', 'error')
+        return
+      }
+      toast('Failed to create contract', 'error')
+    },
   })
 
   if (isLoading) {
@@ -102,13 +151,27 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
         {all.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-gray-400 mb-3">No contracts yet.</p>
-            <button
-              onClick={() => createContract.mutate()}
-              disabled={createContract.isPending}
-              className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
-            >
-              {createContract.isPending ? 'Creating…' : '+ New Contract'}
-            </button>
+            {atLimit ? (
+              <div className="text-xs text-gray-500 space-y-2">
+                <p>
+                  Free plan limit reached — contracts for {STARTER_CONTRACT_COUPLE_LIMIT} couples.
+                </p>
+                <Link
+                  href="/settings/billing"
+                  className="inline-block text-xs text-gray-700 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  Upgrade to Pro
+                </Link>
+              </div>
+            ) : (
+              <button
+                onClick={() => createContract.mutate()}
+                disabled={createContract.isPending}
+                className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+              >
+                {createContract.isPending ? 'Creating…' : '+ New Contract'}
+              </button>
+            )}
           </div>
         ) : (
           <div>
@@ -133,7 +196,7 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
             <button
               onClick={() => createContract.mutate()}
               disabled={createContract.isPending}
-              className="text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
+              className="text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50 px-2"
             >
               {createContract.isPending ? 'Creating…' : '+ New Contract'}
             </button>

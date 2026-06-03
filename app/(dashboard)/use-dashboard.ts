@@ -496,6 +496,10 @@ export function useDashboardTasks() {
         )
         .eq("user_id", user.user.id)
         .neq("status", "done")
+        // Dashboard widget's only action is "click → open couple
+        // profile on Tasks tab". Un-linked tasks have no destination
+        // here; they still appear on /tasks.
+        .not("related_couple_id", "is", null)
         .order("due_date", { ascending: true, nullsFirst: false })
         .limit(10);
 

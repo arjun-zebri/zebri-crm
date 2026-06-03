@@ -32,8 +32,12 @@ export function CoupleModal({
   loading,
 }: CoupleModalProps) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [primaryName, setPrimaryName] = useState("");
+  const [primaryEmail, setPrimaryEmail] = useState("");
+  const [primaryPhone, setPrimaryPhone] = useState("");
+  const [secondaryName, setSecondaryName] = useState("");
+  const [secondaryEmail, setSecondaryEmail] = useState("");
+  const [secondaryPhone, setSecondaryPhone] = useState("");
   const [status, setStatus] = useState<string>("new");
   const [notes, setNotes] = useState("");
   const [leadSource, setLeadSource] = useState<string>("");
@@ -44,8 +48,12 @@ export function CoupleModal({
   useEffect(() => {
     if (couple) {
       setName(couple.name);
-      setEmail(couple.email);
-      setPhone(couple.phone);
+      setPrimaryName(couple.primary_name ?? "");
+      setPrimaryEmail(couple.primary_email ?? "");
+      setPrimaryPhone(couple.primary_phone ?? "");
+      setSecondaryName(couple.secondary_name ?? "");
+      setSecondaryEmail(couple.secondary_email ?? "");
+      setSecondaryPhone(couple.secondary_phone ?? "");
       setStatus(couple.status);
       setLeadSource(couple.lead_source || "");
       setNotes(couple.notes);
@@ -60,22 +68,36 @@ export function CoupleModal({
 
   const resetForm = () => {
     setName("");
-    setEmail("");
-    setPhone("");
+    setPrimaryName("");
+    setPrimaryEmail("");
+    setPrimaryPhone("");
+    setSecondaryName("");
+    setSecondaryEmail("");
+    setSecondaryPhone("");
     setStatus("new");
     setLeadSource("");
     setNotes("");
   };
 
+  const trim = (v: string) => (v.trim() === "" ? null : v.trim());
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !primaryName.trim()) return;
 
     onSave({
       id: couple?.id,
       name,
-      email,
-      phone,
+      // Legacy couple-level email/phone are kept untouched; the
+      // partner triples are the canonical surface from here on.
+      email: couple?.email ?? "",
+      phone: couple?.phone ?? "",
+      primary_name: trim(primaryName),
+      primary_email: trim(primaryEmail),
+      primary_phone: trim(primaryPhone),
+      secondary_name: trim(secondaryName),
+      secondary_email: trim(secondaryEmail),
+      secondary_phone: trim(secondaryPhone),
       event_date: couple?.event_date ?? null,
       venue: couple?.venue ?? "",
       status: status as any,
@@ -83,8 +105,6 @@ export function CoupleModal({
       kanban_position: couple?.kanban_position ?? 0,
       notes,
     });
-
-    resetForm();
   };
 
   const handleDelete = () => {
@@ -92,7 +112,7 @@ export function CoupleModal({
   };
 
   const inputClass =
-    "w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 transition";
+    "w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition";
 
   const selectedStatus = statuses.find(s => s.slug === status);
   const selectedLabel = selectedStatus?.name || "Select status";
@@ -124,7 +144,7 @@ export function CoupleModal({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={loading || !name.trim()}
+              disabled={loading || !name.trim() || !primaryName.trim()}
               className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Saving..." : "Save"}
@@ -133,10 +153,10 @@ export function CoupleModal({
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="flex flex-col gap-8">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
+            <label className="block text-sm text-gray-600 mb-1">
               Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -149,34 +169,82 @@ export function CoupleModal({
             />
           </div>
 
+          {/* Primary partner contact. The section header carries the
+              required marker (no per-field label) so Primary and
+              Secondary share the same visual rhythm - Save is gated
+              on `primaryName` regardless. */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
-              placeholder="email@example.com"
-            />
+            <h4 className="block text-sm text-gray-600 mb-1">
+              Primary contact <span className="text-red-500">*</span>
+            </h4>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={primaryName}
+                onChange={(e) => setPrimaryName(e.target.value)}
+                className={inputClass}
+                placeholder="Full name"
+                required
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                  type="email"
+                  value={primaryEmail}
+                  onChange={(e) => setPrimaryEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="Email"
+                />
+                <input
+                  type="tel"
+                  value={primaryPhone}
+                  onChange={(e) => setPrimaryPhone(e.target.value)}
+                  className={inputClass}
+                  placeholder="Phone"
+                />
+              </div>
+            </div>
           </div>
 
+          {/* Secondary partner - same shape. Both can be empty if
+              the MC hasn't captured the partner details yet. */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Phone
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className={inputClass}
-              placeholder="+61 400 000 000"
-            />
+            <h4 className="block text-sm text-gray-600 mb-1">
+              Secondary contact
+            </h4>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={secondaryName}
+                onChange={(e) => setSecondaryName(e.target.value)}
+                className={inputClass}
+                placeholder="Full name"
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                  type="email"
+                  value={secondaryEmail}
+                  onChange={(e) => setSecondaryEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="Email"
+                />
+                <input
+                  type="tel"
+                  value={secondaryPhone}
+                  onChange={(e) => setSecondaryPhone(e.target.value)}
+                  className={inputClass}
+                  placeholder="Phone"
+                />
+              </div>
+            </div>
           </div>
 
+          {/* Status + Lead Source share a row on sm+ - both are
+              compact picklists, stacking them makes the modal feel
+              taller than it needs to. Whitespace separates them
+              from the Secondary contact block above. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
+            <label className="block text-sm text-gray-600 mb-1">
               Status
             </label>
             <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
@@ -224,7 +292,7 @@ export function CoupleModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
+            <label className="block text-sm text-gray-600 mb-1">
               Lead Source
             </label>
             <Popover.Root open={leadSourceOpen} onOpenChange={setLeadSourceOpen}>
@@ -284,10 +352,11 @@ export function CoupleModal({
               </Popover.Portal>
             </Popover.Root>
           </div>
+          </div>
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
+          <label className="block text-sm text-gray-600 mb-1">
             Notes
           </label>
           <textarea

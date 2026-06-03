@@ -26,6 +26,20 @@ export interface Couple {
   name: string
   email: string
   phone: string
+  /**
+   * Primary partner contact triple - distinct from the couple-level
+   * `name / email / phone`. Surfaces individually on the Overview tab
+   * and as the "Couple" section's first row on the Contacts tab.
+   * Optional on the type: pre-migration rows + ad-hoc Couple
+   * literals (dashboard skeletons, tests) may not carry them.
+   */
+  primary_name?: string | null
+  primary_email?: string | null
+  primary_phone?: string | null
+  /** Secondary partner contact triple. Same shape as primary. */
+  secondary_name?: string | null
+  secondary_email?: string | null
+  secondary_phone?: string | null
   event_date: string | null
   venue: string
   notes: string

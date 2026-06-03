@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { useState } from 'react'
 
-import { ContactPicker } from '@/app/(dashboard)/couples/contact-picker'
+import { ContactPopover } from '@/app/(dashboard)/couples/contact-popover'
 import {
   linkContactToEventAction,
   unlinkContactFromEventAction,
@@ -38,7 +38,6 @@ interface ContactLink {
 export function EventVendors({ eventId }: EventVendorsProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
-  const [showAddVendor, setShowAddVendor] = useState(false)
 
   const { data: vendors, isLoading } = useQuery({
     queryKey: ['event-contacts', eventId],
@@ -83,7 +82,6 @@ export function EventVendors({ eventId }: EventVendorsProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event-contacts', eventId] })
-      setShowAddVendor(false)
     },
   })
 
@@ -102,12 +100,14 @@ export function EventVendors({ eventId }: EventVendorsProps) {
       {!vendors || vendors.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-sm text-gray-500 mb-3">No contacts assigned yet.</p>
-          <button
-            onClick={() => setShowAddVendor(true)}
-            className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+          <ContactPopover
+            excludeIds={[]}
+            onAdd={(id) => addVendor.mutate(id)}
           >
-            + Add Contact
-          </button>
+            <button className="text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
+              + Add Contact
+            </button>
+          </ContactPopover>
         </div>
       ) : (
         <>
@@ -131,22 +131,15 @@ export function EventVendors({ eventId }: EventVendorsProps) {
               </div>
             ))}
           </div>
-          <button
-            onClick={() => setShowAddVendor(true)}
-            className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+          <ContactPopover
+            excludeIds={vendors.map((v) => v.contact_id)}
+            onAdd={(id) => addVendor.mutate(id)}
           >
-            + Add Contact
-          </button>
+            <button className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">
+              + Add Contact
+            </button>
+          </ContactPopover>
         </>
-      )}
-
-      {showAddVendor && (
-        <ContactPicker
-          excludeVendorIds={vendors?.map(v => v.contact_id) ?? []}
-          onAdd={(contactId) => addVendor.mutate(contactId)}
-          onClose={() => setShowAddVendor(false)}
-          isAdding={addVendor.isPending}
-        />
       )}
     </div>
   )
