@@ -4,9 +4,10 @@
  * is clicked in the list/kanban.
  *
  * 9 tabs nesting every per-couple feature: Overview, Pulse, Tasks,
- * Contacts, Timeline, Songs, Files, Payments, Contracts. The
- * Contracts tab is gated by `hasContractsAccess()` from the
- * entitlements helper.
+ * Contacts, Timeline, Songs, Files, Payments, Contracts. Contracts
+ * is available on every plan; the Starter-plan cap (5 distinct
+ * couples) is enforced at contract creation inside `CoupleContracts`,
+ * not by hiding the tab.
  *
  * Composition only — chrome lives in `couple-profile-header`,
  * `couple-profile-nav`, `couple-profile-body`. Mutations route
@@ -34,8 +35,6 @@ import { useEffect, useState } from 'react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { getOpenModalDepth } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
-import { hasContractsAccess } from '@/lib/payments/subscription';
-import { createClient } from '@/lib/supabase/client';
 import { Couple } from '@/types/couple';
 
 import { rotateCouplePortalTokenAction } from './actions';
@@ -117,28 +116,15 @@ export function CoupleProfile({
   loading,
   defaultTab = 'overview',
 }: CoupleProfileProps) {
-  const supabase = createClient();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: statuses } = useCoupleStatuses();
 
-  // Contracts is a paid-plan feature — hide the tab when the user
-  // can't access it. Fetched once on mount; the gate is checked
-  // server-side again at every contract write so this is purely
-  // a display optimisation.
-  const [contractsEnabled, setContractsEnabled] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled) setContractsEnabled(hasContractsAccess(data.user));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
-  const navItems = contractsEnabled
-    ? NAV_ITEMS
-    : NAV_ITEMS.filter((i) => i.key !== 'contracts');
+  // Contracts is available on every plan (2026-06-03). The Starter
+  // 5-couple cap is enforced inside `CoupleContracts` at create time
+  // — hiding the tab would conceal couples that already have
+  // contracts when an MC downgrades.
+  const navItems = NAV_ITEMS;
 
   const [activeSection, setActiveSection] =
     useState<CoupleProfileSection>(defaultTab);

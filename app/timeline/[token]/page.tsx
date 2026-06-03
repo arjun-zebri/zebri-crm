@@ -57,9 +57,9 @@ export default async function PublicTimelinePage({
 
   if (!timeline) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 gap-6">
+      <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-4 gap-6">
         <Image src="/zebri-logo.svg" alt="Zebri" width={80} height={29} />
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-text-muted">
           This timeline is no longer available.
         </p>
       </div>
@@ -70,7 +70,7 @@ export default async function PublicTimelinePage({
   const mcName = mc.business_name || mc.display_name;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-surface">
       <div className="max-w-2xl mx-auto px-4 pb-16">
         {/* Logo */}
         <div className="pt-10 pb-2">
@@ -78,11 +78,11 @@ export default async function PublicTimelinePage({
         </div>
 
         {/* Event header */}
-        <div className="pt-8 pb-8 border-b border-gray-100">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+        <div className="pt-8 pb-8 border-b border-border">
+          <h1 className="text-2xl font-semibold text-text mb-1">
             {timeline.couple.name}
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-text-muted">
             {timeline.date ? formatEventDate(timeline.date) : ""}
             {timeline.date && timeline.venue ? " · " : ""}
             {timeline.venue}
@@ -92,7 +92,7 @@ export default async function PublicTimelinePage({
         {/* Timeline items */}
         <div className="pt-8">
           {!timeline.timeline_items || timeline.timeline_items.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4">No items added yet.</p>
+            <p className="text-sm text-text-subtle py-4">No items added yet.</p>
           ) : (
             timeline.timeline_items
               .filter((item) => item.start_time)
@@ -110,15 +110,15 @@ export default async function PublicTimelinePage({
         </div>
 
         {/* MC contact footer */}
-        <div className="border-t border-gray-100 mt-12 pt-8 pb-4">
+        <div className="border-t border-border mt-12 pt-8 pb-4">
           {mcName && (
-            <p className="text-sm font-medium text-gray-900 mb-1">{mcName}</p>
+            <p className="text-sm font-medium text-text mb-1">{mcName}</p>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {mc.email && (
               <a
                 href={`mailto:${mc.email}`}
-                className="text-sm text-gray-500 hover:text-gray-700 transition"
+                className="text-sm text-text-muted hover:text-text transition"
               >
                 {mc.email}
               </a>
@@ -126,7 +126,7 @@ export default async function PublicTimelinePage({
             {mc.phone && (
               <a
                 href={`tel:${mc.phone}`}
-                className="text-sm text-gray-500 hover:text-gray-700 transition"
+                className="text-sm text-text-muted hover:text-text transition"
               >
                 {mc.phone}
               </a>

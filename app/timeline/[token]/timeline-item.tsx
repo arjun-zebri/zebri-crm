@@ -29,31 +29,31 @@ export function PublicTimelineItem({
     : null;
 
   return (
-    <div className="relative ml-4 pl-6 pb-6 border-l-2 border-gray-200 last:pb-0">
+    <div className="relative ml-4 pl-6 pb-6 border-l-2 border-border last:pb-0">
       {/* Rail dot */}
-      <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-gray-300" />
+      <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-border-strong" />
 
       {/* Time row */}
       <div className="flex items-center justify-between mb-0.5">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+        <span className="text-xs font-medium text-text-muted uppercase tracking-wide">
           {formatTime(time)}
         </span>
         {duration_min && (
-          <span className="text-xs text-gray-400">~{duration_min} min</span>
+          <span className="text-xs text-text-subtle">~{duration_min} min</span>
         )}
       </div>
 
       {/* Title */}
-      <p className="text-sm font-semibold text-gray-900">{title}</p>
+      <p className="text-sm font-semibold text-text">{title}</p>
 
       {/* Description */}
       {description && (
-        <p className="text-sm text-gray-600 mt-0.5">{description}</p>
+        <p className="text-sm text-text-muted mt-0.5">{description}</p>
       )}
 
       {/* Assigned contact */}
       {contact && (
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-text-subtle mt-1">
           {contact.name}
           {categoryLabel ? ` · ${categoryLabel}` : ""}
         </p>

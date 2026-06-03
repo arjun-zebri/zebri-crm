@@ -334,6 +334,91 @@ attempts/hour. Valid-token loads are free.
   direct RPC calls from the section components). Tracked as a
   follow-up; lower priority than rate-limiting.
 
+### Public Timeline RPC security model (Phase 10)
+
+The `/timeline/[token]` surface is **unauthenticated** — MCs share
+the URL with vendors (photographers, caterers, etc.) so they have
+the wedding-day run-of-show. Like the portal and quote surfaces,
+the share token IS the capability.
+
+The page calls one `SECURITY DEFINER` RPC:
+
+- `get_public_timeline(token uuid) → json` — returns event date,
+  venue, couple name, MC contact info, and timeline items.
+
+The guard is the same shape as the other public-surface RPCs:
+
+```sql
+WHERE e.share_token = token AND e.share_token_enabled = true
+```
+
+Consequences:
+
+- **Invalid token** (random UUID) → returns null.
+- **Disabled token** (`share_token_enabled = false`) → returns null.
+- **Anti-confused-deputy** — the JSON payload is built from the
+  event resolved by the token; the MC contact block (`business_name`,
+  `email`, `phone`) joins from `auth.users` via `e.user_id`, so an
+  anon caller cannot substitute their own identity into the payload.
+
+**Tested guards** — `tests/integration/timeline/public-timeline-rpc.test.ts`
+(Phase 10, 5 tests) runs against the **anon-key Supabase client**
+to match the production browser path:
+
+- Random token → null.
+- Valid + enabled token → returns payload with correct venue +
+  couple + items.
+- Valid + disabled → null.
+- Cross-event probe: token A returns only event A's items, even
+  when event B is enabled simultaneously.
+- MC contact block reflects the event owner, not the caller.
+
+Same follow-up as the quote surface: extending the public token-
+attempt limiter (currently `/portal/[token]` only) to cover
+`/timeline/[token]` is tracked for completeness.
+
+### Public Quote RPC security model (Phase 9)
+
+The `/quote/[token]` surface is the same shape as the portal:
+**unauthenticated**, with the share token as the capability. The
+public quote page calls three `SECURITY DEFINER` RPCs directly:
+
+- `get_public_quote(token uuid) → jsonb` — read the payload.
+- `accept_quote(token uuid) → jsonb` — transition status to `accepted`.
+- `decline_quote(token uuid) → jsonb` — transition status to `declined`.
+
+Each RPC's guard is the same WHERE clause inside its body:
+
+```sql
+WHERE share_token = token AND share_token_enabled = true
+```
+
+Consequences identical to the portal model: invalid token →
+no-op / `not_found`; disabled token → no-op / `not_found`;
+anti-confused-deputy holds because the affected row is selected
+by the token, not by a caller-supplied id.
+
+**Tested guards** — `tests/integration/payments/public-quote-rpcs.test.ts`
+(Phase 9, 13 tests) runs against the **anon-key Supabase client**
+(no auth headers) to match the production browser path. Covers:
+
+- `get_public_quote` — random token returns null, valid+enabled
+  returns the quote payload, valid+disabled returns null.
+- `accept_quote` — random → `{error: "not_found"}`, disabled →
+  `{error: "not_found"}`, valid transitions to `accepted` +
+  populates `accepted_at`, second call → `{error: "already_actioned"}`,
+  past `expires_at` → `{error: "expired"}`. Cross-couple probe:
+  holding token A and calling `accept_quote(A)` does NOT
+  transition couple B's quote.
+- `decline_quote` — symmetric coverage. Cross-couple probe also
+  verified.
+
+The public token-attempt limiter currently fronts `/portal/[token]`
+only (see prior section). Extending it to `/quote/[token]` and
+`/invoice/[token]` is tracked as a follow-up — quote tokens are
+also UUIDs, so brute-force probability is identical to the
+portal's, but for completeness the limiter should cover them too.
+
 ### Authenticated Stripe routes — Phase 2D.2 additions
 
 | Route | Zod | Rate-limit | Notes |
@@ -353,33 +438,34 @@ DELETE (sampled clean across the migrations).
 |---|---|---|---|---|
 | `couples` | ✅ | `user_id` | ✅ `tests/integration/rls/couples.test.ts` (5 tests) + `tests/integration/billing/couple-cap.test.ts` (10 tests — Starter cap enforcement) | Couples & Events |
 | `events` | ✅ | `user_id` | ✅ `tests/integration/rls/events.test.ts` (Phase 4A, 5 tests) | Couples & Events |
-| `contacts` | ✅ | `user_id` | ☐ | Contacts |
+| `contacts` | ✅ | `user_id` | ✅ `tests/integration/rls/contacts.test.ts` (Phase 5, 5 tests) | Contacts |
 | `tasks` | ✅ | `user_id` | ✅ `tests/integration/rls/tasks.test.ts` (Phase 4B, 5 tests) | Tasks |
-| `quotes` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
-| `quote_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `quotes` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) + `tests/integration/payments/public-quote-rpcs.test.ts` (Phase 9 — public RPC guards) | Payments / Quotes |
+| `quote_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments / Quotes |
 | `quote_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `quote_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `invoices` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `invoice_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
-| `contract_templates` | ✅ | `user_id` | ☐ | Contracts |
+| `contract_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/contract-templates.test.ts` (Phase 12, 6 tests) | Contracts |
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
+| `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |
 | `event_vendors` (legacy) | ✅ | (join) | ☐ | Contacts |
-| `task_groups` | ✅ | `user_id` | ☐ | Tasks |
-| `timeline_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-items.test.ts` (Phase 4C, 5 tests) | Timeline |
-| `timeline_templates` | ✅ | `user_id` | ☐ | Timeline |
-| `timeline_template_items` | ✅ | `user_id` | ☐ | Timeline |
+| `task_groups` | ✅ | `user_id` | ✅ `tests/integration/rls/task-groups.test.ts` (Phase 6, 5 tests) | Tasks |
+| `timeline_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-items.test.ts` (Phase 4C, 5 tests) + `tests/integration/timeline/public-timeline-rpc.test.ts` (Phase 10 — public RPC guards) | Timeline |
+| `timeline_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-templates.test.ts` (Phase 12, 11 tests — both tables) | Timeline |
+| `timeline_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/timeline-templates.test.ts` (Phase 12, 11 tests — both tables) | Timeline |
 | `portal_files` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-files.test.ts` (Phase 4D, 4 tests) | Client Portal |
 | `portal_people` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-people.test.ts` (Phase 4D, 5 tests) | Client Portal |
 | `portal_songs` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-songs.test.ts` (Phase 4D, 7 tests — also covers `portal_song_categories`) | Client Portal |
 | `portal_song_categories` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-songs.test.ts` (Phase 4D) | Client Portal |
 | `stripe_customers` | ✅ (RLS enabled, no policy — service-role only) | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
-| `user_branding` | ✅ | `user_id` | ☐ | Branding |
+| `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) | Branding |
 
 **Per-page DoD requires** an integration test of the
 `couples.test.ts` shape (owner reads ok / other tenant cannot

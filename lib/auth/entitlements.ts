@@ -112,9 +112,34 @@ export function currentPlan(source: EntitlementSource | null | undefined): PlanI
   return 'starter';
 }
 
-export function hasContractsAccess(source: EntitlementSource | null | undefined): boolean {
-  const plan = currentPlan(source);
-  return plan === 'pro' || plan === 'max';
+/**
+ * Free-tier cap on how many distinct couples a Starter-plan MC can
+ * have contracts for. The Contracts feature itself is available on
+ * every plan (2026-06-03 policy change — was Pro/Max-only); the
+ * Starter cap is the new commercial restriction. Pro/Max are
+ * uncapped.
+ *
+ * "Distinct couples" means `COUNT(DISTINCT couple_id) FROM contracts
+ *  WHERE user_id = $me`. Multiple contracts on the same couple count
+ *  as one slot — once an MC has any contract on a couple, additional
+ *  contracts on that couple are free.
+ */
+export const STARTER_CONTRACT_COUPLE_LIMIT = 5;
+
+/**
+ * The max number of distinct couples the user can have contracts for.
+ * `null` means uncapped (Pro / Max). Starter returns
+ * {@link STARTER_CONTRACT_COUPLE_LIMIT}.
+ *
+ * Client UI calls this to decide whether to disable the "New
+ * contract" affordance for couples that don't already have contracts.
+ * The authoritative enforcement is server-side at contract insert
+ * (see the corresponding DB trigger — pending).
+ */
+export function contractCoupleLimit(
+  source: EntitlementSource | null | undefined,
+): number | null {
+  return currentPlan(source) === 'starter' ? STARTER_CONTRACT_COUPLE_LIMIT : null;
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -135,6 +160,25 @@ export function stripeConnectAccountId(source: EntitlementSource | null | undefi
 
 export function stripeConnectEnabled(source: EntitlementSource | null | undefined): boolean {
   return read<boolean>(source, 'stripe_connect_enabled') === true;
+}
+
+/**
+ * True when the Stripe subscription is set to cancel at the end of
+ * the current period. The Settings → Billing tab uses this to show
+ * the "Resume subscription" CTA instead of "Cancel subscription".
+ */
+export function cancelAtPeriodEnd(source: EntitlementSource | null | undefined): boolean {
+  return read<boolean>(source, 'cancel_at_period_end') === true;
+}
+
+/**
+ * True when the account has been comped (free plan-level access
+ * granted by admin action, no Stripe subscription). Read separately
+ * from `isSubscribed` because the Billing tab shows different copy
+ * for comped vs paying users.
+ */
+export function isComped(source: EntitlementSource | null | undefined): boolean {
+  return read<boolean>(source, 'is_comped') === true;
 }
 
 /* ────────────────────────────────────────────────────────────────

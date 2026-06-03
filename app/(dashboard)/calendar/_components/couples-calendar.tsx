@@ -7,7 +7,6 @@ import {
   MapPin,
   Users,
   CheckSquare,
-  Calendar,
   SlidersHorizontal,
   X,
   ChevronDown,
@@ -94,13 +93,13 @@ function ViewDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-md px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
       >
         <span className="capitalize">{view}</span>
-        <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400" />
+        <ChevronDown size={11} strokeWidth={1.5} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[110px]">
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-20 min-w-32 py-1">
           {options.map((v) => (
             <button
               key={v}
@@ -108,10 +107,10 @@ function ViewDropdown({
                 onChange(v);
                 setOpen(false);
               }}
-              className={`w-full text-left px-4 py-2 text-sm capitalize transition ${
+              className={`w-full text-left px-2.5 py-1.5 text-xs capitalize transition cursor-pointer ${
                 view === v
-                  ? "bg-gray-100 text-gray-900 font-medium"
-                  : "text-gray-600 hover:bg-gray-50"
+                  ? "bg-surface-muted text-text font-medium"
+                  : "text-text hover:bg-surface-muted"
               }`}
             >
               {v}
@@ -151,13 +150,13 @@ function StatusDropdown({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer"
+        className="flex items-center gap-1 border border-border rounded-md px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
       >
         <span>{label}</span>
-        <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400" />
+        <ChevronDown size={11} strokeWidth={1.5} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[160px] p-1">
+        <div className="absolute right-0 top-full mt-1 bg-surface border border-border rounded-lg shadow-lg z-20 min-w-40 py-1">
           {statuses.map((status) => {
             const checked =
               activeStatuses === null || activeStatuses.has(status.slug);
@@ -165,20 +164,20 @@ function StatusDropdown({
               <button
                 key={status.slug}
                 onClick={() => onToggle(status.slug)}
-                className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-gray-900 hover:bg-gray-50 transition cursor-pointer"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-text hover:bg-surface-muted transition cursor-pointer"
               >
                 <div
-                  className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                  className={`w-3.5 h-3.5 rounded-sm border flex-shrink-0 flex items-center justify-center ${
                     checked
-                      ? "border-gray-900 bg-gray-900"
-                      : "border-gray-300 bg-white"
+                      ? "border-brand-fg bg-brand-fg"
+                      : "border-border-strong bg-surface"
                   }`}
                 >
                   {checked && (
-                    <Check size={10} strokeWidth={2.5} className="text-white" />
+                    <Check size={9} strokeWidth={2.5} className="text-text-inverse" />
                   )}
                 </div>
-                <span className="text-sm">{status.name}</span>
+                <span>{status.name}</span>
               </button>
             );
           })}
@@ -222,7 +221,7 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
       const { data, error } = await supabase
         .from("events")
         .select(
-          "id, user_id, date, couple_id, status, created_at, venue, timeline_notes, couples(id, name, status), event_contacts(count), tasks!tasks_related_event_id_fkey(count)"
+          "id, user_id, date, couple_id, status, created_at, venue, timeline_notes, title, couples(id, name, status), event_contacts(count), tasks!tasks_related_event_id_fkey(count)"
         )
         .eq("user_id", user.user.id)
         .not("date", "is", null);
@@ -254,8 +253,14 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
     return grouped;
   }, [filteredEvents]);
 
+  // Use local date components, not toISOString (UTC), so events stored as
+  // bare Postgres `date` (e.g. "2026-06-07") line up with the cell the MC
+  // sees as June 7 in their own timezone.
   const formatDateKey = (date: Date): string => {
-    return date.toISOString().split("T")[0];
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   };
 
   const isToday = (date: Date): boolean => {
@@ -356,30 +361,32 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
 
   return (
     <div className="flex h-full">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-10 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Mobile sidebar backdrop — fades with the slide-in */}
+      <div
+        aria-hidden
+        className={`fixed inset-0 bg-black/40 z-10 md:hidden transition-opacity duration-200 ${
+          sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setSidebarOpen(false)}
+      />
 
-      {/* Left Sidebar */}
+      {/* Left Sidebar
+          On mobile: always mounted off-screen, slides in via translate-x.
+          On desktop: md:* overrides flip it into the in-flow column layout. */}
       <div
         className={`
-        flex-col gap-5 pb-6 overflow-y-auto
-        ${
-          sidebarOpen
-            ? "fixed top-0 left-0 h-full w-[280px] z-20 bg-white shadow-xl p-5 flex"
-            : "hidden md:flex md:w-56 md:flex-shrink-0 border-r border-gray-200 pr-5"
-        }
+        flex flex-col gap-5 pb-6 overflow-y-auto
+        fixed top-0 left-0 h-full w-[280px] z-20 bg-surface shadow-xl p-5
+        transition-transform duration-200 ease-out
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        md:static md:h-auto md:w-56 md:flex-shrink-0 md:z-auto md:bg-transparent md:shadow-none md:p-0 md:pr-5 md:border-r md:border-border md:translate-x-0 md:transition-none
       `}
       >
         {/* Mobile close button */}
         <div className="flex justify-end md:hidden mb-1">
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+            className="p-1.5 text-text-subtle hover:text-text transition cursor-pointer"
           >
             <X size={18} strokeWidth={1.5} />
           </button>
@@ -398,11 +405,11 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                   )
                 )
               }
-              className="p-1 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+              className="p-1 text-text-muted hover:bg-surface-emphasis rounded-control transition cursor-pointer"
             >
               <ChevronLeft size={14} strokeWidth={1.5} />
             </button>
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-medium text-text">
               {MONTHS_SHORT[miniNavDate.getMonth()]} {miniNavDate.getFullYear()}
             </span>
             <button
@@ -415,23 +422,23 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                   )
                 )
               }
-              className="p-1 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+              className="p-1 text-text-muted hover:bg-surface-emphasis rounded-control transition cursor-pointer"
             >
               <ChevronRight size={14} strokeWidth={1.5} />
             </button>
           </div>
 
           {/* Mini weekday headers */}
-          <div className="grid grid-cols-7 gap-2 pb-2">
+          <div className="grid grid-cols-7 gap-x-[9px] pb-2">
             {WEEKDAYS_SHORT.map((day, i) => (
-              <div key={i} className="text-center text-xs text-gray-400 py-1">
+              <div key={i} className="text-center text-xs text-text-subtle py-1">
                 {day}
               </div>
             ))}
           </div>
 
           {/* Mini calendar grid */}
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-x-[9px] gap-y-2">
             {miniMonthDays.map((date, idx) => {
               const dateKey = formatDateKey(date);
               const hasEvents = daysWithEvents.has(dateKey);
@@ -448,27 +455,24 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                     setMiniNavDate(
                       new Date(date.getFullYear(), date.getMonth(), 1)
                     );
+                    // Dismiss the mobile slide-in panel after picking a day.
+                    // No-op on desktop where the sidebar is always mounted.
+                    setSidebarOpen(false);
                   }}
                   className={`h-7 w-7 mx-auto flex flex-col items-center justify-center text-xs rounded-md transition cursor-pointer relative ${
-                    isMiniMonth
-                      ? "text-gray-900 hover:bg-gray-100"
-                      : "text-gray-300"
-                  } ${
-                    isCurrentDay
-                      ? "bg-gray-900 text-white hover:bg-gray-800"
-                      : ""
-                  } ${
-                    isSelectedDay && !isCurrentDay
-                      ? "bg-gray-200 text-gray-800"
-                      : ""
+                    isSelectedDay
+                      ? "bg-brand-fg text-text-inverse hover:opacity-90"
+                      : isMiniMonth
+                        ? `text-text hover:bg-surface-muted${isCurrentDay ? " font-semibold" : ""}`
+                        : "text-text-subtle"
                   }`}
                 >
                   {date.getDate()}
-                  {hasEvents && !isCurrentDay && (
-                    <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-emerald-500"></div>
+                  {hasEvents && !isSelectedDay && (
+                    <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-success"></div>
                   )}
-                  {hasEvents && isCurrentDay && (
-                    <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-white"></div>
+                  {hasEvents && isSelectedDay && (
+                    <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-surface"></div>
                   )}
                 </button>
               );
@@ -477,25 +481,25 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
         </div>
 
         {/* Status filters - mobile only */}
-        <div className="md:hidden border-t border-gray-200 pt-4">
-          <h3 className="text-xs font-medium text-gray-500 mb-2">Filter by status</h3>
-          <div className="flex flex-col gap-1">
+        <div className="md:hidden border-t border-border pt-4">
+          <h3 className="text-xs font-medium text-text-muted mb-2">Filter by status</h3>
+          <div className="flex flex-col">
             {statuses.map((status) => {
               const checked = activeStatuses === null || activeStatuses.has(status.slug);
               return (
                 <button
                   key={status.slug}
                   onClick={() => toggleStatus(status.slug)}
-                  className="flex items-center gap-3 px-1 py-1.5 rounded-lg text-gray-900 hover:bg-gray-50 transition cursor-pointer text-left"
+                  className="w-full flex items-center gap-2 py-1.5 rounded-control text-xs text-text hover:bg-surface-muted transition cursor-pointer text-left"
                 >
                   <div
-                    className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
-                      checked ? "border-gray-900 bg-gray-900" : "border-gray-300 bg-white"
+                    className={`w-3.5 h-3.5 rounded-sm border flex-shrink-0 flex items-center justify-center ${
+                      checked ? "border-brand-fg bg-brand-fg" : "border-border-strong bg-surface"
                     }`}
                   >
-                    {checked && <Check size={10} strokeWidth={2.5} className="text-white" />}
+                    {checked && <Check size={9} strokeWidth={2.5} className="text-text-inverse" />}
                   </div>
-                  <span className="text-sm">{status.name}</span>
+                  <span>{status.name}</span>
                 </button>
               );
             })}
@@ -503,14 +507,14 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
         </div>
 
         {/* Day Events Timeline */}
-        <div className="flex-1 min-h-0 flex flex-col border-t border-gray-200 pt-4">
-          <h3 className="text-xs font-medium text-gray-500 mb-2">
+        <div className="flex-1 min-h-0 flex flex-col border-t border-border pt-4">
+          <h3 className="text-xs font-medium text-text-muted mb-2">
             Events · {WEEKDAYS[currentDate.getDay()]} {currentDate.getDate()}{" "}
             {MONTHS_SHORT[currentDate.getMonth()]}
           </h3>
           <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2">
             {(eventsByDate[formatDateKey(currentDate)] || []).length === 0 ? (
-              <div className="text-xs text-gray-400 py-4">No events</div>
+              <div className="text-xs text-text-subtle py-4">No events</div>
             ) : (
               (eventsByDate[formatDateKey(currentDate)] || []).map((event) => {
                 return (
@@ -519,13 +523,13 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
                     onClick={() =>
                       event.couple && onSelectCouple(event.couple.id)
                     }
-                    className="text-left w-full px-2.5 py-2 rounded-lg bg-white border border-gray-200 transition hover:shadow-sm cursor-pointer"
+                    className="text-left w-full px-2.5 py-2 rounded-lg bg-surface border border-border transition hover:shadow-sm cursor-pointer"
                   >
-                    <div className="text-xs font-semibold truncate text-gray-900">
-                      {event.couple?.name || "Unnamed"}
+                    <div className="text-xs font-semibold truncate text-text">
+                      {formatEventLabel(event)}
                     </div>
                     {event.venue && (
-                      <div className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1">
+                      <div className="text-xs text-text-muted truncate mt-0.5 flex items-center gap-1">
                         <MapPin size={10} strokeWidth={1.5} />
                         {event.venue}
                       </div>
@@ -541,43 +545,43 @@ export function CouplesCalendar({ onSelectCouple }: CouplesCalendarProps) {
       {/* Main Calendar Area */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden pl-0 md:pl-8">
         {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between mb-5 pb-4 border-b border-gray-200">
+        <div className="flex-shrink-0 flex items-center justify-between mb-5 pb-4 border-b border-border">
           {/* Left: Filter toggle (mobile) + Nav */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+              className="md:hidden inline-flex items-center justify-center p-1.5 text-text-muted hover:bg-surface-muted hover:text-text rounded-md transition cursor-pointer"
             >
-              <SlidersHorizontal size={16} strokeWidth={1.5} />
+              <SlidersHorizontal size={14} strokeWidth={1.5} />
             </button>
             <button
               onClick={() => {
                 setCurrentDate(new Date());
                 setMiniNavDate(new Date());
               }}
-              className="px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-md transition cursor-pointer border border-gray-200"
+              className="inline-flex items-center border border-border rounded-md px-2 py-2 text-xs text-text-muted hover:bg-surface-muted hover:text-text transition whitespace-nowrap cursor-pointer"
             >
               Today
             </button>
             <button
               data-testid="calendar-prev-btn"
               onClick={handlePrev}
-              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+              className="inline-flex items-center justify-center p-1.5 text-text-muted hover:bg-surface-muted hover:text-text rounded-md transition cursor-pointer"
             >
-              <ChevronLeft size={16} strokeWidth={1.5} />
+              <ChevronLeft size={14} strokeWidth={1.5} />
             </button>
             <h2
               data-testid="calendar-header"
-              className="text-sm font-semibold text-gray-900 min-w-0 sm:min-w-32 md:min-w-44 text-center select-none truncate max-w-[180px] sm:max-w-none"
+              className="text-sm font-semibold text-text min-w-0 sm:min-w-32 md:min-w-44 text-center select-none truncate max-w-[180px] sm:max-w-none"
             >
               {getHeaderLabel()}
             </h2>
             <button
               data-testid="calendar-next-btn"
               onClick={handleNext}
-              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition cursor-pointer"
+              className="inline-flex items-center justify-center p-1.5 text-text-muted hover:bg-surface-muted hover:text-text rounded-md transition cursor-pointer"
             >
-              <ChevronRight size={16} strokeWidth={1.5} />
+              <ChevronRight size={14} strokeWidth={1.5} />
             </button>
           </div>
 
@@ -674,7 +678,16 @@ function getWeekDays(date: Date): Date[] {
 }
 
 function formatDateKey(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** "Couple Name – Event Title", or just the couple name when no title is set. */
+function formatEventLabel(event: EventWithCouple): string {
+  const name = event.couple?.name || "Unnamed";
+  return event.title ? `${name} – ${event.title}` : name;
 }
 
 function isTodayFn(date: Date): boolean {
@@ -692,10 +705,15 @@ function EventPill({
 }) {
   return (
     <button
-      onClick={() => event.couple && onSelectCouple(event.couple.id)}
-      className="text-left w-full px-2.5 py-1.5 rounded-md text-xs font-medium truncate bg-white border border-gray-200 transition hover:shadow-sm cursor-pointer"
+      onClick={(e) => {
+        // Don't let the click bubble to the day cell's switch-to-day-view
+        // handler — tapping a pill opens the couple modal instead.
+        e.stopPropagation();
+        if (event.couple) onSelectCouple(event.couple.id);
+      }}
+      className="text-left w-full px-2.5 py-1.5 rounded-control text-xs font-medium truncate bg-surface border border-border transition hover:shadow-sm cursor-pointer"
     >
-      {event.couple?.name || "Unnamed"}
+      {formatEventLabel(event)}
     </button>
   );
 }
@@ -707,11 +725,11 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
     const monthDays = getMonthDays(new Date());
     return (
       <div className="flex flex-col h-full">
-        <div className="grid grid-cols-7 flex-shrink-0 border-b border-gray-200">
+        <div className="grid grid-cols-7 flex-shrink-0 border-b border-border">
           {WEEKDAYS.map((day) => (
             <div
               key={day}
-              className="text-center text-xs font-medium text-gray-500 py-2"
+              className="text-center text-xs font-medium text-text-muted py-2"
             >
               {day}
             </div>
@@ -723,19 +741,19 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
             return (
               <div
                 key={idx}
-                className={`border-b border-r border-gray-100 p-2 flex flex-col gap-0.5 min-h-[100px] ${
-                  !isCurrent ? "bg-gray-50/50" : ""
+                className={`border-b border-r border-border p-2 flex flex-col gap-0.5 min-h-[100px] ${
+                  !isCurrent ? "bg-surface-muted/70" : ""
                 }`}
               >
                 <div
                   className={`text-xs font-medium mb-0.5 ${
-                    isCurrent ? "text-gray-900" : "text-gray-300"
+                    isCurrent ? "text-text" : "text-text-subtle"
                   }`}
                 >
                   {date.getDate()}
                 </div>
-                <div className="h-6 bg-gray-100 rounded animate-pulse" />
-                <div className="h-6 bg-gray-100 rounded animate-pulse" />
+                <div className="h-6 bg-surface-emphasis rounded animate-pulse" />
+                <div className="h-6 bg-surface-emphasis rounded animate-pulse" />
               </div>
             );
           })}
@@ -751,13 +769,13 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
         {weekDays.map((date, idx) => (
           <div
             key={idx}
-            className="flex flex-col border-r border-gray-100 last:border-r-0 min-h-0"
+            className="flex flex-col border-r border-border last:border-r-0 min-h-0"
           >
-            <div className="px-2 py-3 text-center border-b border-gray-200 flex-shrink-0">
-              <div className="text-xs text-gray-500 font-medium">
+            <div className="px-2 py-3 text-center border-b border-border flex-shrink-0">
+              <div className="text-xs text-text-muted font-medium">
                 {WEEKDAYS[date.getDay()]}
               </div>
-              <div className="text-sm font-semibold mt-0.5 text-gray-900">
+              <div className="text-sm font-semibold mt-0.5 text-text">
                 {date.getDate()}
               </div>
             </div>
@@ -765,7 +783,7 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="w-full h-12 bg-gray-100 rounded-lg animate-pulse"
+                  className="w-full h-12 bg-surface-emphasis rounded-lg animate-pulse"
                 />
               ))}
             </div>
@@ -781,21 +799,21 @@ function CalendarSkeleton({ view }: { view: CalendarView }) {
       {Array.from({ length: 4 }).map((_, idx) => (
         <div
           key={idx}
-          className="relative bg-gray-100 rounded-xl overflow-hidden mb-3 p-5 animate-pulse"
+          className="relative bg-surface-emphasis rounded-card overflow-hidden mb-3 p-5 animate-pulse"
         >
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-300" />
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-border-strong" />
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-1/2" />
+              <div className="h-5 bg-border rounded w-3/4 mb-2" />
+              <div className="h-4 bg-border rounded w-1/2" />
             </div>
-            <div className="h-6 w-16 bg-gray-200 rounded-full flex-shrink-0" />
+            <div className="h-6 w-16 bg-border rounded-full flex-shrink-0" />
           </div>
-          <div className="h-4 bg-gray-200 rounded w-full mt-3" />
-          <div className="h-4 bg-gray-200 rounded w-2/3 mt-2" />
+          <div className="h-4 bg-border rounded w-full mt-3" />
+          <div className="h-4 bg-border rounded w-2/3 mt-2" />
           <div className="flex items-center gap-5 mt-4 pt-4">
-            <div className="h-4 bg-gray-200 rounded w-20" />
-            <div className="h-4 bg-gray-200 rounded w-20" />
+            <div className="h-4 bg-border rounded w-20" />
+            <div className="h-4 bg-border rounded w-20" />
           </div>
         </div>
       ))}
@@ -822,12 +840,12 @@ function MonthView({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="grid grid-cols-7 flex-shrink-0 border-b border-gray-200">
+      <div className="grid grid-cols-7 flex-shrink-0 border-b border-border">
         {WEEKDAYS.map((day, i) => (
           <div
             key={day}
             data-testid={`weekday-${day}`}
-            className="text-center text-xs font-medium text-gray-500 py-3"
+            className="text-center text-xs font-medium text-text-muted py-3"
           >
             <span className="hidden md:inline">{day}</span>
             <span className="md:hidden">{WEEKDAYS_SHORT[i]}</span>
@@ -848,19 +866,19 @@ function MonthView({
             <div
               key={idx}
               onClick={() => onDayClick(date)}
-              className={`border-b border-r border-gray-100 p-1.5 md:p-2 flex flex-col gap-0.5 min-h-[60px] md:min-h-[100px] md:cursor-default cursor-pointer ${
-                !isCurrent ? "bg-gray-50/50" : ""
+              className={`border-b border-r border-border p-1.5 md:p-2 flex flex-col gap-0.5 min-h-[60px] md:min-h-[100px] md:cursor-default cursor-pointer ${
+                !isCurrent ? "bg-surface-muted/70" : ""
               }`}
             >
               <div
                 className={`text-xs font-medium mb-0.5 ${
-                  isCurrent ? "text-gray-900" : "text-gray-300"
+                  isCurrent ? "text-text" : "text-text-subtle"
                 }`}
               >
                 <span
                   className={
                     isCurrentDay
-                      ? "bg-gray-900 text-white rounded-full w-5 h-5 inline-flex items-center justify-center"
+                      ? "bg-brand-fg text-text-inverse rounded-md w-5 h-5 inline-flex items-center justify-center"
                       : ""
                   }
                 >
@@ -874,11 +892,11 @@ function MonthView({
                   {dayEvents.slice(0, 3).map((event) => (
                     <div
                       key={event.id}
-                      className="w-1.5 h-1.5 rounded-full bg-gray-400"
+                      className="w-1.5 h-1.5 rounded-full bg-text-subtle"
                     />
                   ))}
                   {dayEvents.length > 3 && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-border-strong" />
                   )}
                 </div>
               )}
@@ -894,7 +912,7 @@ function MonthView({
                   />
                 ))}
                 {dayEvents.length > 3 && (
-                  <div className="text-xs text-gray-400 px-1">
+                  <div className="text-xs text-text-subtle px-1">
                     +{dayEvents.length - 3} more
                   </div>
                 )}
@@ -932,18 +950,18 @@ function WeekView({
         return (
           <div
             key={idx}
-            className="flex flex-col border-r border-gray-100 last:border-r-0 min-h-0"
+            className="flex flex-col border-r border-border last:border-r-0 min-h-0"
           >
             {/* Day header */}
-            <div className="px-3 h-14 flex flex-col items-center justify-center text-center border-b border-gray-200 flex-shrink-0">
-              <div className="text-xs text-gray-500 font-medium">
+            <div className="px-3 h-14 flex flex-col items-center justify-center text-center border-b border-border flex-shrink-0">
+              <div className="text-xs text-text-muted font-medium">
                 {WEEKDAYS[date.getDay()]}
               </div>
-              <div className="text-sm font-semibold mt-0.5 text-gray-900">
+              <div className="text-sm font-semibold mt-0.5 text-text">
                 <span
                   className={
                     isCurrentDay
-                      ? "bg-gray-900 text-white rounded-full w-6 h-6 inline-flex items-center justify-center text-xs"
+                      ? "bg-brand-fg text-text-inverse rounded-md w-6 h-6 inline-flex items-center justify-center text-xs"
                       : ""
                   }
                 >
@@ -956,7 +974,7 @@ function WeekView({
             <div className="flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-1.5">
               {dayEvents.length === 0 ? (
                 <div className="flex-1 flex items-start justify-center pt-8">
-                  <div className="w-4 h-px bg-gray-200" />
+                  <div className="w-4 h-px bg-border" />
                 </div>
               ) : (
                 dayEvents.map((event) => {
@@ -969,19 +987,19 @@ function WeekView({
                       onClick={() =>
                         event.couple && onSelectCouple(event.couple.id)
                       }
-                      className="text-left w-full px-2.5 py-2 rounded-lg bg-white border border-gray-200 transition hover:shadow-md cursor-pointer"
+                      className="text-left w-full px-2.5 py-2 rounded-lg bg-surface border border-border transition hover:shadow-md cursor-pointer"
                     >
-                      <div className="text-xs font-semibold truncate text-gray-900">
-                        {event.couple?.name || "Unnamed"}
+                      <div className="text-xs font-semibold text-text break-words">
+                        {formatEventLabel(event)}
                       </div>
                       {event.venue && (
-                        <div className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1">
+                        <div className="text-xs text-text-muted truncate mt-0.5 flex items-center gap-1">
                           <MapPin size={10} strokeWidth={1.5} />
                           {event.venue}
                         </div>
                       )}
                       {hasFooter && (
-                        <div className="text-[10px] text-gray-400 flex items-center gap-2 mt-1">
+                        <div className="text-[10px] text-text-subtle flex items-center gap-2 mt-1">
                           {vendorCount > 0 && (
                             <span className="flex items-center gap-0.5">
                               <Users size={8} strokeWidth={1.5} />
@@ -1028,10 +1046,7 @@ function DayView({
   return (
     <div className="flex flex-col h-full">
       {dayEvents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-3">
-          <Calendar size={40} strokeWidth={1} />
-          <p className="text-sm text-gray-400">No events on this day</p>
-        </div>
+        <p className="text-sm text-text-subtle py-8">No events on this day.</p>
       ) : (
         <div className="flex flex-col gap-3 py-4">
           {dayEvents.map((event) => {
@@ -1053,17 +1068,17 @@ function DayView({
               <div
                 key={event.id}
                 onClick={() => event.couple && onSelectCouple(event.couple.id)}
-                className="bg-white border border-gray-200 rounded-xl transition hover:shadow-md cursor-pointer"
+                className="bg-surface border border-border rounded-card transition hover:shadow-md cursor-pointer"
               >
                 <div className="px-4 py-4">
                   {/* Top row: name + status badge */}
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h4 className="text-base font-semibold text-gray-900">
-                        {event.couple?.name || "Unnamed"}
+                      <h4 className="text-base font-semibold text-text">
+                        {formatEventLabel(event)}
                       </h4>
                       {event.venue && (
-                        <div className="flex items-center gap-1.5 mt-1.5 text-sm text-gray-500">
+                        <div className="flex items-center gap-1.5 mt-1.5 text-sm text-text-muted">
                           <MapPin
                             size={14}
                             strokeWidth={1.5}
@@ -1074,7 +1089,7 @@ function DayView({
                       )}
                     </div>
                     <span
-                      className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 capitalize border border-gray-200 ${classes.pill}`}
+                      className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 capitalize border border-border ${classes.pill}`}
                     >
                       {statusName}
                     </span>
@@ -1082,28 +1097,28 @@ function DayView({
 
                   {/* Timeline notes */}
                   {event.timeline_notes && (
-                    <p className="text-sm text-gray-500 mt-3 whitespace-pre-line leading-relaxed">
+                    <p className="text-sm text-text-muted mt-3 whitespace-pre-line leading-relaxed">
                       {event.timeline_notes}
                     </p>
                   )}
 
                   {/* Footer: counts - only shown when non-zero */}
                   {(vendorCount > 0 || taskCount > 0) && (
-                    <div className="flex items-center gap-5 mt-4 pt-4 border-t border-gray-100 text-xs">
+                    <div className="flex items-center gap-5 mt-4 pt-4 border-t border-border text-xs">
                       {vendorCount > 0 && (
-                        <span className="flex items-center gap-1.5 text-gray-500">
+                        <span className="flex items-center gap-1.5 text-text-muted">
                           <Users size={14} strokeWidth={1.5} />
                           <span className="font-medium">{vendorCount}</span>
-                          <span className="text-gray-400">
+                          <span className="text-text-subtle">
                             contact{vendorCount !== 1 ? "s" : ""}
                           </span>
                         </span>
                       )}
                       {taskCount > 0 && (
-                        <span className="flex items-center gap-1.5 text-gray-500">
+                        <span className="flex items-center gap-1.5 text-text-muted">
                           <CheckSquare size={14} strokeWidth={1.5} />
                           <span className="font-medium">{taskCount}</span>
-                          <span className="text-gray-400">
+                          <span className="text-text-subtle">
                             task{taskCount !== 1 ? "s" : ""}
                           </span>
                         </span>

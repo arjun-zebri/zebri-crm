@@ -2,7 +2,7 @@
  * Event domain types and constants.
  *
  * Wedding/event shapes owned by a couple (an event always belongs to a
- * couple — there is no standalone events surface). Used by couple profile,
+ * couple - there is no standalone events surface). Used by couple profile,
  * calendar, timeline, and the dashboard.
  *
  * @module types/event
@@ -15,6 +15,7 @@ export interface Event {
   user_id: string
   couple_id: string
   date: string
+  title?: string | null
   venue: string
   venue_phone?: string | null
   venue_website?: string | null

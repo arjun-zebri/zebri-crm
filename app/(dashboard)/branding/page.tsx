@@ -109,22 +109,22 @@ export default function BrandingPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full bg-white">
-        <div className="h-12 border-b border-gray-100 px-3 flex items-center gap-2">
-          <div className="h-4 w-32 bg-gray-100 rounded animate-pulse" />
+      <div className="flex flex-col h-full bg-surface">
+        <div className="h-12 border-b border-border px-3 flex items-center gap-2">
+          <div className="h-4 w-32 bg-surface-emphasis rounded animate-pulse" />
         </div>
-        <div className="h-12 border-b border-gray-100 px-3 flex items-center gap-2">
-          <div className="h-7 w-24 bg-gray-100 rounded animate-pulse" />
-          <div className="h-7 w-24 bg-gray-100 rounded animate-pulse" />
+        <div className="h-12 border-b border-border px-3 flex items-center gap-2">
+          <div className="h-7 w-24 bg-surface-emphasis rounded animate-pulse" />
+          <div className="h-7 w-24 bg-surface-emphasis rounded animate-pulse" />
         </div>
         <div className="flex flex-1 min-h-0">
-          <div className="w-[320px] border-r border-gray-100 p-4 space-y-3">
+          <div className="w-[320px] border-r border-border p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+              <div key={i} className="h-20 bg-surface-emphasis rounded-xl animate-pulse" />
             ))}
           </div>
-          <div className="flex-1 p-10 bg-[#FAFAFA]">
-            <div className="max-w-2xl mx-auto h-[640px] bg-white border border-gray-200/80 rounded-xl animate-pulse" />
+          <div className="flex-1 p-10 bg-surface-muted">
+            <div className="max-w-2xl mx-auto h-[640px] bg-surface border border-border rounded-xl animate-pulse" />
           </div>
         </div>
       </div>

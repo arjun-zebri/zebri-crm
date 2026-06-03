@@ -12,7 +12,7 @@ import {
   StatusCell,
   TaskTypeCell,
 } from './task-cells'
-import { TaskPriority } from '@/types/task'
+import { TaskOption, TaskOptionColor, TaskPriority } from '@/types/task'
 
 export interface TaskPanelTask {
   id: string
@@ -43,12 +43,27 @@ interface TaskSidePanelProps {
   task?: TaskPanelTask
   couples?: { id: string; name: string }[]
   groups?: TaskGroup[]
-  knownTypes?: string[]
-  knownStatuses?: string[]
-  knownPriorities?: string[]
-  onDeleteStatus?: (status: string) => void
-  onDeletePriority?: (priority: string) => void
-  onDeleteType?: (type: string) => void
+  statusOptions?: TaskOption[]
+  priorityOptions?: TaskOption[]
+  typeOptions?: TaskOption[]
+  onCreateStatusOption?: (input: {
+    name: string
+    color: TaskOptionColor
+  }) => void
+  onRecolorStatusOption?: (id: string, color: TaskOptionColor) => void
+  onDeleteStatusOption?: (id: string) => void
+  onCreatePriorityOption?: (input: {
+    name: string
+    color: TaskOptionColor
+  }) => void
+  onRecolorPriorityOption?: (id: string, color: TaskOptionColor) => void
+  onDeletePriorityOption?: (id: string) => void
+  onCreateTypeOption?: (input: {
+    name: string
+    color: TaskOptionColor
+  }) => void
+  onRecolorTypeOption?: (id: string, color: TaskOptionColor) => void
+  onDeleteTypeOption?: (id: string) => void
   onPatch: (id: string, patch: TaskFieldUpdate) => void
   onDelete?: (id: string) => void
   onPrev?: () => void
@@ -61,12 +76,18 @@ export function TaskSidePanel({
   task,
   couples,
   groups,
-  knownTypes,
-  knownStatuses,
-  knownPriorities,
-  onDeleteStatus,
-  onDeletePriority,
-  onDeleteType,
+  statusOptions,
+  priorityOptions,
+  typeOptions,
+  onCreateStatusOption,
+  onRecolorStatusOption,
+  onDeleteStatusOption,
+  onCreatePriorityOption,
+  onRecolorPriorityOption,
+  onDeletePriorityOption,
+  onCreateTypeOption,
+  onRecolorTypeOption,
+  onDeleteTypeOption,
   onPatch,
   onDelete,
   onPrev,
@@ -81,12 +102,18 @@ export function TaskSidePanel({
       task={task}
       couples={couples}
       groups={groups}
-      knownTypes={knownTypes ?? []}
-      knownStatuses={knownStatuses}
-      knownPriorities={knownPriorities}
-      onDeleteStatus={onDeleteStatus}
-      onDeletePriority={onDeletePriority}
-      onDeleteType={onDeleteType}
+      statusOptions={statusOptions}
+      priorityOptions={priorityOptions}
+      typeOptions={typeOptions}
+      onCreateStatusOption={onCreateStatusOption}
+      onRecolorStatusOption={onRecolorStatusOption}
+      onDeleteStatusOption={onDeleteStatusOption}
+      onCreatePriorityOption={onCreatePriorityOption}
+      onRecolorPriorityOption={onRecolorPriorityOption}
+      onDeletePriorityOption={onDeletePriorityOption}
+      onCreateTypeOption={onCreateTypeOption}
+      onRecolorTypeOption={onRecolorTypeOption}
+      onDeleteTypeOption={onDeleteTypeOption}
       onPatch={onPatch}
       onDelete={onDelete}
       onPrev={onPrev}
@@ -101,12 +128,27 @@ interface InnerProps {
   task: TaskPanelTask
   couples?: { id: string; name: string }[]
   groups?: TaskGroup[]
-  knownTypes: string[]
-  knownStatuses?: string[]
-  knownPriorities?: string[]
-  onDeleteStatus?: (status: string) => void
-  onDeletePriority?: (priority: string) => void
-  onDeleteType?: (type: string) => void
+  statusOptions?: TaskOption[]
+  priorityOptions?: TaskOption[]
+  typeOptions?: TaskOption[]
+  onCreateStatusOption?: (input: {
+    name: string
+    color: TaskOptionColor
+  }) => void
+  onRecolorStatusOption?: (id: string, color: TaskOptionColor) => void
+  onDeleteStatusOption?: (id: string) => void
+  onCreatePriorityOption?: (input: {
+    name: string
+    color: TaskOptionColor
+  }) => void
+  onRecolorPriorityOption?: (id: string, color: TaskOptionColor) => void
+  onDeletePriorityOption?: (id: string) => void
+  onCreateTypeOption?: (input: {
+    name: string
+    color: TaskOptionColor
+  }) => void
+  onRecolorTypeOption?: (id: string, color: TaskOptionColor) => void
+  onDeleteTypeOption?: (id: string) => void
   onPatch: (id: string, patch: TaskFieldUpdate) => void
   onDelete?: (id: string) => void
   onPrev?: () => void
@@ -119,12 +161,18 @@ function TaskSidePanelInner({
   task,
   couples,
   groups,
-  knownTypes,
-  knownStatuses,
-  knownPriorities,
-  onDeleteStatus,
-  onDeletePriority,
-  onDeleteType,
+  statusOptions,
+  priorityOptions,
+  typeOptions,
+  onCreateStatusOption,
+  onRecolorStatusOption,
+  onDeleteStatusOption,
+  onCreatePriorityOption,
+  onRecolorPriorityOption,
+  onDeletePriorityOption,
+  onCreateTypeOption,
+  onRecolorTypeOption,
+  onDeleteTypeOption,
   onPatch,
   onDelete,
   onPrev,
@@ -202,8 +250,10 @@ function TaskSidePanelInner({
               <StatusCell
                 value={task.status}
                 onChange={(v) => patch({ status: v })}
-                knownStatuses={knownStatuses}
-                onDeleteStatus={onDeleteStatus}
+                statusOptions={statusOptions}
+                onCreateStatus={onCreateStatusOption}
+                onRecolorStatus={onRecolorStatusOption}
+                onDeleteStatusOption={onDeleteStatusOption}
               />
             </PropertyRow>
 
@@ -215,8 +265,10 @@ function TaskSidePanelInner({
               <PriorityCell
                 value={task.priority ?? null}
                 onChange={(v) => patch({ priority: v })}
-                knownPriorities={knownPriorities}
-                onDeletePriority={onDeletePriority}
+                priorityOptions={priorityOptions}
+                onCreatePriority={onCreatePriorityOption}
+                onRecolorPriority={onRecolorPriorityOption}
+                onDeletePriorityOption={onDeletePriorityOption}
               />
             </PropertyRow>
 
@@ -224,8 +276,10 @@ function TaskSidePanelInner({
               <TaskTypeCell
                 value={task.task_type ?? null}
                 onChange={(v) => patch({ task_type: v })}
-                knownTypes={knownTypes}
-                onDeleteType={onDeleteType}
+                typeOptions={typeOptions}
+                onCreateType={onCreateTypeOption}
+                onRecolorType={onRecolorTypeOption}
+                onDeleteTypeOption={onDeleteTypeOption}
               />
             </PropertyRow>
 

@@ -296,14 +296,32 @@ const COLUMN_WIDTHS: Record<ColumnKey, string> = {
   task_type: '160px',
 }
 
-export function ColumnHeader({ columns }: { columns: ColumnKey[] }) {
-  const template = ['28px', 'minmax(200px, 1fr)', ...columns.map((c) => COLUMN_WIDTHS[c])].join(' ')
+/**
+ * Column header row above task rows.
+ *
+ * `hideGutter` drops the leading 28px gutter column so the header
+ * aligns with rows rendered with the matching `TaskRow` flag — used
+ * in modal contexts (couple / event Tasks tabs) that don't expose
+ * drag-to-reorder or bulk selection.
+ */
+export function ColumnHeader({
+  columns,
+  hideGutter = false,
+}: {
+  columns: ColumnKey[]
+  hideGutter?: boolean
+}) {
+  const template = [
+    ...(hideGutter ? [] : ['28px']),
+    'minmax(200px, 1fr)',
+    ...columns.map((c) => COLUMN_WIDTHS[c]),
+  ].join(' ')
   return (
     <div
       className="hidden sm:grid items-center gap-2 px-2 py-1.5 border-b border-gray-200 text-xs text-gray-400"
       style={{ gridTemplateColumns: template }}
     >
-      <span />
+      {!hideGutter && <span />}
       <span className="px-1.5 flex items-center gap-1.5">
         <span className="text-[11px]">Aa</span>
         Task name

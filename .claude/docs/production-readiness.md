@@ -1,6 +1,383 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on `phase-5-contacts`. **Phase 6 (Tasks)** ✅ on `phase-6-tasks`. **Phase 7 (Dashboard)** ✅ on `phase-7-dashboard`. **Phase 8 (Client Portal)** ✅ in flight on `phase-8-client-portal`.
+> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ on staging. **Phase 12 (Settings)** ✅ on staging. **Phase 13 (Admin + Ops)** ✅ in flight on `phase-13-admin-ops`.
+
+### Admin / Shadow mode — single-pane founder dashboard (Phase 13)
+
+Phase 13 shipped in two passes: the first pass added safety
+(audit log, alerts, §7.4 sidebar fix), decomposed the
+UserDetailPanel, and added a tab-based "Ops" surface. After
+review, the user pointed out (a) the founder dashboard didn't
+actually answer the questions a founder asks every morning,
+(b) the trial UI was dead since Phase 1 had removed trials, and
+(c) the sidebar Admin link was unreachable on mobile. This
+revision (13.1) lands on the same PR.
+
+**Sidebar mobile scroll**
+
+- `app/components/sidebar.tsx:89` changed `overflow-hidden` →
+  `overflow-y-auto` on the inner wrapper. Short viewports
+  (iPhone SE with shadow banner active was the worst case) had
+  the Admin link clipped below the fold with no scroll
+  affordance. Now the nav + bottom-block stack scrolls.
+
+**Single-pane dashboard (replaces tabs)**
+
+`/admin` is now a single scrollable view modelled on the
+founder-`/dashboard`'s visual language — bordered cards
+(`bg-surface rounded-xl border-border`), uppercase tracked-wide
+labels, mint-green (`#A7F3D0`) area chart for signups.
+
+Layout:
+
+- **Row 1 — hero metrics (4 cards)**: MRR (total + Pro/Max
+  split), Active subscribers (paying count + comped /
+  past-due / free-Starter breakdown), Churn last 30d (% +
+  pending-cancellation count, flips to danger tone at ≥5%),
+  Engaged users (last 30d active + new-this-week + dormant
+  count).
+- **Row 2 — signups chart + plan breakdown**: 12-week area
+  chart of new signups per week; sibling card stacks the
+  Pro vs Max revenue contribution as two bars.
+- **Row 3 — operational lists**: Upcoming renewals (next 7
+  days, $30-day total in the header), Past-due
+  subscriptions, Connect-account issues.
+- **Row 4 — supporting lists**: Dormant accounts (signed up
+  > 30 days ago, zero couples ever), Recent signups.
+
+Every row item clicks through to the existing UserDetailPanel.
+The email/business-name search bar (from the first pass) still
+sits above the layout.
+
+**`lib/admin/admin-analytics.ts` rewrite**
+
+- `getAdminDashboard()` — one-pass aggregator that returns
+  every card / chart / list the page consumes. Underneath:
+  `computeMrr` (per-plan), `computeSubscriberCounts`,
+  `computeChurn` (rolling-30d ratio), `computeRenewals`
+  (`subscription_end` bucketed into next 7d / 30d),
+  `computeEngagement` + `loadEngagementSets` (distinct
+  user-ids that wrote couples/events/invoices/contracts/
+  quotes in the last 30d + the "ever engaged" set for
+  dormant detection), `computeSignupsChart` (12 weekly
+  buckets), `computeRecentSignups`, `computePastDue`,
+  `loadConnectIssues` (folded in from the deleted
+  ops-signals).
+- `GlobalStats`, `findTrialsEndingSoon`, `trialToPaidRate`
+  and the rest of the old shape — **deleted**. Trials were
+  removed from signup in Phase 1; surfacing trial metrics
+  was actively misleading.
+
+**Deletions**
+
+- `app/(dashboard)/admin/admin-tabs.tsx`
+- `app/(dashboard)/admin/tabs/users-tab.tsx`
+- `app/(dashboard)/admin/tabs/subscriptions-tab.tsx`
+- `app/(dashboard)/admin/tabs/stats-tab.tsx`
+- `app/(dashboard)/admin/tabs/ops-tab.tsx`
+- `lib/admin/ops-signals.ts` (rolled into admin-analytics)
+- `tests/unit/lib/admin/ops-signals.test.ts`
+
+The audit log table + recordAdminAction helper + 4 Slack
+alert types + decomposed UserDetailPanel components from the
+first pass remain unchanged.
+
+### Admin / Shadow mode — first-pass audit log + UX cleanup (Phase 13)
+
+Three deliverables in one PR — security, UX cleanup, and a new
+Ops surface that makes the admin page actually useful for
+day-to-day support / ops work.
+
+**Safety (Part A)**
+
+- **Sidebar §7.4 fix** — `app/components/sidebar.tsx:133` used to
+  read `user.user_metadata.account_type === 'admin'` to decide
+  whether to render the Admin link. The route itself was
+  middleware-gated, but the link visibility leaked the wrong
+  decision pattern. Now routes through `isAdmin(user)` from
+  `@/lib/auth/entitlements`. The invariant ("user_metadata-claimed
+  admin is ignored") is already locked in by
+  `tests/unit/lib/auth/entitlements.test.ts:115`, so no new
+  component test was added.
+
+- **`supabase/migrations/20260531000000_create_admin_audit_log.sql`**
+  — new `public.admin_audit_log` table. Columns: `actor_id`,
+  `target_user_id`, `action`, `details (jsonb)`, `created_at`.
+  RLS: SELECT-only for admins (policy reads `app_metadata` via
+  `auth.jwt()` — same JWT-claim path middleware uses); no
+  INSERT/UPDATE/DELETE policies — the sole writer is the
+  service-role helper at `lib/admin/audit.ts`. Matches the access
+  model already used for `stripe_events`, `connect_accounts`, and
+  `contract_audit_log`.
+
+- **`lib/admin/audit.ts`** — `recordAdminAction()` writes one row
+  per mutating admin action. Failure-tolerant: on insert error it
+  fires an `app_error` Slack alert and returns `false` rather
+  than throwing — blocking the original admin action because the
+  audit table is unreachable would be worse than shipping the
+  action without a record.
+
+- **`app/admin/actions.ts` audit + alert wiring** — every mutating
+  admin action now calls `recordAdminAction()` after success:
+  `extendTrial`, `compUser`, `linkStripeCustomer`,
+  `cancelAtPeriodEnd`, `refundLastInvoice`, `updateUserProfile`,
+  `sendPasswordReset`, `deleteUser`, `enterShadow`, `exitShadow`.
+  Shadow-mode entries record + alert BEFORE `redirect()` since
+  Next's redirect throws an internal exception.
+
+- **4 new Slack alert types** — `admin_shadow_entered` (warn),
+  `admin_user_deleted` (error), `admin_user_comped` (warn),
+  `admin_refund_issued` (warn). Routine non-destructive admin
+  actions (extendTrial, sendPasswordReset, updateUserProfile,
+  linkStripeCustomer, cancelAtPeriodEnd) are logged to
+  `admin_audit_log` but not Slack-alerted — destructive-only,
+  per the locked decision.
+
+**UX cleanup (Part B)**
+
+- **Decomposed `UserDetailPanel`** (503 LOC → 42 LOC orchestrator
+  + 4 child sections):
+  - `user-profile-section.tsx` (≈63 LOC) — display + business name.
+  - `user-analytics-section.tsx` (≈75 LOC) — couples/events/
+    invoices/contracts counts + last sign-in.
+  - `subscription-actions-section.tsx` (≈250 LOC) — status
+    summary + extend trial / comp / cancel / link Stripe /
+    refund actions.
+  - `account-actions-section.tsx` (≈100 LOC) — shadow / password
+    reset / delete (with confirm dialog).
+
+- **Design-token migration across every admin file** — `gray-*`,
+  `bg-white`, `bg-amber-*`, `text-red-*`, `bg-red-*`,
+  `border-red-*` all gone. Now uses `bg-surface`, `bg-surface-muted`,
+  `bg-surface-emphasis`, `text-text`, `text-text-muted`,
+  `text-text-subtle`, `border-border`, `text-danger`,
+  `bg-warning/10` + `text-warning`.
+
+- **UI primitives swap-in** — native `<button>` / `<input>` /
+  `<select>` inside the user detail panel replaced with
+  `Button` / `Input` / `Select` from `components/ui/*`. Cancel +
+  Delete actions use the `danger` variant.
+
+**Ops surface (Part C)**
+
+- **New `Ops` tab** at `/admin?tab=ops` —
+  `app/(dashboard)/admin/tabs/ops-tab.tsx`. Three actionable
+  cards:
+  1. **Trials ending in 7 days** — filtered by
+     `subscription_status = 'trialing'`, excludes already-comped
+     and Stripe-paying users. Sorted soonest-first. Day-count
+     badge flips to `cancelled` (red) tone at ≤ 2 days.
+  2. **Past-due subscriptions** — `subscription_status =
+     'past_due'`. Shows business + email + plan + a "Stripe"
+     drill-down link to the customer dashboard.
+  3. **Connect account issues** — pulls
+     `disabled_reason IS NOT NULL` OR
+     `requirements_past_due` non-empty from
+     `public.connect_accounts`. Lists the failed capability
+     flags + the past-due field names so support knows what to
+     ask the vendor for.
+
+- **`lib/admin/ops-signals.ts`** — pure helpers
+  (`findTrialsEndingSoon`, `findPastDueUsers`) + service-role
+  query (`findConnectIssues`) + the one-pass `getOpsSnapshot()`
+  the page consumes.
+
+- **Email / business-name quick-jump search**
+  (`app/(dashboard)/admin/components/user-search-bar.tsx`) sits
+  above the tab bar. Type 2+ characters → up to 6 matches
+  appear in a popover; click → opens the user detail panel.
+  Removes the "copy email from Stripe → search in Supabase
+  Studio" loop for inbound support requests.
+
+**Tests**
+
+- `tests/integration/rls/admin-audit-log.test.ts` (8 tests) —
+  admin SELECT works, vendor SELECT is empty, §7.4 escalator
+  probe (admin in user_metadata → still empty), no
+  INSERT/UPDATE/DELETE policy, anon sees nothing.
+- `tests/integration/admin/audit-log-flow.test.ts` (3 tests) —
+  end-to-end `recordAdminAction → admin_audit_log` round-trip,
+  null-target support, failure-tolerance on bad actor id.
+- `tests/unit/lib/admin/ops-signals.test.ts` (8 tests) —
+  filters / sorts / window math for `findTrialsEndingSoon` +
+  `findPastDueUsers`.
+
+**Out of scope (deliberate)**
+
+- Schema drift detector (entitlement ↔ Stripe mismatch) — per
+  user instruction post-John-incident.
+- Per-user 30d activity sparkline — deferred to a follow-up.
+- Decomposing big template managers in Settings (Phase 12
+  leftover, not admin work).
+
+### Settings — page orchestrator + template RLS coverage (Phase 12)
+
+The `/settings` page is a 7-tab orchestrator (Personal Info,
+Account, Billing, Receive Payments, Templates, Statuses,
+Notifications) backed by per-tab section components. Phase 12
+fills in three RLS coverage gaps from the matrix, closes a
+§7.4 helper-bypass on the page itself, and applies the same
+design-token cleanup pattern Phases 10/11 used.
+
+- **`tests/integration/rls/contract-templates.test.ts` (+6)** —
+  cross-tenant denial on SELECT/UPDATE/DELETE plus a sanity check
+  that an INSERT claiming a different `user_id` is rejected at
+  the policy layer. Closes the `☐` cell in the security matrix.
+
+- **`tests/integration/rls/timeline-templates.test.ts` (+11)** —
+  covers both `timeline_templates` and `timeline_template_items`
+  (a parent/child pair). Beyond the standard CRUD denial probes,
+  one extra anti-confused-deputy test verifies that even if a
+  cross-owned item somehow ends up on a template (service-role
+  insert simulating a worst case), A's RLS-scoped SELECT still
+  only returns the items A actually owns. Closes both `☐` cells.
+
+- **`app/(dashboard)/settings/page.tsx` § entitlements migration**
+  — replaced inline `app_metadata.subscription_status`,
+  `app_metadata.subscription_plan`, `app_metadata.stripe_customer_id`,
+  `app_metadata.stripe_connect_account_id`,
+  `app_metadata.stripe_connect_enabled`,
+  `app_metadata.trial_end`, `app_metadata.subscription_end`,
+  `app_metadata.cancel_at_period_end`, and `app_metadata.is_comped`
+  reads with `subscriptionStatus()`, `subscriptionPlan()`,
+  `stripeCustomerId()`, `stripeConnectAccountId()`,
+  `stripeConnectEnabled()`, `trialEnd()`, `subscriptionEnd()`,
+  `cancelAtPeriodEnd()`, and `isComped()` from
+  `@/lib/auth/entitlements`. Added two new helpers
+  (`cancelAtPeriodEnd`, `isComped`) that hadn't existed yet. The
+  values were already coming from the right storage location
+  (post-§7.4); the page was just bypassing the canonical accessor.
+
+- **Settings page design-token cleanup** — loading skeleton, tab
+  bar, and heading migrated from `bg-gray-100/50`, `border-gray-200`,
+  `text-gray-900/500/700`, `bg-gray-900` to semantic tokens
+  (`bg-surface-emphasis`, `bg-surface-muted`, `border-border`,
+  `text-text`, `text-text-muted`, `bg-text`).
+
+- **No section-component changes.** The 7 tab sections + 4 template
+  managers were not touched. Their internal direct `auth.updateUser`
+  writes for user-metadata fields are intentional under the auth
+  model (`user_metadata` is user-writable by design).
+
+- **No gate movement.** Strict typecheck and lint budgets unchanged.
+
+### Branding — editor surface + internal helper (Phase 11)
+
+The `/branding` editor is the MC's brand designer — colours,
+fonts, logo, the block trees that render on public quote /
+invoice / timeline / portal surfaces. The editor itself is large
+(~8.3k LOC across 23 files) and structurally clean enough that
+decomposition isn't on the critical path. Phase 11 focuses on
+**proving the storage + helper layer that the editor writes into
+holds tenant-wise**, and a small design-token cleanup.
+
+- **`tests/integration/rls/user-branding.test.ts` (+5)** — owner
+  can read/upsert their own row, **cross-tenant denial** verified
+  for SELECT/UPDATE/INSERT (a user authenticated as A cannot read,
+  update, or claim B's row). Save round-trip preserves the block
+  tree shape unchanged.
+
+- **`tests/integration/branding/user-branding-helper.test.ts` (+4)**
+  — exercises `_user_branding(uuid)` through the service-role
+  client (the helper is `REVOKE ALL FROM public, anon, authenticated`
+  — it's an internal helper for other SECURITY DEFINER RPCs).
+  Proves the helper returns the requested user's scalars verbatim,
+  returns the documented `COALESCE` defaults for a user with no
+  metadata, returns null for a non-existent user id, and never
+  leaks between users. This locks in the foundation of the whole
+  public-surface model: the token-resolved `user_id` flows into
+  `_user_branding(p_user_id)` and gets back THAT user's branding.
+
+- **Branding page loading skeleton design-token cleanup** —
+  `app/(dashboard)/branding/page.tsx`'s 18-line loading skeleton
+  migrated from raw `bg-white`, `gray-100`, `bg-[#FAFAFA]`,
+  `border-gray-200/80` to semantic tokens (`bg-surface`,
+  `bg-surface-emphasis`, `bg-surface-muted`, `border-border`).
+  The skeleton now respects the active theme like the rest of
+  the app.
+
+- **No structural code changes** to the editor itself. The block-
+  toolbar / render / branding-editor / brand-panel megafiles
+  (~4.2k LOC across 4 files) are working code; decomposing them
+  is a separate later phase if it ever becomes a priority.
+
+- **No gate movement.** Strict typecheck and lint budgets
+  unchanged.
+
+### Timeline — public vendor-facing surface (Phase 10)
+
+The `/timeline/[token]` page is the wedding-day run-of-show MCs
+send to vendors (photographers, caterers, etc.). Same shape as
+the Phase 8 portal and Phase 9 quote surfaces: **unauthenticated**,
+share-token-as-capability, one SECURITY DEFINER RPC behind it.
+
+- **`tests/integration/timeline/public-timeline-rpc.test.ts` (+5)**
+  runs against the anon-key Supabase client (no auth headers, matches
+  the production browser path) to verify `get_public_timeline`'s
+  `share_token = token AND share_token_enabled = true` guard:
+  - Random invalid UUID → null.
+  - Valid + enabled token → returns the event's date, venue, couple
+    name, MC contact block, and timeline items.
+  - Valid token but `share_token_enabled = false` → null.
+  - **Cross-event probe** — calling with token A returns only event
+    A's data; event B (enabled at the same time) does not leak.
+  - **MC identity probe** — the `mc` block in the payload is joined
+    from the event owner's `auth.users` row, not anything the
+    anon caller can substitute.
+
+- **Public page design-system cleanup.** `app/timeline/[token]/page.tsx`
+  and `app/timeline/[token]/timeline-item.tsx` migrated from raw
+  `gray-*` / `bg-white` colours to semantic tokens (`bg-surface`,
+  `text-text`, `text-text-muted`, `text-text-subtle`, `border-border`,
+  `bg-border-strong`). The public timeline now adopts the user's
+  branding/theme via the same CSS-variable path as the rest of the
+  app.
+
+- **No structural code changes.** The 139-LOC server component is
+  already a clean orchestrator (one RPC call + render); no
+  decomposition required.
+
+- **No gate movement.** Strict typecheck and lint budgets
+  unchanged.
+
+### Quotes — public couple-facing surface (Phase 9)
+
+The Quote builder + invoice builder modal decomposition and the
+`payments/actions.ts` server actions were **already shipped** as
+part of the Phase 2C / 2C.2 work. So Phase 9 is the same shape
+as Phase 8: **proving the existing public surface security holds**
+plus cleaning up dead `[id]` routes that survived the original
+prototype.
+
+- **Deleted dead routes** — `app/(dashboard)/quotes/[id]/page.tsx`
+  (525 LOC) and `app/(dashboard)/invoices/[id]/page.tsx`
+  (637 LOC) were orphaned: no inbound references anywhere in
+  `app/`, `lib/`, or email templates. The only link was
+  `/quotes/[id]` → `/invoices/[id]` forming a closed dead loop.
+  MCs work the Quote/Invoice surface entirely through the
+  `/payments` page + builder modals — these `[id]` pages
+  predated that consolidation. **−1162 LOC**.
+
+- **`tests/integration/payments/public-quote-rpcs.test.ts` (+13)**
+  runs against the anon-key Supabase client (no auth headers,
+  matches the production `/quote/[token]` browser path) to
+  verify every public-quote RPC's `share_token = token AND
+  share_token_enabled = true` guard:
+  - `get_public_quote` returns null for random / disabled tokens.
+  - `accept_quote` returns `{error: "not_found"}` on invalid
+    or disabled tokens; transitions status to `accepted` on
+    valid; rejects with `already_actioned` on second call;
+    rejects with `expired` when `expires_at` is past.
+  - `decline_quote` symmetric.
+  - Cross-couple probe: holding token A and calling
+    `accept_quote(A)` does NOT transition couple B's quote
+    (anti-confused-deputy).
+
+- **No structural code changes.** Builder modals + server
+  actions were already done. No new mutation paths added.
+
+- **No gate movement.** Strict typecheck and lint budgets
+  unchanged.
 
 ### Client Portal — public couple-facing surface (Phase 8)
 

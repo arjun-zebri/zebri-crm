@@ -2,18 +2,18 @@
  * Server actions for the Events surface (Phase 4C).
  *
  * Events are couple-owned (`events.couple_id` is NOT NULL). Every
- * action runs against an RLS-scoped Supabase client — the user is
- * the authenticated session — and validates input with Zod before
+ * action runs against an RLS-scoped Supabase client - the user is
+ * the authenticated session - and validates input with Zod before
  * any write. Tagged `ActionResult<T>` results match the couples
  * actions module so the UI can pattern-match the same way.
  *
  * Three groups of actions:
  *
- * 1. **Event CRUD** — create / update / delete the `events` row.
- * 2. **Per-event task CRUD** — the Tasks tab inside the Event
+ * 1. **Event CRUD** - create / update / delete the `events` row.
+ * 2. **Per-event task CRUD** - the Tasks tab inside the Event
  *    Profile writes `tasks` rows with `related_event_id`. Mirrors
  *    the couple-task actions but scoped to an event.
- * 3. **Timeline + contact-link CRUD** — `timeline_items` writes
+ * 3. **Timeline + contact-link CRUD** - `timeline_items` writes
  *    (used by the day-calendar + the couple's Timeline tab) and
  *    `event_contacts` link/unlink (used by the Vendors tab).
  *
@@ -66,7 +66,7 @@ const dateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD');
 // `time` in HH:MM (24-hour). The timeline-item start_time is a
-// Postgres `time` column, not a timestamptz — local clock time
+// Postgres `time` column, not a timestamptz - local clock time
 // matters here, not UTC.
 const timeSchema = z
   .string()
@@ -79,6 +79,10 @@ const eventStatusSchema = z.enum(['upcoming', 'completed', 'cancelled']);
 const eventInputSchema = z.object({
   couple_id: uuidSchema,
   date: dateSchema,
+  // Optional short label (e.g. "Ceremony", "Reception"). Couples often
+  // run multiple events on the same day, so the events list / calendar
+  // need something more specific than venue to distinguish them.
+  title: z.string().trim().max(200).nullable().default(null),
   venue: z.string().trim().max(300).default(''),
   // `.nullable().default(null)` (not `.nullable().optional()`) so the
   // parsed shape always has the key. Avoids exactOptionalPropertyTypes
@@ -93,7 +97,7 @@ const eventInputSchema = z.object({
 
 // Use z.input (not z.infer/z.output) so .default(null) fields stay
 // optional on the *call signature*. After parsing, the output has
-// every default applied — so the spread into Supabase Insert is
+// every default applied - so the spread into Supabase Insert is
 // always complete.
 export type EventInput = z.input<typeof eventInputSchema>;
 
@@ -275,6 +279,9 @@ const taskStatusSchema = z.string().trim().min(1).max(100);
 const taskPrioritySchema = z.string().trim().min(1).max(100).nullable();
 
 const createEventTaskSchema = z.object({
+  // Optional client-generated UUID — see the corresponding comment in
+  // `app/(dashboard)/couples/actions.ts` for why we accept this.
+  id: uuidSchema.optional(),
   eventId: uuidSchema,
   title: z.string().trim().min(1, 'Title is required').max(500),
 });
@@ -295,14 +302,23 @@ export async function createEventTaskAction(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
+  const insertPayload: {
+    id?: string;
+    user_id: string;
+    related_event_id: string;
+    title: string;
+    status: string;
+  } = {
+    user_id: user.id,
+    related_event_id: parsed.data.eventId,
+    title: parsed.data.title,
+    status: 'todo',
+  };
+  if (parsed.data.id) insertPayload.id = parsed.data.id;
+
   const { data, error } = await supabase
     .from('tasks')
-    .insert({
-      user_id: user.id,
-      related_event_id: parsed.data.eventId,
-      title: parsed.data.title,
-      status: 'todo',
-    })
+    .insert(insertPayload)
     .select('id')
     .single();
 
@@ -524,7 +540,7 @@ export async function deleteTimelineItemAction(
 
 /**
  * Bulk-insert timeline items (used when applying a template to an
- * event). The DB-side `position` defaults are inconvenient here —
+ * event). The DB-side `position` defaults are inconvenient here -
  * callers supply explicit positions so the visual order matches
  * what the template intended.
  */
@@ -604,7 +620,7 @@ export async function linkContactToEventAction(
 
 /**
  * Unlink by composite (event_id + contact_id) rather than the join
- * row's id — the UI maintains a per-event list keyed on contact_id
+ * row's id - the UI maintains a per-event list keyed on contact_id
  * so this matches how the click handlers fire.
  */
 export async function unlinkContactFromEventAction(
@@ -647,7 +663,7 @@ const bulkLinkContactsSchema = z.object({
 export type BulkLinkContactsInput = z.input<typeof bulkLinkContactsSchema>;
 
 /**
- * Used when creating a new event with a pre-selected vendor team —
+ * Used when creating a new event with a pre-selected vendor team -
  * inserts every link in one round-trip.
  */
 export async function bulkLinkContactsToEventAction(

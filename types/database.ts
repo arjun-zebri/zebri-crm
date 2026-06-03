@@ -7,8 +7,60 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          details: Json
+          id: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          details?: Json
+          id?: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       connect_accounts: {
         Row: {
           account_id: string | null
@@ -375,6 +427,12 @@ export type Database = {
           phone: string | null
           portal_token: string
           portal_token_enabled: boolean
+          primary_email: string | null
+          primary_name: string | null
+          primary_phone: string | null
+          secondary_email: string | null
+          secondary_name: string | null
+          secondary_phone: string | null
           status: string
           user_id: string
           venue: string | null
@@ -391,6 +449,12 @@ export type Database = {
           phone?: string | null
           portal_token?: string
           portal_token_enabled?: boolean
+          primary_email?: string | null
+          primary_name?: string | null
+          primary_phone?: string | null
+          secondary_email?: string | null
+          secondary_name?: string | null
+          secondary_phone?: string | null
           status?: string
           user_id: string
           venue?: string | null
@@ -407,6 +471,12 @@ export type Database = {
           phone?: string | null
           portal_token?: string
           portal_token_enabled?: boolean
+          primary_email?: string | null
+          primary_name?: string | null
+          primary_phone?: string | null
+          secondary_email?: string | null
+          secondary_name?: string | null
+          secondary_phone?: string | null
           status?: string
           user_id?: string
           venue?: string | null
@@ -469,6 +539,7 @@ export type Database = {
           share_token_enabled: boolean
           status: string
           timeline_notes: string | null
+          title: string | null
           user_id: string
           venue: string | null
           venue_lat: number | null
@@ -489,6 +560,7 @@ export type Database = {
           share_token_enabled?: boolean
           status?: string
           timeline_notes?: string | null
+          title?: string | null
           user_id: string
           venue?: string | null
           venue_lat?: number | null
@@ -509,6 +581,7 @@ export type Database = {
           share_token_enabled?: boolean
           status?: string
           timeline_notes?: string | null
+          title?: string | null
           user_id?: string
           venue?: string | null
           venue_lat?: number | null
@@ -1101,6 +1174,87 @@ export type Database = {
         }
         Relationships: []
       }
+      task_statuses: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_priorities: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_types: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           created_at: string
@@ -1360,6 +1514,7 @@ export type Database = {
         }[]
       }
       decline_contract:
+        | { Args: { p_reason: string; token: string }; Returns: Json }
         | {
             Args: {
               p_actor_ip?: string
@@ -1369,7 +1524,6 @@ export type Database = {
             }
             Returns: Json
           }
-        | { Args: { p_reason: string; token: string }; Returns: Json }
       decline_quote: { Args: { token: string }; Returns: Json }
       delete_portal_file: {
         Args: { p_id: string; p_token: string }
@@ -1647,7 +1801,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+

@@ -136,15 +136,25 @@ export function usePortalData(coupleId: string) {
     setPersonSaving(true)
     try {
       if (editingPerson) {
+        // `data.X !== undefined ? data.X : editingPerson.X` and not
+        // `data.X ?? editingPerson.X` - the latter falls back when
+        // the value is explicitly `null` too, which silently
+        // un-deletes a recording / role / phonetic the user just
+        // cleared on the form.
+        const pick = <K extends keyof PortalPerson>(
+          key: K,
+          fallback: PortalPerson[K],
+        ): PortalPerson[K] =>
+          data[key] !== undefined ? (data[key] as PortalPerson[K]) : fallback
         unwrap(
           await updatePortalPersonAction({
             id: editingPerson.id,
             patch: {
-              full_name: data.full_name ?? editingPerson.full_name,
-              phonetic: data.phonetic ?? editingPerson.phonetic,
-              role: data.role ?? editingPerson.role,
-              audio_url: data.audio_url ?? editingPerson.audio_url,
-              notes: data.notes ?? null,
+              full_name: pick('full_name', editingPerson.full_name),
+              phonetic: pick('phonetic', editingPerson.phonetic),
+              role: pick('role', editingPerson.role),
+              audio_url: pick('audio_url', editingPerson.audio_url),
+              notes: pick('notes', editingPerson.notes),
             },
           }),
         )
