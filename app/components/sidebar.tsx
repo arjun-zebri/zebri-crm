@@ -120,8 +120,8 @@ export function Sidebar({ mobileOpen, onMobileClose, isExpanded, onToggle }: Sid
                     : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
                 }`}
               >
-                <Icon size={22} strokeWidth={1.5} className="flex-shrink-0" />
-                <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[14px]`}>
+                <Icon size={18} strokeWidth={1.5} className="flex-shrink-0" />
+                <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
                   {item.label}
                 </span>
               </Link>
@@ -155,8 +155,8 @@ export function Sidebar({ mobileOpen, onMobileClose, isExpanded, onToggle }: Sid
                       : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
                   }`}
                 >
-                  <Icon size={22} strokeWidth={1.5} className="flex-shrink-0" />
-                  <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[14px]`}>
+                  <Icon size={18} strokeWidth={1.5} className="flex-shrink-0" />
+                  <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
                     {item.label}
                   </span>
                 </Link>
@@ -164,18 +164,20 @@ export function Sidebar({ mobileOpen, onMobileClose, isExpanded, onToggle }: Sid
             })}
 
             {user && (
-              <div className="flex items-center px-[10px] py-2.5 rounded-xl">
-                <div className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 min-w-0 flex-1`}>
-                  <div className="text-[14px] font-medium truncate">{displayName}</div>
-                  <div className="text-[12px] text-gray-600 truncate">{email}</div>
+              <div className="border-t border-gray-200 mt-2 pt-2">
+                <div className="flex items-center px-[10px] py-2.5">
+                  <div className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 min-w-0 flex-1`}>
+                    <div className="text-[13px] font-medium truncate">{displayName}</div>
+                    <div className="text-[11px] text-gray-600 truncate">{email}</div>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    disabled={signingOut}
+                    className={`flex-shrink-0 text-gray-500 hover:text-gray-900 transition disabled:opacity-50 cursor-pointer ${isExpanded ? "ml-3" : "md:ml-auto ml-3"}`}
+                  >
+                    <LogOut size={18} strokeWidth={1.5} />
+                  </button>
                 </div>
-                <button
-                  onClick={handleSignOut}
-                  disabled={signingOut}
-                  className={`flex-shrink-0 text-gray-500 hover:text-gray-900 transition disabled:opacity-50 cursor-pointer ${isExpanded ? "ml-3" : "md:ml-auto ml-3"}`}
-                >
-                  <LogOut size={22} strokeWidth={1.5} />
-                </button>
               </div>
             )}
           </div>
