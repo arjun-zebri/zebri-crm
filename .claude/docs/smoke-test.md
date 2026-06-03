@@ -157,8 +157,8 @@ Click any couple → profile opens. Test each tab:
 
 ## 4 · Calendar (`/calendar`)
 
-- [ ] Loads, Week view default.
-- [ ] Day / Week / Month switching works.
+- [y] Loads, Week view default.
+- [y] Day / Week / Month switching works.
 - [ ] **Mobile**: Day/Week usable; Month grid scrolls horizontally.
 
 ---
