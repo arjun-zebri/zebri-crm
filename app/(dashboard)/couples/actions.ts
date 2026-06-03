@@ -385,11 +385,20 @@ const taskStatusSchema = z.string().trim().min(1).max(100);
 const taskPrioritySchema = z.string().trim().min(1).max(100).nullable();
 
 const createTaskSchema = z.object({
+  // Optional client-generated UUID so the optimistic UI row can be
+  // created with the same id that the server-side row ends up with —
+  // that way cell edits (status, priority, etc.) fire `patchTask`
+  // against a real UUID immediately after `+ New task` is clicked,
+  // instead of failing Zod's UUID check on a `temp-` placeholder.
+  // RLS still enforces ownership, so accepting a client-supplied id
+  // is safe; an unlikely collision would surface as a unique-violation
+  // error from Postgres.
+  id: z.uuid().optional(),
   coupleId: z.uuid('coupleId must be a UUID'),
   title: z.string().trim().min(1, 'Title is required').max(500),
 });
 
-export type CreateCoupleTaskInput = z.infer<typeof createTaskSchema>;
+export type CreateCoupleTaskInput = z.input<typeof createTaskSchema>;
 
 export async function createCoupleTaskAction(
   input: CreateCoupleTaskInput,
@@ -405,14 +414,23 @@ export async function createCoupleTaskAction(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
+  const insertPayload: {
+    id?: string;
+    user_id: string;
+    related_couple_id: string;
+    title: string;
+    status: string;
+  } = {
+    user_id: user.id,
+    related_couple_id: parsed.data.coupleId,
+    title: parsed.data.title,
+    status: 'todo',
+  };
+  if (parsed.data.id) insertPayload.id = parsed.data.id;
+
   const { data, error } = await supabase
     .from('tasks')
-    .insert({
-      user_id: user.id,
-      related_couple_id: parsed.data.coupleId,
-      title: parsed.data.title,
-      status: 'todo',
-    })
+    .insert(insertPayload)
     .select('id')
     .single();
 

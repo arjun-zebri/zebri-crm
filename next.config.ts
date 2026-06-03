@@ -20,10 +20,14 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   // Don't leak full URLs to third-party resources.
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // Deny powerful APIs we don't use anywhere in the app today.
+  // Allow microphone on first-party (same-origin) frames only, used
+  // by the AudioRecorder in the couple-portal Contacts tab to record
+  // name pronunciations. Other powerful APIs stay denied across the
+  // board. `microphone=()` previously blocked even first-party use,
+  // so the permission prompt never appeared.
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    value: "camera=(), microphone=(self), geolocation=(), interest-cohort=()",
   },
   // HSTS — prod only, two-year max-age, includeSubDomains.
   ...(isProd

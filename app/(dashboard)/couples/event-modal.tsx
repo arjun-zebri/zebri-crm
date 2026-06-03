@@ -85,6 +85,7 @@ export function EventModal({
   const [title, setTitle] = useState('')
   const [date, setDate] = useState('')
   const [dateError, setDateError] = useState<string | null>(null)
+  const [titleError, setTitleError] = useState<string | null>(null)
   const [venue, setVenue] = useState('')
   const [venuePhone, setVenuePhone] = useState<string | null>(null)
   const [venueWebsite, setVenueWebsite] = useState<string | null>(null)
@@ -136,7 +137,11 @@ export function EventModal({
       setNotes(event.timeline_notes ?? '')
     } else {
       setTitle('')
-      setDate(defaultDate || nextSaturday())
+      // New events leave the date empty - the user picks it
+      // explicitly. The calendar still opens at `defaultDate`
+      // (the couple's existing event date, falling back to the
+      // next Saturday) so the picker lands on the right month.
+      setDate('')
       setVenue('')
       setVenuePhone(null)
       setVenueWebsite(null)
@@ -146,6 +151,7 @@ export function EventModal({
       setNotes('')
     }
     setDateError(null)
+    setTitleError(null)
     setSelectedVendorIds(initialVendorIds || [])
     setShowDeleteModal(false)
     setVenueSuggestions([])
@@ -211,17 +217,28 @@ export function EventModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    // Validate both fields up front so the user sees every missing
+    // requirement at once instead of fixing-saving-fixing.
+    let invalid = false
+    if (!title.trim()) {
+      setTitleError('Title is required')
+      invalid = true
+    } else {
+      setTitleError(null)
+    }
     if (!date.trim()) {
       setDateError('Date is required')
-      return
+      invalid = true
+    } else {
+      setDateError(null)
     }
-    setDateError(null)
+    if (invalid) return
 
     onSave({
       ...(event?.id ? { id: event.id } : {}),
       couple_id: coupleId,
       date,
-      title: title.trim() ? title.trim() : null,
+      title: title.trim(),
       venue,
       venue_phone: venuePhone,
       venue_website: venueWebsite,
@@ -279,8 +296,8 @@ export function EventModal({
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={loading}
-                className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+                disabled={loading || !title.trim() || !date.trim()}
+                className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? 'Saving...' : 'Save'}
               </button>
@@ -289,18 +306,26 @@ export function EventModal({
         }
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Title - optional short label distinguishing ceremony /
-              reception / engagement party. Goes first because it's
+          {/* Title - required short label distinguishing ceremony
+              / reception / engagement party. Goes first because it's
               the line users will see in the events list. */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Title</label>
+            <label className={labelClass}>
+              Title <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value)
+                if (titleError) setTitleError(null)
+              }}
               placeholder="e.g., Ceremony"
               className={inputClass}
             />
+            {titleError && (
+              <p className="text-xs text-red-500 mt-1">{titleError}</p>
+            )}
           </div>
 
           {/* Date + Status share a row - both compact controls. */}

@@ -163,7 +163,7 @@ export function ContactModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
+            <label className="block text-sm text-gray-600 mb-1">
               Contact / Business Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -177,8 +177,8 @@ export function ContactModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Email
+            <label className="block text-sm text-gray-600 mb-1">
+              Email <span className="text-gray-400 font-normal">(optional)</span>
             </label>
             <input
               type="email"
@@ -190,8 +190,8 @@ export function ContactModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Phone
+            <label className="block text-sm text-gray-600 mb-1">
+              Phone <span className="text-gray-400 font-normal">(optional)</span>
             </label>
             <input
               type="tel"
@@ -206,7 +206,7 @@ export function ContactModal({
               picklists and the modal feels too tall when stacked. */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
+            <label className="block text-sm text-gray-600 mb-1">
               Category
             </label>
             <Popover.Root open={categoryOpen} onOpenChange={setCategoryOpen}>
@@ -252,7 +252,7 @@ export function ContactModal({
 
           {/* Status */}
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
+            <label className="block text-sm text-gray-600 mb-1">
               Status
             </label>
             <Popover.Root open={statusOpen} onOpenChange={setStatusOpen}>
@@ -295,8 +295,8 @@ export function ContactModal({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">
-              Contact Person
+            <label className="block text-sm text-gray-600 mb-1">
+              Contact Person <span className="text-gray-400 font-normal">(optional)</span>
             </label>
             <input
               type="text"
@@ -309,8 +309,8 @@ export function ContactModal({
         </div>
 
         <div>
-          <label className="block text-sm text-gray-400 mb-1">
-            Notes
+          <label className="block text-sm text-gray-600 mb-1">
+            Notes <span className="text-gray-400 font-normal">(optional)</span>
           </label>
           <textarea
             value={notes}

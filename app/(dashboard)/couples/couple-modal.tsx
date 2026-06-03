@@ -83,7 +83,7 @@ export function CoupleModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !primaryName.trim()) return;
 
     onSave({
       id: couple?.id,
@@ -144,7 +144,7 @@ export function CoupleModal({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={loading || !name.trim()}
+              disabled={loading || !name.trim() || !primaryName.trim()}
               className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Saving..." : "Save"}
@@ -153,8 +153,8 @@ export function CoupleModal({
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="flex flex-col gap-8">
           <div>
             <label className="block text-sm text-gray-600 mb-1">
               Name <span className="text-red-500">*</span>
@@ -169,12 +169,13 @@ export function CoupleModal({
             />
           </div>
 
-          {/* Primary partner contact. Section header instead of
-              per-field labels keeps the modal scannable; each row
-              uses placeholder text to indicate the field. */}
-          <div className="pt-1">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-              Primary contact
+          {/* Primary partner contact. The section header carries the
+              required marker (no per-field label) so Primary and
+              Secondary share the same visual rhythm - Save is gated
+              on `primaryName` regardless. */}
+          <div>
+            <h4 className="block text-sm text-gray-600 mb-1">
+              Primary contact <span className="text-red-500">*</span>
             </h4>
             <div className="space-y-3">
               <input
@@ -182,7 +183,8 @@ export function CoupleModal({
                 value={primaryName}
                 onChange={(e) => setPrimaryName(e.target.value)}
                 className={inputClass}
-                placeholder="Name"
+                placeholder="Full name"
+                required
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <input
@@ -205,8 +207,8 @@ export function CoupleModal({
 
           {/* Secondary partner - same shape. Both can be empty if
               the MC hasn't captured the partner details yet. */}
-          <div className="pt-1">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+          <div>
+            <h4 className="block text-sm text-gray-600 mb-1">
               Secondary contact
             </h4>
             <div className="space-y-3">
@@ -215,7 +217,7 @@ export function CoupleModal({
                 value={secondaryName}
                 onChange={(e) => setSecondaryName(e.target.value)}
                 className={inputClass}
-                placeholder="Name"
+                placeholder="Full name"
               />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <input
@@ -236,6 +238,11 @@ export function CoupleModal({
             </div>
           </div>
 
+          {/* Status + Lead Source share a row on sm+ - both are
+              compact picklists, stacking them makes the modal feel
+              taller than it needs to. Whitespace separates them
+              from the Secondary contact block above. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">
               Status
@@ -344,6 +351,7 @@ export function CoupleModal({
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
+          </div>
           </div>
         </div>
 

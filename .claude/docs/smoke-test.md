@@ -132,7 +132,7 @@ e# Zebri smoke test plan
   live on Events tab).
 - [y] Submit empty → validation errors.
 - [y] Submit valid → modal closes, couple appears.
-- [ ] **Starter cap**: at 5 couples on Starter, trying to add a
+- [y] **Starter cap**: at 5 couples on Starter, trying to add a
   6th must fail with a clear "Upgrade to add more couples"
   message.
 
@@ -140,14 +140,14 @@ e# Zebri smoke test plan
 
 Click any couple → profile opens. Test each tab:
 
-- [ ] **Overview** — events list + contacts inline (no separate
+- [y] **Overview** — events list + contacts inline (no separate
   sidebar). Edit Name / Email / Phone / Status / Notes → Save
   → toast → reopen → persists.
-- [ ] **Events** — add event (date + venue). Multiple events
+- [y] **Events** — add event (date + venue). Multiple events
   supported. Edit and delete an event.
-- [ ] **Contacts** — ContactPicker search → assign existing
+- [y] **Contacts** — ContactPicker search → assign existing
   contact → appears in list. Remove a contact link.
-- [ ] **Tasks** — inline form creates task. Mark complete.
+- [y] **Tasks** — inline form creates task. Mark complete.
   Delete task.
 - [ ] **Payments** sub-tab — Quotes list, Invoices list. Open
   existing → builder modal opens with right data.

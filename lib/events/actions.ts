@@ -279,6 +279,9 @@ const taskStatusSchema = z.string().trim().min(1).max(100);
 const taskPrioritySchema = z.string().trim().min(1).max(100).nullable();
 
 const createEventTaskSchema = z.object({
+  // Optional client-generated UUID — see the corresponding comment in
+  // `app/(dashboard)/couples/actions.ts` for why we accept this.
+  id: uuidSchema.optional(),
   eventId: uuidSchema,
   title: z.string().trim().min(1, 'Title is required').max(500),
 });
@@ -299,14 +302,23 @@ export async function createEventTaskAction(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
+  const insertPayload: {
+    id?: string;
+    user_id: string;
+    related_event_id: string;
+    title: string;
+    status: string;
+  } = {
+    user_id: user.id,
+    related_event_id: parsed.data.eventId,
+    title: parsed.data.title,
+    status: 'todo',
+  };
+  if (parsed.data.id) insertPayload.id = parsed.data.id;
+
   const { data, error } = await supabase
     .from('tasks')
-    .insert({
-      user_id: user.id,
-      related_event_id: parsed.data.eventId,
-      title: parsed.data.title,
-      status: 'todo',
-    })
+    .insert(insertPayload)
     .select('id')
     .single();
 

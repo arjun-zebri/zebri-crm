@@ -9,7 +9,13 @@ import { createClient } from '@/lib/supabase/client'
 
 import type { PortalPerson, PortalSong } from './use-portal-data'
 
-const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition'
+// Underline input vocabulary - matches the couple/event/contact
+// modals so the four surfaces look like one product. Same definition
+// kept locally because this file is consumed before the shared
+// modals module mounts in dev.
+const inputClass =
+  'w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition'
+const labelClass = 'block text-sm text-gray-600 mb-1'
 
 // ── Audio recorder ──────────────────────────────────────────────────────────
 export function AudioRecorder({
@@ -27,10 +33,23 @@ export function AudioRecorder({
 }) {
   const [recording, setRecording] = useState(false)
   const [uploading, setUploading] = useState(false)
+  // Surface the underlying reason (denied permission, unsupported
+  // browser, non-secure context) so the button doesn't just "do
+  // nothing" when the user clicks - it shows an inline note.
+  const [error, setError] = useState<string | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
 
   const startRecording = async () => {
+    setError(null)
+    if (typeof window === 'undefined' || !window.isSecureContext) {
+      setError('Recording requires HTTPS (or localhost). Switch context to record.')
+      return
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError('This browser does not support audio recording.')
+      return
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mr = new MediaRecorder(stream)
@@ -41,19 +60,38 @@ export function AudioRecorder({
         stream.getTracks().forEach((t) => t.stop())
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         setUploading(true)
-        const supabase = createClient()
-        const fileName = `${coupleId}/${personId}-${Date.now()}.webm`
-        const { data } = await supabase.storage.from('portal-audio').upload(fileName, blob, { upsert: true })
-        if (data) {
-          const { data: urlData } = supabase.storage.from('portal-audio').getPublicUrl(data.path)
-          onRecorded(urlData.publicUrl)
+        try {
+          const supabase = createClient()
+          const fileName = `${coupleId}/${personId}-${Date.now()}.webm`
+          const { data, error: upErr } = await supabase.storage
+            .from('portal-audio')
+            .upload(fileName, blob, { upsert: true })
+          if (upErr) {
+            console.error('[AudioRecorder] upload failed', upErr)
+            setError('Could not save the recording. Try again.')
+          } else if (data) {
+            const { data: urlData } = supabase.storage.from('portal-audio').getPublicUrl(data.path)
+            onRecorded(urlData.publicUrl)
+          }
+        } catch (e) {
+          console.error('[AudioRecorder] upload threw', e)
+          setError('Could not save the recording. Try again.')
+        } finally {
+          setUploading(false)
         }
-        setUploading(false)
       }
       mr.start()
       setRecording(true)
-    } catch {
-      // user denied mic
+    } catch (e) {
+      console.error('[AudioRecorder] getUserMedia / MediaRecorder failed', e)
+      const name = (e as { name?: string } | null)?.name
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setError('Microphone access denied. Enable mic permissions to record.')
+      } else if (name === 'NotFoundError') {
+        setError('No microphone found.')
+      } else {
+        setError('Could not start recording. Check microphone permissions.')
+      }
     }
   }
 
@@ -68,6 +106,20 @@ export function AudioRecorder({
         <Loader2 size={13} className="animate-spin" />
         Uploading...
       </div>
+    )
+  }
+
+  // Recording takes priority over a stored audio URL so that
+  // clicking "Re-record" (Mic) visually switches the row to
+  // "Stop recording". Previously this branch was unreachable
+  // whenever `audioUrl` was set, so the Re-record button did
+  // nothing the user could see.
+  if (recording) {
+    return (
+      <button type="button" onClick={stopRecording} className="flex items-center gap-1 text-xs text-red-600 border border-red-200 bg-red-50 rounded-lg px-2.5 py-1.5 hover:bg-red-100 transition cursor-pointer animate-pulse">
+        <Square size={12} strokeWidth={2} />
+        Stop recording
+      </button>
     )
   }
 
@@ -95,20 +147,18 @@ export function AudioRecorder({
     )
   }
 
-  if (recording) {
-    return (
-      <button type="button" onClick={stopRecording} className="flex items-center gap-1 text-xs text-red-600 border border-red-200 bg-red-50 rounded-lg px-2.5 py-1.5 hover:bg-red-100 transition cursor-pointer animate-pulse">
-        <Square size={12} strokeWidth={2} />
-        Stop recording
-      </button>
-    )
-  }
-
   return (
-    <button type="button" onClick={startRecording} className="flex items-center gap-1 text-xs text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-100 transition cursor-pointer">
-      <Mic size={12} strokeWidth={1.5} />
-      Record pronunciation
-    </button>
+    <div className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        onClick={startRecording}
+        className="self-start flex items-center gap-1 text-xs text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-100 transition cursor-pointer"
+      >
+        <Mic size={12} strokeWidth={1.5} />
+        Record pronunciation
+      </button>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
   )
 }
 
@@ -128,97 +178,36 @@ export function PersonModal({
 }) {
   const [fullName, setFullName] = useState('')
   const [role, setRole] = useState('')
-  const [phonetic, setPhonetic] = useState('')
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
 
+  // Seed form state when the modal opens (and only when the
+  // *underlying person* changes - keying on `person?.id`, not the
+  // object reference). A React-Query refetch after a save returns
+  // a fresh `person` reference with the same id; depending on
+  // `person` directly would re-run this and wipe local edits the
+  // user just made (e.g. clearing the audio recording).
   useEffect(() => {
     if (isOpen) {
       setFullName(person?.full_name ?? '')
       setRole(person?.role ?? '')
-      setPhonetic(person?.phonetic ?? '')
       setAudioUrl(person?.audio_url ?? null)
       setNotes(person?.notes ?? '')
       setConfirmDelete(false)
     }
-  }, [isOpen, person])
+  }, [isOpen, person?.id])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="sm" nested title={person ? 'Edit person' : categoryLabel ? `Add to ${categoryLabel}` : 'Add person'}>
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Full name</label>
-            <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Siobhan Murphy" className={inputClass} autoFocus />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Role</label>
-            <Popover.Root open={roleOpen} onOpenChange={setRoleOpen}>
-              <Popover.Trigger asChild>
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2 text-sm hover:border-gray-300 transition cursor-pointer"
-                >
-                  <span className={role ? 'text-gray-900' : 'text-gray-400'}>
-                    {role || 'No role'}
-                  </span>
-                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-                </button>
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
-                  style={{ width: 'var(--radix-popover-trigger-width)' }}
-                  sideOffset={4}
-                  align="start"
-                >
-                  <button
-                    type="button"
-                    onClick={() => { setRole(''); setRoleOpen(false) }}
-                    className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                      !role ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    No role
-                  </button>
-                  {roleOptions.map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => { setRole(r); setRoleOpen(false) }}
-                      className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                        role === r ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Phonetic spelling</label>
-            <input type="text" value={phonetic} onChange={(e) => setPhonetic(e.target.value)} placeholder="e.g. SEER-sha" className={inputClass} />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1.5">Pronunciation recording</label>
-            <AudioRecorder audioUrl={audioUrl} personId={person?.id ?? 'new'} coupleId={coupleId} onRecorded={setAudioUrl} onDelete={() => setAudioUrl(null)} />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any notes for the MC..."
-              rows={6}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition resize-none"
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="md"
+      nested
+      title={person ? 'Edit person' : categoryLabel ? `Add to ${categoryLabel}` : 'Add person'}
+      footer={
+        <div className="flex items-center justify-between">
           {person && onDelete ? (
             confirmDelete ? (
               <div className="flex items-center gap-2">
@@ -227,18 +216,112 @@ export function PersonModal({
                 <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">Cancel</button>
               </div>
             ) : (
-              <button type="button" onClick={() => setConfirmDelete(true)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 transition cursor-pointer">
-                <Trash2 size={13} strokeWidth={1.5} />
-                Remove
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
+              >
+                Delete
               </button>
             )
-          ) : <div />}
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={onClose} className="text-sm text-gray-500 px-3 py-1.5 hover:text-gray-700 transition cursor-pointer">Cancel</button>
-            <button type="button" onClick={() => onSave({ full_name: fullName, role: role || null, phonetic: phonetic || null, audio_url: audioUrl, notes: notes || null })} disabled={saving || !fullName.trim()} className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50">
+          ) : null}
+          <div className="flex gap-3 ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave({ full_name: fullName, role: role || null, phonetic: null, audio_url: audioUrl, notes: notes || null })}
+              disabled={saving || !fullName.trim()}
+              className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+            >
               {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className={labelClass}>Full name</label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="e.g. Siobhan Murphy"
+            className={inputClass}
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Role</label>
+          <Popover.Root open={roleOpen} onOpenChange={setRoleOpen}>
+            <Popover.Trigger asChild>
+              <button
+                type="button"
+                className={`${inputClass} flex items-center justify-between text-left`}
+              >
+                <span className={role ? 'text-gray-900' : 'text-gray-400'}>
+                  {role || 'No role'}
+                </span>
+                <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className="bg-white border border-gray-200 rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto w-[var(--radix-popover-trigger-width)]"
+                sideOffset={4}
+                align="start"
+              >
+                <button
+                  type="button"
+                  onClick={() => { setRole(''); setRoleOpen(false) }}
+                  className={`w-full text-left px-3 py-2 text-sm transition cursor-pointer ${
+                    !role ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  No role
+                </button>
+                {roleOptions.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => { setRole(r); setRoleOpen(false) }}
+                    className={`w-full text-left px-3 py-2 text-sm transition cursor-pointer ${
+                      role === r ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        </div>
+        <div>
+          <label className={labelClass}>Pronunciation recording</label>
+          <AudioRecorder
+            audioUrl={audioUrl}
+            personId={person?.id ?? 'new'}
+            coupleId={coupleId}
+            onRecorded={setAudioUrl}
+            onDelete={() => setAudioUrl(null)}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Notes</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Any notes for the MC..."
+            rows={8}
+            className={`${inputClass} resize-none`}
+          />
         </div>
       </div>
     </Modal>
@@ -272,23 +355,14 @@ export function SongModal({
   }, [isOpen, song])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} nested title="Edit">
-      <div className="space-y-4">
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Song title</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Can't Help Falling in Love" className={inputClass} autoFocus />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Artist (optional)</label>
-            <input type="text" value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="e.g. Elvis Presley" className={inputClass} />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Notes (optional)</label>
-            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. Start from the chorus" className={inputClass} />
-          </div>
-        </div>
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="sm"
+      nested
+      title={song ? 'Edit song' : `Add ${categoryLabel} song`}
+      footer={
+        <div className="flex items-center justify-between">
           {song && onDelete ? (
             confirmDelete ? (
               <div className="flex items-center gap-2">
@@ -297,18 +371,67 @@ export function SongModal({
                 <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer">Cancel</button>
               </div>
             ) : (
-              <button type="button" onClick={() => setConfirmDelete(true)} className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 transition cursor-pointer">
-                <Trash2 size={13} strokeWidth={1.5} />
-                Remove
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="text-sm px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition cursor-pointer"
+              >
+                Delete
               </button>
             )
-          ) : <div />}
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={onClose} className="text-sm text-gray-500 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer">Cancel</button>
-            <button type="button" onClick={() => onSave({ title, artist: artist || null, notes: notes || null })} disabled={saving || !title.trim()} className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50">
+          ) : null}
+          <div className="flex gap-3 ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave({ title, artist: artist || null, notes: notes || null })}
+              disabled={saving || !title.trim()}
+              className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+            >
               {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className={labelClass}>Song title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Can't Help Falling in Love"
+            className={inputClass}
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Artist (optional)</label>
+          <input
+            type="text"
+            value={artist}
+            onChange={(e) => setArtist(e.target.value)}
+            placeholder="e.g. Elvis Presley"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Notes (optional)</label>
+          <input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. Start from the chorus"
+            className={inputClass}
+          />
         </div>
       </div>
     </Modal>

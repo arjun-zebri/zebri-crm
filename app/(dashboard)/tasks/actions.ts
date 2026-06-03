@@ -80,6 +80,12 @@ function compactPatch<T extends Record<string, unknown>>(
 /* ─── Tasks ───────────────────────────────────────────────────── */
 
 const createTaskSchema = z.object({
+  // Optional client-generated UUID so the optimistic UI row uses the
+  // same id the server-side row ends up with — see the matching
+  // comment in `app/(dashboard)/couples/actions.ts` for the full
+  // rationale (lets cell edits fire against a real id immediately
+  // after `+ New task`).
+  id: uuidSchema.optional(),
   title: z.string().trim().min(1, 'Title is required').max(500),
   due_date: dateOrNull.default(null),
   description: z.string().max(5000).nullable().default(null),
@@ -498,4 +504,261 @@ export async function reorderTaskGroupsAction(
   }
 
   return { ok: true, data: undefined };
+}
+
+/* ─── Task option lookups (priority + task_type) ───────────────── */
+//
+// Custom priorities and task types persist in their own lookup tables
+// (`task_priorities`, `task_types`) so a user-created option keeps
+// showing up in the cell dropdown even when no task currently
+// references it, and so each option carries a stable colour.
+//
+// The lookup tables are *additive* to whatever value lives in
+// `tasks.priority` / `tasks.task_type` — the tasks table still stores
+// the option name as free-form text, the lookup just decides which
+// names appear in the dropdown and what colour to render them in.
+//
+// The two tables are structurally identical, so the actions are
+// parameterised over a `'priority' | 'type'` discriminator to avoid
+// two near-identical copies.
+
+const optionColorSchema = z.enum([
+  'gray',
+  'green',
+  'blue',
+  'amber',
+  'red',
+  'purple',
+]);
+
+const createOptionSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required').max(100),
+  color: optionColorSchema.default('gray'),
+});
+
+const updateOptionSchema = z.object({
+  id: uuidSchema,
+  patch: z
+    .object({
+      name: z.string().trim().min(1).max(100).optional(),
+      color: optionColorSchema.optional(),
+    })
+    .refine((p) => Object.keys(p).length > 0, {
+      message: 'Patch must contain at least one field',
+    }),
+});
+
+export type CreateTaskOptionInput = z.input<typeof createOptionSchema>;
+export type UpdateTaskOptionInput = z.input<typeof updateOptionSchema>;
+
+type OptionKind = 'priority' | 'type' | 'status';
+
+const optionTable = (kind: OptionKind) => {
+  if (kind === 'priority') return 'task_priorities';
+  if (kind === 'status') return 'task_statuses';
+  return 'task_types';
+};
+
+const optionTaskColumn = (kind: OptionKind) => {
+  if (kind === 'priority') return 'priority';
+  if (kind === 'status') return 'status';
+  return 'task_type';
+};
+
+async function createTaskOptionAction(
+  kind: OptionKind,
+  input: CreateTaskOptionInput,
+): Promise<
+  ActionResult<{ id: string; name: string; color: string; position: number }>
+> {
+  const parsed = createOptionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid option data.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  // Position is computed server-side so concurrent creates don't
+  // collide on a stale client-side max.
+  const { data: existing } = await supabase
+    .from(optionTable(kind))
+    .select('position')
+    .eq('user_id', user.id)
+    .order('position', { ascending: false })
+    .limit(1);
+  const nextPosition =
+    existing && existing.length > 0 ? (existing[0]?.position ?? 0) + 1 : 0;
+
+  const { data, error } = await supabase
+    .from(optionTable(kind))
+    .insert({ ...parsed.data, position: nextPosition, user_id: user.id })
+    .select('id, name, color, position')
+    .single();
+
+  if (error || !data) {
+    logger.error(`[tasks/actions] createTaskOptionAction(${kind}) failed`,
+      error,
+      { userId: user.id },
+    );
+    return { ok: false, error: 'Could not create option.' };
+  }
+
+  return { ok: true, data };
+}
+
+async function updateTaskOptionAction(
+  kind: OptionKind,
+  input: UpdateTaskOptionInput,
+): Promise<ActionResult<void>> {
+  const parsed = updateOptionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid option patch.' };
+  }
+  const { id, patch } = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  // If the name is changing, cascade the rename to every task that
+  // references the old name so the assignments stay in sync.
+  if (patch.name) {
+    const { data: row } = await supabase
+      .from(optionTable(kind))
+      .select('name')
+      .eq('id', id)
+      .single();
+    const previousName = row?.name;
+    if (previousName && previousName !== patch.name) {
+      await supabase
+        .from('tasks')
+        .update({ [optionTaskColumn(kind)]: patch.name })
+        .eq('user_id', user.id)
+        .eq(optionTaskColumn(kind), previousName);
+    }
+  }
+
+  const { error } = await supabase
+    .from(optionTable(kind))
+    .update(compactPatch(patch))
+    .eq('id', id);
+
+  if (error) {
+    logger.error(`[tasks/actions] updateTaskOptionAction(${kind}) failed`,
+      error,
+      { userId: user.id, optionId: id },
+    );
+    return { ok: false, error: 'Could not update option.' };
+  }
+
+  return { ok: true, data: undefined };
+}
+
+async function deleteTaskOptionAction(
+  kind: OptionKind,
+  id: string,
+): Promise<ActionResult<void>> {
+  const parsed = uuidSchema.safeParse(id);
+  if (!parsed.success) return { ok: false, error: 'Invalid option ID.' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  // Look up the name first so we can null it out on referencing tasks.
+  // Two round-trips here — could be folded into a single Postgres
+  // function later, but the volume on these surfaces is tiny.
+  const { data: row } = await supabase
+    .from(optionTable(kind))
+    .select('name')
+    .eq('id', parsed.data)
+    .single();
+
+  const { error } = await supabase
+    .from(optionTable(kind))
+    .delete()
+    .eq('id', parsed.data);
+
+  if (error) {
+    logger.error(`[tasks/actions] deleteTaskOptionAction(${kind}) failed`,
+      error,
+      { userId: user.id, optionId: id },
+    );
+    return { ok: false, error: 'Could not delete option.' };
+  }
+
+  if (row?.name) {
+    // `tasks.status` is NOT NULL (defaults to 'todo'), so deleting a
+    // custom status resets referencing tasks to the built-in 'todo'
+    // rather than nulling them out. Priority and task_type are
+    // nullable so they get cleared.
+    const fallback: string | null = kind === 'status' ? 'todo' : null;
+    // Best-effort — failure here doesn't undo the delete; the task
+    // just keeps a dangling label that the UI falls back to a
+    // hash-derived colour for.
+    await supabase
+      .from('tasks')
+      .update({ [optionTaskColumn(kind)]: fallback })
+      .eq('user_id', user.id)
+      .eq(optionTaskColumn(kind), row.name);
+  }
+
+  return { ok: true, data: undefined };
+}
+
+/* Priority-specific exports (thin wrappers around the generic
+ * helpers above so call sites stay typed and discoverable). */
+
+export async function createTaskPriorityAction(
+  input: CreateTaskOptionInput,
+) {
+  return createTaskOptionAction('priority', input);
+}
+
+export async function updateTaskPriorityAction(
+  input: UpdateTaskOptionInput,
+) {
+  return updateTaskOptionAction('priority', input);
+}
+
+export async function deleteTaskPriorityAction(id: string) {
+  return deleteTaskOptionAction('priority', id);
+}
+
+/* Task-type-specific exports. */
+
+export async function createTaskTypeAction(input: CreateTaskOptionInput) {
+  return createTaskOptionAction('type', input);
+}
+
+export async function updateTaskTypeAction(input: UpdateTaskOptionInput) {
+  return updateTaskOptionAction('type', input);
+}
+
+export async function deleteTaskTypeAction(id: string) {
+  return deleteTaskOptionAction('type', id);
+}
+
+/* Status-specific exports. Same shape as priority/type but writes to
+ * `task_statuses` and falls back to the built-in `todo` rather than
+ * nulling references (since `tasks.status` is NOT NULL). */
+
+export async function createTaskStatusAction(input: CreateTaskOptionInput) {
+  return createTaskOptionAction('status', input);
+}
+
+export async function updateTaskStatusAction(input: UpdateTaskOptionInput) {
+  return updateTaskOptionAction('status', input);
+}
+
+export async function deleteTaskStatusAction(id: string) {
+  return deleteTaskOptionAction('status', id);
 }

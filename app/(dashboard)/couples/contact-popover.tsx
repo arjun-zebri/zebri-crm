@@ -23,6 +23,11 @@ interface ContactPopoverProps {
   onAdd: (contactId: string) => void
   /** Trigger element. Forwarded to `Popover.Trigger asChild`. */
   children: React.ReactNode
+  /** Optional controlled-open state. When provided the popover is
+   *  driven by the parent (e.g. opened in response to a menu item
+   *  click rather than a click on `children`). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /**
@@ -42,10 +47,18 @@ export function ContactPopover({
   excludeIds,
   onAdd,
   children,
+  open: controlledOpen,
+  onOpenChange,
 }: ContactPopoverProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : uncontrolledOpen
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next)
+    onOpenChange?.(next)
+  }
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   // The ContactModal must mount outside the parent <form> (HTML
