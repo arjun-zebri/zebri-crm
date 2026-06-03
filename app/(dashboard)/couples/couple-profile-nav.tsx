@@ -6,9 +6,8 @@
  *   the header.
  * - Desktop: a vertical sidebar nav on the left of the body.
  *
- * Stateless — the parent owns `activeSection` + the gated nav-item
- * list (e.g. "Contracts" is hidden when `hasContractsAccess` is
- * false). This component just renders the chrome.
+ * Stateless — the parent owns `activeSection` + the nav-item list.
+ * This component just renders the chrome.
  *
  * @module app/(dashboard)/couples/couple-profile-nav
  */

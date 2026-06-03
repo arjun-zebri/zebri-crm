@@ -16,13 +16,11 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { ContractBuilderModal } from '@/components/builders/contract-builder-modal';
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal';
 import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal';
-import { createClient } from '@/lib/supabase/client';
-import { hasContractsAccess } from '@/lib/payments/subscription';
 
 import { ContractsList } from './contracts-list';
 import { deriveInvoices, InvoicesList } from './invoices-list';
@@ -34,7 +32,6 @@ import { useContracts, useInvoices, useQuotes } from './use-payments-data';
 import { type PaymentsTab, usePaymentsShortcut } from './use-payments-shortcut';
 
 export default function PaymentsPage() {
-  const supabase = createClient();
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeTab, setActiveTab] = useState<PaymentsTab>('quotes');
@@ -49,25 +46,10 @@ export default function PaymentsPage() {
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [contractSearch, setContractSearch] = useState('');
   const [newContractOpen, setNewContractOpen] = useState(false);
-  const [contractsEnabled, setContractsEnabled] = useState(false);
 
-  // Contracts entitlement reads from `hasContractsAccess(user)` —
-  // gated to Pro/Max via the entitlements helper (post-§7.4 fix).
-  useEffect(() => {
-    let cancelled = false;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled) setContractsEnabled(hasContractsAccess(data.user));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
-
-  // Demote off the Contracts tab if the user loses access while
-  // viewing it (e.g. subscription lapses in another tab).
-  useEffect(() => {
-    if (!contractsEnabled && activeTab === 'contracts') setActiveTab('quotes');
-  }, [contractsEnabled, activeTab]);
+  // Contracts is available on every plan (2026-06-03). The Starter
+  // 5-couple cap is enforced inside `NewContractPopover` at create
+  // time, not by hiding the tab.
 
   // Keyboard shortcut + Escape-to-clear-search.
   usePaymentsShortcut({
@@ -194,7 +176,6 @@ export default function PaymentsPage() {
         searchInputRef={searchInputRef}
         onNew={handleNew}
         newButtonOverride={activeTab === 'contracts' ? contractsNewButton : undefined}
-        contractsEnabled={contractsEnabled}
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -215,7 +196,7 @@ export default function PaymentsPage() {
               onOpen={setActiveInvoiceId}
             />
           )}
-          {activeTab === 'contracts' && contractsEnabled && (
+          {activeTab === 'contracts' && (
             <ContractsList
               loading={isLoading}
               contracts={filteredContracts}

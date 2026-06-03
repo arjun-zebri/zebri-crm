@@ -149,9 +149,9 @@ Click any couple → profile opens. Test each tab:
   contact → appears in list. Remove a contact link.
 - [y] **Tasks** — inline form creates task. Mark complete.
   Delete task.
-- [ ] **Payments** sub-tab — Quotes list, Invoices list. Open
+- [y] **Payments** sub-tab — Quotes list, Invoices list. Open
   existing → builder modal opens with right data.
-- [ ] **Contracts** sub-tab — list. "New contract" opens builder.
+- [y] **Contracts** sub-tab — list. "New contract" opens builder.
 
 ---
 

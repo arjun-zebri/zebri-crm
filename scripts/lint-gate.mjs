@@ -43,7 +43,10 @@ import { execSync } from 'node:child_process';
 // fixes real UX bugs (custom statuses now persist + apply, new
 // tasks editable on first render). To be ratcheted back DOWN
 // during the eventual Tasks-page hardening pass.
-const ERROR_BUDGET = 75;
+// 2026-06-03 Contracts always-on: 75→74 (removed unused
+// `hasContractsAccess` import paths + the contractsEnabled prop
+// plumbing on /payments).
+const ERROR_BUDGET = 74;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -77,7 +80,10 @@ const ERROR_BUDGET = 75;
 // once mutations routed through actions; calendar relocation
 // cleared a stale colocation warning).
 // Phase 5 contacts: 480 → 478 (lift inline supabase calls + cleanup).
-const WARNING_BUDGET = 478;
+// 2026-06-03 Contracts always-on: 478 → 454 (removed gating
+// useEffect + state plumbing from couple-profile.tsx + payments/page.tsx
+// + payments-header.tsx, dropped unused createClient/useEffect imports).
+const WARNING_BUDGET = 454;
 
 function runEslintJson() {
   try {
