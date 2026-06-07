@@ -67,6 +67,7 @@ begin
 end;
 $$;
 
+drop trigger if exists couples_emit_new_enquiry on public.couples;
 create trigger couples_emit_new_enquiry
   after insert on public.couples
   for each row execute function public.tg_couples_emit_new_enquiry();
@@ -121,6 +122,7 @@ begin
 end;
 $$;
 
+drop trigger if exists couples_emit_stage_changed on public.couples;
 create trigger couples_emit_stage_changed
   after update of status on public.couples
   for each row execute function public.tg_couples_emit_stage_changed();
@@ -217,6 +219,7 @@ begin
 end;
 $$;
 
+drop trigger if exists quotes_emit_lifecycle on public.quotes;
 create trigger quotes_emit_lifecycle
   after insert or update on public.quotes
   for each row execute function public.tg_quotes_emit_lifecycle();
@@ -298,6 +301,7 @@ begin
 end;
 $$;
 
+drop trigger if exists invoices_emit_lifecycle on public.invoices;
 create trigger invoices_emit_lifecycle
   after insert or update on public.invoices
   for each row execute function public.tg_invoices_emit_lifecycle();
@@ -397,6 +401,7 @@ begin
 end;
 $$;
 
+drop trigger if exists contracts_emit_lifecycle on public.contracts;
 create trigger contracts_emit_lifecycle
   after insert or update on public.contracts
   for each row execute function public.tg_contracts_emit_lifecycle();
@@ -454,6 +459,7 @@ begin
 end;
 $$;
 
+drop trigger if exists tasks_emit_lifecycle on public.tasks;
 create trigger tasks_emit_lifecycle
   after insert or update on public.tasks
   for each row execute function public.tg_tasks_emit_lifecycle();
@@ -502,6 +508,7 @@ begin
 end;
 $$;
 
+drop trigger if exists timeline_items_emit_edited on public.timeline_items;
 create trigger timeline_items_emit_edited
   after insert or update on public.timeline_items
   for each row execute function public.tg_timeline_items_emit_edited();
@@ -549,6 +556,7 @@ begin
 end;
 $$;
 
+drop trigger if exists portal_people_emit_progress on public.portal_people;
 create trigger portal_people_emit_progress
   after insert on public.portal_people
   for each row execute function public.tg_portal_people_emit_section_progress();
@@ -582,6 +590,7 @@ begin
 end;
 $$;
 
+drop trigger if exists portal_songs_emit_progress on public.portal_songs;
 create trigger portal_songs_emit_progress
   after insert on public.portal_songs
   for each row execute function public.tg_portal_songs_emit_section_progress();
@@ -615,6 +624,7 @@ begin
 end;
 $$;
 
+drop trigger if exists portal_files_emit_progress on public.portal_files;
 create trigger portal_files_emit_progress
   after insert on public.portal_files
   for each row execute function public.tg_portal_files_emit_section_progress();
@@ -652,6 +662,7 @@ begin
 end;
 $$;
 
+drop trigger if exists custom_fields_emit_changed on public.couple_custom_fields;
 create trigger custom_fields_emit_changed
   after insert or update on public.couple_custom_fields
   for each row execute function public.tg_custom_fields_emit_changed();

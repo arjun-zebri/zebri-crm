@@ -111,6 +111,7 @@ begin
 end;
 $$;
 
+drop trigger if exists events_emit_lifecycle on public.events;
 create trigger events_emit_lifecycle
   after insert or update or delete on public.events
   for each row execute function public.tg_events_emit_lifecycle();
@@ -180,6 +181,7 @@ begin
 end;
 $$;
 
+drop trigger if exists contacts_emit_lifecycle on public.contacts;
 create trigger contacts_emit_lifecycle
   after insert or update on public.contacts
   for each row execute function public.tg_contacts_emit_lifecycle();
@@ -226,6 +228,7 @@ begin
 end;
 $$;
 
+drop trigger if exists couple_contacts_emit_linked on public.couple_contacts;
 create trigger couple_contacts_emit_linked
   after insert on public.couple_contacts
   for each row execute function public.tg_couple_contacts_emit_linked();
@@ -287,6 +290,7 @@ begin
 end;
 $$;
 
+drop trigger if exists contracts_emit_status_flip on public.contracts;
 create trigger contracts_emit_status_flip
   after update of status on public.contracts
   for each row execute function public.tg_contracts_emit_status_flip();

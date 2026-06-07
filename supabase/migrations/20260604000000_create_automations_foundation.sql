@@ -122,21 +122,25 @@ create index if not exists automations_active_trigger_idx
 
 alter table public.automations enable row level security;
 
+drop policy if exists automations_select_own on public.automations;
 create policy automations_select_own
   on public.automations
   for select
   using (auth.uid() = user_id);
 
+drop policy if exists automations_insert_own on public.automations;
 create policy automations_insert_own
   on public.automations
   for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists automations_update_own on public.automations;
 create policy automations_update_own
   on public.automations
   for update
   using (auth.uid() = user_id);
 
+drop policy if exists automations_delete_own on public.automations;
 create policy automations_delete_own
   on public.automations
   for delete
@@ -215,6 +219,7 @@ alter table public.automation_actions enable row level security;
 -- Actions are scoped by their parent automation's owner. Standard
 -- "join through to the owning row" RLS pattern used elsewhere
 -- (quote_items, invoice_items, etc.).
+drop policy if exists automation_actions_select_own on public.automation_actions;
 create policy automation_actions_select_own
   on public.automation_actions
   for select
@@ -225,6 +230,7 @@ create policy automation_actions_select_own
     )
   );
 
+drop policy if exists automation_actions_insert_own on public.automation_actions;
 create policy automation_actions_insert_own
   on public.automation_actions
   for insert
@@ -235,6 +241,7 @@ create policy automation_actions_insert_own
     )
   );
 
+drop policy if exists automation_actions_update_own on public.automation_actions;
 create policy automation_actions_update_own
   on public.automation_actions
   for update
@@ -245,6 +252,7 @@ create policy automation_actions_update_own
     )
   );
 
+drop policy if exists automation_actions_delete_own on public.automation_actions;
 create policy automation_actions_delete_own
   on public.automation_actions
   for delete
@@ -320,6 +328,7 @@ alter table public.automation_events enable row level security;
 -- helper below + the service-role-keyed tick. Mirrors the access
 -- model used by stripe_events, connect_accounts, and
 -- contract_audit_log.
+drop policy if exists automation_events_select_own on public.automation_events;
 create policy automation_events_select_own
   on public.automation_events
   for select
@@ -391,11 +400,13 @@ create index if not exists automation_runs_live_idx
 
 alter table public.automation_runs enable row level security;
 
+drop policy if exists automation_runs_select_own on public.automation_runs;
 create policy automation_runs_select_own
   on public.automation_runs
   for select
   using (auth.uid() = user_id);
 
+drop policy if exists automation_runs_update_own_pause on public.automation_runs;
 create policy automation_runs_update_own_pause
   on public.automation_runs
   for update
@@ -455,6 +466,7 @@ create unique index if not exists automation_waits_token_idx
 
 alter table public.automation_waits enable row level security;
 
+drop policy if exists automation_waits_select_own on public.automation_waits;
 create policy automation_waits_select_own
   on public.automation_waits
   for select
@@ -505,6 +517,7 @@ alter table public.automation_audit_log enable row level security;
 
 -- SELECT only for owners. Writes go through the runner using the
 -- service-role key, same model as contract_audit_log.
+drop policy if exists automation_audit_log_select_own on public.automation_audit_log;
 create policy automation_audit_log_select_own
   on public.automation_audit_log
   for select
@@ -550,21 +563,25 @@ create index if not exists couple_custom_fields_couple_idx
 
 alter table public.couple_custom_fields enable row level security;
 
+drop policy if exists couple_custom_fields_select_own on public.couple_custom_fields;
 create policy couple_custom_fields_select_own
   on public.couple_custom_fields
   for select
   using (auth.uid() = user_id);
 
+drop policy if exists couple_custom_fields_insert_own on public.couple_custom_fields;
 create policy couple_custom_fields_insert_own
   on public.couple_custom_fields
   for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists couple_custom_fields_update_own on public.couple_custom_fields;
 create policy couple_custom_fields_update_own
   on public.couple_custom_fields
   for update
   using (auth.uid() = user_id);
 
+drop policy if exists couple_custom_fields_delete_own on public.couple_custom_fields;
 create policy couple_custom_fields_delete_own
   on public.couple_custom_fields
   for delete
@@ -630,14 +647,17 @@ begin
 end;
 $$;
 
+drop trigger if exists automations_touch_updated_at on public.automations;
 create trigger automations_touch_updated_at
   before update on public.automations
   for each row execute function public.tg_automations_touch_updated_at();
 
+drop trigger if exists automation_actions_touch_updated_at on public.automation_actions;
 create trigger automation_actions_touch_updated_at
   before update on public.automation_actions
   for each row execute function public.tg_automations_touch_updated_at();
 
+drop trigger if exists couple_custom_fields_touch_updated_at on public.couple_custom_fields;
 create trigger couple_custom_fields_touch_updated_at
   before update on public.couple_custom_fields
   for each row execute function public.tg_automations_touch_updated_at();
