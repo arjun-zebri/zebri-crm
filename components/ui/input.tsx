@@ -46,10 +46,15 @@ const SIZE_CLASSES: Record<InputSize, string> = {
   md: 'h-9 px-3 text-body',
 };
 
+// Focus uses a 1px ring tight against the border (no offset). With
+// `ring-offset-2` you'd see two stacked borders on focus - the
+// original border + the ring sitting 2px outside it - which reads as
+// an ugly double border. Same pattern as Linear / Notion: subtle, no
+// gap.
 const BASE_CLASSES =
   'block w-full rounded-control bg-surface text-text placeholder:text-text-subtle ' +
   'border transition-colors ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface ' +
+  'focus-visible:outline-none focus-visible:ring-1 ' +
   'disabled:opacity-50 disabled:cursor-not-allowed read-only:bg-surface-muted';
 
 /** Token-driven labelled input. See {@link InputProps}. */

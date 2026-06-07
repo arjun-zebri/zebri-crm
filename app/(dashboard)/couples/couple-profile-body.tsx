@@ -11,6 +11,7 @@
 
 import type { Couple } from '@/types/couple';
 
+import { CoupleAutomations } from './couple-automations';
 import { CoupleContracts } from './couple-contracts';
 import { CoupleOverview } from './couple-overview';
 import { CouplePayments } from './couple-payments';
@@ -81,6 +82,10 @@ export function CoupleProfileBody({
       )}
 
       {activeSection === 'files' && <McPortalFiles coupleId={couple.id} />}
+
+      {activeSection === 'automations' && (
+        <CoupleAutomations coupleId={couple.id} />
+      )}
     </div>
   );
 }

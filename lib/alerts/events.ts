@@ -248,6 +248,26 @@ export type AlertEvent =
       paymentIntentId?: string;
     })
 
+  // ───── Automations ─────────────────────────────────────────────────
+  | (BaseEvent & {
+      type: 'automation_failed';
+      severity: 'error';
+      automationId: string;
+      runId: string;
+      message: string;
+    })
+  | (BaseEvent & {
+      type: 'automation_tick_slow';
+      severity: 'warn';
+      durationMs: number;
+      actionsExecuted: number;
+    })
+  | (BaseEvent & {
+      type: 'automation_tick_backlog';
+      severity: 'warn';
+      pendingEvents: number;
+    })
+
   // ───── Catch-all ──────────────────────────────────────────────────
   | (BaseEvent & {
       type: 'app_error';

@@ -1240,7 +1240,7 @@ Each page/section is its own small PR(s) and must meet the §5 DoD before it's "
 11. **Branding editor**
 12. **Settings**
 13. **Admin / Shadow mode**
-14. **Workflows / automation**
+14. **Workflows / automation** — Phase 14a (foundation + builder + recipe library + linear engine) **shipped 2026-06-04** on `staging`. See `.claude/docs/automations.md` for the trigger/action catalogue + architecture. 14b (SMS / WhatsApp / IG / AI helpers / questionnaire editor / run-as-batch) is the follow-up.
 15. **Cron + email pipeline**
 
 (Order can be revisited after Phase 0; security-critical surfaces stay first.)

@@ -100,6 +100,12 @@ function describe(event: AlertEvent): string {
       return `admin=${event.actorId} refunded $${(event.amountCents / 100).toFixed(2)} to ${event.targetEmail}${
         event.paymentIntentId ? ` · pi=${event.paymentIntentId}` : ''
       }`;
+    case 'automation_failed':
+      return `automation=${event.automationId} run=${event.runId} — ${event.message}`;
+    case 'automation_tick_slow':
+      return `tick took ${event.durationMs}ms · ${event.actionsExecuted} actions`;
+    case 'automation_tick_backlog':
+      return `pending events=${event.pendingEvents}`;
     case 'app_error':
       return `${event.source ? `${event.source}: ` : ''}${event.message}`;
   }
