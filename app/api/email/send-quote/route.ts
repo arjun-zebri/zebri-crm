@@ -88,16 +88,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Auto-enable the share link if it isn't already. The send action
-  // implicitly says "I want the couple to be able to view this".
-  if (!quote.share_token_enabled) {
-    await supabase
-      .from('quotes')
-      .update({
-        share_token_enabled: true,
-        status: quote.status === 'draft' ? 'sent' : quote.status,
-      })
-      .eq('id', quoteId);
+  // Sending implicitly says "I want the couple to be able to view
+  // this" and "this quote is no longer a draft". The two flips were
+  // previously bundled inside one if-block gated on
+  // `!share_token_enabled` — but a later migration made
+  // `share_token_enabled` default to `true` on insert, so for any
+  // newly-created quote the gate was always false and the status
+  // flip never ran. Now they fire independently so each transitions
+  // on its own merit.
+  const updates: Record<string, unknown> = {};
+  if (!quote.share_token_enabled) updates.share_token_enabled = true;
+  if (quote.status === 'draft') updates.status = 'sent';
+  if (Object.keys(updates).length > 0) {
+    await supabase.from('quotes').update(updates).eq('id', quoteId);
   }
 
   const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/quote/${quote.share_token}`;
