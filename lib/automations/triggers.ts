@@ -27,14 +27,29 @@ import { z } from 'zod'
 import type { AutomationEventRow, TriggerType } from '@/types/automations'
 
 import {
+  BOOKING_TIERS,
+  CANCELLATION_REASONS,
   COMPARISON_OPS,
+  CONSULTATION_LOCATIONS,
+  CONSULTATION_OUTCOMES,
+  CONSULTATION_TYPES,
   CONTACT_CATEGORIES,
   DAY_OF_WEEK_BUCKETS,
+  EMAIL_ENGAGEMENT_KINDS,
+  EVENT_CHANGE_FIELDS,
   EVENT_TYPES,
   LEAD_SOURCES,
-  PEOPLE_CATEGORIES,
+  MONTHS,
+  PAYMENT_FAILURE_REASONS,
+  PAYMENT_METHODS,
+  PORTAL_COMPLETION_RANGES,
   PORTAL_SECTIONS,
+  SEASONS,
+  SIGNER_REQUIREMENTS,
+  TASK_CATEGORIES,
+  TASK_PRIORITIES,
   TIME_UNITS,
+  WEBHOOK_SOURCES,
   compareNumber,
   dateMatchesDayOfWeek,
   type ComparisonOp,
@@ -46,11 +61,17 @@ export interface TriggerUi {
     | 'lead'
     | 'pipeline'
     | 'calendar'
+    | 'consultation'
     | 'portal'
     | 'task'
     | 'payment'
     | 'contract'
     | 'contact'
+    | 'engagement'
+    | 'compliance'
+    | 'billing'
+    | 'integration'
+    | 'meta'
     | 'manual'
   label: string
   description: string
@@ -76,6 +97,23 @@ const amountFilter = z
   .object({
     amountOp: z.enum(COMPARISON_OPS).optional(),
     amountValue: z.number().nonnegative().optional(),
+    // ── Extended UI fields (Phase 14a — not yet matched) ──────────
+    /** Saved package/tier slug the quote was built from. */
+    tier: z.enum(BOOKING_TIERS).optional(),
+    /** True when one or more add-on line items are on the document. */
+    hasAddOns: z.boolean().optional(),
+    /** True when a discount was applied. */
+    discountApplied: z.boolean().optional(),
+    /** Which revision of the document this is (1 = first send). */
+    versionNumber: z.number().int().min(1).optional(),
+    /** True when the doc is a deposit invoice/quote. */
+    isDeposit: z.boolean().optional(),
+    /** True when the doc is the final balance invoice. */
+    isFinalBalance: z.boolean().optional(),
+    /** True when this is a partial payment (not full amount). */
+    isPartial: z.boolean().optional(),
+    /** Method used (relevant for payment_received). */
+    paymentMethod: z.enum(PAYMENT_METHODS).optional(),
   })
   .passthrough()
 
@@ -111,13 +149,6 @@ function daysUntilEventMatches(
   return compareNumber(days, op, value)
 }
 
-const daysUntilEventFilter = z
-  .object({
-    daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
-    daysUntilEventValue: z.number().int().optional(),
-  })
-  .passthrough()
-
 // ────────────────────────────────────────────────────────────────
 // Lead / enquiry
 // ────────────────────────────────────────────────────────────────
@@ -126,13 +157,27 @@ const newEnquiry: TriggerSpec<{
   leadSource?: string
   daysUntilEventOp?: ComparisonOp
   daysUntilEventValue?: number
+  hasEventDate?: boolean
+  hasVenue?: boolean
+  dayOfWeek?: DayOfWeekBucket
+  eventMonth?: string
+  season?: string
+  budgetTier?: string
+  referralByContactId?: string
 }> = {
   type: 'new_enquiry',
   configSchema: z.object({
     leadSource: z.enum(LEAD_SOURCES).optional(),
     daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
     daysUntilEventValue: z.number().int().optional(),
-  }),
+    hasEventDate: z.boolean().optional(),
+    hasVenue: z.boolean().optional(),
+    dayOfWeek: z.enum(DAY_OF_WEEK_BUCKETS).optional(),
+    eventMonth: z.enum(MONTHS).optional(),
+    season: z.enum(SEASONS).optional(),
+    budgetTier: z.enum(BOOKING_TIERS).optional(),
+    referralByContactId: z.string().uuid().optional(),
+  }).passthrough(),
   match(event, config) {
     const payload = p(event)
     if (config.leadSource && payload.lead_source !== config.leadSource) return false
@@ -147,12 +192,21 @@ const newEnquiry: TriggerSpec<{
   },
 }
 
-const leadInactive: TriggerSpec<{ days: number; status?: string }> = {
+const leadInactive: TriggerSpec<{
+  days: number
+  status?: string
+  lastActivityType?: 'any' | 'no_email_reply' | 'no_portal_visit' | 'no_quote_view'
+  excludeIfDoNotContact?: boolean
+  excludeIfReplied?: boolean
+}> = {
   type: 'lead_inactive',
   configSchema: z.object({
     days: z.number().int().min(1).max(180),
     status: z.string().optional(),
-  }),
+    lastActivityType: z.enum(['any', 'no_email_reply', 'no_portal_visit', 'no_quote_view']).optional(),
+    excludeIfDoNotContact: z.boolean().optional(),
+    excludeIfReplied: z.boolean().optional(),
+  }).passthrough(),
   // Status narrowing happens at the tick-emit site because match()
   // can't see the couple snapshot. We keep the option here for the
   // future tick implementation to read.
@@ -169,13 +223,19 @@ const customFieldChanged: TriggerSpec<{
   key?: string
   valueOp?: ComparisonOp
   valueNumber?: number
+  valueText?: string
+  previousValueText?: string
+  changedBy?: 'any' | 'mc' | 'system' | 'couple_portal'
 }> = {
   type: 'custom_field_changed',
   configSchema: z.object({
     key: z.string().optional(),
     valueOp: z.enum(COMPARISON_OPS).optional(),
     valueNumber: z.number().optional(),
-  }),
+    valueText: z.string().optional(),
+    previousValueText: z.string().optional(),
+    changedBy: z.enum(['any', 'mc', 'system', 'couple_portal']).optional(),
+  }).passthrough(),
   match(event, config) {
     const payload = p(event)
     if (config.key && payload.key !== config.key) return false
@@ -204,6 +264,9 @@ const coupleStageChanged: TriggerSpec<{
   fromStatus?: string
   daysUntilEventOp?: ComparisonOp
   daysUntilEventValue?: number
+  timeInPreviousStageOp?: ComparisonOp
+  timeInPreviousStageDays?: number
+  triggeredBy?: 'any' | 'mc' | 'automation' | 'payment' | 'portal'
 }> = {
   type: 'couple_stage_changed',
   configSchema: z.object({
@@ -211,7 +274,10 @@ const coupleStageChanged: TriggerSpec<{
     fromStatus: z.string().optional(),
     daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
     daysUntilEventValue: z.number().int().optional(),
-  }),
+    timeInPreviousStageOp: z.enum(COMPARISON_OPS).optional(),
+    timeInPreviousStageDays: z.number().int().optional(),
+    triggeredBy: z.enum(['any', 'mc', 'automation', 'payment', 'portal']).optional(),
+  }).passthrough(),
   match(event, config) {
     const payload = p(event)
     if (config.toStatus && payload.to_status !== config.toStatus) return false
@@ -230,9 +296,20 @@ const coupleStageChanged: TriggerSpec<{
 const bookingCancelled: TriggerSpec<{
   daysUntilEventOp?: ComparisonOp
   daysUntilEventValue?: number
+  cancellationReason?: string
+  depositAlreadyPaid?: boolean
+  daysSinceBookedOp?: ComparisonOp
+  daysSinceBookedValue?: number
 }> = {
   type: 'booking_cancelled',
-  configSchema: daysUntilEventFilter,
+  configSchema: z.object({
+    daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
+    daysUntilEventValue: z.number().int().optional(),
+    cancellationReason: z.enum(CANCELLATION_REASONS).optional(),
+    depositAlreadyPaid: z.boolean().optional(),
+    daysSinceBookedOp: z.enum(COMPARISON_OPS).optional(),
+    daysSinceBookedValue: z.number().int().optional(),
+  }).passthrough(),
   match(event, config) {
     return daysUntilEventMatches(p(event), config.daysUntilEventOp, config.daysUntilEventValue)
   },
@@ -293,23 +370,49 @@ const quoteDeclined = amountSpec('quote_declined', {
   icon: 'XCircle',
 })
 
-const quoteDue: TriggerSpec<{ days: number }> = {
+const quoteDue: TriggerSpec<{
+  days: number
+  notificationCount?: number
+  respectQuietHours?: boolean
+}> = {
   type: 'quote_due',
-  configSchema: z.object({ days: z.number().int().min(0).max(180).default(0) }),
+  configSchema: z.object({
+    days: z.number().int().min(0).max(180).default(0),
+    notificationCount: z.number().int().min(1).max(5).optional(),
+    respectQuietHours: z.boolean().optional(),
+  }).passthrough(),
   match: () => true,
   ui: { category: 'payment', label: 'Quote due', description: 'When a quote reaches its due date', icon: 'Hourglass' },
 }
 
-const quoteOverdue: TriggerSpec<{ daysOverdueMin?: number }> = {
+const quoteOverdue: TriggerSpec<{
+  daysOverdueMin?: number
+  daysOverdueMax?: number
+  couplePreviouslyViewed?: boolean
+}> = {
   type: 'quote_overdue',
-  configSchema: z.object({ daysOverdueMin: z.number().int().min(0).max(365).optional() }),
+  configSchema: z.object({
+    daysOverdueMin: z.number().int().min(0).max(365).optional(),
+    daysOverdueMax: z.number().int().min(0).max(365).optional(),
+    couplePreviouslyViewed: z.boolean().optional(),
+  }).passthrough(),
   match: () => true,
   ui: { category: 'payment', label: 'Quote overdue', description: 'When a quote has passed its expiry without acceptance', icon: 'AlertTriangle' },
 }
 
-const quoteViewedNotResponded: TriggerSpec<{ days: number }> = {
+const quoteViewedNotResponded: TriggerSpec<{
+  days: number
+  viewCountOp?: ComparisonOp
+  viewCountValue?: number
+  lastViewedWithinDays?: number
+}> = {
   type: 'quote_viewed_but_not_responded',
-  configSchema: z.object({ days: z.number().int().min(1).max(60).default(7) }),
+  configSchema: z.object({
+    days: z.number().int().min(1).max(60).default(7),
+    viewCountOp: z.enum(COMPARISON_OPS).optional(),
+    viewCountValue: z.number().int().min(1).optional(),
+    lastViewedWithinDays: z.number().int().min(1).max(60).optional(),
+  }).passthrough(),
   match: () => true,
   ui: { category: 'payment', label: 'Quote viewed but no response', description: 'When a couple has viewed a quote and gone quiet', icon: 'EyeOff' },
 }
@@ -335,23 +438,51 @@ const paymentReceived = amountSpec('payment_received', {
   icon: 'CreditCard',
 })
 
-const invoiceDue: TriggerSpec<{ days: number }> = {
+const invoiceDue: TriggerSpec<{
+  days: number
+  notificationCount?: number
+  respectQuietHours?: boolean
+  isFinalBalance?: boolean
+}> = {
   type: 'invoice_due',
-  configSchema: z.object({ days: z.number().int().min(0).max(180).default(0) }),
+  configSchema: z.object({
+    days: z.number().int().min(0).max(180).default(0),
+    notificationCount: z.number().int().min(1).max(5).optional(),
+    respectQuietHours: z.boolean().optional(),
+    isFinalBalance: z.boolean().optional(),
+  }).passthrough(),
   match: () => true,
   ui: { category: 'payment', label: 'Invoice due', description: 'When an invoice reaches its due date', icon: 'Hourglass' },
 }
 
-const invoiceOverdue: TriggerSpec<{ daysOverdueMin?: number }> = {
+const invoiceOverdue: TriggerSpec<{
+  daysOverdueMin?: number
+  daysOverdueMax?: number
+  isFinalBalance?: boolean
+  daysUntilEventOp?: ComparisonOp
+  daysUntilEventValue?: number
+}> = {
   type: 'invoice_overdue',
-  configSchema: z.object({ daysOverdueMin: z.number().int().min(0).max(365).optional() }),
+  configSchema: z.object({
+    daysOverdueMin: z.number().int().min(0).max(365).optional(),
+    daysOverdueMax: z.number().int().min(0).max(365).optional(),
+    isFinalBalance: z.boolean().optional(),
+    daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
+    daysUntilEventValue: z.number().int().optional(),
+  }).passthrough(),
   match: () => true,
   ui: { category: 'payment', label: 'Invoice overdue', description: 'When an invoice passes its due date without payment', icon: 'AlertTriangle' },
 }
 
-const paymentFailed: TriggerSpec<Record<string, unknown>> = {
+const paymentFailed: TriggerSpec<{
+  failureReason?: string
+  attemptNumber?: number
+}> = {
   type: 'payment_failed',
-  configSchema: empty,
+  configSchema: z.object({
+    failureReason: z.enum(PAYMENT_FAILURE_REASONS).optional(),
+    attemptNumber: z.number().int().min(1).optional(),
+  }).passthrough(),
   match: () => true,
   ui: { category: 'payment', label: 'Payment failed', description: 'When a Stripe charge fails', icon: 'AlertCircle' },
 }
@@ -360,51 +491,75 @@ const paymentFailed: TriggerSpec<Record<string, unknown>> = {
 // Contracts
 // ────────────────────────────────────────────────────────────────
 
-const contractCreated: TriggerSpec<Record<string, unknown>> = {
+/**
+ * Shared schema for contract-lifecycle triggers — all of them gained
+ * the same set of optional filters in Phase 14a UI scaffolding so
+ * the picker can offer template / days-until-event / signer
+ * narrowing on every contract step.
+ */
+const contractFilterSchema = z.object({
+  daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
+  daysUntilEventValue: z.number().int().optional(),
+  templateUsed: z.string().optional(),
+  versionNumber: z.number().int().min(1).optional(),
+  signerRole: z.enum(SIGNER_REQUIREMENTS).optional(),
+}).passthrough()
+
+type ContractFilterConfig = z.infer<typeof contractFilterSchema>
+
+const contractCreated: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_created',
-  configSchema: empty,
+  configSchema: contractFilterSchema,
   match: () => true,
   ui: { category: 'contract', label: 'Contract created', description: 'When a contract is created as a draft', icon: 'FilePlus2' },
 }
 
-const contractSent: TriggerSpec<Record<string, unknown>> = {
+const contractSent: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_sent',
-  configSchema: empty,
+  configSchema: contractFilterSchema,
   match: () => true,
   ui: { category: 'contract', label: 'Contract sent', description: 'When a contract is emailed to the couple', icon: 'Send' },
 }
 
-const contractSigned: TriggerSpec<Record<string, unknown>> = {
+const contractSigned: TriggerSpec<ContractFilterConfig & {
+  timeToSignHoursOp?: ComparisonOp
+  timeToSignHoursValue?: number
+  signedByBoth?: boolean
+}> = {
   type: 'contract_signed',
-  configSchema: empty,
+  configSchema: contractFilterSchema.extend({
+    timeToSignHoursOp: z.enum(COMPARISON_OPS).optional(),
+    timeToSignHoursValue: z.number().int().min(0).optional(),
+    signedByBoth: z.boolean().optional(),
+  }),
   match: () => true,
   ui: { category: 'contract', label: 'Contract signed', description: 'When a couple signs a contract', icon: 'FileSignature' },
 }
 
-const contractDeclined: TriggerSpec<Record<string, unknown>> = {
+const contractDeclined: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_declined',
-  configSchema: empty,
+  configSchema: contractFilterSchema,
   match: () => true,
   ui: { category: 'contract', label: 'Contract declined', description: 'When a couple declines a contract', icon: 'XCircle' },
 }
 
-const contractRevoked: TriggerSpec<Record<string, unknown>> = {
+const contractRevoked: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_revoked',
-  configSchema: empty,
+  configSchema: contractFilterSchema,
   match: () => true,
   ui: { category: 'contract', label: 'Contract revoked', description: 'When you revoke a sent contract', icon: 'Undo2' },
 }
 
-const contractExpired: TriggerSpec<Record<string, unknown>> = {
+const contractExpired: TriggerSpec<ContractFilterConfig> = {
   type: 'contract_expired',
-  configSchema: empty,
+  configSchema: contractFilterSchema,
   match: () => true,
   ui: { category: 'contract', label: 'Contract expired', description: 'When a contract passes its expiry without being signed', icon: 'CalendarX' },
 }
 
-const documentSigned: TriggerSpec<Record<string, unknown>> = {
+const documentSigned: TriggerSpec<ContractFilterConfig> = {
   type: 'document_signed',
-  configSchema: empty,
+  configSchema: contractFilterSchema,
   match: () => true,
   ui: { category: 'contract', label: 'Document signed', description: 'Alias of contract signed', icon: 'PenTool' },
 }
@@ -416,7 +571,15 @@ const documentSigned: TriggerSpec<Record<string, unknown>> = {
 const eventFilter = z.object({
   eventType: z.enum(EVENT_TYPES).optional(),
   dayOfWeek: z.enum(DAY_OF_WEEK_BUCKETS).optional(),
-})
+  month: z.enum(MONTHS).optional(),
+  season: z.enum(SEASONS).optional(),
+  daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
+  daysUntilEventValue: z.number().int().optional(),
+  hasVenue: z.boolean().optional(),
+  isDestination: z.boolean().optional(),
+  guestCountOp: z.enum(COMPARISON_OPS).optional(),
+  guestCountValue: z.number().int().min(0).optional(),
+}).passthrough()
 
 type EventFilterConfig = z.infer<typeof eventFilter>
 
@@ -442,10 +605,10 @@ const eventCreated: TriggerSpec<EventFilterConfig> = {
   },
 }
 
-const eventUpdated: TriggerSpec<EventFilterConfig & { changed?: 'any' | 'date' | 'venue' }> = {
+const eventUpdated: TriggerSpec<EventFilterConfig & { changed?: string }> = {
   type: 'event_updated',
   configSchema: eventFilter.extend({
-    changed: z.enum(['any', 'date', 'venue']).optional(),
+    changed: z.enum(EVENT_CHANGE_FIELDS).optional(),
   }),
   match(event, config) {
     if (!eventTriggerMatch(event, config)) return false
@@ -464,9 +627,11 @@ const eventUpdated: TriggerSpec<EventFilterConfig & { changed?: 'any' | 'date' |
   },
 }
 
-const eventDeleted: TriggerSpec<EventFilterConfig> = {
+const eventDeleted: TriggerSpec<EventFilterConfig & { withinDaysOfEvent?: number }> = {
   type: 'event_deleted',
-  configSchema: eventFilter,
+  configSchema: eventFilter.extend({
+    withinDaysOfEvent: z.number().int().min(0).max(365).optional(),
+  }),
   match: eventTriggerMatch,
   ui: {
     category: 'calendar',
@@ -486,7 +651,19 @@ const calendarConfig = z.object({
   eventType: z.enum(EVENT_TYPES).optional(),
   /** Time of day (HH:MM, 24h) the reminder should fire. */
   timeOfDay: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-})
+  /** Only fire when the resolved trigger time falls on this day-of-week bucket. */
+  dayOfWeek: z.enum(DAY_OF_WEEK_BUCKETS).optional(),
+  /** Skip couples whose automations are currently paused. */
+  skipIfPaused: z.boolean().optional(),
+  /** Only fire when couple status matches. */
+  eventStatus: z.string().optional(),
+  /** Skip the fire if today is an Australian public holiday. */
+  respectPublicHolidays: z.boolean().optional(),
+  /** Skip if the couple has already left a post-event review. */
+  onlyIfNoReviewPosted: z.boolean().optional(),
+  /** Skip if the couple has already referred someone. */
+  onlyIfNotReferred: z.boolean().optional(),
+}).passthrough()
 
 type CalendarConfig = z.infer<typeof calendarConfig>
 
@@ -514,12 +691,19 @@ const timeAfterEvent: TriggerSpec<CalendarConfig> = {
   },
 }
 
-const specificDateReached: TriggerSpec<{ date: string; repeatYearly?: boolean }> = {
+const specificDateReached: TriggerSpec<{
+  date: string
+  repeatYearly?: boolean
+  audienceStatus?: string
+  eventDateWithinMonths?: number
+}> = {
   type: 'specific_date_reached',
   configSchema: z.object({
     date: z.string(),
     repeatYearly: z.boolean().optional(),
-  }),
+    audienceStatus: z.string().optional(),
+    eventDateWithinMonths: z.number().int().min(1).max(36).optional(),
+  }).passthrough(),
   match: () => true,
   ui: {
     category: 'calendar',
@@ -529,12 +713,19 @@ const specificDateReached: TriggerSpec<{ date: string; repeatYearly?: boolean }>
   },
 }
 
-const anniversaryOfEvent: TriggerSpec<{ years: number; maxYears?: number }> = {
+const anniversaryOfEvent: TriggerSpec<{
+  years: number
+  maxYears?: number
+  onlyIfMarriedByMe?: boolean
+  onlyIfHadGoodOutcome?: boolean
+}> = {
   type: 'anniversary_of_event',
   configSchema: z.object({
     years: z.number().int().min(1).max(50).default(1),
     maxYears: z.number().int().min(1).max(50).optional(),
-  }),
+    onlyIfMarriedByMe: z.boolean().optional(),
+    onlyIfHadGoodOutcome: z.boolean().optional(),
+  }).passthrough(),
   match: () => true,
   ui: {
     category: 'calendar',
@@ -548,12 +739,21 @@ const anniversaryOfEvent: TriggerSpec<{ years: number; maxYears?: number }> = {
 // Client portal
 // ────────────────────────────────────────────────────────────────
 
-const sectionCompleted: TriggerSpec<{ section?: string; category?: string }> = {
+const sectionCompleted: TriggerSpec<{
+  section?: string
+  category?: string
+  completedWithinDaysOfEvent?: number
+  completionDurationHoursOp?: ComparisonOp
+  completionDurationHoursValue?: number
+}> = {
   type: 'section_completed',
   configSchema: z.object({
     section: z.enum(PORTAL_SECTIONS).optional(),
     category: z.string().optional(),
-  }),
+    completedWithinDaysOfEvent: z.number().int().min(0).max(365).optional(),
+    completionDurationHoursOp: z.enum(COMPARISON_OPS).optional(),
+    completionDurationHoursValue: z.number().int().min(0).optional(),
+  }).passthrough(),
   match(event, config) {
     const payload = p(event)
     if (config.section && payload.section !== config.section) return false
@@ -568,19 +768,38 @@ const sectionCompleted: TriggerSpec<{ section?: string; category?: string }> = {
   },
 }
 
-const portalSectionStartedNotFinished: TriggerSpec<{ section?: string; days: number }> = {
+const portalSectionStartedNotFinished: TriggerSpec<{
+  section?: string
+  days: number
+  percentCompleteRange?: string
+  lastActivityWithinDays?: number
+}> = {
   type: 'portal_section_started_not_finished',
   configSchema: z.object({
     section: z.enum(PORTAL_SECTIONS).optional(),
     days: z.number().int().min(1).max(60).default(7),
-  }),
+    percentCompleteRange: z.enum(PORTAL_COMPLETION_RANGES).optional(),
+    lastActivityWithinDays: z.number().int().min(1).max(60).optional(),
+  }).passthrough(),
   match: () => true,
   ui: { category: 'portal', label: 'Portal section started but not finished', description: 'Abandonment recovery', icon: 'CornerDownLeft' },
 }
 
-const timelineEdited: TriggerSpec<Record<string, unknown>> = {
+const timelineEdited: TriggerSpec<{
+  editedBy?: 'any' | 'mc' | 'couple' | 'vendor'
+  itemsAddedOp?: ComparisonOp
+  itemsAddedValue?: number
+  itemsRemovedOp?: ComparisonOp
+  itemsRemovedValue?: number
+}> = {
   type: 'timeline_edited',
-  configSchema: empty,
+  configSchema: z.object({
+    editedBy: z.enum(['any', 'mc', 'couple', 'vendor']).optional(),
+    itemsAddedOp: z.enum(COMPARISON_OPS).optional(),
+    itemsAddedValue: z.number().int().min(0).optional(),
+    itemsRemovedOp: z.enum(COMPARISON_OPS).optional(),
+    itemsRemovedValue: z.number().int().min(0).optional(),
+  }).passthrough(),
   match: () => true,
   ui: {
     category: 'portal',
@@ -594,9 +813,18 @@ const timelineEdited: TriggerSpec<Record<string, unknown>> = {
 // Task
 // ────────────────────────────────────────────────────────────────
 
-const taskCreated: TriggerSpec<Record<string, unknown>> = {
+const taskFilterSchema = z.object({
+  taskCategory: z.enum(TASK_CATEGORIES).optional(),
+  taskPriority: z.enum(TASK_PRIORITIES).optional(),
+  dueWithinDaysOp: z.enum(COMPARISON_OPS).optional(),
+  dueWithinDaysValue: z.number().int().optional(),
+}).passthrough()
+
+type TaskFilterConfig = z.infer<typeof taskFilterSchema>
+
+const taskCreated: TriggerSpec<TaskFilterConfig> = {
   type: 'task_created',
-  configSchema: empty,
+  configSchema: taskFilterSchema,
   match: () => true,
   ui: {
     category: 'task',
@@ -606,9 +834,9 @@ const taskCreated: TriggerSpec<Record<string, unknown>> = {
   },
 }
 
-const taskCompleted: TriggerSpec<Record<string, unknown>> = {
+const taskCompleted: TriggerSpec<TaskFilterConfig> = {
   type: 'task_completed',
-  configSchema: empty,
+  configSchema: taskFilterSchema,
   match: () => true,
   ui: {
     category: 'task',
@@ -618,9 +846,17 @@ const taskCompleted: TriggerSpec<Record<string, unknown>> = {
   },
 }
 
-const taskOverdue: TriggerSpec<{ daysOverdueMin?: number }> = {
+const taskOverdue: TriggerSpec<TaskFilterConfig & {
+  daysOverdueMin?: number
+  daysOverdueMax?: number
+  assignedTo?: 'any' | 'self' | 'delegated'
+}> = {
   type: 'task_overdue',
-  configSchema: z.object({ daysOverdueMin: z.number().int().min(0).max(365).optional() }),
+  configSchema: taskFilterSchema.extend({
+    daysOverdueMin: z.number().int().min(0).max(365).optional(),
+    daysOverdueMax: z.number().int().min(0).max(365).optional(),
+    assignedTo: z.enum(['any', 'self', 'delegated']).optional(),
+  }),
   match: () => true,
   ui: {
     category: 'task',
@@ -637,7 +873,10 @@ const taskOverdue: TriggerSpec<{ daysOverdueMin?: number }> = {
 const contactFilter = z.object({
   category: z.enum(CONTACT_CATEGORIES).optional(),
   hasEmail: z.boolean().optional(),
-})
+  hasPhone: z.boolean().optional(),
+  isPrimaryVendorForCouple: z.boolean().optional(),
+  region: z.string().optional(),
+}).passthrough()
 
 type ContactFilterConfig = z.infer<typeof contactFilter>
 
@@ -688,9 +927,15 @@ const contactLinkedToCouple: TriggerSpec<ContactFilterConfig> = {
 // Manual
 // ────────────────────────────────────────────────────────────────
 
-const manualFire: TriggerSpec<Record<string, unknown>> = {
+const manualFire: TriggerSpec<{
+  requireConfirmation?: boolean
+  requireNote?: boolean
+}> = {
   type: 'manual_fire',
-  configSchema: empty,
+  configSchema: z.object({
+    requireConfirmation: z.boolean().optional(),
+    requireNote: z.boolean().optional(),
+  }).passthrough(),
   match(event, _config) {
     // Manual fires carry the target automation id in the payload -
     // the dispatcher reads that directly. This matcher exists to
@@ -699,6 +944,387 @@ const manualFire: TriggerSpec<Record<string, unknown>> = {
     return Boolean(p(event).automation_id)
   },
   ui: { category: 'manual', label: 'Run manually', description: 'Fire this automation for a specific couple from the UI', icon: 'Play' },
+}
+
+// ────────────────────────────────────────────────────────────────
+// Phase 14a UI-only trigger scaffolding
+//
+// Every spec below has `match: () => true` because no DB trigger or
+// tick currently emits these event types. They appear in the picker
+// + inspector so MCs can shape automations against them today; the
+// emit sites will be wired in a later phase.
+// ────────────────────────────────────────────────────────────────
+
+const consultationSchema = z.object({
+  meetingType: z.enum(CONSULTATION_TYPES).optional(),
+  location: z.enum(CONSULTATION_LOCATIONS).optional(),
+  daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
+  daysUntilEventValue: z.number().int().optional(),
+}).passthrough()
+
+type ConsultationConfig = z.infer<typeof consultationSchema>
+
+const consultationBooked: TriggerSpec<ConsultationConfig & {
+  dateWithinDays?: number
+}> = {
+  type: 'consultation_booked',
+  configSchema: consultationSchema.extend({
+    dateWithinDays: z.number().int().min(1).max(365).optional(),
+  }),
+  match: () => true,
+  ui: { category: 'consultation', label: 'Consultation booked', description: 'When a discovery / planning meeting is scheduled', icon: 'CalendarHeart' },
+}
+
+const consultationCompleted: TriggerSpec<ConsultationConfig & {
+  outcome?: string
+}> = {
+  type: 'consultation_completed',
+  configSchema: consultationSchema.extend({
+    outcome: z.enum(CONSULTATION_OUTCOMES).optional(),
+  }),
+  match: () => true,
+  ui: { category: 'consultation', label: 'Consultation completed', description: 'When a meeting wraps up — branch on outcome', icon: 'CalendarCheck' },
+}
+
+const consultationNoShow: TriggerSpec<ConsultationConfig> = {
+  type: 'consultation_no_show',
+  configSchema: consultationSchema,
+  match: () => true,
+  ui: { category: 'consultation', label: 'Consultation no-show', description: 'When the couple misses the meeting', icon: 'CalendarOff' },
+}
+
+// ── AU paperwork milestones ────────────────────────────────────
+
+const noimLodged: TriggerSpec<{
+  daysBeforeEventOp?: ComparisonOp
+  daysBeforeEventValue?: number
+}> = {
+  type: 'noim_lodged',
+  configSchema: z.object({
+    daysBeforeEventOp: z.enum(COMPARISON_OPS).optional(),
+    daysBeforeEventValue: z.number().int().min(0).max(540).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'compliance', label: 'NOIM lodged', description: 'Notice of Intended Marriage paperwork has been filed', icon: 'FileCheck' },
+}
+
+const noimOverdue: TriggerSpec<{
+  daysOverdueOp?: ComparisonOp
+  daysOverdueValue?: number
+}> = {
+  type: 'noim_overdue',
+  configSchema: z.object({
+    daysOverdueOp: z.enum(COMPARISON_OPS).optional(),
+    daysOverdueValue: z.number().int().min(0).max(540).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'compliance', label: 'NOIM overdue', description: 'NOIM not lodged within the 1-month statutory window', icon: 'AlertOctagon' },
+}
+
+const donlimDue: TriggerSpec<{
+  daysBeforeEvent?: number
+}> = {
+  type: 'donlim_due',
+  configSchema: z.object({
+    daysBeforeEvent: z.number().int().min(0).max(30).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'compliance', label: 'DONLIM due', description: 'Declaration of No Legal Impediment needs signing', icon: 'FileText' },
+}
+
+const donlimSigned: TriggerSpec<Record<string, unknown>> = {
+  type: 'donlim_signed',
+  configSchema: empty,
+  match: () => true,
+  ui: { category: 'compliance', label: 'DONLIM signed', description: 'Declaration signed — ceremony paperwork is clean', icon: 'FileSignature' },
+}
+
+const marriageCertificateIssued: TriggerSpec<Record<string, unknown>> = {
+  type: 'marriage_certificate_issued',
+  configSchema: empty,
+  match: () => true,
+  ui: { category: 'compliance', label: 'Marriage certificate issued', description: 'Triggers post-event BDM admin', icon: 'Award' },
+}
+
+const rehearsalScheduled: TriggerSpec<{
+  daysBeforeEventOp?: ComparisonOp
+  daysBeforeEventValue?: number
+}> = {
+  type: 'rehearsal_scheduled',
+  configSchema: z.object({
+    daysBeforeEventOp: z.enum(COMPARISON_OPS).optional(),
+    daysBeforeEventValue: z.number().int().min(0).max(180).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'consultation', label: 'Rehearsal scheduled', description: 'When the rehearsal is added to the calendar', icon: 'Drama' },
+}
+
+const rehearsalCompleted: TriggerSpec<Record<string, unknown>> = {
+  type: 'rehearsal_completed',
+  configSchema: empty,
+  match: () => true,
+  ui: { category: 'consultation', label: 'Rehearsal completed', description: 'Triggers final-week pack send', icon: 'Sparkles' },
+}
+
+// ── Engagement (inbound) ───────────────────────────────────────
+
+const engagementBase = z.object({
+  withinHoursOp: z.enum(COMPARISON_OPS).optional(),
+  withinHoursValue: z.number().int().min(0).optional(),
+  templateMatched: z.string().optional(),
+  linkType: z.string().optional(),
+}).passthrough()
+
+const coupleRepliedToEmail: TriggerSpec<z.infer<typeof engagementBase>> = {
+  type: 'couple_replied_to_email',
+  configSchema: engagementBase,
+  match: () => true,
+  ui: { category: 'engagement', label: 'Couple replied to email', description: 'Engagement-aware sequences — stop chasing on reply', icon: 'MailCheck' },
+}
+
+const coupleDidNotReply: TriggerSpec<{
+  daysSinceSent?: number
+  templateMatched?: string
+}> = {
+  type: 'couple_did_not_reply',
+  configSchema: z.object({
+    daysSinceSent: z.number().int().min(1).max(60).optional(),
+    templateMatched: z.string().optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'engagement', label: 'Couple did not reply', description: 'Targeted follow-up after silence', icon: 'MailX' },
+}
+
+const coupleOpenedEmail: TriggerSpec<z.infer<typeof engagementBase>> = {
+  type: 'couple_opened_email',
+  configSchema: engagementBase,
+  match: () => true,
+  ui: { category: 'engagement', label: 'Couple opened email', description: 'Couple opened a tracked email', icon: 'MailOpen' },
+}
+
+const coupleClickedLink: TriggerSpec<z.infer<typeof engagementBase>> = {
+  type: 'couple_clicked_link',
+  configSchema: engagementBase,
+  match: () => true,
+  ui: { category: 'engagement', label: 'Couple clicked link', description: 'Couple clicked a tracked link inside an email', icon: 'MousePointerClick' },
+}
+
+const coupleEmailBounced: TriggerSpec<{ kind?: string }> = {
+  type: 'couple_email_bounced',
+  configSchema: z.object({ kind: z.enum(EMAIL_ENGAGEMENT_KINDS).optional() }).passthrough(),
+  match: () => true,
+  ui: { category: 'engagement', label: 'Couple email bounced', description: 'Outbound email returned a hard or soft bounce', icon: 'MailWarning' },
+}
+
+const coupleUnsubscribed: TriggerSpec<Record<string, unknown>> = {
+  type: 'couple_unsubscribed',
+  configSchema: empty,
+  match: () => true,
+  ui: { category: 'engagement', label: 'Couple unsubscribed', description: 'Triggers do-not-contact + audit logging', icon: 'BellOff' },
+}
+
+// ── Contact relationships ──────────────────────────────────────
+
+const vendorContactAssigned: TriggerSpec<{
+  category?: string
+  forEventType?: string
+}> = {
+  type: 'vendor_contact_assigned',
+  configSchema: z.object({
+    category: z.enum(CONTACT_CATEGORIES).optional(),
+    forEventType: z.enum(EVENT_TYPES).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'contact', label: 'Vendor contact assigned', description: 'When a vendor (e.g. photographer) is linked to a couple', icon: 'Link2' },
+}
+
+// ── Portal interactions ────────────────────────────────────────
+
+const coupleUploadedFile: TriggerSpec<{
+  fileType?: string
+  section?: string
+  sizeBytesOp?: ComparisonOp
+  sizeBytesValue?: number
+}> = {
+  type: 'couple_uploaded_file',
+  configSchema: z.object({
+    fileType: z.string().optional(),
+    section: z.enum(PORTAL_SECTIONS).optional(),
+    sizeBytesOp: z.enum(COMPARISON_OPS).optional(),
+    sizeBytesValue: z.number().int().min(0).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'portal', label: 'Couple uploaded a file', description: 'Couple added a file to the portal', icon: 'Upload' },
+}
+
+const coupleAddedSongToPlaylist: TriggerSpec<{
+  playlistKey?: 'entrance' | 'exit' | 'first_dance' | 'ceremony' | 'reception' | 'other'
+  songCountOp?: ComparisonOp
+  songCountValue?: number
+}> = {
+  type: 'couple_added_song_to_playlist',
+  configSchema: z.object({
+    playlistKey: z.enum(['entrance', 'exit', 'first_dance', 'ceremony', 'reception', 'other']).optional(),
+    songCountOp: z.enum(COMPARISON_OPS).optional(),
+    songCountValue: z.number().int().min(0).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'portal', label: 'Song added to playlist', description: 'Couple added a song — useful for DJ coordination', icon: 'Music' },
+}
+
+const coupleCompletedVows: TriggerSpec<{
+  who?: 'primary' | 'spouse' | 'both'
+}> = {
+  type: 'couple_completed_vows',
+  configSchema: z.object({
+    who: z.enum(['primary', 'spouse', 'both']).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'portal', label: 'Couple completed vows', description: 'Vow drafts submitted by one or both partners', icon: 'Heart' },
+}
+
+// ── Subscription / billing (MC's own plan) ─────────────────────
+
+const subscriptionStatusChanged: TriggerSpec<{
+  fromStatus?: string
+  toStatus?: string
+}> = {
+  type: 'subscription_status_changed',
+  configSchema: z.object({
+    fromStatus: z.string().optional(),
+    toStatus: z.string().optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'billing', label: 'Subscription status changed', description: 'Your own plan changed (trial→active, active→past_due, …)', icon: 'CreditCard' },
+}
+
+const subscriptionTrialEnding: TriggerSpec<{
+  daysRemaining?: number
+}> = {
+  type: 'subscription_trial_ending',
+  configSchema: z.object({
+    daysRemaining: z.number().int().min(0).max(60).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'billing', label: 'Trial ending', description: 'Drives the MC-side onboarding nudge flow', icon: 'Clock4' },
+}
+
+const teamMemberAdded: TriggerSpec<{
+  role?: string
+}> = {
+  type: 'team_member_added',
+  configSchema: z.object({
+    role: z.string().optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'billing', label: 'Team member added', description: 'When a teammate / assistant is invited', icon: 'UserPlus2' },
+}
+
+// ── Meta / self-healing ────────────────────────────────────────
+
+const automationFailed: TriggerSpec<{
+  automationId?: string
+  failureCategory?: string
+}> = {
+  type: 'automation_failed',
+  configSchema: z.object({
+    automationId: z.string().uuid().optional(),
+    failureCategory: z.string().optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'meta', label: 'Another automation failed', description: 'Self-healing — fire when a different automation errors', icon: 'AlertTriangle' },
+}
+
+// ── Inbound integrations ───────────────────────────────────────
+
+const webhookReceived: TriggerSpec<{
+  source?: string
+  payloadSchema?: string
+}> = {
+  type: 'webhook_received',
+  configSchema: z.object({
+    source: z.enum(WEBHOOK_SOURCES).optional(),
+    payloadSchema: z.string().optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'integration', label: 'Webhook received', description: 'Inbound payload from Calendly / Typeform / Zapier / website', icon: 'Webhook' },
+}
+
+// ── Tagging ────────────────────────────────────────────────────
+
+const tagAddedToCouple: TriggerSpec<{ tag?: string }> = {
+  type: 'tag_added_to_couple',
+  configSchema: z.object({ tag: z.string().optional() }).passthrough(),
+  match: () => true,
+  ui: { category: 'pipeline', label: 'Tag added to couple', description: 'When a tag is attached to a couple', icon: 'Tag' },
+}
+
+const tagRemovedFromCouple: TriggerSpec<{ tag?: string }> = {
+  type: 'tag_removed_from_couple',
+  configSchema: z.object({ tag: z.string().optional() }).passthrough(),
+  match: () => true,
+  ui: { category: 'pipeline', label: 'Tag removed from couple', description: 'When a tag is detached', icon: 'TagOff' },
+}
+
+// ── Birthday + payment plan ────────────────────────────────────
+
+const coupleBirthday: TriggerSpec<{
+  daysBefore?: number
+  who?: 'primary' | 'spouse' | 'either'
+}> = {
+  type: 'couple_birthday',
+  configSchema: z.object({
+    daysBefore: z.number().int().min(0).max(60).optional(),
+    who: z.enum(['primary', 'spouse', 'either']).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'calendar', label: 'Couple birthday', description: 'Personal-touch acknowledgement', icon: 'Cake' },
+}
+
+const paymentPlanMilestoneReached: TriggerSpec<{
+  installmentNumber?: number
+  percentPaidOp?: ComparisonOp
+  percentPaidValue?: number
+}> = {
+  type: 'payment_plan_milestone_reached',
+  configSchema: z.object({
+    installmentNumber: z.number().int().min(1).optional(),
+    percentPaidOp: z.enum(COMPARISON_OPS).optional(),
+    percentPaidValue: z.number().int().min(0).max(100).optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'payment', label: 'Payment plan milestone reached', description: 'Installment hit (e.g. 50% paid unlocks a portal section)', icon: 'Milestone' },
+}
+
+const refundIssued: TriggerSpec<{
+  amountOp?: ComparisonOp
+  amountValue?: number
+  reason?: string
+}> = {
+  type: 'refund_issued',
+  configSchema: z.object({
+    amountOp: z.enum(COMPARISON_OPS).optional(),
+    amountValue: z.number().nonnegative().optional(),
+    reason: z.string().optional(),
+  }).passthrough(),
+  match: () => true,
+  ui: { category: 'payment', label: 'Refund issued', description: 'Triggers cancellation paperwork + status update', icon: 'Undo2' },
+}
+
+// ── Privacy / onboarding ───────────────────────────────────────
+
+const coupleSetDoNotContact: TriggerSpec<Record<string, unknown>> = {
+  type: 'couple_set_do_not_contact',
+  configSchema: empty,
+  match: () => true,
+  ui: { category: 'engagement', label: 'Couple set do-not-contact', description: 'Compliance hook — pause all outbound comms', icon: 'ShieldOff' },
+}
+
+const brandingPublished: TriggerSpec<Record<string, unknown>> = {
+  type: 'branding_published',
+  configSchema: empty,
+  match: () => true,
+  ui: { category: 'meta', label: 'Branding published', description: 'You just published your branding — share portal link nudge', icon: 'Palette' },
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -756,8 +1382,49 @@ export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   contact_created: contactCreated,
   contact_updated: contactUpdated,
   contact_linked_to_couple: contactLinkedToCouple,
+  vendor_contact_assigned: vendorContactAssigned,
   // Manual
   manual_fire: manualFire,
+  // Consultations
+  consultation_booked: consultationBooked,
+  consultation_completed: consultationCompleted,
+  consultation_no_show: consultationNoShow,
+  rehearsal_scheduled: rehearsalScheduled,
+  rehearsal_completed: rehearsalCompleted,
+  // Compliance
+  noim_lodged: noimLodged,
+  noim_overdue: noimOverdue,
+  donlim_due: donlimDue,
+  donlim_signed: donlimSigned,
+  marriage_certificate_issued: marriageCertificateIssued,
+  // Engagement
+  couple_replied_to_email: coupleRepliedToEmail,
+  couple_did_not_reply: coupleDidNotReply,
+  couple_opened_email: coupleOpenedEmail,
+  couple_clicked_link: coupleClickedLink,
+  couple_email_bounced: coupleEmailBounced,
+  couple_unsubscribed: coupleUnsubscribed,
+  couple_set_do_not_contact: coupleSetDoNotContact,
+  // Portal interactions (extra)
+  couple_uploaded_file: coupleUploadedFile,
+  couple_added_song_to_playlist: coupleAddedSongToPlaylist,
+  couple_completed_vows: coupleCompletedVows,
+  // Billing meta
+  subscription_status_changed: subscriptionStatusChanged,
+  subscription_trial_ending: subscriptionTrialEnding,
+  team_member_added: teamMemberAdded,
+  // Self-healing meta
+  automation_failed: automationFailed,
+  branding_published: brandingPublished,
+  // Inbound integrations
+  webhook_received: webhookReceived,
+  // Tagging
+  tag_added_to_couple: tagAddedToCouple,
+  tag_removed_from_couple: tagRemovedFromCouple,
+  // Personal / payment plans
+  couple_birthday: coupleBirthday,
+  payment_plan_milestone_reached: paymentPlanMilestoneReached,
+  refund_issued: refundIssued,
 }
 
 /** Cheap lookup; returns null for unknown types (e.g. tampered data). */

@@ -35,7 +35,17 @@ const FROM = 'Zebri <noreply@app.zebri.com.au>'
 const baseSchema = z.object({
   subject: z.string().min(1),
   body: z.string().min(1),
-})
+  /** Pick a saved template instead of providing inline subject/body. */
+  templateId: z.string().optional(),
+  /** Attach assets (welcome PDF, testimonial gallery, brochure). */
+  attachAssets: z.array(z.string()).optional(),
+  /** Override the tone (formal / warm / casual). */
+  tone: z.enum(['formal', 'warm', 'casual']).optional(),
+  /** Recipient role: primary / spouse / both. */
+  recipientRole: z.enum(['primary', 'spouse', 'both']).optional(),
+  /** Enable Resend open/click tracking. */
+  trackEngagement: z.boolean().optional(),
+}).passthrough()
 
 async function sendPreComposed(
   ctx: RunContext,
@@ -119,16 +129,24 @@ const sendThankYou: ActionSpec<z.infer<typeof baseSchema>> = {
 // request_review
 // ────────────────────────────────────────────────────────────────
 
-const requestReview: ActionSpec<z.infer<typeof baseSchema>> = {
+const requestReviewSchema = baseSchema.extend({
+  subject: z.string().default('Could I ask a small favour? ⭐'),
+  body: z
+    .string()
+    .default(
+      "Hi {{couple.primary_name}},\n\nNow that the dust has settled - if the day felt the way you hoped it would, would you mind dropping a quick review? Even a sentence or two helps me out enormously.\n\nGoogle review link: https://g.page/r/your-place\n\nThanks so much.\n- {{mc.contact_name}}",
+    ),
+  /** Which platforms the email should link to (multi-select). */
+  platforms: z.array(z.enum(['google', 'easy_weddings', 'abia', 'wedsites', 'wedding_wire', 'facebook', 'other'])).optional(),
+  /** Free-text incentive ("first reviewer wins…"). */
+  incentive: z.string().optional(),
+  /** Send a polite follow-up after N days if no review was posted. */
+  followUpIfIgnored: z.boolean().optional(),
+})
+
+const requestReview: ActionSpec<z.infer<typeof requestReviewSchema>> = {
   type: 'request_review',
-  configSchema: baseSchema.extend({
-    subject: z.string().default('Could I ask a small favour? ⭐'),
-    body: z
-      .string()
-      .default(
-        "Hi {{couple.primary_name}},\n\nNow that the dust has settled - if the day felt the way you hoped it would, would you mind dropping a quick review? Even a sentence or two helps me out enormously.\n\nGoogle review link: https://g.page/r/your-place\n\nThanks so much.\n- {{mc.contact_name}}",
-      ),
-  }),
+  configSchema: requestReviewSchema,
   async handler(ctx, config) {
     return sendPreComposed(ctx, config.subject, config.body)
   },
@@ -139,16 +157,22 @@ const requestReview: ActionSpec<z.infer<typeof baseSchema>> = {
 // send_referral_request
 // ────────────────────────────────────────────────────────────────
 
-const sendReferralRequest: ActionSpec<z.infer<typeof baseSchema>> = {
+const sendReferralRequestSchema = baseSchema.extend({
+  subject: z.string().default('Know anyone planning an event? 👋'),
+  body: z
+    .string()
+    .default(
+      "Hi {{couple.primary_name}},\n\nIf any of your friends are starting to plan an event, I'd love to be part of theirs too. You can pass on my details - {{mc.contact_name}}, {{mc.email}} - or tell me their name and I'll reach out gently.\n\nThanks for trusting me with your day.\n- {{mc.contact_name}}",
+    ),
+  /** Free-text referral bonus copy. */
+  referralBonus: z.string().optional(),
+  /** Inject a referral tracking link. */
+  trackingLink: z.boolean().optional(),
+})
+
+const sendReferralRequest: ActionSpec<z.infer<typeof sendReferralRequestSchema>> = {
   type: 'send_referral_request',
-  configSchema: baseSchema.extend({
-    subject: z.string().default('Know anyone planning an event? 👋'),
-    body: z
-      .string()
-      .default(
-        "Hi {{couple.primary_name}},\n\nIf any of your friends are starting to plan an event, I'd love to be part of theirs too. You can pass on my details - {{mc.contact_name}}, {{mc.email}} - or tell me their name and I'll reach out gently.\n\nThanks for trusting me with your day.\n- {{mc.contact_name}}",
-      ),
-  }),
+  configSchema: sendReferralRequestSchema,
   async handler(ctx, config) {
     return sendPreComposed(ctx, config.subject, config.body)
   },

@@ -186,3 +186,466 @@ export function compareNumber(actual: number, op: ComparisonOp, threshold: numbe
  * maps this back to `undefined` before saving config.
  */
 export const ANY_SENTINEL = '__any__'
+
+// ────────────────────────────────────────────────────────────────
+// Extended enums (Phase 14a UI scaffolding — see audit table)
+//
+// Backend logic for triggers/actions that depend on these enums
+// is not yet wired; the values exist so the inspector can render
+// the configuration affordances surfaced by the audit. Adding
+// behaviour later just means reading these slugs in match() /
+// handler() — the picker, schemas, and forms already speak them.
+// ────────────────────────────────────────────────────────────────
+
+/** Calendar month slug (used for season / peak-month filters). */
+export const MONTHS = [
+  'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+  'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+] as const
+export type Month = (typeof MONTHS)[number]
+
+export const MONTH_LABELS: Record<Month, string> = {
+  jan: 'January', feb: 'February', mar: 'March', apr: 'April',
+  may: 'May', jun: 'June', jul: 'July', aug: 'August',
+  sep: 'September', oct: 'October', nov: 'November', dec: 'December',
+}
+
+/** Coarse wedding-season buckets — peak/shoulder/off in AU. */
+export const SEASONS = ['any', 'peak', 'shoulder', 'off'] as const
+export type Season = (typeof SEASONS)[number]
+
+export const SEASON_LABELS: Record<Season, string> = {
+  any: 'Any season',
+  peak: 'Peak (Oct–Apr)',
+  shoulder: 'Shoulder (May, Sep)',
+  off: 'Off (Jun–Aug)',
+}
+
+/** Booking package tiers — generic, not tied to a saved template. */
+export const BOOKING_TIERS = ['bronze', 'silver', 'gold', 'platinum', 'custom'] as const
+export type BookingTier = (typeof BOOKING_TIERS)[number]
+
+export const BOOKING_TIER_LABELS: Record<BookingTier, string> = {
+  bronze: 'Bronze',
+  silver: 'Silver',
+  gold: 'Gold',
+  platinum: 'Platinum',
+  custom: 'Custom / other',
+}
+
+/** Task category slugs used by create_task + task_created triggers. */
+export const TASK_CATEGORIES = [
+  'admin',
+  'ceremony',
+  'coordination',
+  'followup',
+  'compliance',
+  'travel',
+  'other',
+] as const
+export type TaskCategory = (typeof TASK_CATEGORIES)[number]
+
+export const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
+  admin: 'Admin',
+  ceremony: 'Ceremony',
+  coordination: 'Coordination',
+  followup: 'Follow-up',
+  compliance: 'Compliance / paperwork',
+  travel: 'Travel',
+  other: 'Other',
+}
+
+/** Task priority levels. */
+export const TASK_PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const
+export type TaskPriority = (typeof TASK_PRIORITIES)[number]
+
+export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  urgent: 'Urgent',
+}
+
+/** Payment methods seen on invoices / received payments. */
+export const PAYMENT_METHODS = [
+  'stripe_card',
+  'bank_transfer',
+  'cash',
+  'cheque',
+  'other',
+] as const
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  stripe_card: 'Stripe card',
+  bank_transfer: 'Bank transfer',
+  cash: 'Cash',
+  cheque: 'Cheque',
+  other: 'Other',
+}
+
+/** Stripe-style payment failure reasons surfaced to the picker. */
+export const PAYMENT_FAILURE_REASONS = [
+  'card_declined',
+  'insufficient_funds',
+  'expired_card',
+  'authentication_required',
+  'other',
+] as const
+export type PaymentFailureReason = (typeof PAYMENT_FAILURE_REASONS)[number]
+
+export const PAYMENT_FAILURE_REASON_LABELS: Record<PaymentFailureReason, string> = {
+  card_declined: 'Card declined',
+  insufficient_funds: 'Insufficient funds',
+  expired_card: 'Expired card',
+  authentication_required: '3DS / authentication required',
+  other: 'Other',
+}
+
+/** Tone tiers used by payment / chase emails. */
+export const REMINDER_TONES = ['friendly', 'firm', 'final'] as const
+export type ReminderTone = (typeof REMINDER_TONES)[number]
+
+export const REMINDER_TONE_LABELS: Record<ReminderTone, string> = {
+  friendly: 'Friendly nudge',
+  firm: 'Firm reminder',
+  final: 'Final notice',
+}
+
+/** Review platforms an MC might point a couple at. */
+export const REVIEW_PLATFORMS = [
+  'google',
+  'easy_weddings',
+  'abia',
+  'wedsites',
+  'wedding_wire',
+  'facebook',
+  'other',
+] as const
+export type ReviewPlatform = (typeof REVIEW_PLATFORMS)[number]
+
+export const REVIEW_PLATFORM_LABELS: Record<ReviewPlatform, string> = {
+  google: 'Google',
+  easy_weddings: 'Easy Weddings',
+  abia: 'ABIA',
+  wedsites: 'WedSites',
+  wedding_wire: 'WeddingWire',
+  facebook: 'Facebook',
+  other: 'Other',
+}
+
+/** Consultation types — discovery / planning / rehearsal / etc. */
+export const CONSULTATION_TYPES = [
+  'discovery',
+  'planning',
+  'rehearsal',
+  'final_meeting',
+  'other',
+] as const
+export type ConsultationType = (typeof CONSULTATION_TYPES)[number]
+
+export const CONSULTATION_TYPE_LABELS: Record<ConsultationType, string> = {
+  discovery: 'Discovery call',
+  planning: 'Planning meeting',
+  rehearsal: 'Rehearsal',
+  final_meeting: 'Final pre-event meeting',
+  other: 'Other',
+}
+
+/** Outcome of a consultation meeting. */
+export const CONSULTATION_OUTCOMES = [
+  'booked',
+  'declined',
+  'undecided',
+  'rescheduled',
+] as const
+export type ConsultationOutcome = (typeof CONSULTATION_OUTCOMES)[number]
+
+export const CONSULTATION_OUTCOME_LABELS: Record<ConsultationOutcome, string> = {
+  booked: 'Booked',
+  declined: 'Declined',
+  undecided: 'Undecided',
+  rescheduled: 'Rescheduled',
+}
+
+/** Consultation location / format. */
+export const CONSULTATION_LOCATIONS = ['in_person', 'video', 'phone'] as const
+export type ConsultationLocation = (typeof CONSULTATION_LOCATIONS)[number]
+
+export const CONSULTATION_LOCATION_LABELS: Record<ConsultationLocation, string> = {
+  in_person: 'In person',
+  video: 'Video call',
+  phone: 'Phone call',
+}
+
+/** Fields a couple's portal/section completion can be filtered by. */
+export const PORTAL_COMPLETION_RANGES = [
+  'lt_25',
+  '25_to_50',
+  '50_to_75',
+  'gt_75',
+] as const
+export type PortalCompletionRange = (typeof PORTAL_COMPLETION_RANGES)[number]
+
+export const PORTAL_COMPLETION_RANGE_LABELS: Record<PortalCompletionRange, string> = {
+  lt_25: 'Less than 25%',
+  '25_to_50': '25–50%',
+  '50_to_75': '50–75%',
+  gt_75: 'More than 75%',
+}
+
+/** Fields the event_updated `changed` filter can pick. */
+export const EVENT_CHANGE_FIELDS = [
+  'any',
+  'date',
+  'venue',
+  'guest_count',
+  'ceremony_type',
+  'start_time',
+  'notes',
+] as const
+export type EventChangeField = (typeof EVENT_CHANGE_FIELDS)[number]
+
+export const EVENT_CHANGE_FIELD_LABELS: Record<EventChangeField, string> = {
+  any: 'Anything changed',
+  date: 'Date',
+  venue: 'Venue',
+  guest_count: 'Guest count',
+  ceremony_type: 'Ceremony type',
+  start_time: 'Start time',
+  notes: 'Notes',
+}
+
+/** Cancellation reasons surfaced on the booking_cancelled trigger. */
+export const CANCELLATION_REASONS = [
+  'couple_changed_mind',
+  'wedding_postponed',
+  'wedding_cancelled',
+  'mc_unavailable',
+  'budget',
+  'other',
+] as const
+export type CancellationReason = (typeof CANCELLATION_REASONS)[number]
+
+export const CANCELLATION_REASON_LABELS: Record<CancellationReason, string> = {
+  couple_changed_mind: 'Couple changed their mind',
+  wedding_postponed: 'Wedding postponed',
+  wedding_cancelled: 'Wedding cancelled',
+  mc_unavailable: 'You became unavailable',
+  budget: 'Budget',
+  other: 'Other',
+}
+
+/** AU paperwork milestone slugs (NOIM, DONLIM, certificates). */
+export const COMPLIANCE_MILESTONES = [
+  'noim_lodged',
+  'noim_overdue',
+  'donlim_due',
+  'donlim_signed',
+  'marriage_certificate_issued',
+  'bdm_lodged',
+] as const
+export type ComplianceMilestone = (typeof COMPLIANCE_MILESTONES)[number]
+
+export const COMPLIANCE_MILESTONE_LABELS: Record<ComplianceMilestone, string> = {
+  noim_lodged: 'NOIM lodged',
+  noim_overdue: 'NOIM overdue',
+  donlim_due: 'DONLIM due',
+  donlim_signed: 'DONLIM signed',
+  marriage_certificate_issued: 'Marriage certificate issued',
+  bdm_lodged: 'BDM paperwork lodged',
+}
+
+/** Email engagement signal type (open / click / reply / bounce). */
+export const EMAIL_ENGAGEMENT_KINDS = [
+  'opened',
+  'clicked',
+  'replied',
+  'bounced',
+  'unsubscribed',
+] as const
+export type EmailEngagementKind = (typeof EMAIL_ENGAGEMENT_KINDS)[number]
+
+export const EMAIL_ENGAGEMENT_KIND_LABELS: Record<EmailEngagementKind, string> = {
+  opened: 'Opened',
+  clicked: 'Clicked a link',
+  replied: 'Replied',
+  bounced: 'Bounced',
+  unsubscribed: 'Unsubscribed',
+}
+
+/** Source of an inbound webhook event the engine can react to. */
+export const WEBHOOK_SOURCES = [
+  'calendly',
+  'typeform',
+  'website_form',
+  'zapier',
+  'make',
+  'easy_weddings',
+  'wedding_wire',
+  'other',
+] as const
+export type WebhookSource = (typeof WEBHOOK_SOURCES)[number]
+
+export const WEBHOOK_SOURCE_LABELS: Record<WebhookSource, string> = {
+  calendly: 'Calendly',
+  typeform: 'Typeform',
+  website_form: 'Website form',
+  zapier: 'Zapier',
+  make: 'Make.com',
+  easy_weddings: 'Easy Weddings',
+  wedding_wire: 'WeddingWire',
+  other: 'Other webhook',
+}
+
+/** Slack channels / mentions for the send_to_slack action. */
+export const SLACK_MENTION_ROLES = ['none', 'oncall', 'mc', 'channel', 'here'] as const
+export type SlackMentionRole = (typeof SLACK_MENTION_ROLES)[number]
+
+export const SLACK_MENTION_ROLE_LABELS: Record<SlackMentionRole, string> = {
+  none: 'No mention',
+  oncall: '@oncall',
+  mc: '@mc',
+  channel: '@channel',
+  here: '@here',
+}
+
+/** Sub-flow context-passing modes. */
+export const SUB_FLOW_CONTEXT_MODES = ['inherit_all', 'couple_only', 'isolated'] as const
+export type SubFlowContextMode = (typeof SUB_FLOW_CONTEXT_MODES)[number]
+
+export const SUB_FLOW_CONTEXT_MODE_LABELS: Record<SubFlowContextMode, string> = {
+  inherit_all: 'Pass all run variables through',
+  couple_only: 'Pass the couple context only',
+  isolated: 'Start with a clean context',
+}
+
+/** Generic merge modes for update_custom_fields. */
+export const FIELD_MERGE_MODES = ['set', 'append', 'increment', 'only_if_unset'] as const
+export type FieldMergeMode = (typeof FIELD_MERGE_MODES)[number]
+
+export const FIELD_MERGE_MODE_LABELS: Record<FieldMergeMode, string> = {
+  set: 'Set (overwrite)',
+  append: 'Append (string / array)',
+  increment: 'Increment (number)',
+  only_if_unset: 'Only set if currently unset',
+}
+
+/** Note categories for add_note. */
+export const NOTE_CATEGORIES = ['general', 'admin', 'followup', 'risk', 'private'] as const
+export type NoteCategory = (typeof NOTE_CATEGORIES)[number]
+
+export const NOTE_CATEGORY_LABELS: Record<NoteCategory, string> = {
+  general: 'General',
+  admin: 'Admin',
+  followup: 'Follow-up',
+  risk: 'Risk / watchout',
+  private: 'Private (never visible to couple)',
+}
+
+/** Pause categories for pause_couple_automations. */
+export const PAUSE_CATEGORIES = ['general', 'cancellation', 'on_hold', 'postponed'] as const
+export type PauseCategory = (typeof PAUSE_CATEGORIES)[number]
+
+export const PAUSE_CATEGORY_LABELS: Record<PauseCategory, string> = {
+  general: 'General pause',
+  cancellation: 'Cancellation',
+  on_hold: 'On hold',
+  postponed: 'Wedding postponed',
+}
+
+/** Run-sheet PDF format variants. */
+export const RUN_SHEET_FORMATS = ['full', 'vendor_only', 'mc_only', 'couple_only'] as const
+export type RunSheetFormat = (typeof RUN_SHEET_FORMATS)[number]
+
+export const RUN_SHEET_FORMAT_LABELS: Record<RunSheetFormat, string> = {
+  full: 'Full run sheet',
+  vendor_only: 'Vendor-only (hides MC notes)',
+  mc_only: 'MC-only (private)',
+  couple_only: 'Couple-only',
+}
+
+/** Timeline-item cue type (music / mic / lighting / none). */
+export const TIMELINE_CUE_TYPES = ['none', 'music', 'mic', 'lighting', 'video', 'av'] as const
+export type TimelineCueType = (typeof TIMELINE_CUE_TYPES)[number]
+
+export const TIMELINE_CUE_TYPE_LABELS: Record<TimelineCueType, string> = {
+  none: 'No cue',
+  music: 'Music',
+  mic: 'Microphone',
+  lighting: 'Lighting',
+  video: 'Video',
+  av: 'AV / other',
+}
+
+/** Timeline-item category (ceremony / reception / prep / formalities). */
+export const TIMELINE_CATEGORIES = [
+  'prep',
+  'ceremony',
+  'formalities',
+  'reception',
+  'send_off',
+  'other',
+] as const
+export type TimelineCategory = (typeof TIMELINE_CATEGORIES)[number]
+
+export const TIMELINE_CATEGORY_LABELS: Record<TimelineCategory, string> = {
+  prep: 'Prep / arrival',
+  ceremony: 'Ceremony',
+  formalities: 'Formalities',
+  reception: 'Reception',
+  send_off: 'Send-off',
+  other: 'Other',
+}
+
+/** Signer-required slug for contracts. */
+export const SIGNER_REQUIREMENTS = ['primary', 'spouse', 'both'] as const
+export type SignerRequirement = (typeof SIGNER_REQUIREMENTS)[number]
+
+export const SIGNER_REQUIREMENT_LABELS: Record<SignerRequirement, string> = {
+  primary: 'Primary only',
+  spouse: 'Spouse only',
+  both: 'Both partners',
+}
+
+/** Calendar-event categories used by create_calendar_event. */
+export const CALENDAR_EVENT_CATEGORIES = [
+  'consultation',
+  'rehearsal',
+  'ceremony',
+  'followup',
+  'travel',
+  'admin',
+  'other',
+] as const
+export type CalendarEventCategory = (typeof CALENDAR_EVENT_CATEGORIES)[number]
+
+export const CALENDAR_EVENT_CATEGORY_LABELS: Record<CalendarEventCategory, string> = {
+  consultation: 'Consultation',
+  rehearsal: 'Rehearsal',
+  ceremony: 'Ceremony',
+  followup: 'Follow-up',
+  travel: 'Travel',
+  admin: 'Admin / paperwork',
+  other: 'Other',
+}
+
+/** Approval channels for the approval flow-control action. */
+export const APPROVAL_CHANNELS = ['email', 'slack', 'in_app'] as const
+export type ApprovalChannel = (typeof APPROVAL_CHANNELS)[number]
+
+export const APPROVAL_CHANNEL_LABELS: Record<ApprovalChannel, string> = {
+  email: 'Email magic link',
+  slack: 'Slack message',
+  in_app: 'In-app notification',
+}
+
+/** What to do when an approval window expires. */
+export const APPROVAL_EXPIRY_BEHAVIOURS = ['cancel', 'proceed', 'pause'] as const
+export type ApprovalExpiryBehaviour = (typeof APPROVAL_EXPIRY_BEHAVIOURS)[number]
+
+export const APPROVAL_EXPIRY_BEHAVIOUR_LABELS: Record<ApprovalExpiryBehaviour, string> = {
+  cancel: 'Cancel the run',
+  proceed: 'Proceed as if approved',
+  pause: 'Pause and notify the MC',
+}

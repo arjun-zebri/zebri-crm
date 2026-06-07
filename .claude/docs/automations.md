@@ -28,11 +28,27 @@ DB write / webhook / manual fire / tick
                 ▼
    tick cron (every minute)
         ├── dispatcher: open a run per matching automation
-        └── runner:     advance each live run one step
+        └── runner:     advance each live run one action
                             │
                             ▼
-        actions / waits / branches / approvals
+        actions (messaging / CRUD / flow control)
 ```
+
+Every node in an automation's DAG is an **action**. Action types
+split into two families:
+
+- **Registered actions** — `send_email`, `create_task`,
+  `update_couple_stage`, etc. Each has a handler in
+  `lib/automations/actions/`.
+- **Flow-control actions** — `wait`, `branch`, `stop`, `sub_flow`,
+  `approval`. Evaluated directly by the runner via
+  `lib/automations/conditions.ts`; they don't appear in the action
+  registry.
+
+The runner switches on `action.type`. There's no nested
+`actionType` field — the `type` column on `automation_actions` is
+the discriminator, and the `config` jsonb holds the per-type
+payload flat.
 
 The engine is **stateless between ticks**. State lives in the bus
 (events), the run rows, the wait rows, and the audit log. Everything
@@ -61,11 +77,11 @@ Migrations:
 | Table | Purpose |
 | --- | --- |
 | `automations` | One user-authored recipe. Holds the trigger type/config + status. |
-| `automation_steps` | DAG of steps. Linear by default; branches use `parent_step_id` + `branch_path = 'yes'\|'no'`. |
+| `automation_actions` | DAG of actions. Linear by default; branches use `parent_action_id` + `branch_path = 'yes'\|'no'`. The `type` column is the action-type slug (`send_email`, `wait`, `branch`, …); the application registry is the source of truth, the DB has no CHECK so new action types can ship without a migration. |
 | `automation_events` | Append-only event bus. The tick reads here. |
-| `automation_runs` | One per `(automation, triggering event)`. Tracks lifecycle. |
-| `automation_waits` | Sleeping runs (wait steps, approval gates, quiet-hours defers). |
-| `automation_audit_log` | Durable per-step transition trail. |
+| `automation_runs` | One per `(automation, triggering event)`. Tracks lifecycle. `current_action_id` points at the action the run is currently sitting on. |
+| `automation_waits` | Sleeping runs (wait actions, approval gates, quiet-hours defers). FK to `automation_actions.id` via `action_id`. |
+| `automation_audit_log` | Durable per-action transition trail. Events: `run_started`, `action_started/completed/skipped/errored`, `run_completed/cancelled/errored`, `approval_*`, `quiet_hours_deferred`. |
 | `couple_custom_fields` | Per-couple key/value bag for `custom_field_changed` + `update_custom_fields`. |
 
 All tables are RLS-scoped to `user_id`. Writes to `automation_events`
@@ -86,8 +102,8 @@ Each tick:
    matcher, and opens runs. Idempotent via the
    `(automation_id, event_id)` unique constraint.
 2. **Runner** (`lib/automations/runner.ts`) wakes any due waits,
-   then advances up to 200 live runs by one step each. Per-tick
-   step budget keeps the function under Vercel's timeout.
+   then advances up to 200 live runs by one action each. Per-tick
+   action budget keeps the function under Vercel's timeout.
 
 Slack alerts:
 
@@ -173,10 +189,10 @@ Catalogue in `lib/automations/actions/`. Split by category:
 Each handler:
 
 - Receives the runner-built `RunContext` (couple snapshot, MC
-  snapshot, prior step outputs, triggering event).
+  snapshot, prior action outputs, triggering event).
 - Validates its config via Zod (`spec.configSchema.safeParse`).
 - Returns an `ActionResult`:
-  - `{ kind: 'ok', output? }` - advance to next step
+  - `{ kind: 'ok', output? }` - advance to next action
   - `{ kind: 'sleep', wakeAt, reason, token?, payload? }` -
     suspend (used by wait + approval + quiet-hours)
   - `{ kind: 'error', message, recoverable? }` - record + flip
@@ -215,7 +231,7 @@ namespaces:
 | `venue` | `name` |
 | `mc` | `business_name`, `contact_name`, `email`, `phone` |
 | `portal` | `link` |
-| `quote` / `invoice` / `contract` / `task` | populated from trigger payload + step results |
+| `quote` / `invoice` / `contract` / `task` | populated from trigger payload + prior action results |
 
 Filters: `friendly`, `friendly_long`, `iso`, `time`, `weekday`,
 `default:VALUE`, `upper`, `lower`, `currency`.
@@ -228,7 +244,7 @@ for the builder's right-rail variable reference.
 
 ## Quiet hours
 
-`lib/automations/quiet-hours.ts` defers a wait step's `wakeAt`
+`lib/automations/quiet-hours.ts` defers a wait action's `wakeAt`
 into the next allowed window when the requested time falls inside
 the couple-local quiet block.
 
@@ -251,10 +267,11 @@ on the `automations` row.
   command-palette popover for choosing the trigger; on pick the
   inspector auto-opens for parameter config (no "Coming soon"
   states - every trigger in the registry is wired)
-- `app/(dashboard)/automations/[id]/step-picker.tsx` -
-  categorised step-type picker
+- `app/(dashboard)/automations/[id]/action-picker.tsx` -
+  categorised action-type picker (flow control + every registered
+  action)
 - `app/(dashboard)/automations/[id]/inspector-panel.tsx` - right
-  drawer with typed config forms per trigger / step. Triggers
+  drawer with typed config forms per trigger / action. Triggers
   with no extra parameters show a confirmation hint instead of
   an empty form
 - `app/(dashboard)/couples/couple-automations.tsx` - couple-profile
@@ -280,7 +297,7 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
   registry; the tick body that joins `events` on `event_type` is
   still TODO.
 - `contacts.tags` column for true custom-tag recipient matching.
-- Drag-to-reorder steps in the builder (replace position math with
+- Drag-to-reorder actions in the builder (replace position math with
   dnd-kit, mirroring the branding block renderer).
 - Full questionnaire editor.
 - Custom-field key catalogue so `custom_field_changed` can offer

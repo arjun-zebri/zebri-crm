@@ -24,13 +24,24 @@ import type { ActionResult, ActionType, RunContext } from '@/types/automations'
 
 import { coupleActions } from './couple'
 import { documentActions } from './documents'
+import { extendedActions } from './extended'
 import { messagingActions } from './messaging'
 import { postEventActions } from './post-event'
 import { taskActions } from './task'
 import { timelineActions } from './timeline'
 
 export interface ActionUi {
-  category: 'general' | 'couple' | 'calendar' | 'payments' | 'post_event' | 'flow'
+  category:
+    | 'general'
+    | 'couple'
+    | 'calendar'
+    | 'consultation'
+    | 'payments'
+    | 'compliance'
+    | 'segmentation'
+    | 'integration'
+    | 'post_event'
+    | 'flow'
   label: string
   description: string
   icon: string
@@ -54,6 +65,8 @@ export const actionRegistry: Partial<Record<ActionType, ActionSpec<any>>> = {
   ...documentActions,
   ...timelineActions,
   ...postEventActions,
+  // Phase 14a UI-only stubs (handlers throw a clear "not wired" error).
+  ...extendedActions,
 }
 
 export function getActionSpec(type: ActionType): ActionSpec | null {

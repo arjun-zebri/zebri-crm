@@ -48,7 +48,34 @@ const sendEmailConfigSchema = z.object({
   body: z.string().min(1),
   /** Wrap the body in the standard Zebri-branded HTML shell. */
   wrap: z.boolean().default(true),
-})
+  // ── Extended UI scaffolding (handler ignores for now) ──────────
+  /** Override the Reply-To header. */
+  replyToOverride: z.string().email().optional(),
+  /** CC every vendor contact attached to the couple. */
+  ccVendors: z.boolean().optional(),
+  /** BCC the MC so they retain a paper trail. */
+  bccSelf: z.boolean().optional(),
+  /** Attach the couple's most recent quote PDF. */
+  attachQuote: z.boolean().optional(),
+  /** Attach the couple's most recent contract PDF. */
+  attachContract: z.boolean().optional(),
+  /** Attach the couple's most recent invoice PDF. */
+  attachInvoice: z.boolean().optional(),
+  /** Attach the latest generated run sheet. */
+  attachRunSheet: z.boolean().optional(),
+  /** Attach one or more files from the couple's portal uploads (by storage key). */
+  attachFiles: z.array(z.string()).optional(),
+  /** Defer the send into the next non-quiet-hours window. */
+  respectQuietHours: z.boolean().optional(),
+  /** Skip the send entirely if the couple has do-not-email set. */
+  respectCoupleDoNotEmail: z.boolean().optional(),
+  /** Send a preview to the MC first and require approval before send. */
+  previewBeforeSend: z.boolean().optional(),
+  /** Enable Resend open tracking. */
+  trackOpens: z.boolean().optional(),
+  /** Force the send at a specific ISO datetime (overrides immediate). */
+  sendAt: z.string().optional(),
+}).passthrough()
 
 const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
   type: 'send_email',
@@ -110,7 +137,17 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
 const deferredConfigSchema = z.object({
   recipients: recipientSpecSchema,
   body: z.string().min(1),
-})
+  /** Defer the send into the next allowed window. */
+  respectQuietHours: z.boolean().optional(),
+  /** Custom sender ID (SMS only; some carriers honour). */
+  senderId: z.string().optional(),
+  /** Hard-cap the body length (most carriers split at 160). */
+  truncateAt: z.number().int().min(50).max(1600).optional(),
+  /** WhatsApp media attachment URL. */
+  mediaUrl: z.string().url().optional(),
+  /** WhatsApp approved-template ID (required for non-session messages). */
+  templateId: z.string().optional(),
+}).passthrough()
 
 const sendSms: ActionSpec<z.infer<typeof deferredConfigSchema>> = {
   type: 'send_sms',

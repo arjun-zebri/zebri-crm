@@ -44,6 +44,7 @@ import { VARIABLE_CATALOGUE } from '@/lib/automations/variables'
 import { createClient } from '@/lib/supabase/client'
 import type {
   ActionType,
+  AutomationActionRow,
   TriggerType,
 } from '@/types/automations'
 
@@ -51,7 +52,36 @@ import {
   setAutomationTriggerAction,
   upsertAutomationActionRow,
 } from '../actions'
-import type { AutomationActionRow } from '@/types/automations'
+
+import {
+  AddNoteExtraFields,
+  ApprovalExtraFields,
+  BranchExtraFields,
+  CalendarEventExtraFields,
+  CreateCoupleExtraFields,
+  CreateTaskExtraFields,
+  ExtendedActionForm,
+  ExtendedTriggerFields,
+  PauseCoupleExtraFields,
+  PaymentReminderExtraFields,
+  PostEventExtraFields,
+  RequestInformationExtraFields,
+  RunSheetExtraFields,
+  SendContractExtraFields,
+  SendEmailExtraFields,
+  SendInvoiceExtraFields,
+  SendPortalLinkExtraFields,
+  SendQuoteExtraFields,
+  SendTimelineExtraFields,
+  StopExtraFields,
+  SubFlowExtraFields,
+  TimelineEventExtraFields,
+  UpdateCoupleStageExtraFields,
+  UpdateCustomFieldsExtraFields,
+  UpdateTaskExtraFields,
+  UpdateTimelineEventExtraFields,
+  WaitExtraFields,
+} from './inspector-extended'
 
 /**
  * Optimistic save payload. The parent page applies these updates
@@ -485,6 +515,10 @@ function TriggerConfigForm({
           parameters needed. Add steps below to define what runs.
         </div>
       )}
+
+      {/* Phase 14a extended trigger fields — appended after the legacy fields so the
+          inspector keeps its current shape and new params layer on top. */}
+      <ExtendedTriggerFields triggerType={triggerType} config={config} setConfig={setConfig} />
     </div>
   )
 }
@@ -716,18 +750,41 @@ function ActionConfigForm({
 
   return (
     <div className="space-y-3">
-      {action.type === 'wait' && <WaitFields config={config} setConfig={setConfig} />}
-      {action.type === 'branch' && <BranchFields config={config} setConfig={setConfig} />}
+      {action.type === 'wait' && (
+        <>
+          <WaitFields config={config} setConfig={setConfig} />
+          <WaitExtraFields config={config} setConfig={setConfig} />
+        </>
+      )}
+      {action.type === 'branch' && (
+        <>
+          <BranchFields config={config} setConfig={setConfig} />
+          <BranchExtraFields config={config} setConfig={setConfig} />
+        </>
+      )}
       {action.type !== 'wait' && action.type !== 'branch' && action.type !== 'approval' && action.type !== 'sub_flow' && action.type !== 'stop' && <ActionFields config={config} setConfig={setConfig} />}
-      {action.type === 'approval' && <ApprovalFields config={config} setConfig={setConfig} />}
-      {action.type === 'sub_flow' && <SubFlowField config={config} setConfig={setConfig} />}
+      {action.type === 'approval' && (
+        <>
+          <ApprovalFields config={config} setConfig={setConfig} />
+          <ApprovalExtraFields config={config} setConfig={setConfig} />
+        </>
+      )}
+      {action.type === 'sub_flow' && (
+        <>
+          <SubFlowField config={config} setConfig={setConfig} />
+          <SubFlowExtraFields config={config} setConfig={setConfig} />
+        </>
+      )}
       {action.type === 'stop' && (
-        <TextInput
-          label="Reason this run is stopping (optional)"
-          placeholder="Shows in the audit log"
-          value={(config['reason'] as string) ?? ''}
-          onChange={(v) => setConfig({ ...config, reason: v })}
-        />
+        <>
+          <TextInput
+            label="Reason this run is stopping (optional)"
+            placeholder="Shows in the audit log"
+            value={(config['reason'] as string) ?? ''}
+            onChange={(v) => setConfig({ ...config, reason: v })}
+          />
+          <StopExtraFields config={config} setConfig={setConfig} />
+        </>
       )}
     </div>
   )
@@ -1065,13 +1122,23 @@ function ActionFields({ config, setConfig }: FieldProps) {
     case 'update_custom_fields':
       return <UpdateCustomFieldsForm config={config} updateConfig={updateInner} />
     case 'send_portal_link':
-      return <MessageBodyForm config={config} updateConfig={updateInner} label="Message" />
+      return (
+        <>
+          <MessageBodyForm config={config} updateConfig={updateInner} label="Message" />
+          <SendPortalLinkExtraFields config={config} updateConfig={updateInner} />
+        </>
+      )
     case 'request_information':
       return <RequestInformationForm config={config} updateConfig={updateInner} />
     case 'create_couple':
       return <CreateCoupleForm config={config} updateConfig={updateInner} />
     case 'pause_couple_automations':
-      return <Hint>Pauses every other running automation on this couple. No extra config needed.</Hint>
+      return (
+        <>
+          <Hint>Pauses every other running automation on this couple.</Hint>
+          <PauseCoupleExtraFields config={config} updateConfig={updateInner} />
+        </>
+      )
     case 'create_timeline_event':
       return <TimelineEventForm config={config} updateConfig={updateInner} requireExistingItem={false} />
     case 'update_timeline_event':
@@ -1079,46 +1146,92 @@ function ActionFields({ config, setConfig }: FieldProps) {
     case 'send_timeline_to_vendors':
     case 'send_final_run_sheet':
       return (
-        <MessageBodyForm
-          config={config}
-          updateConfig={updateInner}
-          label="Message to vendors"
-          recipients={recipients}
-          updateRecipients={updateRecipients}
-        />
+        <>
+          <MessageBodyForm
+            config={config}
+            updateConfig={updateInner}
+            label="Message to vendors"
+            recipients={recipients}
+            updateRecipients={updateRecipients}
+          />
+          <SendTimelineExtraFields config={config} updateConfig={updateInner} />
+        </>
       )
     case 'create_calendar_event':
     case 'create_reminder':
       return <CalendarEntryForm config={config} updateConfig={updateInner} />
     case 'send_quote':
+      return (
+        <>
+          <Hint>
+            This action sends the most recent quote for the triggering couple. The picker
+            auto-selects based on the trigger payload, or the latest draft if there isn't one.
+          </Hint>
+          <SendQuoteExtraFields config={config} updateConfig={updateInner} />
+        </>
+      )
     case 'send_contract':
+      return (
+        <>
+          <Hint>
+            This action sends the most recent contract for the triggering couple.
+          </Hint>
+          <SendContractExtraFields config={config} updateConfig={updateInner} />
+        </>
+      )
     case 'send_invoice':
+      return (
+        <>
+          <Hint>
+            This action sends the most recent invoice for the triggering couple.
+          </Hint>
+          <SendInvoiceExtraFields config={config} updateConfig={updateInner} />
+        </>
+      )
     case 'trigger_payment_reminder':
       return (
-        <Hint>
-          This action sends the most recent {actionLabelFor(actionType)} for the
-          triggering couple. The picker auto-selects based on the trigger
-          payload, or the latest draft if there isn't one.
-        </Hint>
+        <>
+          <Hint>
+            Re-sends the most recent unpaid invoice. Use the tone / escalation fields below
+            to tier the message between first nudge and final notice.
+          </Hint>
+          <PaymentReminderExtraFields config={config} updateConfig={updateInner} />
+        </>
       )
     case 'generate_run_sheet_pdf':
-      return <Hint>Renders a PDF run sheet from the couple's current event timeline.</Hint>
+      return (
+        <>
+          <Hint>Renders a PDF run sheet from the couple's current event timeline.</Hint>
+          <RunSheetExtraFields config={config} updateConfig={updateInner} />
+        </>
+      )
     case 'send_onboarding_pack':
     case 'send_pre_event_checklist':
     case 'send_thank_you_message':
-    case 'request_review':
-    case 'send_referral_request':
     case 'send_anniversary_message':
-      return <SubjectBodyEmailForm config={config} updateConfig={updateInner} />
+      return (
+        <>
+          <SubjectBodyEmailForm config={config} updateConfig={updateInner} />
+          <PostEventExtraFields config={config} updateConfig={updateInner} />
+        </>
+      )
+    case 'request_review':
+      return (
+        <>
+          <SubjectBodyEmailForm config={config} updateConfig={updateInner} />
+          <PostEventExtraFields config={config} updateConfig={updateInner} isReview />
+        </>
+      )
+    case 'send_referral_request':
+      return (
+        <>
+          <SubjectBodyEmailForm config={config} updateConfig={updateInner} />
+          <PostEventExtraFields config={config} updateConfig={updateInner} isReferral />
+        </>
+      )
+    default:
+      return <ExtendedActionForm actionType={actionType} config={config} updateConfig={updateInner} />
   }
-}
-
-function actionLabelFor(t: ActionType): string {
-  if (t === 'send_quote') return 'quote'
-  if (t === 'send_contract') return 'contract'
-  if (t === 'send_invoice') return 'invoice'
-  if (t === 'trigger_payment_reminder') return 'invoice'
-  return 'document'
 }
 
 /* ─── Sub-flow step ────────────────────────────────────────────── */
@@ -1187,6 +1300,7 @@ function SendEmailForm({
         checked={config['wrap'] !== false}
         onChange={(v) => updateConfig({ wrap: v })}
       />
+      <SendEmailExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
@@ -1279,6 +1393,7 @@ function CreateTaskForm({ config, updateConfig }: ConfigProps) {
         onChange={(v) => updateConfig({ description: v })}
       />
       <DueDateMode config={config} updateConfig={updateConfig} />
+      <CreateTaskExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
@@ -1392,17 +1507,21 @@ function UpdateTaskForm({ config, updateConfig }: ConfigProps) {
         value={(config['dueDate'] as string) ?? ''}
         onChange={(v) => updateConfig({ dueDate: v || undefined })}
       />
+      <UpdateTaskExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
 
 function UpdateCoupleStageForm({ config, updateConfig }: ConfigProps) {
   return (
-    <CoupleStatusSelect
-      label="Move couple to status"
-      value={(config['toStatus'] as string) ?? ''}
-      onChange={(v) => updateConfig({ toStatus: v })}
-    />
+    <>
+      <CoupleStatusSelect
+        label="Move couple to status"
+        value={(config['toStatus'] as string) ?? ''}
+        onChange={(v) => updateConfig({ toStatus: v })}
+      />
+      <UpdateCoupleStageExtraFields config={config} updateConfig={updateConfig} />
+    </>
   )
 }
 
@@ -1417,6 +1536,7 @@ function AddNoteForm({ config, updateConfig }: ConfigProps) {
       />
       <Hint>Appends to the couple's notes with today's date.</Hint>
       <InlineVariableHint />
+      <AddNoteExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
@@ -1464,6 +1584,7 @@ function UpdateCustomFieldsForm({ config, updateConfig }: ConfigProps) {
           + Add field
         </button>
       </div>
+      <UpdateCustomFieldsExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
@@ -1492,6 +1613,7 @@ function RequestInformationForm({ config, updateConfig }: ConfigProps) {
         onChange={(v) => updateConfig({ message: v })}
       />
       <InlineVariableHint />
+      <RequestInformationExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
@@ -1529,6 +1651,7 @@ function CreateCoupleForm({ config, updateConfig }: ConfigProps) {
           ...LEAD_SOURCES.map((s) => ({ value: s, label: LEAD_SOURCE_LABELS[s] })),
         ]}
       />
+      <CreateCoupleExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }
@@ -1579,6 +1702,9 @@ function TimelineEventForm({
           onChange={(v) => updateConfig({ eventId: v || undefined })}
         />
       )}
+      {requireExistingItem
+        ? <UpdateTimelineEventExtraFields config={config} updateConfig={updateConfig} />
+        : <TimelineEventExtraFields config={config} updateConfig={updateConfig} />}
     </>
   )
 }
@@ -1602,6 +1728,7 @@ function CalendarEntryForm({ config, updateConfig }: ConfigProps) {
         value={(config['notes'] as string) ?? ''}
         onChange={(v) => updateConfig({ notes: v || undefined })}
       />
+      <CalendarEventExtraFields config={config} updateConfig={updateConfig} />
     </>
   )
 }

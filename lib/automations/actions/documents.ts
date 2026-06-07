@@ -33,7 +33,17 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
 const sendQuoteSchema = z.object({
   /** If omitted, pick the most recent draft quote for this couple. */
   quoteId: z.string().uuid().optional(),
-})
+  /** Specific saved quote template to render (overrides existing draft contents). */
+  templateId: z.string().optional(),
+  /** Days until the quote expires. */
+  expiryDays: z.number().int().min(1).max(365).optional(),
+  /** Optional personal message above the quote link. */
+  customMessage: z.string().optional(),
+  /** Additional file storage keys to attach (brochure, testimonial doc). */
+  attachAdditionalFiles: z.array(z.string()).optional(),
+  /** CC list (assistant / partner). */
+  cc: z.array(z.string().email()).optional(),
+}).passthrough()
 
 const sendQuote: ActionSpec<z.infer<typeof sendQuoteSchema>> = {
   type: 'send_quote',
@@ -66,7 +76,11 @@ const sendQuote: ActionSpec<z.infer<typeof sendQuoteSchema>> = {
 
 const sendContractSchema = z.object({
   contractId: z.string().uuid().optional(),
-})
+  templateId: z.string().optional(),
+  signersRequired: z.enum(['primary', 'spouse', 'both']).optional(),
+  expiryDays: z.number().int().min(1).max(365).optional(),
+  customMessage: z.string().optional(),
+}).passthrough()
 
 const sendContract: ActionSpec<z.infer<typeof sendContractSchema>> = {
   type: 'send_contract',
@@ -103,7 +117,14 @@ const sendContract: ActionSpec<z.infer<typeof sendContractSchema>> = {
 
 const sendInvoiceSchema = z.object({
   invoiceId: z.string().uuid().optional(),
-})
+  /** Toggle which payment methods are surfaced on the public invoice page. */
+  paymentMethods: z.array(z.enum(['stripe_card', 'bank_transfer', 'cash', 'cheque', 'other'])).optional(),
+  /** Override the due-in days. */
+  dueInDays: z.number().int().min(0).max(365).optional(),
+  /** Show a late-payment fee notice (%). */
+  latePaymentFeePercent: z.number().min(0).max(100).optional(),
+  customMessage: z.string().optional(),
+}).passthrough()
 
 const sendInvoice: ActionSpec<z.infer<typeof sendInvoiceSchema>> = {
   type: 'send_invoice',
@@ -135,9 +156,18 @@ const sendInvoice: ActionSpec<z.infer<typeof sendInvoiceSchema>> = {
 // trigger_payment_reminder
 // ────────────────────────────────────────────────────────────────
 
-const triggerPaymentReminder: ActionSpec<z.infer<typeof sendInvoiceSchema>> = {
+const triggerPaymentReminderSchema = sendInvoiceSchema.extend({
+  /** Friendly / firm / final escalation tone. */
+  tone: z.enum(['friendly', 'firm', 'final']).optional(),
+  /** Escalation level for tracking (1 → first nudge, 3 → final notice). */
+  escalationLevel: z.number().int().min(1).max(5).optional(),
+  /** Attach a separate late-fee notice PDF. */
+  attachLateFeeNotice: z.boolean().optional(),
+})
+
+const triggerPaymentReminder: ActionSpec<z.infer<typeof triggerPaymentReminderSchema>> = {
   type: 'trigger_payment_reminder',
-  configSchema: sendInvoiceSchema,
+  configSchema: triggerPaymentReminderSchema,
   async handler(ctx, config) {
     return sendInvoice.handler(ctx, config)
   },
@@ -150,7 +180,17 @@ const triggerPaymentReminder: ActionSpec<z.infer<typeof sendInvoiceSchema>> = {
 
 const generateRunSheetSchema = z.object({
   eventId: z.string().uuid().optional(),
-})
+  /** Format variant — full / vendor-only / MC-only / couple-only. */
+  format: z.enum(['full', 'vendor_only', 'mc_only', 'couple_only']).optional(),
+  /** Include the vendor contacts roster page. */
+  includeContacts: z.boolean().optional(),
+  /** Include explicit minute-by-minute timings. */
+  includeTimings: z.boolean().optional(),
+  /** Save a copy into the couple's portal files. */
+  saveToCoupleFiles: z.boolean().optional(),
+  /** Email the PDF to the MC themselves once generated. */
+  emailToSelf: z.boolean().optional(),
+}).passthrough()
 
 const generateRunSheetPdf: ActionSpec<z.infer<typeof generateRunSheetSchema>> = {
   type: 'generate_run_sheet_pdf',

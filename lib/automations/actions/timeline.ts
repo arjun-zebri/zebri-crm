@@ -47,7 +47,15 @@ const createTimelineEventSchema = z.object({
   description: z.string().optional(),
   startTime: z.string().optional(),
   durationMin: z.number().int().min(0).optional(),
-})
+  /** Bucket — prep / ceremony / formalities / reception / etc. */
+  category: z.enum(['prep', 'ceremony', 'formalities', 'reception', 'send_off', 'other']).optional(),
+  /** Contact id of the vendor responsible for this cue. */
+  responsibleVendor: z.string().uuid().optional(),
+  /** Cue type — music / mic / lighting / video / av. */
+  cue: z.enum(['none', 'music', 'mic', 'lighting', 'video', 'av']).optional(),
+  /** Minutes of slack to leave after this item. */
+  bufferAfterMin: z.number().int().min(0).optional(),
+}).passthrough()
 
 const createTimelineEvent: ActionSpec<z.infer<typeof createTimelineEventSchema>> = {
   type: 'create_timeline_event',
@@ -81,7 +89,14 @@ const updateTimelineEventSchema = z.object({
   description: z.string().optional(),
   startTime: z.string().optional(),
   durationMin: z.number().int().min(0).optional(),
-})
+  /** Shift this item and every later item by a duration. */
+  shiftBy: z.object({
+    amount: z.number().int(),
+    unit: z.enum(['minutes', 'hours']),
+  }).optional(),
+  /** Auto-notify impacted vendor contacts when this changes. */
+  notifyVendors: z.boolean().optional(),
+}).passthrough()
 
 const updateTimelineEvent: ActionSpec<z.infer<typeof updateTimelineEventSchema>> = {
   type: 'update_timeline_event',
@@ -114,7 +129,17 @@ const sendTimelineToVendorsSchema = z.object({
     .string()
     .min(1)
     .default('Here is the latest timeline for {{couple.name}} on {{event.date | friendly}}. Please review and let me know if anything looks off.'),
-})
+  /** Send only to a subset of vendor categories. */
+  vendorFilter: z.array(z.string()).optional(),
+  /** Vendor-friendly format — full timeline vs only their cues. */
+  format: z.enum(['full', 'their_cues_only']).optional(),
+  /** CC the couple primary email. */
+  ccCouple: z.boolean().optional(),
+  /** Attach the run-sheet PDF. */
+  attachRunSheet: z.boolean().optional(),
+  /** Require each vendor to click a confirm link. */
+  requireConfirmation: z.boolean().optional(),
+}).passthrough()
 
 const sendTimelineToVendors: ActionSpec<z.infer<typeof sendTimelineToVendorsSchema>> = {
   type: 'send_timeline_to_vendors',

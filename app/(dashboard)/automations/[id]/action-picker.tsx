@@ -18,6 +18,7 @@ import { actionRegistry } from '@/lib/automations/actions'
 import type { ActionType, AutomationActionRow } from '@/types/automations'
 
 import { updateAutomationActionPosition, upsertAutomationActionRow } from '../actions'
+
 import { CommandPalette, type PaletteAnchor, type PaletteItem } from './command-palette'
 import { getLucideIcon } from './lucide-lookup'
 
@@ -65,7 +66,11 @@ const GROUP_ORDER: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: 'general', label: 'General' },
   { slug: 'couple', label: 'Couple' },
   { slug: 'calendar', label: 'Calendar' },
+  { slug: 'consultation', label: 'Consultations' },
   { slug: 'payments', label: 'Payments' },
+  { slug: 'compliance', label: 'Compliance & paperwork (AU)' },
+  { slug: 'segmentation', label: 'Tags & segmentation' },
+  { slug: 'integration', label: 'Integrations (outbound)' },
   { slug: 'post_event', label: 'Post-event' },
 ]
 
@@ -88,14 +93,16 @@ export function ActionPicker({
       description: f.description,
       icon: f.icon,
     })),
-    // Hide coming-soon actions (currently SMS + WhatsApp). They
-    // reappear when the channel ships.
+    // Phase 14a — every action surfaces in the picker so MCs can
+    // compose flows against them today. Coming-soon items (SMS,
+    // WhatsApp, and the UI-only scaffolding stubs) get a "(coming
+    // soon)" suffix and a leading hint description so the picker
+    // reads correctly.
     ...Object.values(actionRegistry)
-      .filter((spec) => !spec.ui.comingSoon)
       .map((spec) => ({
         id: `action:${spec.type}`,
         group: spec.ui.category,
-        label: spec.ui.label,
+        label: spec.ui.comingSoon ? `${spec.ui.label} (coming soon)` : spec.ui.label,
         description: spec.ui.description,
         icon: getLucideIcon(spec.ui.icon),
       })),

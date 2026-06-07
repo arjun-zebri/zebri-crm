@@ -38,7 +38,20 @@ const createTaskSchema = z.object({
       unit: z.enum(['days', 'weeks']),
     })
     .optional(),
-})
+  /** Bucket for filtering on dashboards / ops view. */
+  category: z.enum(['admin', 'ceremony', 'coordination', 'followup', 'compliance', 'travel', 'other']).optional(),
+  /** Priority tier. */
+  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
+  /** Assignee — self / assistant / specific email. */
+  assignTo: z.string().optional(),
+  /** Link the task to a related document for context. */
+  linkedDocument: z.object({
+    kind: z.enum(['quote', 'contract', 'invoice', 'run_sheet']),
+    id: z.string().optional(),
+  }).optional(),
+  /** Fire a reminder N days before the due date. */
+  reminderBeforeDays: z.number().int().min(0).max(60).optional(),
+}).passthrough()
 
 const createTask: ActionSpec<z.infer<typeof createTaskSchema>> = {
   type: 'create_task',
@@ -77,7 +90,16 @@ const updateTaskSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   dueDate: z.string().optional(),
-})
+  /** Append text to the task description rather than replace. */
+  appendNote: z.string().optional(),
+  /** Reassign the task. */
+  reassignTo: z.string().optional(),
+  /** Snooze: push the due date by N days/weeks. */
+  pushDueDateBy: z.object({
+    amount: z.number().int().min(0),
+    unit: z.enum(['days', 'weeks']),
+  }).optional(),
+}).passthrough()
 
 const updateTask: ActionSpec<z.infer<typeof updateTaskSchema>> = {
   type: 'update_task',
@@ -110,7 +132,23 @@ const createCalendarEventSchema = z.object({
   title: z.string().min(1),
   date: z.string().min(1),
   notes: z.string().optional(),
-})
+  /** HH:MM start time. */
+  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  /** HH:MM end time. */
+  endTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  /** Address or virtual link. */
+  location: z.string().optional(),
+  /** Bucket for filtering. */
+  category: z.enum(['consultation', 'rehearsal', 'ceremony', 'followup', 'travel', 'admin', 'other']).optional(),
+  /** Auto-send a calendar invite to the couple's primary email. */
+  inviteCouple: z.boolean().optional(),
+  /** Colour-tag for the calendar surface. */
+  colorTag: z.string().optional(),
+  /** Reminder hours before the start time (separate from create_reminder). */
+  reminderHoursBefore: z.number().int().min(0).max(168).optional(),
+  /** Notification channel for reminders. */
+  notificationChannel: z.enum(['email', 'slack', 'in_app']).optional(),
+}).passthrough()
 
 const createCalendarEvent: ActionSpec<z.infer<typeof createCalendarEventSchema>> = {
   type: 'create_calendar_event',

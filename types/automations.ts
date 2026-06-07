@@ -92,6 +92,52 @@ export type TriggerType =
   | 'contact_linked_to_couple'
   // Manual
   | 'manual_fire'
+  // ── Phase 14a UI scaffolding (not yet emitted) ─────────────────
+  // Consultations
+  | 'consultation_booked'
+  | 'consultation_completed'
+  | 'consultation_no_show'
+  // AU paperwork / compliance milestones
+  | 'noim_lodged'
+  | 'noim_overdue'
+  | 'donlim_due'
+  | 'donlim_signed'
+  | 'marriage_certificate_issued'
+  | 'rehearsal_scheduled'
+  | 'rehearsal_completed'
+  // Engagement (inbound email / portal interaction)
+  | 'couple_replied_to_email'
+  | 'couple_did_not_reply'
+  | 'couple_opened_email'
+  | 'couple_clicked_link'
+  | 'couple_email_bounced'
+  | 'couple_unsubscribed'
+  // Contact relationships
+  | 'vendor_contact_assigned'
+  // Portal interactions
+  | 'couple_uploaded_file'
+  | 'couple_added_song_to_playlist'
+  | 'couple_completed_vows'
+  // App / billing meta
+  | 'subscription_status_changed'
+  | 'subscription_trial_ending'
+  | 'team_member_added'
+  // Self-healing
+  | 'automation_failed'
+  // Inbound integrations
+  | 'webhook_received'
+  // Tagging
+  | 'tag_added_to_couple'
+  | 'tag_removed_from_couple'
+  // Personal touches
+  | 'couple_birthday'
+  // Payment plans
+  | 'payment_plan_milestone_reached'
+  | 'refund_issued'
+  // Privacy / compliance
+  | 'couple_set_do_not_contact'
+  // Onboarding
+  | 'branding_published'
 
 // ────────────────────────────────────────────────────────────────
 // Actions
@@ -153,6 +199,63 @@ export type ActionType =
   // Recommended additions
   | 'pause_couple_automations'
   | 'generate_run_sheet_pdf'
+  // ── Phase 14a UI scaffolding (handlers not wired) ──────────────
+  // Consultation / calendar
+  | 'create_consultation'
+  | 'cancel_consultation'
+  | 'block_calendar_slot'
+  | 'unblock_calendar_slot'
+  | 'send_calendar_invite'
+  // AU paperwork
+  | 'lodge_noim_reminder'
+  | 'generate_noim_pdf'
+  | 'generate_donlim_pdf'
+  | 'generate_marriage_certificate'
+  | 'lodge_bdm_paperwork'
+  // Tagging + segmentation
+  | 'assign_tag'
+  | 'remove_tag'
+  | 'update_lead_score'
+  | 'add_to_segment'
+  | 'remove_from_segment'
+  | 'enqueue_for_newsletter'
+  // Payments
+  | 'create_invoice_from_quote'
+  | 'create_quote_from_template'
+  | 'create_contract_from_template'
+  | 'void_quote'
+  | 'void_invoice'
+  | 'revoke_contract'
+  | 'apply_discount'
+  | 'add_line_item'
+  | 'send_payment_link'
+  | 'record_offline_payment'
+  | 'request_payment_method_update'
+  // Couple
+  | 'assign_contact_to_couple'
+  | 'request_vendor_confirmation'
+  | 'escalate_to_phone_call'
+  | 'mark_couple_as_lost'
+  | 'share_portal_section_with_vendor'
+  | 'clone_couple_to_new_event'
+  | 'merge_couples'
+  | 'archive_couple'
+  | 'export_couple_data'
+  // Drip / sequence flow control
+  | 'start_drip_campaign'
+  | 'pause_drip_campaign'
+  | 'resume_drip_campaign'
+  | 'pause_sequence'
+  | 'resume_sequence'
+  | 'goto_step'
+  // Integrations (outbound)
+  | 'send_to_slack'
+  | 'send_to_webhook'
+  | 'add_to_zapier'
+  // Notifications
+  | 'notify_couple_via_push'
+  // Print / batch
+  | 'print_label_for_certificate'
   // Flow control (no registry entry — runner-evaluated)
   | 'wait'
   | 'branch'
@@ -509,9 +612,15 @@ export const TRIGGER_CATEGORIES = [
   { slug: 'payment', label: 'Quotes, invoices & payments' },
   { slug: 'contract', label: 'Contracts' },
   { slug: 'calendar', label: 'Calendar & events' },
+  { slug: 'consultation', label: 'Consultations' },
   { slug: 'portal', label: 'Client portal' },
   { slug: 'task', label: 'Tasks' },
   { slug: 'contact', label: 'Contacts (vendors, family)' },
+  { slug: 'engagement', label: 'Engagement (opens, replies, clicks)' },
+  { slug: 'compliance', label: 'Compliance & paperwork (AU)' },
+  { slug: 'billing', label: 'Subscription & billing' },
+  { slug: 'integration', label: 'Inbound integrations' },
+  { slug: 'meta', label: 'Meta / self-healing' },
   { slug: 'manual', label: 'Manual' },
 ] as const
 
@@ -519,7 +628,11 @@ export const ACTION_CATEGORIES = [
   { slug: 'general', label: 'General' },
   { slug: 'couple', label: 'Couple' },
   { slug: 'calendar', label: 'Calendar' },
+  { slug: 'consultation', label: 'Consultations' },
   { slug: 'payments', label: 'Payments' },
+  { slug: 'compliance', label: 'Compliance & paperwork (AU)' },
+  { slug: 'segmentation', label: 'Tags & segmentation' },
+  { slug: 'integration', label: 'Integrations (outbound)' },
   { slug: 'post_event', label: 'Post-event' },
   { slug: 'flow', label: 'Flow control' },
 ] as const

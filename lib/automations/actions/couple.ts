@@ -41,7 +41,13 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
 // update_couple_stage
 // ────────────────────────────────────────────────────────────────
 
-const updateStageSchema = z.object({ toStatus: z.string().min(1) })
+const updateStageSchema = z.object({
+  toStatus: z.string().min(1),
+  /** Guard rail — only run when the couple is currently in one of these statuses. */
+  onlyIfCurrentStatus: z.array(z.string()).optional(),
+  /** Auto-append a note to the couple recording why the move happened. */
+  addNote: z.string().optional(),
+}).passthrough()
 
 const updateCoupleStage: ActionSpec<z.infer<typeof updateStageSchema>> = {
   type: 'update_couple_stage',
@@ -64,7 +70,15 @@ const updateCoupleStage: ActionSpec<z.infer<typeof updateStageSchema>> = {
 // add_note
 // ────────────────────────────────────────────────────────────────
 
-const addNoteSchema = z.object({ text: z.string().min(1) })
+const addNoteSchema = z.object({
+  text: z.string().min(1),
+  /** Bucket for filtering / dashboard surfaces. */
+  category: z.enum(['general', 'admin', 'followup', 'risk', 'private']).optional(),
+  /** Pin to the top of the couple's notes panel. */
+  pinned: z.boolean().optional(),
+  /** Whether this note can ever be shown to the couple (default: no). */
+  visibleToCouple: z.boolean().optional(),
+}).passthrough()
 
 const addNote: ActionSpec<z.infer<typeof addNoteSchema>> = {
   type: 'add_note',
@@ -94,7 +108,11 @@ const addNote: ActionSpec<z.infer<typeof addNoteSchema>> = {
 
 const updateCustomFieldsSchema = z.object({
   fields: z.array(z.object({ key: z.string().min(1), value: z.any() })).min(1),
-})
+  /** set / append / increment / only_if_unset. */
+  mergeMode: z.enum(['set', 'append', 'increment', 'only_if_unset']).optional(),
+  /** Don't overwrite values that are already set (alias of merge_mode = only_if_unset). */
+  onlyIfUnset: z.boolean().optional(),
+}).passthrough()
 
 const updateCustomFields: ActionSpec<z.infer<typeof updateCustomFieldsSchema>> = {
   type: 'update_custom_fields',
@@ -123,7 +141,15 @@ const updateCustomFields: ActionSpec<z.infer<typeof updateCustomFieldsSchema>> =
 
 const sendPortalLinkSchema = z.object({
   message: z.string().min(1).default('Hi {{couple.primary_name}}, here is your event portal - please add your details when you have a moment.'),
-})
+  /** Subject line override (default is "Your event portal — {business_name}"). */
+  subject: z.string().optional(),
+  /** Burn the magic link after N days. */
+  expiresInDays: z.number().int().min(1).max(365).optional(),
+  /** Deep-link to one portal section only. */
+  restrictToSection: z.enum(['onboarding', 'pre_event', 'day_of', 'people', 'songs', 'files', 'timeline']).optional(),
+  /** Send to primary only, both partners, or one specifically. */
+  magicLinkRecipient: z.enum(['primary', 'spouse', 'both']).optional(),
+}).passthrough()
 
 const sendPortalLink: ActionSpec<z.infer<typeof sendPortalLinkSchema>> = {
   type: 'send_portal_link',
@@ -171,7 +197,13 @@ const requestInformationSchema = z.object({
   message: z.string().min(1).default(
     "Hi {{couple.primary_name}}, when you have a moment could you fill in the next section of your event portal? It helps me prepare for the big day.",
   ),
-})
+  /** Date the MC needs this back by — shown in the email. */
+  dueDate: z.string().optional(),
+  /** none / weekly / every-2-days follow-up cadence if the couple ignores. */
+  reminderCadence: z.enum(['none', 'weekly', 'two_day']).optional(),
+  /** Auto-create an MC task if not completed within N days. */
+  escalateAfterDays: z.number().int().min(1).max(60).optional(),
+}).passthrough()
 
 const requestInformation: ActionSpec<z.infer<typeof requestInformationSchema>> = {
   type: 'request_information',
@@ -209,7 +241,15 @@ const createCoupleSchema = z.object({
   phone: z.string().optional(),
   eventDate: z.string().optional(),
   leadSource: z.string().optional(),
-})
+  eventType: z.string().optional(),
+  venue: z.string().optional(),
+  partnerName: z.string().optional(),
+  assignTags: z.array(z.string()).optional(),
+  /** Auto-create a "welcome call" task once the couple is added. */
+  autoCreateTask: z.boolean().optional(),
+  /** Skip creating duplicates if an existing couple shares the email. */
+  dedupeOnEmail: z.boolean().optional(),
+}).passthrough()
 
 const createCouple: ActionSpec<z.infer<typeof createCoupleSchema>> = {
   type: 'create_couple',
@@ -241,9 +281,18 @@ const createCouple: ActionSpec<z.infer<typeof createCoupleSchema>> = {
 // pause_couple_automations
 // ────────────────────────────────────────────────────────────────
 
-const pauseCoupleAutomations: ActionSpec<Record<string, never>> = {
+const pauseCoupleAutomationsSchema = z.object({
+  /** Auto-resume after N days (omit for indefinite pause). */
+  pauseForDays: z.number().int().min(1).max(365).optional(),
+  /** Free-text reason — surfaces in the audit log. */
+  pauseReason: z.string().optional(),
+  /** Bucket for filtering: general / cancellation / on_hold / postponed. */
+  pauseCategory: z.enum(['general', 'cancellation', 'on_hold', 'postponed']).optional(),
+}).passthrough()
+
+const pauseCoupleAutomations: ActionSpec<z.infer<typeof pauseCoupleAutomationsSchema>> = {
   type: 'pause_couple_automations',
-  configSchema: z.object({}),
+  configSchema: pauseCoupleAutomationsSchema,
   async handler(ctx) {
     if (!ctx.couple) return { kind: 'error', message: 'no couple in context' }
     const supabase = createAdminClient()
