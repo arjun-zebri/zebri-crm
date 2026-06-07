@@ -381,8 +381,18 @@ const quoteDue: TriggerSpec<{
     notificationCount: z.number().int().min(1).max(5).optional(),
     respectQuietHours: z.boolean().optional(),
   }).passthrough(),
-  match: () => true,
-  ui: { category: 'payment', label: 'Quote due', description: 'When a quote reaches its due date', icon: 'Hourglass' },
+  // The `quote_due` event is emitted by the time-emitter once per
+  // (quote, lead-time, day) — see `lib/automations/time-emitters/
+  // quote-due.ts`. The emitter stamps the matching lead-time in
+  // `payload.days_until_due`. Narrowing here means an automation
+  // with `days=3` only fires for events that fire 3 days before
+  // the expiry, not for `days=0` events on the same quote.
+  match: (event, config) => {
+    const payload = p(event)
+    const emitted = Number(payload.days_until_due)
+    return Number.isFinite(emitted) && emitted === config.days
+  },
+  ui: { category: 'payment', label: 'Quote due', description: 'When a quote reaches its expiry date', icon: 'Hourglass' },
 }
 
 const quoteOverdue: TriggerSpec<{

@@ -3,11 +3,16 @@
  *
  * Vercel Cron fires this every minute. Each tick:
  *
- *   1. Dispatches up to N unprocessed events from the bus -
+ *   1. Runs the time-based emitters — computes "what should fire
+ *      now" for triggers like `quote_due` / `task_overdue` that
+ *      have no source-row state change to hook a DB trigger off.
+ *      New events land in the bus and are dispatched on this same
+ *      tick.
+ *   2. Dispatches up to N unprocessed events from the bus -
  *      matches them to active automations, opens runs.
- *   2. Advances up to N live runs by one action each.
+ *   3. Advances up to N live runs by one action each.
  *
- * Both halves are budget-capped so a backlog can't run the
+ * All three halves are budget-capped so a backlog can't run the
  * function past Vercel's timeout. If unprocessed events ever
  * grow above a threshold, the tick fires a Slack alert so we
  * notice before users do.
@@ -19,9 +24,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { sendAlert } from '@/lib/alerts/send-alert'
+import { isCronAuthorized } from '@/lib/api/cron-auth'
 import { dispatchPendingEvents } from '@/lib/automations/dispatcher'
 import { advanceLiveRuns } from '@/lib/automations/runner'
-import { isCronAuthorized } from '@/lib/api/cron-auth'
+import { runTimeEmitters } from '@/lib/automations/time-emitters'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const TICK_SLOW_THRESHOLD_MS = 30_000
@@ -35,6 +41,10 @@ async function handle(request: NextRequest) {
   const supabase = createAdminClient()
   const started = Date.now()
 
+  // Run time-emitters BEFORE the dispatcher so events emitted on
+  // this tick are picked up in the same pass — minimises the
+  // worst-case delivery latency to one tick rather than two.
+  const emitters = await runTimeEmitters(supabase)
   const dispatch = await dispatchPendingEvents(supabase)
   const runner = await advanceLiveRuns(supabase)
 
@@ -66,6 +76,7 @@ async function handle(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     duration_ms: durationMs,
+    emitters,
     dispatch,
     runner,
     backlog: count ?? 0,

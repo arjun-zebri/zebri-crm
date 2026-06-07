@@ -126,10 +126,23 @@ Time-based triggers (`time_before_event`, `time_after_event`,
 `anniversary_of_event`, `lead_inactive`, the `*_due` / `*_overdue`
 variants, `task_overdue`, `quote_viewed_but_not_responded`,
 `portal_section_started_not_finished`) are emitted by the tick
-itself - there's no DB trigger that fires when a date crosses
-the threshold. Wiring those tick-time emitters is a follow-up
-work item (the registry entries exist; the tick body to compute
-them does not yet).
+itself - there's no DB trigger that fires when a date crosses the
+threshold. Each emitter lives under
+`lib/automations/time-emitters/<trigger>.ts` and registers in the
+shared `runTimeEmitters()` pass that the cron route runs before the
+dispatcher. The framework is in place; per-trigger wiring proceeds
+one at a time per `.claude/docs/automations-wiring.md`.
+
+**Wired today:**
+
+- `quote_due` (A1) — fires for `quotes` with `status = 'sent'` whose
+  `expires_at` lands `config.days` from today. Emits one event per
+  (quote, days-lead-time, calendar day); narrowing happens via
+  `payload.days_until_due === config.days` in the trigger's
+  `match()`.
+
+**Not yet wired:** every other time-based trigger in the list above.
+See `automations-wiring.md` for the running order.
 
 ### Categories (in picker order)
 
@@ -291,11 +304,13 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 
 ## Future work
 
-- Tick-time emitters for the time-based triggers (calendar,
-  inactivity, due/overdue). The `event_type` config on
-  `time_before_event` / `time_after_event` is already in the
-  registry; the tick body that joins `events` on `event_type` is
-  still TODO.
+- Tick-time emitters for the remaining time-based triggers
+  (`quote_overdue`, `invoice_due`, `invoice_overdue`, `task_overdue`,
+  `lead_inactive`, `portal_section_started_not_finished`,
+  `time_before_event`, `time_after_event`, `anniversary_of_event`,
+  `specific_date_reached`). The framework
+  (`lib/automations/time-emitters/`) and the first wiring
+  (`quote_due`) shipped together; see `automations-wiring.md`.
 - `contacts.tags` column for true custom-tag recipient matching.
 - Drag-to-reorder actions in the builder (replace position math with
   dnd-kit, mirroring the branding block renderer).
