@@ -20,15 +20,28 @@ interface CoupleOverviewProps {
   ) => void;
 }
 
+type EditField =
+  | "primary_name"
+  | "primary_email"
+  | "primary_phone"
+  | "secondary_name"
+  | "secondary_email"
+  | "secondary_phone"
+  | "leadSource"
+  | "notes"
+  | null;
+
 export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
-  const [editingField, setEditingField] = useState<
-    "phone" | "email" | "leadSource" | "notes" | null
-  >(null);
+  const [editingField, setEditingField] = useState<EditField>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
   const isLoading = eventsLoading;
   const handleEventsLoading = useCallback((v: boolean) => setEventsLoading(v), []);
-  const [phone, setPhone] = useState(couple.phone);
-  const [email, setEmail] = useState(couple.email);
+  const [primaryName, setPrimaryName] = useState(couple.primary_name ?? "");
+  const [primaryEmail, setPrimaryEmail] = useState(couple.primary_email ?? "");
+  const [primaryPhone, setPrimaryPhone] = useState(couple.primary_phone ?? "");
+  const [secondaryName, setSecondaryName] = useState(couple.secondary_name ?? "");
+  const [secondaryEmail, setSecondaryEmail] = useState(couple.secondary_email ?? "");
+  const [secondaryPhone, setSecondaryPhone] = useState(couple.secondary_phone ?? "");
   const [leadSource, setLeadSource] = useState(couple.lead_source || "");
   const [notes, setNotes] = useState(couple.notes ?? "");
   const [leadSourceOpen, setLeadSourceOpen] = useState(false);
@@ -39,11 +52,26 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
 
   const handleSaveField = (field: string, value: string | null) => {
     setEditingField(null);
+    const empty = (v: string) => (v.trim() === "" ? null : v.trim());
     onSave({
       id: couple.id,
       name: couple.name,
-      email: field === "email" ? (value ?? "") : email,
-      phone: field === "phone" ? (value ?? "") : phone,
+      // Legacy couple-level email/phone are no longer surfaced here -
+      // they remain in the DB row untouched.
+      email: couple.email,
+      phone: couple.phone,
+      primary_name:
+        field === "primary_name" ? (value && value.trim() ? value.trim() : null) : empty(primaryName),
+      primary_email:
+        field === "primary_email" ? (value && value.trim() ? value.trim() : null) : empty(primaryEmail),
+      primary_phone:
+        field === "primary_phone" ? (value && value.trim() ? value.trim() : null) : empty(primaryPhone),
+      secondary_name:
+        field === "secondary_name" ? (value && value.trim() ? value.trim() : null) : empty(secondaryName),
+      secondary_email:
+        field === "secondary_email" ? (value && value.trim() ? value.trim() : null) : empty(secondaryEmail),
+      secondary_phone:
+        field === "secondary_phone" ? (value && value.trim() ? value.trim() : null) : empty(secondaryPhone),
       status: couple.status,
       lead_source: field === "leadSource" ? value : leadSource || null,
       kanban_position: couple.kanban_position,
@@ -81,47 +109,44 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       <div className="flex flex-col">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">General</h3>
 
-        {/* Phone */}
-        <div className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2">
-          <span className="text-sm text-gray-700 w-28 shrink-0">Phone</span>
-          <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              onFocus={() => setEditingField("phone")}
-              onBlur={() => handleSaveField("phone", phone)}
-              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-              placeholder="+61 400 000 000"
-              className="flex-1 text-right bg-transparent outline-none border-none text-sm text-gray-500 placeholder:text-gray-300 cursor-pointer focus:cursor-text"
-            />
-            <Pencil
-              size={11}
-              className={`shrink-0 text-gray-400 transition ${editingField === "phone" ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
-            />
-          </div>
-        </div>
-
-        {/* Email */}
-        <div className="group flex items-center justify-between py-3 rounded-xl -mx-2 px-2">
-          <span className="text-sm text-gray-700 w-28 shrink-0">Email</span>
-          <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onFocus={() => setEditingField("email")}
-              onBlur={() => handleSaveField("email", email)}
-              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-              placeholder="email@example.com"
-              className="flex-1 text-right bg-transparent outline-none border-none text-sm text-gray-500 placeholder:text-gray-300 cursor-pointer focus:cursor-text"
-            />
-            <Pencil
-              size={11}
-              className={`shrink-0 text-gray-400 transition ${editingField === "email" ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
-            />
-          </div>
-        </div>
+        {/* Primary + Secondary partner contacts. Six inline-editable
+            rows in total, grouped under quiet section subheaders so
+            scanning the column still feels coherent. Each row keeps
+            the hover-pencil affordance used elsewhere. */}
+        <PartnerBlock
+          label="Primary contact"
+          name={primaryName}
+          email={primaryEmail}
+          phone={primaryPhone}
+          setName={setPrimaryName}
+          setEmail={setPrimaryEmail}
+          setPhone={setPrimaryPhone}
+          editingField={editingField}
+          startEdit={(f) => setEditingField(f)}
+          save={(field, value) => handleSaveField(field, value)}
+          fieldNames={{
+            name: "primary_name",
+            email: "primary_email",
+            phone: "primary_phone",
+          }}
+        />
+        <PartnerBlock
+          label="Secondary contact"
+          name={secondaryName}
+          email={secondaryEmail}
+          phone={secondaryPhone}
+          setName={setSecondaryName}
+          setEmail={setSecondaryEmail}
+          setPhone={setSecondaryPhone}
+          editingField={editingField}
+          startEdit={(f) => setEditingField(f)}
+          save={(field, value) => handleSaveField(field, value)}
+          fieldNames={{
+            name: "secondary_name",
+            email: "secondary_email",
+            phone: "secondary_phone",
+          }}
+        />
 
         {/* Lead Source */}
         <div
@@ -241,5 +266,123 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       </div>
     </div>
   </>
+  );
+}
+
+interface PartnerBlockProps {
+  label: string;
+  name: string;
+  email: string;
+  phone: string;
+  setName: (v: string) => void;
+  setEmail: (v: string) => void;
+  setPhone: (v: string) => void;
+  editingField: EditField;
+  startEdit: (field: EditField) => void;
+  save: (field: string, value: string | null) => void;
+  fieldNames: { name: string; email: string; phone: string };
+}
+
+function PartnerBlock({
+  label,
+  name,
+  email,
+  phone,
+  setName,
+  setEmail,
+  setPhone,
+  editingField,
+  startEdit,
+  save,
+  fieldNames,
+}: PartnerBlockProps) {
+  return (
+    <div className="mt-2 first:mt-0">
+      <h4 className="text-xs uppercase tracking-wider text-gray-400 mt-3 mb-1">
+        {label}
+      </h4>
+      <EditableRow
+        label="Name"
+        type="text"
+        value={name}
+        setValue={setName}
+        placeholder="Full name"
+        fieldName={fieldNames.name as EditField}
+        editingField={editingField}
+        startEdit={startEdit}
+        save={save}
+      />
+      <EditableRow
+        label="Email"
+        type="email"
+        value={email}
+        setValue={setEmail}
+        placeholder="email@example.com"
+        fieldName={fieldNames.email as EditField}
+        editingField={editingField}
+        startEdit={startEdit}
+        save={save}
+      />
+      <EditableRow
+        label="Phone"
+        type="tel"
+        value={phone}
+        setValue={setPhone}
+        placeholder="+61 400 000 000"
+        fieldName={fieldNames.phone as EditField}
+        editingField={editingField}
+        startEdit={startEdit}
+        save={save}
+      />
+    </div>
+  );
+}
+
+interface EditableRowProps {
+  label: string;
+  type: "text" | "email" | "tel";
+  value: string;
+  setValue: (v: string) => void;
+  placeholder: string;
+  fieldName: EditField;
+  editingField: EditField;
+  startEdit: (field: EditField) => void;
+  save: (field: string, value: string | null) => void;
+}
+
+function EditableRow({
+  label,
+  type,
+  value,
+  setValue,
+  placeholder,
+  fieldName,
+  editingField,
+  startEdit,
+  save,
+}: EditableRowProps) {
+  const isEditing = editingField === fieldName;
+  return (
+    <div className="group flex items-center justify-between py-2 rounded-xl -mx-2 px-2">
+      <span className="text-sm text-gray-500 w-20 shrink-0">{label}</span>
+      <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onFocus={() => startEdit(fieldName)}
+          onBlur={() => save(fieldName ?? "", value || null)}
+          onKeyDown={(e) =>
+            e.key === "Enter" && (e.target as HTMLInputElement).blur()
+          }
+          placeholder={placeholder}
+          className="flex-1 text-right bg-transparent outline-none border-none text-sm text-gray-700 placeholder:text-gray-300 cursor-pointer focus:cursor-text"
+        />
+        <Pencil
+          size={11}
+          className={`shrink-0 text-gray-400 transition ${isEditing ? "opacity-0" : "opacity-0 group-hover:opacity-60"}`}
+        />
+      </div>
+    </div>
   );
 }

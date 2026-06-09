@@ -22,6 +22,16 @@ interface DatePickerProps {
    *  is set (e.g. 'Expires' → "Expires 31 May 2026"). Used by the
    *  builder modals to make the date's purpose obvious at a glance. */
   displayPrefix?: string
+  /** Trigger visual style. `outlined` is the default boxed input
+   *  (rounded border, used by builder modals). `underline` is the
+   *  flat single-rule style used in form modals that follow the
+   *  couple-modal vocabulary (transparent, bottom border, no ring). */
+  variant?: 'outlined' | 'underline'
+  /** Month/year to open the calendar to when no value is set.
+   *  YYYY-MM-DD. Falls back to today. Used by the event modal to
+   *  scroll to the couple's existing event date when adding a second
+   *  event on the same day. */
+  defaultViewDate?: string
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -86,11 +96,11 @@ function buildCalendarGrid(year: number, month: number): Date[][] {
 
 const DROPDOWN_HEIGHT = 330
 
-export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right', displayPrefix }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right', displayPrefix, variant = 'outlined', defaultViewDate }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null)
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
   const [mounted, setMounted] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -104,7 +114,8 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
   useEffect(() => {
     if (open) {
       const d = value ? parseYMD(value) : null
-      const ref = d ?? new Date()
+      const fallback = defaultViewDate ? parseYMD(defaultViewDate) : null
+      const ref = d ?? fallback ?? new Date()
       setViewYear(ref.getFullYear())
       setViewMonth(ref.getMonth())
 
@@ -115,13 +126,16 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
           ? rect.top - DROPDOWN_HEIGHT - 4
           : rect.bottom + 4
 
-        // Right-align if calendar would overflow viewport right edge
-        const calWidth = 288 // w-72
-        const left = rect.left + calWidth > window.innerWidth - 8
-          ? Math.max(8, rect.right - calWidth)
+        // Match the trigger width so the calendar lines up with the
+        // input it belongs to. Floor at 260px so narrow triggers
+        // (e.g. half-row meta controls) still leave room for 7 day
+        // columns to render comfortably.
+        const width = Math.max(260, rect.width)
+        const left = rect.left + width > window.innerWidth - 8
+          ? Math.max(8, rect.right - width)
           : rect.left
 
-        setDropdownPos({ top, left })
+        setDropdownPos({ top, left, width })
       }
     }
   }, [open, value, inline])
@@ -151,11 +165,11 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
         const top = spaceBelow < DROPDOWN_HEIGHT
           ? rect.top - DROPDOWN_HEIGHT - 4
           : rect.bottom + 4
-        const calWidth = 288
-        const left = rect.left + calWidth > window.innerWidth - 8
-          ? Math.max(8, rect.right - calWidth)
+        const width = Math.max(260, rect.width)
+        const left = rect.left + width > window.innerWidth - 8
+          ? Math.max(8, rect.right - width)
           : rect.left
-        setDropdownPos({ top, left })
+        setDropdownPos({ top, left, width })
       }
     }
 
@@ -207,13 +221,27 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
 
   const triggerLayout =
     iconPosition === 'left' ? 'justify-start gap-2' : 'justify-between'
-  const triggerClass = `flex items-center ${triggerLayout} w-full border rounded-xl px-3 py-2 text-sm focus:outline-none transition cursor-pointer ${
-    disabled
-      ? 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
-      : open && inline
-      ? 'border-green-300 ring-2 ring-green-100 bg-white hover:bg-white'
-      : 'border-gray-200 hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
-  } ${className ?? ''}`
+  const isUnderline = variant === 'underline'
+  // Two visual treatments - boxed/outlined for builder modals (Quote,
+  // Invoice, Contract) and flat-underline for the form modals that
+  // share the couple-modal vocabulary (Couple, Event). Underline mode
+  // intentionally drops the green focus ring; the form's other inputs
+  // use the same calm `focus:border-gray-400` underline state.
+  const baseChrome = isUnderline
+    ? 'border-0 border-b rounded-none px-0 py-2 bg-transparent'
+    : 'border rounded-xl px-3 py-2'
+  const stateChrome = disabled
+    ? isUnderline
+      ? 'border-gray-100 text-gray-400 cursor-not-allowed'
+      : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+    : isUnderline
+    ? open
+      ? 'border-gray-400'
+      : 'border-gray-200 hover:border-gray-300 focus:border-gray-400'
+    : open && inline
+    ? 'border-green-300 ring-2 ring-green-100 bg-white hover:bg-white'
+    : 'border-gray-200 hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
+  const triggerClass = `flex items-center ${triggerLayout} w-full text-sm focus:outline-none transition cursor-pointer ${baseChrome} ${stateChrome} ${className ?? ''}`
 
   const calendarIcon = (
     <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
@@ -288,7 +316,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
           {triggerContent}
         </button>
         {open && (
-          <div className="absolute top-full right-0 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20">
+          <div className="absolute top-full left-0 right-0 mt-1 min-w-[260px] bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20">
             {calendarBody}
           </div>
         )}
@@ -300,8 +328,8 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
   const dropdown = mounted && open && dropdownPos ? createPortal(
     <div
       ref={dropdownRef}
-      style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 200 }}
-      className="w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3"
+      style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 200 }}
+      className="bg-white border border-gray-200 rounded-xl shadow-lg p-3"
     >
       {calendarBody}
     </div>,

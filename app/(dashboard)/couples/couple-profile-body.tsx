@@ -61,6 +61,7 @@ export function CoupleProfileBody({
 
       {activeSection === 'contacts' && (
         <McPortalContacts
+          couple={couple}
           people={portal.people}
           isPeopleLoading={portal.isPeopleLoading}
           coupleId={couple.id}

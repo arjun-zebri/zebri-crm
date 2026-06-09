@@ -2,7 +2,87 @@
 
 > Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ on staging. **Phase 12 (Settings)** ✅ on staging. **Phase 13 (Admin + Ops)** ✅ in flight on `phase-13-admin-ops`.
 
-### Admin / Shadow mode — audit log + Ops surface (Phase 13)
+### Admin / Shadow mode — single-pane founder dashboard (Phase 13)
+
+Phase 13 shipped in two passes: the first pass added safety
+(audit log, alerts, §7.4 sidebar fix), decomposed the
+UserDetailPanel, and added a tab-based "Ops" surface. After
+review, the user pointed out (a) the founder dashboard didn't
+actually answer the questions a founder asks every morning,
+(b) the trial UI was dead since Phase 1 had removed trials, and
+(c) the sidebar Admin link was unreachable on mobile. This
+revision (13.1) lands on the same PR.
+
+**Sidebar mobile scroll**
+
+- `app/components/sidebar.tsx:89` changed `overflow-hidden` →
+  `overflow-y-auto` on the inner wrapper. Short viewports
+  (iPhone SE with shadow banner active was the worst case) had
+  the Admin link clipped below the fold with no scroll
+  affordance. Now the nav + bottom-block stack scrolls.
+
+**Single-pane dashboard (replaces tabs)**
+
+`/admin` is now a single scrollable view modelled on the
+founder-`/dashboard`'s visual language — bordered cards
+(`bg-surface rounded-xl border-border`), uppercase tracked-wide
+labels, mint-green (`#A7F3D0`) area chart for signups.
+
+Layout:
+
+- **Row 1 — hero metrics (4 cards)**: MRR (total + Pro/Max
+  split), Active subscribers (paying count + comped /
+  past-due / free-Starter breakdown), Churn last 30d (% +
+  pending-cancellation count, flips to danger tone at ≥5%),
+  Engaged users (last 30d active + new-this-week + dormant
+  count).
+- **Row 2 — signups chart + plan breakdown**: 12-week area
+  chart of new signups per week; sibling card stacks the
+  Pro vs Max revenue contribution as two bars.
+- **Row 3 — operational lists**: Upcoming renewals (next 7
+  days, $30-day total in the header), Past-due
+  subscriptions, Connect-account issues.
+- **Row 4 — supporting lists**: Dormant accounts (signed up
+  > 30 days ago, zero couples ever), Recent signups.
+
+Every row item clicks through to the existing UserDetailPanel.
+The email/business-name search bar (from the first pass) still
+sits above the layout.
+
+**`lib/admin/admin-analytics.ts` rewrite**
+
+- `getAdminDashboard()` — one-pass aggregator that returns
+  every card / chart / list the page consumes. Underneath:
+  `computeMrr` (per-plan), `computeSubscriberCounts`,
+  `computeChurn` (rolling-30d ratio), `computeRenewals`
+  (`subscription_end` bucketed into next 7d / 30d),
+  `computeEngagement` + `loadEngagementSets` (distinct
+  user-ids that wrote couples/events/invoices/contracts/
+  quotes in the last 30d + the "ever engaged" set for
+  dormant detection), `computeSignupsChart` (12 weekly
+  buckets), `computeRecentSignups`, `computePastDue`,
+  `loadConnectIssues` (folded in from the deleted
+  ops-signals).
+- `GlobalStats`, `findTrialsEndingSoon`, `trialToPaidRate`
+  and the rest of the old shape — **deleted**. Trials were
+  removed from signup in Phase 1; surfacing trial metrics
+  was actively misleading.
+
+**Deletions**
+
+- `app/(dashboard)/admin/admin-tabs.tsx`
+- `app/(dashboard)/admin/tabs/users-tab.tsx`
+- `app/(dashboard)/admin/tabs/subscriptions-tab.tsx`
+- `app/(dashboard)/admin/tabs/stats-tab.tsx`
+- `app/(dashboard)/admin/tabs/ops-tab.tsx`
+- `lib/admin/ops-signals.ts` (rolled into admin-analytics)
+- `tests/unit/lib/admin/ops-signals.test.ts`
+
+The audit log table + recordAdminAction helper + 4 Slack
+alert types + decomposed UserDetailPanel components from the
+first pass remain unchanged.
+
+### Admin / Shadow mode — first-pass audit log + UX cleanup (Phase 13)
 
 Three deliverables in one PR — security, UX cleanup, and a new
 Ops surface that makes the admin page actually useful for

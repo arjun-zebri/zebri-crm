@@ -66,7 +66,7 @@ export function DashboardInvoices({ onCoupleClick }: DashboardInvoicesProps) {
               }`}
             >
               <div className="flex-1 min-w-0">
-                <span className={`truncate block transition ${clickable ? 'text-gray-900 group-hover:text-black group-hover:underline underline-offset-2 decoration-gray-300' : 'text-gray-900'}`}>
+                <span className="truncate block text-gray-900 transition-opacity group-hover:opacity-80">
                   {invoice.couple?.name ?? invoice.title}
                 </span>
                 <span className="text-xs text-gray-400">{invoice.invoice_number}</span>

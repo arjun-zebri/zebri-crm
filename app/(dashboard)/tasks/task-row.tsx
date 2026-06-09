@@ -11,7 +11,7 @@ import {
   TaskTypeCell,
   TitleCell,
 } from './task-cells'
-import { TaskPriority } from '@/types/task'
+import { TaskOption, TaskOptionColor, TaskPriority } from '@/types/task'
 import { formatRelativeDate } from '@/lib/utils'
 
 export interface TaskRowTask {
@@ -29,20 +29,48 @@ export interface TaskRowTask {
 
 export interface TaskRowProps {
   task: TaskRowTask
-  knownTypes: string[]
   selected?: boolean
   selectionActive?: boolean
   draggable?: boolean
   showCouple?: boolean
   /** Skeleton/muted state for tasks still being persisted to the server */
   pending?: boolean
+  /**
+   * Drop the 28px leading gutter (drag handle + selection checkbox).
+   * Use in contexts without drag-to-reorder and without bulk selection
+   * (e.g. the per-couple / per-event Tasks tabs inside modals) so the
+   * row aligns with the "+ New task" affordance below.
+   */
+  hideGutter?: boolean
   /** Visible columns to render. Defaults to all. */
   columns?: ColumnKey[]
-  knownStatuses?: string[]
-  knownPriorities?: string[]
-  onDeleteType?: (type: string) => void
-  onDeleteStatus?: (status: string) => void
-  onDeletePriority?: (priority: string) => void
+  /** User-defined status options (`task_statuses` rows). */
+  statusOptions?: TaskOption[]
+  /** User-defined priority options (`task_priorities` rows). */
+  priorityOptions?: TaskOption[]
+  /** User-defined task type options (`task_types` rows). */
+  typeOptions?: TaskOption[]
+  /** Persist a new status option to the DB. */
+  onCreateStatusOption?: (input: {
+    name: string
+    color: TaskOptionColor
+  }) => void
+  onRecolorStatusOption?: (id: string, color: TaskOptionColor) => void
+  onDeleteStatusOption?: (id: string) => void
+  /** Persist a new priority option to the DB. */
+  onCreatePriorityOption?: (input: {
+    name: string
+    color: TaskOptionColor
+  }) => void
+  onRecolorPriorityOption?: (id: string, color: TaskOptionColor) => void
+  onDeletePriorityOption?: (id: string) => void
+  /** Persist a new task_type option to the DB. */
+  onCreateTypeOption?: (input: {
+    name: string
+    color: TaskOptionColor
+  }) => void
+  onRecolorTypeOption?: (id: string, color: TaskOptionColor) => void
+  onDeleteTypeOption?: (id: string) => void
   onCommitTitle: (title: string) => void
   onChangeStatus: (status: string) => void
   onChangeDueDate: (date: string | null) => void
@@ -93,18 +121,25 @@ interface TaskRowContentProps extends TaskRowProps {
 
 const TaskRowContent = memo(function TaskRowContent({
   task,
-  knownTypes,
   selected,
   selectionActive,
   draggable = false,
   showCouple = true,
   pending = false,
+  hideGutter = false,
   columns = DEFAULT_COLUMNS,
-  knownStatuses,
-  knownPriorities,
-  onDeleteType,
-  onDeleteStatus,
-  onDeletePriority,
+  statusOptions,
+  priorityOptions,
+  typeOptions,
+  onCreateStatusOption,
+  onRecolorStatusOption,
+  onDeleteStatusOption,
+  onCreatePriorityOption,
+  onRecolorPriorityOption,
+  onDeletePriorityOption,
+  onCreateTypeOption,
+  onRecolorTypeOption,
+  onDeleteTypeOption,
   onCommitTitle,
   onChangeStatus,
   onChangeDueDate,
@@ -140,6 +175,7 @@ const TaskRowContent = memo(function TaskRowContent({
     >
       <RowGrid
         columns={columns}
+        hideGutter={hideGutter}
         mobileSub={
           task.due_date ? (
             <span className={`block text-xs mt-0.5 px-1.5 ${overdue ? 'text-red-400' : 'text-gray-400'}`}>
@@ -221,8 +257,10 @@ const TaskRowContent = memo(function TaskRowContent({
             <StatusCell
               value={task.status}
               onChange={onChangeStatus}
-              knownStatuses={knownStatuses}
-              onDeleteStatus={onDeleteStatus}
+              statusOptions={statusOptions}
+              onCreateStatus={onCreateStatusOption}
+              onRecolorStatus={onRecolorStatusOption}
+              onDeleteStatusOption={onDeleteStatusOption}
             />
           ),
           due_date: (
@@ -232,16 +270,20 @@ const TaskRowContent = memo(function TaskRowContent({
             <PriorityCell
               value={task.priority ?? null}
               onChange={onChangePriority}
-              knownPriorities={knownPriorities}
-              onDeletePriority={onDeletePriority}
+              priorityOptions={priorityOptions}
+              onCreatePriority={onCreatePriorityOption}
+              onRecolorPriority={onRecolorPriorityOption}
+              onDeletePriorityOption={onDeletePriorityOption}
             />
           ),
           task_type: (
             <TaskTypeCell
               value={task.task_type ?? null}
               onChange={onChangeTaskType}
-              knownTypes={knownTypes}
-              onDeleteType={onDeleteType}
+              typeOptions={typeOptions}
+              onCreateType={onCreateTypeOption}
+              onRecolorType={onRecolorTypeOption}
+              onDeleteTypeOption={onDeleteTypeOption}
             />
           ),
         }}
@@ -267,14 +309,20 @@ function RowGrid({
   cells,
   columns,
   mobileSub,
+  hideGutter = false,
 }: {
   gutter: React.ReactNode
   title: React.ReactNode
   cells: Record<ColumnKey, React.ReactNode>
   columns: ColumnKey[]
   mobileSub?: React.ReactNode
+  hideGutter?: boolean
 }) {
-  const template = ['28px', 'minmax(200px, 1fr)', ...columns.map((c) => COLUMN_WIDTHS[c])].join(' ')
+  const template = [
+    ...(hideGutter ? [] : ['28px']),
+    'minmax(200px, 1fr)',
+    ...columns.map((c) => COLUMN_WIDTHS[c]),
+  ].join(' ')
   return (
     <div className="contents">
       {/* Mobile: title full-width + due date, no checkbox */}
@@ -287,7 +335,7 @@ function RowGrid({
         className="hidden sm:grid items-center gap-2"
         style={{ gridTemplateColumns: template }}
       >
-        {gutter}
+        {!hideGutter && gutter}
         {title}
         {columns.map((c) => (
           <div key={c} className="min-w-0 truncate">

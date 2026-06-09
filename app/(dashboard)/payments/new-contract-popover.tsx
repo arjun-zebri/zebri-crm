@@ -16,12 +16,17 @@
 'use client';
 
 import * as Popover from '@radix-ui/react-popover';
-import { useQuery } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Lock, Plus } from 'lucide-react';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
 import { useToast } from '@/components/ui/toast';
+import {
+  contractCoupleLimit,
+  STARTER_CONTRACT_COUPLE_LIMIT,
+} from '@/lib/payments/subscription';
 import { createClient } from '@/lib/supabase/client';
 
 export interface NewContractPopoverProps {
@@ -38,6 +43,7 @@ export function NewContractPopover({
   onCreated,
 }: NewContractPopoverProps) {
   const supabase = createClient();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [filter, setFilter] = useState('');
 
@@ -57,7 +63,47 @@ export function NewContractPopover({
     },
   });
 
+  // Starter-plan cap: contracts for max 5 distinct couples. Pro/Max
+  // are uncapped. We fetch every contract.couple_id for the user
+  // (cheap — even prolific MCs have at most a few hundred) so we can
+  // tell which couples in the picker would consume a new "slot" vs.
+  // already use one.
+  const { data: limitInfo } = useQuery({
+    queryKey: ['contracts-couple-limit', 'popover'],
+    enabled: open,
+    queryFn: async () => {
+      const { data: userRes } = await supabase.auth.getUser();
+      const user = userRes.user;
+      if (!user) throw new Error('Not authenticated');
+      const limit = contractCoupleLimit(user);
+      if (limit === null) {
+        return { limit: null, idsWithContracts: new Set<string>() };
+      }
+      const { data, error } = await supabase
+        .from('contracts')
+        .select('couple_id')
+        .eq('user_id', user.id);
+      if (error) throw error;
+      const idsWithContracts = new Set<string>();
+      for (const row of data ?? []) idsWithContracts.add(row.couple_id as string);
+      return { limit, idsWithContracts };
+    },
+  });
+
+  const distinctCount = limitInfo?.idsWithContracts.size ?? 0;
+  const limit = limitInfo?.limit ?? null;
+  const atLimit = limit !== null && distinctCount >= limit;
+
+  function isLockedForCouple(coupleId: string): boolean {
+    if (!atLimit) return false;
+    return !limitInfo!.idsWithContracts.has(coupleId);
+  }
+
   async function createForCouple(coupleId: string, coupleName: string) {
+    if (isLockedForCouple(coupleId)) {
+      toast(`Free plan limit: contracts for ${STARTER_CONTRACT_COUPLE_LIMIT} couples`, 'error');
+      return;
+    }
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) return;
     const { data: num, error: numErr } = await supabase.rpc('generate_contract_number', {
@@ -83,6 +129,7 @@ export function NewContractPopover({
       toast('Failed to create contract', 'error');
       return;
     }
+    queryClient.invalidateQueries({ queryKey: ['contracts-couple-limit'] });
     onOpenChange(false);
     setFilter('');
     onCreated({ id: data.id, coupleId, coupleName });
@@ -100,6 +147,18 @@ export function NewContractPopover({
           <p className="text-xs font-medium text-gray-500 px-2 py-1">
             Pick a couple for this contract
           </p>
+          {atLimit && (
+            <div className="mx-1 mb-1 px-2 py-1.5 rounded-md bg-gray-50 border border-gray-200 text-[11px] text-gray-600 leading-snug">
+              Free plan: {distinctCount}/{limit} couples with contracts.{' '}
+              <Link
+                href="/settings/billing"
+                className="text-gray-900 underline cursor-pointer"
+              >
+                Upgrade to Pro
+              </Link>{' '}
+              to add more.
+            </div>
+          )}
           <input
             type="text"
             autoFocus
@@ -111,19 +170,32 @@ export function NewContractPopover({
           <div className="max-h-64 overflow-y-auto">
             {(couples || [])
               .filter((c) => !filter || c.name.toLowerCase().includes(filter.toLowerCase()))
-              .map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => createForCouple(c.id, c.name)}
-                  className="w-full text-left px-2 py-1.5 text-sm text-gray-900 hover:bg-gray-50 rounded-md cursor-pointer"
-                >
-                  <span className="inline-flex items-center gap-1">
-                    <Plus size={12} strokeWidth={1.5} className="text-gray-400" />
-                    {c.name}
-                  </span>
-                </button>
-              ))}
+              .map((c) => {
+                const locked = isLockedForCouple(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => createForCouple(c.id, c.name)}
+                    disabled={locked}
+                    title={locked ? 'Free plan limit reached' : undefined}
+                    className={`w-full text-left px-2 py-1.5 text-sm rounded-md flex items-center justify-between gap-2 ${
+                      locked
+                        ? 'text-gray-400 cursor-not-allowed'
+                        : 'text-gray-900 hover:bg-gray-50 cursor-pointer'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1 min-w-0">
+                      {locked ? (
+                        <Lock size={12} strokeWidth={1.5} className="text-gray-300 shrink-0" />
+                      ) : (
+                        <Plus size={12} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                      )}
+                      <span className="truncate">{c.name}</span>
+                    </span>
+                  </button>
+                );
+              })}
             {couples && couples.length === 0 && (
               <p className="text-sm text-gray-400 px-2 py-3 text-center">
                 Create a couple first.

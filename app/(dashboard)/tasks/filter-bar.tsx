@@ -10,6 +10,7 @@ import {
 } from './task-cells'
 import {
   STATUS_ORDER,
+  TaskOption,
   getPriorityLabel,
   getStatusLabel,
 } from '@/types/task'
@@ -37,6 +38,11 @@ interface FilterBarProps {
   knownTypes: string[]
   knownStatuses?: string[]
   knownPriorities?: string[]
+  /** Colour-carrying option lists — passed through to the pills so
+   *  filter chips render with the same colours as the table cells. */
+  statusOptions?: TaskOption[]
+  priorityOptions?: TaskOption[]
+  typeOptions?: TaskOption[]
   couples: { id: string; name: string }[]
 }
 
@@ -62,6 +68,9 @@ export function FilterBar({
   knownTypes,
   knownStatuses,
   knownPriorities,
+  statusOptions,
+  priorityOptions,
+  typeOptions,
   couples,
 }: FilterBarProps) {
   const [addOpen, setAddOpen] = useState(false)
@@ -88,6 +97,9 @@ export function FilterBar({
           knownTypes={knownTypes}
           knownStatuses={knownStatuses}
           knownPriorities={knownPriorities}
+          statusOptions={statusOptions}
+          priorityOptions={priorityOptions}
+          typeOptions={typeOptions}
           couples={couples}
           onChange={(value) => updateFilter(i, value)}
           onRemove={() => removeFilter(i)}
@@ -194,6 +206,9 @@ function FilterChip({
   knownTypes,
   knownStatuses,
   knownPriorities,
+  statusOptions,
+  priorityOptions,
+  typeOptions,
   couples,
   onChange,
   onRemove,
@@ -202,6 +217,9 @@ function FilterChip({
   knownTypes: string[]
   knownStatuses?: string[]
   knownPriorities?: string[]
+  statusOptions?: TaskOption[]
+  priorityOptions?: TaskOption[]
+  typeOptions?: TaskOption[]
   couples: { id: string; name: string }[]
   onChange: (value: string) => void
   onRemove: () => void
@@ -260,7 +278,7 @@ function FilterChip({
                 }}
                 className="w-full text-left px-2 py-1 hover:bg-gray-50 transition flex items-center"
               >
-                <StatusPill value={s} />
+                <StatusPill value={s} options={statusOptions} />
               </button>
             ))}
           {filter.property === 'priority' &&
@@ -274,7 +292,7 @@ function FilterChip({
                 }}
                 className="w-full text-left px-2 py-1 hover:bg-gray-50 transition flex items-center"
               >
-                <PriorityPill value={p} />
+                <PriorityPill value={p} options={priorityOptions} />
               </button>
             ))}
           {filter.property === 'task_type' && (
@@ -292,7 +310,7 @@ function FilterChip({
                   }}
                   className="w-full text-left px-2 py-1 hover:bg-gray-50 transition flex items-center"
                 >
-                  <TaskTypePill value={t} />
+                  <TaskTypePill value={t} options={typeOptions} />
                 </button>
               ))}
             </>

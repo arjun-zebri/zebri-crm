@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { UserCog } from 'lucide-react';
+import { Trash2, UserCog } from 'lucide-react';
 
 import { deleteUser, enterShadow, sendPasswordReset } from '@/app/admin/actions';
 import { Button } from '@/components/ui/button';
@@ -10,14 +10,12 @@ import { useToast } from '@/components/ui/toast';
 import type { AdminUser } from '@/lib/admin/admin-analytics';
 
 /**
- * Account-level admin levers — send password reset (recovery link
- * copied to clipboard), enter shadow mode as the target user, and
- * delete the account.
+ * Account levers. Safe actions (password reset + shadow mode) live
+ * inline; the destructive Delete button is visually separated as a
+ * "Danger zone" so it can't be mis-clicked.
  *
- * Delete is destructive: it cancels the Stripe subscription, removes
- * the Stripe customer, and then deletes the auth.users row (cascade
- * removes couples / events / etc). Confirmed via dialog; logged in
- * admin_audit_log + fires a `admin_user_deleted` Slack alert.
+ * All three actions audit-log and (for shadow + delete) Slack-alert
+ * via the wrappers added in Phase 13.
  */
 export function AccountActionsSection({
   user,
@@ -69,22 +67,31 @@ export function AccountActionsSection({
   };
 
   return (
-    <section>
-      <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted mb-2">
-        Account actions
-      </h3>
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={handleEnterShadow} variant="secondary" size="sm">
-          <UserCog size={14} strokeWidth={1.5} />
-          Enter shadow mode
-        </Button>
-        <Button onClick={handlePasswordReset} variant="secondary" size="sm">
-          Send password reset
-        </Button>
+    <>
+      <section>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted mb-3">
+          Account
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={handleEnterShadow} variant="secondary" size="sm">
+            <UserCog size={14} strokeWidth={1.5} />
+            Enter shadow mode
+          </Button>
+          <Button onClick={handlePasswordReset} variant="secondary" size="sm">
+            Send password reset
+          </Button>
+        </div>
+      </section>
+
+      <section className="pt-4 border-t border-border">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-danger mb-3">
+          Danger zone
+        </h3>
         <Button onClick={() => setConfirmDelete(true)} variant="danger" size="sm">
+          <Trash2 size={14} strokeWidth={1.5} />
           Delete user
         </Button>
-      </div>
+      </section>
 
       <ConfirmDialog
         open={confirmDelete}
@@ -95,6 +102,6 @@ export function AccountActionsSection({
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
       />
-    </section>
+    </>
   );
 }

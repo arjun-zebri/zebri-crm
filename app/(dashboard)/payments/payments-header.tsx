@@ -30,7 +30,6 @@ export interface PaymentsHeaderProps {
    *  here so the popover anchors correctly. The header still renders
    *  the standard button if undefined. */
   newButtonOverride?: ReactNode;
-  contractsEnabled: boolean;
 }
 
 export function PaymentsHeader({
@@ -42,7 +41,6 @@ export function PaymentsHeader({
   searchInputRef,
   onNew,
   newButtonOverride,
-  contractsEnabled,
 }: PaymentsHeaderProps) {
   const newLabel =
     activeTab === 'quotes' ? 'quote' : activeTab === 'invoices' ? 'invoice' : 'contract';
@@ -124,14 +122,12 @@ export function PaymentsHeader({
           icon={<Receipt size={15} strokeWidth={1.5} />}
           label="Invoices"
         />
-        {contractsEnabled && (
-          <TabButton
-            active={activeTab === 'contracts'}
-            onClick={() => onTabChange('contracts')}
-            icon={<FileSignature size={15} strokeWidth={1.5} />}
-            label="Contracts"
-          />
-        )}
+        <TabButton
+          active={activeTab === 'contracts'}
+          onClick={() => onTabChange('contracts')}
+          icon={<FileSignature size={15} strokeWidth={1.5} />}
+          label="Contracts"
+        />
       </div>
     </div>
   );
