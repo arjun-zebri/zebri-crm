@@ -17,6 +17,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
+import { dispatchPendingEvents } from '@/lib/automations/dispatcher'
 import { runTimeEmitters } from '@/lib/automations/time-emitters'
 
 import {
@@ -248,6 +249,49 @@ describe('quote_due time-emitter', () => {
     const result = await runTimeEmitters(serviceClient())
     expect(result.emitted.quote_due).toBe(1)
     expect(await quoteDueEventsFor(quoteId)).toHaveLength(1)
+  })
+
+  it('dispatcher matches and opens a run for an empty-config automation', async () => {
+    // End-to-end regression for the full emitter → dispatcher chain.
+    // Bug 6 (the inverse of the empty-config emitter fix): the
+    // dispatcher passed `automation.trigger_config` raw to match(),
+    // so an empty jsonb produced `config.days === undefined`. The
+    // payload's `days_until_due: 0` then failed the `===` narrowing,
+    // 0 runs opened, the action never ran. Asserts the dispatcher
+    // applies Zod defaults the same way the picker and emitter do.
+    const admin = serviceClient()
+    const coupleId = await seedCouple(user)
+    const { data: a, error: aerr } = await admin
+      .from('automations' as never)
+      .insert({
+        user_id: user.id,
+        name: 'empty config quote_due — dispatch',
+        trigger_type: 'quote_due',
+        trigger_config: {},
+        status: 'active',
+      } as never)
+      .select('id')
+      .single()
+    if (aerr || !a) throw new Error(`seed automation: ${aerr?.message}`)
+    const automationId = (a as { id: string }).id
+
+    await seedQuote(user, coupleId, isoDateOffset(0))
+
+    // 1. Emit
+    const emit = await runTimeEmitters(serviceClient())
+    expect(emit.emitted.quote_due).toBe(1)
+
+    // 2. Dispatch (processes the whole bus — totals reflect any
+    // residual events from sibling tests, so we don't assert on the
+    // return shape; we assert on this automation's runs)
+    await dispatchPendingEvents(serviceClient())
+
+    // 3. The run row exists and points at this automation
+    const { data: runs } = await serviceClient()
+      .from('automation_runs' as never)
+      .select('id, automation_id, status')
+      .eq('automation_id', automationId)
+    expect(runs ?? []).toHaveLength(1)
   })
 
   it('respects tenant isolation — events are RLS-scoped to their owner', async () => {

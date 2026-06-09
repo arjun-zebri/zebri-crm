@@ -59,7 +59,15 @@ export async function dispatchPendingEvents(
       for (const automation of automations) {
         const spec = getTriggerSpec(automation.trigger_type)
         if (!spec) continue
-        if (!spec.match(event, automation.trigger_config ?? {})) continue
+        // Apply the trigger spec's Zod schema before calling match()
+        // so optional fields with `.default(0)` etc. resolve to their
+        // declared defaults. Without this, an automation saved before
+        // the picker started seeding defaults (or one with a missing
+        // optional field) would silently fail `match()` for any
+        // narrowing predicate that compares against config values.
+        const parsed = spec.configSchema.safeParse(automation.trigger_config ?? {})
+        if (!parsed.success) continue
+        if (!spec.match(event, parsed.data)) continue
         matchedAutomations += 1
         const opened = await openRun(supabase, automation, event)
         if (opened) openedRuns += 1
