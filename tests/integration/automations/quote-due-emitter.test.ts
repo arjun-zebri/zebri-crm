@@ -221,6 +221,35 @@ describe('quote_due time-emitter', () => {
     expect(await quoteDueEventsFor(quoteId)).toHaveLength(1)
   })
 
+  it('fires when an active automation has an empty trigger_config (defaults applied)', async () => {
+    // Regression: the trigger picker used to write `triggerConfig: {}`
+    // when a user picked a trigger without touching the inspector.
+    // That left `days` unset in the jsonb, which the emitter then
+    // read as null and skipped the automation. The Zod schema has
+    // `days.default(0)`, so an empty config must behave like
+    // `{ days: 0 }`.
+    const admin = serviceClient()
+    const coupleId = await seedCouple(user)
+    const { data, error } = await admin
+      .from('automations' as never)
+      .insert({
+        user_id: user.id,
+        name: 'empty config quote_due',
+        trigger_type: 'quote_due',
+        trigger_config: {},
+        status: 'active',
+      } as never)
+      .select('id')
+      .single()
+    if (error || !data) throw new Error(`seed: ${error?.message}`)
+
+    const quoteId = await seedQuote(user, coupleId, isoDateOffset(0))
+
+    const result = await runTimeEmitters(serviceClient())
+    expect(result.emitted.quote_due).toBe(1)
+    expect(await quoteDueEventsFor(quoteId)).toHaveLength(1)
+  })
+
   it('respects tenant isolation — events are RLS-scoped to their owner', async () => {
     // Set up A's automation + quote, run the emitter, then prove
     // user B cannot SELECT A's emitted event under RLS.

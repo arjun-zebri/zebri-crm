@@ -42,14 +42,10 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { getTriggerSpec } from '@/lib/automations/triggers'
 import type { Database } from '@/types/database'
 
 import type { TimeEmitter } from './index'
-
-/** Trigger-config shape we read off active automations. */
-interface QuoteDueConfig {
-  days?: unknown
-}
 
 /** A quote row that could potentially fire. */
 interface CandidateQuote {
@@ -86,13 +82,29 @@ function expiryDateForLeadDays(days: number): string {
   return target.toISOString().slice(0, 10)
 }
 
-/** Coerce a Zod-passed config value to a non-negative integer days field. */
+/**
+ * Resolve the `days` lead-time from a raw trigger_config jsonb.
+ *
+ * Defers to the trigger spec's Zod schema so the `.default(0)` on
+ * the `days` field is applied uniformly. An automation that was
+ * saved before the inspector wrote its defaults will have an empty
+ * config jsonb — without this, `parseDays({})` would return null
+ * and skip the automation, even though the user picked the trigger
+ * and never overrode the default.
+ *
+ * Returns null only if the config is unrecoverably invalid (e.g.
+ * `days: -5` or `days: 'huh'`) — those automations are skipped
+ * rather than silently coerced.
+ */
 function parseDays(config: unknown): number | null {
-  if (typeof config !== 'object' || config === null) return null
-  const raw = (config as QuoteDueConfig).days
-  const n = typeof raw === 'number' ? raw : Number(raw)
-  if (!Number.isFinite(n) || n < 0 || n > 365) return null
-  return Math.floor(n)
+  const spec = getTriggerSpec('quote_due')
+  if (!spec) return null
+  const parsed = spec.configSchema.safeParse(config ?? {})
+  if (!parsed.success) return null
+  const days = (parsed.data as { days?: unknown }).days
+  if (typeof days !== 'number' || !Number.isFinite(days)) return null
+  if (days < 0 || days > 365) return null
+  return Math.floor(days)
 }
 
 /**

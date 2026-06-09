@@ -14,7 +14,7 @@
 
 import { Trash2 } from 'lucide-react'
 
-import { triggerRegistry } from '@/lib/automations/triggers'
+import { getTriggerSpec, triggerRegistry } from '@/lib/automations/triggers'
 import { TRIGGER_CATEGORIES, type TriggerType } from '@/types/automations'
 
 import { setAutomationTriggerAction } from '../actions'
@@ -44,10 +44,18 @@ export function TriggerPicker({ automationId, currentTrigger, anchor, onClose, o
     // action in the background. Matches the Notion / tasks pattern -
     // the network round-trip never blocks the picker → drawer flow.
     onPicked(id as TriggerType)
+    // Seed the config with the trigger's Zod-schema defaults so
+    // downstream consumers (the time-emitter, the dispatcher's
+    // match() narrowing) see the same values the inspector would
+    // render. Without this, picking "Quote due" with no further
+    // edits left config as `{}` — and the emitter then skipped the
+    // automation because `days` was missing rather than 0.
+    const spec = getTriggerSpec(id as TriggerType)
+    const defaults = spec ? (spec.configSchema.safeParse({}).data ?? {}) : {}
     void setAutomationTriggerAction({
       automationId,
       triggerType: id,
-      triggerConfig: {},
+      triggerConfig: defaults as Record<string, unknown>,
     })
   }
 
