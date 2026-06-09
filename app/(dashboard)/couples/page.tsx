@@ -178,7 +178,12 @@ function CouplesPageContent() {
     if (!existing) return;
     const updated = { ...existing, ...data } as Couple;
     await updateCouple.mutateAsync(updated);
-    setSelectedCouple(updated);
+    // Don't `setSelectedCouple(updated)` here - the cache-sync
+    // effect in useCoupleProfileSync rebinds the open profile to
+    // the fresh cache row. Setting it explicitly after the await
+    // races against a concurrent Close click: the user closes
+    // before the save resolves, then this line reopens the modal
+    // with the post-save data.
     toast('Couple updated');
   };
 

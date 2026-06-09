@@ -29,6 +29,20 @@ import {
   TaskGroupColor,
   TASK_GROUP_DOT_CLASS,
 } from "./use-task-groups";
+import {
+  useCreateTaskPriority,
+  useCreateTaskStatus,
+  useCreateTaskType,
+  useDeleteTaskPriority,
+  useDeleteTaskStatus,
+  useDeleteTaskType,
+  useTaskPriorities,
+  useTaskStatuses,
+  useTaskTypes,
+  useUpdateTaskPriority,
+  useUpdateTaskStatus,
+  useUpdateTaskType,
+} from "./use-task-options";
 import { TaskRow, TaskRowTask } from "./task-row";
 import { TaskSidePanel, TaskFieldUpdate } from "./task-side-panel";
 import { GroupByToggle, GroupByMode } from "./group-by-toggle";
@@ -101,7 +115,12 @@ export default function TasksPage() {
   const deleteCouple = useDeleteCouple();
   const { toast } = useToast();
 
-  const [groupBy, setGroupBy] = useState<GroupByMode>("status");
+  // Read the persisted group-by mode in the `useState` initializer so
+  // there's no mount-effect-then-setState cycle (which the React
+  // compiler flags as a cascading-render risk).
+  const [groupBy, setGroupBy] = useState<GroupByMode>(() =>
+    parseGroupByFromStorage(),
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<TaskFilter[]>([]);
   const [sorts, setSorts] = useState<TaskSort[]>([]);
@@ -117,11 +136,6 @@ export default function TasksPage() {
       window.localStorage.setItem(STORAGE_KEY, groupBy);
     }
   }, [groupBy]);
-
-  useEffect(() => {
-    const stored = parseGroupByFromStorage();
-    if (stored !== "status") setGroupBy(stored);
-  }, []);
 
   useEffect(() => {
     if (selectedIds.size === 0) return;
@@ -160,6 +174,21 @@ export default function TasksPage() {
   const updateGroup = useUpdateTaskGroup();
   const deleteGroup = useDeleteTaskGroup();
 
+  // Persisted status + priority + task_type option lists. These back
+  // the colour-aware Notion-style dropdowns on those cells.
+  const { data: statusOptions = [] } = useTaskStatuses();
+  const { data: priorityOptions = [] } = useTaskPriorities();
+  const { data: typeOptions = [] } = useTaskTypes();
+  const createStatusOption = useCreateTaskStatus();
+  const updateStatusOption = useUpdateTaskStatus();
+  const deleteStatusOption = useDeleteTaskStatus();
+  const createPriorityOption = useCreateTaskPriority();
+  const updatePriorityOption = useUpdateTaskPriority();
+  const deletePriorityOption = useDeleteTaskPriority();
+  const createTypeOption = useCreateTaskType();
+  const updateTypeOption = useUpdateTaskType();
+  const deleteTypeOption = useDeleteTaskType();
+
   // ─── Mutations ─────────────────────────────────────────────────────────────
   const patchTask = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: TaskFieldUpdate }) => {
@@ -174,9 +203,17 @@ export default function TasksPage() {
   });
 
   const insertTask = useMutation({
-    mutationFn: async (input: Partial<Task> & { title: string; _tempId?: string }) => {
+    // Caller supplies the new task's UUID (via `crypto.randomUUID()`)
+    // so the optimistic row's id matches the server-side row's id —
+    // that way cell edits can fire `patchTask` against a real UUID
+    // immediately after `+ New task` instead of failing on a `temp-`
+    // placeholder.
+    mutationFn: async (
+      input: Partial<Task> & { id: string; title: string },
+    ) => {
       unwrap(
         await createTaskAction({
+          id: input.id,
           title: input.title,
           due_date: input.due_date ?? null,
           group_id: input.group_id ?? null,
@@ -188,12 +225,11 @@ export default function TasksPage() {
       );
     },
     onMutate: (input) => {
-      const tempId = input._tempId ?? `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const couple = input.related_couple_id
         ? coupleList.find((c) => c.id === input.related_couple_id) ?? null
         : null;
       const optimistic: Task = {
-        id: tempId,
+        id: input.id,
         title: input.title,
         due_date: input.due_date ?? null,
         description: null,
@@ -208,13 +244,13 @@ export default function TasksPage() {
       queryClient.setQueryData(["all-tasks"], (old: Task[] | undefined) =>
         old ? [...old, optimistic] : [optimistic]
       );
-      return { tempId };
+      return { id: input.id };
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["all-tasks"] }),
     onError: (_err, _input, ctx) => {
-      if (ctx?.tempId) {
+      if (ctx?.id) {
         queryClient.setQueryData(["all-tasks"], (old: Task[] | undefined) =>
-          old?.filter((t) => t.id !== ctx.tempId)
+          old?.filter((t) => t.id !== ctx.id)
         );
       }
     },
@@ -284,55 +320,29 @@ export default function TasksPage() {
     [couples]
   );
 
-  const knownTypes = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of tasks || []) {
-      if (t.task_type) set.add(t.task_type);
-    }
-    return [...set].sort();
-  }, [tasks]);
+  // String-name lists for the filter bar (which doesn't care about
+  // colours). Priorities merge built-ins + user-defined options;
+  // task types are entirely user-defined.
+  const knownTypes = useMemo(
+    () => typeOptions.map((o) => o.name).sort(),
+    [typeOptions],
+  );
 
   const knownStatuses = useMemo(() => {
-    const custom = new Set<string>();
-    const base = new Set(STATUS_ORDER as string[]);
-    for (const t of tasks ?? []) {
-      if (t.status && !base.has(t.status)) custom.add(t.status);
-    }
-    return [...(STATUS_ORDER as string[]), ...custom];
-  }, [tasks]);
+    const base = new Set((STATUS_ORDER as string[]).map((s) => s.toLowerCase()));
+    const customs = statusOptions
+      .map((o) => o.name)
+      .filter((n) => !base.has(n.toLowerCase()));
+    return [...(STATUS_ORDER as string[]), ...customs];
+  }, [statusOptions]);
 
   const knownPriorities = useMemo(() => {
-    const custom = new Set<string>();
     const base = new Set(PRIORITY_ORDER);
-    for (const t of tasks ?? []) {
-      if (t.priority && !base.has(t.priority)) custom.add(t.priority);
-    }
-    return [...PRIORITY_ORDER, ...custom];
-  }, [tasks]);
-
-  const handleDeleteStatus = (status: string) => {
-    const ids = (tasks || []).filter((x) => x.status === status).map((x) => x.id);
-    queryClient.setQueryData(["all-tasks"], (old: Task[] | undefined) =>
-      old?.map((x) => (x.status === status ? { ...x, status: "todo" } : x))
-    );
-    if (ids.length > 0) bulkUpdate.mutate({ ids, patch: { status: "todo" } });
-  };
-
-  const handleDeletePriority = (priority: string) => {
-    const ids = (tasks || []).filter((x) => x.priority === priority).map((x) => x.id);
-    queryClient.setQueryData(["all-tasks"], (old: Task[] | undefined) =>
-      old?.map((x) => (x.priority === priority ? { ...x, priority: null } : x))
-    );
-    if (ids.length > 0) bulkUpdate.mutate({ ids, patch: { priority: null } });
-  };
-
-  const handleDeleteType = (type: string) => {
-    const ids = (tasks || []).filter((x) => x.task_type === type).map((x) => x.id);
-    queryClient.setQueryData(["all-tasks"], (old: Task[] | undefined) =>
-      old?.map((x) => (x.task_type === type ? { ...x, task_type: null } : x))
-    );
-    if (ids.length > 0) bulkUpdate.mutate({ ids, patch: { task_type: null } });
-  };
+    const customs = priorityOptions
+      .map((o) => o.name)
+      .filter((n) => !base.has(n.toLowerCase()));
+    return [...PRIORITY_ORDER, ...customs];
+  }, [priorityOptions]);
 
   const filteredTasks = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -492,7 +502,7 @@ export default function TasksPage() {
     if (groupBy === "status") {
       return knownStatuses.map((s) => ({
         droppableId: `status:${s}`,
-        header: <StatusPill value={s} />,
+        header: <StatusPill value={s} options={statusOptions} />,
         tasks: filteredTasks.filter((t) => t.status === s),
         addTaskDefaults: { status: s },
       }));
@@ -500,7 +510,7 @@ export default function TasksPage() {
     if (groupBy === "priority") {
       const out: Section[] = knownPriorities.map((p) => ({
         droppableId: `priority:${p}`,
-        header: <PriorityPill value={p} />,
+        header: <PriorityPill value={p} options={priorityOptions} />,
         tasks: filteredTasks.filter((t) => t.priority === p),
         addTaskDefaults: { priority: p },
       }));
@@ -676,7 +686,7 @@ export default function TasksPage() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-semibold text-gray-900">Tasks</h1>
           <button
-            onClick={() => insertTask.mutate({ title: 'Untitled task' })}
+            onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
             className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
             aria-label="New task"
           >
@@ -716,12 +726,15 @@ export default function TasksPage() {
             knownTypes={knownTypes}
             knownStatuses={knownStatuses}
             knownPriorities={knownPriorities}
+            statusOptions={statusOptions}
+            priorityOptions={priorityOptions}
+            typeOptions={typeOptions}
             couples={coupleList}
           />
           <div className="ml-auto flex items-center gap-2">
             <GroupByToggle value={groupBy} onChange={setGroupBy} />
             <button
-              onClick={() => insertTask.mutate({ title: 'Untitled task' })}
+              onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
               className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
             >
               <Plus size={11} strokeWidth={2} />
@@ -767,17 +780,20 @@ export default function TasksPage() {
                 }
                 onDelete={s.group ? (id) => deleteGroup.mutate(id) : undefined}
                 onAddTask={() =>
-                  insertTask.mutate({ title: "Untitled task", ...s.addTaskDefaults })
+                  insertTask.mutate({
+                    id: crypto.randomUUID(),
+                    title: "Untitled task",
+                    ...s.addTaskDefaults,
+                  })
                 }
               >
                 {s.tasks.map((t) => (
                   <TaskRow
                     key={t.id}
                     task={t}
-                    pending={t.id.startsWith("temp-")}
-                    knownTypes={knownTypes}
-                    knownStatuses={knownStatuses}
-                    knownPriorities={knownPriorities}
+                    statusOptions={statusOptions}
+                    priorityOptions={priorityOptions}
+                    typeOptions={typeOptions}
                     selected={selectedIds.has(t.id)}
                     selectionActive={selectionActive}
                     draggable
@@ -796,9 +812,31 @@ export default function TasksPage() {
                     onChangeTaskType={(task_type) =>
                       patchTask.mutate({ id: t.id, patch: { task_type } })
                     }
-                    onDeleteType={handleDeleteType}
-                    onDeleteStatus={handleDeleteStatus}
-                    onDeletePriority={handleDeletePriority}
+                    onCreateStatusOption={(input) =>
+                      createStatusOption.mutate(input)
+                    }
+                    onRecolorStatusOption={(id, color) =>
+                      updateStatusOption.mutate({ id, color })
+                    }
+                    onDeleteStatusOption={(id) =>
+                      deleteStatusOption.mutate(id)
+                    }
+                    onCreatePriorityOption={(input) =>
+                      createPriorityOption.mutate(input)
+                    }
+                    onRecolorPriorityOption={(id, color) =>
+                      updatePriorityOption.mutate({ id, color })
+                    }
+                    onDeletePriorityOption={(id) =>
+                      deletePriorityOption.mutate(id)
+                    }
+                    onCreateTypeOption={(input) =>
+                      createTypeOption.mutate(input)
+                    }
+                    onRecolorTypeOption={(id, color) =>
+                      updateTypeOption.mutate({ id, color })
+                    }
+                    onDeleteTypeOption={(id) => deleteTypeOption.mutate(id)}
                     onOpen={() => setEditingTaskId(t.id)}
                     onCoupleClick={handleSelectCouple}
                     onToggleSelect={(e) => onToggleSelect(t.id, e, visibleIds)}
@@ -839,12 +877,26 @@ export default function TasksPage() {
         task={editingTask}
         couples={coupleList}
         groups={groupsList}
-        knownTypes={knownTypes}
-        knownStatuses={knownStatuses}
-        knownPriorities={knownPriorities}
-        onDeleteStatus={handleDeleteStatus}
-        onDeletePriority={handleDeletePriority}
-        onDeleteType={handleDeleteType}
+        statusOptions={statusOptions}
+        priorityOptions={priorityOptions}
+        typeOptions={typeOptions}
+        onCreateStatusOption={(input) => createStatusOption.mutate(input)}
+        onRecolorStatusOption={(id, color) =>
+          updateStatusOption.mutate({ id, color })
+        }
+        onDeleteStatusOption={(id) => deleteStatusOption.mutate(id)}
+        onCreatePriorityOption={(input) =>
+          createPriorityOption.mutate(input)
+        }
+        onRecolorPriorityOption={(id, color) =>
+          updatePriorityOption.mutate({ id, color })
+        }
+        onDeletePriorityOption={(id) => deletePriorityOption.mutate(id)}
+        onCreateTypeOption={(input) => createTypeOption.mutate(input)}
+        onRecolorTypeOption={(id, color) =>
+          updateTypeOption.mutate({ id, color })
+        }
+        onDeleteTypeOption={(id) => deleteTypeOption.mutate(id)}
         onPatch={(id, patch) => patchTask.mutate({ id, patch })}
         onDelete={(id) => {
           deleteTaskMutation.mutate(id);

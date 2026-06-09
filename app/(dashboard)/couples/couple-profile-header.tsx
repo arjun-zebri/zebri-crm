@@ -8,7 +8,7 @@
  * - **Desktop**: name + status pill + inline action row
  *   (delete · portal-links popover · call/email/whatsapp · close).
  *
- * The header is stateless presentation — the parent passes the
+ * The header is stateless presentation - the parent passes the
  * `couple` row + callbacks. Status changes call `onSave(couple
  * with new status)`; the parent (or its hook) re-syncs the cache.
  *
@@ -28,6 +28,7 @@ import {
   Link,
   Mail,
   MoreHorizontal,
+  Pencil,
   Phone,
   RefreshCw,
   Trash2,
@@ -118,7 +119,7 @@ export function CoupleProfileHeader({
               onChange={(e) => setNameInput(e.target.value)}
               onBlur={handleSaveName}
               onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-lg font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition"
+              className="min-w-0 flex-1 text-lg font-semibold text-gray-900 placeholder:text-gray-400 bg-transparent border-none outline-none transition"
               autoFocus
             />
           ) : (
@@ -127,9 +128,16 @@ export function CoupleProfileHeader({
                 setNameInput(couple.name);
                 setEditingName(true);
               }}
-              className="text-lg font-semibold text-gray-900 truncate hover:text-blue-600 transition cursor-pointer text-left"
+              className="group flex items-center gap-1.5 min-w-0 cursor-pointer text-left"
             >
-              {couple.name}
+              <span className="text-lg font-semibold text-gray-900 truncate transition">
+                {couple.name}
+              </span>
+              <Pencil
+                size={12}
+                strokeWidth={1.5}
+                className="shrink-0 text-gray-400 opacity-0 group-hover:opacity-60 transition"
+              />
             </button>
           )}
 

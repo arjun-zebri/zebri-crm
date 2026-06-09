@@ -32,7 +32,6 @@ export type AdminActionType =
   | 'enter_shadow'
   | 'exit_shadow'
   | 'comp_user'
-  | 'extend_trial'
   | 'cancel_at_period_end'
   | 'link_stripe_customer'
   | 'refund_last_invoice'

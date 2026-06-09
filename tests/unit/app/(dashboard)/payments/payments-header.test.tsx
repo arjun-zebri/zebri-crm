@@ -1,8 +1,10 @@
 /**
  * Unit tests for `PaymentsHeader`.
  *
- * Covers tab switching, search clearing, and the Contracts tab
- * gating (hidden when contractsEnabled=false).
+ * Covers tab switching, search clearing, and that all three tabs
+ * (Quotes / Invoices / Contracts) are always rendered — the
+ * Starter-plan cap is enforced at contract create time, not by
+ * hiding the tab (2026-06-03 policy change).
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -22,7 +24,6 @@ function Harness(overrides: Partial<React.ComponentProps<typeof PaymentsHeader>>
       onSearchChange={vi.fn()}
       searchInputRef={ref}
       onNew={vi.fn()}
-      contractsEnabled
       {...overrides}
     />
   );
@@ -34,9 +35,9 @@ describe('PaymentsHeader', () => {
     expect(screen.getByText('7 total')).toBeInTheDocument();
   });
 
-  it('hides the Contracts tab when contractsEnabled is false', () => {
-    render(<Harness contractsEnabled={false} />);
-    expect(screen.queryByRole('button', { name: /Contracts/i })).toBeNull();
+  it('always renders the Contracts tab (no plan gate)', () => {
+    render(<Harness />);
+    expect(screen.getByRole('button', { name: /Contracts/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Quotes/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Invoices/i })).toBeInTheDocument();
   });

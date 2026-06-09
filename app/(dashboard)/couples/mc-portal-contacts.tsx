@@ -8,10 +8,11 @@ import { useState } from 'react'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS, Contact } from '@/types/contact'
+import type { Couple } from '@/types/couple'
 
 import { ContactModal } from '../contacts/contact-modal'
 
-import { ContactPicker } from './contact-picker'
+import { ContactPopover } from './contact-popover'
 import {
   addCoupleContactLinkAction,
   deleteContactAction,
@@ -37,14 +38,20 @@ interface ContactLink {
   vendor: Contact
 }
 
+// Couple partners are now sourced from `couples.primary_*` and
+// `couples.secondary_*` (Phase: Option B). The `partner` portal_people
+// category is left in the type union for legacy data but is no
+// longer surfaced as its own section here or in the add menu.
 const PEOPLE_CATEGORIES = [
-  { label: 'Couple', category: 'partner', roles: PARTNER_ROLES },
   { label: 'Bridal party', category: 'bridal_party', roles: BRIDAL_ROLES },
   { label: 'Family', category: 'family', roles: FAMILY_ROLES },
   { label: 'Other', category: 'other', roles: OTHER_ROLES },
 ]
 
-const MENU_CATEGORIES = PEOPLE_CATEGORIES.slice(0, 3)
+// All three person categories surface in the "Add contact" menu so
+// MCs / celebrants have an "Other" bucket for people who don't fit
+// bridal-party or family (e.g. officiant, guest speaker, performer).
+const MENU_CATEGORIES = PEOPLE_CATEGORIES
 
 const AVATAR_COLORS: Record<string, string> = {
   partner: 'bg-emerald-50 text-emerald-600',
@@ -54,6 +61,7 @@ const AVATAR_COLORS: Record<string, string> = {
 }
 
 interface McPortalContactsProps {
+  couple: Couple
   people: PortalPerson[]
   isPeopleLoading: boolean
   coupleId: string
@@ -74,13 +82,18 @@ function CountBadge({ count }: { count: number }) {
 }
 
 export function McPortalContacts({
-  people, isPeopleLoading, coupleId, onEditPerson, onAddPerson,
+  couple, people, isPeopleLoading, coupleId, onEditPerson, onAddPerson,
 }: McPortalContactsProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
-  const [addMenuOpen, setAddMenuOpen] = useState(false)
-  const [showContactPicker, setShowContactPicker] = useState(false)
+  // Single popover with mode-switching content: `type` shows the
+  // wedding-party / vendor chooser, `vendor` swaps to a search-and-
+  // create panel. The popover never closes/reopens between them, so
+  // the surface feels like one stable floating control.
+  const [addMode, setAddMode] = useState<'closed' | 'type' | 'vendor'>('closed')
+  const [vendorSearch, setVendorSearch] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | undefined>()
 
   const { data: vendors, isLoading: vendorsLoading } = useQuery({
@@ -118,9 +131,64 @@ export function McPortalContacts({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couple-contacts', coupleId] })
-      setShowContactPicker(false)
     },
     onError: () => toast('Failed to add vendor'),
+  })
+
+  // Lookup pool for the vendor popover. Same `['all-contacts']`
+  // cache key (and select shape) used by every other contact picker
+  // so they all share data.
+  const { data: allContacts } = useQuery({
+    queryKey: ['all-contacts'],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, name, category, created_at')
+        .eq('user_id', user.user.id)
+        .eq('status', 'active')
+        .order('name', { ascending: true })
+      if (error) throw error
+      return (data || []) as { id: string; name: string; category: string; created_at: string }[]
+    },
+    enabled: addMode === 'vendor',
+  })
+
+  // Insert + attach in one go when the user saves the inline
+  // create modal. Mirrors ContactPopover's mutation shape.
+  const createContact = useMutation({
+    mutationFn: async (
+      input: Omit<Contact, 'id' | 'user_id' | 'created_at'>,
+    ) => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+      const { data: inserted, error } = await supabase
+        .from('contacts')
+        .insert({
+          user_id: user.user.id,
+          name: input.name,
+          contact_name: input.contact_name,
+          phone: input.phone,
+          email: input.email,
+          category: input.category,
+          status: input.status,
+          notes: input.notes,
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+      return inserted.id as string
+    },
+    onSuccess: (newId) => {
+      queryClient.invalidateQueries({ queryKey: ['all-contacts'] })
+      queryClient.invalidateQueries({ queryKey: ['contacts'] })
+      addVendor.mutate(newId)
+      setCreateOpen(false)
+      setAddMode('closed')
+      setVendorSearch('')
+    },
+    onError: () => toast('Failed to create contact'),
   })
 
   const updateContact = useMutation({
@@ -160,43 +228,112 @@ export function McPortalContacts({
   const visibleCategories = PEOPLE_CATEGORIES.filter(({ category }) =>
     people.some((p) => p.category === category)
   )
+  // Couple partners come from the couple row itself (post-Option-B).
+  // Only render a partner if at least one of name/email/phone is set,
+  // so half-filled rows don't show empty placeholders.
+  const couplePartners = (
+    [
+      {
+        role: 'Primary',
+        name: couple.primary_name ?? '',
+        email: couple.primary_email ?? '',
+        phone: couple.primary_phone ?? '',
+      },
+      {
+        role: 'Secondary',
+        name: couple.secondary_name ?? '',
+        email: couple.secondary_email ?? '',
+        phone: couple.secondary_phone ?? '',
+      },
+    ] as const
+  ).filter((p) => p.name || p.email || p.phone)
+  const hasCouplePartners = couplePartners.length > 0
   const hasPeople = visibleCategories.length > 0
-  const isEmpty = !isLoading && !hasPeople && !hasVendors
+  const isEmpty =
+    !isLoading && !hasPeople && !hasVendors && !hasCouplePartners
   const modalLoading = updateContact.isPending || deleteContact.isPending
 
   return (
     <div className="pt-3">
-      <div className="flex justify-end mb-1.5">
-        <Popover.Root open={addMenuOpen} onOpenChange={setAddMenuOpen}>
+      {/* Left-aligned header-style action, matching the Events tab
+          pattern on the Overview surface. The trailing "+" anchors
+          the popover that branches into Wedding Party / Vendor. */}
+      <div className="mb-3">
+        <Popover.Root
+          open={addMode !== 'closed'}
+          onOpenChange={(o) => {
+            if (!o) {
+              setAddMode('closed')
+              setVendorSearch('')
+            } else if (addMode === 'closed') {
+              setAddMode('type')
+            }
+          }}
+        >
           <Popover.Trigger asChild>
-            <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition cursor-pointer">
-              <Plus size={14} strokeWidth={2} />
-              Add contact
+            <button className="group flex items-center gap-1.5 cursor-pointer">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">
+                Add contact
+              </h3>
+              <Plus
+                size={12}
+                strokeWidth={2}
+                className="text-gray-900 group-hover:text-gray-600 transition"
+              />
             </button>
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Content
-              className="bg-white border border-gray-200 rounded-xl shadow-lg z-[70] w-44 py-1"
+              className={`bg-white border border-gray-200 rounded-xl shadow-lg z-[70] py-1 ${addMode === 'vendor' ? 'w-72' : 'w-44'}`}
               sideOffset={6}
-              align="end"
+              align="start"
+              onOpenAutoFocus={(e) => {
+                // Don't pull focus into the vendor search input until
+                // the user actually switches to vendor mode.
+                if (addMode === 'vendor') e.preventDefault()
+              }}
             >
-              <p className="px-3 pt-2 pb-1 text-xs text-gray-400">Wedding party</p>
-              {MENU_CATEGORIES.map(({ label, category, roles }) => (
-                <button
-                  key={category}
-                  onClick={() => { setAddMenuOpen(false); onAddPerson(category, roles) }}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                >
-                  {label}
-                </button>
-              ))}
-              <div className="border-t border-gray-100 my-1" />
-              <button
-                onClick={() => { setAddMenuOpen(false); setShowContactPicker(true) }}
-                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-              >
-                Vendor
-              </button>
+              {addMode === 'type' && (
+                <>
+                  <p className="px-3 pt-2 pb-1 text-xs text-gray-400">Wedding party</p>
+                  {MENU_CATEGORIES.map(({ label, category, roles }) => (
+                    <button
+                      key={category}
+                      onClick={() => { setAddMode('closed'); onAddPerson(category, roles) }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <div className="border-t border-gray-100 my-1" />
+                  <button
+                    onClick={() => setAddMode('vendor')}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    Vendor
+                  </button>
+                </>
+              )}
+
+              {addMode === 'vendor' && (
+                <VendorPickerBody
+                  search={vendorSearch}
+                  setSearch={setVendorSearch}
+                  contacts={allContacts ?? []}
+                  excludeIds={vendors?.map((v) => v.contact_id) ?? []}
+                  onPick={(id) => {
+                    addVendor.mutate(id)
+                    setVendorSearch('')
+                    setAddMode('closed')
+                  }}
+                  onCreate={() => {
+                    // Close the popover before opening the create
+                    // modal so the two surfaces don't visually stack.
+                    setAddMode('closed')
+                    setCreateOpen(true)
+                  }}
+                />
+              )}
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
@@ -216,15 +353,48 @@ export function McPortalContacts({
         </div>
       ) : (
         <>
-          {isEmpty && (
+          {isEmpty && !hasCouplePartners && (
             <p className="text-sm text-gray-400">No contacts added yet.</p>
+          )}
+
+          {hasCouplePartners && (
+            <div className="mb-1">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  Couple
+                </h3>
+                <CountBadge count={couplePartners.length} />
+              </div>
+              <div className="space-y-0.5">
+                {couplePartners.map((p) => (
+                  <div
+                    key={p.role}
+                    className="flex items-center gap-3 min-h-[40px] py-1.5 -mx-2 px-2 rounded-lg"
+                  >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0 select-none bg-emerald-50 text-emerald-600">
+                      {p.name ? initials(p.name) : '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900 truncate">
+                        {p.name || `${p.role} (unnamed)`}
+                      </p>
+                      {(p.email || p.phone) && (
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">
+                          {[p.email, p.phone].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {visibleCategories.map(({ label, category, roles }, renderIdx) => {
             const items = people.filter((p) => p.category === category)
             const avatarColor = AVATAR_COLORS[category]
             return (
-              <div key={category} className={renderIdx > 0 ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
+              <div key={category} className={renderIdx > 0 || hasCouplePartners ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
                 <div className="flex items-center gap-2 mb-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</h3>
                   <CountBadge count={items.length} />
@@ -270,7 +440,7 @@ export function McPortalContacts({
           })}
 
           {hasVendors && (
-            <div className={hasPeople ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
+            <div className={hasPeople || hasCouplePartners ? 'border-t border-gray-100 pt-5 mt-1' : ''}>
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Vendors</h3>
                 <CountBadge count={vendors!.length} />
@@ -303,14 +473,15 @@ export function McPortalContacts({
         </>
       )}
 
-      {showContactPicker && (
-        <ContactPicker
-          excludeVendorIds={vendors?.map((v) => v.contact_id) ?? []}
-          onAdd={(contactId) => addVendor.mutate(contactId)}
-          onClose={() => setShowContactPicker(false)}
-          isAdding={addVendor.isPending}
-        />
-      )}
+      {/* New vendor contact - opened from the popover footer. */}
+      <ContactModal
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onSave={(data) => createContact.mutate(data)}
+        onDelete={() => {}}
+        loading={createContact.isPending}
+        nested
+      />
 
       <ContactModal
         isOpen={!!editingContact}
@@ -324,5 +495,69 @@ export function McPortalContacts({
         loading={modalLoading}
       />
     </div>
+  )
+}
+
+interface VendorPickerBodyProps {
+  search: string
+  setSearch: (v: string) => void
+  contacts: { id: string; name: string; category: string }[]
+  excludeIds: string[]
+  onPick: (id: string) => void
+  onCreate: () => void
+}
+
+function VendorPickerBody({
+  search, setSearch, contacts, excludeIds, onPick, onCreate,
+}: VendorPickerBodyProps) {
+  const q = search.trim().toLowerCase()
+  const filtered = contacts
+    .filter((c) => !excludeIds.includes(c.id))
+    .filter((c) => (q ? c.name.toLowerCase().includes(q) : true))
+
+  return (
+    <>
+      <div className="px-3 py-2 border-b border-gray-100">
+        <input
+          type="text"
+          placeholder="Search contacts"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          autoFocus
+          className="w-full text-sm text-gray-900 placeholder:text-gray-400 outline-none border-none bg-transparent"
+        />
+      </div>
+      <div className="max-h-64 overflow-y-auto py-1">
+        {filtered.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-4">
+            {contacts.length === 0 ? 'No contacts yet' : 'No matches'}
+          </p>
+        ) : (
+          filtered.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onPick(c.id)}
+              className="w-full text-left px-3 py-2 hover:bg-gray-50 transition cursor-pointer flex items-center justify-between gap-2"
+            >
+              <span className="text-sm text-gray-900 truncate">{c.name}</span>
+              <span className="text-xs text-gray-400 shrink-0">
+                {CATEGORY_LABELS[c.category as keyof typeof CATEGORY_LABELS] || c.category}
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+      <div className="border-t border-gray-100">
+        <button
+          type="button"
+          onClick={onCreate}
+          className="w-full text-left px-3 py-2 hover:bg-gray-50 transition cursor-pointer flex items-center gap-2 text-sm text-gray-700"
+        >
+          <Plus size={12} strokeWidth={2} className="text-gray-400" />
+          Create new contact
+        </button>
+      </div>
+    </>
   )
 }

@@ -15,7 +15,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section';
 import { TaskRow, TaskRowTask } from '@/app/(dashboard)/tasks/task-row';
@@ -23,9 +23,22 @@ import {
   TaskFieldUpdate,
   TaskSidePanel,
 } from '@/app/(dashboard)/tasks/task-side-panel';
-import { useToast } from '@/components/ui/toast';
+import {
+  useCreateTaskPriority,
+  useCreateTaskStatus,
+  useCreateTaskType,
+  useDeleteTaskPriority,
+  useDeleteTaskStatus,
+  useDeleteTaskType,
+  useTaskPriorities,
+  useTaskStatuses,
+  useTaskTypes,
+  useUpdateTaskPriority,
+  useUpdateTaskStatus,
+  useUpdateTaskType,
+} from '@/app/(dashboard)/tasks/use-task-options';
 import { createClient } from '@/lib/supabase/client';
-import { STATUS_ORDER, TaskPriority } from '@/types/task';
+import { TaskPriority } from '@/types/task';
 
 import {
   createCoupleTaskAction,
@@ -53,8 +66,24 @@ function unwrap<T>(
 export function CoupleTasks({ coupleId }: CoupleTasksProps) {
   const supabase = createClient();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+
+  // Persisted status + priority + task_type option lists. The
+  // dropdowns on those cells read from these so custom options survive
+  // even when no task currently references them, and each option
+  // carries a stable colour.
+  const { data: statusOptions = [] } = useTaskStatuses();
+  const { data: priorityOptions = [] } = useTaskPriorities();
+  const { data: typeOptions = [] } = useTaskTypes();
+  const createStatusOption = useCreateTaskStatus();
+  const updateStatusOption = useUpdateTaskStatus();
+  const deleteStatusOption = useDeleteTaskStatus();
+  const createPriorityOption = useCreateTaskPriority();
+  const updatePriorityOption = useUpdateTaskPriority();
+  const deletePriorityOption = useDeleteTaskPriority();
+  const createTypeOption = useCreateTaskType();
+  const updateTypeOption = useUpdateTaskType();
+  const deleteTypeOption = useDeleteTaskType();
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['couple-tasks', coupleId],
@@ -79,6 +108,15 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
     queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
   };
 
+  /**
+   * Optimistic patch. The cache is updated **before** the server call
+   * so cell edits (status pill, due date, priority, title, etc.) feel
+   * instant — Notion-style. We snapshot the prior list so we can put
+   * the row back the way it was if the server rejects the update.
+   * `invalidate()` on success re-syncs from the server (a no-op since
+   * the optimistic value already matches what the server wrote, but
+   * keeps any server-side derived fields fresh).
+   */
   const patchTask = useMutation({
     mutationFn: async ({
       id,
@@ -89,48 +127,115 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
     }) => {
       unwrap(await updateCoupleTaskAction({ id, patch }));
     },
+    onMutate: async ({ id, patch }) => {
+      await queryClient.cancelQueries({
+        queryKey: ['couple-tasks', coupleId],
+      });
+      const previous = queryClient.getQueryData<Task[]>([
+        'couple-tasks',
+        coupleId,
+      ]);
+      queryClient.setQueryData<Task[]>(
+        ['couple-tasks', coupleId],
+        (old) => old?.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData<Task[]>(
+          ['couple-tasks', coupleId],
+          ctx.previous,
+        );
+      }
+    },
     onSuccess: invalidate,
   });
 
+  /**
+   * Insert with an optimistic row using a **client-generated UUID**
+   * (the same id is passed through to the server insert) so the new
+   * row is immediately editable: any `patchTask` fired by a cell edit
+   * targets a real UUID that satisfies Zod's validation, even before
+   * the server insert resolves. On error we roll back by filtering
+   * the same id out.
+   */
   const insertTask = useMutation({
-    mutationFn: async (input: { title: string }) => {
+    mutationFn: async (input: { id: string; title: string }) => {
       unwrap(
         await createCoupleTaskAction({
+          id: input.id,
           coupleId,
           title: input.title,
         }),
       );
     },
-    onSuccess: () => {
-      invalidate();
-      toast('Task added');
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({
+        queryKey: ['couple-tasks', coupleId],
+      });
+      const optimistic: Task = {
+        id: input.id,
+        title: input.title,
+        due_date: null,
+        description: null,
+        status: 'todo',
+        related_couple_id: coupleId,
+        group_id: null,
+        position: Number.MAX_SAFE_INTEGER,
+        priority: null,
+        task_type: null,
+      };
+      queryClient.setQueryData<Task[]>(
+        ['couple-tasks', coupleId],
+        (old) => (old ? [...old, optimistic] : [optimistic]),
+      );
+      return { id: input.id };
     },
+    onError: (_err, _input, ctx) => {
+      if (ctx?.id) {
+        queryClient.setQueryData<Task[]>(
+          ['couple-tasks', coupleId],
+          (old) => old?.filter((t) => t.id !== ctx.id),
+        );
+      }
+    },
+    onSuccess: invalidate,
   });
 
+  /**
+   * Delete with an optimistic remove so the row disappears
+   * instantly. We snapshot the prior list so the row can be put back
+   * exactly where it was if the server rejects the delete.
+   */
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
       unwrap(await deleteCoupleTaskAction(id));
     },
-    onSuccess: () => {
-      invalidate();
-      toast('Task deleted');
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({
+        queryKey: ['couple-tasks', coupleId],
+      });
+      const previous = queryClient.getQueryData<Task[]>([
+        'couple-tasks',
+        coupleId,
+      ]);
+      queryClient.setQueryData<Task[]>(
+        ['couple-tasks', coupleId],
+        (old) => old?.filter((t) => t.id !== id),
+      );
+      return { previous };
     },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData<Task[]>(
+          ['couple-tasks', coupleId],
+          ctx.previous,
+        );
+      }
+    },
+    onSuccess: invalidate,
   });
-
-  const knownTypes = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of tasks || []) if (t.task_type) set.add(t.task_type);
-    return [...set].sort();
-  }, [tasks]);
-
-  const knownStatuses = useMemo(() => {
-    const custom = new Set<string>();
-    const base = new Set(STATUS_ORDER as string[]);
-    for (const t of tasks ?? []) {
-      if (t.status && !base.has(t.status)) custom.add(t.status);
-    }
-    return [...(STATUS_ORDER as string[]), ...custom];
-  }, [tasks]);
 
   const editingTask = (tasks || []).find((t) => t.id === editingTaskId);
 
@@ -152,7 +257,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
         <div className="text-center py-8">
           <p className="text-sm text-gray-400 mb-3">No tasks yet.</p>
           <button
-            onClick={() => insertTask.mutate({ title: 'Untitled task' })}
+            onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
             className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
           >
             + Add task
@@ -160,13 +265,18 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
         </div>
       ) : (
         <div>
-          <ColumnHeader columns={['status', 'due_date', 'priority', 'task_type']} />
+          <ColumnHeader
+            columns={['status', 'due_date', 'priority', 'task_type']}
+            hideGutter
+          />
           {all.map((t) => (
             <TaskRow
               key={t.id}
               task={t}
-              knownTypes={knownTypes}
-              knownStatuses={knownStatuses}
+              hideGutter
+              statusOptions={statusOptions}
+              priorityOptions={priorityOptions}
+              typeOptions={typeOptions}
               showCouple={false}
               onCommitTitle={(title) =>
                 patchTask.mutate({ id: t.id, patch: { title } })
@@ -183,12 +293,33 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
               onChangeTaskType={(task_type) =>
                 patchTask.mutate({ id: t.id, patch: { task_type } })
               }
+              onCreateStatusOption={(input) =>
+                createStatusOption.mutate(input)
+              }
+              onRecolorStatusOption={(id, color) =>
+                updateStatusOption.mutate({ id, color })
+              }
+              onDeleteStatusOption={(id) => deleteStatusOption.mutate(id)}
+              onCreatePriorityOption={(input) =>
+                createPriorityOption.mutate(input)
+              }
+              onRecolorPriorityOption={(id, color) =>
+                updatePriorityOption.mutate({ id, color })
+              }
+              onDeletePriorityOption={(id) =>
+                deletePriorityOption.mutate(id)
+              }
+              onCreateTypeOption={(input) => createTypeOption.mutate(input)}
+              onRecolorTypeOption={(id, color) =>
+                updateTypeOption.mutate({ id, color })
+              }
+              onDeleteTypeOption={(id) => deleteTypeOption.mutate(id)}
               onOpen={() => setEditingTaskId(t.id)}
             />
           ))}
           <button
-            onClick={() => insertTask.mutate({ title: 'Untitled task' })}
-            className="w-full flex items-center gap-2 px-2 py-2 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
+            onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
+            className="w-full flex items-center gap-2 pl-3.5 pr-2 py-2 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
           >
             <Plus size={13} strokeWidth={1.5} />
             New task
@@ -200,8 +331,26 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
         isOpen={!!editingTask}
         onClose={() => setEditingTaskId(null)}
         task={editingTask}
-        knownTypes={knownTypes}
-        knownStatuses={knownStatuses}
+        statusOptions={statusOptions}
+        priorityOptions={priorityOptions}
+        typeOptions={typeOptions}
+        onCreateStatusOption={(input) => createStatusOption.mutate(input)}
+        onRecolorStatusOption={(id, color) =>
+          updateStatusOption.mutate({ id, color })
+        }
+        onDeleteStatusOption={(id) => deleteStatusOption.mutate(id)}
+        onCreatePriorityOption={(input) =>
+          createPriorityOption.mutate(input)
+        }
+        onRecolorPriorityOption={(id, color) =>
+          updatePriorityOption.mutate({ id, color })
+        }
+        onDeletePriorityOption={(id) => deletePriorityOption.mutate(id)}
+        onCreateTypeOption={(input) => createTypeOption.mutate(input)}
+        onRecolorTypeOption={(id, color) =>
+          updateTypeOption.mutate({ id, color })
+        }
+        onDeleteTypeOption={(id) => deleteTypeOption.mutate(id)}
         onPatch={(id, patch) => patchTask.mutate({ id, patch })}
         onDelete={(id) => {
           deleteTask.mutate(id);

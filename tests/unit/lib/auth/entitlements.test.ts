@@ -3,12 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   accountType,
   type AuthAdmin,
+  contractCoupleLimit,
   currentPlan,
-  hasContractsAccess,
   isActive,
   isAdmin,
   isBetaUser,
   isSubscribed,
+  STARTER_CONTRACT_COUPLE_LIMIT,
   stripeConnectAccountId,
   stripeConnectEnabled,
   stripeCustomerId,
@@ -45,7 +46,6 @@ describe('entitlements — privilege-escalation blocks', () => {
     expect(subscriptionStatus(attacker)).toBe('expired');
     expect(isActive(attacker)).toBe(false);
     expect(currentPlan(attacker)).toBe('starter');
-    expect(hasContractsAccess(attacker)).toBe(false);
     expect(isSubscribed(attacker)).toBe(false);
   });
 
@@ -143,6 +143,51 @@ describe('entitlements — paywall edge cases', () => {
 
   it('unknown plan with active status falls back to starter', () => {
     expect(currentPlan({ app_metadata: { subscription_status: 'active', subscription_plan: 'enterprise' } })).toBe('starter');
+  });
+});
+
+/**
+ * 2026-06-03 policy: Contracts is available on every plan. The
+ * Starter-tier commercial restriction is a cap on the number of
+ * distinct couples a user can have contracts for. Pro/Max are
+ * uncapped. These tests pin the helper that drives the UI gate.
+ */
+describe('entitlements — contract couple cap', () => {
+  it('returns the starter cap for a brand-new (no subscription) user', () => {
+    expect(contractCoupleLimit(null)).toBe(STARTER_CONTRACT_COUPLE_LIMIT);
+    expect(contractCoupleLimit({ app_metadata: {} })).toBe(STARTER_CONTRACT_COUPLE_LIMIT);
+  });
+
+  it('returns the starter cap for an expired-sub user even if plan was pro', () => {
+    expect(
+      contractCoupleLimit({
+        app_metadata: { subscription_status: 'expired', subscription_plan: 'pro' },
+      }),
+    ).toBe(STARTER_CONTRACT_COUPLE_LIMIT);
+  });
+
+  it('returns null (uncapped) for a Pro user', () => {
+    expect(
+      contractCoupleLimit({
+        app_metadata: { subscription_status: 'active', subscription_plan: 'pro' },
+      }),
+    ).toBeNull();
+  });
+
+  it('returns null (uncapped) for a Max user', () => {
+    expect(
+      contractCoupleLimit({
+        app_metadata: { subscription_status: 'active', subscription_plan: 'max' },
+      }),
+    ).toBeNull();
+  });
+
+  it('returns null (uncapped) for a trialing Pro user', () => {
+    expect(
+      contractCoupleLimit({
+        app_metadata: { subscription_status: 'trialing', subscription_plan: 'pro' },
+      }),
+    ).toBeNull();
   });
 });
 

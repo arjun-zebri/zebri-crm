@@ -2,12 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
-import { Check, Plus, Trash2 } from 'lucide-react'
+import { Check, Palette, Plus, Trash2 } from 'lucide-react'
 import { DatePicker } from '@/components/ui/date-picker'
 import { formatRelativeDate } from '@/lib/utils'
 import {
   PRIORITY_ORDER,
   STATUS_ORDER,
+  TaskOption,
+  TaskOptionColor,
+  TASK_OPTION_COLORS,
+  TASK_OPTION_DOT_CLASS,
+  TASK_OPTION_PILL_CLASS,
   TaskPriority,
   taskTypeColor,
   getStatusPillClass,
@@ -15,61 +20,167 @@ import {
   getStatusLabel,
   getPriorityPillClass,
   getPriorityLabel,
+  resolvePriorityPillClass,
+  resolveStatusDotClass,
+  resolveStatusPillClass,
+  resolveTypePillClass,
 } from '@/types/task'
+
+// ─── Shared option-picker bits ─────────────────────────────────────
+// Used by both PriorityCell and TaskTypeCell so the visual language
+// (colour swatches, recolour popover, "Create with colour" affordance)
+// stays consistent.
+
+/** Six little circles for picking a colour. */
+function ColorPickerRow({
+  value,
+  onChange,
+  onClickStop = true,
+}: {
+  value: TaskOptionColor
+  onChange: (c: TaskOptionColor) => void
+  /** Stop event propagation so swatch clicks don't bubble out of the
+   *  enclosing popover row and trigger a commit. */
+  onClickStop?: boolean
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {TASK_OPTION_COLORS.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={(e) => {
+            if (onClickStop) e.stopPropagation()
+            onChange(c)
+          }}
+          className={`w-4 h-4 rounded-full border transition cursor-pointer ${
+            value === c ? 'border-gray-900' : 'border-transparent'
+          } ${TASK_OPTION_DOT_CLASS[c]}`}
+          aria-label={c}
+        />
+      ))}
+    </div>
+  )
+}
 
 // ─── Cell wrapper ──────────────────────────────────────────────────────────
 // Notion cells are flush, no border, hover bg-gray-50, cursor pointer.
+// Uses `focus-visible:` (keyboard-only) rather than `focus:` for the
+// background, otherwise Radix restoring focus to the trigger after
+// closing the popover leaves a sticky grey shadow behind the pill.
 const cellTriggerClass =
-  'w-full h-full px-2 py-1 -my-1 -mx-2 text-left text-sm rounded transition cursor-pointer hover:bg-gray-50 focus:outline-none focus:bg-gray-50'
+  'w-full h-full px-2 py-1 -my-1 -mx-2 text-left text-sm rounded transition cursor-pointer hover:bg-gray-50 focus:outline-none focus-visible:bg-gray-50'
 
 // ─── Status cell ───────────────────────────────────────────────────────────
+/**
+ * Notion-style picker for the `status` field.
+ *
+ * Built-in statuses (`todo` / `in_progress` / `done`) live in
+ * `STATUS_ORDER` with hardcoded pill + dot colours and can't be
+ * edited or deleted. Custom statuses come from `statusOptions` (the
+ * `task_statuses` lookup table) and own their colour — they can be
+ * recoloured or deleted from the dropdown. "Create" persists the new
+ * option to the DB and assigns it to the current task in one motion.
+ */
 export function StatusCell({
   value,
   onChange,
-  knownStatuses,
-  onDeleteStatus,
+  statusOptions = [],
+  onCreateStatus,
+  onRecolorStatus,
+  onDeleteStatusOption,
 }: {
   value: string
   onChange: (v: string) => void
-  knownStatuses?: string[]
-  onDeleteStatus?: (status: string) => void
+  statusOptions?: TaskOption[]
+  onCreateStatus?: (input: { name: string; color: TaskOptionColor }) => void
+  onRecolorStatus?: (id: string, color: TaskOptionColor) => void
+  onDeleteStatusOption?: (id: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
+  const [createColor, setCreateColor] = useState<TaskOptionColor>('gray')
+  const [colorPickerForId, setColorPickerForId] = useState<string | null>(null)
 
-  const allStatuses = useMemo(() => {
-    const base = STATUS_ORDER as string[]
-    const custom = (knownStatuses ?? []).filter((s) => !base.includes(s))
-    return [...base, ...custom]
-  }, [knownStatuses])
+  type Item =
+    | { kind: 'builtin'; name: string }
+    | { kind: 'custom'; option: TaskOption }
+
+  const items: Item[] = useMemo(() => {
+    const builtins: Item[] = (STATUS_ORDER as string[]).map((name) => ({
+      kind: 'builtin',
+      name,
+    }))
+    const builtinNames = new Set(
+      (STATUS_ORDER as string[]).map((n) => n.toLowerCase()),
+    )
+    const customs: Item[] = statusOptions
+      .filter((o) => !builtinNames.has(o.name.toLowerCase()))
+      .map((option) => ({ kind: 'custom', option }))
+    return [...builtins, ...customs]
+  }, [statusOptions])
+
+  const itemName = (i: Item) =>
+    i.kind === 'builtin' ? i.name : i.option.name
 
   const matches = useMemo(() => {
     const q = draft.trim().toLowerCase()
-    return q ? allStatuses.filter((s) => getStatusLabel(s).toLowerCase().includes(q)) : allStatuses
-  }, [draft, allStatuses])
+    if (!q) return items
+    return items.filter((i) =>
+      (i.kind === 'builtin' ? getStatusLabel(i.name) : i.option.name)
+        .toLowerCase()
+        .includes(q),
+    )
+  }, [draft, items])
 
-  const exact = matches.find((s) => getStatusLabel(s).toLowerCase() === draft.trim().toLowerCase())
-  const canCreate = draft.trim().length > 0 && !exact && !allStatuses.includes(draft.trim())
+  const exact = matches.find((i) => {
+    const label =
+      i.kind === 'builtin' ? getStatusLabel(i.name) : i.option.name
+    return label.toLowerCase() === draft.trim().toLowerCase()
+  })
+
+  const canCreate =
+    !!onCreateStatus && draft.trim().length > 0 && !exact
 
   const commit = (v: string) => {
     onChange(v)
     setOpen(false)
   }
 
-  const isBuiltIn = (s: string) => (STATUS_ORDER as string[]).includes(s)
+  const handleCreate = () => {
+    const name = draft.trim()
+    if (!name || !onCreateStatus) return
+    onCreateStatus({ name, color: createColor })
+    commit(name)
+    setCreateColor('gray')
+  }
 
   return (
-    <Popover.Root open={open} onOpenChange={(o) => { setOpen(o); if (o) setDraft('') }}>
+    <Popover.Root
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o)
+        if (o) {
+          setDraft('')
+          setColorPickerForId(null)
+          setCreateColor('gray')
+        }
+      }}
+    >
       <Popover.Trigger asChild>
-        <button type="button" onClick={(e) => e.stopPropagation()} className={cellTriggerClass}>
-          <StatusPill value={value} />
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className={cellTriggerClass}
+        >
+          <StatusPill value={value} options={statusOptions} />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-52"
+          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-60"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2 py-1.5 border-b border-gray-100">
@@ -79,54 +190,115 @@ export function StatusCell({
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  if (canCreate) commit(draft.trim())
-                  else if (exact) commit(exact)
-                  else if (matches[0]) commit(matches[0])
+                  if (canCreate) handleCreate()
+                  else if (exact) commit(itemName(exact))
+                  else if (matches[0]) commit(itemName(matches[0]))
                 }
               }}
               placeholder="Search or create..."
               className="w-full text-xs placeholder:text-gray-400 outline-none"
             />
           </div>
-          {matches.map((s) => (
-            <div
-              key={s}
-              className="group/status flex items-center justify-between hover:bg-gray-50 transition"
-            >
+
+          {matches.map((item) => {
+            const name = itemName(item)
+            const id = item.kind === 'custom' ? item.option.id : null
+            const pickerOpen = id !== null && colorPickerForId === id
+            return (
+              <div key={item.kind === 'builtin' ? `b-${name}` : `c-${id}`}>
+                <div className="group/option flex items-center justify-between hover:bg-gray-50 transition">
+                  <button
+                    type="button"
+                    onClick={() => commit(name)}
+                    className="flex-1 min-w-0 text-left px-2 py-1.5 flex items-center justify-between gap-2"
+                  >
+                    <StatusPill value={name} options={statusOptions} />
+                    {value === name && (
+                      <Check
+                        size={13}
+                        strokeWidth={2}
+                        className="text-gray-400 shrink-0"
+                      />
+                    )}
+                  </button>
+                  {item.kind === 'custom' && (
+                    <div className="flex items-center pr-1.5 opacity-0 group-hover/option:opacity-100 transition">
+                      {onRecolorStatus && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setColorPickerForId(pickerOpen ? null : id)
+                          }}
+                          className="p-1 text-gray-300 hover:text-gray-600 transition cursor-pointer"
+                          aria-label={`Recolour ${name}`}
+                        >
+                          <Palette size={11} strokeWidth={1.5} />
+                        </button>
+                      )}
+                      {onDeleteStatusOption && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteStatusOption(item.option.id)
+                            if (value === name) commit('todo')
+                            else setOpen(false)
+                          }}
+                          className="p-1 text-gray-300 hover:text-red-500 transition cursor-pointer"
+                          aria-label={`Delete ${name}`}
+                        >
+                          <Trash2 size={11} strokeWidth={1.5} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {pickerOpen && item.kind === 'custom' && onRecolorStatus && (
+                  <div className="px-3 pb-2 pt-1">
+                    <ColorPickerRow
+                      value={item.option.color}
+                      onChange={(c) => {
+                        onRecolorStatus(item.option.id, c)
+                        setColorPickerForId(null)
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {canCreate && (
+            <>
+              <div className="border-t border-gray-100 mt-1" />
+              <div className="px-2 pt-2 pb-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                  Colour
+                </span>
+                <ColorPickerRow
+                  value={createColor}
+                  onChange={setCreateColor}
+                  onClickStop={false}
+                />
+              </div>
               <button
                 type="button"
-                onClick={() => commit(s)}
-                className="flex-1 text-left px-2 py-1.5 flex items-center justify-between gap-2"
+                onClick={handleCreate}
+                className="w-full text-left px-2 py-1.5 hover:bg-gray-50 transition flex items-center gap-2 text-xs text-gray-500"
               >
-                <StatusPill value={s} />
-                {value === s && <Check size={13} strokeWidth={2} className="text-gray-400" />}
-              </button>
-              {onDeleteStatus && !isBuiltIn(s) && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDeleteStatus(s)
-                    if (value === s) commit('todo')
-                    else setOpen(false)
-                  }}
-                  className="mr-1.5 p-0.5 text-gray-300 hover:text-red-500 opacity-0 group-hover/status:opacity-100 transition cursor-pointer"
-                  aria-label={`Delete status ${s}`}
+                <Plus size={12} strokeWidth={1.5} />
+                Create{' '}
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[createColor]}`}
                 >
-                  <Trash2 size={11} strokeWidth={1.5} />
-                </button>
-              )}
-            </div>
-          ))}
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => commit(draft.trim())}
-              className="w-full text-left px-2 py-1.5 hover:bg-gray-50 transition flex items-center gap-2 text-xs text-gray-500"
-            >
-              <Plus size={12} strokeWidth={1.5} />
-              Create <StatusPill value={draft.trim()} />
-            </button>
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${TASK_OPTION_DOT_CLASS[createColor]}`}
+                  />
+                  {draft.trim()}
+                </span>
+              </button>
+            </>
           )}
         </Popover.Content>
       </Popover.Portal>
@@ -134,73 +306,146 @@ export function StatusCell({
   )
 }
 
-export function StatusPill({ value }: { value: string }) {
+/**
+ * Pill for a status value. When `options` is provided it consults the
+ * user-defined `task_statuses` list for the colour; otherwise it
+ * falls back to the built-in todo/in_progress/done palette.
+ */
+export function StatusPill({
+  value,
+  options,
+}: {
+  value: string
+  options?: TaskOption[]
+}) {
+  const pillClass = options
+    ? resolveStatusPillClass(value, options)
+    : getStatusPillClass(value)
+  const dotClass = options
+    ? resolveStatusDotClass(value, options)
+    : getStatusDotClass(value)
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${getStatusPillClass(value)}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${pillClass}`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${getStatusDotClass(value)}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
       {getStatusLabel(value)}
     </span>
   )
 }
 
 // ─── Priority cell ─────────────────────────────────────────────────────────
+/**
+ * Notion-style picker for the `priority` field.
+ *
+ * Built-in priorities (`high` / `medium` / `low`) live in
+ * `PRIORITY_ORDER` with hardcoded pill colours and can't be edited or
+ * deleted. Custom priorities come from `priorityOptions` (the
+ * `task_priorities` lookup table) and own their colour — they can be
+ * recoloured or deleted from the dropdown. "Create" persists the new
+ * option to the DB and assigns it to the current task in one motion.
+ */
 export function PriorityCell({
   value,
   onChange,
-  knownPriorities,
-  onDeletePriority,
+  priorityOptions = [],
+  onCreatePriority,
+  onRecolorPriority,
+  onDeletePriorityOption,
 }: {
   value: TaskPriority | null
   onChange: (v: TaskPriority | null) => void
-  knownPriorities?: string[]
-  onDeletePriority?: (priority: string) => void
+  priorityOptions?: TaskOption[]
+  onCreatePriority?: (input: { name: string; color: TaskOptionColor }) => void
+  onRecolorPriority?: (id: string, color: TaskOptionColor) => void
+  onDeletePriorityOption?: (id: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
+  const [createColor, setCreateColor] = useState<TaskOptionColor>('gray')
+  const [colorPickerForId, setColorPickerForId] = useState<string | null>(null)
 
-  const allPriorities = useMemo(() => {
-    const base = PRIORITY_ORDER
-    const custom = (knownPriorities ?? []).filter((p) => !base.includes(p))
-    return [...base, ...custom]
-  }, [knownPriorities])
+  type Item =
+    | { kind: 'builtin'; name: string }
+    | { kind: 'custom'; option: TaskOption }
+
+  const items: Item[] = useMemo(() => {
+    const builtins: Item[] = PRIORITY_ORDER.map((name) => ({
+      kind: 'builtin',
+      name,
+    }))
+    const builtinNames = new Set(PRIORITY_ORDER.map((n) => n.toLowerCase()))
+    const customs: Item[] = priorityOptions
+      .filter((o) => !builtinNames.has(o.name.toLowerCase()))
+      .map((option) => ({ kind: 'custom', option }))
+    return [...builtins, ...customs]
+  }, [priorityOptions])
+
+  const itemName = (i: Item) =>
+    i.kind === 'builtin' ? i.name : i.option.name
 
   const matches = useMemo(() => {
     const q = draft.trim().toLowerCase()
-    return q
-      ? allPriorities.filter((p) => getPriorityLabel(p).toLowerCase().includes(q))
-      : allPriorities
-  }, [draft, allPriorities])
+    if (!q) return items
+    return items.filter((i) =>
+      (i.kind === 'builtin' ? getPriorityLabel(i.name) : i.option.name)
+        .toLowerCase()
+        .includes(q),
+    )
+  }, [draft, items])
 
-  const exact = matches.find((p) => getPriorityLabel(p).toLowerCase() === draft.trim().toLowerCase())
-  const canCreate = draft.trim().length > 0 && !exact && !allPriorities.includes(draft.trim())
+  const exact = matches.find((i) => {
+    const label =
+      i.kind === 'builtin' ? getPriorityLabel(i.name) : i.option.name
+    return label.toLowerCase() === draft.trim().toLowerCase()
+  })
+
+  const canCreate =
+    !!onCreatePriority && draft.trim().length > 0 && !exact
 
   const commit = (v: TaskPriority | null) => {
     onChange(v)
     setOpen(false)
   }
 
-  const isBuiltIn = (p: string) => PRIORITY_ORDER.includes(p)
+  const handleCreate = () => {
+    const name = draft.trim()
+    if (!name || !onCreatePriority) return
+    onCreatePriority({ name, color: createColor })
+    commit(name)
+    setCreateColor('gray')
+  }
 
   return (
     <Popover.Root
       open={open}
       onOpenChange={(o) => {
         setOpen(o)
-        if (o) setDraft('')
+        if (o) {
+          setDraft('')
+          setColorPickerForId(null)
+          setCreateColor('gray')
+        }
       }}
     >
       <Popover.Trigger asChild>
-        <button type="button" onClick={(e) => e.stopPropagation()} className={cellTriggerClass}>
-          {value ? <PriorityPill value={value} /> : <EmptyCellHint />}
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className={cellTriggerClass}
+        >
+          {value ? (
+            <PriorityPill value={value} options={priorityOptions} />
+          ) : (
+            <EmptyCellHint />
+          )}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-52"
+          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-60"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2 py-1.5 border-b border-gray-100">
@@ -210,54 +455,124 @@ export function PriorityCell({
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  if (canCreate) commit(draft.trim())
-                  else if (exact) commit(exact)
-                  else if (matches[0]) commit(matches[0])
+                  if (canCreate) handleCreate()
+                  else if (exact) commit(itemName(exact))
+                  else if (matches[0]) commit(itemName(matches[0]))
                 }
               }}
               placeholder="Search or create..."
               className="w-full text-xs placeholder:text-gray-400 outline-none"
             />
           </div>
-          {matches.map((p) => (
-            <div
-              key={p}
-              className="group/priority flex items-center justify-between hover:bg-gray-50 transition"
-            >
+
+          {matches.map((item) => {
+            const name = itemName(item)
+            const label =
+              item.kind === 'builtin' ? getPriorityLabel(name) : name
+            const pillClass =
+              item.kind === 'builtin'
+                ? getPriorityPillClass(name)
+                : TASK_OPTION_PILL_CLASS[item.option.color]
+            const id = item.kind === 'custom' ? item.option.id : null
+            const pickerOpen = id !== null && colorPickerForId === id
+            return (
+              <div key={item.kind === 'builtin' ? `b-${name}` : `c-${id}`}>
+                <div className="group/option flex items-center justify-between hover:bg-gray-50 transition">
+                  <button
+                    type="button"
+                    onClick={() => commit(name)}
+                    className="flex-1 min-w-0 text-left px-2 py-1.5 flex items-center justify-between gap-2"
+                  >
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${pillClass}`}
+                    >
+                      {label}
+                    </span>
+                    {value === name && (
+                      <Check
+                        size={13}
+                        strokeWidth={2}
+                        className="text-gray-400 shrink-0"
+                      />
+                    )}
+                  </button>
+                  {item.kind === 'custom' && (
+                    <div className="flex items-center pr-1.5 opacity-0 group-hover/option:opacity-100 transition">
+                      {onRecolorPriority && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setColorPickerForId(pickerOpen ? null : id)
+                          }}
+                          className="p-1 text-gray-300 hover:text-gray-600 transition cursor-pointer"
+                          aria-label={`Recolour ${name}`}
+                        >
+                          <Palette size={11} strokeWidth={1.5} />
+                        </button>
+                      )}
+                      {onDeletePriorityOption && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeletePriorityOption(item.option.id)
+                            if (value === name) commit(null)
+                            else setOpen(false)
+                          }}
+                          className="p-1 text-gray-300 hover:text-red-500 transition cursor-pointer"
+                          aria-label={`Delete ${name}`}
+                        >
+                          <Trash2 size={11} strokeWidth={1.5} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {pickerOpen &&
+                  item.kind === 'custom' &&
+                  onRecolorPriority && (
+                    <div className="px-3 pb-2 pt-1">
+                      <ColorPickerRow
+                        value={item.option.color}
+                        onChange={(c) => {
+                          onRecolorPriority(item.option.id, c)
+                          setColorPickerForId(null)
+                        }}
+                      />
+                    </div>
+                  )}
+              </div>
+            )
+          })}
+
+          {canCreate && (
+            <>
+              <div className="border-t border-gray-100 mt-1" />
+              <div className="px-2 pt-2 pb-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                  Colour
+                </span>
+                <ColorPickerRow
+                  value={createColor}
+                  onChange={setCreateColor}
+                  onClickStop={false}
+                />
+              </div>
               <button
                 type="button"
-                onClick={() => commit(p)}
-                className="flex-1 text-left px-2 py-1.5 flex items-center justify-between gap-2"
+                onClick={handleCreate}
+                className="w-full text-left px-2 py-1.5 hover:bg-gray-50 transition flex items-center gap-2 text-xs text-gray-500"
               >
-                <PriorityPill value={p} />
-                {value === p && <Check size={13} strokeWidth={2} className="text-gray-400" />}
-              </button>
-              {onDeletePriority && !isBuiltIn(p) && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDeletePriority(p)
-                    if (value === p) commit(null)
-                    else setOpen(false)
-                  }}
-                  className="mr-1.5 p-0.5 text-gray-300 hover:text-red-500 opacity-0 group-hover/priority:opacity-100 transition cursor-pointer"
-                  aria-label={`Delete priority ${p}`}
+                <Plus size={12} strokeWidth={1.5} />
+                Create{' '}
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[createColor]}`}
                 >
-                  <Trash2 size={11} strokeWidth={1.5} />
-                </button>
-              )}
-            </div>
-          ))}
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => commit(draft.trim())}
-              className="w-full text-left px-2 py-1.5 hover:bg-gray-50 transition flex items-center gap-2 text-xs text-gray-500"
-            >
-              <Plus size={12} strokeWidth={1.5} />
-              Create <PriorityPill value={draft.trim()} />
-            </button>
+                  {draft.trim()}
+                </span>
+              </button>
+            </>
           )}
           {value && (
             <>
@@ -277,10 +592,25 @@ export function PriorityCell({
   )
 }
 
-export function PriorityPill({ value }: { value: TaskPriority }) {
+/**
+ * Pill for a priority value. When `options` is provided it consults
+ * the user-defined `task_priorities` list for the colour; otherwise
+ * it falls back to the built-in palette (low/medium/high) or a
+ * deterministic hash colour for unknown values.
+ */
+export function PriorityPill({
+  value,
+  options,
+}: {
+  value: TaskPriority
+  options?: TaskOption[]
+}) {
+  const pillClass = options
+    ? resolvePriorityPillClass(value, options)
+    : getPriorityPillClass(value)
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${getPriorityPillClass(value)}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${pillClass}`}
     >
       {getPriorityLabel(value)}
     </span>
@@ -340,34 +670,58 @@ export function DueDateCell({
 }
 
 // ─── Task type cell ────────────────────────────────────────────────────────
+/**
+ * Notion-style picker for the `task_type` field.
+ *
+ * Unlike priority there are no built-ins — every option is a row in
+ * `task_types`. "Create" persists the new option (with the chosen
+ * colour) and assigns it to the current task in one motion; existing
+ * options can be recoloured or deleted from the dropdown.
+ */
 export function TaskTypeCell({
   value,
   onChange,
-  knownTypes,
-  onDeleteType,
+  typeOptions = [],
+  onCreateType,
+  onRecolorType,
+  onDeleteTypeOption,
 }: {
   value: string | null
   onChange: (v: string | null) => void
-  knownTypes: string[]
-  onDeleteType?: (type: string) => void
+  typeOptions?: TaskOption[]
+  onCreateType?: (input: { name: string; color: TaskOptionColor }) => void
+  onRecolorType?: (id: string, color: TaskOptionColor) => void
+  onDeleteTypeOption?: (id: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
+  const [createColor, setCreateColor] = useState<TaskOptionColor>('gray')
+  const [colorPickerForId, setColorPickerForId] = useState<string | null>(null)
 
   const matches = useMemo(() => {
     const q = draft.trim().toLowerCase()
-    return knownTypes
-      .filter((t, i, arr) => arr.indexOf(t) === i)
-      .filter((t) => !q || t.toLowerCase().includes(q))
-      .sort()
-  }, [draft, knownTypes])
+    return typeOptions
+      .filter((o) => !q || o.name.toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [draft, typeOptions])
 
-  const exact = matches.find((t) => t.toLowerCase() === draft.trim().toLowerCase())
-  const canCreate = draft.trim() && !exact
+  const exact = matches.find(
+    (o) => o.name.toLowerCase() === draft.trim().toLowerCase(),
+  )
+  const canCreate =
+    !!onCreateType && draft.trim().length > 0 && !exact
 
   const commit = (v: string | null) => {
     onChange(v)
     setOpen(false)
+  }
+
+  const handleCreate = () => {
+    const name = draft.trim()
+    if (!name || !onCreateType) return
+    onCreateType({ name, color: createColor })
+    commit(name)
+    setCreateColor('gray')
   }
 
   return (
@@ -375,79 +729,147 @@ export function TaskTypeCell({
       open={open}
       onOpenChange={(o) => {
         setOpen(o)
-        if (o) setDraft('')
+        if (o) {
+          setDraft('')
+          setColorPickerForId(null)
+          setCreateColor('gray')
+        }
       }}
     >
       <Popover.Trigger asChild>
-        <button type="button" onClick={(e) => e.stopPropagation()} className={cellTriggerClass}>
-          {value ? <TaskTypePill value={value} /> : <EmptyCellHint />}
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className={cellTriggerClass}
+        >
+          {value ? (
+            <TaskTypePill value={value} options={typeOptions} />
+          ) : (
+            <EmptyCellHint />
+          )}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-56 max-h-72 overflow-y-auto"
+          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] w-60 max-h-80 overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="px-2 py-1.5">
+          <div className="px-2 py-1.5 border-b border-gray-100">
             <input
               autoFocus
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && canCreate) commit(draft.trim())
-                else if (e.key === 'Enter' && exact) commit(exact)
+                if (e.key === 'Enter') {
+                  if (canCreate) handleCreate()
+                  else if (exact) commit(exact.name)
+                  else if (matches[0]) commit(matches[0].name)
+                }
               }}
               placeholder="Search or create..."
               className="w-full text-xs placeholder:text-gray-400 outline-none"
             />
           </div>
-          <div className="border-t border-gray-100" />
           {matches.length === 0 && !canCreate && (
             <p className="px-2 py-2 text-xs text-gray-400">No types yet</p>
           )}
-          {matches.map((t) => (
-            <div
-              key={t}
-              className="group/type flex items-center justify-between hover:bg-gray-50 transition"
-            >
+          {matches.map((option) => {
+            const pickerOpen = colorPickerForId === option.id
+            return (
+              <div key={option.id}>
+                <div className="group/option flex items-center justify-between hover:bg-gray-50 transition">
+                  <button
+                    type="button"
+                    onClick={() => commit(option.name)}
+                    className="flex-1 min-w-0 text-left px-2 py-1.5 flex items-center justify-between gap-2"
+                  >
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[option.color]}`}
+                    >
+                      {option.name}
+                    </span>
+                    {value === option.name && (
+                      <Check
+                        size={13}
+                        strokeWidth={2}
+                        className="text-gray-400 shrink-0"
+                      />
+                    )}
+                  </button>
+                  <div className="flex items-center pr-1.5 opacity-0 group-hover/option:opacity-100 transition">
+                    {onRecolorType && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setColorPickerForId(pickerOpen ? null : option.id)
+                        }}
+                        className="p-1 text-gray-300 hover:text-gray-600 transition cursor-pointer"
+                        aria-label={`Recolour ${option.name}`}
+                      >
+                        <Palette size={11} strokeWidth={1.5} />
+                      </button>
+                    )}
+                    {onDeleteTypeOption && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDeleteTypeOption(option.id)
+                          if (value === option.name) commit(null)
+                          else setOpen(false)
+                        }}
+                        className="p-1 text-gray-300 hover:text-red-500 transition cursor-pointer"
+                        aria-label={`Delete ${option.name}`}
+                      >
+                        <Trash2 size={11} strokeWidth={1.5} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {pickerOpen && onRecolorType && (
+                  <div className="px-3 pb-2 pt-1">
+                    <ColorPickerRow
+                      value={option.color}
+                      onChange={(c) => {
+                        onRecolorType(option.id, c)
+                        setColorPickerForId(null)
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+          {canCreate && (
+            <>
+              <div className="border-t border-gray-100 mt-1" />
+              <div className="px-2 pt-2 pb-1 flex items-center justify-between gap-2">
+                <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                  Colour
+                </span>
+                <ColorPickerRow
+                  value={createColor}
+                  onChange={setCreateColor}
+                  onClickStop={false}
+                />
+              </div>
               <button
                 type="button"
-                onClick={() => commit(t)}
-                className="flex-1 text-left px-2 py-1.5 flex items-center gap-2"
+                onClick={handleCreate}
+                className="w-full text-left px-2 py-1.5 hover:bg-gray-50 transition flex items-center gap-2 text-xs text-gray-500"
               >
-                <TaskTypePill value={t} />
-                {value === t && <Check size={13} strokeWidth={2} className="text-gray-400" />}
-              </button>
-              {onDeleteType && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDeleteType(t)
-                    if (value === t) commit(null)
-                    setOpen(false)
-                  }}
-                  className="mr-1.5 p-0.5 text-gray-300 hover:text-red-500 opacity-0 group-hover/type:opacity-100 transition cursor-pointer"
-                  aria-label={`Delete type ${t}`}
+                <Plus size={12} strokeWidth={1.5} />
+                Create{' '}
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${TASK_OPTION_PILL_CLASS[createColor]}`}
                 >
-                  <Trash2 size={11} strokeWidth={1.5} />
-                </button>
-              )}
-            </div>
-          ))}
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => commit(draft.trim())}
-              className="w-full text-left px-2 py-1.5 hover:bg-gray-50 transition flex items-center gap-2 text-xs text-gray-500"
-            >
-              <Plus size={12} strokeWidth={1.5} />
-              Create <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset bg-gray-50 text-gray-700 ring-gray-200">
-                {draft.trim()}
-              </span>
-            </button>
+                  {draft.trim()}
+                </span>
+              </button>
+            </>
           )}
           {value && (
             <>
@@ -467,10 +889,23 @@ export function TaskTypeCell({
   )
 }
 
-export function TaskTypePill({ value }: { value: string }) {
+/**
+ * Pill for a task_type value. When `options` is provided it consults
+ * the user-defined `task_types` list for the colour; otherwise it
+ * falls back to the deterministic hash palette so legacy callers
+ * still render something sensible.
+ */
+export function TaskTypePill({
+  value,
+  options,
+}: {
+  value: string
+  options?: TaskOption[]
+}) {
+  const pillClass = options ? resolveTypePillClass(value, options) : taskTypeColor(value)
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${taskTypeColor(value)}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs ring-1 ring-inset ${pillClass}`}
     >
       {value}
     </span>

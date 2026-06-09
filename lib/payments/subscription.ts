@@ -12,5 +12,9 @@
  *
  * @module lib/payments/subscription
  */
-export { currentPlan, hasContractsAccess } from '@/lib/auth/entitlements';
+export {
+  currentPlan,
+  contractCoupleLimit,
+  STARTER_CONTRACT_COUPLE_LIMIT,
+} from '@/lib/auth/entitlements';
 export type { PlanId, EntitlementSource as SubscriptionMeta } from '@/lib/auth/entitlements';
