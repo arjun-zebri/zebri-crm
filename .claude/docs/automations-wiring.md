@@ -320,3 +320,59 @@ End-to-end check on every PR before requesting review:
    automations e2e spec that's easy for A2–A11 to extend; first
    non-trivial e2e candidate is A8 because it intersects with the
    builder's per-config-form UX.
+
+## A1 lessons (recorded for future items)
+
+End-to-end manual testing of A1 on the cloud dev project surfaced
+**seven pre-existing bugs** the local integration suite hadn't
+caught — none in A1 itself, all in the surrounding builder, runtime,
+and migration history. Worth being aware of before A2:
+
+1. **`/api/email/send-quote` gated the `draft → sent` status flip
+   on `share_token_enabled` being false.** A later migration
+   defaulted that flag to `true` on insert, silently killing the
+   transition. Fixed in this PR.
+2. **Trigger picker wrote `triggerConfig: {}`** instead of seeding
+   the Zod-schema defaults — every trigger with a `.default()`
+   field was skipped by the emitters and dispatcher. Picker,
+   emitter, and dispatcher all now defaults-parse via the spec
+   schema. Fixed.
+3. **Dispatcher coerced caught errors as the literal string
+   `'unknown'`.** Supabase JS errors aren't `Error` instances, so
+   PGRST / RLS / constraint failures lost their diagnostic info
+   inside the try/catch. Fixed with a `describeError` helper.
+4. **Inspector `ActionFields` read `actionType` from
+   `config['type']`** which is always undefined — the action's
+   type lives at the row level. Every registered action's
+   inspector rendered as an empty panel. Fixed.
+5. **Quote modal `sendEmail` didn't invalidate `couple-quotes`**,
+   so sending from a couple profile left the parent list showing
+   `draft` until manual refresh. Fixed.
+6. **Foundation migration column was renamed in source
+   (`current_step_id → current_action_id`) without a column-rename
+   migration.** Envs that applied the foundation migration before
+   the rename kept the old name + a legacy `automation_steps` FK
+   target. Two remediation migrations (`20260609000000`,
+   `20260609000100`) rename the column and re-point the FK,
+   guarded so fresh envs are no-ops.
+7. **Cloud ledger drift** — `supabase db push` reported "up to
+   date" but the tables didn't exist (foundation migration died
+   mid-flight previously). Resolved with
+   `supabase migration repair --status reverted ...` + idempotency
+   guards (`drop policy if exists`, `drop trigger if exists`) on
+   every non-idempotent CREATE in the three foundation migrations.
+
+### Implications for A2–A11
+
+- **Every trigger with `.default()` fields needs a unit test for
+  `match()` narrowing**, especially if the predicate uses strict
+  equality.
+- **The runtime trio (picker / emitter / dispatcher) must agree on
+  how config defaults are applied.** Centralised on
+  `spec.configSchema.safeParse(...)` — A2 should follow the
+  pattern without inventing new defaulting logic.
+- **Migration deploy hygiene:** never edit a shipped migration to
+  rename a column. Add a rename migration instead. The §7.9 ledger
+  rule was already documented; this PR adds idempotency guards on
+  the foundation migration as belt-and-braces for any future
+  drift incident.
