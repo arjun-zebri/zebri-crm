@@ -762,7 +762,7 @@ function ActionConfigForm({
           <BranchExtraFields config={config} setConfig={setConfig} />
         </>
       )}
-      {action.type !== 'wait' && action.type !== 'branch' && action.type !== 'approval' && action.type !== 'sub_flow' && action.type !== 'stop' && <ActionFields config={config} setConfig={setConfig} />}
+      {action.type !== 'wait' && action.type !== 'branch' && action.type !== 'approval' && action.type !== 'sub_flow' && action.type !== 'stop' && <ActionFields actionType={action.type as ActionType} config={config} setConfig={setConfig} />}
       {action.type === 'approval' && (
         <>
           <ApprovalFields config={config} setConfig={setConfig} />
@@ -1079,8 +1079,11 @@ function ApprovalFields({ config, setConfig }: FieldProps) {
 
 /* ─── Action step dispatch ─────────────────────────────────────── */
 
-function ActionFields({ config, setConfig }: FieldProps) {
-  const actionType = (config['type'] ?? null) as ActionType | null
+function ActionFields({ actionType, config, setConfig }: FieldProps & { actionType: ActionType }) {
+  // The action's `type` lives at the row level, not inside `config`.
+  // Reading it off `config['type']` (the prior shape) always
+  // returned undefined — every registered action's inspector
+  // rendered as an empty panel until this prop landed.
   const recipients = (config['recipients'] as RecipientConfig | undefined)
   function updateInner(patch: Record<string, unknown>) {
     setConfig({ ...config, ...patch })
@@ -1088,7 +1091,6 @@ function ActionFields({ config, setConfig }: FieldProps) {
   function updateRecipients(next: RecipientConfig) {
     setConfig({ ...config, recipients: next })
   }
-  if (!actionType) return null
 
   switch (actionType) {
     case 'send_email':
