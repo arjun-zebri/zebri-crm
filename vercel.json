@@ -15,7 +15,7 @@
     },
     {
       "path": "/api/cron/automations-tick",
-      "schedule": "* * * * *"
+      "schedule": "0 1 * * *"
     }
   ]
 }

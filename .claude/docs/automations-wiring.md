@@ -321,6 +321,18 @@ End-to-end check on every PR before requesting review:
    non-trivial e2e candidate is A8 because it intersects with the
    builder's per-config-form UX.
 
+7. **Cron frequency (raised in A1)** — Vercel Hobby caps the cron
+   schedule at once per day. `vercel.json` is now `0 1 * * *`
+   (1 am UTC daily). Fine for A1 and every other day-bucketed
+   trigger in the A backlog. **Will not work for A8
+   (`time_before_event`) with sub-day offsets**, and feels sluggish
+   for any time-emitted event whose UX expectation is "within an
+   hour" (e.g. a same-day reminder). Upgrade to Vercel Pro
+   ($20/mo) before A8 begins, switch the schedule back to
+   `* * * * *`, and update the cron route's doc comment. Until
+   then, every time-emitter docs should disclose the day-grain
+   constraint.
+
 ## A1 lessons (recorded for future items)
 
 End-to-end manual testing of A1 on the cloud dev project surfaced

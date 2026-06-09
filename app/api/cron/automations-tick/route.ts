@@ -1,7 +1,15 @@
 /**
  * Cron route: tick the automations engine once.
  *
- * Vercel Cron fires this every minute. Each tick:
+ * Vercel Cron fires this once a day on the Hobby tier (the
+ * schedule in `vercel.json` is `0 1 * * *` — 1 am UTC, mid-morning
+ * AEDT, well clear of the other daily crons). When the project
+ * upgrades to Pro the schedule should drop to `* * * * *` so the
+ * time-emitters approach minute-grain freshness — particularly for
+ * future triggers like `time_before_event` with hour-level offsets
+ * (see `.claude/docs/automations-wiring.md` open question 7).
+ *
+ * Each tick:
  *
  *   1. Runs the time-based emitters — computes "what should fire
  *      now" for triggers like `quote_due` / `task_overdue` that
