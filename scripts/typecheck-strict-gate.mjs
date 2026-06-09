@@ -31,7 +31,10 @@ import { execSync } from 'node:child_process';
 // 2A), 295 (Phase 0.2b).
 // Burn-down target: reach 277 again by ratcheting future
 // page-hardening PRs down. Only ever decrease.
-const STRICT_BUDGET = 324;
+// A1 staging merge: 324 → 323 (one strict error removed via the
+// auto-fix sweep inside the admin redesign commits that came in
+// with the staging merge into this PR). Locking the gain in.
+const STRICT_BUDGET = 323;
 
 function runTscStrict() {
   try {
