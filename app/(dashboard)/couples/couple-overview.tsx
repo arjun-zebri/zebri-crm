@@ -76,9 +76,9 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       )}
 
       {/* Real content - always mounted so queries fire; hidden via CSS while loading */}
-      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 ${isLoading ? 'hidden' : ''}`}>
+      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 h-full ${isLoading ? 'hidden' : ''}`}>
       {/* Column 1: General Info */}
-      <div>
+      <div className="flex flex-col">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">General</h3>
 
         {/* Phone */}
@@ -216,7 +216,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
         </div>
 
         {/* Notes */}
-        <div className="group py-3 rounded-xl -mx-2 px-2">
+        <div className="group flex-1 flex flex-col py-3 rounded-xl -mx-2 px-2 min-h-0">
           <div className="flex items-start justify-between">
             <span className="text-sm text-gray-700 w-28 shrink-0 pt-0.5">Notes</span>
             <Pencil
@@ -230,8 +230,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
             onFocus={() => setEditingField("notes")}
             onBlur={() => handleSaveField("notes", notes)}
             placeholder="Any additional notes..."
-            rows={editingField === "notes" ? 6 : 4}
-            className="w-full bg-transparent outline-none border-none resize-none mt-1 text-sm text-gray-500 placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed"
+            className="flex-1 w-full bg-transparent outline-none border-none resize-none mt-1 text-sm text-gray-500 placeholder:text-gray-300 cursor-pointer focus:cursor-text leading-relaxed min-h-[6rem]"
           />
         </div>
       </div>

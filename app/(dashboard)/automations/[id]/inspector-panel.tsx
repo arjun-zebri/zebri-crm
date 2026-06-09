@@ -1874,13 +1874,36 @@ function NumberInput({
   value: number
   onChange: (v: number) => void
 }) {
+  const [draft, setDraft] = useState(String(value))
+
+  // Sync draft when the committed value changes from outside (e.g. a
+  // different node is selected and the panel re-renders with new props).
+  // Only update if the parsed value actually differs so we don't stomp
+  // the user's in-progress edit (e.g. "1" would be overwritten by 1→"1"
+  // unnecessarily, but that's a no-op anyway).
+  useEffect(() => {
+    if (Number(draft) !== value) setDraft(String(value))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
+  function commit() {
+    const parsed = Number(draft)
+    const next = Number.isFinite(parsed) ? parsed : value
+    setDraft(String(next))
+    if (next !== value) onChange(next)
+  }
+
   return (
     <Input
       label={label}
       size="sm"
       type="number"
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+      }}
     />
   )
 }

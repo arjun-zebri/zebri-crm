@@ -56,7 +56,7 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
         }}
-        className="flex-1 min-w-0 max-w-sm text-sm font-semibold bg-transparent focus:outline-none focus:bg-surface-muted px-1.5 py-0.5 rounded-md"
+        className="flex-1 min-w-0 max-w-sm text-sm font-semibold bg-transparent outline-none border-none px-1.5 py-0.5"
         placeholder="Untitled automation"
       />
 

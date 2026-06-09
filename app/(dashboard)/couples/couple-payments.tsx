@@ -6,7 +6,6 @@ import { useState } from 'react'
 
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal'
 import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -55,8 +54,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
 
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null)
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null)
-  const [deleteQuoteId, setDeleteQuoteId] = useState<string | null>(null)
-  const [deleteInvoiceId, setDeleteInvoiceId] = useState<string | null>(null)
 
   const { data: quotes, isLoading: isQuotesLoading } = useQuery({
     queryKey: ['couple-quotes', coupleId],
@@ -163,34 +160,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
       setActiveInvoiceId(id)
     },
     onError: () => toast('Failed to create invoice'),
-  })
-
-  const deleteQuote = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('quotes').delete().eq('id', id)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['couple-quotes', coupleId] })
-      setDeleteQuoteId(null)
-      setActiveQuoteId(null)
-      toast('Quote deleted')
-    },
-    onError: () => toast('Failed to delete quote'),
-  })
-
-  const deleteInvoice = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('invoices').delete().eq('id', id)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['couple-invoices', coupleId] })
-      setDeleteInvoiceId(null)
-      setActiveInvoiceId(null)
-      toast('Invoice deleted')
-    },
-    onError: () => toast('Failed to delete invoice'),
   })
 
   const allQuotes = quotes || []
@@ -321,11 +290,19 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
         <div className="mt-auto grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-16">
           <div className="flex items-center justify-between px-2 pt-6 border-t border-gray-100">
             <span className="text-xs text-gray-400">Quoted</span>
-            <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(quotesTotal)}</span>
+            {isQuotesLoading ? (
+              <div className="h-4 w-16 bg-gray-100 rounded animate-pulse" />
+            ) : (
+              <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(quotesTotal)}</span>
+            )}
           </div>
           <div className="flex items-center justify-between px-2 pt-6 border-t border-gray-100">
             <span className="text-xs text-gray-400">Invoiced</span>
-            <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(invoicesTotal)}</span>
+            {isInvoicesLoading ? (
+              <div className="h-4 w-16 bg-gray-100 rounded animate-pulse" />
+            ) : (
+              <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(invoicesTotal)}</span>
+            )}
           </div>
         </div>
       </div>
@@ -340,7 +317,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
             setActiveQuoteId(null)
             setActiveInvoiceId(invId)
           }}
-          onDelete={() => setDeleteQuoteId(activeQuoteId)}
         />
       )}
 
@@ -349,27 +325,8 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           invoiceId={activeInvoiceId}
           isOpen
           onClose={() => setActiveInvoiceId(null)}
-          onDelete={() => setDeleteInvoiceId(activeInvoiceId)}
         />
       )}
-
-      <ConfirmDialog
-        open={!!deleteQuoteId}
-        title="Delete Quote"
-        description="Are you sure you want to delete this quote? This cannot be undone."
-        onConfirm={() => deleteQuoteId && deleteQuote.mutate(deleteQuoteId)}
-        onCancel={() => setDeleteQuoteId(null)}
-        loading={deleteQuote.isPending}
-      />
-
-      <ConfirmDialog
-        open={!!deleteInvoiceId}
-        title="Delete Invoice"
-        description="Are you sure you want to delete this invoice? This cannot be undone."
-        onConfirm={() => deleteInvoiceId && deleteInvoice.mutate(deleteInvoiceId)}
-        onCancel={() => setDeleteInvoiceId(null)}
-        loading={deleteInvoice.isPending}
-      />
     </>
   )
 }
