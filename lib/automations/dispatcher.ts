@@ -74,7 +74,7 @@ export async function dispatchPendingEvents(
       }
       await markProcessed(supabase, event.id)
     } catch (err) {
-      await markProcessed(supabase, event.id, err instanceof Error ? err.message : 'unknown')
+      await markProcessed(supabase, event.id, describeError(err))
     }
   }
 
@@ -134,6 +134,28 @@ async function openRun(
     throw error
   }
   return true
+}
+
+/**
+ * Coerce any thrown value into a readable string for
+ * `automation_events.error_message`. Supabase JS errors are plain
+ * objects with `code` + `message` and aren't `Error` instances, so
+ * the prior `err instanceof Error ? err.message : 'unknown'` lost
+ * the actual failure (PostgREST schema cache misses, RLS denials,
+ * etc.) — they all stored literally `'unknown'`.
+ */
+function describeError(err: unknown): string {
+  if (err instanceof Error) return err.message
+  if (typeof err === 'string') return err
+  if (typeof err === 'object' && err !== null) {
+    const o = err as { code?: unknown; message?: unknown; details?: unknown }
+    const parts: string[] = []
+    if (o.code) parts.push(`[${String(o.code)}]`)
+    if (o.message) parts.push(String(o.message))
+    if (o.details) parts.push(`(${String(o.details)})`)
+    if (parts.length > 0) return parts.join(' ')
+  }
+  return 'unknown'
 }
 
 async function markProcessed(
