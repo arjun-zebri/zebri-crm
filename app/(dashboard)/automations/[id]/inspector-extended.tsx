@@ -563,13 +563,18 @@ function OverdueExtra({ config, setConfig, isInvoice }: { config: Cfg; setConfig
   return (
     <>
       <NumField label="Maximum days overdue (optional)" value={(config['daysOverdueMax'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, daysOverdueMax: v || undefined })} />
-      {isInvoice ? (
+      {/* The quote branch used to offer a "couple has previously
+          viewed" checkbox, but quote view tracking doesn't exist in
+          the schema yet — the filter silently did nothing. Hidden
+          until view tracking ships (same blocker as the
+          quote_viewed_but_not_responded trigger). The config schema
+          still accepts the field, so previously saved values are
+          harmless. */}
+      {isInvoice && (
         <>
           <Check label="Final-balance invoices only" checked={config['isFinalBalance'] === true} onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })} />
           <NumericComparison label="Days until event date" opField="daysUntilEventOp" valueField="daysUntilEventValue" config={config} setConfig={setConfig} />
         </>
-      ) : (
-        <Check label="Only when the couple has previously viewed the quote" checked={config['couplePreviouslyViewed'] === true} onChange={(v) => setConfig({ ...config, couplePreviouslyViewed: v || undefined })} />
       )}
     </>
   )

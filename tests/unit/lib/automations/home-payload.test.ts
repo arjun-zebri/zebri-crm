@@ -160,9 +160,13 @@ describe('buildHomePayload', () => {
       automation({ id: 'a1', name: 'Quote follow-up' }),
       automation({ id: 'a2', name: 'Onboarding' }),
     ]
+    // Relative to now — hardcoded ISO dates silently age out of the
+    // 7-day window and start failing months later for no code change.
+    const daysAgo = (n: number) =>
+      new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString()
     const runs = [
-      run({ id: 'r1', automation_id: 'a1', couple_id: null, status: 'errored', started_at: '2026-06-04T10:00:00Z' }),
-      run({ id: 'r2', automation_id: 'a2', couple_id: null, status: 'errored', started_at: '2026-06-03T10:00:00Z' }),
+      run({ id: 'r1', automation_id: 'a1', couple_id: null, status: 'errored', started_at: daysAgo(2) }),
+      run({ id: 'r2', automation_id: 'a2', couple_id: null, status: 'errored', started_at: daysAgo(3) }),
     ]
     const payload = buildHomePayload({ automations, runs, waits: [], recent: [], couples })
 

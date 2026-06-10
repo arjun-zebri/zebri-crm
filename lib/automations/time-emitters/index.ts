@@ -46,6 +46,7 @@ import type { TriggerType } from '@/types/automations'
 import type { Database } from '@/types/database'
 
 import { quoteDueEmitter } from './quote-due'
+import { quoteOverdueEmitter } from './quote-overdue'
 
 /**
  * One time-based emitter. Each emitter owns the full lifecycle for
@@ -68,7 +69,7 @@ export interface TimeEmitter {
  * trigger (e.g. `invoice_overdue`) is "implement the
  * {@link TimeEmitter} and append it here" — no other wiring.
  */
-const registry: readonly TimeEmitter[] = [quoteDueEmitter]
+const registry: readonly TimeEmitter[] = [quoteDueEmitter, quoteOverdueEmitter]
 
 export interface TimeEmittersResult {
   /** Per-emitter event counts, keyed by trigger type. */

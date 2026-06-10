@@ -140,6 +140,16 @@ one at a time per `.claude/docs/automations-wiring.md`.
   (quote, days-lead-time, calendar day); narrowing happens via
   `payload.days_until_due === config.days` in the trigger's
   `match()`.
+- `quote_overdue` (A2) — fires once for `quotes` with
+  `status = 'sent'` on the day they cross
+  `max(1, daysOverdueMin ?? 1)` days past `expires_at` (a min of 0
+  is clamped to 1 — the expiry day itself belongs to `quote_due`).
+  Emits one event per (quote, threshold, calendar day); narrowing
+  via `payload.days_overdue === threshold`, plus a `daysOverdueMax`
+  window guard. `couplePreviouslyViewed` is accepted by the schema
+  but **not enforced** — quote view tracking doesn't exist yet, and
+  the inspector hides the checkbox until it does. Day boundaries
+  are UTC (same caveat as `quote_due`).
 
 **Not yet wired:** every other time-based trigger in the list above.
 See `automations-wiring.md` for the running order.
@@ -305,12 +315,16 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 ## Future work
 
 - Tick-time emitters for the remaining time-based triggers
-  (`quote_overdue`, `invoice_due`, `invoice_overdue`, `task_overdue`,
+  (`invoice_due`, `invoice_overdue`, `task_overdue`,
   `lead_inactive`, `portal_section_started_not_finished`,
   `time_before_event`, `time_after_event`, `anniversary_of_event`,
   `specific_date_reached`). The framework
   (`lib/automations/time-emitters/`) and the first wiring
-  (`quote_due`) shipped together; see `automations-wiring.md`.
+  (`quote_due`) shipped together; `quote_overdue` (A2) followed.
+  See `automations-wiring.md`.
+- Quote view tracking — prerequisite for `quote_overdue`'s
+  `couplePreviouslyViewed` filter and the
+  `quote_viewed_but_not_responded` trigger.
 - `contacts.tags` column for true custom-tag recipient matching.
 - Drag-to-reorder actions in the builder (replace position math with
   dnd-kit, mirroring the branding block renderer).
