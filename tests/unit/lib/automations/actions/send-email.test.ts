@@ -7,10 +7,14 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { getActionSpec } from '@/lib/automations/actions'
 import type { RunContext } from '@/types/automations'
 
 const sendMock = vi.fn()
 
+// vi.mock calls are hoisted above the imports above, so mocking
+// `resend` / the admin client here still applies to getActionSpec's
+// transitive imports despite appearing after them in source order.
 vi.mock('resend', () => ({
   Resend: class {
     emails = { send: sendMock }
@@ -29,8 +33,6 @@ vi.mock('@/lib/supabase/admin', () => ({
     }),
   }),
 }))
-
-import { getActionSpec } from '@/lib/automations/actions'
 
 function makeCtx(): RunContext {
   return {
@@ -174,5 +176,48 @@ describe('send_email handler', () => {
     const payload = sendMock.mock.calls[0]![0]
     expect(payload.to).toBe('vera@venue.co')
     expect(payload.cc).toBeUndefined()
+  })
+
+  it('errors when every recipient send is rejected by Resend', async () => {
+    // Previously a rejected send soft-failed and the run reported
+    // ok/sent:0 with no signal. A total failure must surface so the
+    // runner errors the run + alerts (the user has no other way to
+    // know the chase-up email never went out).
+    sendMock.mockResolvedValue({
+      data: null,
+      error: { message: 'domain app.zebri.com.au is not verified' },
+    })
+    const result = await run(baseConfig())
+    expect(result.kind).toBe('error')
+    if (result.kind === 'error') {
+      expect(result.message).toContain('not verified')
+    }
+  })
+
+  it('errors when the Resend call throws for every recipient', async () => {
+    sendMock.mockRejectedValue(new Error('network down'))
+    const result = await run(baseConfig())
+    expect(result.kind).toBe('error')
+    if (result.kind === 'error') {
+      expect(result.message).toContain('network down')
+    }
+  })
+
+  it('stays ok but records the failure count on a partial failure', async () => {
+    // One of two recipients fails — the other email already went out,
+    // so erroring (and re-running) would double-send. Stay ok, but
+    // make the partial failure visible in the run output.
+    sendMock
+      .mockResolvedValueOnce({ data: { id: 'msg_ok' }, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: 'bounced' } })
+    const result = await run(
+      baseConfig({
+        recipients: { roles: ['primary', 'me'], fallback: 'skip' },
+      }),
+    )
+    expect(result.kind).toBe('ok')
+    if (result.kind === 'ok') {
+      expect(result.output).toMatchObject({ recipients: 2, sent: 1, failed: 1 })
+    }
   })
 })

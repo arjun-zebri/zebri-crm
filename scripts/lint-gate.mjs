@@ -78,7 +78,11 @@ const ERROR_BUDGET = 89;
 // Automations A1 re-anchor: budget drifted with the same ee7ef8c
 // PR that raised errors — staging head was at 481 warnings when
 // this PR forked. Re-anchoring at 481. Burn-down target: back to 478.
-const WARNING_BUDGET = 481;
+// Automations A2 send_email cleanup: tidied import grouping in the
+// new test → 481 → 480.
+// Couple Automations tab rework: fixed the tab's exhaustive-deps
+// warning + raw-button usage and two import-order slips → 480 → 477.
+const WARNING_BUDGET = 477;
 
 function runEslintJson() {
   try {

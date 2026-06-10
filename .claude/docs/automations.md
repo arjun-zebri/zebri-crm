@@ -205,6 +205,14 @@ Catalogue in `lib/automations/actions/`. Split by category:
   do-not-email, preview-before-send, track-opens, send-at) are
   schema-accepted but ignored and hidden from the inspector — the
   per-field blockers are documented on `sendEmailConfigSchema`.
+  **Failure semantics:** if every addressable recipient is rejected
+  by Resend, the handler returns `{ kind: 'error' }` so the runner
+  errors the run + fires the `automations.runner` Slack alert —
+  no more silent `sent: 0`. A partial failure stays `ok` (the
+  successful sends can't be un-sent) but records `failed` +
+  `last_error` in the run output. NB locally `send_email` hits the
+  real Resend API (not Mailpit), so an unverified sender domain
+  surfaces here as a run error.
 - `couple.ts` - stage update, note, custom fields, portal link,
   request information, create couple, pause couple automations
 - `task.ts` - create / update task, calendar event, reminder
@@ -308,7 +316,12 @@ on the `automations` row.
   with no extra parameters show a confirmation hint instead of
   an empty form
 - `app/(dashboard)/couples/couple-automations.tsx` - couple-profile
-  sub-tab showing runs touching this couple
+  sub-tab: one row per automation that has touched this couple
+  (live first, trigger label + headline status); the row expands
+  to that automation's run history. Run errors are rendered via
+  `lib/automations/config-errors.ts` `friendlyRunError()` - the
+  runner stores plain-English config errors (`configErrorMessage()`)
+  and legacy raw-Zod rows are translated at display time
 
 The sidebar nav item is added in `app/components/sidebar.tsx`
 (`Sparkles` icon, between Payments and Branding).

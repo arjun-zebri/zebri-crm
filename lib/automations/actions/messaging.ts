@@ -116,13 +116,18 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       if (ccList.length > 0) cc = ccList
     }
 
+    const addressable = recipients.filter((r) => r.email)
+    if (addressable.length === 0) {
+      return { kind: 'ok', output: { skipped: 'no addressable recipients' } }
+    }
+
     const messageIds: string[] = []
-    for (const r of recipients) {
-      if (!r.email) continue
+    let lastError: string | null = null
+    for (const r of addressable) {
       try {
         const { data, error } = await resend().emails.send({
           from: FROM,
-          to: r.email,
+          to: r.email!,
           subject,
           html,
           replyTo: config.replyToOverride ?? ctx.mc.email,
@@ -130,18 +135,43 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
           ...(cc ? { cc } : {}),
         })
         if (error || !data?.id) {
-          // Soft fail per-recipient - record but don't kill the run.
+          lastError = error?.message ?? 'Resend returned no message id'
           continue
         }
         messageIds.push(data.id)
-      } catch {
-        // Same - soft fail.
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err)
       }
     }
 
+    const sent = messageIds.length
+    const failed = addressable.length - sent
+
+    // Total failure: nothing went out. Surface it so the runner
+    // errors the run + fires the automation_failed Slack alert —
+    // otherwise a misconfigured sender (unverified domain, dead key)
+    // silently no-ops every send and the MC never knows.
+    if (sent === 0) {
+      return {
+        kind: 'error',
+        message: `send_email: all ${failed} recipient(s) failed${
+          lastError ? ` — ${lastError}` : ''
+        }`,
+      }
+    }
+
+    // Partial failure: some emails already went out, so erroring (and
+    // re-running) would double-send the successful ones. Stay ok but
+    // record the failure count + reason in the run output.
     return {
       kind: 'ok',
-      output: { recipients: recipients.length, sent: messageIds.length, message_ids: messageIds },
+      output: {
+        recipients: addressable.length,
+        sent,
+        failed,
+        message_ids: messageIds,
+        ...(failed > 0 && lastError ? { last_error: lastError } : {}),
+      },
     }
   },
   ui: {
