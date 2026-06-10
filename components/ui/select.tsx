@@ -74,10 +74,21 @@ const SIZE_CLASSES: Record<SelectSize, string> = {
   md: 'h-9 px-3 text-body gap-2',
 };
 
+/**
+ * Item text size kept in sync with the trigger so the dropdown
+ * panel doesn't render at a different size than what the user
+ * just clicked. Without this, a small trigger would open a list
+ * of 14px items — visually jarring.
+ */
+const ITEM_TEXT: Record<SelectSize, string> = {
+  sm: 'text-caption',
+  md: 'text-body',
+};
+
 const TRIGGER_BASE =
   'inline-flex w-full items-center justify-between rounded-control bg-surface text-text ' +
   'border transition-colors data-[placeholder]:text-text-subtle ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-surface ' +
+  'focus-visible:outline-none focus-visible:ring-1 ' +
   'disabled:opacity-50 disabled:cursor-not-allowed';
 
 /** Token-driven, accessible select. See {@link SelectProps}. */
@@ -147,7 +158,7 @@ export function Select({
                   key={opt.value}
                   value={opt.value}
                   {...(opt.disabled !== undefined && { disabled: opt.disabled })}
-                  className="relative flex cursor-pointer items-center rounded-control px-2 py-1.5 pr-8 text-body text-text outline-none data-[highlighted]:bg-surface-emphasis data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+                  className={`relative flex cursor-pointer items-center rounded-control px-2 py-1.5 pr-8 text-text outline-none data-[highlighted]:bg-surface-emphasis data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 ${ITEM_TEXT[size]}`}
                 >
                   <RadixSelect.ItemText>{opt.label}</RadixSelect.ItemText>
                   <RadixSelect.ItemIndicator className="absolute right-2 inline-flex items-center">

@@ -322,6 +322,11 @@ export function QuoteBuilderModal({
       toast('Sent to couple');
       queryClient.invalidateQueries({ queryKey: ['quote', id] });
       queryClient.invalidateQueries({ queryKey: ['all-quotes'] });
+      // The same modal is opened from the couple profile too, where
+      // the parent list keys on ['couple-quotes', coupleId]. Without
+      // this, sending from a couple profile leaves the list showing
+      // `draft` until the user manually refreshes.
+      queryClient.invalidateQueries({ queryKey: ['couple-quotes'] });
     },
     onError: (err) => toast(err instanceof Error ? err.message : 'Failed to send', 'error'),
   });

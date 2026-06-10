@@ -28,6 +28,7 @@ import {
   Music,
   Paperclip,
   Receipt,
+  Sparkles,
   Users,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -94,6 +95,11 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'contracts',
     label: 'Contracts',
     icon: <FileSignature size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: 'automations',
+    label: 'Automations',
+    icon: <Sparkles size={18} strokeWidth={1.5} />,
   },
 ];
 

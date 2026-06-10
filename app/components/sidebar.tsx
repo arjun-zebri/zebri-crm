@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Paintbrush,
+  Sparkles,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
@@ -30,6 +31,7 @@ const navItems = [
   { label: "Tasks", href: "/tasks", icon: CheckSquare },
   { label: "Contacts", href: "/contacts", icon: Contact },
   { label: "Payments", href: "/payments", icon: CreditCard },
+  { label: "Automations", href: "/automations", icon: Sparkles },
 ];
 
 const bottomItems = [
