@@ -418,7 +418,7 @@ export interface CoupleCustomFieldRow {
  * The recipient picker on every send-* action exposes these as
  * built-in roles. Custom-tag handling layers a string slug on top.
  */
-export type RecipientRole = 'primary' | 'spouse' | 'family' | 'vendor' | 'custom'
+export type RecipientRole = 'primary' | 'spouse' | 'family' | 'vendor' | 'custom' | 'me'
 
 export interface RecipientSpec {
   /** One or more roles to address. Multi-select. */

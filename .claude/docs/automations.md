@@ -198,7 +198,13 @@ config to the MC use-case without inventing per-use-case slugs:
 Catalogue in `lib/automations/actions/`. Split by category:
 
 - `messaging.ts` - `send_email` (Resend) + `send_sms` / `send_whatsapp`
-  (14b stubs)
+  (14b stubs). `send_email` honours: recipients, subject, body,
+  branded-shell wrap, `replyToOverride`, `ccVendors` (deduped
+  against direct recipients), `bccSelf`. The remaining Phase 14a
+  scaffolding fields (attachments, per-email quiet hours,
+  do-not-email, preview-before-send, track-opens, send-at) are
+  schema-accepted but ignored and hidden from the inspector — the
+  per-field blockers are documented on `sendEmailConfigSchema`.
 - `couple.ts` - stage update, note, custom fields, portal link,
   request information, create couple, pause couple automations
 - `task.ts` - create / update task, calendar event, reminder
@@ -224,9 +230,13 @@ Each handler:
 ## Recipient model
 
 `lib/automations/recipients.ts` exposes
-`resolveRecipients(supabase, couple, spec)`.
+`resolveRecipients(supabase, couple, spec, mc?)`.
 
-Roles: `primary`, `spouse`, `family`, `vendor`, `custom`.
+Roles: `primary`, `spouse`, `family`, `vendor`, `custom`, `me`.
+`me` resolves to the MC's own email from the `mc` snapshot
+("Myself (your email)" in the picker) — call sites that don't
+thread the MC through simply drop the role and the fallback rule
+applies.
 Spouse details come from `portal_people` where `category = 'partner'`.
 Family / vendor matching reads `couple_contacts` joined to
 `contacts.category`. Custom tag matching is currently aliased to

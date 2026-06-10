@@ -13,9 +13,11 @@
  */
 'use client'
 
-import { Repeat2, Trash2, X } from 'lucide-react'
+import { ChevronRight, Repeat2, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { Checkbox } from '@/components/ui/checkbox'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { actionRegistry } from '@/lib/automations/actions'
@@ -592,17 +594,7 @@ function CheckboxField({
   checked: boolean
   onChange: (v: boolean) => void
 }) {
-  return (
-    <label className="flex items-center gap-3 cursor-pointer">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-border accent-brand-fg"
-      />
-      <span className="text-caption text-text">{label}</span>
-    </label>
-  )
+  return <Checkbox label={label} checked={checked} onChange={onChange} />
 }
 
 function CoupleStatusSelect({
@@ -1271,7 +1263,7 @@ function SubFlowField({ config, setConfig }: FieldProps) {
 type ConfigProps = { config: Record<string, unknown>; updateConfig: (patch: Record<string, unknown>) => void }
 
 interface RecipientConfig {
-  roles: ('primary' | 'spouse' | 'family' | 'vendor' | 'custom')[]
+  roles: ('primary' | 'spouse' | 'family' | 'vendor' | 'custom' | 'me')[]
   customTag?: string
   fallback: 'primary_only' | 'skip' | 'error'
 }
@@ -1737,12 +1729,13 @@ function CalendarEntryForm({ config, updateConfig }: ConfigProps) {
 
 /* ─── Recipients picker (multi-select roles + fallback) ────────── */
 
-const RECIPIENT_ROLES: ('primary' | 'spouse' | 'family' | 'vendor')[] = ['primary', 'spouse', 'family', 'vendor']
+const RECIPIENT_ROLES: ('primary' | 'spouse' | 'family' | 'vendor' | 'me')[] = ['primary', 'spouse', 'family', 'vendor', 'me']
 const RECIPIENT_ROLE_LABELS: Record<string, string> = {
   primary: 'Primary couple email',
   spouse: 'Spouse',
   family: 'Family contacts',
   vendor: 'Vendor contacts',
+  me: 'Myself (your email)',
 }
 
 function RecipientsField({
@@ -1753,7 +1746,7 @@ function RecipientsField({
   update: (r: RecipientConfig) => void
 }) {
   const r: RecipientConfig = recipients ?? { roles: ['primary'], fallback: 'primary_only' }
-  function toggleRole(role: 'primary' | 'spouse' | 'family' | 'vendor') {
+  function toggleRole(role: 'primary' | 'spouse' | 'family' | 'vendor' | 'me') {
     const has = r.roles.includes(role)
     const next = has ? r.roles.filter((x) => x !== role) : [...r.roles, role]
     update({ ...r, roles: next.length > 0 ? next : ['primary'] })
@@ -1787,21 +1780,47 @@ function RecipientsField({
 
 /* ─── Inline variable hint + generic hint banner ───────────────── */
 
+/**
+ * Collapsible variable reference. A controlled disclosure rather
+ * than a native `<details>` so the expand/collapse animates — the
+ * grid-rows 0fr→1fr transition tweens to the content's natural
+ * height, which `max-height` hacks can't do reliably.
+ */
 function InlineVariableHint() {
+  const [open, setOpen] = useState(false)
   return (
-    <details className="rounded-control border border-border bg-surface-muted px-3 py-2">
-      <summary className="text-caption text-text-muted cursor-pointer select-none">Available variables</summary>
-      <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
-        {VARIABLE_CATALOGUE.map((group) => (
-          <div key={group.group}>
-            <div className="text-[10px] uppercase tracking-wide text-text-subtle mt-1">{group.group}</div>
-            {group.variables.map((v) => (
-              <div key={v.token} className="text-caption font-mono text-text-muted">{v.token}</div>
+    <div className="rounded-control border border-border bg-surface-muted px-3 py-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-1.5 text-caption text-text-muted cursor-pointer select-none transition-colors hover:text-text"
+      >
+        <ChevronRight
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? 'rotate-90' : ''}`}
+          strokeWidth={1.5}
+        />
+        Available variables
+      </button>
+      <div
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <div className="overflow-hidden min-h-0">
+          <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+            {VARIABLE_CATALOGUE.map((group) => (
+              <div key={group.group}>
+                <div className="text-[10px] uppercase tracking-wide text-text-subtle mt-1">{group.group}</div>
+                {group.variables.map((v) => (
+                  <div key={v.token} className="text-caption font-mono text-text-muted">{v.token}</div>
+                ))}
+              </div>
             ))}
           </div>
-        ))}
+        </div>
       </div>
-    </details>
+    </div>
   )
 }
 
@@ -1855,13 +1874,10 @@ function TextInput({
 
 function DateInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <Input
-      label={label}
-      size="sm"
-      type="date"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <div className="space-y-1">
+      <Label>{label}</Label>
+      <DatePicker value={value} onChange={onChange} />
+    </div>
   )
 }
 

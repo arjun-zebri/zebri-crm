@@ -14,6 +14,8 @@
 
 import { Trash2 } from 'lucide-react'
 
+import { Checkbox } from '@/components/ui/checkbox'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import {
@@ -146,30 +148,46 @@ function DateField({
   label: string; value: string; onChange: (v: string) => void
 }) {
   return (
-    <Input
-      label={label}
-      size="sm"
-      type="date"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <div className="space-y-1">
+      <Label>{label}</Label>
+      <DatePicker value={value} onChange={onChange} />
+    </div>
   )
 }
 
+/**
+ * Time-of-day picker built on the design-system Select (30-minute
+ * steps) instead of a native `type="time"` input, whose platform
+ * chrome ignores our tokens. A previously saved arbitrary value
+ * (e.g. "14:45" from the old free-form input) is injected as an
+ * extra option so it still displays and round-trips.
+ */
 function TimeField({
   label, value, onChange,
 }: {
   label: string; value: string; onChange: (v: string) => void
 }) {
-  return (
-    <Input
-      label={label}
-      size="sm"
-      type="time"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  )
+  const options = [{ value: '', label: 'Not set' }]
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 30]) {
+      const v = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+      options.push({ value: v, label: formatTimeLabel(h, m) })
+    }
+  }
+  if (value && !options.some((o) => o.value === value)) {
+    const [h, m] = value.split(':').map(Number)
+    options.push({
+      value,
+      label: Number.isFinite(h) && Number.isFinite(m) ? formatTimeLabel(h!, m!) : value,
+    })
+  }
+  return <SelectField label={label} value={value} onChange={onChange} options={options} />
+}
+
+function formatTimeLabel(h: number, m: number): string {
+  const period = h < 12 ? 'am' : 'pm'
+  const hour12 = h % 12 === 0 ? 12 : h % 12
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`
 }
 
 function TextAreaField({
@@ -195,17 +213,7 @@ function Check({
 }: {
   label: string; checked: boolean; onChange: (v: boolean) => void
 }) {
-  return (
-    <label className="flex items-center gap-3 cursor-pointer">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-border accent-brand-fg"
-      />
-      <span className="text-caption text-text">{label}</span>
-    </label>
-  )
+  return <Checkbox label={label} checked={checked} onChange={onChange} />
 }
 
 function SelectField({
@@ -1482,8 +1490,18 @@ function PushForm({ config, updateConfig }: FormProps) {
 
 /**
  * Extra fields appended to the inspector's existing `send_email`
- * form for the Phase 14a UI scaffolding (attachments, quiet hours,
- * preview-before-send, etc.).
+ * form. Only fields the handler actually honours are offered:
+ * reply-to override, CC vendors, BCC self.
+ *
+ * The Phase 14a scaffolding fields (attachments, per-email quiet
+ * hours, do-not-email, preview-before-send, track-opens, send-at)
+ * were removed from the form because the handler ignores them —
+ * advertising a control that silently does nothing is worse than
+ * not offering it. The config schema still accepts them so saved
+ * configs keep parsing; see `sendEmailConfigSchema` in
+ * `lib/automations/actions/messaging.ts` for the per-field
+ * blockers. Timing belongs to a `wait` action and approval to an
+ * Approval-gate action, both first-class builder steps.
  */
 export function SendEmailExtraFields({
   config, updateConfig,
@@ -1493,20 +1511,11 @@ export function SendEmailExtraFields({
       <TextField label="Reply-to override (optional)" value={(config['replyToOverride'] as string) ?? ''} onChange={(v) => updateConfig({ replyToOverride: v || undefined })} placeholder="you@your-business.com" />
       <Check label="CC every vendor contact attached to the couple" checked={config['ccVendors'] === true} onChange={(v) => updateConfig({ ccVendors: v })} />
       <Check label="BCC yourself for the paper trail" checked={config['bccSelf'] === true} onChange={(v) => updateConfig({ bccSelf: v })} />
-      <div>
-        <Label>Attachments</Label>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-          <Check label="Attach latest quote" checked={config['attachQuote'] === true} onChange={(v) => updateConfig({ attachQuote: v })} />
-          <Check label="Attach latest contract" checked={config['attachContract'] === true} onChange={(v) => updateConfig({ attachContract: v })} />
-          <Check label="Attach latest invoice" checked={config['attachInvoice'] === true} onChange={(v) => updateConfig({ attachInvoice: v })} />
-          <Check label="Attach run-sheet PDF" checked={config['attachRunSheet'] === true} onChange={(v) => updateConfig({ attachRunSheet: v })} />
-        </div>
-      </div>
-      <Check label="Defer if it lands inside quiet hours" checked={config['respectQuietHours'] === true} onChange={(v) => updateConfig({ respectQuietHours: v })} />
-      <Check label="Skip if the couple has do-not-email set" checked={config['respectCoupleDoNotEmail'] === true} onChange={(v) => updateConfig({ respectCoupleDoNotEmail: v })} />
-      <Check label="Send a preview to me first for approval" checked={config['previewBeforeSend'] === true} onChange={(v) => updateConfig({ previewBeforeSend: v })} />
-      <Check label="Track opens" checked={config['trackOpens'] === true} onChange={(v) => updateConfig({ trackOpens: v })} />
-      <Input label="Send at (optional)" size="sm" type="datetime-local" value={(config['sendAt'] as string) ?? ''} onChange={(e) => updateConfig({ sendAt: e.target.value || undefined })} />
+      <Hint>
+        Need timing or sign-off? Add a Wait step before this email, or an
+        Approval gate to review it before it sends. Attachments are coming
+        soon.
+      </Hint>
     </>
   )
 }

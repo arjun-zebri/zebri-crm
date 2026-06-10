@@ -13,7 +13,7 @@ import { Resend } from 'resend'
 import { z } from 'zod'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { ActionResult, ActionType, RecipientSpec, RunContext } from '@/types/automations'
+import type { ActionType, RecipientSpec, RunContext } from '@/types/automations'
 
 import { resolveRecipients } from '../recipients'
 import { renderTemplate } from '../variables'
@@ -37,7 +37,7 @@ function resend(): Resend {
 // ────────────────────────────────────────────────────────────────
 
 const recipientSpecSchema: z.ZodSchema<RecipientSpec> = z.object({
-  roles: z.array(z.enum(['primary', 'spouse', 'family', 'vendor', 'custom'])).min(1),
+  roles: z.array(z.enum(['primary', 'spouse', 'family', 'vendor', 'custom', 'me'])).min(1),
   customTag: z.string().optional(),
   fallback: z.enum(['primary_only', 'skip', 'error']).default('primary_only'),
 })
@@ -48,32 +48,31 @@ const sendEmailConfigSchema = z.object({
   body: z.string().min(1),
   /** Wrap the body in the standard Zebri-branded HTML shell. */
   wrap: z.boolean().default(true),
-  // ── Extended UI scaffolding (handler ignores for now) ──────────
-  /** Override the Reply-To header. */
+  /** Override the Reply-To header (defaults to the MC's email). */
   replyToOverride: z.string().email().optional(),
   /** CC every vendor contact attached to the couple. */
   ccVendors: z.boolean().optional(),
   /** BCC the MC so they retain a paper trail. */
   bccSelf: z.boolean().optional(),
-  /** Attach the couple's most recent quote PDF. */
+  // ── Deferred fields ────────────────────────────────────────────
+  // Accepted so previously saved configs keep parsing, but the
+  // handler ignores them and the inspector no longer offers them:
+  //   - attach* needs PDF generation plumbed into Resend attachments
+  //   - respectQuietHours only exists at the `wait` action level
+  //   - respectCoupleDoNotEmail needs a couples.do_not_email column
+  //   - previewBeforeSend duplicates the Approval-gate action
+  //   - trackOpens has no per-send toggle in the Resend API
+  //   - sendAt: a fixed datetime is wrong for recurring automations;
+  //     use a `wait` action before the send instead
   attachQuote: z.boolean().optional(),
-  /** Attach the couple's most recent contract PDF. */
   attachContract: z.boolean().optional(),
-  /** Attach the couple's most recent invoice PDF. */
   attachInvoice: z.boolean().optional(),
-  /** Attach the latest generated run sheet. */
   attachRunSheet: z.boolean().optional(),
-  /** Attach one or more files from the couple's portal uploads (by storage key). */
   attachFiles: z.array(z.string()).optional(),
-  /** Defer the send into the next non-quiet-hours window. */
   respectQuietHours: z.boolean().optional(),
-  /** Skip the send entirely if the couple has do-not-email set. */
   respectCoupleDoNotEmail: z.boolean().optional(),
-  /** Send a preview to the MC first and require approval before send. */
   previewBeforeSend: z.boolean().optional(),
-  /** Enable Resend open tracking. */
   trackOpens: z.boolean().optional(),
-  /** Force the send at a specific ISO datetime (overrides immediate). */
   sendAt: z.string().optional(),
 }).passthrough()
 
@@ -86,7 +85,7 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
     }
 
     const supabase = createAdminClient()
-    const recipients = await resolveRecipients(supabase, ctx.couple, config.recipients)
+    const recipients = await resolveRecipients(supabase, ctx.couple, config.recipients, ctx.mc)
     if (recipients.length === 0) {
       return { kind: 'ok', output: { skipped: 'no recipients' } }
     }
@@ -94,6 +93,28 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
     const subject = renderTemplate(config.subject, ctx)
     const bodyText = renderTemplate(config.body, ctx)
     const html = config.wrap ? wrapAutomationHtml(bodyText, ctx) : bodyText
+
+    // CC list resolves once and applies to every outgoing message.
+    // Vendors already addressed directly are dropped so nobody gets
+    // the same email twice.
+    let cc: string[] | undefined
+    if (config.ccVendors) {
+      const vendors = await resolveRecipients(supabase, ctx.couple, {
+        roles: ['vendor'],
+        fallback: 'skip',
+      })
+      const direct = new Set(
+        recipients.map((r) => r.email?.toLowerCase()).filter(Boolean),
+      )
+      const ccList = [
+        ...new Set(
+          vendors
+            .map((v) => v.email)
+            .filter((e): e is string => !!e && !direct.has(e.toLowerCase())),
+        ),
+      ]
+      if (ccList.length > 0) cc = ccList
+    }
 
     const messageIds: string[] = []
     for (const r of recipients) {
@@ -104,7 +125,9 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
           to: r.email,
           subject,
           html,
-          replyTo: ctx.mc.email,
+          replyTo: config.replyToOverride ?? ctx.mc.email,
+          ...(config.bccSelf ? { bcc: ctx.mc.email } : {}),
+          ...(cc ? { cc } : {}),
         })
         if (error || !data?.id) {
           // Soft fail per-recipient - record but don't kill the run.

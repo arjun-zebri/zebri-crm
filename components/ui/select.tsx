@@ -150,7 +150,7 @@ export function Select({
           <RadixSelect.Content
             position="popper"
             sideOffset={4}
-            className="z-50 min-w-(--radix-select-trigger-width) overflow-hidden rounded-card border border-border bg-surface text-text shadow-lg"
+            className="z-50 min-w-(--radix-select-trigger-width) overflow-hidden rounded-card border border-border bg-surface text-text shadow-lg animate-fade-in"
           >
             <RadixSelect.Viewport className="p-1">
               {options.map((opt) => (
