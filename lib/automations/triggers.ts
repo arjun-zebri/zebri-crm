@@ -493,8 +493,35 @@ const invoiceDue: TriggerSpec<{
     respectQuietHours: z.boolean().optional(),
     isFinalBalance: z.boolean().optional(),
   }).passthrough(),
-  match: () => true,
+  // The `invoice_due` event is emitted by the time-emitter once per
+  // (invoice, lead-time, day) — see `lib/automations/time-emitters/
+  // invoice-due.ts`. The emitter stamps the matching lead-time in
+  // `payload.days_until_due`; narrowing here means an automation with
+  // `days=3` only fires for the 3-days-before event, not the `days=0`
+  // event on the same invoice. Mirrors `quote_due`. `isFinalBalance`
+  // is accepted but not yet enforced — the emitter anchors on the
+  // top-level `due_date`, not payment-schedule installments.
+  match: (event, config) => {
+    const payload = p(event)
+    const emitted = Number(payload.days_until_due)
+    return Number.isFinite(emitted) && emitted === config.days
+  },
   ui: { category: 'payment', label: 'Invoice due', description: 'When an invoice reaches its due date', icon: 'Hourglass' },
+}
+
+/**
+ * Effective overdue threshold (days past `due_date`) for an
+ * `invoice_overdue` automation config. "Overdue" means strictly past
+ * the due date — a configured min of 0 is clamped up to 1 so the
+ * trigger never collides with `invoice_due` (`days: 0`) on the due
+ * date itself. Shared by the trigger's `match()` and the time-emitter
+ * so both sides agree on which calendar day an invoice fires. Direct
+ * sibling of {@link quoteOverdueThresholdDays}.
+ */
+export function invoiceOverdueThresholdDays(config: {
+  daysOverdueMin?: number
+}): number {
+  return Math.max(1, config.daysOverdueMin ?? 1)
 }
 
 const invoiceOverdue: TriggerSpec<{
@@ -512,7 +539,26 @@ const invoiceOverdue: TriggerSpec<{
     daysUntilEventOp: z.enum(COMPARISON_OPS).optional(),
     daysUntilEventValue: z.number().int().optional(),
   }).passthrough(),
-  match: () => true,
+  // The `invoice_overdue` event is emitted by the time-emitter once
+  // per (invoice, threshold, day) — see `lib/automations/
+  // time-emitters/invoice-overdue.ts`. The emitter stamps the overdue
+  // depth in `payload.days_overdue`; narrowing here means an
+  // automation with min=7 only fires for the day-7 event, not the
+  // day-1 one. Mirrors `quote_overdue`. `isFinalBalance` and the
+  // `daysUntilEvent*` filters are accepted but not yet enforced — the
+  // emitter anchors on the top-level `due_date` and carries no
+  // event-date anchor in its payload.
+  match: (event, config) => {
+    const payload = p(event)
+    const emitted = Number(payload.days_overdue)
+    if (!Number.isFinite(emitted)) return false
+    const threshold = invoiceOverdueThresholdDays(config)
+    if (emitted !== threshold) return false
+    if (config.daysOverdueMax !== undefined && emitted > config.daysOverdueMax) {
+      return false
+    }
+    return true
+  },
   ui: { category: 'payment', label: 'Invoice overdue', description: 'When an invoice passes its due date without payment', icon: 'AlertTriangle' },
 }
 

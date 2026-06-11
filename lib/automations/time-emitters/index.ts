@@ -45,6 +45,8 @@ import { sendAlert } from '@/lib/alerts/send-alert'
 import type { TriggerType } from '@/types/automations'
 import type { Database } from '@/types/database'
 
+import { invoiceDueEmitter } from './invoice-due'
+import { invoiceOverdueEmitter } from './invoice-overdue'
 import { quoteDueEmitter } from './quote-due'
 import { quoteOverdueEmitter } from './quote-overdue'
 
@@ -69,7 +71,12 @@ export interface TimeEmitter {
  * trigger (e.g. `invoice_overdue`) is "implement the
  * {@link TimeEmitter} and append it here" — no other wiring.
  */
-const registry: readonly TimeEmitter[] = [quoteDueEmitter, quoteOverdueEmitter]
+const registry: readonly TimeEmitter[] = [
+  quoteDueEmitter,
+  quoteOverdueEmitter,
+  invoiceDueEmitter,
+  invoiceOverdueEmitter,
+]
 
 export interface TimeEmittersResult {
   /** Per-emitter event counts, keyed by trigger type. */

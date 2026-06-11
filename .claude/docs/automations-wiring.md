@@ -94,8 +94,8 @@ actions third — by domain priority.
 | :----: | --- | --------------------------------------------- | ------------------------------------------------------ |
 |   ☑    | A1  | `quote_due`                                   | Shipped with framework — `lib/automations/time-emitters/{index,quote-due}.ts` |
 |   ☑    | A2  | `quote_overdue`                               | `lib/automations/time-emitters/quote-overdue.ts` — fires once at `max(1, daysOverdueMin ?? 1)` days past expiry; `couplePreviouslyViewed` deferred (no view tracking) |
-|   ☐    | A3  | `invoice_due`                                 |                                                        |
-|   ☐    | A4  | `invoice_overdue`                             |                                                        |
+|   ☑    | A3  | `invoice_due`                                 | `lib/automations/time-emitters/invoice-due.ts` — mirrors A1; `status='sent'` invoices, anchored on `due_date`; `isFinalBalance` + payment-schedule installment dates deferred |
+|   ☑    | A4  | `invoice_overdue`                             | `lib/automations/time-emitters/invoice-overdue.ts` — mirrors A2; fires once at `max(1, daysOverdueMin ?? 1)` days past `due_date`; `isFinalBalance`/`daysUntilEvent*` accepted-not-enforced. Shipped with A3 in one PR |
 |   ☐    | A5  | `task_overdue`                                |                                                        |
 |   ☐    | A6  | `lead_inactive`                               | Open question — see below                              |
 |   ☐    | A7  | `portal_section_started_not_finished`         | Open question — see below                              |

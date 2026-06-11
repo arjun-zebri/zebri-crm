@@ -331,6 +331,35 @@ export function QuoteBuilderModal({
     onError: (err) => toast(err instanceof Error ? err.message : 'Failed to send', 'error'),
   });
 
+  // Mark sent WITHOUT emailing — for when the MC shared the link
+  // out-of-band (copied it, texted it). Saves any pending edits first,
+  // then flips draft→sent and ensures the public link is live.
+  // Deliberately leaves `email_sent_at` null (no email went out), so
+  // the footer still offers "Send to couple" afterwards.
+  const markSent = useMutation({
+    mutationFn: async () => {
+      let targetId = effectiveId;
+      if (dirty || !targetId) {
+        targetId = await save.mutateAsync();
+      }
+      if (!targetId) throw new Error('No quote to mark as sent');
+      const { error } = await supabase
+        .from('quotes')
+        .update({ status: 'sent', share_token_enabled: true })
+        .eq('id', targetId);
+      if (error) throw error;
+      return targetId;
+    },
+    onSuccess: (id) => {
+      queryClient.invalidateQueries({ queryKey: ['quote', id] });
+      queryClient.invalidateQueries({ queryKey: ['all-quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['couple-quotes'] });
+      toast('Marked as sent');
+    },
+    onError: (err) =>
+      toast(err instanceof Error ? err.message : 'Failed to mark as sent', 'error'),
+  });
+
   const remove = useMutation({
     mutationFn: async () => {
       if (!effectiveId) return;
@@ -525,6 +554,9 @@ export function QuoteBuilderModal({
             hasCouple={!!coupleId}
             onSave={() => save.mutate()}
             onSend={() => sendEmail.mutate()}
+            canMarkSent={status === 'draft'}
+            markingSent={markSent.isPending}
+            onMarkSent={() => markSent.mutate()}
           />
         }
       >

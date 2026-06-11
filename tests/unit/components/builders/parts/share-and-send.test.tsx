@@ -90,4 +90,42 @@ describe('ShareAndSend', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Send to couple' }));
     expect(p.onSend).toHaveBeenCalledOnce();
   });
+
+  it('does not render "Mark as sent" unless canMarkSent + a live link', () => {
+    // No affordance on a brand-new (non-live) draft…
+    render(<ShareAndSend {...base()} canMarkSent onMarkSent={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /Mark as sent/i })).toBeNull();
+  });
+
+  it('renders "Mark as sent" for a live draft and calls onMarkSent', async () => {
+    const onMarkSent = vi.fn();
+    render(
+      <ShareAndSend
+        {...base()}
+        shareEnabled
+        shareUrl="https://x/y"
+        canMarkSent
+        onMarkSent={onMarkSent}
+      />,
+    );
+    const btn = screen.getByRole('button', { name: /Mark as sent/i });
+    await userEvent.click(btn);
+    expect(onMarkSent).toHaveBeenCalledOnce();
+  });
+
+  it('hides "Mark as sent" once the doc is no longer a draft', () => {
+    // canMarkSent is driven by status === 'draft' upstream; once sent
+    // the affordance is gone (the status pill carries it from there).
+    render(
+      <ShareAndSend
+        {...base()}
+        shareEnabled
+        shareUrl="https://x/y"
+        lastSentAt="2026-05-22T00:00:00Z"
+        canMarkSent={false}
+        onMarkSent={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Mark as sent/i })).toBeNull();
+  });
 });

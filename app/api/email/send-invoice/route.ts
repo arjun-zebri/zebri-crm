@@ -86,14 +86,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!invoice.share_token_enabled) {
-    await supabase
-      .from('invoices')
-      .update({
-        share_token_enabled: true,
-        status: invoice.status === 'draft' ? 'sent' : invoice.status,
-      })
-      .eq('id', invoiceId);
+  // Sending implicitly says "the couple may view this" and "this is
+  // no longer a draft". These two flips were previously bundled in one
+  // if-block gated on `!share_token_enabled` — but `share_token_enabled`
+  // defaults to `true` on insert, so for any newly-created invoice the
+  // gate was always false and the status flip never ran (the invoice
+  // stayed `draft` after a successful send). This is the same bug A1
+  // fixed in `send-quote`; the invoice route was never updated. Fire
+  // each flip independently so each transitions on its own merit.
+  const updates: Record<string, unknown> = {};
+  if (!invoice.share_token_enabled) updates.share_token_enabled = true;
+  if (invoice.status === 'draft') updates.status = 'sent';
+  if (Object.keys(updates).length > 0) {
+    await supabase.from('invoices').update(updates).eq('id', invoiceId);
   }
 
   const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invoice/${invoice.share_token}`;

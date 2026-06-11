@@ -1,7 +1,7 @@
 'use client';
 
 import { Loader2 } from 'lucide-react';
-import { formatRelativeDate } from '@/lib/utils';
+import { formatRelativeDate, isPastDue } from '@/lib/utils';
 
 interface DashboardTask {
   id: string;
@@ -18,12 +18,7 @@ interface DashboardTasksProps {
   onCoupleClick: (couple: { id: string; name: string }) => void;
 }
 
-function isOverdue(dateStr: string | null): boolean {
-  if (!dateStr) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(dateStr + 'T00:00:00') < today;
-}
+const isOverdue = isPastDue;
 
 export function DashboardTasks({ tasks, isLoading, onCoupleClick }: DashboardTasksProps) {
   if (isLoading) {

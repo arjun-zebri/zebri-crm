@@ -61,6 +61,7 @@ import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
 import { stripeConnectEnabled } from '@/lib/auth/entitlements';
 import { createClient } from '@/lib/supabase/client';
+import { isPastDue } from '@/lib/utils';
 
 interface Invoice {
   id: string;
@@ -200,10 +201,7 @@ export function InvoiceBuilderModal({
 
   /* ─── derived effective status (handles overdue) ───────────── */
   const rawStatus = invoice?.status ?? 'draft';
-  const isOverdue =
-    rawStatus === 'sent' &&
-    dueDate &&
-    new Date(dueDate + 'T00:00:00') < new Date();
+  const isOverdue = rawStatus === 'sent' && isPastDue(dueDate);
   const status = isOverdue ? 'overdue' : rawStatus;
   const canEdit = !['paid', 'cancelled'].includes(rawStatus);
   const hasDepositSchedule = depositEnabled && !!depositDueDate;
@@ -411,6 +409,30 @@ export function InvoiceBuilderModal({
     }
     return effectiveId;
   }
+
+  // Mark sent WITHOUT emailing — for when the MC shared the link
+  // out-of-band (copied it, texted it). Flips draft→sent and makes
+  // sure the public link is live; deliberately leaves `email_sent_at`
+  // null (no email went out), so the footer still offers "Send to
+  // couple" if they later want the templated email too.
+  const markSent = useMutation({
+    mutationFn: async () => {
+      const id = await ensureSaved();
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: 'sent', share_token_enabled: true })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
+      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['couple-invoices'] });
+      toast('Marked as sent');
+    },
+    onError: (err) =>
+      toast(err instanceof Error ? err.message : 'Failed to mark as sent', 'error'),
+  });
 
   const markPaid = useMutation({
     mutationFn: async () => {
@@ -632,6 +654,9 @@ export function InvoiceBuilderModal({
             hasCouple={!!coupleId}
             onSave={() => save.mutate()}
             onSend={() => sendEmail.mutate()}
+            canMarkSent={rawStatus === 'draft'}
+            markingSent={markSent.isPending}
+            onMarkSent={() => markSent.mutate()}
           />
         }
       >

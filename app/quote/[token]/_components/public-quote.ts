@@ -8,6 +8,7 @@
  */
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 import type { PublicBranding } from '@/lib/branding/public-surface';
+import { isPastDue } from '@/lib/utils';
 
 export interface QuoteItem {
   id: string;
@@ -49,7 +50,7 @@ export function deriveState(quote: PublicQuote | null): PageState {
   if (!quote) return 'not_found';
   if (quote.status === 'accepted') return 'accepted';
   if (quote.status === 'declined') return 'declined';
-  if (quote.expires_at && new Date(quote.expires_at + 'T00:00:00') < new Date()) {
+  if (isPastDue(quote.expires_at)) {
     return 'expired';
   }
   return 'active';
