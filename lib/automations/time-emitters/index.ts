@@ -49,6 +49,7 @@ import { invoiceDueEmitter } from './invoice-due'
 import { invoiceOverdueEmitter } from './invoice-overdue'
 import { quoteDueEmitter } from './quote-due'
 import { quoteOverdueEmitter } from './quote-overdue'
+import { taskOverdueEmitter } from './task-overdue'
 
 /**
  * One time-based emitter. Each emitter owns the full lifecycle for
@@ -76,6 +77,7 @@ const registry: readonly TimeEmitter[] = [
   quoteOverdueEmitter,
   invoiceDueEmitter,
   invoiceOverdueEmitter,
+  taskOverdueEmitter,
 ]
 
 export interface TimeEmittersResult {

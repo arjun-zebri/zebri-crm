@@ -96,7 +96,7 @@ actions third — by domain priority.
 |   ☑    | A2  | `quote_overdue`                               | `lib/automations/time-emitters/quote-overdue.ts` — fires once at `max(1, daysOverdueMin ?? 1)` days past expiry; `couplePreviouslyViewed` deferred (no view tracking) |
 |   ☑    | A3  | `invoice_due`                                 | `lib/automations/time-emitters/invoice-due.ts` — mirrors A1; `status='sent'` invoices, anchored on `due_date`; `isFinalBalance` + payment-schedule installment dates deferred |
 |   ☑    | A4  | `invoice_overdue`                             | `lib/automations/time-emitters/invoice-overdue.ts` — mirrors A2; fires once at `max(1, daysOverdueMin ?? 1)` days past `due_date`; `isFinalBalance`/`daysUntilEvent*` accepted-not-enforced. Shipped with A3 in one PR |
-|   ☐    | A5  | `task_overdue`                                |                                                        |
+|   ☑    | A5  | `task_overdue`                                | `lib/automations/time-emitters/task-overdue.ts` — mirrors A2/A4; fires once at `max(1, daysOverdueMin ?? 1)` days past `due_date` for tasks where `status != 'done'`; couple_id from `related_couple_id` (nullable); category/priority/assignee filters accepted-not-enforced |
 |   ☐    | A6  | `lead_inactive`                               | Open question — see below                              |
 |   ☐    | A7  | `portal_section_started_not_finished`         | Open question — see below                              |
 |   ☐    | A8  | `time_before_event`                           | Hour-granularity bucket                                |

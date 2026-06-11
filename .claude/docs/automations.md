@@ -167,6 +167,17 @@ one at a time per `.claude/docs/automations-wiring.md`.
   window guard. `isFinalBalance` and the `daysUntilEvent*` filters
   are accepted but **not enforced** (same `due_date`-only anchor as
   `invoice_due`). Day boundaries are UTC.
+- `task_overdue` (A5) — fires once for `tasks` whose `status != 'done'`
+  on the day they cross `max(1, daysOverdueMin ?? 1)` days past
+  `due_date` (a min of 0 is clamped to 1 — a task due today isn't yet
+  overdue). Emits one event per (task, threshold, calendar day);
+  narrowing via `payload.days_overdue === threshold`, plus a
+  `daysOverdueMax` window guard. The event's `couple_id` is the task's
+  `related_couple_id` and may be null (tasks need not belong to a
+  couple). `taskCategory` / `taskPriority` / `assignedTo` /
+  `dueWithinDays*` are accepted but **not enforced** (`task_type` is a
+  free-form per-user tag, not the `taskCategory` enum; there's no
+  assignee column). Day boundaries are UTC.
 
 **Not yet wired:** every other time-based trigger in the list above.
 See `automations-wiring.md` for the running order.
@@ -355,14 +366,13 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 ## Future work
 
 - Tick-time emitters for the remaining time-based triggers
-  (`task_overdue`, `lead_inactive`,
-  `portal_section_started_not_finished`, `time_before_event`,
-  `time_after_event`, `anniversary_of_event`,
+  (`lead_inactive`, `portal_section_started_not_finished`,
+  `time_before_event`, `time_after_event`, `anniversary_of_event`,
   `specific_date_reached`). The framework
   (`lib/automations/time-emitters/`) and the first wiring
   (`quote_due`) shipped together; `quote_overdue` (A2),
-  `invoice_due` (A3) and `invoice_overdue` (A4) followed.
-  See `automations-wiring.md`.
+  `invoice_due` (A3), `invoice_overdue` (A4) and `task_overdue` (A5)
+  followed. See `automations-wiring.md`.
 - Quote view tracking — prerequisite for `quote_overdue`'s
   `couplePreviouslyViewed` filter and the
   `quote_viewed_but_not_responded` trigger.
