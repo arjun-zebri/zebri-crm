@@ -150,6 +150,23 @@ one at a time per `.claude/docs/automations-wiring.md`.
   but **not enforced** — quote view tracking doesn't exist yet, and
   the inspector hides the checkbox until it does. Day boundaries
   are UTC (same caveat as `quote_due`).
+- `invoice_due` (A3) — fires for `invoices` with `status = 'sent'`
+  whose `due_date` lands `config.days` from today. Emits one event
+  per (invoice, days-lead-time, calendar day); narrowing via
+  `payload.days_until_due === config.days`. Anchored on the
+  top-level `due_date` only — payment-schedule installment dates
+  (`deposit_due_date` / `final_due_date`) and the `isFinalBalance`
+  filter are accepted but **not enforced** yet. Day boundaries are
+  UTC.
+- `invoice_overdue` (A4) — fires once for `invoices` with
+  `status = 'sent'` on the day they cross
+  `max(1, daysOverdueMin ?? 1)` days past `due_date` (a min of 0 is
+  clamped to 1 — the due date itself belongs to `invoice_due`).
+  Emits one event per (invoice, threshold, calendar day); narrowing
+  via `payload.days_overdue === threshold`, plus a `daysOverdueMax`
+  window guard. `isFinalBalance` and the `daysUntilEvent*` filters
+  are accepted but **not enforced** (same `due_date`-only anchor as
+  `invoice_due`). Day boundaries are UTC.
 
 **Not yet wired:** every other time-based trigger in the list above.
 See `automations-wiring.md` for the running order.
@@ -338,12 +355,13 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 ## Future work
 
 - Tick-time emitters for the remaining time-based triggers
-  (`invoice_due`, `invoice_overdue`, `task_overdue`,
-  `lead_inactive`, `portal_section_started_not_finished`,
-  `time_before_event`, `time_after_event`, `anniversary_of_event`,
+  (`task_overdue`, `lead_inactive`,
+  `portal_section_started_not_finished`, `time_before_event`,
+  `time_after_event`, `anniversary_of_event`,
   `specific_date_reached`). The framework
   (`lib/automations/time-emitters/`) and the first wiring
-  (`quote_due`) shipped together; `quote_overdue` (A2) followed.
+  (`quote_due`) shipped together; `quote_overdue` (A2),
+  `invoice_due` (A3) and `invoice_overdue` (A4) followed.
   See `automations-wiring.md`.
 - Quote view tracking — prerequisite for `quote_overdue`'s
   `couplePreviouslyViewed` filter and the
