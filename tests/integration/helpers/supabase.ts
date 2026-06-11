@@ -137,6 +137,25 @@ export async function createTestUser(
     email,
     client,
     cleanup: async () => {
+      // `auth.admin.deleteUser` cascades to most owned tables, but
+      // `quotes` and `invoices` reference `auth.users` with NO ACTION
+      // (not ON DELETE CASCADE), so a user that created either blocks
+      // the delete — the user then leaks, and with it every couple /
+      // automation / event they own. Deleting those children first
+      // unblocks the cascade.
+      //
+      // `events` is deleted explicitly too: its delete trigger emits
+      // an `event_deleted` automation_event, which fails if it fires
+      // mid-user-delete (the FK target is being removed). Deleting
+      // events while the user still exists lets the trigger insert
+      // cleanly; those rows then cascade away with the user.
+      //
+      // Root cause is the schema (the two FKs should cascade per the
+      // CLAUDE.md owner-column convention) — tracked as a follow-up
+      // migration. This keeps the local DB clean until then.
+      await admin.from('events').delete().eq('user_id', id)
+      await admin.from('quotes').delete().eq('user_id', id)
+      await admin.from('invoices').delete().eq('user_id', id)
       await admin.auth.admin.deleteUser(id)
     },
   }

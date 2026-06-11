@@ -11,6 +11,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { resolveCoupleEmail } from '@/lib/couples/email'
 import type { Database } from '@/types/database'
 import type {
   AutomationEventRow,
@@ -51,7 +52,9 @@ export async function loadCoupleSnapshot(
 ): Promise<CoupleSnapshot | null> {
   const { data } = await supabase
     .from('couples')
-    .select('id, user_id, name, email, phone, event_date, venue, notes, status')
+    .select(
+      'id, user_id, name, email, phone, event_date, venue, notes, status, primary_name, primary_email, primary_phone, secondary_name, secondary_email, secondary_phone',
+    )
     .eq('id', coupleId)
     .single()
   if (!data) return null
@@ -59,18 +62,24 @@ export async function loadCoupleSnapshot(
   const { primaryName, spouseName } = splitCoupleName(data.name)
 
   const spouseDetails = await loadSpouseDetails(supabase, coupleId)
+  // Post partner-triples migration, new couples carry only the
+  // `primary_*` / `secondary_*` columns — the legacy couple-level
+  // email/phone stay empty. Prefer the partner columns, fall back
+  // to legacy values (pre-migration rows) and name-split heuristics.
+  // Portal-submitted partner details still win for the spouse: the
+  // couple typed those in themselves.
   return {
     id: data.id,
     name: data.name,
-    email: data.email || null,
-    phone: data.phone || null,
+    email: resolveCoupleEmail(data),
+    phone: data.primary_phone?.trim() || data.phone || null,
     eventDate: data.event_date ?? null,
     venue: data.venue || null,
     status: data.status,
-    primaryName,
-    spouseName: spouseDetails.name ?? spouseName,
-    spouseEmail: spouseDetails.email,
-    spousePhone: spouseDetails.phone,
+    primaryName: data.primary_name?.trim() || primaryName,
+    spouseName: spouseDetails.name ?? data.secondary_name ?? spouseName,
+    spouseEmail: spouseDetails.email ?? data.secondary_email,
+    spousePhone: spouseDetails.phone ?? data.secondary_phone,
     timezone: DEFAULT_TIMEZONE,
   }
 }

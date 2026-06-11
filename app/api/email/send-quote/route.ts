@@ -23,6 +23,7 @@ import { sendAlert } from '@/lib/alerts';
 import { logger } from '@/lib/alerts/logger';
 import { EMAIL_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
+import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendQuoteEmail } from '@/lib/email';
 import { createClient } from '@/lib/supabase/server';
 
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
     .select(
-      'id, quote_number, title, share_token, share_token_enabled, status, couples(email, name)',
+      'id, quote_number, title, share_token, share_token_enabled, status, couples(email, primary_email, name)',
     )
     .eq('id', quoteId)
     .eq('user_id', user.id)
@@ -78,7 +79,9 @@ export async function POST(request: NextRequest) {
   }
 
   const couple = Array.isArray(quote.couples) ? quote.couples[0] : quote.couples;
-  const coupleEmail = couple?.email?.trim();
+  // New couples only carry `primary_email` (the modal no longer
+  // writes the legacy `email` column) — resolve through the helper.
+  const coupleEmail = resolveCoupleEmail(couple);
   const coupleName = couple?.name || 'there';
 
   if (!coupleEmail) {

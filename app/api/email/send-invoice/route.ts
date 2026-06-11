@@ -21,6 +21,7 @@ import { sendAlert } from '@/lib/alerts';
 import { logger } from '@/lib/alerts/logger';
 import { EMAIL_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
+import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendInvoiceEmail } from '@/lib/email';
 import { createClient } from '@/lib/supabase/server';
 
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
     .select(
-      'id, invoice_number, title, share_token, share_token_enabled, status, due_date, couples(email, name)',
+      'id, invoice_number, title, share_token, share_token_enabled, status, due_date, couples(email, primary_email, name)',
     )
     .eq('id', invoiceId)
     .eq('user_id', user.id)
@@ -73,7 +74,9 @@ export async function POST(request: NextRequest) {
   }
 
   const couple = Array.isArray(invoice.couples) ? invoice.couples[0] : invoice.couples;
-  const coupleEmail = couple?.email?.trim();
+  // New couples only carry `primary_email` (the modal no longer
+  // writes the legacy `email` column) — resolve through the helper.
+  const coupleEmail = resolveCoupleEmail(couple);
   const coupleName = couple?.name || 'there';
 
   if (!coupleEmail) {

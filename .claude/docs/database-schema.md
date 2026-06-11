@@ -60,6 +60,20 @@ Columns:
 id (uuid) user_id (uuid, not null) name (text) email (text) phone (text) event_date (date) venue
 (text) notes (text) status (text)
 
+Partner contact triples (added 2026-06-03, `add_couple_partner_contacts`):
+
+primary_name (text) primary_email (text) primary_phone (text)
+secondary_name (text) secondary_email (text) secondary_phone (text)
+
+**The couple modal writes only the `primary_*` / `secondary_*` triples** — the
+legacy `name`-level `email` / `phone` columns are kept for old API contracts
+(pre-migration rows were backfilled into `primary_*`) but stay **empty** for
+couples created through the new flow. Anything that emails a couple must
+resolve the address via `resolveCoupleEmail()` in `lib/couples/email.ts`
+(primary_email first, legacy email fallback) — never read `couples.email`
+directly. The automations couple snapshot (`loadCoupleSnapshot`) applies the
+same precedence for phone and partner names.
+
 Status values: stored as custom couple status slug (e.g. 'new', 'contacted', 'confirmed', 'paid', 'complete'). See couple_statuses table for user-defined statuses.
 
 lead_source (text, nullable)

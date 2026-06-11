@@ -32,9 +32,16 @@ match `<Input />`. Pass an `options: { value, label }[]` array and a
 controlled `value` + `onValueChange` (or uncontrolled `defaultValue`).
 Standalone (no companion components to import).
 
+### `<Checkbox />` — `@/components/ui/checkbox`
+Custom `<button role="checkbox">` per the frontend-design §Checkboxes
+spec (emerald fill + white checkmark when checked) — never a native
+`<input type="checkbox">`. Takes controlled `checked` + `onChange`
+and an optional clickable `label`. Always visible (form variant);
+table rows keep their own hover-reveal selection checkbox.
+
 Conventions:
-- All three use design tokens only — no raw hex / arbitrary values.
-- Unit-tested in `tests/unit/components/ui/{button,input,select}.test.tsx`.
+- All of the above use design tokens only — no raw hex / arbitrary values.
+- Unit-tested in `tests/unit/components/ui/{button,input,select,checkbox}.test.tsx`.
 - Existing raw-button / raw-input call sites stay until each page is
   hardened (per-page adoption, consistent with the ratchets).
 

@@ -395,6 +395,20 @@ const quoteDue: TriggerSpec<{
   ui: { category: 'payment', label: 'Quote due', description: 'When a quote reaches its expiry date', icon: 'Hourglass' },
 }
 
+/**
+ * Effective overdue threshold (days past `expires_at`) for a
+ * `quote_overdue` automation config. "Overdue" means strictly past
+ * the expiry date — a configured min of 0 is clamped up to 1 so the
+ * trigger never collides with `quote_due` (`days: 0`) on the expiry
+ * day itself. Shared by the trigger's `match()` and the time-emitter
+ * so both sides agree on which calendar day a quote fires.
+ */
+export function quoteOverdueThresholdDays(config: {
+  daysOverdueMin?: number
+}): number {
+  return Math.max(1, config.daysOverdueMin ?? 1)
+}
+
 const quoteOverdue: TriggerSpec<{
   daysOverdueMin?: number
   daysOverdueMax?: number
@@ -406,7 +420,25 @@ const quoteOverdue: TriggerSpec<{
     daysOverdueMax: z.number().int().min(0).max(365).optional(),
     couplePreviouslyViewed: z.boolean().optional(),
   }).passthrough(),
-  match: () => true,
+  // The `quote_overdue` event is emitted by the time-emitter once per
+  // (quote, threshold, day) — see `lib/automations/time-emitters/
+  // quote-overdue.ts`. The emitter stamps the overdue depth in
+  // `payload.days_overdue`; narrowing here means an automation with
+  // min=7 only fires for the day-7 event, not the day-1 one.
+  // `couplePreviouslyViewed` is accepted but not yet enforced — quote
+  // view tracking doesn't exist in the schema (same blocker as the
+  // `quote_viewed_but_not_responded` trigger).
+  match: (event, config) => {
+    const payload = p(event)
+    const emitted = Number(payload.days_overdue)
+    if (!Number.isFinite(emitted)) return false
+    const threshold = quoteOverdueThresholdDays(config)
+    if (emitted !== threshold) return false
+    if (config.daysOverdueMax !== undefined && emitted > config.daysOverdueMax) {
+      return false
+    }
+    return true
+  },
   ui: { category: 'payment', label: 'Quote overdue', description: 'When a quote has passed its expiry without acceptance', icon: 'AlertTriangle' },
 }
 

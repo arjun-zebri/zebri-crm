@@ -29,6 +29,7 @@ import {
   buildContractVariables,
   renderContractHtml,
 } from '@/lib/contracts/contract-variables';
+import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendContractEmail } from '@/lib/email';
 import { createClient } from '@/lib/supabase/server';
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
   const { data: contract, error: contractError } = await supabase
     .from('contracts')
     .select(
-      'id, title, contract_number, content, status, share_token, expires_at, quote_id, couple_id, couples(name, email)',
+      'id, title, contract_number, content, status, share_token, expires_at, quote_id, couple_id, couples(name, email, primary_email)',
     )
     .eq('id', contractId)
     .eq('user_id', user.id)
@@ -86,7 +87,9 @@ export async function POST(request: NextRequest) {
   const couple = Array.isArray(contract.couples)
     ? contract.couples[0]
     : contract.couples;
-  const coupleEmail = couple?.email?.trim();
+  // New couples only carry `primary_email` (the modal no longer
+  // writes the legacy `email` column) — resolve through the helper.
+  const coupleEmail = resolveCoupleEmail(couple);
   const coupleName = couple?.name || 'there';
   if (!coupleEmail) {
     return NextResponse.json(

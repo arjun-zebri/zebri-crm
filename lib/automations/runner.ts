@@ -25,7 +25,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { sendAlert } from '@/lib/alerts/send-alert'
-import type { Database } from '@/types/database'
 import type {
   ActionResult,
   ApprovalActionConfig,
@@ -38,6 +37,7 @@ import type {
   SubFlowActionConfig,
   WaitActionConfig,
 } from '@/types/automations'
+import type { Database } from '@/types/database'
 
 import { getActionSpec } from './actions'
 import {
@@ -52,6 +52,7 @@ import {
   subFlowConfigSchema,
   waitConfigSchema,
 } from './conditions'
+import { configErrorMessage } from './config-errors'
 import { buildRunContext } from './context'
 import { nextAllowedSendAt, resolveQuietHours } from './quiet-hours'
 
@@ -160,7 +161,7 @@ async function advanceOne(
     case 'wait': {
       const parsed = waitConfigSchema.safeParse(action.config)
       if (!parsed.success) {
-        await failRun(supabase, run, `wait action config invalid: ${parsed.error.message}`)
+        await failRun(supabase, run, configErrorMessage('Wait', parsed.error))
         return 'errored'
       }
       result = applyQuietHours(
@@ -173,7 +174,7 @@ async function advanceOne(
     case 'branch': {
       const parsed = branchConfigSchema.safeParse(action.config)
       if (!parsed.success) {
-        await failRun(supabase, run, `branch action config invalid: ${parsed.error.message}`)
+        await failRun(supabase, run, configErrorMessage('Branch', parsed.error))
         return 'errored'
       }
       const path = evaluateBranch((parsed.data as BranchActionConfig).predicate, ctx)
@@ -185,7 +186,7 @@ async function advanceOne(
     case 'stop': {
       const parsed = stopConfigSchema.safeParse(action.config)
       if (!parsed.success) {
-        await failRun(supabase, run, `stop action config invalid: ${parsed.error.message}`)
+        await failRun(supabase, run, configErrorMessage('Stop', parsed.error))
         return 'errored'
       }
       result = evaluateStopAction(parsed.data as StopActionConfig)
@@ -196,7 +197,7 @@ async function advanceOne(
     case 'sub_flow': {
       const parsed = subFlowConfigSchema.safeParse(action.config)
       if (!parsed.success) {
-        await failRun(supabase, run, `sub_flow config invalid: ${parsed.error.message}`)
+        await failRun(supabase, run, configErrorMessage('Run another automation', parsed.error))
         return 'errored'
       }
       await emitManualFire(supabase, run, (parsed.data as SubFlowActionConfig).automationId)
@@ -206,7 +207,7 @@ async function advanceOne(
     case 'approval': {
       const parsed = approvalConfigSchema.safeParse(action.config)
       if (!parsed.success) {
-        await failRun(supabase, run, `approval config invalid: ${parsed.error.message}`)
+        await failRun(supabase, run, configErrorMessage('Approval', parsed.error))
         return 'errored'
       }
       result = evaluateApprovalAction(parsed.data as ApprovalActionConfig)
@@ -228,7 +229,7 @@ async function runRegisteredAction(
   const spec = getActionSpec(action.type)
   if (!spec) return { kind: 'error', message: `unknown action ${action.type}` }
   const parsed = spec.configSchema.safeParse(action.config)
-  if (!parsed.success) return { kind: 'error', message: `invalid config: ${parsed.error.message}` }
+  if (!parsed.success) return { kind: 'error', message: configErrorMessage(spec.ui.label, parsed.error) }
   return spec.handler(ctx, parsed.data as never)
 }
 

@@ -93,7 +93,7 @@ actions third — by domain priority.
 | Status | ID  | Item                                          | Notes                                                  |
 | :----: | --- | --------------------------------------------- | ------------------------------------------------------ |
 |   ☑    | A1  | `quote_due`                                   | Shipped with framework — `lib/automations/time-emitters/{index,quote-due}.ts` |
-|   ☐    | A2  | `quote_overdue`                               |                                                        |
+|   ☑    | A2  | `quote_overdue`                               | `lib/automations/time-emitters/quote-overdue.ts` — fires once at `max(1, daysOverdueMin ?? 1)` days past expiry; `couplePreviouslyViewed` deferred (no view tracking) |
 |   ☐    | A3  | `invoice_due`                                 |                                                        |
 |   ☐    | A4  | `invoice_overdue`                             |                                                        |
 |   ☐    | A5  | `task_overdue`                                |                                                        |

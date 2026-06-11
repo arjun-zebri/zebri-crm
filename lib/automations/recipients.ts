@@ -26,26 +26,45 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import type { Database } from '@/types/database'
 import type {
   CoupleSnapshot,
+  McSnapshot,
   RecipientSpec,
   ResolvedRecipient,
 } from '@/types/automations'
+import type { Database } from '@/types/database'
 
 /**
  * Resolve a recipient spec for a couple. The supabase client must
  * be the service-role admin client (the runner is server-only).
+ *
+ * `mc` is required only when the spec includes the `'me'` role
+ * (send to the MC themselves). Call sites that never offer `'me'`
+ * (e.g. timeline vendor sends) can omit it — an unresolvable
+ * `'me'` role is dropped and the fallback rule applies.
  */
 export async function resolveRecipients(
   supabase: SupabaseClient<Database>,
   couple: CoupleSnapshot,
   spec: RecipientSpec,
+  mc?: McSnapshot,
 ): Promise<ResolvedRecipient[]> {
   const resolved: ResolvedRecipient[] = []
 
   for (const role of spec.roles) {
     switch (role) {
+      case 'me':
+        if (mc?.email) {
+          resolved.push({
+            role,
+            contactId: null,
+            name: mc.contactName || mc.businessName,
+            email: mc.email,
+            phone: mc.phone,
+            fallbackApplied: false,
+          })
+        }
+        break
       case 'primary':
         if (couple.email) {
           resolved.push({

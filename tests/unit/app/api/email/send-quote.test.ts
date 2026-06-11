@@ -111,6 +111,7 @@ function loadedQuote(overrides: Partial<{
   status: string
   share_token_enabled: boolean
   email: string | null
+  primary_email: string | null
 }> = {}) {
   singleMock.mockResolvedValue({
     data: {
@@ -122,6 +123,7 @@ function loadedQuote(overrides: Partial<{
       status: overrides.status ?? 'draft',
       couples: {
         email: overrides.email === null ? null : overrides.email ?? 'c@test',
+        primary_email: overrides.primary_email ?? null,
         name: 'Couple',
       },
     },
@@ -135,6 +137,61 @@ function getUpdatePatches(): Record<string, unknown>[] {
     [Record<string, unknown>]
   >).map((c) => c[0])
 }
+
+describe('POST /api/email/send-quote — recipient resolution', () => {
+  // Since the partner-contact-triples migration, the couple modal
+  // writes `primary_email` and leaves the legacy `email` column
+  // empty for new couples. The route must read both.
+  it('sends to primary_email when the legacy couple email is empty', async () => {
+    authedUser()
+    loadedQuote({ email: '', primary_email: 'primary@test' })
+
+    const { POST } = await loadRoute()
+    const res = await POST(req({ quoteId: '00000000-0000-0000-0000-000000000000' }))
+
+    expect(res.status).toBe(200)
+    expect(sendQuoteEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ coupleEmail: 'primary@test' }),
+    )
+  })
+
+  it('prefers primary_email over the legacy email when both exist', async () => {
+    authedUser()
+    loadedQuote({ email: 'legacy@test', primary_email: 'primary@test' })
+
+    const { POST } = await loadRoute()
+    const res = await POST(req({ quoteId: '00000000-0000-0000-0000-000000000000' }))
+
+    expect(res.status).toBe(200)
+    expect(sendQuoteEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ coupleEmail: 'primary@test' }),
+    )
+  })
+
+  it('falls back to the legacy email when primary_email is not set', async () => {
+    authedUser()
+    loadedQuote({ email: 'legacy@test', primary_email: null })
+
+    const { POST } = await loadRoute()
+    const res = await POST(req({ quoteId: '00000000-0000-0000-0000-000000000000' }))
+
+    expect(res.status).toBe(200)
+    expect(sendQuoteEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ coupleEmail: 'legacy@test' }),
+    )
+  })
+
+  it('400s when the couple has no email on either column', async () => {
+    authedUser()
+    loadedQuote({ email: '', primary_email: null })
+
+    const { POST } = await loadRoute()
+    const res = await POST(req({ quoteId: '00000000-0000-0000-0000-000000000000' }))
+
+    expect(res.status).toBe(400)
+    expect(sendQuoteEmailMock).not.toHaveBeenCalled()
+  })
+})
 
 describe('POST /api/email/send-quote — status flip', () => {
   it('flips a draft quote to sent even when share_token is already enabled', async () => {

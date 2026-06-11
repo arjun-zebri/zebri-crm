@@ -13,7 +13,7 @@ import { Resend } from 'resend'
 import { z } from 'zod'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { ActionResult, ActionType, RecipientSpec, RunContext } from '@/types/automations'
+import type { ActionType, RecipientSpec, RunContext } from '@/types/automations'
 
 import { resolveRecipients } from '../recipients'
 import { renderTemplate } from '../variables'
@@ -37,7 +37,7 @@ function resend(): Resend {
 // ────────────────────────────────────────────────────────────────
 
 const recipientSpecSchema: z.ZodSchema<RecipientSpec> = z.object({
-  roles: z.array(z.enum(['primary', 'spouse', 'family', 'vendor', 'custom'])).min(1),
+  roles: z.array(z.enum(['primary', 'spouse', 'family', 'vendor', 'custom', 'me'])).min(1),
   customTag: z.string().optional(),
   fallback: z.enum(['primary_only', 'skip', 'error']).default('primary_only'),
 })
@@ -48,32 +48,31 @@ const sendEmailConfigSchema = z.object({
   body: z.string().min(1),
   /** Wrap the body in the standard Zebri-branded HTML shell. */
   wrap: z.boolean().default(true),
-  // ── Extended UI scaffolding (handler ignores for now) ──────────
-  /** Override the Reply-To header. */
+  /** Override the Reply-To header (defaults to the MC's email). */
   replyToOverride: z.string().email().optional(),
   /** CC every vendor contact attached to the couple. */
   ccVendors: z.boolean().optional(),
   /** BCC the MC so they retain a paper trail. */
   bccSelf: z.boolean().optional(),
-  /** Attach the couple's most recent quote PDF. */
+  // ── Deferred fields ────────────────────────────────────────────
+  // Accepted so previously saved configs keep parsing, but the
+  // handler ignores them and the inspector no longer offers them:
+  //   - attach* needs PDF generation plumbed into Resend attachments
+  //   - respectQuietHours only exists at the `wait` action level
+  //   - respectCoupleDoNotEmail needs a couples.do_not_email column
+  //   - previewBeforeSend duplicates the Approval-gate action
+  //   - trackOpens has no per-send toggle in the Resend API
+  //   - sendAt: a fixed datetime is wrong for recurring automations;
+  //     use a `wait` action before the send instead
   attachQuote: z.boolean().optional(),
-  /** Attach the couple's most recent contract PDF. */
   attachContract: z.boolean().optional(),
-  /** Attach the couple's most recent invoice PDF. */
   attachInvoice: z.boolean().optional(),
-  /** Attach the latest generated run sheet. */
   attachRunSheet: z.boolean().optional(),
-  /** Attach one or more files from the couple's portal uploads (by storage key). */
   attachFiles: z.array(z.string()).optional(),
-  /** Defer the send into the next non-quiet-hours window. */
   respectQuietHours: z.boolean().optional(),
-  /** Skip the send entirely if the couple has do-not-email set. */
   respectCoupleDoNotEmail: z.boolean().optional(),
-  /** Send a preview to the MC first and require approval before send. */
   previewBeforeSend: z.boolean().optional(),
-  /** Enable Resend open tracking. */
   trackOpens: z.boolean().optional(),
-  /** Force the send at a specific ISO datetime (overrides immediate). */
   sendAt: z.string().optional(),
 }).passthrough()
 
@@ -86,7 +85,7 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
     }
 
     const supabase = createAdminClient()
-    const recipients = await resolveRecipients(supabase, ctx.couple, config.recipients)
+    const recipients = await resolveRecipients(supabase, ctx.couple, config.recipients, ctx.mc)
     if (recipients.length === 0) {
       return { kind: 'ok', output: { skipped: 'no recipients' } }
     }
@@ -95,30 +94,84 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
     const bodyText = renderTemplate(config.body, ctx)
     const html = config.wrap ? wrapAutomationHtml(bodyText, ctx) : bodyText
 
+    // CC list resolves once and applies to every outgoing message.
+    // Vendors already addressed directly are dropped so nobody gets
+    // the same email twice.
+    let cc: string[] | undefined
+    if (config.ccVendors) {
+      const vendors = await resolveRecipients(supabase, ctx.couple, {
+        roles: ['vendor'],
+        fallback: 'skip',
+      })
+      const direct = new Set(
+        recipients.map((r) => r.email?.toLowerCase()).filter(Boolean),
+      )
+      const ccList = [
+        ...new Set(
+          vendors
+            .map((v) => v.email)
+            .filter((e): e is string => !!e && !direct.has(e.toLowerCase())),
+        ),
+      ]
+      if (ccList.length > 0) cc = ccList
+    }
+
+    const addressable = recipients.filter((r) => r.email)
+    if (addressable.length === 0) {
+      return { kind: 'ok', output: { skipped: 'no addressable recipients' } }
+    }
+
     const messageIds: string[] = []
-    for (const r of recipients) {
-      if (!r.email) continue
+    let lastError: string | null = null
+    for (const r of addressable) {
       try {
         const { data, error } = await resend().emails.send({
           from: FROM,
-          to: r.email,
+          to: r.email!,
           subject,
           html,
-          replyTo: ctx.mc.email,
+          replyTo: config.replyToOverride ?? ctx.mc.email,
+          ...(config.bccSelf ? { bcc: ctx.mc.email } : {}),
+          ...(cc ? { cc } : {}),
         })
         if (error || !data?.id) {
-          // Soft fail per-recipient - record but don't kill the run.
+          lastError = error?.message ?? 'Resend returned no message id'
           continue
         }
         messageIds.push(data.id)
-      } catch {
-        // Same - soft fail.
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err)
       }
     }
 
+    const sent = messageIds.length
+    const failed = addressable.length - sent
+
+    // Total failure: nothing went out. Surface it so the runner
+    // errors the run + fires the automation_failed Slack alert —
+    // otherwise a misconfigured sender (unverified domain, dead key)
+    // silently no-ops every send and the MC never knows.
+    if (sent === 0) {
+      return {
+        kind: 'error',
+        message: `send_email: all ${failed} recipient(s) failed${
+          lastError ? ` — ${lastError}` : ''
+        }`,
+      }
+    }
+
+    // Partial failure: some emails already went out, so erroring (and
+    // re-running) would double-send the successful ones. Stay ok but
+    // record the failure count + reason in the run output.
     return {
       kind: 'ok',
-      output: { recipients: recipients.length, sent: messageIds.length, message_ids: messageIds },
+      output: {
+        recipients: addressable.length,
+        sent,
+        failed,
+        message_ids: messageIds,
+        ...(failed > 0 && lastError ? { last_error: lastError } : {}),
+      },
     }
   },
   ui: {

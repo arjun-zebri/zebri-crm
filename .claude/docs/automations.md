@@ -140,6 +140,16 @@ one at a time per `.claude/docs/automations-wiring.md`.
   (quote, days-lead-time, calendar day); narrowing happens via
   `payload.days_until_due === config.days` in the trigger's
   `match()`.
+- `quote_overdue` (A2) — fires once for `quotes` with
+  `status = 'sent'` on the day they cross
+  `max(1, daysOverdueMin ?? 1)` days past `expires_at` (a min of 0
+  is clamped to 1 — the expiry day itself belongs to `quote_due`).
+  Emits one event per (quote, threshold, calendar day); narrowing
+  via `payload.days_overdue === threshold`, plus a `daysOverdueMax`
+  window guard. `couplePreviouslyViewed` is accepted by the schema
+  but **not enforced** — quote view tracking doesn't exist yet, and
+  the inspector hides the checkbox until it does. Day boundaries
+  are UTC (same caveat as `quote_due`).
 
 **Not yet wired:** every other time-based trigger in the list above.
 See `automations-wiring.md` for the running order.
@@ -188,7 +198,21 @@ config to the MC use-case without inventing per-use-case slugs:
 Catalogue in `lib/automations/actions/`. Split by category:
 
 - `messaging.ts` - `send_email` (Resend) + `send_sms` / `send_whatsapp`
-  (14b stubs)
+  (14b stubs). `send_email` honours: recipients, subject, body,
+  branded-shell wrap, `replyToOverride`, `ccVendors` (deduped
+  against direct recipients), `bccSelf`. The remaining Phase 14a
+  scaffolding fields (attachments, per-email quiet hours,
+  do-not-email, preview-before-send, track-opens, send-at) are
+  schema-accepted but ignored and hidden from the inspector — the
+  per-field blockers are documented on `sendEmailConfigSchema`.
+  **Failure semantics:** if every addressable recipient is rejected
+  by Resend, the handler returns `{ kind: 'error' }` so the runner
+  errors the run + fires the `automations.runner` Slack alert —
+  no more silent `sent: 0`. A partial failure stays `ok` (the
+  successful sends can't be un-sent) but records `failed` +
+  `last_error` in the run output. NB locally `send_email` hits the
+  real Resend API (not Mailpit), so an unverified sender domain
+  surfaces here as a run error.
 - `couple.ts` - stage update, note, custom fields, portal link,
   request information, create couple, pause couple automations
 - `task.ts` - create / update task, calendar event, reminder
@@ -214,9 +238,13 @@ Each handler:
 ## Recipient model
 
 `lib/automations/recipients.ts` exposes
-`resolveRecipients(supabase, couple, spec)`.
+`resolveRecipients(supabase, couple, spec, mc?)`.
 
-Roles: `primary`, `spouse`, `family`, `vendor`, `custom`.
+Roles: `primary`, `spouse`, `family`, `vendor`, `custom`, `me`.
+`me` resolves to the MC's own email from the `mc` snapshot
+("Myself (your email)" in the picker) — call sites that don't
+thread the MC through simply drop the role and the fallback rule
+applies.
 Spouse details come from `portal_people` where `category = 'partner'`.
 Family / vendor matching reads `couple_contacts` joined to
 `contacts.category`. Custom tag matching is currently aliased to
@@ -288,7 +316,12 @@ on the `automations` row.
   with no extra parameters show a confirmation hint instead of
   an empty form
 - `app/(dashboard)/couples/couple-automations.tsx` - couple-profile
-  sub-tab showing runs touching this couple
+  sub-tab: one row per automation that has touched this couple
+  (live first, trigger label + headline status); the row expands
+  to that automation's run history. Run errors are rendered via
+  `lib/automations/config-errors.ts` `friendlyRunError()` - the
+  runner stores plain-English config errors (`configErrorMessage()`)
+  and legacy raw-Zod rows are translated at display time
 
 The sidebar nav item is added in `app/components/sidebar.tsx`
 (`Sparkles` icon, between Payments and Branding).
@@ -305,12 +338,16 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 ## Future work
 
 - Tick-time emitters for the remaining time-based triggers
-  (`quote_overdue`, `invoice_due`, `invoice_overdue`, `task_overdue`,
+  (`invoice_due`, `invoice_overdue`, `task_overdue`,
   `lead_inactive`, `portal_section_started_not_finished`,
   `time_before_event`, `time_after_event`, `anniversary_of_event`,
   `specific_date_reached`). The framework
   (`lib/automations/time-emitters/`) and the first wiring
-  (`quote_due`) shipped together; see `automations-wiring.md`.
+  (`quote_due`) shipped together; `quote_overdue` (A2) followed.
+  See `automations-wiring.md`.
+- Quote view tracking — prerequisite for `quote_overdue`'s
+  `couplePreviouslyViewed` filter and the
+  `quote_viewed_but_not_responded` trigger.
 - `contacts.tags` column for true custom-tag recipient matching.
 - Drag-to-reorder actions in the builder (replace position math with
   dnd-kit, mirroring the branding block renderer).
