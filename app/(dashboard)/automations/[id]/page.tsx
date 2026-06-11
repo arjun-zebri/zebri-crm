@@ -65,6 +65,7 @@ import { CanvasHeader } from './canvas-header'
 import { CanvasNode, type CanvasNodeData } from './canvas-node'
 import { InspectorPanel } from './inspector-panel'
 import { ActionPicker } from './action-picker'
+import { RunHistoryPanel } from './runs-panel'
 import { TriggerPicker } from './trigger-picker'
 
 const TRIGGER_NODE_ID = '__trigger__'
@@ -92,6 +93,7 @@ function AutomationCanvas() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [triggerPickerAnchor, setTriggerPickerAnchor] = useState<{ x: number; y: number } | null>(null)
   const [copilotOpen, setCopilotOpen] = useState(true)
+  const [runsOpen, setRunsOpen] = useState(false)
   const [actionPickerCtx, setActionPickerCtx] = useState<
     | null
     | {
@@ -412,8 +414,9 @@ function AutomationCanvas() {
         onBack={() => router.push('/automations')}
         onRename={handleRename}
         onToggleActive={handleToggleActive}
+        onShowRuns={() => setRunsOpen(true)}
       />
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden relative">
         <AiCopilotPanel open={copilotOpen} onClose={() => setCopilotOpen(false)} />
         <div className="flex-1 relative">
           {!copilotOpen && (
@@ -489,6 +492,12 @@ function AutomationCanvas() {
             }}
           />
         )}
+        <RunHistoryPanel
+          automationId={automationId}
+          actions={actions}
+          open={runsOpen}
+          onClose={() => setRunsOpen(false)}
+        />
       </div>
 
       {triggerPickerAnchor && (

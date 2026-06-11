@@ -343,6 +343,14 @@ on the `automations` row.
   drawer with typed config forms per trigger / action. Triggers
   with no extra parameters show a confirmation hint instead of
   an empty form
+- `app/(dashboard)/automations/[id]/runs-panel.tsx` - "Runs" button
+  in the canvas header opens a read-only run-history drawer: recent
+  `automation_runs` for this automation (RLS-scoped) with status,
+  time and couple; an errored run names the failed step (resolved
+  from `current_action_id` against the canvas actions) and shows the
+  message via `friendlyRunError()`. This is the in-canvas answer to
+  "did it run / where did it error" — the couple-profile tab only
+  shows runs that touched a given couple
 - `app/(dashboard)/couples/couple-automations.tsx` - couple-profile
   sub-tab: one row per automation that has touched this couple
   (live first, trigger label + headline status); the row expands
