@@ -546,7 +546,7 @@ Table Columns (matching couples/vendors style):
 - Number (quote #, gray text)
 - Title
 - Couple (name)
-- Status (badge: gray=draft, blue=sent, emerald=accepted, red=declined, amber=expired)
+- Status (badge: gray=draft, blue=sent, emerald=accepted, red=declined, amber=expired). "Expired" begins the day *after* `expires_at` — a quote expiring today is still active (derived via `isPastDue` in `@/lib/utils`).
 - Total (right-aligned, currency formatted AUD)
 - Expiry Date (right-aligned, formatted date)
 
@@ -563,7 +563,7 @@ Table Columns (matching couples/vendors style):
 - Number (invoice #, gray text)
 - Title
 - Couple (name)
-- Status (badge: gray=draft, blue=sent, emerald=paid, red=overdue, gray=cancelled)
+- Status (badge: gray=draft, blue=sent, emerald=paid, red=overdue, gray=cancelled). "Overdue" begins the day *after* `due_date` — an invoice due today is not yet overdue (derived via `isPastDue` in `@/lib/utils`; same boundary the A4 `invoice_overdue` automation uses).
 - Total (right-aligned, currency formatted AUD)
 - Due Date (right-aligned, formatted date, red if overdue)
 
@@ -582,7 +582,7 @@ Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phas
 - Top of the modal: document number (e.g. `Q-001` / `INV-001`) + inline `StatePill` (the same tonal pill used on the Billing tab).
 - Right side of the header: status-aware contextual primary CTA + `⋯` overflow menu for destructive / revert actions.
 - Body: hero title input (large unbordered text — Notion-style) followed by the composed parts.
-- Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple).
+- Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple). While the doc is still a draft, a subtle "Mark as sent" text button sits next to Copy link / Open — it flips the status draft→sent **without** firing an email (for MCs who shared the link out-of-band via SMS/WhatsApp). It leaves `email_sent_at` null, so the primary stays "Send to couple".
 - New `previewPane` prop carries the right-side preview content. When provided, the shell switches to a 2-column grid (`grid-cols-1 lg:grid-cols-2`) and the modal upgrades to `fullscreen` size.
 
 ### Preview pane (`builder-preview-pane.tsx`)
@@ -607,7 +607,7 @@ Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phas
 - Totals panel: Subtotal · (optional Discount) · (optional GST 10%) · **Total** (bold).
 - Notes & terms textarea at the bottom.
 - Overflow menu: "Convert to invoice" (when accepted) · "Delete quote".
-- Save flow: `Save changes` (footer, secondary) + `Send to couple` (footer, primary). Send saves any dirty changes, enables the share token, and fires the email in one click. After first send, the primary becomes `Resend` + a small "Sent {date}" timestamp.
+- Save flow: `Save changes` (footer, secondary) + `Send to couple` (footer, primary). Send saves any dirty changes, ensures the share token is enabled, flips a draft to `sent`, and fires the email in one click. After first send, the primary becomes `Resend` + a small "Sent {date}" timestamp. A draft also shows a "Mark as sent" link (flips status without emailing — see the shell footer note above).
 - State pill map: Draft (muted) · Sent (info + hollow dot) · Accepted (success + filled dot) · Declined (danger) · Expired (muted).
 
 ### `InvoiceBuilderModal`
@@ -631,7 +631,7 @@ Mutations no longer happen inline. Saves flow through:
 - `saveQuoteAction(input)` — Zod-validated, RLS-scoped, transactional (replace-line-items pattern).
 - `saveInvoiceAction(input)` — same shape, plus payment schedule fields + `quantity=1`/`unit_price=amount` invariant.
 - `deleteQuoteAction(id)` / `deleteInvoiceAction(id)` — RLS-scoped destructive.
-- Status mutations (mark paid / revert / cancel) remain inline one-line UPDATEs in the modal — they don't justify their own server actions.
+- Status mutations (mark sent / mark paid / revert / cancel) remain inline one-line UPDATEs in the modal — they don't justify their own server actions. "Mark sent" flips a draft to `sent` + ensures `share_token_enabled`, without sending an email.
 
 ## Couple Profile Integration
 

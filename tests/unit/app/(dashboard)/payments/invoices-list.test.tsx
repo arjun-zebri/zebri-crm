@@ -73,6 +73,25 @@ describe('deriveInvoices', () => {
     expect(d?.isOverdue).toBe(false);
   });
 
+  it('does NOT flag an invoice due *today* as overdue', () => {
+    // Regression: the old `< new Date()` comparison pitted the due
+    // date's midnight against the current instant, so anything due
+    // today flipped to overdue the moment midnight passed. Overdue
+    // must begin the day *after* the due date.
+    const [d] = deriveInvoices([
+      { ...baseInvoice, due_date: '2026-05-22' },
+    ]);
+    expect(d?.isOverdue).toBe(false);
+    expect(d?.effectiveStatus).toBe('sent');
+  });
+
+  it('flags an invoice due *yesterday* as overdue (boundary)', () => {
+    const [d] = deriveInvoices([
+      { ...baseInvoice, due_date: '2026-05-21' },
+    ]);
+    expect(d?.isOverdue).toBe(true);
+  });
+
   it('preserves the raw status separately from effectiveStatus', () => {
     const [d] = deriveInvoices([
       { ...baseInvoice, status: 'sent', due_date: '2026-05-01' },

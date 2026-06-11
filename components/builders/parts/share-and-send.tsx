@@ -6,7 +6,10 @@
  *
  * Layout (draft state — share link live by default since
  * `share_token_enabled` defaults to true on insert):
- *   🔗 Share link live   Copy link   Open ↗          [Save] [Send to couple]
+ *   🔗 Share link live  Copy link  Open ↗  Mark as sent  [Save] [Send]
+ *
+ * "Mark as sent" (shown only while `canMarkSent`) lets an MC who
+ * shared the link out-of-band flip draft→sent without an email.
  *
  * Layout (no doc yet — `shareUrl === null`):
  *   (left side hidden)                               [Save] [Send to couple]
@@ -19,7 +22,7 @@
  */
 'use client';
 
-import { Check, Copy, ExternalLink, Link2 } from 'lucide-react';
+import { Check, CheckCheck, Copy, ExternalLink, Link2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -49,6 +52,14 @@ export interface ShareAndSendProps {
   /** Send email to the couple. The share link is already live
    *  pre-send; this triggers the email + flips the status. */
   onSend: () => void;
+  /** Whether the "Mark as sent" affordance applies — i.e. the doc is
+   *  still a draft. Lets an MC who shared the link out-of-band (copied
+   *  it, texted it) flip the status to "sent" without firing an email. */
+  canMarkSent?: boolean;
+  /** Whether a mark-as-sent is in-flight. */
+  markingSent?: boolean;
+  /** Flip the status to "sent" without sending an email. */
+  onMarkSent?: () => void;
 }
 
 function formatDateShort(iso: string): string {
@@ -69,6 +80,9 @@ export function ShareAndSend({
   hasCouple,
   onSave,
   onSend,
+  canMarkSent = false,
+  markingSent = false,
+  onMarkSent,
 }: ShareAndSendProps) {
   const [copied, setCopied] = useState(false);
 
@@ -143,6 +157,26 @@ export function ShareAndSend({
               <ExternalLink size={12} strokeWidth={1.5} />
               Open
             </a>
+
+            {/* Out-of-band send: the MC copied the link and sent it
+                themselves (text, their own email client). Lets them
+                flip draft→sent without firing our templated email. */}
+            {canMarkSent && onMarkSent ? (
+              <>
+                <span aria-hidden className="text-text-subtle">
+                  ·
+                </span>
+                <button
+                  type="button"
+                  onClick={onMarkSent}
+                  disabled={markingSent || locked}
+                  className="inline-flex items-center gap-1 text-text-muted hover:text-text transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <CheckCheck size={12} strokeWidth={1.5} />
+                  {markingSent ? 'Marking…' : 'Mark as sent'}
+                </button>
+              </>
+            ) : null}
           </>
         ) : null}
       </div>

@@ -1,7 +1,10 @@
 'use client'
 
-import { PortalQuote, PortalInvoice } from './page'
 import { ExternalLink } from 'lucide-react'
+
+import { isPastDue } from '@/lib/utils'
+
+import { PortalQuote, PortalInvoice } from './page'
 
 interface PaymentsSectionProps {
   payments: { quotes: PortalQuote[]; invoices: PortalInvoice[] }
@@ -35,13 +38,7 @@ function formatAUD(value: number): string {
   }).format(value)
 }
 
-function isOverdue(dueDate: string | null): boolean {
-  if (!dueDate) return false
-  const due = new Date(dueDate + 'T00:00:00')
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return due < today
-}
+const isOverdue = isPastDue
 
 export function PaymentsSection({ payments }: PaymentsSectionProps) {
   const hasQuotes = payments.quotes.length > 0

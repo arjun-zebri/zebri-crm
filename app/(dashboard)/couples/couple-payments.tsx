@@ -8,6 +8,7 @@ import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal
 import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
+import { isPastDue } from '@/lib/utils'
 
 interface CouplePaymentsProps {
   coupleId: string
@@ -245,8 +246,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
               <div className="space-y-1">
                 {allInvoices.map((invoice) => {
                   const isOverdue =
-                    invoice.due_date &&
-                    new Date(invoice.due_date + 'T00:00:00') < new Date() &&
+                    isPastDue(invoice.due_date) &&
                     !['paid', 'cancelled'].includes(invoice.status)
                   const dueDateFormatted = invoice.due_date
                     ? new Date(invoice.due_date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })

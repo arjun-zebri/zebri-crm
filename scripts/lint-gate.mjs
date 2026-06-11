@@ -82,7 +82,10 @@ const ERROR_BUDGET = 89;
 // new test → 481 → 480.
 // Couple Automations tab rework: fixed the tab's exhaustive-deps
 // warning + raw-button usage and two import-order slips → 480 → 477.
-const WARNING_BUDGET = 477;
+// Overdue-date bugfix: consolidating the duplicated overdue/expired
+// derivations onto the shared `isPastDue` helper cleared 3 warnings
+// (removed inline date helpers + tidied import grouping) → 477 → 474.
+const WARNING_BUDGET = 474;
 
 function runEslintJson() {
   try {

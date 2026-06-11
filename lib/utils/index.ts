@@ -1,3 +1,26 @@
+/**
+ * True when a `YYYY-MM-DD` calendar date is strictly *before* today —
+ * i.e. the date has fully passed. The date itself ("due today") is
+ * NOT past due; overdue/expired begins the following day.
+ *
+ * Both sides are pinned to **local midnight** so the current
+ * time-of-day never leaks into the comparison. The bug this guards
+ * against: comparing a date's midnight directly to `new Date()` (the
+ * current instant) made anything due *today* read as overdue the
+ * moment the clock passed midnight. Use this for every "overdue" /
+ * "expired" derivation on quotes, invoices, contracts and tasks.
+ *
+ * @param dateStr - a `YYYY-MM-DD` date, or null/undefined (→ false).
+ */
+export function isPastDue(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false
+  const due = new Date(dateStr + 'T00:00:00')
+  if (Number.isNaN(due.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return due < today
+}
+
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return ''
   const date = new Date(dateStr + 'T00:00:00')

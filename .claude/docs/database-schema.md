@@ -286,7 +286,7 @@ expires_at (date, nullable)
 
 share_token (uuid, not null, default gen_random_uuid())  -  unique URL key; generated on row creation
 
-share_token_enabled (boolean, not null, default false)  -  link inactive until MC explicitly enables it
+share_token_enabled (boolean, not null, default true)  -  link is live from creation so the MC can copy/share it out-of-band (default flipped false→true + all rows back-filled by `20260527000000_share_token_enabled_by_default`). Disabling (e.g. cancelling an invoice) preserves the token; the public RPC 404s while it is false
 
 accepted_at (timestamp with time zone, nullable)
 
@@ -360,7 +360,7 @@ stripe_payment_intent_id (text, nullable)  -  Stripe payment intent ID, set when
 
 share_token (uuid, not null, default gen_random_uuid())  -  unique URL key; generated on row creation
 
-share_token_enabled (boolean, not null, default false)  -  link inactive until MC explicitly enables it
+share_token_enabled (boolean, not null, default true)  -  link is live from creation so the MC can copy/share it out-of-band (default flipped false→true + all rows back-filled by `20260527000000_share_token_enabled_by_default`). Disabling (e.g. cancelling an invoice) preserves the token; the public RPC 404s while it is false
 
 paid_at (timestamp with time zone, nullable)
 
