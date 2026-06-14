@@ -12,9 +12,10 @@
  */
 'use client'
 
-import { Clock, GitBranch, type LucideIcon, Pause, Sparkles, Square } from 'lucide-react'
+import { Clock, GitBranch, type LucideIcon, Square } from 'lucide-react'
 
 import { actionRegistry } from '@/lib/automations/actions'
+import { isActionLaunchVisible } from '@/lib/automations/launch-catalogue'
 import type { ActionType, AutomationActionRow } from '@/types/automations'
 
 import { updateAutomationActionPosition, upsertAutomationActionRow } from '../actions'
@@ -50,9 +51,11 @@ const FLOW_ITEMS: {
 }[] = [
   { id: 'flow:wait', actionType: 'wait', label: 'Wait', description: 'Pause before the next action', icon: Clock },
   { id: 'flow:branch', actionType: 'branch', label: 'Branch', description: 'If / else split based on a condition', icon: GitBranch },
-  { id: 'flow:approval', actionType: 'approval', label: 'Wait for approval', description: 'Pause until you (or another approver) confirm by email', icon: Pause },
-  { id: 'flow:sub_flow', actionType: 'sub_flow', label: 'Run another automation', description: 'Trigger one of your other automations from this point', icon: Sparkles },
   { id: 'flow:stop', actionType: 'stop', label: 'Stop', description: 'End the run here', icon: Square },
+  // `sub_flow` + `approval` are implemented by the runner but are NOT
+  // in the review-file catalogue (automations-review.md → FLOW CONTROL
+  // is wait/branch/stop only), so they're omitted from the picker.
+  // Existing automations that use them still render and run.
 ]
 
 // Flow control comes first (wait / branch / stop / approval / sub_flow
@@ -93,12 +96,13 @@ export function ActionPicker({
       description: f.description,
       icon: f.icon,
     })),
-    // Phase 14a — every action surfaces in the picker so MCs can
-    // compose flows against them today. Coming-soon items (SMS,
-    // WhatsApp, and the UI-only scaffolding stubs) get a "(coming
-    // soon)" suffix and a leading hint description so the picker
-    // reads correctly.
+    // Only surface actions whose handler does something today. The
+    // registry carries the full catalogue (un-reviewed extras +
+    // to-wire stubs); the launch allowlist hides dead tiles. The one
+    // exception is `send_sms`, which stays listed but greyed via its
+    // `comingSoon` flag (kept per the catalogue review).
     ...Object.values(actionRegistry)
+      .filter((spec) => isActionLaunchVisible(spec.type))
       .map((spec) => ({
         id: `action:${spec.type}`,
         group: spec.ui.category,

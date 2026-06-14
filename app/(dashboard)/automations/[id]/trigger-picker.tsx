@@ -14,6 +14,7 @@
 
 import { Trash2 } from 'lucide-react'
 
+import { isTriggerLaunchVisible } from '@/lib/automations/launch-catalogue'
 import { getTriggerSpec, triggerRegistry } from '@/lib/automations/triggers'
 import { TRIGGER_CATEGORIES, type TriggerType } from '@/types/automations'
 
@@ -30,14 +31,21 @@ interface Props {
 }
 
 export function TriggerPicker({ automationId, currentTrigger, anchor, onClose, onPicked }: Props) {
-  const items: PaletteItem[] = Object.values(triggerRegistry).map((spec) => ({
-    id: spec.type,
-    group: spec.ui.category,
-    label: spec.ui.label,
-    description: spec.ui.description,
-    icon: getLucideIcon(spec.ui.icon),
-    active: spec.type === currentTrigger,
-  }))
+  // Only surface triggers that actually fire today. The registry
+  // carries the full catalogue (incl. un-wired + Phase-14b types);
+  // the launch allowlist hides dead tiles. A currently-set trigger
+  // stays listed even if hidden, so an automation built before a
+  // type was hidden still shows its trigger rather than a blank.
+  const items: PaletteItem[] = Object.values(triggerRegistry)
+    .filter((spec) => isTriggerLaunchVisible(spec.type) || spec.type === currentTrigger)
+    .map((spec) => ({
+      id: spec.type,
+      group: spec.ui.category,
+      label: spec.ui.label,
+      description: spec.ui.description,
+      icon: getLucideIcon(spec.ui.icon),
+      active: spec.type === currentTrigger,
+    }))
 
   function pick(id: string) {
     // Optimistic: paint the UI change immediately, fire the server

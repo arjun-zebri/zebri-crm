@@ -11,110 +11,150 @@ once the catalogue is fully wired.
 
 ## Context
 
-Automations Phase 14a shipped to `staging` (commit `ee7ef8c` —
-"Automations: expand trigger + action catalogue (UI-only)"). The
-**foundation is complete**: 6 tables with RLS, the
+The Phase 14a foundation is **complete**: 6 tables with RLS, the
 `emit_automation_event()` RPC, the per-minute tick (dispatcher +
 runner), the React Flow builder UI, recipient + variable resolution,
-quiet hours, approval gates, and the audit log are all live.
+quiet hours, and the audit log are all live.
 
-What's **not** wired yet falls into four buckets. We work through
-them **one item at a time** (one trigger or one action per PR), in a
-clear order, with each PR small enough to review, gate, and ship.
+**Scope = `automations-review.md`.** That file is the agreed
+catalogue of triggers, actions, and flow-control steps. This wiring
+plan tracks **only** review-file items. The earlier "Bucket A–D"
+plan (the `lead_inactive` / `portal_section_started_not_finished` /
+`specific_date_reached` triggers, the Stripe-webhook bucket, the ~40
+"extended actions", and the Phase-14b set) is **cut** — those types
+stay defined in code so saved automations resolve, but they're
+hidden from the picker and **must not be built**. Check the review
+file before wiring anything.
 
-## Current gap
+## Done
 
-The catalogues below come from `lib/automations/triggers.ts`,
-`lib/automations/trigger-constants.ts`, `lib/automations/actions/*`,
-and the Phase 14a `comingSoon: true` flag.
+- **A1–A5 time-emitters** — `quote_due`, `quote_overdue`,
+  `invoice_due`, `invoice_overdue`, `task_overdue` are live on the
+  shared time-emitter framework (`lib/automations/time-emitters/`),
+  each firing once per (source, threshold, calendar day) with
+  payload-based `match()` narrowing. Day boundaries are UTC.
+  Per-row detail lives in `automations.md` → "Wired today".
+- **Catalogue cleanup PR** — `lib/automations/launch-catalogue.ts`
+  allowlist hides every non-review and not-yet-built type from both
+  pickers; ⚠️ dead inputs stripped from the visible tiles' inspector
+  forms. Detail in "Catalogue review outcome" below.
 
-### Bucket A — Time-based trigger emitters (11)
+## Remaining backlog (review-file scope)
 
-Registry entries exist; the tick body that computes "what's due"
-does not. Each needs: a matcher (already there in registry), an
-emitter SQL/JS predicate that runs each tick, and a row in the
-audit-log narrative.
+The complete list of what's left to build. Each ships as its own PR
+through `staging` per the recipe below, and **adds itself to the
+`launch-catalogue.ts` allowlist in the same PR** (that's what
+unhides it). Order is value-first.
 
-| #   | Trigger                               | What "fires" means                                                         | Source of truth             |
-| --- | ------------------------------------- | -------------------------------------------------------------------------- | --------------------------- |
-| A1  | `quote_due`                           | Quote `expires_at` lands `config.days` from today, status still `sent`     | `quotes.expires_at`         |
-| A2  | `quote_overdue`                       | `now() > expires_at + 1d`, status still `sent`                             | `quotes.expires_at`         |
-| A3  | `invoice_due`                         | Invoice `due_date` reached, balance > 0                                    | `invoices`                  |
-| A4  | `invoice_overdue`                     | `now() > due_date + 1d`, balance > 0                                       | `invoices`                  |
-| A5  | `task_overdue`                        | `now() > tasks.due_at`, not completed                                      | `tasks`                     |
-| A6  | `lead_inactive`                       | No couple/touchpoint activity in N days, status still `lead`               | `couples` + activity log    |
-| A7  | `portal_section_started_not_finished` | Section started > N days ago, not complete                                 | `portal_section_progress`   |
-| A8  | `time_before_event`                   | `now() = events.event_at - offset` (per-automation config)                 | `events.event_at`           |
-| A9  | `time_after_event`                    | `now() = events.event_at + offset`                                         | `events.event_at`           |
-| A10 | `anniversary_of_event`                | `to_char(now(), 'MM-DD') = to_char(event_at, 'MM-DD')`                     | `events.event_at`           |
-| A11 | `specific_date_reached`               | `now() >= config.date`                                                     | per-automation config       |
+| Status | ID  | Item                            | Notes                                                                                              |
+| :----: | --- | ------------------------------- | -------------------------------------------------------------------------------------------------- |
+|   ☐    | T1  | `time_before_event`             | PROMOTE — backbone of MC flows. Keep `amount` + `unit` + `eventType`. **Day-grain only** — restrict `unit` to days (no hours/minutes); the daily cron covers it, so **no Vercel Pro** |
+|   ☐    | T2  | `time_after_event`              | PROMOTE — thank-you / review nudges. Same emitter shape as T1; **day-grain (days) only** too        |
+|   ☐    | T3  | `anniversary_of_event`          | KEEP but **defer** (nice-to-have). `years` config; fires on the MM-DD match                          |
+|   ☐    | P1  | `couple_uploaded_file`          | Wire an emitter on `portal_files` (today that INSERT emits `section_completed`). No `file_type` column — that filter stays dropped |
+|   ☐    | P2  | `couple_added_song_to_playlist` | Wire an emitter on `portal_songs`. No `playlistKey` / `songCount` columns — those filters stay dropped |
+|   ☐    | P3  | `couple_completed_vows`         | **Blocked:** needs a `vows` table + portal feature first. Largest of the three                      |
+|   ☐    | AC1 | `generate_run_sheet_pdf`        | Wire the handler to `lib/pdf` (today returns `{pdf_requested:true}` and makes nothing)               |
+|   ☐    | AC2 | `create_invoice_from_quote`     | PROMOTE — real quote→invoice draft workflow                                                          |
 
-### Bucket B — Stripe payment events (2)
+Nothing else is on the backlog. `send_sms` stays a greyed
+"coming soon" stub (not built). Flow control (`wait`, `branch`,
+`stop`) is done; `sub_flow` / `approval` are **cut** (not in the
+review file) — hide them from the picker.
 
-| #   | Event              | Where it must be emitted                                                                                            |
-| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| B1  | `payment_received` | `app/api/webhooks/stripe/route.ts` (or wherever Connect payment success lives) — call `emit_automation_event()`     |
-| B2  | `payment_failed`   | Same webhook, on `payment_intent.payment_failed` branch                                                             |
+## Catalogue review outcome (2026-06-14) — launch scope
 
-### Bucket C — Extended action handlers (~40, comingSoon: true)
+A full audit (matchers in `triggers.ts`, handlers in
+`lib/automations/actions/*`, DB-trigger payloads, and the real
+schema) was run against `automations-review.md`. The picker today
+surfaces **every** registry entry (~74 triggers, ~29 actions),
+including ~40 triggers that never fire and several actions that
+return ok without doing anything. Decisions locked with Arjun:
 
-Grouped by domain so we can sequence by value, not file count:
+**The launch rule:** *a trigger/action is visible in the picker only
+if it actually does something today.* Everything dead is **hidden
+from the picker, not deleted from the registry** — deleting entries
+would break saved automations that reference them. Hidden entries
+get unhidden by their wiring PR.
 
-- **C1. AU paperwork (HIGH)** — NOIM PDF, DONLIM PDF, marriage cert
-  PDF, send NOIM to BDM, archive paperwork.
-- **C2. Consultations (HIGH)** — create_consultation, cancel,
-  reschedule, send slots, send reminder.
-- **C3. Tags & segmentation (MED)** — add_tag, remove_tag,
-  add_to_segment, remove_from_segment.
-- **C4. Payment ops (MED)** — generate payment link, apply discount,
-  apply credit, send refund.
-- **C5. Drip campaigns (MED)** — enroll_in_drip, exit_drip,
-  schedule_drip. (Largely duplicates `wait` + `send_email` — confirm
-  whether we keep the abstraction or fold into existing primitives.)
-- **C6. Calendar slots (LOW)** — publish_slot, unpublish_slot,
-  block_slot.
-- **C7. Misc external (LOW)** — Zapier webhook out, push
-  notification, label printing.
+**Mechanism (cleanup PR — shipped):**
+- `lib/automations/launch-catalogue.ts` exports the VISIBLE
+  allowlists + `isTriggerLaunchVisible` / `isActionLaunchVisible`;
+  `trigger-picker.tsx` and `action-picker.tsx` filter on them (a
+  currently-set trigger stays listed even if hidden). The registry
+  is untouched, so saved automations on hidden types still resolve.
+  `comingSoon` stays as the greyed label (only `send_sms` uses it).
+- **Dead-input drop:** every ⚠️ field (the ones the matcher /
+  handler never reads) was stripped from the inspector forms of the
+  *visible* tiles. Zod schemas keep `.passthrough()` so previously
+  saved configs still parse; the fields just leave the UI.
 
-### Bucket D — Phase 14b (out of scope here)
+### Triggers — VISIBLE after cleanup (28, fire today)
 
-SMS / WhatsApp / IG, inbound email parsing, AI helpers. These are
-**not wiring** — they are net-new third-party integrations and will
-get their own brainstorm + spec.
+`new_enquiry`, `couple_stage_changed`, `booking_cancelled`,
+`quote_created`, `quote_sent`, `quote_accepted`, `quote_declined`,
+`quote_due`, `quote_overdue`, `invoice_created`, `invoice_sent`,
+`payment_received`, `invoice_due`, `invoice_overdue`,
+`contract_created`, `contract_sent`, `contract_signed`,
+`contract_declined`, `contract_expired`, `event_created`,
+`event_updated`, `section_completed`, `timeline_edited`,
+`task_created`, `task_completed`, `task_overdue`, `contact_created`,
+`contact_linked_to_couple`.
 
-## Ordering: one PR per row
+### Triggers — HIDDEN
 
-The order is **risk × value**. Time-based triggers first because
-they unlock proactive automations (the "set and forget" half of the
-product) and they establish the tick-emitter pattern the rest of the
-backlog leans on. Stripe second — bounded, money flow. Extended
-actions third — by domain priority.
+- **In review, not built yet (unhide when wired — backlog T1–T3 /
+  P1–P3 above):** `time_before_event`, `time_after_event`,
+  `anniversary_of_event`, `couple_uploaded_file`,
+  `couple_added_song_to_playlist`, `couple_completed_vows`.
+- **CUT — not in the review file, never build:** `lead_inactive`,
+  `portal_section_started_not_finished`, `specific_date_reached`,
+  `payment_failed`, `quote_viewed_but_not_responded`,
+  `contract_revoked`, `event_deleted`, `contact_updated`,
+  `custom_field_changed`, `couple_set_do_not_contact`,
+  `branding_published`, `manual_fire`, `automation_failed`
+  (meta/internal), plus the entire Phase-14b set
+  (`consultation_*`, `noim_*`, `donlim_*`,
+  `marriage_certificate_issued`, `document_signed`, `rehearsal_*`,
+  the `couple_*_email` engagement triggers, `tag_*`,
+  `subscription_*`, `couple_birthday`,
+  `payment_plan_milestone_reached`, `refund_issued`,
+  `vendor_contact_assigned`, `team_member_added`,
+  `webhook_received`). All stay defined in the registry but hidden.
 
-| Status | ID  | Item                                          | Notes                                                  |
-| :----: | --- | --------------------------------------------- | ------------------------------------------------------ |
-|   ☑    | A1  | `quote_due`                                   | Shipped with framework — `lib/automations/time-emitters/{index,quote-due}.ts` |
-|   ☑    | A2  | `quote_overdue`                               | `lib/automations/time-emitters/quote-overdue.ts` — fires once at `max(1, daysOverdueMin ?? 1)` days past expiry; `couplePreviouslyViewed` deferred (no view tracking) |
-|   ☑    | A3  | `invoice_due`                                 | `lib/automations/time-emitters/invoice-due.ts` — mirrors A1; `status='sent'` invoices, anchored on `due_date`; `isFinalBalance` + payment-schedule installment dates deferred |
-|   ☑    | A4  | `invoice_overdue`                             | `lib/automations/time-emitters/invoice-overdue.ts` — mirrors A2; fires once at `max(1, daysOverdueMin ?? 1)` days past `due_date`; `isFinalBalance`/`daysUntilEvent*` accepted-not-enforced. Shipped with A3 in one PR |
-|   ☑    | A5  | `task_overdue`                                | `lib/automations/time-emitters/task-overdue.ts` — mirrors A2/A4; fires once at `max(1, daysOverdueMin ?? 1)` days past `due_date` for tasks where `status != 'done'`; couple_id from `related_couple_id` (nullable); category/priority/assignee filters accepted-not-enforced |
-|   ☐    | A6  | `lead_inactive`                               | Open question — see below                              |
-|   ☐    | A7  | `portal_section_started_not_finished`         | Open question — see below                              |
-|   ☐    | A8  | `time_before_event`                           | Hour-granularity bucket                                |
-|   ☐    | A9  | `time_after_event`                            |                                                        |
-|   ☐    | A10 | `anniversary_of_event`                        |                                                        |
-|   ☐    | A11 | `specific_date_reached`                       |                                                        |
-|   ☐    | B1  | `payment_received`                            | Stripe webhook                                         |
-|   ☐    | B2  | `payment_failed`                              | Stripe webhook                                         |
-|   ☐    | C1  | AU paperwork (5 actions, may sub-slice)       |                                                        |
-|   ☐    | C2  | Consultations (5 actions)                     |                                                        |
-|   ☐    | C3  | Tags & segmentation (4 actions)               |                                                        |
-|   ☐    | C4  | Payment ops (4 actions)                       |                                                        |
-|   ☐    | C5  | Drip campaigns (3 actions)                    | Review necessity first                                 |
-|   ☐    | C6  | Calendar slots (3 actions)                    |                                                        |
-|   ☐    | C7  | Misc external (3 actions)                     |                                                        |
+### Actions — VISIBLE after cleanup (21)
 
-C-bucket rows are themselves multiple PRs (one per action), grouped
-only here for planning.
+`send_email`, `update_couple_stage`, `add_note`, `send_portal_link`,
+`request_information`, `create_couple`, `pause_couple_automations`,
+`create_task`, `update_task`, `send_quote`, `send_contract`,
+`send_invoice`, `trigger_payment_reminder`, `create_timeline_event`,
+`send_timeline_to_vendors`, `send_final_run_sheet`,
+`send_pre_event_checklist`, `send_thank_you_message`,
+`request_review`, `send_referral_request`, plus `send_sms`
+(greyed `comingSoon`, kept per review). Flow control: `wait`,
+`branch`, `stop` only — `sub_flow` and `approval` are cut (not in
+the review file) and should be hidden from the picker's flow list.
+
+### Actions — HIDDEN / CUT
+
+- **CUT — not in the review file, never build:** `send_whatsapp`,
+  `create_calendar_event`, `create_reminder`,
+  `update_timeline_event`, `send_onboarding_pack`,
+  `send_anniversary_message`, `update_custom_fields`.
+- **In review, not built yet (unhide when wired — backlog AC1/AC2
+  above):** `generate_run_sheet_pdf` (→ wire to `lib/pdf`),
+  `create_invoice_from_quote` (PROMOTE).
+
+### Review-doc corrections (verified in code)
+
+- `events.event_type` **does exist** (migration `20260605000000`,
+  free-form, default `'ceremony'`). The schema spot-check that
+  claimed otherwise was wrong; `eventType` filters on
+  `event_created` / `event_updated` are sound.
+- `new_enquiry.daysUntilEvent` and `contact_created.hasEmail` are
+  actually wired (review implied dead); both still slated to drop
+  per the simplify pass (daysUntilEvent is ~always empty at enquiry
+  time).
 
 ## The per-item recipe (every PR)
 
@@ -122,7 +162,7 @@ Every wiring PR — trigger or action — must satisfy this checklist.
 This **is** the per-page DoD (`production-readiness.md` §5)
 translated to a per-feature DoD for automations.
 
-### For a time-based trigger (Bucket A)
+### For a time-based trigger
 
 1. **Predicate** — extend the time-based section of the tick route
    (or a new `lib/automations/time-emitters/<trigger>.ts`) with the
@@ -134,7 +174,7 @@ translated to a per-feature DoD for automations.
 3. **Matcher** — confirm `lib/automations/triggers.ts` matcher
    already exists; if not, add it. Zod schema for any
    per-automation config (e.g. `time_before_event.offset`).
-4. **Unit test** — `tests/unit/automations/time-emitters/<trigger>.test.ts`
+4. **Unit test** — `tests/unit/lib/automations/time-emitters/<trigger>.test.ts`
    covering: not-due (no fire), just-due (fires once), past-due
    already-fired (no re-fire).
 5. **Integration test** — `tests/integration/automations/<trigger>.test.ts`
@@ -156,7 +196,7 @@ translated to a per-feature DoD for automations.
     silently no-op (e.g. missing column) — in which case add one
     `automation_emitter_skipped` warn.
 
-### For an extended action (Bucket C)
+### For an extended action
 
 1. **Handler** — flip `comingSoon: false` in the action spec and
    implement the handler in `lib/automations/actions/<category>.ts`.
@@ -202,8 +242,8 @@ framework with ~50 LoC each.
     once per minute, after the existing event dispatcher pass.
   - Per-emitter contract: `{ id, run(ctx): Promise<number> }` —
     returns count emitted, for tick metrics.
-  - Registry pattern matching `actions/index.ts` so adding A2…A11
-    is "implement the emitter, add to the registry."
+  - Registry pattern matching `actions/index.ts` so adding the
+    remaining emitters is "implement the emitter, add to the registry."
 - **Tick integration:** edit
   `app/api/cron/automations-tick/route.ts` to call
   `runTimeEmitters()` between the dispatcher and runner passes.
@@ -229,10 +269,11 @@ framework with ~50 LoC each.
 
 ### After A1 lands
 
-A2–A11 each follow the framework. Per-PR work shrinks to: write a
-single `lib/automations/time-emitters/<trigger>.ts` file, register
-it, write three tests, add a doc row. Estimated 1 PR / 1–2 hrs each
-after A1.
+The remaining time-emitters (backlog T1–T3) follow the framework.
+Per-PR work shrinks to: write a single
+`lib/automations/time-emitters/<trigger>.ts` file, register it,
+write three tests, add a doc row, and add the trigger to the
+`launch-catalogue.ts` allowlist. Estimated 1 PR / 1–2 hrs each.
 
 ## Verification per PR
 
@@ -286,52 +327,36 @@ End-to-end check on every PR before requesting review:
 
 ## Open questions (resolve before the relevant PR begins)
 
-1. **C5 drip campaigns** — do we keep this as a first-class action
-   set, or fold into existing `wait` + `send_email` + `sub_flow`?
-   Worth a 30-minute review during the B-bucket phase.
-2. **A6 `lead_inactive`** — what defines "activity"? Couple-row
-   update? Touchpoint log? We don't have a unified activity feed
-   today. Likely needs a new `couple_activity` view or column.
-   Flag before A6 starts.
-3. **A7 portal section "started"** — does
-   `portal_section_progress` already track `started_at`? Check
-   schema before the PR.
-4. **Idempotency bucket granularity** — day-granularity works for
+1. **Idempotency bucket granularity** — day-granularity works for
    `_due` / `_overdue`, but `time_before_event.offset` could be
-   hour-level. Decide bucket key during framework design in A1.
-   **Resolved (A1):** day-grain bucket (UTC) is the default; per-day
-   dedupe queries `automation_events` directly using `created_at` ≥
-   `date_trunc('day', now())` and the matching `payload` field that
-   identifies the bucket (e.g. `payload.days_until_due` for
-   `quote_due`). Hour-grain emitters will swap in their own bucket
-   key in their event payload when needed.
+   hour-level. **Resolved (A1):** day-grain bucket (UTC) is the
+   default; per-day dedupe queries `automation_events` directly
+   using `created_at` ≥ `date_trunc('day', now())` and the matching
+   `payload` field that identifies the bucket (e.g.
+   `payload.days_until_due`). Hour-grain emitters will swap in their
+   own bucket key in their event payload when needed.
 
-5. **Timezone for time-emitters (raised in A1)** — day boundaries
-   are currently UTC, which means AU users see "today" tick over at
-   ~11am local time. Acceptable for `_due` / `_overdue` style
-   messaging, but `time_before_event` with sub-day offsets will need
-   per-user timezone awareness (read from the couple/MC snapshot).
-   Flag before A8 starts.
+2. **Timezone for time-emitters** — day boundaries are UTC, so AU
+   users see "today" tick over at ~11am local time. Since T1/T2 are
+   **day-grain only** (decided — no sub-day offsets), this is the
+   only timezone effect, same as `_due` / `_overdue`. Per-user
+   timezone awareness is only needed if sub-day offsets are ever
+   added; not now.
 
-6. **E2E coverage for time-emitters** — A1 ships with unit +
-   integration coverage but no Playwright e2e (there is no
-   automations e2e harness today, and the cron route isn't a
-   user-driven UI surface). A follow-up PR will add a shared
-   automations e2e spec that's easy for A2–A11 to extend; first
-   non-trivial e2e candidate is A8 because it intersects with the
+3. **E2E coverage for time-emitters** — A1–A5 shipped with unit +
+   integration coverage but no Playwright e2e (no automations e2e
+   harness today, and the cron route isn't a user-driven UI
+   surface). A follow-up PR will add a shared automations e2e spec;
+   first non-trivial candidate is T1 because it intersects the
    builder's per-config-form UX.
 
-7. **Cron frequency (raised in A1)** — Vercel Hobby caps the cron
-   schedule at once per day. `vercel.json` is now `0 1 * * *`
-   (1 am UTC daily). Fine for A1 and every other day-bucketed
-   trigger in the A backlog. **Will not work for A8
-   (`time_before_event`) with sub-day offsets**, and feels sluggish
-   for any time-emitted event whose UX expectation is "within an
-   hour" (e.g. a same-day reminder). Upgrade to Vercel Pro
-   ($20/mo) before A8 begins, switch the schedule back to
-   `* * * * *`, and update the cron route's doc comment. Until
-   then, every time-emitter docs should disclose the day-grain
-   constraint.
+4. **Cron frequency** — Vercel Hobby caps the cron schedule at once
+   per day. `vercel.json` is `0 1 * * *` (1 am UTC daily). Fine for
+   every day-bucketed trigger (A1–A5). **Decision (2026-06-14):
+   T1/T2 stay day-grain only** (offsets in days), so the daily cron
+   is sufficient and we are **not** upgrading to Vercel Pro yet.
+   Sub-day offsets / "within the hour" reminders are deferred until
+   there's a concrete reason to pay for Pro.
 
 ## A1 lessons (recorded for future items)
 
@@ -374,15 +399,15 @@ and migration history. Worth being aware of before A2:
    guards (`drop policy if exists`, `drop trigger if exists`) on
    every non-idempotent CREATE in the three foundation migrations.
 
-### Implications for A2–A11
+### Implications for the remaining emitters (T1–T3)
 
 - **Every trigger with `.default()` fields needs a unit test for
   `match()` narrowing**, especially if the predicate uses strict
   equality.
 - **The runtime trio (picker / emitter / dispatcher) must agree on
   how config defaults are applied.** Centralised on
-  `spec.configSchema.safeParse(...)` — A2 should follow the
-  pattern without inventing new defaulting logic.
+  `spec.configSchema.safeParse(...)` — follow the pattern without
+  inventing new defaulting logic.
 - **Migration deploy hygiene:** never edit a shipped migration to
   rename a column. Add a rename migration instead. The §7.9 ledger
   rule was already documented; this PR adds idempotency guards on
