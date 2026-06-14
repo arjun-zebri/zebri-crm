@@ -16,7 +16,7 @@
  */
 'use client'
 
-import { ArrowLeft, Play, Power } from 'lucide-react'
+import { ArrowLeft, History, Play, Power } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { StatePill } from '@/components/ui/state-pill'
@@ -29,9 +29,10 @@ interface Props {
   onBack: () => void
   onRename: (name: string) => void
   onToggleActive: () => void
+  onShowRuns: () => void
 }
 
-export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggleActive }: Props) {
+export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggleActive, onShowRuns }: Props) {
   const [draft, setDraft] = useState(name)
   useEffect(() => setDraft(name), [name])
 
@@ -63,6 +64,15 @@ export function CanvasHeader({ name, status, savedAt, onBack, onRename, onToggle
       <div className="ml-auto flex items-center gap-3">
         <StatusPill status={status} />
         <SavedIndicator at={savedAt} />
+        <button
+          type="button"
+          onClick={onShowRuns}
+          title="See recent runs and any errors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md text-text hover:bg-surface-muted cursor-pointer transition"
+        >
+          <History size={12} strokeWidth={1.5} />
+          Runs
+        </button>
         <button
           type="button"
           disabled

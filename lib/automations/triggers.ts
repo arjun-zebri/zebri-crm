@@ -934,6 +934,22 @@ const taskCompleted: TriggerSpec<TaskFilterConfig> = {
   },
 }
 
+/**
+ * Effective overdue threshold (days past `due_date`) for a
+ * `task_overdue` automation config. "Overdue" means strictly past the
+ * due date — a configured min of 0 is clamped up to 1 so a task only
+ * fires once it is genuinely late (the due date itself is not yet
+ * overdue: `due_date < today`). Shared by the trigger's `match()` and
+ * the time-emitter so both sides agree on which calendar day a task
+ * fires. Direct sibling of {@link quoteOverdueThresholdDays} /
+ * {@link invoiceOverdueThresholdDays}.
+ */
+export function taskOverdueThresholdDays(config: {
+  daysOverdueMin?: number
+}): number {
+  return Math.max(1, config.daysOverdueMin ?? 1)
+}
+
 const taskOverdue: TriggerSpec<TaskFilterConfig & {
   daysOverdueMin?: number
   daysOverdueMax?: number
@@ -945,7 +961,27 @@ const taskOverdue: TriggerSpec<TaskFilterConfig & {
     daysOverdueMax: z.number().int().min(0).max(365).optional(),
     assignedTo: z.enum(['any', 'self', 'delegated']).optional(),
   }),
-  match: () => true,
+  // The `task_overdue` event is emitted by the time-emitter once per
+  // (task, threshold, day) — see `lib/automations/time-emitters/
+  // task-overdue.ts`. The emitter stamps the overdue depth in
+  // `payload.days_overdue`; narrowing here means an automation with
+  // min=7 only fires for the day-7 event, not the day-1 one. Mirrors
+  // `quote_overdue` / `invoice_overdue`. The `taskCategory`,
+  // `taskPriority`, `assignedTo` and `dueWithinDays*` filters are
+  // accepted but not enforced — `task_type` is a free-form per-user
+  // tag (not the `taskCategory` enum), there's no assignee column, and
+  // a "due within N days" filter is meaningless for an overdue task.
+  match: (event, config) => {
+    const payload = p(event)
+    const emitted = Number(payload.days_overdue)
+    if (!Number.isFinite(emitted)) return false
+    const threshold = taskOverdueThresholdDays(config)
+    if (emitted !== threshold) return false
+    if (config.daysOverdueMax !== undefined && emitted > config.daysOverdueMax) {
+      return false
+    }
+    return true
+  },
   ui: {
     category: 'task',
     label: 'Task overdue',

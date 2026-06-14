@@ -8,6 +8,15 @@ or `app/(dashboard)/automations/`.
 
 ## Scope cuts (locked)
 
+- **The offered catalogue is `automations-review.md`.** That file is
+  the **single source of truth** for which triggers, actions, and
+  flow-control steps Zebri ships. This doc only describes what's in
+  it. The code registries (`lib/automations/triggers.ts`,
+  `lib/automations/actions/`) still carry extra types from earlier
+  14a scaffolding; anything not in the review file is **out of
+  scope** — hidden from the picker (`launch-catalogue.ts`) and not
+  on the backlog. Do **not** build catalogue items that aren't in
+  the review file.
 - **14a** - engine + builder UI + the trigger / action subset that
   can be wired without third-party accounts.
 - **14b (deferred)** - SMS / WhatsApp / IG, inbound email parsing,
@@ -40,10 +49,12 @@ split into two families:
 - **Registered actions** — `send_email`, `create_task`,
   `update_couple_stage`, etc. Each has a handler in
   `lib/automations/actions/`.
-- **Flow-control actions** — `wait`, `branch`, `stop`, `sub_flow`,
-  `approval`. Evaluated directly by the runner via
+- **Flow-control actions** — `wait`, `branch`, `stop` (the only
+  three in the review file). Evaluated directly by the runner via
   `lib/automations/conditions.ts`; they don't appear in the action
-  registry.
+  registry. The runner also implements `sub_flow` and `approval`,
+  but those are **out of scope** (not in `automations-review.md`)
+  and should be hidden from the picker.
 
 The runner switches on `action.type`. There's no nested
 `actionType` field — the `type` column on `automation_actions` is
@@ -123,9 +134,8 @@ intentionally flat - `quote_accepted` rather than `quote.accepted`
 - to mirror the slack alert event style + keep DB CHECKs simple.
 
 Time-based triggers (`time_before_event`, `time_after_event`,
-`anniversary_of_event`, `lead_inactive`, the `*_due` / `*_overdue`
-variants, `task_overdue`, `quote_viewed_but_not_responded`,
-`portal_section_started_not_finished`) are emitted by the tick
+`anniversary_of_event`, the `*_due` / `*_overdue` variants,
+`task_overdue`) are emitted by the tick
 itself - there's no DB trigger that fires when a date crosses the
 threshold. Each emitter lives under
 `lib/automations/time-emitters/<trigger>.ts` and registers in the
@@ -167,6 +177,17 @@ one at a time per `.claude/docs/automations-wiring.md`.
   window guard. `isFinalBalance` and the `daysUntilEvent*` filters
   are accepted but **not enforced** (same `due_date`-only anchor as
   `invoice_due`). Day boundaries are UTC.
+- `task_overdue` (A5) — fires once for `tasks` whose `status != 'done'`
+  on the day they cross `max(1, daysOverdueMin ?? 1)` days past
+  `due_date` (a min of 0 is clamped to 1 — a task due today isn't yet
+  overdue). Emits one event per (task, threshold, calendar day);
+  narrowing via `payload.days_overdue === threshold`, plus a
+  `daysOverdueMax` window guard. The event's `couple_id` is the task's
+  `related_couple_id` and may be null (tasks need not belong to a
+  couple). `taskCategory` / `taskPriority` / `assignedTo` /
+  `dueWithinDays*` are accepted but **not enforced** (`task_type` is a
+  free-form per-user tag, not the `taskCategory` enum; there's no
+  assignee column). Day boundaries are UTC.
 
 **Not yet wired:** every other time-based trigger in the list above.
 See `automations-wiring.md` for the running order.
@@ -175,15 +196,41 @@ See `automations-wiring.md` for the running order.
 
 | Category | Triggers |
 | --- | --- |
-| Lead & enquiry | `new_enquiry` · `lead_inactive` · `custom_field_changed` |
+| Lead & enquiry | `new_enquiry` |
 | Pipeline | `couple_stage_changed` · `booking_cancelled` |
-| Quotes, invoices & payments | `quote_created` · `quote_sent` · `quote_accepted` · `quote_declined` · `quote_due` · `quote_overdue` · `quote_viewed_but_not_responded` · `invoice_created` · `invoice_sent` · `payment_received` · `invoice_due` · `invoice_overdue` · `payment_failed` |
-| Contracts | `contract_created` · `contract_sent` · `contract_signed` · `contract_declined` · `contract_revoked` · `contract_expired` · `document_signed` (alias) |
-| Calendar & events | `event_created` · `event_updated` · `event_deleted` · `time_before_event` · `time_after_event` · `specific_date_reached` · `anniversary_of_event` |
-| Client portal | `section_completed` · `portal_section_started_not_finished` · `timeline_edited` |
+| Quotes, invoices & payments | `quote_created` · `quote_sent` · `quote_accepted` · `quote_declined` · `quote_due` · `quote_overdue` · `invoice_created` · `invoice_sent` · `payment_received` · `invoice_due` · `invoice_overdue` |
+| Contracts | `contract_created` · `contract_sent` · `contract_signed` · `contract_declined` · `contract_expired` |
+| Calendar & events | `event_created` · `event_updated` · `time_before_event` · `time_after_event` · `anniversary_of_event` |
+| Client portal | `section_completed` · `timeline_edited` · `couple_uploaded_file` · `couple_added_song_to_playlist` · `couple_completed_vows` |
 | Tasks | `task_created` · `task_completed` · `task_overdue` |
-| Contacts | `contact_created` · `contact_updated` · `contact_linked_to_couple` |
-| Manual | `manual_fire` |
+| Contacts | `contact_created` · `contact_linked_to_couple` |
+
+These 34 triggers **are** the agreed catalogue — they mirror
+`automations-review.md` exactly. The code registry
+(`lib/automations/triggers.ts`) still holds extra types from earlier
+scaffolding (e.g. `lead_inactive`, `payment_failed`,
+`quote_viewed_but_not_responded`, `contract_revoked`,
+`event_deleted`, `specific_date_reached`,
+`portal_section_started_not_finished`, `contact_updated`,
+`manual_fire`, the Phase-14b set); all of those are **out of
+scope** — hidden from the picker and not on the backlog.
+
+### Launch visibility (what the picker offers today)
+
+`lib/automations/launch-catalogue.ts` is the code allowlist for
+which triggers/actions appear in the builder pickers. Two filters
+stack: (1) it must be in the review-file catalogue, and (2) within
+that, it must **actually do something today** — the review-file
+items that aren't built yet (e.g. `time_before_event`,
+`couple_completed_vows`, `generate_run_sheet_pdf`) stay hidden until
+their wiring PR adds them to the allowlist. Out-of-scope registry
+types stay defined (so saved automations still resolve) but are
+never shown. The pickers filter on `isTriggerLaunchVisible` /
+`isActionLaunchVisible`; a currently-set trigger stays listed even
+if hidden. Dead config inputs (filters the matcher/handler never
+reads) are stripped from the inspector forms of the visible tiles.
+Full visible/hidden inventory + rationale: `automations-wiring.md` →
+"Catalogue review outcome".
 
 ### MC-specific narrowing
 
@@ -207,15 +254,13 @@ config to the MC use-case without inventing per-use-case slugs:
   is a single trigger with config.
 - `couple_stage_changed` loads the user's custom statuses from
   `couple_statuses` and offers them as Select options.
-- `custom_field_changed` narrows by `key` - once a custom-field
-  key catalogue exists this can become a typed Select.
 
 ## Actions
 
 Catalogue in `lib/automations/actions/`. Split by category:
 
-- `messaging.ts` - `send_email` (Resend) + `send_sms` / `send_whatsapp`
-  (14b stubs). `send_email` honours: recipients, subject, body,
+- `messaging.ts` - `send_email` (Resend) + `send_sms` (14b stub,
+  shown greyed "coming soon"). `send_email` honours: recipients, subject, body,
   branded-shell wrap, `replyToOverride`, `ccVendors` (deduped
   against direct recipients), `bccSelf`. The remaining Phase 14a
   scaffolding fields (attachments, per-email quiet hours,
@@ -230,15 +275,22 @@ Catalogue in `lib/automations/actions/`. Split by category:
   `last_error` in the run output. NB locally `send_email` hits the
   real Resend API (not Mailpit), so an unverified sender domain
   surfaces here as a run error.
-- `couple.ts` - stage update, note, custom fields, portal link,
-  request information, create couple, pause couple automations
-- `task.ts` - create / update task, calendar event, reminder
+- `couple.ts` - stage update, note, portal link, request
+  information, create couple, pause couple automations
+- `task.ts` - create / update task
 - `documents.ts` - send quote / invoice / contract, payment
-  reminder, run-sheet PDF
-- `timeline.ts` - create / update timeline event, send to vendors,
+  reminder, run-sheet PDF, create invoice from quote
+- `timeline.ts` - create timeline event, send to vendors,
   final run sheet
-- `post-event.ts` - onboarding pack, pre-event checklist, thank
-  you, review request, referral request, anniversary
+- `post-event.ts` - pre-event checklist, thank you, review request,
+  referral request
+
+> In-scope but **not yet built** (hidden until wired):
+> `generate_run_sheet_pdf` and `create_invoice_from_quote` are stubs
+> today. Out-of-scope action types still in the registry files
+> (`send_whatsapp`, `update_custom_fields`, `create_calendar_event`,
+> `create_reminder`, `update_timeline_event`, `send_onboarding_pack`,
+> `send_anniversary_message`) are hidden and not on the backlog.
 
 Each handler:
 
@@ -332,6 +384,14 @@ on the `automations` row.
   drawer with typed config forms per trigger / action. Triggers
   with no extra parameters show a confirmation hint instead of
   an empty form
+- `app/(dashboard)/automations/[id]/runs-panel.tsx` - "Runs" button
+  in the canvas header opens a read-only run-history drawer: recent
+  `automation_runs` for this automation (RLS-scoped) with status,
+  time and couple; an errored run names the failed step (resolved
+  from `current_action_id` against the canvas actions) and shows the
+  message via `friendlyRunError()`. This is the in-canvas answer to
+  "did it run / where did it error" — the couple-profile tab only
+  shows runs that touched a given couple
 - `app/(dashboard)/couples/couple-automations.tsx` - couple-profile
   sub-tab: one row per automation that has touched this couple
   (live first, trigger label + headline status); the row expands
@@ -354,26 +414,27 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 
 ## Future work
 
-- Tick-time emitters for the remaining time-based triggers
-  (`task_overdue`, `lead_inactive`,
-  `portal_section_started_not_finished`, `time_before_event`,
-  `time_after_event`, `anniversary_of_event`,
-  `specific_date_reached`). The framework
-  (`lib/automations/time-emitters/`) and the first wiring
-  (`quote_due`) shipped together; `quote_overdue` (A2),
-  `invoice_due` (A3) and `invoice_overdue` (A4) followed.
-  See `automations-wiring.md`.
-- Quote view tracking — prerequisite for `quote_overdue`'s
-  `couplePreviouslyViewed` filter and the
-  `quote_viewed_but_not_responded` trigger.
+These are the remaining **in-scope** (review-file) builds — see
+`automations-wiring.md` → "Remaining backlog" for the canonical list:
+
+- Tick-time emitters for `time_before_event` (T1), `time_after_event`
+  (T2), `anniversary_of_event` (T3). The framework
+  (`lib/automations/time-emitters/`) and A1–A5 (`quote_due`,
+  `quote_overdue`, `invoice_due`, `invoice_overdue`, `task_overdue`)
+  shipped.
+- Portal triggers `couple_uploaded_file` (P1),
+  `couple_added_song_to_playlist` (P2), `couple_completed_vows` (P3 —
+  needs a `vows` table first).
+- Stub actions `generate_run_sheet_pdf` (AC1 → wire to `lib/pdf`) and
+  `create_invoice_from_quote` (AC2).
+
+Engine/UX future work (not catalogue items):
+
 - `contacts.tags` column for true custom-tag recipient matching.
 - Drag-to-reorder actions in the builder (replace position math with
   dnd-kit, mirroring the branding block renderer).
 - Full questionnaire editor.
-- Custom-field key catalogue so `custom_field_changed` can offer
-  a Select of known keys instead of a free-form text input.
 - Inbound IG / email channel + outbound SMS / WhatsApp (14b).
 - AI helpers: subject-line suggestions, "rewrite for tone", AI
   run-sheet generation.
-- Run-as-batch: execute one automation against many couples at
-  once.
+- Run-as-batch: execute one automation against many couples at once.

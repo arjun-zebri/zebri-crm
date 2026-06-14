@@ -24,12 +24,8 @@ import {
   APPROVAL_CHANNEL_LABELS,
   APPROVAL_EXPIRY_BEHAVIOURS,
   APPROVAL_EXPIRY_BEHAVIOUR_LABELS,
-  BOOKING_TIERS,
-  BOOKING_TIER_LABELS,
   CALENDAR_EVENT_CATEGORIES,
   CALENDAR_EVENT_CATEGORY_LABELS,
-  CANCELLATION_REASONS,
-  CANCELLATION_REASON_LABELS,
   COMPARISON_OPS,
   COMPARISON_OP_LABELS,
   CONSULTATION_LOCATIONS,
@@ -50,42 +46,20 @@ import {
   EVENT_TYPE_LABELS,
   FIELD_MERGE_MODES,
   FIELD_MERGE_MODE_LABELS,
-  MONTHS,
-  MONTH_LABELS,
-  NOTE_CATEGORIES,
-  NOTE_CATEGORY_LABELS,
-  PAUSE_CATEGORIES,
-  PAUSE_CATEGORY_LABELS,
   PAYMENT_FAILURE_REASONS,
   PAYMENT_FAILURE_REASON_LABELS,
-  PAYMENT_METHODS,
-  PAYMENT_METHOD_LABELS,
   PORTAL_COMPLETION_RANGES,
   PORTAL_COMPLETION_RANGE_LABELS,
   PORTAL_SECTIONS,
   PORTAL_SECTION_LABELS,
-  REMINDER_TONES,
-  REMINDER_TONE_LABELS,
-  REVIEW_PLATFORMS,
-  REVIEW_PLATFORM_LABELS,
   RUN_SHEET_FORMATS,
   RUN_SHEET_FORMAT_LABELS,
-  SEASONS,
-  SEASON_LABELS,
   SIGNER_REQUIREMENTS,
   SIGNER_REQUIREMENT_LABELS,
   SLACK_MENTION_ROLES,
   SLACK_MENTION_ROLE_LABELS,
   SUB_FLOW_CONTEXT_MODES,
   SUB_FLOW_CONTEXT_MODE_LABELS,
-  TASK_CATEGORIES,
-  TASK_CATEGORY_LABELS,
-  TASK_PRIORITIES,
-  TASK_PRIORITY_LABELS,
-  TIMELINE_CATEGORIES,
-  TIMELINE_CATEGORY_LABELS,
-  TIMELINE_CUE_TYPES,
-  TIMELINE_CUE_TYPE_LABELS,
   WEBHOOK_SOURCES,
   WEBHOOK_SOURCE_LABELS,
 } from '@/lib/automations/trigger-constants'
@@ -404,44 +378,7 @@ export function ExtendedTriggerFields({
 
 /* ── Per-trigger field bundles ── */
 
-function NewEnquiryExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <Check label="Only when couple has an event date" checked={config['hasEventDate'] === true} onChange={(v) => setConfig({ ...config, hasEventDate: v || undefined })} />
-      <Check label="Only when couple has a venue" checked={config['hasVenue'] === true} onChange={(v) => setConfig({ ...config, hasVenue: v || undefined })} />
-      <SelectField
-        label="Day of week (optional)"
-        value={(config['dayOfWeek'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, dayOfWeek: v || undefined })}
-        options={[{ value: '', label: 'Any day' }, ...DAY_OF_WEEK_BUCKETS.filter((d) => d !== 'any').map((d) => ({ value: d, label: DAY_OF_WEEK_LABELS[d] }))]}
-      />
-      <SelectField
-        label="Event month (optional)"
-        value={(config['eventMonth'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, eventMonth: v || undefined })}
-        options={enumOptions(MONTHS, MONTH_LABELS, 'Any month')}
-      />
-      <SelectField
-        label="Season (optional)"
-        value={(config['season'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, season: v || undefined })}
-        options={enumOptions(SEASONS, SEASON_LABELS)}
-      />
-      <SelectField
-        label="Budget tier (optional)"
-        value={(config['budgetTier'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, budgetTier: v || undefined })}
-        options={enumOptions(BOOKING_TIERS, BOOKING_TIER_LABELS, 'Any tier')}
-      />
-      <TextField
-        label="Referred by contact ID (optional)"
-        placeholder="UUID of existing contact"
-        value={(config['referralByContactId'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, referralByContactId: v || undefined })}
-      />
-    </>
-  )
-}
+const NewEnquiryExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
 function LeadInactiveExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
@@ -483,110 +420,15 @@ function CustomFieldChangedExtra({ config, setConfig }: { config: Cfg; setConfig
   )
 }
 
-function CoupleStageChangedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <NumericComparison
-        label="Time spent in previous stage (days)"
-        opField="timeInPreviousStageOp"
-        valueField="timeInPreviousStageDays"
-        config={config}
-        setConfig={setConfig}
-      />
-      <SelectField
-        label="Triggered by (optional)"
-        value={(config['triggeredBy'] as string) ?? 'any'}
-        onChange={(v) => setConfig({ ...config, triggeredBy: v === 'any' ? undefined : v })}
-        options={[
-          { value: 'any', label: 'Any source' },
-          { value: 'mc', label: 'MC manual change' },
-          { value: 'automation', label: 'Another automation' },
-          { value: 'payment', label: 'Payment received' },
-          { value: 'portal', label: 'Couple portal action' },
-        ]}
-      />
-    </>
-  )
-}
+const CoupleStageChangedExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
-function BookingCancelledExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <SelectField
-        label="Cancellation reason (optional)"
-        value={(config['cancellationReason'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, cancellationReason: v || undefined })}
-        options={enumOptions(CANCELLATION_REASONS, CANCELLATION_REASON_LABELS, 'Any reason')}
-      />
-      <Check label="Deposit already paid" checked={config['depositAlreadyPaid'] === true} onChange={(v) => setConfig({ ...config, depositAlreadyPaid: v || undefined })} />
-      <NumericComparison label="Days since booked" opField="daysSinceBookedOp" valueField="daysSinceBookedValue" config={config} setConfig={setConfig} />
-    </>
-  )
-}
+const BookingCancelledExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
-function PaymentDocFiltersExtra({
-  config, setConfig, forPayment,
-}: { config: Cfg; setConfig: SetCfg; forPayment: boolean }) {
-  return (
-    <>
-      <SelectField
-        label="Package / tier (optional)"
-        value={(config['tier'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, tier: v || undefined })}
-        options={enumOptions(BOOKING_TIERS, BOOKING_TIER_LABELS, 'Any tier')}
-      />
-      <Check label="Document has add-on line items" checked={config['hasAddOns'] === true} onChange={(v) => setConfig({ ...config, hasAddOns: v || undefined })} />
-      <Check label="Discount was applied" checked={config['discountApplied'] === true} onChange={(v) => setConfig({ ...config, discountApplied: v || undefined })} />
-      <NumField label="Version number (optional, blank for any)" value={(config['versionNumber'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, versionNumber: v || undefined })} />
-      <Check label="Deposit only" checked={config['isDeposit'] === true} onChange={(v) => setConfig({ ...config, isDeposit: v || undefined })} />
-      <Check label="Final balance only" checked={config['isFinalBalance'] === true} onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })} />
-      {forPayment && (
-        <>
-          <Check label="Partial payment only" checked={config['isPartial'] === true} onChange={(v) => setConfig({ ...config, isPartial: v || undefined })} />
-          <SelectField
-            label="Payment method (optional)"
-            value={(config['paymentMethod'] as string) ?? ''}
-            onChange={(v) => setConfig({ ...config, paymentMethod: v || undefined })}
-            options={enumOptions(PAYMENT_METHODS, PAYMENT_METHOD_LABELS, 'Any method')}
-          />
-        </>
-      )}
-    </>
-  )
-}
+const PaymentDocFiltersExtra: (p: { config: Cfg; setConfig: SetCfg; forPayment: boolean }) => null = () => null
 
-function DueExtra({ config, setConfig, isInvoice }: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) {
-  return (
-    <>
-      <NumField label="Reminder number (1 = first, 3 = final)" value={(config['notificationCount'] as number | undefined) ?? 1} onChange={(v) => setConfig({ ...config, notificationCount: v || undefined })} />
-      <Check label="Defer into the next non-quiet-hours window" checked={config['respectQuietHours'] === true} onChange={(v) => setConfig({ ...config, respectQuietHours: v || undefined })} />
-      {isInvoice && (
-        <Check label="Final-balance invoices only" checked={config['isFinalBalance'] === true} onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })} />
-      )}
-    </>
-  )
-}
+const DueExtra: (p: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) => null = () => null
 
-function OverdueExtra({ config, setConfig, isInvoice }: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) {
-  return (
-    <>
-      <NumField label="Maximum days overdue (optional)" value={(config['daysOverdueMax'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, daysOverdueMax: v || undefined })} />
-      {/* The quote branch used to offer a "couple has previously
-          viewed" checkbox, but quote view tracking doesn't exist in
-          the schema yet — the filter silently did nothing. Hidden
-          until view tracking ships (same blocker as the
-          quote_viewed_but_not_responded trigger). The config schema
-          still accepts the field, so previously saved values are
-          harmless. */}
-      {isInvoice && (
-        <>
-          <Check label="Final-balance invoices only" checked={config['isFinalBalance'] === true} onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })} />
-          <NumericComparison label="Days until event date" opField="daysUntilEventOp" valueField="daysUntilEventValue" config={config} setConfig={setConfig} />
-        </>
-      )}
-    </>
-  )
-}
+const OverdueExtra: (p: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) => null = () => null
 
 function QuoteViewedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
@@ -611,41 +453,15 @@ function PaymentFailedExtra({ config, setConfig }: { config: Cfg; setConfig: Set
   )
 }
 
-function ContractFiltersExtra({
-  triggerType, config, setConfig,
-}: { triggerType: TriggerType; config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <NumericComparison label="Days until event date" opField="daysUntilEventOp" valueField="daysUntilEventValue" config={config} setConfig={setConfig} />
-      <TextField label="Template used (optional)" value={(config['templateUsed'] as string) ?? ''} onChange={(v) => setConfig({ ...config, templateUsed: v || undefined })} placeholder="e.g. ceremony-agreement-v2" />
-      <NumField label="Version number (blank for any)" value={(config['versionNumber'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, versionNumber: v || undefined })} />
-      <SelectField
-        label="Signer requirement (optional)"
-        value={(config['signerRole'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, signerRole: v || undefined })}
-        options={enumOptions(SIGNER_REQUIREMENTS, SIGNER_REQUIREMENT_LABELS, 'Any signer')}
-      />
-      {triggerType === 'contract_signed' && (
-        <>
-          <NumericComparison label="Time to sign (hours)" opField="timeToSignHoursOp" valueField="timeToSignHoursValue" config={config} setConfig={setConfig} />
-          <Check label="Only when both partners have signed" checked={config['signedByBoth'] === true} onChange={(v) => setConfig({ ...config, signedByBoth: v || undefined })} />
-        </>
-      )}
-    </>
-  )
-}
+const ContractFiltersExtra: (p: { triggerType: TriggerType; config: Cfg; setConfig: SetCfg }) => React.JSX.Element = () => (
+  <Hint>This trigger fires whenever the event happens — no extra parameters needed.</Hint>
+)
 
 function EventExtra({
   triggerType, config, setConfig,
 }: { triggerType: TriggerType; config: Cfg; setConfig: SetCfg }) {
   return (
     <>
-      <SelectField label="Month (optional)" value={(config['month'] as string) ?? ''} onChange={(v) => setConfig({ ...config, month: v || undefined })} options={enumOptions(MONTHS, MONTH_LABELS, 'Any month')} />
-      <SelectField label="Season (optional)" value={(config['season'] as string) ?? ''} onChange={(v) => setConfig({ ...config, season: v || undefined })} options={enumOptions(SEASONS, SEASON_LABELS)} />
-      <NumericComparison label="Days until event" opField="daysUntilEventOp" valueField="daysUntilEventValue" config={config} setConfig={setConfig} />
-      <Check label="Only events with a venue set" checked={config['hasVenue'] === true} onChange={(v) => setConfig({ ...config, hasVenue: v || undefined })} />
-      <Check label="Only destination weddings" checked={config['isDestination'] === true} onChange={(v) => setConfig({ ...config, isDestination: v || undefined })} />
-      <NumericComparison label="Guest count" opField="guestCountOp" valueField="guestCountValue" config={config} setConfig={setConfig} />
       {triggerType === 'event_updated' && (
         <SelectField
           label="Only when this field changed (optional)"
@@ -701,14 +517,7 @@ function AnniversaryExtra({ config, setConfig }: { config: Cfg; setConfig: SetCf
   )
 }
 
-function SectionCompletedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <NumField label="Completed within N days of event (optional)" value={(config['completedWithinDaysOfEvent'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, completedWithinDaysOfEvent: v || undefined })} />
-      <NumericComparison label="Completion duration (hours)" opField="completionDurationHoursOp" valueField="completionDurationHoursValue" config={config} setConfig={setConfig} />
-    </>
-  )
-}
+const SectionCompletedExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
 function PortalAbandonExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
@@ -724,62 +533,24 @@ function PortalAbandonExtra({ config, setConfig }: { config: Cfg; setConfig: Set
   )
 }
 
-function TimelineEditedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <SelectField
-        label="Edited by (optional)"
-        value={(config['editedBy'] as string) ?? 'any'}
-        onChange={(v) => setConfig({ ...config, editedBy: v === 'any' ? undefined : v })}
-        options={[
-          { value: 'any', label: 'Anyone' },
-          { value: 'mc', label: 'You' },
-          { value: 'couple', label: 'The couple' },
-          { value: 'vendor', label: 'A vendor' },
-        ]}
-      />
-      <NumericComparison label="Items added" opField="itemsAddedOp" valueField="itemsAddedValue" config={config} setConfig={setConfig} />
-      <NumericComparison label="Items removed" opField="itemsRemovedOp" valueField="itemsRemovedValue" config={config} setConfig={setConfig} />
-    </>
-  )
-}
+const TimelineEditedExtra: (p: { config: Cfg; setConfig: SetCfg }) => React.JSX.Element = () => (
+  <Hint>This trigger fires whenever the event happens — no extra parameters needed.</Hint>
+)
 
 function TaskFiltersExtra({
   triggerType, config, setConfig,
 }: { triggerType: TriggerType; config: Cfg; setConfig: SetCfg }) {
+  if (triggerType === 'task_overdue') {
+    return (
+      <NumField label="Maximum days overdue (optional)" value={(config['daysOverdueMax'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, daysOverdueMax: v || undefined })} />
+    )
+  }
   return (
-    <>
-      <SelectField label="Task category (optional)" value={(config['taskCategory'] as string) ?? ''} onChange={(v) => setConfig({ ...config, taskCategory: v || undefined })} options={enumOptions(TASK_CATEGORIES, TASK_CATEGORY_LABELS, 'Any category')} />
-      <SelectField label="Priority (optional)" value={(config['taskPriority'] as string) ?? ''} onChange={(v) => setConfig({ ...config, taskPriority: v || undefined })} options={enumOptions(TASK_PRIORITIES, TASK_PRIORITY_LABELS, 'Any priority')} />
-      <NumericComparison label="Due within (days)" opField="dueWithinDaysOp" valueField="dueWithinDaysValue" config={config} setConfig={setConfig} />
-      {triggerType === 'task_overdue' && (
-        <>
-          <NumField label="Maximum days overdue (optional)" value={(config['daysOverdueMax'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, daysOverdueMax: v || undefined })} />
-          <SelectField
-            label="Assigned to (optional)"
-            value={(config['assignedTo'] as string) ?? 'any'}
-            onChange={(v) => setConfig({ ...config, assignedTo: v === 'any' ? undefined : v })}
-            options={[
-              { value: 'any', label: 'Anyone' },
-              { value: 'self', label: 'You' },
-              { value: 'delegated', label: 'Delegated' },
-            ]}
-          />
-        </>
-      )}
-    </>
+    <Hint>This trigger fires whenever the event happens — no extra parameters needed.</Hint>
   )
 }
 
-function ContactExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <Check label="Only when the contact has a phone number" checked={config['hasPhone'] === true} onChange={(v) => setConfig({ ...config, hasPhone: v || undefined })} />
-      <Check label="Only when this is the primary vendor for the couple" checked={config['isPrimaryVendorForCouple'] === true} onChange={(v) => setConfig({ ...config, isPrimaryVendorForCouple: v || undefined })} />
-      <TextField label="Region / suburb (optional)" value={(config['region'] as string) ?? ''} onChange={(v) => setConfig({ ...config, region: v || undefined })} placeholder="e.g. Melbourne" />
-    </>
-  )
-}
+const ContactExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
 function ManualFireExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
@@ -1511,40 +1282,15 @@ export function SendEmailExtraFields({
       <TextField label="Reply-to override (optional)" value={(config['replyToOverride'] as string) ?? ''} onChange={(v) => updateConfig({ replyToOverride: v || undefined })} placeholder="you@your-business.com" />
       <Check label="CC every vendor contact attached to the couple" checked={config['ccVendors'] === true} onChange={(v) => updateConfig({ ccVendors: v })} />
       <Check label="BCC yourself for the paper trail" checked={config['bccSelf'] === true} onChange={(v) => updateConfig({ bccSelf: v })} />
-      <Hint>
-        Need timing or sign-off? Add a Wait step before this email, or an
-        Approval gate to review it before it sends. Attachments are coming
-        soon.
-      </Hint>
     </>
   )
 }
 
 /** Extra fields for the `update_couple_stage` form. */
-export function UpdateCoupleStageExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <TextField
-        label="Only run if current status is (comma-separated, optional)"
-        value={((config['onlyIfCurrentStatus'] as string[] | undefined) ?? []).join(', ')}
-        onChange={(v) => updateConfig({ onlyIfCurrentStatus: v ? v.split(',').map((s) => s.trim()).filter(Boolean) : undefined })}
-        placeholder="e.g. enquiry, contacted"
-      />
-      <TextField label="Auto-add note (optional)" value={(config['addNote'] as string) ?? ''} onChange={(v) => updateConfig({ addNote: v || undefined })} placeholder="e.g. Moved to booked via automation" />
-    </>
-  )
-}
+export const UpdateCoupleStageExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for the `add_note` form. */
-export function AddNoteExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <SelectField label="Category (optional)" value={(config['category'] as string) ?? 'general'} onChange={(v) => updateConfig({ category: v })} options={enumOptions(NOTE_CATEGORIES, NOTE_CATEGORY_LABELS)} />
-      <Check label="Pin to the top of the couple's notes" checked={config['pinned'] === true} onChange={(v) => updateConfig({ pinned: v })} />
-      <Check label="Allow this to be shown to the couple" checked={config['visibleToCouple'] === true} onChange={(v) => updateConfig({ visibleToCouple: v })} />
-    </>
-  )
-}
+export const AddNoteExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for the `update_custom_fields` form. */
 export function UpdateCustomFieldsExtraFields({ config, updateConfig }: FormProps) {
@@ -1557,96 +1303,24 @@ export function UpdateCustomFieldsExtraFields({ config, updateConfig }: FormProp
 }
 
 /** Extra fields for the `send_portal_link` form. */
-export function SendPortalLinkExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <TextField label="Subject override (optional)" value={(config['subject'] as string) ?? ''} onChange={(v) => updateConfig({ subject: v || undefined })} />
-      <NumField label="Link expires in (days, optional)" value={(config['expiresInDays'] as number | undefined) ?? 30} onChange={(v) => updateConfig({ expiresInDays: v || undefined })} />
-      <SelectField label="Restrict to section (optional)" value={(config['restrictToSection'] as string) ?? ''} onChange={(v) => updateConfig({ restrictToSection: v || undefined })} options={[{ value: '', label: 'Full portal' }, { value: 'onboarding', label: 'Onboarding' }, { value: 'pre_event', label: 'Pre-event' }, { value: 'day_of', label: 'Day-of' }, { value: 'people', label: 'People' }, { value: 'songs', label: 'Songs' }, { value: 'files', label: 'Files' }, { value: 'timeline', label: 'Timeline' }]} />
-      <SelectField label="Recipient" value={(config['magicLinkRecipient'] as string) ?? 'primary'} onChange={(v) => updateConfig({ magicLinkRecipient: v })} options={[{ value: 'primary', label: 'Primary' }, { value: 'spouse', label: 'Spouse' }, { value: 'both', label: 'Both partners' }]} />
-    </>
-  )
-}
+export const SendPortalLinkExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for the `request_information` form. */
-export function RequestInformationExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <DateField label="Due back by (optional)" value={(config['dueDate'] as string) ?? ''} onChange={(v) => updateConfig({ dueDate: v || undefined })} />
-      <SelectField label="Reminder cadence" value={(config['reminderCadence'] as string) ?? 'none'} onChange={(v) => updateConfig({ reminderCadence: v })} options={[{ value: 'none', label: 'None' }, { value: 'two_day', label: 'Every 2 days' }, { value: 'weekly', label: 'Weekly' }]} />
-      <NumField label="Escalate to MC after (days, optional)" value={(config['escalateAfterDays'] as number | undefined) ?? 0} onChange={(v) => updateConfig({ escalateAfterDays: v || undefined })} />
-    </>
-  )
-}
+export const RequestInformationExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for the `create_couple` form. */
-export function CreateCoupleExtraFields({ config, updateConfig }: FormProps) {
-  const tags = (config['assignTags'] as string[] | undefined) ?? []
-  return (
-    <>
-      <TextField label="Event type (optional)" value={(config['eventType'] as string) ?? ''} onChange={(v) => updateConfig({ eventType: v || undefined })} placeholder="e.g. ceremony, reception" />
-      <TextField label="Venue (optional)" value={(config['venue'] as string) ?? ''} onChange={(v) => updateConfig({ venue: v || undefined })} />
-      <TextField label="Partner name (optional)" value={(config['partnerName'] as string) ?? ''} onChange={(v) => updateConfig({ partnerName: v || undefined })} />
-      <div>
-        <Label>Auto-apply tags</Label>
-        <div className="space-y-2">
-          {tags.map((t, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Input label="" size="sm" type="text" value={t} onChange={(e) => updateConfig({ assignTags: tags.map((x, idx) => idx === i ? e.target.value : x) })} />
-              <button type="button" onClick={() => updateConfig({ assignTags: tags.filter((_, idx) => idx !== i) })} className="text-text-muted hover:text-danger cursor-pointer p-1" aria-label="Remove tag">
-                <Trash2 size={14} strokeWidth={1.5} />
-              </button>
-            </div>
-          ))}
-          <button type="button" onClick={() => updateConfig({ assignTags: [...tags, ''] })} className="text-caption text-text-muted hover:text-text cursor-pointer">+ Add tag</button>
-        </div>
-      </div>
-      <Check label="Auto-create a welcome-call task" checked={config['autoCreateTask'] === true} onChange={(v) => updateConfig({ autoCreateTask: v })} />
-      <Check label="Skip if an existing couple shares the same email" checked={config['dedupeOnEmail'] === true} onChange={(v) => updateConfig({ dedupeOnEmail: v })} />
-    </>
-  )
-}
+export const CreateCoupleExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for the `pause_couple_automations` form. */
-export function PauseCoupleExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <NumField label="Auto-resume after (days, optional)" value={(config['pauseForDays'] as number | undefined) ?? 0} onChange={(v) => updateConfig({ pauseForDays: v || undefined })} />
-      <TextField label="Reason (audit log, optional)" value={(config['pauseReason'] as string) ?? ''} onChange={(v) => updateConfig({ pauseReason: v || undefined })} />
-      <SelectField label="Category" value={(config['pauseCategory'] as string) ?? 'general'} onChange={(v) => updateConfig({ pauseCategory: v })} options={enumOptions(PAUSE_CATEGORIES, PAUSE_CATEGORY_LABELS)} />
-    </>
-  )
-}
+export const PauseCoupleExtraFields: (p: FormProps) => React.JSX.Element = () => (
+  <Hint>Pauses every other running automation on this couple.</Hint>
+)
 
 /** Extra fields for `create_task`. */
-export function CreateTaskExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <SelectField label="Category (optional)" value={(config['category'] as string) ?? ''} onChange={(v) => updateConfig({ category: v || undefined })} options={enumOptions(TASK_CATEGORIES, TASK_CATEGORY_LABELS, 'No category')} />
-      <SelectField label="Priority (optional)" value={(config['priority'] as string) ?? ''} onChange={(v) => updateConfig({ priority: v || undefined })} options={enumOptions(TASK_PRIORITIES, TASK_PRIORITY_LABELS, 'Default')} />
-      <TextField label="Assign to (optional)" value={(config['assignTo'] as string) ?? ''} onChange={(v) => updateConfig({ assignTo: v || undefined })} placeholder="self / assistant / email" />
-      <NumField label="Reminder N days before due (optional)" value={(config['reminderBeforeDays'] as number | undefined) ?? 0} onChange={(v) => updateConfig({ reminderBeforeDays: v || undefined })} />
-    </>
-  )
-}
+export const CreateTaskExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for `update_task`. */
-export function UpdateTaskExtraFields({ config, updateConfig }: FormProps) {
-  const push = (config['pushDueDateBy'] as { amount?: number; unit?: string } | undefined) ?? {}
-  return (
-    <>
-      <TextAreaField label="Append a note (optional)" value={(config['appendNote'] as string) ?? ''} onChange={(v) => updateConfig({ appendNote: v || undefined })} />
-      <TextField label="Reassign to (optional)" value={(config['reassignTo'] as string) ?? ''} onChange={(v) => updateConfig({ reassignTo: v || undefined })} />
-      <div>
-        <Label>Snooze: push the due date</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <NumField label="" value={push.amount ?? 0} onChange={(v) => updateConfig({ pushDueDateBy: { amount: v, unit: push.unit ?? 'days' } })} />
-          <SelectField label="" value={push.unit ?? 'days'} onChange={(v) => updateConfig({ pushDueDateBy: { amount: push.amount ?? 0, unit: v } })} options={[{ value: 'days', label: 'Days' }, { value: 'weeks', label: 'Weeks' }]} />
-        </div>
-      </div>
-    </>
-  )
-}
+export const UpdateTaskExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for `create_calendar_event` / `create_reminder`. */
 export function CalendarEventExtraFields({ config, updateConfig }: FormProps) {
@@ -1667,60 +1341,18 @@ export function CalendarEventExtraFields({ config, updateConfig }: FormProps) {
 /** Extra fields for `send_quote`. */
 export function SendQuoteExtraFields({ config, updateConfig }: FormProps) {
   return (
-    <>
-      <TextField label="Template ID (optional)" value={(config['templateId'] as string) ?? ''} onChange={(v) => updateConfig({ templateId: v || undefined })} />
-      <NumField label="Expires in (days, optional)" value={(config['expiryDays'] as number | undefined) ?? 14} onChange={(v) => updateConfig({ expiryDays: v || undefined })} />
-      <TextAreaField label="Custom message above the quote link (optional)" value={(config['customMessage'] as string) ?? ''} onChange={(v) => updateConfig({ customMessage: v || undefined })} />
-    </>
+    <TextAreaField label="Custom message above the quote link (optional)" value={(config['customMessage'] as string) ?? ''} onChange={(v) => updateConfig({ customMessage: v || undefined })} />
   )
 }
 
 /** Extra fields for `send_contract`. */
-export function SendContractExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <TextField label="Template ID (optional)" value={(config['templateId'] as string) ?? ''} onChange={(v) => updateConfig({ templateId: v || undefined })} />
-      <SelectField label="Signers required" value={(config['signersRequired'] as string) ?? 'both'} onChange={(v) => updateConfig({ signersRequired: v })} options={enumOptions(SIGNER_REQUIREMENTS, SIGNER_REQUIREMENT_LABELS)} />
-      <NumField label="Expires in (days, optional)" value={(config['expiryDays'] as number | undefined) ?? 14} onChange={(v) => updateConfig({ expiryDays: v || undefined })} />
-      <TextAreaField label="Custom message (optional)" value={(config['customMessage'] as string) ?? ''} onChange={(v) => updateConfig({ customMessage: v || undefined })} />
-    </>
-  )
-}
+export const SendContractExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for `send_invoice`. */
-export function SendInvoiceExtraFields({ config, updateConfig }: FormProps) {
-  const methods = (config['paymentMethods'] as string[] | undefined) ?? []
-  function toggle(m: string) {
-    const next = methods.includes(m) ? methods.filter((x) => x !== m) : [...methods, m]
-    updateConfig({ paymentMethods: next })
-  }
-  return (
-    <>
-      <div>
-        <Label>Payment methods to surface</Label>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-          {PAYMENT_METHODS.map((m) => (
-            <Check key={m} label={PAYMENT_METHOD_LABELS[m]} checked={methods.includes(m)} onChange={() => toggle(m)} />
-          ))}
-        </div>
-      </div>
-      <NumField label="Due in (days, optional)" value={(config['dueInDays'] as number | undefined) ?? 14} onChange={(v) => updateConfig({ dueInDays: v || undefined })} />
-      <NumField label="Late-payment fee (%, optional)" value={(config['latePaymentFeePercent'] as number | undefined) ?? 0} onChange={(v) => updateConfig({ latePaymentFeePercent: v || undefined })} />
-      <TextAreaField label="Custom message (optional)" value={(config['customMessage'] as string) ?? ''} onChange={(v) => updateConfig({ customMessage: v || undefined })} />
-    </>
-  )
-}
+export const SendInvoiceExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for `trigger_payment_reminder`. */
-export function PaymentReminderExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <SelectField label="Tone" value={(config['tone'] as string) ?? 'friendly'} onChange={(v) => updateConfig({ tone: v })} options={enumOptions(REMINDER_TONES, REMINDER_TONE_LABELS)} />
-      <NumField label="Escalation level (1 = first, 3 = final)" value={(config['escalationLevel'] as number | undefined) ?? 1} onChange={(v) => updateConfig({ escalationLevel: v })} />
-      <Check label="Attach a late-fee notice PDF" checked={config['attachLateFeeNotice'] === true} onChange={(v) => updateConfig({ attachLateFeeNotice: v })} />
-    </>
-  )
-}
+export const PaymentReminderExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for `generate_run_sheet_pdf`. */
 export function RunSheetExtraFields({ config, updateConfig }: FormProps) {
@@ -1736,16 +1368,7 @@ export function RunSheetExtraFields({ config, updateConfig }: FormProps) {
 }
 
 /** Extra fields for `create_timeline_event`. */
-export function TimelineEventExtraFields({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <SelectField label="Category" value={(config['category'] as string) ?? 'other'} onChange={(v) => updateConfig({ category: v })} options={enumOptions(TIMELINE_CATEGORIES, TIMELINE_CATEGORY_LABELS)} />
-      <TextField label="Responsible vendor contact ID (optional)" value={(config['responsibleVendor'] as string) ?? ''} onChange={(v) => updateConfig({ responsibleVendor: v || undefined })} placeholder="UUID" />
-      <SelectField label="Cue" value={(config['cue'] as string) ?? 'none'} onChange={(v) => updateConfig({ cue: v })} options={enumOptions(TIMELINE_CUE_TYPES, TIMELINE_CUE_TYPE_LABELS)} />
-      <NumField label="Buffer after (minutes, optional)" value={(config['bufferAfterMin'] as number | undefined) ?? 0} onChange={(v) => updateConfig({ bufferAfterMin: v || undefined })} />
-    </>
-  )
-}
+export const TimelineEventExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for `update_timeline_event`. */
 export function UpdateTimelineEventExtraFields({ config, updateConfig }: FormProps) {
@@ -1765,68 +1388,10 @@ export function UpdateTimelineEventExtraFields({ config, updateConfig }: FormPro
 }
 
 /** Extra fields for `send_timeline_to_vendors` / `send_final_run_sheet`. */
-export function SendTimelineExtraFields({ config, updateConfig }: FormProps) {
-  const filter = (config['vendorFilter'] as string[] | undefined) ?? []
-  function toggle(c: string) {
-    const next = filter.includes(c) ? filter.filter((x) => x !== c) : [...filter, c]
-    updateConfig({ vendorFilter: next.length > 0 ? next : undefined })
-  }
-  return (
-    <>
-      <div>
-        <Label>Send only to these vendor categories (leave empty for all)</Label>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-          {CONTACT_CATEGORIES.map((c) => (
-            <Check key={c} label={CONTACT_CATEGORY_LABELS[c]} checked={filter.includes(c)} onChange={() => toggle(c)} />
-          ))}
-        </div>
-      </div>
-      <SelectField label="Format" value={(config['format'] as string) ?? 'full'} onChange={(v) => updateConfig({ format: v })} options={[{ value: 'full', label: 'Full timeline' }, { value: 'their_cues_only', label: 'Only this vendor\'s cues' }]} />
-      <Check label="CC the couple's primary email" checked={config['ccCouple'] === true} onChange={(v) => updateConfig({ ccCouple: v })} />
-      <Check label="Attach the run-sheet PDF" checked={config['attachRunSheet'] === true} onChange={(v) => updateConfig({ attachRunSheet: v })} />
-      <Check label="Require each vendor to confirm receipt" checked={config['requireConfirmation'] === true} onChange={(v) => updateConfig({ requireConfirmation: v })} />
-    </>
-  )
-}
+export const SendTimelineExtraFields: (p: FormProps) => null = () => null
 
 /** Extra fields for the post-event email actions (baseSchema-based). */
-export function PostEventExtraFields({
-  config, updateConfig, isReview, isReferral,
-}: FormProps & { isReview?: boolean; isReferral?: boolean }) {
-  const platforms = (config['platforms'] as string[] | undefined) ?? []
-  function togglePlatform(p: string) {
-    const next = platforms.includes(p) ? platforms.filter((x) => x !== p) : [...platforms, p]
-    updateConfig({ platforms: next.length > 0 ? next : undefined })
-  }
-  return (
-    <>
-      <TextField label="Saved template ID (optional)" value={(config['templateId'] as string) ?? ''} onChange={(v) => updateConfig({ templateId: v || undefined })} placeholder="Overrides subject/body" />
-      <SelectField label="Tone" value={(config['tone'] as string) ?? 'warm'} onChange={(v) => updateConfig({ tone: v })} options={[{ value: 'formal', label: 'Formal' }, { value: 'warm', label: 'Warm' }, { value: 'casual', label: 'Casual' }]} />
-      <SelectField label="Recipient" value={(config['recipientRole'] as string) ?? 'primary'} onChange={(v) => updateConfig({ recipientRole: v })} options={[{ value: 'primary', label: 'Primary' }, { value: 'spouse', label: 'Spouse' }, { value: 'both', label: 'Both partners' }]} />
-      <Check label="Track opens & clicks" checked={config['trackEngagement'] === true} onChange={(v) => updateConfig({ trackEngagement: v })} />
-      {isReview && (
-        <>
-          <div>
-            <Label>Review platforms to link</Label>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-              {REVIEW_PLATFORMS.map((p) => (
-                <Check key={p} label={REVIEW_PLATFORM_LABELS[p]} checked={platforms.includes(p)} onChange={() => togglePlatform(p)} />
-              ))}
-            </div>
-          </div>
-          <TextField label="Incentive copy (optional)" value={(config['incentive'] as string) ?? ''} onChange={(v) => updateConfig({ incentive: v || undefined })} placeholder="e.g. first reviewer wins..." />
-          <Check label="Auto-follow-up if no review left after 14 days" checked={config['followUpIfIgnored'] === true} onChange={(v) => updateConfig({ followUpIfIgnored: v })} />
-        </>
-      )}
-      {isReferral && (
-        <>
-          <TextField label="Referral bonus (optional)" value={(config['referralBonus'] as string) ?? ''} onChange={(v) => updateConfig({ referralBonus: v || undefined })} placeholder="e.g. $100 off your next event" />
-          <Check label="Include a unique tracking link" checked={config['trackingLink'] === true} onChange={(v) => updateConfig({ trackingLink: v })} />
-        </>
-      )}
-    </>
-  )
-}
+export const PostEventExtraFields: (p: FormProps & { isReview?: boolean; isReferral?: boolean }) => null = () => null
 
 /* ─── Flow-control extra fields ─────────────────────────────────── */
 
