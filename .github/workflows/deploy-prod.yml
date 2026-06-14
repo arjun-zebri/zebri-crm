@@ -48,10 +48,13 @@ jobs:
         run: bash scripts/check-migrations.sh "${{ github.event.before }}" "${{ github.sha }}"
 
       - name: Set up Supabase CLI
-        # Install via npm rather than the supabase/setup-cli action —
-        # the action's major-tag resolution started 404ing on
-        # codeload. See ci.yml for the longer rationale.
-        run: npm install -g supabase
+        # Pinned 2.65.5 from the GitHub release binary. Not npm: the
+        # package rejects global installs, and unpinned CLI drift broke
+        # CI's local stack (see ci.yml). Bump deliberately.
+        run: |
+          curl -fsSL https://github.com/supabase/cli/releases/download/v2.65.5/supabase_linux_amd64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin supabase
+          supabase --version
 
       # IMPORTANT: secrets are passed via env vars, NEVER interpolated
       # directly into the shell `run:` block. GitHub's `${{ secrets.X }}`
