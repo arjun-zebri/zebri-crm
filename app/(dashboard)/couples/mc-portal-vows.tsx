@@ -2,9 +2,8 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { History, RotateCcw } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 
 import { revertVowAction, updateVowAsMcAction } from './portal-actions'
@@ -22,16 +21,18 @@ interface Revision {
   created_at: string
 }
 
-const WHO_LABEL: Record<string, string> = {
-  primary: 'Primary partner',
-  spouse: 'Spouse',
+function timeAgo(iso: string): string {
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  if (d < 7) return `${d}d ago`
+  return new Date(iso).toLocaleDateString('en-AU')
 }
 
-/**
- * Load the couple's vows + full revision history. RLS scopes both to
- * the signed-in MC (they own the rows). `vows` / `vow_revisions` aren't
- * in the generated DB types yet, hence the `as never` casts.
- */
+/** Load the couple's vows + revision history (RLS-scoped to the MC). */
 async function loadVows(coupleId: string): Promise<{ vows: Vow[]; revisions: Revision[] }> {
   const supabase = createClient()
   const { data: v } = await supabase
@@ -53,31 +54,116 @@ async function loadVows(coupleId: string): Promise<{ vows: Vow[]; revisions: Rev
   return { vows, revisions }
 }
 
+/** Click-outside popover listing the vow's revisions; click one to restore. */
+function HistoryPopover({
+  history,
+  onRestore,
+  busy,
+}: {
+  history: Revision[]
+  onRestore: (revisionId: string) => void
+  busy: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text cursor-pointer transition-colors"
+      >
+        <History size={14} strokeWidth={1.5} /> History ({history.length})
+      </button>
+      <div
+        className={`absolute right-0 mt-2 w-52 z-30 origin-top-right rounded-xl border border-gray-100 bg-white shadow-lg py-1 text-sm transition-all duration-150 ${
+          open ? 'opacity-100 scale-100' : 'pointer-events-none opacity-0 scale-95'
+        }`}
+      >
+        {history.length === 0 ? (
+          <p className="px-3 py-2 text-xs text-gray-400">No history yet</p>
+        ) : (
+          <ul className="max-h-64 overflow-y-auto">
+            {history.map((r, i) => (
+              <li key={r.id}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    onRestore(r.id)
+                    setOpen(false)
+                  }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+                >
+                  <span className="min-w-0">
+                    <span className="block">
+                      {r.author === 'couple' ? "Couple's version" : 'Your edit'}
+                      {i === 0 && <span className="text-gray-400"> · current</span>}
+                    </span>
+                    <span className="block text-xs text-gray-400">{timeAgo(r.created_at)}</span>
+                  </span>
+                  {i !== 0 && (
+                    <RotateCcw size={13} strokeWidth={1.5} className="shrink-0 text-gray-400" />
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  )
+}
+
+interface McPortalVowsProps {
+  coupleId: string
+  primaryName: string
+  secondaryName: string | null
+}
+
 /**
- * MC-side vows editor inside the couple profile: edit each partner's
- * vows and revert to any prior version (incl. the couple's original).
+ * MC-side vows editor inside the couple profile. Autosaves on blur (like
+ * the other portal tabs), keeps a full revision history, and lets the MC
+ * restore any version — restoring the couple's version marks it as theirs.
  */
-export function McPortalVows({ coupleId }: { coupleId: string }) {
+export function McPortalVows({ coupleId, primaryName, secondaryName }: McPortalVowsProps) {
   const queryClient = useQueryClient()
   const { data, isLoading } = useQuery({
     queryKey: ['couple-vows', coupleId],
     queryFn: () => loadVows(coupleId),
   })
   const [drafts, setDrafts] = useState<Record<string, string>>({})
-  const [openHistory, setOpenHistory] = useState<string | null>(null)
+  const [status, setStatus] = useState<Record<string, 'saving' | 'saved' | undefined>>({})
   const [busy, setBusy] = useState(false)
 
   const vows = data?.vows ?? []
   const revisions = data?.revisions ?? []
   const reload = () => queryClient.invalidateQueries({ queryKey: ['couple-vows', coupleId] })
 
-  const save = async (vowId: string, fallback: string) => {
-    setBusy(true)
-    await updateVowAsMcAction({ id: vowId, content: drafts[vowId] ?? fallback })
+  const label = (who: string) =>
+    who === 'primary' ? primaryName || 'Primary partner' : secondaryName || 'Partner'
+
+  const autosave = async (vow: Vow) => {
+    const draft = drafts[vow.id]
+    if (draft === undefined || draft === vow.content) return
+    setStatus((s) => ({ ...s, [vow.id]: 'saving' }))
+    await updateVowAsMcAction({ id: vow.id, content: draft })
     await reload()
-    setBusy(false)
+    setStatus((s) => ({ ...s, [vow.id]: 'saved' }))
+    setTimeout(() => setStatus((s) => ({ ...s, [vow.id]: undefined })), 2000)
   }
-  const revert = async (vowId: string, revisionId: string) => {
+
+  const restore = async (vowId: string, revisionId: string) => {
     setBusy(true)
     await revertVowAction({ id: vowId, revisionId })
     setDrafts((d) => {
@@ -95,67 +181,31 @@ export function McPortalVows({ coupleId }: { coupleId: string }) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+    <div className="grid grid-cols-1 xl:grid-cols-2 auto-rows-fr gap-6 flex-1 min-h-0">
       {vows.map((vow) => {
         const history = revisions.filter((r) => r.vow_id === vow.id)
-        const coupleOriginal = [...history].reverse().find((r) => r.author === 'couple')
         const value = drafts[vow.id] ?? vow.content
+        const st = status[vow.id]
         return (
-          <div key={vow.id} className="bg-card rounded-xl border border-border p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-text">{WHO_LABEL[vow.who] ?? vow.who}</span>
-              <button
-                type="button"
-                onClick={() => setOpenHistory((h) => (h === vow.id ? null : vow.id))}
-                className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text cursor-pointer"
-              >
-                <History size={14} strokeWidth={1.5} /> History ({history.length})
-              </button>
+          <div key={vow.id} className="flex flex-col min-h-[280px]">
+            <div className="flex items-center justify-between mb-2 px-3">
+              <span className="text-sm font-medium text-text">{label(vow.who)}</span>
+              <div className="flex items-center gap-3">
+                <span
+                  className={`text-xs text-text-subtle transition-opacity duration-300 ${st ? 'opacity-100' : 'opacity-0'}`}
+                >
+                  {st === 'saving' ? 'Saving…' : 'Saved'}
+                </span>
+                <HistoryPopover history={history} onRestore={(id) => restore(vow.id, id)} busy={busy} />
+              </div>
             </div>
             <textarea
-              className="w-full min-h-[140px] resize-none rounded-md border border-border bg-surface p-3 text-sm text-text"
+              className="flex-1 w-full resize-none rounded-md border border-border bg-surface p-3 text-sm text-text transition-shadow focus:outline-none focus:ring-2 focus:ring-brand/30"
               value={value}
+              placeholder="No vows written yet."
               onChange={(e) => setDrafts((d) => ({ ...d, [vow.id]: e.target.value }))}
+              onBlur={() => autosave(vow)}
             />
-            <div className="mt-3 flex items-center gap-3">
-              <Button onClick={() => save(vow.id, vow.content)} disabled={busy}>
-                Save
-              </Button>
-              {coupleOriginal && coupleOriginal.content !== vow.content && (
-                <button
-                  type="button"
-                  onClick={() => revert(vow.id, coupleOriginal.id)}
-                  disabled={busy}
-                  className="inline-flex items-center gap-1 text-sm text-text-muted hover:text-text cursor-pointer disabled:opacity-50"
-                >
-                  <RotateCcw size={14} strokeWidth={1.5} /> Revert to couple&apos;s original
-                </button>
-              )}
-            </div>
-
-            {openHistory === vow.id && (
-              <ul className="mt-4 space-y-2 border-t border-border pt-3">
-                {history.map((r) => (
-                  <li key={r.id} className="flex items-start justify-between gap-3 text-sm">
-                    <div className="min-w-0">
-                      <span className="text-text-muted">
-                        {r.author === 'couple' ? 'Couple' : 'You'} ·{' '}
-                        {new Date(r.created_at).toLocaleString('en-AU')}
-                      </span>
-                      <p className="text-text-subtle truncate">{r.content || '(empty)'}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => revert(vow.id, r.id)}
-                      disabled={busy}
-                      className="shrink-0 text-xs text-brand hover:underline cursor-pointer disabled:opacity-50"
-                    >
-                      Restore
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         )
       })}

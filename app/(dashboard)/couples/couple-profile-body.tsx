@@ -85,7 +85,13 @@ export function CoupleProfileBody({
 
       {activeSection === 'files' && <McPortalFiles coupleId={couple.id} />}
 
-      {activeSection === 'vows' && <McPortalVows coupleId={couple.id} />}
+      {activeSection === 'vows' && (
+        <McPortalVows
+          coupleId={couple.id}
+          primaryName={couple.primary_name ?? couple.name}
+          secondaryName={couple.secondary_name ?? null}
+        />
+      )}
 
       {activeSection === 'automations' && (
         <CoupleAutomations coupleId={couple.id} />

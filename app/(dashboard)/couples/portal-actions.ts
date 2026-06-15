@@ -721,10 +721,10 @@ export async function revertVowAction(
 
   const { data: rev } = await supabase
     .from('vow_revisions' as never)
-    .select('content, vow_id')
+    .select('content, vow_id, author')
     .eq('id', parsed.data.revisionId)
     .maybeSingle();
-  const r = rev as { content: string; vow_id: string } | null;
+  const r = rev as { content: string; vow_id: string; author: string } | null;
   if (!r || r.vow_id !== parsed.data.id) return { ok: false, error: 'Revision not found.' };
 
   const { error } = await supabase
@@ -739,9 +739,11 @@ export async function revertVowAction(
     return { ok: false, error: 'Could not revert vow.' };
   }
 
+  // Carry the restored revision's author through, so restoring the
+  // couple's version marks the new live revision as theirs.
   await supabase
     .from('vow_revisions' as never)
-    .insert({ vow_id: parsed.data.id, user_id: user.id, content: r.content, author: 'mc' } as never);
+    .insert({ vow_id: parsed.data.id, user_id: user.id, content: r.content, author: r.author } as never);
 
   return { ok: true, data: undefined };
 }
