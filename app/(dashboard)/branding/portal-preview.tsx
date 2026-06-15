@@ -1,9 +1,9 @@
 'use client'
 
-import { LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText, Info, Eye, EyeOff } from 'lucide-react'
+import { LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText, Heart, Info, Eye, EyeOff } from 'lucide-react'
 import type { PortalSectionSettings } from './branding-editor'
 
-type SectionKey = 'timeline' | 'contacts' | 'payments' | 'contracts' | 'songs' | 'files'
+type SectionKey = 'timeline' | 'contacts' | 'payments' | 'contracts' | 'songs' | 'files' | 'vows'
 
 interface Section {
   id: 'overview' | SectionKey
@@ -22,6 +22,7 @@ const SECTIONS: Section[] = [
   { id: 'contracts', label: 'Contracts', icon: FileSignature, count: 1, toggleable: true },
   { id: 'songs', label: 'Songs', icon: Music, count: 18, toggleable: true },
   { id: 'files', label: 'Files', icon: FileText, count: 3, toggleable: true },
+  { id: 'vows', label: 'Vows', icon: Heart, count: 2, toggleable: true },
 ]
 
 export function PortalSectionsBar({

@@ -146,4 +146,36 @@ describe('vows feature (P3)', () => {
       await otherUser.cleanup()
     }
   })
+
+  it('logs a couple revision per portal save; revisions are owner-scoped', async () => {
+    const couple = await seedCouple(user)
+    const vowId = crypto.randomUUID()
+    await serviceClient().rpc('save_portal_vow' as never, {
+      p_token: couple.token, p_id: vowId, p_who: 'primary', p_content: 'v1',
+    } as never)
+    await serviceClient().rpc('save_portal_vow' as never, {
+      p_token: couple.token, p_id: vowId, p_who: 'primary', p_content: 'v2',
+    } as never)
+
+    const { data: revs } = await serviceClient()
+      .from('vow_revisions' as never)
+      .select('content, author')
+      .eq('vow_id', vowId)
+      .order('created_at', { ascending: true })
+    const list = (revs ?? []) as Array<{ content: string; author: string }>
+    expect(list).toHaveLength(2)
+    expect(list[0]!.content).toBe('v1')
+    expect(list.every((r) => r.author === 'couple')).toBe(true)
+
+    const otherUser = await createTestUser({}, { account_type: 'vendor' })
+    try {
+      const { data } = await otherUser.client
+        .from('vow_revisions' as never)
+        .select('id')
+        .eq('vow_id', vowId)
+      expect(data ?? []).toEqual([])
+    } finally {
+      await otherUser.cleanup()
+    }
+  })
 })

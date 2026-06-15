@@ -24,6 +24,7 @@ import {
   CheckSquare,
   Clock,
   FileSignature,
+  Heart,
   LayoutDashboard,
   Music,
   Paperclip,
@@ -85,6 +86,11 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'files',
     label: 'Files',
     icon: <Paperclip size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: 'vows',
+    label: 'Vows',
+    icon: <Heart size={18} strokeWidth={1.5} />,
   },
   {
     key: 'payments',
