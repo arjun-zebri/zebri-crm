@@ -402,28 +402,20 @@ function TriggerConfigForm({
 
       {(triggerType === 'time_before_event' || triggerType === 'time_after_event') && (
         <>
+          {/* Day-grain only — the offset is a number of days (no unit
+              picker), so the daily cron can serve it without Vercel Pro.
+              `unit: 'days'` is set explicitly so the emitter's
+              day-grain guard always matches. */}
           <NumberInput
-            label="Amount"
+            label={triggerType === 'time_before_event' ? 'Days before the event' : 'Days after the event'}
             value={Number(config['amount'] ?? 1)}
-            onChange={(v) => setConfig({ ...config, amount: v })}
-          />
-          <SelectInput
-            label="Unit"
-            value={(config['unit'] as string) ?? 'days'}
-            onChange={(v) => setConfig({ ...config, unit: v })}
-            options={unitOptions()}
+            onChange={(v) => setConfig({ ...config, amount: v, unit: 'days' })}
           />
           <SelectInput
             label="Anchor to event type (optional)"
             value={(config['eventType'] as string) ?? ''}
             onChange={(v) => setConfig({ ...config, eventType: v || undefined })}
             options={eventTypeOptions()}
-          />
-          <TextInput
-            label="Time of day to fire (optional, HH:MM)"
-            placeholder="e.g. 09:00"
-            value={(config['timeOfDay'] as string) ?? ''}
-            onChange={(v) => setConfig({ ...config, timeOfDay: v || undefined })}
           />
         </>
       )}
@@ -654,10 +646,6 @@ function contactCategoryOptions() {
     { value: '', label: 'Any category' },
     ...CONTACT_CATEGORIES.map((c) => ({ value: c, label: CONTACT_CATEGORY_LABELS[c] })),
   ]
-}
-
-function unitOptions() {
-  return TIME_UNITS.map((u) => ({ value: u, label: TIME_UNIT_LABELS[u] }))
 }
 
 function dayOfWeekOptions() {

@@ -71,6 +71,8 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   // Contacts
   'contact_created',
   'contact_linked_to_couple',
+  // Calendar (tick-emitted) — T1 wired; T2 time_after_event follows
+  'time_before_event',
 ])
 
 /**
