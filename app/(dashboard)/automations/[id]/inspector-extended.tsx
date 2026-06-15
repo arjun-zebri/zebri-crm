@@ -36,8 +36,6 @@ import {
   CONSULTATION_TYPE_LABELS,
   CONTACT_CATEGORIES,
   CONTACT_CATEGORY_LABELS,
-  DAY_OF_WEEK_BUCKETS,
-  DAY_OF_WEEK_LABELS,
   EMAIL_ENGAGEMENT_KINDS,
   EMAIL_ENGAGEMENT_KIND_LABELS,
   EVENT_CHANGE_FIELDS,
@@ -477,27 +475,11 @@ function EventExtra({
   )
 }
 
-function CalendarExtra({ config, setConfig, isAfter }: { config: Cfg; setConfig: SetCfg; isAfter: boolean }) {
-  return (
-    <>
-      <SelectField
-        label="Day of week (optional)"
-        value={(config['dayOfWeek'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, dayOfWeek: v || undefined })}
-        options={enumOptions(DAY_OF_WEEK_BUCKETS, DAY_OF_WEEK_LABELS, 'Any day')}
-      />
-      <Check label="Skip if the couple's automations are paused" checked={config['skipIfPaused'] === true} onChange={(v) => setConfig({ ...config, skipIfPaused: v || undefined })} />
-      <TextField label="Only when couple status is (optional)" value={(config['eventStatus'] as string) ?? ''} onChange={(v) => setConfig({ ...config, eventStatus: v || undefined })} placeholder="e.g. booked" />
-      <Check label="Respect Australian public holidays" checked={config['respectPublicHolidays'] === true} onChange={(v) => setConfig({ ...config, respectPublicHolidays: v || undefined })} />
-      {isAfter && (
-        <>
-          <Check label="Only if no review has been posted yet" checked={config['onlyIfNoReviewPosted'] === true} onChange={(v) => setConfig({ ...config, onlyIfNoReviewPosted: v || undefined })} />
-          <Check label="Only if no referral submitted yet" checked={config['onlyIfNotReferred'] === true} onChange={(v) => setConfig({ ...config, onlyIfNotReferred: v || undefined })} />
-        </>
-      )}
-    </>
-  )
-}
+// time_before_event / time_after_event keep only `amount` (days) +
+// `eventType`, both rendered by the base inspector. The Phase-14a extra
+// filters (day-of-week, skip-if-paused, public-holidays, review/referral
+// gates) were dropped per the catalogue review — no extra panel.
+const CalendarExtra: (p: { config: Cfg; setConfig: SetCfg; isAfter: boolean }) => null = () => null
 
 function SpecificDateExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (

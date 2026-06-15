@@ -48,7 +48,7 @@ unhides it). Order is value-first.
 
 | Status | ID  | Item                            | Notes                                                                                              |
 | :----: | --- | ------------------------------- | -------------------------------------------------------------------------------------------------- |
-|   ☐    | T1  | `time_before_event`             | PROMOTE — backbone of MC flows. Keep `amount` + `unit` + `eventType`. **Day-grain only** — restrict `unit` to days (no hours/minutes); the daily cron covers it, so **no Vercel Pro** |
+|   ☑    | T1  | `time_before_event`             | Shipped — `lib/automations/time-emitters/time-before-event.ts`. Fires on `events.date = today + amount` days, narrowed by `eventType`; cancelled events skipped. **Day-grain only** (emitter ignores `unit != days`; inspector shows "Days before the event", no unit picker). Unit + integration tests green |
 |   ☐    | T2  | `time_after_event`              | PROMOTE — thank-you / review nudges. Same emitter shape as T1; **day-grain (days) only** too        |
 |   ☐    | T3  | `anniversary_of_event`          | KEEP but **defer** (nice-to-have). `years` config; fires on the MM-DD match                          |
 |   ☐    | P1  | `couple_uploaded_file`          | Wire an emitter on `portal_files` (today that INSERT emits `section_completed`). No `file_type` column — that filter stays dropped |

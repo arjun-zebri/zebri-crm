@@ -188,9 +188,19 @@ one at a time per `.claude/docs/automations-wiring.md`.
   `dueWithinDays*` are accepted but **not enforced** (`task_type` is a
   free-form per-user tag, not the `taskCategory` enum; there's no
   assignee column). Day boundaries are UTC.
+- `time_before_event` (T1) — fires when an event's `date` is exactly
+  `config.amount` **days** away (`amount = 0` = the event day itself),
+  optionally narrowed to one `eventType` (ceremony / rehearsal / …).
+  Emits one event per (event, days-before, calendar day) carrying
+  `days_before` + `event_type`; `match()` narrows by those.
+  **Day-grain only** — the inspector offers no unit picker and the
+  emitter ignores any automation whose `unit` isn't `days` (the daily
+  cron can't serve sub-day offsets without Vercel Pro; see
+  `automations-wiring.md`). Cancelled events never fire. UTC day
+  boundaries.
 
-**Not yet wired:** every other time-based trigger in the list above.
-See `automations-wiring.md` for the running order.
+**Not yet wired:** `time_after_event` (T2) and `anniversary_of_event`
+(T3). See `automations-wiring.md` for the running order.
 
 ### Categories (in picker order)
 

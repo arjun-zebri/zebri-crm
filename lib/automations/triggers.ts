@@ -735,7 +735,11 @@ const eventDeleted: TriggerSpec<EventFilterConfig & { withinDaysOfEvent?: number
 
 const calendarConfig = z.object({
   amount: z.number().int().min(0),
-  unit: z.enum(TIME_UNITS),
+  // Day-grain only (locked 2026-06-14 — see automations-wiring.md). The
+  // daily cron can't serve sub-day offsets without Vercel Pro, so the
+  // emitter only acts on `unit: 'days'` and the inspector offers no unit
+  // picker. Default to days so a config saved without a unit still fires.
+  unit: z.enum(TIME_UNITS).default('days'),
   eventType: z.enum(EVENT_TYPES).optional(),
   /** Time of day (HH:MM, 24h) the reminder should fire. */
   timeOfDay: z.string().regex(/^\d{2}:\d{2}$/).optional(),
@@ -758,11 +762,21 @@ type CalendarConfig = z.infer<typeof calendarConfig>
 const timeBeforeEvent: TriggerSpec<CalendarConfig> = {
   type: 'time_before_event',
   configSchema: calendarConfig,
-  match: () => true,
+  // Narrow to this automation's configured lead-time + event type. The
+  // emitter publishes one event per (event, days-before, calendar day)
+  // carrying `days_before` + `event_type`; without this every
+  // time_before_event automation would fire for every emitted event.
+  match: (event, config) => {
+    const payload = p(event)
+    const emitted = Number(payload.days_before)
+    if (!Number.isFinite(emitted) || emitted !== config.amount) return false
+    if (config.eventType && payload.event_type !== config.eventType) return false
+    return true
+  },
   ui: {
     category: 'calendar',
-    label: 'X time before event',
-    description: 'Relative-time reminder anchored to the event (or rehearsal) date',
+    label: 'Days before event',
+    description: 'A reminder a set number of days before the event (or rehearsal) date',
     icon: 'CalendarClock',
   },
 }

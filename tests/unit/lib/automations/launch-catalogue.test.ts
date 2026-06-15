@@ -23,8 +23,8 @@ import {
 import { triggerRegistry } from '@/lib/automations/triggers'
 
 describe('launch catalogue — triggers', () => {
-  it('lists exactly the 28 triggers that fire today', () => {
-    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(28)
+  it('lists exactly the 29 triggers that fire today', () => {
+    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(29)
   })
 
   it('every visible trigger is a real registry entry', () => {
@@ -35,14 +35,14 @@ describe('launch catalogue — triggers', () => {
 
   it('hides triggers that do not fire yet (wiring backlog + Phase 14b + stubs)', () => {
     const mustBeHidden = [
-      // wiring backlog
+      // cut — not in the review file
       'lead_inactive',
       'portal_section_started_not_finished',
-      'time_before_event',
-      'time_after_event',
-      'anniversary_of_event',
       'specific_date_reached',
       'payment_failed',
+      // in review, not built yet (time_before_event is now wired — T1)
+      'time_after_event',
+      'anniversary_of_event',
       // to-wire per review
       'couple_uploaded_file',
       'couple_added_song_to_playlist',
@@ -68,6 +68,7 @@ describe('launch catalogue — triggers', () => {
   it('predicate agrees with the set', () => {
     expect(isTriggerLaunchVisible('task_overdue')).toBe(true)
     expect(isTriggerLaunchVisible('new_enquiry')).toBe(true)
+    expect(isTriggerLaunchVisible('time_before_event')).toBe(true) // T1
   })
 })
 
