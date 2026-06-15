@@ -784,11 +784,19 @@ const timeBeforeEvent: TriggerSpec<CalendarConfig> = {
 const timeAfterEvent: TriggerSpec<CalendarConfig> = {
   type: 'time_after_event',
   configSchema: calendarConfig,
-  match: () => true,
+  // Mirror of time_before_event on the post-event side: narrow by the
+  // configured lag (`days_after`) + optional event type.
+  match: (event, config) => {
+    const payload = p(event)
+    const emitted = Number(payload.days_after)
+    if (!Number.isFinite(emitted) || emitted !== config.amount) return false
+    if (config.eventType && payload.event_type !== config.eventType) return false
+    return true
+  },
   ui: {
     category: 'calendar',
-    label: 'X time after event',
-    description: 'Anchored to days after the event (or rehearsal) date',
+    label: 'Days after event',
+    description: 'A reminder a set number of days after the event (or rehearsal) date',
     icon: 'CalendarCheck',
   },
 }
@@ -828,7 +836,18 @@ const anniversaryOfEvent: TriggerSpec<{
     onlyIfMarriedByMe: z.boolean().optional(),
     onlyIfHadGoodOutcome: z.boolean().optional(),
   }).passthrough(),
-  match: () => true,
+  // The emitter publishes one event per (event, years-since) on the
+  // anniversary day; narrow to this automation's year (or year..maxYears
+  // range). `onlyIf*` filters are dropped — no data backs them.
+  match: (event, config) => {
+    const payload = p(event)
+    const yearsSince = Number(payload.years_since)
+    if (!Number.isFinite(yearsSince)) return false
+    if (config.maxYears !== undefined) {
+      return yearsSince >= config.years && yearsSince <= config.maxYears
+    }
+    return yearsSince === config.years
+  },
   ui: {
     category: 'calendar',
     label: 'Anniversary of event',
@@ -1317,7 +1336,13 @@ const coupleCompletedVows: TriggerSpec<{
   configSchema: z.object({
     who: z.enum(['primary', 'spouse', 'both']).optional(),
   }).passthrough(),
-  match: () => true,
+  // The DB trigger emits per submitted vow with `payload.who`
+  // ('primary' | 'spouse'). `both` fires on each submission (true
+  // "both submitted" needs cross-row state the matcher can't see).
+  match: (event, config) => {
+    if (!config.who || config.who === 'both') return true
+    return p(event).who === config.who
+  },
   ui: { category: 'portal', label: 'Couple completed vows', description: 'Vow drafts submitted by one or both partners', icon: 'Heart' },
 }
 

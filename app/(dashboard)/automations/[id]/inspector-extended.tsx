@@ -50,8 +50,6 @@ import {
   PORTAL_COMPLETION_RANGE_LABELS,
   PORTAL_SECTIONS,
   PORTAL_SECTION_LABELS,
-  RUN_SHEET_FORMATS,
-  RUN_SHEET_FORMAT_LABELS,
   SIGNER_REQUIREMENTS,
   SIGNER_REQUIREMENT_LABELS,
   SLACK_MENTION_ROLES,
@@ -490,14 +488,9 @@ function SpecificDateExtra({ config, setConfig }: { config: Cfg; setConfig: SetC
   )
 }
 
-function AnniversaryExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <Check label="Only if you officiated the ceremony" checked={config['onlyIfMarriedByMe'] === true} onChange={(v) => setConfig({ ...config, onlyIfMarriedByMe: v || undefined })} />
-      <Check label="Only if the couple left a positive review" checked={config['onlyIfHadGoodOutcome'] === true} onChange={(v) => setConfig({ ...config, onlyIfHadGoodOutcome: v || undefined })} />
-    </>
-  )
-}
+// anniversary_of_event keeps only `years` + `maxYears` (rendered by the
+// base inspector). The `onlyIf*` gates were dropped — no data backs them.
+const AnniversaryExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
 const SectionCompletedExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
@@ -620,37 +613,13 @@ function VendorAssignedExtra({ config, setConfig }: { config: Cfg; setConfig: Se
   )
 }
 
-function FileUploadExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <TextField label="File type (optional)" value={(config['fileType'] as string) ?? ''} onChange={(v) => setConfig({ ...config, fileType: v || undefined })} placeholder="e.g. pdf, image" />
-      <SelectField label="Portal section (optional)" value={(config['section'] as string) ?? ''} onChange={(v) => setConfig({ ...config, section: v || undefined })} options={enumOptions(PORTAL_SECTIONS, PORTAL_SECTION_LABELS, 'Any section')} />
-      <NumericComparison label="File size (bytes)" opField="sizeBytesOp" valueField="sizeBytesValue" config={config} setConfig={setConfig} />
-    </>
-  )
-}
+// couple_uploaded_file (P1) fires on every file upload — the
+// file_type / section / size filters were dropped (no backing data).
+const FileUploadExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
-function SongPlaylistExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <SelectField
-        label="Playlist (optional)"
-        value={(config['playlistKey'] as string) ?? ''}
-        onChange={(v) => setConfig({ ...config, playlistKey: v || undefined })}
-        options={[
-          { value: '', label: 'Any playlist' },
-          { value: 'entrance', label: 'Entrance' },
-          { value: 'exit', label: 'Exit' },
-          { value: 'first_dance', label: 'First dance' },
-          { value: 'ceremony', label: 'Ceremony' },
-          { value: 'reception', label: 'Reception' },
-          { value: 'other', label: 'Other' },
-        ]}
-      />
-      <NumericComparison label="Song count" opField="songCountOp" valueField="songCountValue" config={config} setConfig={setConfig} />
-    </>
-  )
-}
+// couple_added_song_to_playlist (P2) fires on every song added — the
+// playlistKey / songCount filters were dropped (no backing columns).
+const SongPlaylistExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
 
 function VowsExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
@@ -1336,15 +1305,12 @@ export const SendInvoiceExtraFields: (p: FormProps) => null = () => null
 /** Extra fields for `trigger_payment_reminder`. */
 export const PaymentReminderExtraFields: (p: FormProps) => null = () => null
 
-/** Extra fields for `generate_run_sheet_pdf`. */
+/** Extra fields for `generate_run_sheet_pdf` (shares the run-sheet link). */
 export function RunSheetExtraFields({ config, updateConfig }: FormProps) {
   return (
     <>
-      <SelectField label="Format" value={(config['format'] as string) ?? 'full'} onChange={(v) => updateConfig({ format: v })} options={enumOptions(RUN_SHEET_FORMATS, RUN_SHEET_FORMAT_LABELS)} />
-      <Check label="Include vendor contacts page" checked={config['includeContacts'] === true} onChange={(v) => updateConfig({ includeContacts: v })} />
-      <Check label="Include explicit minute-by-minute timings" checked={config['includeTimings'] === true} onChange={(v) => updateConfig({ includeTimings: v })} />
-      <Check label="Save a copy into the couple's portal files" checked={config['saveToCoupleFiles'] === true} onChange={(v) => updateConfig({ saveToCoupleFiles: v })} />
-      <Check label="Email the PDF to me as well" checked={config['emailToSelf'] === true} onChange={(v) => updateConfig({ emailToSelf: v })} />
+      <Hint>Emails you a link to the event run sheet (the timeline view).</Hint>
+      <Check label="Also email the link to the couple" checked={config['sendToCouple'] === true} onChange={(v) => updateConfig({ sendToCouple: v })} />
     </>
   )
 }

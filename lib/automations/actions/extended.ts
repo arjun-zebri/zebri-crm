@@ -15,7 +15,8 @@
 
 import { z } from 'zod'
 
-import type { ActionResult, ActionType } from '@/types/automations'
+import { createAdminClient } from '@/lib/supabase/admin'
+import type { ActionResult, ActionType, RunContext } from '@/types/automations'
 
 import type { ActionSpec } from './index'
 
@@ -205,15 +206,121 @@ const enqueueForNewsletter = stub(
 // Payments
 // ────────────────────────────────────────────────────────────────
 
-const createInvoiceFromQuote = stub(
-  'create_invoice_from_quote',
-  z.object({
-    quoteId: z.string().uuid().optional(),
-    paymentSchedule: z.enum(['deposit_only', 'full', 'split']).default('deposit_only'),
-    dueDate: z.string().optional(),
-  }).passthrough(),
-  { category: 'payments', label: 'Create invoice from quote', description: 'Auto-draft an invoice from the accepted quote', icon: 'Receipt' },
-)
+const createInvoiceFromQuoteSchema = z.object({
+  quoteId: z.string().uuid().optional(),
+  paymentSchedule: z.enum(['deposit_only', 'full', 'split']).default('deposit_only'),
+  dueDate: z.string().optional(),
+}).passthrough()
+
+/**
+ * Resolve which quote to invoice: an explicit config id, else the
+ * `quote_id` on the triggering event (e.g. a `quote_accepted` event),
+ * else the couple's most recent quote.
+ */
+async function resolveQuoteId(
+  supabase: ReturnType<typeof createAdminClient>,
+  ctx: RunContext,
+  explicitId?: string,
+): Promise<string | null> {
+  if (explicitId) return explicitId
+  const payload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
+  if (typeof payload['quote_id'] === 'string') return payload['quote_id'] as string
+  if (!ctx.couple) return null
+  const { data } = await supabase
+    .from('quotes')
+    .select('id')
+    .eq('user_id', ctx.userId)
+    .eq('couple_id', ctx.couple.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (data as { id: string } | null)?.id ?? null
+}
+
+/**
+ * Draft an invoice from a quote: copies the financials (subtotal, tax,
+ * discount) + line items, links the same couple, leaves it `draft` for
+ * the MC to review. `paymentSchedule` seeds the deposit split — a
+ * 50% deposit is the editable default for `deposit_only` / `split`.
+ */
+const createInvoiceFromQuote: ActionSpec<z.infer<typeof createInvoiceFromQuoteSchema>> = {
+  type: 'create_invoice_from_quote',
+  configSchema: createInvoiceFromQuoteSchema,
+  async handler(ctx, config) {
+    const supabase = createAdminClient()
+    const quoteId = await resolveQuoteId(supabase, ctx, config.quoteId)
+    if (!quoteId) return { kind: 'ok', output: { skipped: 'no quote found' } }
+
+    const { data: quote, error: qErr } = await supabase
+      .from('quotes')
+      .select('id, couple_id, title, notes, subtotal, tax_rate, discount_type, discount_value')
+      .eq('id', quoteId)
+      .eq('user_id', ctx.userId)
+      .maybeSingle()
+    if (qErr) return { kind: 'error', message: `load quote: ${qErr.message}`, recoverable: true }
+    if (!quote) return { kind: 'ok', output: { skipped: 'quote not found' } }
+    const q = quote as {
+      id: string; couple_id: string; title: string | null; notes: string | null
+      subtotal: number; tax_rate: number; discount_type: string | null; discount_value: number | null
+    }
+
+    const { data: items } = await supabase
+      .from('quote_items')
+      .select('description, amount, position')
+      .eq('quote_id', q.id)
+      .order('position', { ascending: true })
+    const quoteItems = (items ?? []) as Array<{ description: string; amount: number; position: number }>
+
+    const { data: numData, error: numErr } = await supabase.rpc('generate_invoice_number', {
+      p_user_id: ctx.userId,
+    } as never)
+    if (numErr) return { kind: 'error', message: `invoice number: ${numErr.message}`, recoverable: true }
+
+    const depositPercent = config.paymentSchedule === 'full' ? null : 50
+    const dueDate = config.dueDate ?? null
+
+    const { data: inserted, error: insErr } = await supabase
+      .from('invoices')
+      .insert({
+        user_id: ctx.userId,
+        couple_id: q.couple_id,
+        status: 'draft',
+        invoice_number: numData as string,
+        title: q.title ?? 'Invoice',
+        notes: q.notes,
+        due_date: dueDate,
+        subtotal: q.subtotal,
+        tax_rate: q.tax_rate,
+        discount_type: q.discount_type,
+        discount_value: q.discount_value,
+        deposit_percent: depositPercent,
+        deposit_due_date: depositPercent ? dueDate : null,
+      } as never)
+      .select('id')
+      .single()
+    if (insErr || !inserted) {
+      return { kind: 'error', message: `create invoice: ${insErr?.message ?? 'no row'}`, recoverable: true }
+    }
+    const invoiceId = (inserted as { id: string }).id
+
+    if (quoteItems.length > 0) {
+      const rows = quoteItems.map((it) => ({
+        invoice_id: invoiceId,
+        user_id: ctx.userId,
+        description: it.description,
+        amount: it.amount,
+        quantity: 1,
+        unit_price: it.amount,
+        position: it.position,
+      }))
+      const { error: itErr } = await supabase.from('invoice_items').insert(rows as never)
+      if (itErr) return { kind: 'error', message: `invoice items: ${itErr.message}`, recoverable: true }
+    }
+
+    return { kind: 'ok', output: { invoice_id: invoiceId, from_quote_id: q.id } }
+  },
+  ui: { category: 'payments', label: 'Create invoice from quote', description: 'Auto-draft an invoice from the accepted quote', icon: 'Receipt' },
+}
 
 const createQuoteFromTemplate = stub(
   'create_quote_from_template',

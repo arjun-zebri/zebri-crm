@@ -45,11 +45,13 @@ import { sendAlert } from '@/lib/alerts/send-alert'
 import type { TriggerType } from '@/types/automations'
 import type { Database } from '@/types/database'
 
+import { anniversaryOfEventEmitter } from './anniversary-of-event'
 import { invoiceDueEmitter } from './invoice-due'
 import { invoiceOverdueEmitter } from './invoice-overdue'
 import { quoteDueEmitter } from './quote-due'
 import { quoteOverdueEmitter } from './quote-overdue'
 import { taskOverdueEmitter } from './task-overdue'
+import { timeAfterEventEmitter } from './time-after-event'
 import { timeBeforeEventEmitter } from './time-before-event'
 
 /**
@@ -80,6 +82,8 @@ const registry: readonly TimeEmitter[] = [
   invoiceOverdueEmitter,
   taskOverdueEmitter,
   timeBeforeEventEmitter,
+  timeAfterEventEmitter,
+  anniversaryOfEventEmitter,
 ]
 
 export interface TimeEmittersResult {

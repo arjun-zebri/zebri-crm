@@ -32,6 +32,7 @@ export interface PortalSectionSettings {
   contracts: boolean
   songs: boolean
   files: boolean
+  vows: boolean
 }
 
 interface BrandingEditorProps {

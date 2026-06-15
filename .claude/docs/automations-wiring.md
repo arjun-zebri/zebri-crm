@@ -49,13 +49,13 @@ unhides it). Order is value-first.
 | Status | ID  | Item                            | Notes                                                                                              |
 | :----: | --- | ------------------------------- | -------------------------------------------------------------------------------------------------- |
 |   ☑    | T1  | `time_before_event`             | Shipped — `lib/automations/time-emitters/time-before-event.ts`. Fires on `events.date = today + amount` days, narrowed by `eventType`; cancelled events skipped. **Day-grain only** (emitter ignores `unit != days`; inspector shows "Days before the event", no unit picker). Unit + integration tests green |
-|   ☐    | T2  | `time_after_event`              | PROMOTE — thank-you / review nudges. Same emitter shape as T1; **day-grain (days) only** too        |
-|   ☐    | T3  | `anniversary_of_event`          | KEEP but **defer** (nice-to-have). `years` config; fires on the MM-DD match                          |
-|   ☐    | P1  | `couple_uploaded_file`          | Wire an emitter on `portal_files` (today that INSERT emits `section_completed`). No `file_type` column — that filter stays dropped |
-|   ☐    | P2  | `couple_added_song_to_playlist` | Wire an emitter on `portal_songs`. No `playlistKey` / `songCount` columns — those filters stay dropped |
-|   ☐    | P3  | `couple_completed_vows`         | **Blocked:** needs a `vows` table + portal feature first. Largest of the three                      |
-|   ☐    | AC1 | `generate_run_sheet_pdf`        | Wire the handler to `lib/pdf` (today returns `{pdf_requested:true}` and makes nothing)               |
-|   ☐    | AC2 | `create_invoice_from_quote`     | PROMOTE — real quote→invoice draft workflow                                                          |
+|   ☑    | T2  | `time_after_event`              | Shipped — `time-emitters/time-after-event.ts`. Mirror of T1 on `events.date = today − amount` days; day-grain only |
+|   ☑    | T3  | `anniversary_of_event`          | Shipped — `time-emitters/anniversary-of-event.ts`. Fires on the MM-DD anniversary; `years` (or `years..maxYears` range) |
+|   ☑    | P1  | `couple_uploaded_file`          | Shipped — AFTER INSERT trigger on `portal_files` (migration `20260615000000`). file_type/section/size filters dropped |
+|   ☑    | P2  | `couple_added_song_to_playlist` | Shipped — AFTER INSERT trigger on `portal_songs` (migration `20260615000000`). playlistKey/songCount filters dropped |
+|   ☑    | P3  | `couple_completed_vows`         | Shipped — full vows feature (migration `20260615000100`): `vows` table + RLS + `save_portal_vow` RPC + DB-trigger event + couple portal section + MC settings toggle. `who` filter (primary/spouse) |
+|   ☑    | AC1 | `generate_run_sheet_pdf`        | Shipped — emails the run-sheet (timeline) link instead of a server PDF (no PDF stack). Best-effort email + returns the link |
+|   ☑    | AC2 | `create_invoice_from_quote`     | Shipped — drafts a `draft` invoice + line items from a quote; `paymentSchedule` seeds the deposit (50% default) |
 
 Nothing else is on the backlog. `send_sms` stays a greyed
 "coming soon" stub (not built). Flow control (`wait`, `branch`,

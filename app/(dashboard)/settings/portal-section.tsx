@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
+import { Clock, Users2, Receipt, FileSignature, Music, FileText, Heart } from 'lucide-react'
 import { useState, useRef } from 'react'
 
 import { useToast } from '@/components/ui/toast'
@@ -13,6 +13,7 @@ interface PortalSectionSettings {
   contracts: boolean
   songs: boolean
   files: boolean
+  vows: boolean
 }
 
 interface PortalSectionProps {
@@ -26,6 +27,7 @@ const SECTION_DEFS = [
   { id: 'contracts' as const, label: 'Contracts', icon: FileSignature, description: 'Contracts for review and signing' },
   { id: 'songs' as const, label: 'Songs', icon: Music, description: 'Music requests by category' },
   { id: 'files' as const, label: 'Files', icon: FileText, description: 'Document and photo uploads' },
+  { id: 'vows' as const, label: 'Vows', icon: Heart, description: 'Couples write their ceremony vows' },
 ]
 
 const DEFAULT_SETTINGS: PortalSectionSettings = {
@@ -35,6 +37,7 @@ const DEFAULT_SETTINGS: PortalSectionSettings = {
   contracts: true,
   songs: true,
   files: true,
+  vows: true,
 }
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {

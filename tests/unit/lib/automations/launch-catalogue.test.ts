@@ -23,8 +23,8 @@ import {
 import { triggerRegistry } from '@/lib/automations/triggers'
 
 describe('launch catalogue — triggers', () => {
-  it('lists exactly the 29 triggers that fire today', () => {
-    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(29)
+  it('lists exactly the 34 triggers that fire today', () => {
+    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(34)
   })
 
   it('every visible trigger is a real registry entry', () => {
@@ -40,13 +40,6 @@ describe('launch catalogue — triggers', () => {
       'portal_section_started_not_finished',
       'specific_date_reached',
       'payment_failed',
-      // in review, not built yet (time_before_event is now wired — T1)
-      'time_after_event',
-      'anniversary_of_event',
-      // to-wire per review
-      'couple_uploaded_file',
-      'couple_added_song_to_playlist',
-      'couple_completed_vows',
       // Phase 14b deferred
       'consultation_booked',
       'noim_lodged',
@@ -73,8 +66,8 @@ describe('launch catalogue — triggers', () => {
 })
 
 describe('launch catalogue — actions', () => {
-  it('lists exactly the 21 actions offered today', () => {
-    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(21)
+  it('lists exactly the 23 actions offered today', () => {
+    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(23)
   })
 
   it('every visible action is a real registry entry', () => {
@@ -94,9 +87,6 @@ describe('launch catalogue — actions', () => {
       'send_onboarding_pack',
       'send_anniversary_message',
       'update_custom_fields',
-      // hide until wired
-      'generate_run_sheet_pdf',
-      'create_invoice_from_quote',
     ] as const
     for (const type of mustBeHidden) {
       expect(isActionLaunchVisible(type), `${type} should be hidden`).toBe(false)

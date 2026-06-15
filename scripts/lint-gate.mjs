@@ -85,7 +85,9 @@ const ERROR_BUDGET = 89;
 // Overdue-date bugfix: consolidating the duplicated overdue/expired
 // derivations onto the shared `isPastDue` helper cleared 3 warnings
 // (removed inline date helpers + tidied import grouping) → 477 → 474.
-const WARNING_BUDGET = 474;
+// Automations remaining-backlog PR (catalogue cleanup carry-over +
+// tidied portal-shell import grouping) → 474 → 468.
+const WARNING_BUDGET = 468;
 
 function runEslintJson() {
   try {
