@@ -41,27 +41,23 @@ function openPrint(title: string, body: string): void {
   setTimeout(() => win.print(), 300)
 }
 
-/** Print the couple's vows (one section per partner). */
-export async function printVowsPdf(
-  coupleId: string,
-  names: { primary: string; secondary: string | null },
-): Promise<void> {
+/** Print a single partner's vow. */
+export async function printVowPdf(coupleId: string, who: string, name: string): Promise<void> {
   const supabase = createClient()
   const { data } = await supabase
     .from('vows' as never)
-    .select('who, content')
+    .select('content')
     .eq('couple_id', coupleId)
-  const vows = (data ?? []) as unknown as Array<{ who: string; content: string }>
+    .eq('who', who)
+    .maybeSingle()
+  const content = (data as { content: string } | null)?.content
 
-  const sections = (['primary', 'spouse'] as const)
-    .map((who) => {
-      const label = who === 'primary' ? names.primary : names.secondary || 'Partner'
-      const content = vows.find((v) => v.who === who)?.content
-      return `<h2>${escapeHtml(label)}</h2><p>${content ? escapeHtml(content) : '<span class="muted">No vows written.</span>'}</p>`
-    })
-    .join('')
-
-  openPrint('Vows', `<h1>Vows</h1>${sections}`)
+  openPrint(
+    `Vow — ${name}`,
+    `<h1>Vows</h1><h2>${escapeHtml(name)}</h2><p>${
+      content ? escapeHtml(content) : '<span class="muted">No vows written.</span>'
+    }</p>`,
+  )
 }
 
 /** Print the couple's run sheet (the timeline of their earliest event). */

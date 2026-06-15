@@ -24,10 +24,8 @@
 import * as Popover from '@radix-ui/react-popover';
 import {
   Check,
-  Clock,
   Copy,
   FileDown,
-  Heart,
   Link,
   Mail,
   MoreHorizontal,
@@ -42,7 +40,7 @@ import { PiWhatsappLogoLight } from 'react-icons/pi';
 
 import { Couple, CoupleStatusRecord, getStatusClasses } from '@/types/couple';
 
-import { printTimelinePdf, printVowsPdf } from './print-couple-docs';
+import { printTimelinePdf, printVowPdf } from './print-couple-docs';
 
 export interface CoupleProfileHeaderProps {
   couple: Couple;
@@ -70,7 +68,6 @@ export function CoupleProfileHeader({
   const [statusOpen, setStatusOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
-  const [pdfOpen, setPdfOpen] = useState(false);
   const [copied, setCopied] = useState<CopiedKind>(null);
 
   const hasPhone = !!couple.phone;
@@ -358,7 +355,7 @@ export function CoupleProfileHeader({
                 side="bottom"
                 align="end"
                 sideOffset={6}
-                className="z-[80] w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
+                className="z-[80] w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
               >
                 <button
                   onClick={() => {
@@ -408,49 +405,38 @@ export function CoupleProfileHeader({
                     <RefreshCw size={13} strokeWidth={1.5} />
                   </button>
                 </div>
-              </Popover.Content>
-            </Popover.Portal>
-          </Popover.Root>
-          <div className="w-px h-4 bg-gray-200 mx-2" />
-          <Popover.Root open={pdfOpen} onOpenChange={setPdfOpen}>
-            <Popover.Trigger asChild>
-              <button
-                title="Generate PDF"
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-              >
-                <FileDown size={16} strokeWidth={1.5} />
-              </button>
-            </Popover.Trigger>
-            <Popover.Portal>
-              <Popover.Content
-                side="bottom"
-                align="end"
-                sideOffset={6}
-                className="z-[80] w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
-              >
-                <button
-                  onClick={() => {
-                    void printVowsPdf(couple.id, {
-                      primary: couple.primary_name ?? couple.name,
-                      secondary: couple.secondary_name ?? null,
-                    });
-                    setPdfOpen(false);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                >
-                  <span>Vows PDF</span>
-                  <Heart size={13} strokeWidth={1.5} />
-                </button>
-                <button
-                  onClick={() => {
-                    void printTimelinePdf(couple.id, couple.name);
-                    setPdfOpen(false);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                >
-                  <span>Timeline PDF</span>
-                  <Clock size={13} strokeWidth={1.5} />
-                </button>
+                <div className="border-t border-gray-100 mt-1 pt-1">
+                  <button
+                    onClick={() => {
+                      void printVowPdf(couple.id, 'primary', couple.primary_name ?? couple.name);
+                      setLinkOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    <span className="truncate">Download vow for {couple.primary_name ?? couple.name}</span>
+                    <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      void printVowPdf(couple.id, 'spouse', couple.secondary_name ?? 'partner');
+                      setLinkOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    <span className="truncate">Download vow for {couple.secondary_name ?? 'partner'}</span>
+                    <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      void printTimelinePdf(couple.id, couple.name);
+                      setLinkOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    <span>Download timeline</span>
+                    <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                  </button>
+                </div>
               </Popover.Content>
             </Popover.Portal>
           </Popover.Root>
