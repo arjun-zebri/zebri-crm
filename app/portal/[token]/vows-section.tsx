@@ -62,10 +62,11 @@ export function VowsSection({ token, initialVows }: VowsSectionProps) {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <p className="text-sm text-gray-500">
         Write your vows here when you&apos;re ready. Only you and your MC can see them.
       </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
       {WHO.map((w) => (
         <div key={w.key} className="bg-white rounded-lg border border-gray-200 p-5">
           <label className="block text-sm font-medium text-gray-900 mb-2" htmlFor={`vows-${w.key}`}>
@@ -73,7 +74,7 @@ export function VowsSection({ token, initialVows }: VowsSectionProps) {
           </label>
           <textarea
             id={`vows-${w.key}`}
-            className="w-full min-h-[160px] rounded-md border border-gray-300 p-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            className="w-full min-h-[160px] resize-none rounded-md border border-gray-300 p-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
             placeholder="Write your vows here…"
             value={drafts[w.key] ?? ''}
             onChange={(e) => setDrafts((d) => ({ ...d, [w.key]: e.target.value }))}
@@ -86,6 +87,7 @@ export function VowsSection({ token, initialVows }: VowsSectionProps) {
           </div>
         </div>
       ))}
+      </div>
     </div>
   )
 }

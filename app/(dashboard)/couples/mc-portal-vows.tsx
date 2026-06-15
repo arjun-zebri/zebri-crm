@@ -95,7 +95,7 @@ export function McPortalVows({ coupleId }: { coupleId: string }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
       {vows.map((vow) => {
         const history = revisions.filter((r) => r.vow_id === vow.id)
         const coupleOriginal = [...history].reverse().find((r) => r.author === 'couple')
@@ -113,7 +113,7 @@ export function McPortalVows({ coupleId }: { coupleId: string }) {
               </button>
             </div>
             <textarea
-              className="w-full min-h-[140px] rounded-md border border-border bg-surface p-3 text-sm text-text"
+              className="w-full min-h-[140px] resize-none rounded-md border border-border bg-surface p-3 text-sm text-text"
               value={value}
               onChange={(e) => setDrafts((d) => ({ ...d, [vow.id]: e.target.value }))}
             />
