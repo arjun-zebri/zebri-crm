@@ -16,20 +16,22 @@ import { Button } from '@/components/ui/button'
 
 import type { RunSummary } from './couple-automations-data'
 
-type ChipTone = 'neutral' | 'warning' | 'danger'
+type ChipKind = 'active' | 'waiting' | 'failed'
 
-const CHIP_TONE: Record<ChipTone, string> = {
-  neutral: 'border-border bg-surface-muted text-text',
-  warning: 'border-warning/30 bg-warning/10 text-warning',
-  danger: 'border-danger/30 bg-danger/10 text-danger',
+/** Status dot colour per stat — gives the count a calm highlight. */
+const DOT: Record<ChipKind, string> = {
+  active: 'bg-success',
+  waiting: 'bg-warning',
+  failed: 'bg-danger',
 }
 
-/** A bold count + label chip. */
-function Stat({ n, label, tone }: { n: number; label: string; tone: ChipTone }) {
+/** A soft pill: status dot + bold count + label. */
+function Stat({ n, label, kind }: { n: number; label: string; kind: ChipKind }) {
   return (
-    <span className={`inline-flex items-baseline gap-1.5 rounded-lg border px-2.5 py-1 ${CHIP_TONE[tone]}`}>
-      <span className="text-base font-semibold leading-none">{n}</span>
-      <span className="text-xs opacity-80">{label}</span>
+    <span className="inline-flex items-center gap-2 rounded-lg bg-surface-muted px-3 py-1.5">
+      <span className={`h-1.5 w-1.5 rounded-full ${DOT[kind]}`} />
+      <span className="text-sm font-semibold text-text tabular-nums">{n}</span>
+      <span className="text-xs text-text-muted">{label}</span>
     </span>
   )
 }
@@ -48,9 +50,9 @@ export function CoupleAutomationsHeader({ summary, hasLive, pausing, onPauseAll,
   return (
     <div className="flex items-center justify-between gap-3 mb-4">
       <div className="flex items-center gap-2">
-        <Stat n={summary.active} label="active" tone="neutral" />
-        <Stat n={summary.waiting} label="waiting" tone={summary.waiting > 0 ? 'warning' : 'neutral'} />
-        {summary.failedRecently > 0 && <Stat n={summary.failedRecently} label="failed" tone="danger" />}
+        <Stat n={summary.active} label="active" kind="active" />
+        <Stat n={summary.waiting} label="waiting" kind="waiting" />
+        {summary.failedRecently > 0 && <Stat n={summary.failedRecently} label="failed" kind="failed" />}
       </div>
       <div className="flex items-center gap-2">
         {runPicker}

@@ -81,7 +81,7 @@ export function CoupleRunPicker({ coupleId, onRan }: Props) {
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="bg-card border border-border rounded-xl shadow-lg z-[70] w-64 py-1.5"
+          className="bg-surface border border-border rounded-xl shadow-lg z-[80] w-64 py-1.5"
         >
           <p className="px-3 py-1.5 text-xs text-text-subtle">Run for this couple now</p>
           {isLoading ? (
