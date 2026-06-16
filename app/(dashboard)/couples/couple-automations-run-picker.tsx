@@ -14,7 +14,7 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2, Play } from 'lucide-react'
+import { FlaskConical, Loader2, Play } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -24,13 +24,35 @@ import type { TriggerType } from '@/types/automations'
 import {
   loadRunnableAutomationsAction,
   runAutomationForCoupleAction,
+  testAutomationForCoupleAction,
   type RunnableAutomation,
 } from '../automations/actions'
 
+type Mode = 'run' | 'test'
+
 interface Props {
   coupleId: string
+  /** `run` fires for real; `test` routes any email to the MC. */
+  mode: Mode
   /** Refresh the feed after a successful run. */
   onRan: () => void
+}
+
+const MODE = {
+  run: {
+    label: 'Run automation',
+    variant: 'secondary' as const,
+    icon: Play,
+    hint: 'Run for this couple now',
+    action: runAutomationForCoupleAction,
+  },
+  test: {
+    label: 'Test',
+    variant: 'ghost' as const,
+    icon: FlaskConical,
+    hint: 'Test run — any email comes to you',
+    action: testAutomationForCoupleAction,
+  },
 }
 
 const GENERIC_NAMES = new Set(['', 'untitled automation', 'automation'])
@@ -42,7 +64,9 @@ function labelFor(a: RunnableAutomation): string {
   return getTriggerSpec(a.trigger_type as TriggerType)?.ui.label ?? a.trigger_type
 }
 
-export function CoupleRunPicker({ coupleId, onRan }: Props) {
+export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
+  const cfg = MODE[mode]
+  const Icon = cfg.icon
   const [open, setOpen] = useState(false)
   const [runningId, setRunningId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -60,7 +84,7 @@ export function CoupleRunPicker({ coupleId, onRan }: Props) {
   async function run(automationId: string) {
     setRunningId(automationId)
     setError(null)
-    const res = await runAutomationForCoupleAction({ automationId, coupleId })
+    const res = await cfg.action({ automationId, coupleId })
     setRunningId(null)
     if (res.ok) {
       setOpen(false)
@@ -73,8 +97,8 @@ export function CoupleRunPicker({ coupleId, onRan }: Props) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <Button variant="secondary" size="sm" className="cursor-pointer gap-1.5">
-          <Play size={13} strokeWidth={1.5} /> Run automation
+        <Button variant={cfg.variant} size="sm" className="cursor-pointer gap-1.5">
+          <Icon size={13} strokeWidth={1.5} /> {cfg.label}
         </Button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -83,7 +107,7 @@ export function CoupleRunPicker({ coupleId, onRan }: Props) {
           sideOffset={6}
           className="bg-surface border border-border rounded-xl shadow-lg z-[80] w-64 py-1.5"
         >
-          <p className="px-3 py-1.5 text-xs text-text-subtle">Run for this couple now</p>
+          <p className="px-3 py-1.5 text-xs text-text-subtle">{cfg.hint}</p>
           {isLoading ? (
             <div className="flex items-center gap-2 px-3 py-2 text-sm text-text-muted">
               <Loader2 size={14} className="animate-spin" /> Loading…
@@ -102,7 +126,7 @@ export function CoupleRunPicker({ coupleId, onRan }: Props) {
                 {runningId === a.id ? (
                   <Loader2 size={13} className="animate-spin shrink-0 text-text-subtle" />
                 ) : (
-                  <Play size={13} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
+                  <Icon size={13} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
                 )}
               </button>
             ))

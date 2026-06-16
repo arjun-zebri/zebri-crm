@@ -41,12 +41,12 @@ interface Props {
   hasLive: boolean
   pausing: boolean
   onPauseAll: () => void
-  /** The "Run automation" popover trigger. */
-  runPicker: ReactNode
+  /** The Test + Run automation popover triggers. */
+  actions: ReactNode
 }
 
 /** Summary chips + primary actions for the tab. */
-export function CoupleAutomationsHeader({ summary, hasLive, pausing, onPauseAll, runPicker }: Props) {
+export function CoupleAutomationsHeader({ summary, hasLive, pausing, onPauseAll, actions }: Props) {
   return (
     <div className="flex items-center justify-between gap-3 mb-4">
       <div className="flex items-center gap-2">
@@ -55,7 +55,7 @@ export function CoupleAutomationsHeader({ summary, hasLive, pausing, onPauseAll,
         {summary.failedRecently > 0 && <Stat n={summary.failedRecently} label="failed" kind="failed" />}
       </div>
       <div className="flex items-center gap-2">
-        {runPicker}
+        {actions}
         {hasLive && (
           <Button variant="ghost" size="sm" loading={pausing} onClick={onPauseAll} className="cursor-pointer">
             Pause all

@@ -94,7 +94,12 @@ export function CoupleAutomations({ coupleId }: Props) {
         hasLive={hasLive}
         pausing={pausing}
         onPauseAll={pauseAll}
-        runPicker={<CoupleRunPicker coupleId={coupleId} onRan={fetchAndSet} />}
+        actions={
+          <>
+            <CoupleRunPicker coupleId={coupleId} mode="test" onRan={fetchAndSet} />
+            <CoupleRunPicker coupleId={coupleId} mode="run" onRan={fetchAndSet} />
+          </>
+        }
       />
       {runs.length === 0 ? (
         <Empty

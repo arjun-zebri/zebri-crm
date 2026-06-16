@@ -178,6 +178,12 @@ Each Zod-validated, RLS-scoped, returning the tagged `ActionResult`:
   trigger option 2 (inline-executed via `advanceRunNow`). Per-user
   rate-limited (20/min) since a manual run can fan out a real send.
   `loadRunnableAutomationsAction()` backs the picker (active automations).
+- ✅ `testAutomationForCoupleAction({ automationId, coupleId })` — same
+  path with a `test_mode: true` flag on the synthetic event. Actions run
+  for real, but `send_email` reads the flag and routes any email to the
+  **MC's own address** (subject tagged `[Test]`) instead of the couple, so
+  the MC can preview the email without contacting them. Both wrap a shared
+  `openManualRun(input, testMode)` helper.
 - ✅ `retryRunAction({ runId })` — re-open an `errored` run; flips it back to
   `running` and clears `error_message`/`completed_at`. The runner left
   `current_action_id` on the failed step, so the next tick re-attempts it.
@@ -256,7 +262,10 @@ Each phase is its own PR through `staging` (per
 3. ✅ **Run an automation now (shipped 2026-06-17).**
    `runAutomationForCoupleAction` (direct run-open + inline
    `advanceRunNow`, no migration) + `CoupleRunPicker` popover +
-   `loadRunnableAutomationsAction`. Per-user rate-limited.
+   `loadRunnableAutomationsAction`. Per-user rate-limited. Includes a
+   **Test** variant (`testAutomationForCoupleAction`): actions run for
+   real, but `send_email` routes any email to the MC (tagged `[Test]`)
+   instead of the couple. Header shows both a Test and a Run popover.
 4. ✅ **Upcoming + summary strip (shipped 2026-06-17).** `summarizeRuns`
    header strip (active / waiting / failed-30d), `wakeAt` surfaced on
    waiting runs ("Next step …") from `automation_waits`.

@@ -133,6 +133,10 @@ export function narrateAuditEntry(input: NarrationInput): Narration | null {
         const noun = (actionType && ACTION_NOUN[actionType]) ?? 'Step'
         return { icon: 'MinusCircle', tone: 'warning', text: `${noun} not sent — ${skipped}` }
       }
+      // A test run routes the email to the MC instead of the couple.
+      if (details['test'] === true) {
+        return { icon: 'Check', tone: 'info', text: 'Sent test email to you' }
+      }
       // Stage changes read best with their destination.
       if (actionType === 'update_couple_stage') {
         const to = asText(details['to_status'])

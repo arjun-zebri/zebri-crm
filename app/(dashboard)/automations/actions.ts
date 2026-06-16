@@ -445,7 +445,7 @@ const runForCoupleSchema = z.object({
 })
 
 /**
- * Run one automation against one couple, right now.
+ * Open + execute one manual run of an automation against a couple.
  *
  * Ownership is verified with the **user** client (RLS), then the run
  * is opened and executed with the **service-role** client: a synthetic
@@ -455,9 +455,16 @@ const runForCoupleSchema = z.object({
  * sleep inline so the MC sees the result immediately instead of
  * waiting for the next cron tick. Bypasses the trigger predicate by
  * design — the MC is the trigger.
+ *
+ * When `testMode` is set, the synthetic event carries `test_mode: true`,
+ * which `send_email` reads to route any outgoing email to the MC's own
+ * address (tagged `[Test]`) instead of the couple — so the MC can
+ * preview the email without contacting the couple. Non-email actions
+ * still run for real.
  */
-export async function runAutomationForCoupleAction(
+async function openManualRun(
   input: z.infer<typeof runForCoupleSchema>,
+  testMode: boolean,
 ): Promise<ActionResult<{ runId: string }>> {
   const parsed = runForCoupleSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: parsed.error.message }
@@ -500,6 +507,8 @@ export async function runAutomationForCoupleAction(
     .maybeSingle()
   if (!firstAction) return { ok: false, error: 'This automation has no steps to run.' }
 
+  const flags = testMode ? { manual: true, test_mode: true } : { manual: true }
+
   // Synthetic trigger event, pre-marked processed so the dispatcher
   // never opens a second run for it (no active automation keys on
   // `manual_fire` anyway, but this makes it explicit and race-free).
@@ -510,7 +519,7 @@ export async function runAutomationForCoupleAction(
       source_table: 'manual_fire',
       source_id: coupleId,
       event_type: 'manual_fire',
-      payload: { manual: true, automation_id: automationId },
+      payload: { ...flags, automation_id: automationId },
       couple_id: coupleId,
       processed_at: new Date().toISOString(),
     } as never)
@@ -527,7 +536,7 @@ export async function runAutomationForCoupleAction(
       couple_id: coupleId,
       status: 'running',
       current_action_id: (firstAction as { id: string }).id,
-      last_payload: { trigger_payload: { manual: true }, action_results: {} },
+      last_payload: { trigger_payload: flags, action_results: {} },
     } as never)
     .select('id')
     .single()
@@ -536,6 +545,23 @@ export async function runAutomationForCoupleAction(
   const runId = (run as { id: string }).id
   await advanceRunNow(admin, runId)
   return { ok: true, data: { runId } }
+}
+
+/** Run an automation against a couple for real, right now. */
+export async function runAutomationForCoupleAction(
+  input: z.infer<typeof runForCoupleSchema>,
+): Promise<ActionResult<{ runId: string }>> {
+  return openManualRun(input, false)
+}
+
+/**
+ * Test-run an automation against a couple: actions execute, but any
+ * email is sent to the MC (tagged `[Test]`) instead of the couple.
+ */
+export async function testAutomationForCoupleAction(
+  input: z.infer<typeof runForCoupleSchema>,
+): Promise<ActionResult<{ runId: string }>> {
+  return openManualRun(input, true)
 }
 
 /* ─── /automations home loader ──────────────────────────────────── */

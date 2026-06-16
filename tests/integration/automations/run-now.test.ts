@@ -19,7 +19,10 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 // eslint-disable-next-line import/order
-import { runAutomationForCoupleAction } from '@/app/(dashboard)/automations/actions'
+import {
+  runAutomationForCoupleAction,
+  testAutomationForCoupleAction,
+} from '@/app/(dashboard)/automations/actions'
 
 const NOTE = 'Note from a manual run'
 
@@ -89,6 +92,26 @@ describe('runAutomationForCoupleAction — integration', () => {
       .eq('couple_id', coupleId)
       .single()
     expect((run as { status: string }).status).toBe('completed')
+    await user.cleanup()
+  })
+
+  it('test run executes non-email actions and stamps test_mode on the event', async () => {
+    const user = await createTestUser()
+    const { coupleId, automationId } = await seed(user)
+
+    activeUser = user
+    const res = await testAutomationForCoupleAction({ automationId, coupleId })
+    expect(res.ok).toBe(true)
+    // add_note still runs for real…
+    expect(await coupleNotes(coupleId)).toContain(NOTE)
+    // …and the synthetic event is flagged so send_email would redirect.
+    const { data: ev } = await serviceClient()
+      .from('automation_events')
+      .select('payload')
+      .eq('couple_id', coupleId)
+      .eq('event_type', 'manual_fire')
+      .single()
+    expect((ev as { payload: Record<string, unknown> }).payload.test_mode).toBe(true)
     await user.cleanup()
   })
 
