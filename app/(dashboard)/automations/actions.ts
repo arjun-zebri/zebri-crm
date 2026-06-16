@@ -12,6 +12,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
+import { inMemoryLimiter } from '@/lib/api/rate-limit'
 import {
   buildHomePayload,
   type AuditRow,
@@ -20,6 +21,8 @@ import {
   type WaitRow,
 } from '@/lib/automations/home-payload'
 import { partitionResume } from '@/lib/automations/run-controls'
+import { advanceRunNow } from '@/lib/automations/runner'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import type {
   AutomationRow,
@@ -402,6 +405,137 @@ export async function resumeAutomationForCoupleAction(
       .eq('status', 'paused')
   }
   return { ok: true, data: { resumed: pausedIds.length } }
+}
+
+/* ─── run an automation now (couple Automations tab) ─────────────── */
+
+/** A runnable automation for the "Run automation" picker. */
+export interface RunnableAutomation {
+  id: string
+  name: string
+  trigger_type: string
+}
+
+/**
+ * List the caller's **active** automations for the run picker.
+ *
+ * RLS-scoped, so it only ever returns the caller's rows. Drafts and
+ * paused/archived automations are excluded — you can only manually
+ * fire something that's live.
+ */
+export async function loadRunnableAutomationsAction(): Promise<ActionResult<RunnableAutomation[]>> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('automations' as never)
+    .select('id, name, trigger_type')
+    .eq('status', 'active')
+    .order('name', { ascending: true })
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, data: (data as RunnableAutomation[] | null) ?? [] }
+}
+
+// Per-user cap on manual runs — each can fan out a real send, so this
+// stops a click-loop from hammering Resend. Keyed by user id (not IP)
+// because server actions have no Request to read an address from.
+const manualRunLimiter = inMemoryLimiter({ windowMs: 60_000, max: 20 })
+
+const runForCoupleSchema = z.object({
+  automationId: z.string().uuid(),
+  coupleId: z.string().uuid(),
+})
+
+/**
+ * Run one automation against one couple, right now.
+ *
+ * Ownership is verified with the **user** client (RLS), then the run
+ * is opened and executed with the **service-role** client: a synthetic
+ * `manual_fire` event is written pre-`processed_at` (so the dispatcher
+ * ignores it — no double run), a run is opened at the automation's
+ * first action, and {@link advanceRunNow} drives it to completion /
+ * sleep inline so the MC sees the result immediately instead of
+ * waiting for the next cron tick. Bypasses the trigger predicate by
+ * design — the MC is the trigger.
+ */
+export async function runAutomationForCoupleAction(
+  input: z.infer<typeof runForCoupleSchema>,
+): Promise<ActionResult<{ runId: string }>> {
+  const parsed = runForCoupleSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: parsed.error.message }
+  const { automationId, coupleId } = parsed.data
+
+  const supabase = await createClient()
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) return { ok: false, error: 'unauthorized' }
+
+  const rl = await manualRunLimiter.check(auth.user.id)
+  if (!rl.allowed) return { ok: false, error: 'Too many manual runs — wait a moment and try again.' }
+
+  // RLS reads — only the caller's rows resolve, so this is the
+  // ownership check for both the automation and the couple.
+  const { data: automation } = await supabase
+    .from('automations' as never)
+    .select('id, status')
+    .eq('id', automationId)
+    .maybeSingle()
+  const auto = automation as { id: string; status: string } | null
+  if (!auto) return { ok: false, error: 'Automation not found.' }
+  if (auto.status !== 'active') return { ok: false, error: 'Activate the automation before running it.' }
+
+  const { data: couple } = await supabase
+    .from('couples' as never)
+    .select('id')
+    .eq('id', coupleId)
+    .maybeSingle()
+  if (!couple) return { ok: false, error: 'Couple not found.' }
+
+  const admin = createAdminClient()
+
+  const { data: firstAction } = await admin
+    .from('automation_actions' as never)
+    .select('id')
+    .eq('automation_id', automationId)
+    .is('parent_action_id', null)
+    .order('position', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  if (!firstAction) return { ok: false, error: 'This automation has no steps to run.' }
+
+  // Synthetic trigger event, pre-marked processed so the dispatcher
+  // never opens a second run for it (no active automation keys on
+  // `manual_fire` anyway, but this makes it explicit and race-free).
+  const { data: event, error: evErr } = await admin
+    .from('automation_events' as never)
+    .insert({
+      user_id: auth.user.id,
+      source_table: 'manual_fire',
+      source_id: coupleId,
+      event_type: 'manual_fire',
+      payload: { manual: true, automation_id: automationId },
+      couple_id: coupleId,
+      processed_at: new Date().toISOString(),
+    } as never)
+    .select('id')
+    .single()
+  if (evErr) return { ok: false, error: evErr.message }
+
+  const { data: run, error: runErr } = await admin
+    .from('automation_runs' as never)
+    .insert({
+      automation_id: automationId,
+      event_id: (event as { id: string }).id,
+      user_id: auth.user.id,
+      couple_id: coupleId,
+      status: 'running',
+      current_action_id: (firstAction as { id: string }).id,
+      last_payload: { trigger_payload: { manual: true }, action_results: {} },
+    } as never)
+    .select('id')
+    .single()
+  if (runErr) return { ok: false, error: runErr.message }
+
+  const runId = (run as { id: string }).id
+  await advanceRunNow(admin, runId)
+  return { ok: true, data: { runId } }
 }
 
 /* ─── /automations home loader ──────────────────────────────────── */

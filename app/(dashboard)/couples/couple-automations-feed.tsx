@@ -32,6 +32,8 @@ export interface RunActivity {
   status: RunStatus
   startedAt: string
   completedAt: string | null
+  /** Next scheduled step time, for a `waiting` run (else null). */
+  wakeAt: string | null
   lines: FeedLine[]
 }
 

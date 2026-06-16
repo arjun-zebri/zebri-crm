@@ -87,6 +87,12 @@ export function RunRow({ run, pending, onRetry, onCancel }: Props) {
           </Button>
         )}
       </div>
+      {run.status === 'waiting' && run.wakeAt && (
+        <p className="flex items-center gap-2 text-xs text-warning">
+          <Clock size={14} strokeWidth={1.5} className="shrink-0" />
+          Next step {formatTime(run.wakeAt)}
+        </p>
+      )}
       {run.lines.length === 0 ? (
         <p className="text-xs text-text-subtle pl-0.5">No recorded steps for this run.</p>
       ) : (

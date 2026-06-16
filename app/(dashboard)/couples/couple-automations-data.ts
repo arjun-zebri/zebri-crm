@@ -55,14 +55,53 @@ function latestOutcome(runs: RunActivity[]): string | null {
   return null
 }
 
+/** At-a-glance counts for the summary strip. */
+export interface RunSummary {
+  /** Distinct automations with a live (running/waiting) run. */
+  active: number
+  /** Runs currently waiting on a scheduled step. */
+  waiting: number
+  /** Runs that errored in the last 30 days. */
+  failedRecently: number
+}
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+
+/**
+ * Roll the run list up into the header summary counts.
+ *
+ * @param runs - this couple's runs
+ * @param nowMs - current time in ms (passed in so this stays pure)
+ */
+export function summarizeRuns(runs: RunWithAutomation[], nowMs: number): RunSummary {
+  const liveAutomations = new Set<string>()
+  let waiting = 0
+  let failedRecently = 0
+  for (const run of runs) {
+    if (run.status === 'running' || run.status === 'waiting') {
+      liveAutomations.add(run.automation?.id ?? run.automation_id)
+    }
+    if (run.status === 'waiting') waiting += 1
+    if (run.status === 'errored' && nowMs - new Date(run.started_at).getTime() <= THIRTY_DAYS_MS) {
+      failedRecently += 1
+    }
+  }
+  return { active: liveAutomations.size, waiting, failedRecently }
+}
+
 /**
  * Build the narrated activity feed for each run from its audit rows.
  *
  * @param runs - this couple's runs (any order)
  * @param audit - audit rows for those runs, oldest-first
+ * @param wakeByRun - run id → next scheduled step time (waiting runs)
  * @returns run id → its narrated {@link RunActivity}
  */
-export function buildActivity(runs: RunWithAutomation[], audit: AuditRow[]): Map<string, RunActivity> {
+export function buildActivity(
+  runs: RunWithAutomation[],
+  audit: AuditRow[],
+  wakeByRun: Map<string, string> = new Map(),
+): Map<string, RunActivity> {
   const linesByRun = new Map<string, AuditRow[]>()
   for (const row of audit) linesByRun.set(row.run_id, [...(linesByRun.get(row.run_id) ?? []), row])
 
@@ -84,6 +123,7 @@ export function buildActivity(runs: RunWithAutomation[], audit: AuditRow[]): Map
       status: run.status,
       startedAt: run.started_at,
       completedAt: run.completed_at,
+      wakeAt: wakeByRun.get(run.id) ?? null,
       lines,
     })
   }

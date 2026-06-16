@@ -5,12 +5,14 @@ into an **activity + control** surface: what automation has done for this
 couple, what's coming, what broke — and the ability to **run an automation
 on demand** and intervene on individual runs.
 
-> **Status: Phases 1–2 shipped (2026-06-16).** The activity feed +
-> narration and the per-run / per-automation controls are live; Phases 3–5
-> are still design. Source of truth for the phased implementation (§ Phased
-> delivery). Sibling to `automations.md` (how the engine works) and
-> `automations-wiring.md` (catalogue wiring). When a phase ships, update
-> this doc + the cross-referenced docs in the same PR.
+> **Status: Phases 1–4 shipped (2026-06-16/17).** Activity feed +
+> narration, per-run / per-automation controls, "Run an automation now",
+> and the upcoming/summary band are live. Phase 5 (extra transparency) is
+> still design; suppression awareness is deferred (no couple-level
+> do-not-contact field exists yet). Source of truth for the phased
+> implementation (§ Phased delivery). Sibling to `automations.md` (how the
+> engine works) and `automations-wiring.md` (catalogue wiring). When a
+> phase ships, update this doc + the cross-referenced docs in the same PR.
 
 ## Problem
 
@@ -156,16 +158,26 @@ want a manual-source marker on the run.
    the run (small migration) so the activity feed can label it
    *"Run manually by you."*
 
-**Recommendation:** option 2, via a new `runAutomationForCoupleAction`. It
-matches the mental model ("run this specific flow now") and reuses the
-runner unchanged. Confirm before building.
+**Resolved (shipped Phase 3):** option 2, via `runAutomationForCoupleAction`
+— **and no migration was needed.** After verifying ownership with the user
+(RLS) client, the action uses the service-role client to write a synthetic
+`manual_fire` event with `processed_at` pre-stamped (so the dispatcher never
+opens a second run), opens a run at the automation's first action, then
+calls `advanceRunNow(adminClient, runId)` (new export in
+`lib/automations/runner.ts`) to drive that one run to completion/sleep
+**inline** — so the MC sees the result immediately instead of waiting for
+the daily cron tick. The `source = 'manual'` column was **not** added; the
+synthetic event's `source_table = 'manual_fire'` already marks manual runs
+if the feed ever wants to label them.
 
 ## New server actions (all in `app/(dashboard)/automations/actions.ts`)
 
 Each Zod-validated, RLS-scoped, returning the tagged `ActionResult`:
 
-- `runAutomationForCoupleAction({ automationId, coupleId })` — § Manual
-  trigger option 2. **Phase 3, not built yet.**
+- ✅ `runAutomationForCoupleAction({ automationId, coupleId })` — § Manual
+  trigger option 2 (inline-executed via `advanceRunNow`). Per-user
+  rate-limited (20/min) since a manual run can fan out a real send.
+  `loadRunnableAutomationsAction()` backs the picker (active automations).
 - ✅ `retryRunAction({ runId })` — re-open an `errored` run; flips it back to
   `running` and clears `error_message`/`completed_at`. The runner left
   `current_action_id` on the failed step, so the next tick re-attempts it.
@@ -187,14 +199,20 @@ deliberately trigger a send.
 ## UI surfaces / components
 
 Page stays an orchestrator; split into ≤150-line components co-located with
-the couple profile:
+the couple profile (as shipped):
 
-- `couple-automations.tsx` — orchestrator: header (summary strip + Run
-  button), upcoming, activity feed. Replaces today's file.
-- `couple-automations-run-picker.tsx` — the "Run automation now" modal.
-- `couple-automations-feed.tsx` — grouped activity feed + per-run controls.
-- `lib/automations/audit-log/narrate.ts` — pure `(event, action_type,
-  details) → string` narration (unit-tested in isolation).
+- `couple-automations.tsx` — orchestrator: fetch + compose only.
+- `couple-automations-header.tsx` — summary strip + Run / Pause-all.
+- `couple-automations-group.tsx` — one automation's collapsible row.
+- `couple-automations-feed.tsx` — a group's runs + group Pause/Resume.
+- `couple-automations-run-row.tsx` — one run's lines + Retry/Cancel + the
+  "Next step …" wake line.
+- `couple-automations-run-picker.tsx` — the "Run automation now" modal
+  (loads active automations via React Query).
+- `couple-automations-loader.ts` — RLS-scoped IO (runs + audit + waits).
+- `couple-automations-data.ts` — pure shaping (narrate, group, summarize).
+- `lib/automations/audit-log/narrate.ts` — pure audit-row → line narration.
+- `lib/automations/run-controls.ts` — pure `partitionResume`.
 
 Design-system: tokens + `components/ui/*` primitives only; `StatePill`,
 `Button`, `Empty`, `Loading`, `ErrorState`. Explicit **loading / empty /
@@ -234,10 +252,15 @@ Each phase is its own PR through `staging` (per
    affordances in the feed. Resume re-derives waiting-vs-running per run
    (`lib/automations/run-controls.ts` `partitionResume`, unit-tested) so a
    pending scheduled wait isn't skipped. No schema change.
-3. **Run an automation now.** Resolve § Manual trigger, build
-   `runAutomationForCoupleAction` + run picker. (Optional `source` column.)
-4. **Upcoming + summary strip + suppression awareness.** Forward-looking
-   band and health read.
+3. ✅ **Run an automation now (shipped 2026-06-17).**
+   `runAutomationForCoupleAction` (direct run-open + inline
+   `advanceRunNow`, no migration) + `CoupleRunPicker` modal +
+   `loadRunnableAutomationsAction`. Per-user rate-limited.
+4. ✅ **Upcoming + summary strip (shipped 2026-06-17).** `summarizeRuns`
+   header strip (active / waiting / failed-30d), `wakeAt` surfaced on
+   waiting runs ("Next step …") from `automation_waits`.
+   **Suppression awareness deferred** — no `couples.do_not_contact` field
+   exists; revisit if/when one is added.
 5. **(Stretch) "Eligible but not fired" transparency** + Overview-tab
    failure nudge.
 

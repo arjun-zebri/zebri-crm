@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildActivity,
   groupRuns,
+  summarizeRuns,
   type AuditRow,
   type RunWithAutomation,
 } from '@/app/(dashboard)/couples/couple-automations-data'
@@ -98,5 +99,33 @@ describe('groupRuns', () => {
     const runs = [run({})]
     const groups = groupRuns(runs, buildActivity(runs, [audit({ details: { sent: 1 } })]))
     expect(groups[0]?.lastOutcome).toBe('Sent email')
+  })
+})
+
+describe('summarizeRuns', () => {
+  const NOW = new Date('2026-06-20T00:00:00Z').getTime()
+
+  it('counts distinct automations with a live run', () => {
+    const runs = [
+      run({ id: 'r1', automation_id: 'a', status: 'running', automation: { id: 'a', name: 'A', trigger_type: 'x' } }),
+      run({ id: 'r2', automation_id: 'a', status: 'waiting', automation: { id: 'a', name: 'A', trigger_type: 'x' } }),
+      run({ id: 'r3', automation_id: 'b', status: 'waiting', automation: { id: 'b', name: 'B', trigger_type: 'x' } }),
+      run({ id: 'r4', automation_id: 'c', status: 'completed', automation: { id: 'c', name: 'C', trigger_type: 'x' } }),
+    ]
+    const s = summarizeRuns(runs, NOW)
+    expect(s.active).toBe(2) // a + b, not c
+    expect(s.waiting).toBe(2) // r2 + r3
+  })
+
+  it('counts errored runs only within the last 30 days', () => {
+    const runs = [
+      run({ id: 'recent', status: 'errored', started_at: '2026-06-15T00:00:00Z' }), // 5 days ago
+      run({ id: 'old', status: 'errored', started_at: '2026-04-01T00:00:00Z' }), // >30 days
+    ]
+    expect(summarizeRuns(runs, NOW).failedRecently).toBe(1)
+  })
+
+  it('is all-zero for an empty list', () => {
+    expect(summarizeRuns([], NOW)).toEqual({ active: 0, waiting: 0, failedRecently: 0 })
   })
 })

@@ -17,7 +17,6 @@
 import { Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { Button } from '@/components/ui/button'
 import { Empty } from '@/components/ui/empty'
 import { Loading } from '@/components/ui/loading'
 import { createClient } from '@/lib/supabase/client'
@@ -30,14 +29,12 @@ import {
   retryRunAction,
 } from '../automations/actions'
 
-import {
-  buildActivity,
-  groupRuns,
-  type AuditRow,
-  type RunWithAutomation,
-} from './couple-automations-data'
+import { groupRuns, summarizeRuns, type RunWithAutomation } from './couple-automations-data'
 import type { RunActivity } from './couple-automations-feed'
 import { AutomationGroupRow } from './couple-automations-group'
+import { CoupleAutomationsHeader } from './couple-automations-header'
+import { loadCoupleAutomations } from './couple-automations-loader'
+import { CoupleRunPicker } from './couple-automations-run-picker'
 
 interface Props {
   coupleId: string
@@ -48,30 +45,16 @@ export function CoupleAutomations({ coupleId }: Props) {
   const [activity, setActivity] = useState<Map<string, RunActivity>>(new Map())
   const [pausing, setPausing] = useState(false)
   const [openKey, setOpenKey] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  // Captured at fetch time (not in render) so the 30-day "failed"
+  // window is computed from a stable, pure value.
+  const [loadedAt, setLoadedAt] = useState(0)
 
   const fetchAndSet = useCallback(async () => {
-    const supabase = createClient()
-    const { data: runRows } = await supabase
-      .from('automation_runs' as never)
-      .select('*, automation:automations(id, name, trigger_type)')
-      .eq('couple_id', coupleId)
-      .order('started_at', { ascending: false })
-    const list = (runRows as RunWithAutomation[] | null) ?? []
-
-    let audit: AuditRow[] = []
-    if (list.length > 0) {
-      const { data: auditRows } = await supabase
-        .from('automation_audit_log' as never)
-        .select('id, run_id, event, details, created_at, action:automation_actions(type, label)')
-        .in(
-          'run_id',
-          list.map((r) => r.id),
-        )
-        .order('created_at', { ascending: true })
-      audit = (auditRows as AuditRow[] | null) ?? []
-    }
-    setActivity(buildActivity(list, audit))
-    setRuns(list)
+    const data = await loadCoupleAutomations(createClient(), coupleId)
+    setActivity(data.activity)
+    setLoadedAt(data.loadedAt)
+    setRuns(data.runs)
   }, [coupleId])
 
   // The IIFE keeps the setState calls off the effect's synchronous path
@@ -101,42 +84,47 @@ export function CoupleAutomations({ coupleId }: Props) {
 
   if (runs === null) return <Loading variant="center" />
 
-  if (runs.length === 0) {
-    return (
-      <Empty
-        icon={Sparkles}
-        title="No automations have run for this couple yet"
-        description="When one of your active automations matches this couple, you'll see it here."
-      />
-    )
-  }
-
   const groups = groupRuns(runs, activity)
   const hasLive = runs.some((r) => r.status === 'running' || r.status === 'waiting')
+  const summary = summarizeRuns(runs, loadedAt)
 
   return (
     <div>
-      {hasLive && (
-        <div className="flex justify-end mb-3">
-          <Button variant="secondary" size="sm" loading={pausing} onClick={pauseAll} className="cursor-pointer">
-            Pause all
-          </Button>
+      <CoupleAutomationsHeader
+        summary={summary}
+        hasLive={hasLive}
+        pausing={pausing}
+        onRun={() => setPickerOpen(true)}
+        onPauseAll={pauseAll}
+      />
+      {runs.length === 0 ? (
+        <Empty
+          icon={Sparkles}
+          title="No automations have run for this couple yet"
+          description="Run one now, or wait for an active automation to match this couple."
+        />
+      ) : (
+        <div className="space-y-2">
+          {groups.map((group) => (
+            <AutomationGroupRow
+              key={group.key}
+              group={group}
+              open={openKey === group.key}
+              onToggle={() => setOpenKey(openKey === group.key ? null : group.key)}
+              onRetry={retryRun}
+              onCancel={cancelRun}
+              onPause={pauseGroup}
+              onResume={resumeGroup}
+            />
+          ))}
         </div>
       )}
-      <div className="space-y-2">
-        {groups.map((group) => (
-          <AutomationGroupRow
-            key={group.key}
-            group={group}
-            open={openKey === group.key}
-            onToggle={() => setOpenKey(openKey === group.key ? null : group.key)}
-            onRetry={retryRun}
-            onCancel={cancelRun}
-            onPause={pauseGroup}
-            onResume={resumeGroup}
-          />
-        ))}
-      </div>
+      <CoupleRunPicker
+        coupleId={coupleId}
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onRan={fetchAndSet}
+      />
     </div>
   )
 }
