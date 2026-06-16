@@ -45,7 +45,6 @@ export function CoupleAutomations({ coupleId }: Props) {
   const [activity, setActivity] = useState<Map<string, RunActivity>>(new Map())
   const [pausing, setPausing] = useState(false)
   const [openKey, setOpenKey] = useState<string | null>(null)
-  const [pickerOpen, setPickerOpen] = useState(false)
   // Captured at fetch time (not in render) so the 30-day "failed"
   // window is computed from a stable, pure value.
   const [loadedAt, setLoadedAt] = useState(0)
@@ -94,8 +93,8 @@ export function CoupleAutomations({ coupleId }: Props) {
         summary={summary}
         hasLive={hasLive}
         pausing={pausing}
-        onRun={() => setPickerOpen(true)}
         onPauseAll={pauseAll}
+        runPicker={<CoupleRunPicker coupleId={coupleId} onRan={fetchAndSet} />}
       />
       {runs.length === 0 ? (
         <Empty
@@ -119,12 +118,6 @@ export function CoupleAutomations({ coupleId }: Props) {
           ))}
         </div>
       )}
-      <CoupleRunPicker
-        coupleId={coupleId}
-        isOpen={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        onRan={fetchAndSet}
-      />
     </div>
   )
 }

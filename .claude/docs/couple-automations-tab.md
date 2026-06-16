@@ -207,8 +207,9 @@ the couple profile (as shipped):
 - `couple-automations-feed.tsx` — a group's runs + group Pause/Resume.
 - `couple-automations-run-row.tsx` — one run's lines + Retry/Cancel + the
   "Next step …" wake line.
-- `couple-automations-run-picker.tsx` — the "Run automation now" modal
-  (loads active automations via React Query).
+- `couple-automations-run-picker.tsx` — the "Run automation now" popover
+  (Radix, matching the couple header's links/actions popover; loads active
+  automations via React Query, runs the picked one inline).
 - `couple-automations-loader.ts` — RLS-scoped IO (runs + audit + waits).
 - `couple-automations-data.ts` — pure shaping (narrate, group, summarize).
 - `lib/automations/audit-log/narrate.ts` — pure audit-row → line narration.
@@ -254,7 +255,7 @@ Each phase is its own PR through `staging` (per
    pending scheduled wait isn't skipped. No schema change.
 3. ✅ **Run an automation now (shipped 2026-06-17).**
    `runAutomationForCoupleAction` (direct run-open + inline
-   `advanceRunNow`, no migration) + `CoupleRunPicker` modal +
+   `advanceRunNow`, no migration) + `CoupleRunPicker` popover +
    `loadRunnableAutomationsAction`. Per-user rate-limited.
 4. ✅ **Upcoming + summary strip (shipped 2026-06-17).** `summarizeRuns`
    header strip (active / waiting / failed-30d), `wakeAt` surfaced on

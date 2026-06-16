@@ -1,9 +1,10 @@
 /**
- * "Run an automation now" picker for the couple Automations tab.
+ * "Run an automation now" popover for the couple Automations tab.
  *
- * A small modal: pick one of the MC's active automations and fire it
- * against this couple on demand (the everyday "send the portal link
- * now" case), bypassing the trigger. Calls
+ * A self-contained Radix popover (matching the couple header's
+ * links/actions popover) anchored to the "Run automation" button:
+ * pick one of the MC's active automations and fire it against this
+ * couple on demand, bypassing the trigger. Calls
  * `runAutomationForCoupleAction`, then asks the parent to refresh so
  * the new run shows up in the feed.
  *
@@ -11,14 +12,12 @@
  */
 'use client'
 
+import * as Popover from '@radix-ui/react-popover'
 import { useQuery } from '@tanstack/react-query'
+import { Loader2, Play } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Empty } from '@/components/ui/empty'
-import { Loading } from '@/components/ui/loading'
-import { Modal } from '@/components/ui/modal'
-import { Select } from '@/components/ui/select'
 import { getTriggerSpec } from '@/lib/automations/triggers'
 import type { TriggerType } from '@/types/automations'
 
@@ -30,8 +29,6 @@ import {
 
 interface Props {
   coupleId: string
-  isOpen: boolean
-  onClose: () => void
   /** Refresh the feed after a successful run. */
   onRan: () => void
 }
@@ -45,14 +42,14 @@ function labelFor(a: RunnableAutomation): string {
   return getTriggerSpec(a.trigger_type as TriggerType)?.ui.label ?? a.trigger_type
 }
 
-export function CoupleRunPicker({ coupleId, isOpen, onClose, onRan }: Props) {
-  const [selected, setSelected] = useState('')
-  const [running, setRunning] = useState(false)
+export function CoupleRunPicker({ coupleId, onRan }: Props) {
+  const [open, setOpen] = useState(false)
+  const [runningId, setRunningId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const { data: list, isLoading } = useQuery({
     queryKey: ['runnable-automations'],
-    enabled: isOpen,
+    enabled: open,
     queryFn: async (): Promise<RunnableAutomation[]> => {
       const res = await loadRunnableAutomationsAction()
       if (!res.ok) throw new Error(res.error)
@@ -60,57 +57,59 @@ export function CoupleRunPicker({ coupleId, isOpen, onClose, onRan }: Props) {
     },
   })
 
-  async function run() {
-    const automationId = selected || list?.[0]?.id
-    if (!automationId) return
-    setRunning(true)
+  async function run(automationId: string) {
+    setRunningId(automationId)
     setError(null)
     const res = await runAutomationForCoupleAction({ automationId, coupleId })
-    setRunning(false)
+    setRunningId(null)
     if (res.ok) {
+      setOpen(false)
       onRan()
-      onClose()
     } else {
       setError(res.error)
     }
   }
 
-  const options = (list ?? []).map((a) => ({ value: a.id, label: labelFor(a) }))
-  const value = selected || list?.[0]?.id || ''
-
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Run an automation"
-      size="sm"
-      footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} className="cursor-pointer">
-            Cancel
-          </Button>
-          <Button onClick={run} loading={running} disabled={!value} className="cursor-pointer">
-            Run now
-          </Button>
-        </div>
-      }
-    >
-      {isLoading ? (
-        <Loading variant="center" />
-      ) : options.length === 0 ? (
-        <Empty
-          title="No active automations"
-          description="Activate an automation first, then you can run it for this couple."
-        />
-      ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-text-muted">
-            Pick an automation to run for this couple now. It runs immediately, skipping its trigger.
-          </p>
-          <Select value={value} onValueChange={setSelected} options={options} />
-          {error && <p className="text-sm text-danger">{error}</p>}
-        </div>
-      )}
-    </Modal>
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <Button variant="secondary" size="sm" className="cursor-pointer gap-1.5">
+          <Play size={13} strokeWidth={1.5} /> Run automation
+        </Button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="end"
+          sideOffset={6}
+          className="bg-card border border-border rounded-xl shadow-lg z-[70] w-64 py-1.5"
+        >
+          <p className="px-3 py-1.5 text-xs text-text-subtle">Run for this couple now</p>
+          {isLoading ? (
+            <div className="flex items-center gap-2 px-3 py-2 text-sm text-text-muted">
+              <Loader2 size={14} className="animate-spin" /> Loading…
+            </div>
+          ) : (list ?? []).length === 0 ? (
+            <p className="px-3 py-2 text-sm text-text-muted">No active automations to run.</p>
+          ) : (
+            (list ?? []).map((a) => (
+              <button
+                key={a.id}
+                onClick={() => run(a.id)}
+                disabled={runningId !== null}
+                className="w-full flex items-center justify-between gap-3 px-3 py-2 text-sm text-text hover:bg-surface-muted transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <span className="truncate">{labelFor(a)}</span>
+                {runningId === a.id ? (
+                  <Loader2 size={13} className="animate-spin shrink-0 text-text-subtle" />
+                ) : (
+                  <Play size={13} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
+                )}
+              </button>
+            ))
+          )}
+          {error && <p className="px-3 py-2 text-xs text-danger">{error}</p>}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
