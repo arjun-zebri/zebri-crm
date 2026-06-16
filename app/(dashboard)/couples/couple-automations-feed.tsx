@@ -1,26 +1,24 @@
 /**
- * Activity feed for one automation's runs against a couple.
+ * Activity feed + controls for one automation's runs against a couple.
  *
- * Renders the per-step narration (from `automation_audit_log`, via
- * {@link narrateAuditEntry}) as an outcome-first timeline — "Sent
- * email", "Moved couple to Booked", "Quote follow-up failed — couple
- * has no email" — grouped under each run with its status and time.
- * This is what replaces the old "Started … finished …" run-log rows:
- * the MC sees *what the automation did*, not just that it ran.
+ * Renders the group-level Pause / Resume controls and maps each run
+ * to a {@link RunRow} (its narrated step timeline + Retry/Cancel).
+ * The per-step narration comes from `automation_audit_log` via
+ * {@link narrateAuditEntry}; this is what replaces the old read-only
+ * run log — the MC sees what each automation did *and* can intervene.
  *
  * @module app/(dashboard)/couples/couple-automations-feed
  */
 'use client'
 
-import { AlertTriangle, Ban, Check, Clock, MinusCircle, Pause } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Pause, Play } from 'lucide-react'
+import { useState } from 'react'
 
-import { StatePill } from '@/components/ui/state-pill'
+import { Button } from '@/components/ui/button'
 import type { Narration } from '@/lib/automations/audit-log/narrate'
 import type { RunStatus } from '@/types/automations'
-import { RUN_STATUS_LABELS } from '@/types/automations'
 
-import { STATUS_TONE } from './couple-automations-shared'
+import { RunRow } from './couple-automations-run-row'
 
 /** One narrated audit row with its timestamp. */
 export interface FeedLine extends Narration {
@@ -37,66 +35,76 @@ export interface RunActivity {
   lines: FeedLine[]
 }
 
-/** Narration icon name → lucide component. */
-const ICONS: Record<string, LucideIcon> = {
-  Check,
-  AlertTriangle,
-  MinusCircle,
-  Clock,
-  Ban,
-  Pause,
+/** Control callbacks — each awaits the action + a data reload. */
+export interface FeedControls {
+  onRetry: (runId: string) => Promise<void>
+  onCancel: (runId: string) => Promise<void>
+  onPause: () => Promise<void>
+  onResume: () => Promise<void>
 }
 
-/** Tone → token text colour for the line icon. */
-const TONE_COLOR: Record<Narration['tone'], string> = {
-  success: 'text-success',
-  danger: 'text-danger',
-  warning: 'text-warning',
-  info: 'text-info',
-  neutral: 'text-text-subtle',
+interface Props extends FeedControls {
+  runs: RunActivity[]
 }
 
-/** '2026-06-10T13:37:48Z' → '10 Jun, 11:37 pm' (viewer-local). */
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}
+const LIVE: ReadonlySet<RunStatus> = new Set<RunStatus>(['running', 'waiting'])
 
-/** The activity timeline for an automation's runs against this couple. */
-export function CoupleAutomationsFeed({ runs }: { runs: RunActivity[] }) {
+/** The activity timeline + controls for an automation's runs. */
+export function CoupleAutomationsFeed({ runs, onRetry, onCancel, onPause, onResume }: Props) {
+  // One key at a time is acting; disables that control while it runs.
+  const [busy, setBusy] = useState<string | null>(null)
+
+  async function act(key: string, fn: () => Promise<void>) {
+    setBusy(key)
+    try {
+      await fn()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const hasLive = runs.some((r) => LIVE.has(r.status))
+  const hasPaused = runs.some((r) => r.status === 'paused')
+
   return (
-    <div className="ml-8 mt-2 mb-4 pl-4 border-l border-border space-y-5">
-      {runs.map((run) => (
-        <div key={run.runId} className="space-y-2">
-          <div className="flex items-center gap-2">
-            <p className="text-xs text-text-muted">{formatTime(run.startedAt)}</p>
-            <StatePill tone={STATUS_TONE[run.status]} label={RUN_STATUS_LABELS[run.status]} />
-          </div>
-          {run.lines.length === 0 ? (
-            <p className="text-xs text-text-subtle pl-0.5">No recorded steps for this run.</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {run.lines.map((line) => {
-                const Icon = ICONS[line.icon] ?? Check
-                return (
-                  <li key={line.id} className="flex items-start gap-2">
-                    <Icon
-                      size={14}
-                      strokeWidth={1.5}
-                      className={`${TONE_COLOR[line.tone]} shrink-0 mt-0.5`}
-                    />
-                    <span className="text-xs text-text-muted flex-1 min-w-0">{line.text}</span>
-                  </li>
-                )
-              })}
-            </ul>
+    <div className="ml-8 mt-2 mb-4 pl-4 border-l border-border">
+      {(hasLive || hasPaused) && (
+        <div className="flex justify-end gap-2 mb-3">
+          {hasLive && (
+            <Button
+              variant="ghost"
+              size="sm"
+              loading={busy === 'pause'}
+              onClick={() => act('pause', onPause)}
+              className="cursor-pointer gap-1.5"
+            >
+              <Pause size={13} strokeWidth={1.5} /> Pause
+            </Button>
+          )}
+          {hasPaused && (
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={busy === 'resume'}
+              onClick={() => act('resume', onResume)}
+              className="cursor-pointer gap-1.5"
+            >
+              <Play size={13} strokeWidth={1.5} /> Resume
+            </Button>
           )}
         </div>
-      ))}
+      )}
+      <div className="space-y-5">
+        {runs.map((run) => (
+          <RunRow
+            key={run.runId}
+            run={run}
+            pending={busy === run.runId}
+            onRetry={() => void act(run.runId, () => onRetry(run.runId))}
+            onCancel={() => void act(run.runId, () => onCancel(run.runId))}
+          />
+        ))}
+      </div>
     </div>
   )
 }

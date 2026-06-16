@@ -19,6 +19,7 @@ import {
   type RunRow,
   type WaitRow,
 } from '@/lib/automations/home-payload'
+import { partitionResume } from '@/lib/automations/run-controls'
 import { createClient } from '@/lib/supabase/server'
 import type {
   AutomationRow,
@@ -266,6 +267,141 @@ export async function pauseCoupleRunsAction(
     .in('status', ['running', 'waiting'])
   if (error) return { ok: false, error: error.message }
   return { ok: true, data: { paused: count ?? 0 } }
+}
+
+/* ─── per-run / per-automation controls (couple Automations tab) ─── */
+
+const runIdSchema = z.object({ runId: z.string().uuid() })
+
+/**
+ * Re-open an errored run from the step that failed.
+ *
+ * The runner records the failing action in `current_action_id` and
+ * leaves it there on failure, so flipping the run back to `running`
+ * (and clearing the error) makes the next tick re-attempt that step.
+ * Guarded to `errored` rows only — a no-op on anything else.
+ *
+ * Not rate-limited: authenticated, RLS-scoped, single-user, same as
+ * the other builder actions. Any billable re-send is guarded inside
+ * the action handler itself (e.g. the `send_email` recipient check).
+ */
+export async function retryRunAction(
+  input: z.infer<typeof runIdSchema>,
+): Promise<ActionResult<null>> {
+  const parsed = runIdSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: parsed.error.message }
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('automation_runs' as never)
+    .update({ status: 'running', error_message: null, completed_at: null } as never)
+    .eq('id', parsed.data.runId)
+    .eq('status', 'errored')
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, data: null }
+}
+
+/**
+ * Cancel a run that hasn't finished (waiting or paused).
+ *
+ * Sets the run to `cancelled` and consumes any pending wait so the
+ * wake loop can't resurrect it. (The wake loop only flips rows that
+ * are still `waiting`, so the status change alone is sufficient;
+ * consuming the wait keeps the trail clean.)
+ */
+export async function cancelRunAction(
+  input: z.infer<typeof runIdSchema>,
+): Promise<ActionResult<null>> {
+  const parsed = runIdSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: parsed.error.message }
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('automation_runs' as never)
+    .update({ status: 'cancelled', completed_at: new Date().toISOString() } as never)
+    .eq('id', parsed.data.runId)
+    .in('status', ['waiting', 'paused'])
+  if (error) return { ok: false, error: error.message }
+  await supabase
+    .from('automation_waits' as never)
+    .update({ consumed_at: new Date().toISOString() } as never)
+    .eq('run_id', parsed.data.runId)
+    .is('consumed_at', null)
+  return { ok: true, data: null }
+}
+
+const automationCoupleSchema = z.object({
+  automationId: z.string().uuid(),
+  coupleId: z.string().uuid(),
+})
+
+/** Pause one automation's live runs for a couple (scoped "Pause all"). */
+export async function pauseAutomationForCoupleAction(
+  input: z.infer<typeof automationCoupleSchema>,
+): Promise<ActionResult<{ paused: number }>> {
+  const parsed = automationCoupleSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: parsed.error.message }
+  const supabase = await createClient()
+  const { error, count } = await supabase
+    .from('automation_runs' as never)
+    .update({ status: 'paused' } as never, { count: 'exact' })
+    .eq('automation_id', parsed.data.automationId)
+    .eq('couple_id', parsed.data.coupleId)
+    .in('status', ['running', 'waiting'])
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, data: { paused: count ?? 0 } }
+}
+
+/**
+ * Resume an automation's paused runs for a couple.
+ *
+ * Pausing collapses both `running` and `waiting` into `paused`, so
+ * resume must reconstruct the right state per run: a run that still
+ * has an **unconsumed wait** goes back to `waiting` (the wait/wake
+ * machinery keeps owning it); any other paused run goes to `running`
+ * so the next tick advances it. Resuming everything to `running`
+ * would skip pending waits and double-fire scheduled steps.
+ */
+export async function resumeAutomationForCoupleAction(
+  input: z.infer<typeof automationCoupleSchema>,
+): Promise<ActionResult<{ resumed: number }>> {
+  const parsed = automationCoupleSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: parsed.error.message }
+  const supabase = await createClient()
+
+  const { data: pausedRows, error: readErr } = await supabase
+    .from('automation_runs' as never)
+    .select('id')
+    .eq('automation_id', parsed.data.automationId)
+    .eq('couple_id', parsed.data.coupleId)
+    .eq('status', 'paused')
+  if (readErr) return { ok: false, error: readErr.message }
+  const pausedIds = ((pausedRows as { id: string }[] | null) ?? []).map((r) => r.id)
+  if (pausedIds.length === 0) return { ok: true, data: { resumed: 0 } }
+
+  const { data: waitRows } = await supabase
+    .from('automation_waits' as never)
+    .select('run_id')
+    .in('run_id', pausedIds)
+    .is('consumed_at', null)
+  const { toRunning, toWaiting } = partitionResume(
+    pausedIds,
+    ((waitRows as { run_id: string }[] | null) ?? []).map((w) => w.run_id),
+  )
+
+  if (toRunning.length > 0) {
+    await supabase
+      .from('automation_runs' as never)
+      .update({ status: 'running' } as never)
+      .in('id', toRunning)
+      .eq('status', 'paused')
+  }
+  if (toWaiting.length > 0) {
+    await supabase
+      .from('automation_runs' as never)
+      .update({ status: 'waiting' } as never)
+      .in('id', toWaiting)
+      .eq('status', 'paused')
+  }
+  return { ok: true, data: { resumed: pausedIds.length } }
 }
 
 /* ─── /automations home loader ──────────────────────────────────── */

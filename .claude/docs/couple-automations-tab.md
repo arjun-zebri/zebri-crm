@@ -5,11 +5,12 @@ into an **activity + control** surface: what automation has done for this
 couple, what's coming, what broke — and the ability to **run an automation
 on demand** and intervene on individual runs.
 
-> **Status: design only.** Nothing here is built yet. This is the source of
-> truth for the phased implementation (§ Phased delivery). Sibling to
-> `automations.md` (how the engine works) and `automations-wiring.md`
-> (catalogue wiring). When a phase ships, update this doc + the
-> cross-referenced docs in the same PR.
+> **Status: Phases 1–2 shipped (2026-06-16).** The activity feed +
+> narration and the per-run / per-automation controls are live; Phases 3–5
+> are still design. Source of truth for the phased implementation (§ Phased
+> delivery). Sibling to `automations.md` (how the engine works) and
+> `automations-wiring.md` (catalogue wiring). When a phase ships, update
+> this doc + the cross-referenced docs in the same PR.
 
 ## Problem
 
@@ -161,19 +162,27 @@ runner unchanged. Confirm before building.
 
 ## New server actions (all in `app/(dashboard)/automations/actions.ts`)
 
-Each Zod-validated (`@/lib/api/validate`), RLS-scoped, returning the tagged
-`ActionResult`:
+Each Zod-validated, RLS-scoped, returning the tagged `ActionResult`:
 
 - `runAutomationForCoupleAction({ automationId, coupleId })` — § Manual
-  trigger option 2.
-- `retryRunAction({ runId })` — re-open an errored run from its failed step.
-- `cancelRunAction({ runId })` — set a `waiting` run to `cancelled`.
-- `pauseAutomationForCoupleAction({ automationId, coupleId })` /
-  `resumeAutomationForCoupleAction(...)` — per-automation variants of the
-  existing bulk pause.
+  trigger option 2. **Phase 3, not built yet.**
+- ✅ `retryRunAction({ runId })` — re-open an `errored` run; flips it back to
+  `running` and clears `error_message`/`completed_at`. The runner left
+  `current_action_id` on the failed step, so the next tick re-attempts it.
+- ✅ `cancelRunAction({ runId })` — `waiting`/`paused` → `cancelled`, and
+  consumes any pending wait so the wake loop can't resurrect it.
+- ✅ `pauseAutomationForCoupleAction({ automationId, coupleId })` — scoped
+  variant of the bulk pause (`running`/`waiting` → `paused`).
+- ✅ `resumeAutomationForCoupleAction({ automationId, coupleId })` —
+  `paused` → `waiting` if the run still has an unconsumed wait, else
+  `running` (see `partitionResume`).
 
-Rate-limit the manual-run + retry actions (they can send billable
-email/SMS) via `@/lib/api/rate-limit`.
+**Rate-limit:** none on these — they're authenticated, RLS-scoped,
+single-user server actions, matching the codebase convention
+(`payments/actions.ts` §header). The billable-send guard lives inside the
+action handlers (e.g. `send_email`'s recipient check), so a retry can't
+fan out mail. The Phase-3 manual-run will re-evaluate this since it can
+deliberately trigger a send.
 
 ## UI surfaces / components
 
@@ -215,11 +224,16 @@ Each phase is its own PR through `staging` (per
 `feedback_staging_only_batch`), meeting the § 5 DoD in
 `production-readiness.md`.
 
-1. **Activity feed + narration.** `narrate.ts` + read `automation_audit_log`
-   + redesigned feed (outcome-first rows, errors loud). No schema change.
-   Biggest value, lowest risk.
-2. **Per-run control.** Retry / cancel / per-automation pause-resume server
-   actions + feed affordances.
+1. ✅ **Activity feed + narration (shipped 2026-06-16).** `narrate.ts` +
+   read `automation_audit_log` + redesigned feed (outcome-first rows, silent
+   no-ops surfaced as warnings). No schema change. Files: `narrate.ts`,
+   `couple-automations-{data,feed,run-row,group}.tsx`, orchestrator rewrite.
+2. ✅ **Per-run control (shipped 2026-06-16).** `retryRunAction`,
+   `cancelRunAction`, `pauseAutomationForCoupleAction`,
+   `resumeAutomationForCoupleAction` + Retry / Cancel / Pause / Resume
+   affordances in the feed. Resume re-derives waiting-vs-running per run
+   (`lib/automations/run-controls.ts` `partitionResume`, unit-tested) so a
+   pending scheduled wait isn't skipped. No schema change.
 3. **Run an automation now.** Resolve § Manual trigger, build
    `runAutomationForCoupleAction` + run picker. (Optional `source` column.)
 4. **Upcoming + summary strip + suppression awareness.** Forward-looking

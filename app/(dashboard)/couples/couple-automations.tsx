@@ -14,17 +14,21 @@
  */
 'use client'
 
-import { ChevronDown, Sparkles, Zap } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Empty } from '@/components/ui/empty'
 import { Loading } from '@/components/ui/loading'
-import { StatePill } from '@/components/ui/state-pill'
 import { createClient } from '@/lib/supabase/client'
-import { RUN_STATUS_LABELS } from '@/types/automations'
 
-import { pauseCoupleRunsAction } from '../automations/actions'
+import {
+  cancelRunAction,
+  pauseAutomationForCoupleAction,
+  pauseCoupleRunsAction,
+  resumeAutomationForCoupleAction,
+  retryRunAction,
+} from '../automations/actions'
 
 import {
   buildActivity,
@@ -32,8 +36,8 @@ import {
   type AuditRow,
   type RunWithAutomation,
 } from './couple-automations-data'
-import { CoupleAutomationsFeed, type RunActivity } from './couple-automations-feed'
-import { STATUS_TONE } from './couple-automations-shared'
+import type { RunActivity } from './couple-automations-feed'
+import { AutomationGroupRow } from './couple-automations-group'
 
 interface Props {
   coupleId: string
@@ -45,47 +49,55 @@ export function CoupleAutomations({ coupleId }: Props) {
   const [pausing, setPausing] = useState(false)
   const [openKey, setOpenKey] = useState<string | null>(null)
 
-  // Wrapped in a sync function so the setState calls land in an async
-  // callback (after the awaited fetch), never on the effect's
-  // synchronous path — same shape as a `.then()` data load.
-  const load = useCallback(() => {
-    void (async () => {
-      const supabase = createClient()
-      const { data: runRows } = await supabase
-        .from('automation_runs' as never)
-        .select('*, automation:automations(id, name, trigger_type)')
-        .eq('couple_id', coupleId)
-        .order('started_at', { ascending: false })
-      const list = (runRows as RunWithAutomation[] | null) ?? []
+  const fetchAndSet = useCallback(async () => {
+    const supabase = createClient()
+    const { data: runRows } = await supabase
+      .from('automation_runs' as never)
+      .select('*, automation:automations(id, name, trigger_type)')
+      .eq('couple_id', coupleId)
+      .order('started_at', { ascending: false })
+    const list = (runRows as RunWithAutomation[] | null) ?? []
 
-      let audit: AuditRow[] = []
-      if (list.length > 0) {
-        const { data: auditRows } = await supabase
-          .from('automation_audit_log' as never)
-          .select('id, run_id, event, details, created_at, action:automation_actions(type, label)')
-          .in(
-            'run_id',
-            list.map((r) => r.id),
-          )
-          .order('created_at', { ascending: true })
-        audit = (auditRows as AuditRow[] | null) ?? []
-      }
-      setActivity(buildActivity(list, audit))
-      setRuns(list)
-    })()
+    let audit: AuditRow[] = []
+    if (list.length > 0) {
+      const { data: auditRows } = await supabase
+        .from('automation_audit_log' as never)
+        .select('id, run_id, event, details, created_at, action:automation_actions(type, label)')
+        .in(
+          'run_id',
+          list.map((r) => r.id),
+        )
+        .order('created_at', { ascending: true })
+      audit = (auditRows as AuditRow[] | null) ?? []
+    }
+    setActivity(buildActivity(list, audit))
+    setRuns(list)
   }, [coupleId])
 
+  // The IIFE keeps the setState calls off the effect's synchronous path
+  // (they run after the awaited fetch) — same shape as a `.then()` load.
   useEffect(() => {
-    load()
-  }, [load])
+    void (async () => {
+      await fetchAndSet()
+    })()
+  }, [fetchAndSet])
 
   async function pauseAll() {
     if (!confirm('Pause every running automation for this couple?')) return
     setPausing(true)
     await pauseCoupleRunsAction({ coupleId })
     setPausing(false)
-    load()
+    await fetchAndSet()
   }
+
+  // Per-run / per-automation controls — run the action, then refresh so
+  // the feed reflects the new status without a full page reload.
+  const retryRun = (runId: string) => retryRunAction({ runId }).then(fetchAndSet)
+  const cancelRun = (runId: string) => cancelRunAction({ runId }).then(fetchAndSet)
+  const pauseGroup = (automationId: string) =>
+    pauseAutomationForCoupleAction({ automationId, coupleId }).then(fetchAndSet)
+  const resumeGroup = (automationId: string) =>
+    resumeAutomationForCoupleAction({ automationId, coupleId }).then(fetchAndSet)
 
   if (runs === null) return <Loading variant="center" />
 
@@ -112,50 +124,18 @@ export function CoupleAutomations({ coupleId }: Props) {
         </div>
       )}
       <div className="space-y-2">
-        {groups.map((group) => {
-          const open = openKey === group.key
-          const runCount = group.runs.length
-          return (
-            <div key={group.key}>
-              <button
-                onClick={() => setOpenKey(open ? null : group.key)}
-                aria-expanded={open}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-surface-muted transition text-left border border-transparent hover:border-border cursor-pointer"
-              >
-                <Zap size={13} strokeWidth={1.5} className="text-text-subtle shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text truncate">{group.title}</p>
-                  <p className="text-xs text-text-subtle truncate mt-0.5">
-                    {group.lastOutcome ??
-                      `${group.triggerLabel ? `${group.triggerLabel} · ` : ''}${runCount === 1 ? '1 run' : `${runCount} runs`}`}
-                  </p>
-                </div>
-                <StatePill
-                  tone={STATUS_TONE[group.headline]}
-                  label={RUN_STATUS_LABELS[group.headline]}
-                  className="shrink-0"
-                />
-                <ChevronDown
-                  size={14}
-                  strokeWidth={1.5}
-                  className={`text-text-subtle shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {/* Grid-rows 0fr→1fr animates the reveal without JS height
-                  measurement; the inner min-h-0 + overflow-hidden is what
-                  lets the row actually collapse. */}
-              <div
-                className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
-                  open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                }`}
-              >
-                <div className="min-h-0 overflow-hidden">
-                  <CoupleAutomationsFeed runs={group.runs} />
-                </div>
-              </div>
-            </div>
-          )
-        })}
+        {groups.map((group) => (
+          <AutomationGroupRow
+            key={group.key}
+            group={group}
+            open={openKey === group.key}
+            onToggle={() => setOpenKey(openKey === group.key ? null : group.key)}
+            onRetry={retryRun}
+            onCancel={cancelRun}
+            onPause={pauseGroup}
+            onResume={resumeGroup}
+          />
+        ))}
       </div>
     </div>
   )
