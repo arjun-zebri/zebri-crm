@@ -1,12 +1,14 @@
 /**
  * Couple Profile → Automations sub-tab.
  *
- * Automation-centric view: one row per automation that has touched
- * this couple (live ones first), not a flat run log. Each row shows
- * the automation's name, trigger, and current state; clicking it
- * expands the run history for this couple. "Pause all" flips every
- * running / waiting run for the couple to paused; useful when a
- * booking is cancelled or the MC needs to intervene manually.
+ * Activity-first view: one row per automation that has touched this
+ * couple (live ones first). Each row leads with the **most recent
+ * outcome** ("Sent email", "Quote follow-up failed — no email"), not
+ * a bare status word; expanding it reveals the per-step activity feed
+ * for this couple, narrated from `automation_audit_log` (see
+ * {@link narrateAuditEntry}). "Pause all" flips every running /
+ * waiting run for the couple to paused — useful when a booking is
+ * cancelled or the MC needs to intervene.
  *
  * @module app/(dashboard)/couples/couple-automations
  */
@@ -19,97 +21,58 @@ import { Button } from '@/components/ui/button'
 import { Empty } from '@/components/ui/empty'
 import { Loading } from '@/components/ui/loading'
 import { StatePill } from '@/components/ui/state-pill'
-import { friendlyRunError } from '@/lib/automations/config-errors'
-import { getTriggerSpec } from '@/lib/automations/triggers'
 import { createClient } from '@/lib/supabase/client'
-import type { AutomationRunRow, RunStatus, TriggerType } from '@/types/automations'
 import { RUN_STATUS_LABELS } from '@/types/automations'
 
 import { pauseCoupleRunsAction } from '../automations/actions'
 
-interface RunWithAutomation extends AutomationRunRow {
-  automation: { id: string; name: string; trigger_type: string } | null
-}
+import {
+  buildActivity,
+  groupRuns,
+  type AuditRow,
+  type RunWithAutomation,
+} from './couple-automations-data'
+import { CoupleAutomationsFeed, type RunActivity } from './couple-automations-feed'
+import { STATUS_TONE } from './couple-automations-shared'
 
 interface Props {
   coupleId: string
 }
 
-/** Runs grouped under the automation that produced them. */
-interface AutomationGroup {
-  key: string
-  name: string
-  triggerLabel: string
-  /** Newest first (query order). */
-  runs: RunWithAutomation[]
-  /** The status shown on the collapsed row. */
-  headline: RunStatus
-}
-
-const STATUS_TONE: Record<RunStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
-  running: 'info',
-  waiting: 'warning',
-  paused: 'warning',
-  completed: 'success',
-  errored: 'danger',
-  cancelled: 'neutral',
-}
-
-/** Live states take priority on the collapsed row, in this order. */
-const HEADLINE_PRIORITY: RunStatus[] = ['running', 'waiting', 'paused']
-
-/** '2026-06-10T13:37:48Z' → '10 Jun, 11:37 pm' (viewer-local). */
-function formatRunTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-AU', {
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-}
-
-/** Group a started_at-descending run list by automation, live groups first. */
-function groupRuns(runs: RunWithAutomation[]): AutomationGroup[] {
-  const byAutomation = new Map<string, RunWithAutomation[]>()
-  for (const run of runs) {
-    const key = run.automation?.id ?? run.automation_id
-    byAutomation.set(key, [...(byAutomation.get(key) ?? []), run])
-  }
-  const groups = [...byAutomation.entries()].map(([key, groupRuns]) => {
-    const first = groupRuns[0] as RunWithAutomation
-    const headline =
-      HEADLINE_PRIORITY.find((s) => groupRuns.some((r) => r.status === s)) ?? first.status
-    return {
-      key,
-      name: first.automation?.name ?? 'Automation',
-      triggerLabel: first.automation
-        ? (getTriggerSpec(first.automation.trigger_type as TriggerType)?.ui.label ??
-          first.automation.trigger_type)
-        : '',
-      runs: groupRuns,
-      headline,
-    }
-  })
-  // Live automations float to the top; within each band, most recent first.
-  const isLive = (g: AutomationGroup) => HEADLINE_PRIORITY.includes(g.headline)
-  return groups.sort((a, b) => Number(isLive(b)) - Number(isLive(a)))
-}
-
 export function CoupleAutomations({ coupleId }: Props) {
   const [runs, setRuns] = useState<RunWithAutomation[] | null>(null)
+  const [activity, setActivity] = useState<Map<string, RunActivity>>(new Map())
   const [pausing, setPausing] = useState(false)
   const [openKey, setOpenKey] = useState<string | null>(null)
 
+  // Wrapped in a sync function so the setState calls land in an async
+  // callback (after the awaited fetch), never on the effect's
+  // synchronous path — same shape as a `.then()` data load.
   const load = useCallback(() => {
-    const supabase = createClient()
-    supabase
-      .from('automation_runs' as never)
-      .select('*, automation:automations(id, name, trigger_type)')
-      .eq('couple_id', coupleId)
-      .order('started_at', { ascending: false })
-      .then(({ data }) => {
-        setRuns((data as RunWithAutomation[] | null) ?? [])
-      })
+    void (async () => {
+      const supabase = createClient()
+      const { data: runRows } = await supabase
+        .from('automation_runs' as never)
+        .select('*, automation:automations(id, name, trigger_type)')
+        .eq('couple_id', coupleId)
+        .order('started_at', { ascending: false })
+      const list = (runRows as RunWithAutomation[] | null) ?? []
+
+      let audit: AuditRow[] = []
+      if (list.length > 0) {
+        const { data: auditRows } = await supabase
+          .from('automation_audit_log' as never)
+          .select('id, run_id, event, details, created_at, action:automation_actions(type, label)')
+          .in(
+            'run_id',
+            list.map((r) => r.id),
+          )
+          .order('created_at', { ascending: true })
+        audit = (auditRows as AuditRow[] | null) ?? []
+      }
+      setActivity(buildActivity(list, audit))
+      setRuns(list)
+    })()
   }, [coupleId])
 
   useEffect(() => {
@@ -136,7 +99,7 @@ export function CoupleAutomations({ coupleId }: Props) {
     )
   }
 
-  const groups = groupRuns(runs)
+  const groups = groupRuns(runs, activity)
   const hasLive = runs.some((r) => r.status === 'running' || r.status === 'waiting')
 
   return (
@@ -151,6 +114,7 @@ export function CoupleAutomations({ coupleId }: Props) {
       <div className="space-y-2">
         {groups.map((group) => {
           const open = openKey === group.key
+          const runCount = group.runs.length
           return (
             <div key={group.key}>
               <button
@@ -160,11 +124,10 @@ export function CoupleAutomations({ coupleId }: Props) {
               >
                 <Zap size={13} strokeWidth={1.5} className="text-text-subtle shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text truncate">{group.name}</p>
+                  <p className="text-sm text-text truncate">{group.title}</p>
                   <p className="text-xs text-text-subtle truncate mt-0.5">
-                    {group.triggerLabel && `${group.triggerLabel} · `}
-                    {group.runs.length === 1 ? '1 run' : `${group.runs.length} runs`} · last{' '}
-                    {formatRunTime((group.runs[0] as RunWithAutomation).started_at)}
+                    {group.lastOutcome ??
+                      `${group.triggerLabel ? `${group.triggerLabel} · ` : ''}${runCount === 1 ? '1 run' : `${runCount} runs`}`}
                   </p>
                 </div>
                 <StatePill
@@ -187,39 +150,13 @@ export function CoupleAutomations({ coupleId }: Props) {
                 }`}
               >
                 <div className="min-h-0 overflow-hidden">
-                  <RunHistory runs={group.runs} />
+                  <CoupleAutomationsFeed runs={group.runs} />
                 </div>
               </div>
             </div>
           )
         })}
       </div>
-    </div>
-  )
-}
-
-/** Expanded detail: this automation's runs for this couple, newest first. */
-function RunHistory({ runs }: { runs: RunWithAutomation[] }) {
-  return (
-    <div className="ml-8 mt-2 mb-4 pl-4 border-l border-border space-y-4">
-      {runs.map((run) => (
-        <div key={run.id} className="flex items-start gap-3 pr-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-text-muted">
-              Started {formatRunTime(run.started_at)}
-              {run.completed_at ? ` · finished ${formatRunTime(run.completed_at)}` : ''}
-            </p>
-            {run.error_message && (
-              <p className="text-xs text-danger mt-1">{friendlyRunError(run.error_message)}</p>
-            )}
-          </div>
-          <StatePill
-            tone={STATUS_TONE[run.status]}
-            label={RUN_STATUS_LABELS[run.status]}
-            className="shrink-0"
-          />
-        </div>
-      ))}
     </div>
   )
 }
