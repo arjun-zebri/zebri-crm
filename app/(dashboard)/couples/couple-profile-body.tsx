@@ -21,6 +21,7 @@ import { CoupleTimeline } from './couple-timeline';
 import { McPortalContacts } from './mc-portal-contacts';
 import { McPortalFiles } from './mc-portal-files';
 import { McPortalSongs } from './mc-portal-songs';
+import { McPortalVows } from './mc-portal-vows';
 import type { CoupleProfileSection } from './couple-profile-types';
 import type { usePortalData } from './use-portal-data';
 
@@ -83,6 +84,14 @@ export function CoupleProfileBody({
       )}
 
       {activeSection === 'files' && <McPortalFiles coupleId={couple.id} />}
+
+      {activeSection === 'vows' && (
+        <McPortalVows
+          coupleId={couple.id}
+          primaryName={couple.primary_name ?? couple.name}
+          secondaryName={couple.secondary_name ?? null}
+        />
+      )}
 
       {activeSection === 'automations' && (
         <CoupleAutomations coupleId={couple.id} />

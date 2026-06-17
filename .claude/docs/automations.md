@@ -198,9 +198,19 @@ one at a time per `.claude/docs/automations-wiring.md`.
   cron can't serve sub-day offsets without Vercel Pro; see
   `automations-wiring.md`). Cancelled events never fire. UTC day
   boundaries.
+- `time_after_event` (T2) — mirror of T1 on the far side of the date:
+  fires when `events.date = today − config.amount` days. Day-grain,
+  cancelled-skip, `eventType` narrowing — same shape as T1.
+- `anniversary_of_event` (T3) — fires on the calendar anniversary
+  (today's MM-DD matches the event's), for the configured `years`, or
+  every year across a `years..maxYears` range. Payload carries
+  `years_since`. Past, non-cancelled events only; a 29-Feb event only
+  fires in leap years.
 
-**Not yet wired:** `time_after_event` (T2) and `anniversary_of_event`
-(T3). See `automations-wiring.md` for the running order.
+**All review-file time-based triggers are now wired** (A1–A5, T1–T3).
+The portal triggers `couple_uploaded_file` / `couple_added_song_to_playlist`
+/ `couple_completed_vows` are emitted by DB triggers (not the tick) —
+see their migrations.
 
 ### Categories (in picker order)
 
@@ -289,15 +299,16 @@ Catalogue in `lib/automations/actions/`. Split by category:
   information, create couple, pause couple automations
 - `task.ts` - create / update task
 - `documents.ts` - send quote / invoice / contract, payment
-  reminder, run-sheet PDF, create invoice from quote
+  reminder, create invoice from quote (AC2 — drafts a `draft`
+  invoice + line items from a quote), generate run sheet (AC1 —
+  emails the run-sheet **link**; there's no server PDF stack, so it
+  shares the timeline view at `/timeline/{token}` rather than a file)
 - `timeline.ts` - create timeline event, send to vendors,
   final run sheet
 - `post-event.ts` - pre-event checklist, thank you, review request,
   referral request
 
-> In-scope but **not yet built** (hidden until wired):
-> `generate_run_sheet_pdf` and `create_invoice_from_quote` are stubs
-> today. Out-of-scope action types still in the registry files
+> Out-of-scope action types still in the registry files
 > (`send_whatsapp`, `update_custom_fields`, `create_calendar_event`,
 > `create_reminder`, `update_timeline_event`, `send_onboarding_pack`,
 > `send_anniversary_message`) are hidden and not on the backlog.
@@ -424,21 +435,10 @@ The sidebar nav item is added in `app/components/sidebar.tsx`
 
 ## Future work
 
-These are the remaining **in-scope** (review-file) builds — see
-`automations-wiring.md` → "Remaining backlog" for the canonical list:
-
-- Tick-time emitters for `time_before_event` (T1), `time_after_event`
-  (T2), `anniversary_of_event` (T3). The framework
-  (`lib/automations/time-emitters/`) and A1–A5 (`quote_due`,
-  `quote_overdue`, `invoice_due`, `invoice_overdue`, `task_overdue`)
-  shipped.
-- Portal triggers `couple_uploaded_file` (P1),
-  `couple_added_song_to_playlist` (P2), `couple_completed_vows` (P3 —
-  needs a `vows` table first).
-- Stub actions `generate_run_sheet_pdf` (AC1 → wire to `lib/pdf`) and
-  `create_invoice_from_quote` (AC2).
-
-Engine/UX future work (not catalogue items):
+**The review-file catalogue is now fully wired** — every trigger and
+action in `automations-review.md` does something. (See
+`automations-wiring.md` for the shipped history.) Remaining work is
+engine/UX, not catalogue items:
 
 - `contacts.tags` column for true custom-tag recipient matching.
 - Drag-to-reorder actions in the builder (replace position math with

@@ -71,8 +71,14 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   // Contacts
   'contact_created',
   'contact_linked_to_couple',
-  // Calendar (tick-emitted) — T1 wired; T2 time_after_event follows
-  'time_before_event',
+  // Calendar (tick-emitted)
+  'time_before_event', // T1
+  'time_after_event', // T2
+  'anniversary_of_event', // T3
+  // Portal (DB-trigger emitted)
+  'couple_uploaded_file', // P1
+  'couple_added_song_to_playlist', // P2
+  'couple_completed_vows', // P3
 ])
 
 /**
@@ -110,6 +116,8 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'send_thank_you_message',
   'request_review',
   'send_referral_request',
+  'create_invoice_from_quote', // AC2
+  'generate_run_sheet_pdf', // AC1 (run-sheet link)
 ])
 
 /** True when the trigger should appear in the builder's trigger picker. */

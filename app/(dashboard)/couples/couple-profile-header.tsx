@@ -25,6 +25,7 @@ import * as Popover from '@radix-ui/react-popover';
 import {
   Check,
   Copy,
+  FileDown,
   Link,
   Mail,
   MoreHorizontal,
@@ -38,6 +39,8 @@ import { useState } from 'react';
 import { PiWhatsappLogoLight } from 'react-icons/pi';
 
 import { Couple, CoupleStatusRecord, getStatusClasses } from '@/types/couple';
+
+import { printTimelinePdf, printVowPdf } from './print-couple-docs';
 
 export interface CoupleProfileHeaderProps {
   couple: Couple;
@@ -65,6 +68,7 @@ export function CoupleProfileHeader({
   const [statusOpen, setStatusOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
   const [copied, setCopied] = useState<CopiedKind>(null);
 
   const hasPhone = !!couple.phone;
@@ -352,7 +356,7 @@ export function CoupleProfileHeader({
                 side="bottom"
                 align="end"
                 sideOffset={6}
-                className="z-[80] w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
+                className="z-[80] w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
               >
                 <button
                   onClick={() => {
@@ -402,6 +406,55 @@ export function CoupleProfileHeader({
                     <RefreshCw size={13} strokeWidth={1.5} />
                   </button>
                 </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+          <Popover.Root open={pdfOpen} onOpenChange={setPdfOpen}>
+            <Popover.Trigger asChild>
+              <button
+                title="Download documents"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+              >
+                <FileDown size={16} strokeWidth={1.5} />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                side="bottom"
+                align="end"
+                sideOffset={6}
+                className="z-[80] w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
+              >
+                <button
+                  onClick={() => {
+                    void printVowPdf(couple.id, 'primary', couple.primary_name ?? couple.name);
+                    setPdfOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <span className="truncate">Download vow for {couple.primary_name ?? couple.name}</span>
+                  <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                </button>
+                <button
+                  onClick={() => {
+                    void printVowPdf(couple.id, 'spouse', couple.secondary_name ?? 'partner');
+                    setPdfOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <span className="truncate">Download vow for {couple.secondary_name ?? 'partner'}</span>
+                  <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                </button>
+                <button
+                  onClick={() => {
+                    void printTimelinePdf(couple.id, couple.name);
+                    setPdfOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <span>Download timeline</span>
+                  <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                </button>
               </Popover.Content>
             </Popover.Portal>
           </Popover.Root>

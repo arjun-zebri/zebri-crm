@@ -658,3 +658,92 @@ function compactPatch<T extends Record<string, unknown>>(
   }
   return result as { [K in keyof T]: Exclude<T[K], undefined> };
 }
+
+/* ─── Vows (MC edit + revision history) ───────────────────────────── */
+
+const updateVowSchema = z.object({ id: uuidSchema, content: z.string() });
+
+/**
+ * MC edits a couple's vow from the dashboard. RLS scopes the update to
+ * the MC's own rows; every edit appends an 'mc' revision so the change
+ * is reversible (vows / vow_revisions aren't in the generated types
+ * yet, hence the `as never` casts — same pattern as the bus tables).
+ */
+export async function updateVowAsMcAction(
+  input: { id: string; content: string },
+): Promise<ActionResult<void>> {
+  const parsed = updateVowSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Invalid vow patch.' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { error } = await supabase
+    .from('vows' as never)
+    .update({ content: parsed.data.content, updated_at: new Date().toISOString() } as never)
+    .eq('id', parsed.data.id);
+  if (error) {
+    logger.error('[portal-actions] updateVowAsMcAction failed', error, {
+      userId: user.id,
+      vowId: parsed.data.id,
+    });
+    return { ok: false, error: 'Could not update vow.' };
+  }
+
+  await supabase
+    .from('vow_revisions' as never)
+    .insert({ vow_id: parsed.data.id, user_id: user.id, content: parsed.data.content, author: 'mc' } as never);
+
+  return { ok: true, data: undefined };
+}
+
+const revertVowSchema = z.object({ id: uuidSchema, revisionId: uuidSchema });
+
+/**
+ * Restore a vow to a prior revision (e.g. the couple's original). Sets
+ * the live content to the chosen revision and logs the revert as a new
+ * 'mc' revision so history stays linear.
+ */
+export async function revertVowAction(
+  input: { id: string; revisionId: string },
+): Promise<ActionResult<void>> {
+  const parsed = revertVowSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Invalid revert request.' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { data: rev } = await supabase
+    .from('vow_revisions' as never)
+    .select('content, vow_id, author')
+    .eq('id', parsed.data.revisionId)
+    .maybeSingle();
+  const r = rev as { content: string; vow_id: string; author: string } | null;
+  if (!r || r.vow_id !== parsed.data.id) return { ok: false, error: 'Revision not found.' };
+
+  const { error } = await supabase
+    .from('vows' as never)
+    .update({ content: r.content, updated_at: new Date().toISOString() } as never)
+    .eq('id', parsed.data.id);
+  if (error) {
+    logger.error('[portal-actions] revertVowAction failed', error, {
+      userId: user.id,
+      vowId: parsed.data.id,
+    });
+    return { ok: false, error: 'Could not revert vow.' };
+  }
+
+  // Carry the restored revision's author through, so restoring the
+  // couple's version marks the new live revision as theirs.
+  await supabase
+    .from('vow_revisions' as never)
+    .insert({ vow_id: parsed.data.id, user_id: user.id, content: r.content, author: r.author } as never);
+
+  return { ok: true, data: undefined };
+}

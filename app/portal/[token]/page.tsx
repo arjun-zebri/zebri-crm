@@ -112,6 +112,12 @@ export interface PortalSongCategory {
   position: number
 }
 
+export interface PortalVow {
+  id: string
+  who: string
+  content: string
+}
+
 export interface PortalData {
   couple_id: string
   couple_name: string
@@ -123,6 +129,7 @@ export interface PortalData {
   songs: PortalSong[]
   song_categories: PortalSongCategory[]
   files: PortalFile[]
+  vows: PortalVow[]
   timeline_items: PortalTimelineItem[]
   payments: {
     quotes: PortalQuote[]

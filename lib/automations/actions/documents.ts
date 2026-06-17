@@ -16,15 +16,44 @@
  * @module lib/automations/actions/documents
  */
 
+import { Resend } from 'resend'
 import { z } from 'zod'
 
 import { sendContractEmail, sendInvoiceEmail, sendQuoteEmail } from '@/lib/email'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { ActionResult, ActionType, RunContext } from '@/types/automations'
+import type { ActionType, RunContext } from '@/types/automations'
 
 import type { ActionSpec } from './index'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
+const FROM = 'Zebri <noreply@app.zebri.com.au>'
+
+/**
+ * Best-effort send of the run-sheet link. Returns true if it went out.
+ * Emailing is intentionally non-fatal — the run-sheet link is the
+ * primary output, and it's also returned to the run for the audit log.
+ * No `RESEND_API_KEY` (e.g. in integration tests) → skip silently.
+ */
+async function emailRunSheetLink(
+  to: string[],
+  coupleName: string,
+  url: string,
+): Promise<boolean> {
+  const key = process.env.RESEND_API_KEY
+  if (!key || to.length === 0) return false
+  try {
+    const resend = new Resend(key)
+    await resend.emails.send({
+      from: FROM,
+      to,
+      subject: `Run sheet — ${coupleName}`,
+      html: `<p>Here's the run sheet for ${coupleName}.</p><p><a href="${url}">Open the run sheet</a></p><p>${url}</p>`,
+    })
+    return true
+  } catch {
+    return false
+  }
+}
 
 // ────────────────────────────────────────────────────────────────
 // send_quote
@@ -179,32 +208,74 @@ const triggerPaymentReminder: ActionSpec<z.infer<typeof triggerPaymentReminderSc
 // ────────────────────────────────────────────────────────────────
 
 const generateRunSheetSchema = z.object({
+  /** The event to share. Defaults to the triggering event / the
+   *  couple's earliest event. */
   eventId: z.string().uuid().optional(),
-  /** Format variant — full / vendor-only / MC-only / couple-only. */
-  format: z.enum(['full', 'vendor_only', 'mc_only', 'couple_only']).optional(),
-  /** Include the vendor contacts roster page. */
-  includeContacts: z.boolean().optional(),
-  /** Include explicit minute-by-minute timings. */
-  includeTimings: z.boolean().optional(),
-  /** Save a copy into the couple's portal files. */
-  saveToCoupleFiles: z.boolean().optional(),
-  /** Email the PDF to the MC themselves once generated. */
-  emailToSelf: z.boolean().optional(),
+  /** Also email the link to the couple (default: MC only). */
+  sendToCouple: z.boolean().optional(),
 }).passthrough()
 
+/** Resolve the event to share: config id → trigger payload → earliest. */
+async function pickEventId(
+  supabase: ReturnType<typeof createAdminClient>,
+  ctx: RunContext,
+  explicitId?: string,
+): Promise<string | null> {
+  if (explicitId) return explicitId
+  const payload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
+  if (typeof payload['event_id'] === 'string') return payload['event_id'] as string
+  if (!ctx.couple) return null
+  const { data } = await supabase
+    .from('events')
+    .select('id')
+    .eq('couple_id', ctx.couple.id)
+    .eq('user_id', ctx.userId)
+    .order('date', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  return (data as { id: string } | null)?.id ?? null
+}
+
+/**
+ * Share the event run sheet as a link. The "run sheet" is the event
+ * timeline view (`/timeline/{share_token}`); a server-rendered PDF is
+ * deferred (no server PDF stack yet — see automations-wiring.md). The
+ * action enables the event share token, emails the MC (and optionally
+ * the couple) the link, and returns it for the audit log.
+ */
 const generateRunSheetPdf: ActionSpec<z.infer<typeof generateRunSheetSchema>> = {
   type: 'generate_run_sheet_pdf',
   configSchema: generateRunSheetSchema,
-  async handler(ctx) {
+  async handler(ctx, config) {
     if (!ctx.couple) return { kind: 'error', message: 'no couple in context' }
-    // 14a stub: record that a PDF generation was requested. Wiring
-    // into lib/pdf's renderer for the run-sheet page is a follow-up
-    // (it needs a dedicated layout, not the existing quote/invoice
-    // PDF layouts). The audit log makes the request visible until
-    // it's done for real.
-    return { kind: 'ok', output: { pdf_requested: true } }
+    const supabase = createAdminClient()
+    const eventId = await pickEventId(supabase, ctx, config.eventId)
+    if (!eventId) return { kind: 'ok', output: { skipped: 'no event found' } }
+
+    const { data: event } = await supabase
+      .from('events')
+      .select('id, share_token, share_token_enabled')
+      .eq('id', eventId)
+      .eq('user_id', ctx.userId)
+      .maybeSingle()
+    const ev = event as { id: string; share_token: string | null; share_token_enabled: boolean } | null
+    if (!ev?.share_token) {
+      return { kind: 'error', message: 'event has no share token', recoverable: true }
+    }
+    if (!ev.share_token_enabled) {
+      await supabase.from('events').update({ share_token_enabled: true } as never).eq('id', ev.id)
+    }
+
+    const url = `${APP_URL}/timeline/${ev.share_token}`
+    const recipients = [
+      ctx.mc.email,
+      ...(config.sendToCouple && ctx.couple.email ? [ctx.couple.email] : []),
+    ].filter(Boolean)
+    const emailed = await emailRunSheetLink(recipients, ctx.couple.name, url)
+
+    return { kind: 'ok', output: { run_sheet_link: url, event_id: ev.id, emailed } }
   },
-  ui: { category: 'post_event', label: 'Generate run-sheet PDF', description: 'Produce a event run sheet PDF', icon: 'FileType2' },
+  ui: { category: 'post_event', label: 'Send run sheet', description: 'Email a link to the event run sheet (timeline)', icon: 'ClipboardList' },
 }
 
 // ────────────────────────────────────────────────────────────────

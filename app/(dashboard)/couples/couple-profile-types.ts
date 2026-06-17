@@ -27,6 +27,7 @@ export type CoupleProfileSection =
   | 'timeline'
   | 'songs'
   | 'files'
+  | 'vows'
   | 'payments'
   | 'contracts'
   | 'automations';
