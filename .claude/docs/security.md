@@ -275,16 +275,26 @@ The `/portal/[token]` surface is **unauthenticated** — couples and
 bridal-party members open the URL without a Supabase session. The
 share token IS the capability.
 
+**Per-partner tokens (2026-06-16).** Each couple now has *two* portal
+links: the primary partner's `couples.portal_token` and the secondary
+partner's `couples.secondary_portal_token`. Both resolve to the same
+couple but carry a distinct **viewer** identity. The combined "couple
+link" is retired; every link is now partner-scoped.
+
 Every write originates from a `SECURITY DEFINER` RPC keyed by the
-token. The canonical guard prologue (used by every write RPC in
+token. The canonical guard prologue is now the resolver helper
+`_resolve_portal_couple(p_token)` (used by every portal RPC in
 `supabase/migrations/…portal…sql`):
 
 ```sql
-SELECT id, user_id INTO v_couple_id, v_user_id
-FROM couples
-WHERE portal_token = p_token AND portal_token_enabled = true;
+SELECT couple_id, owner_id, viewer
+INTO v_couple_id, v_user_id, v_viewer
+FROM _resolve_portal_couple(p_token);   -- matches portal_token OR secondary_portal_token
 IF v_couple_id IS NULL THEN RAISE EXCEPTION 'Invalid portal token'; END IF;
 ```
+
+`viewer` is `'primary'` when the token is `portal_token` and `'spouse'`
+when it is `secondary_portal_token`.
 
 Consequences:
 
@@ -295,6 +305,21 @@ Consequences:
   rows. The `v_couple_id` + `v_user_id` are resolved from the
   token, not from caller-supplied params; every INSERT uses
   those resolved values.
+
+**Vows privacy (per-partner).** Vows are the one section scoped *within*
+a couple so partners can't read each other's before the day:
+
+- `get_portal_data(token)` returns **only the viewer's own vow**
+  (`WHERE who = v_viewer`) — the other partner's content never leaves
+  the database, even though both share the same couple payload.
+- `save_portal_vow(p_token, p_id, p_content)` derives `who := v_viewer`
+  from the token and **ignores any client-supplied `who`** — the
+  primary physically cannot write (or overwrite) the spouse's vow.
+- `delete_portal_vow` only deletes `WHERE who = v_viewer` — a partner
+  cannot delete the other's vow.
+- Proven end-to-end in
+  `tests/integration/automations/vows-feature.test.ts` (each link sees
+  only its own vow; cross-partner delete is a no-op).
 
 **Public token-attempt limiter** (see prior section) sits in front
 of `/portal/[token]` and returns `notFound()` after 60 invalid
@@ -466,6 +491,12 @@ DELETE (sampled clean across the migrations).
 | `stripe_customers` | ✅ (RLS enabled, no policy — service-role only) | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
 | `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) | Branding |
+| `automations` | ✅ | `user_id` | ✅ `tests/integration/automations/run-now.test.ts` (cross-tenant: cannot manually run another MC's automation) | Automations |
+| `automation_events` | ✅ (SELECT-only; writes via SECURITY DEFINER RPC + service-role) | `user_id` | ✅ exercised by `run-now.test.ts` (manual-fire event opens only the owner's run) | Automations |
+| `automation_actions` | ✅ | `automation_id` (→ `automations.user_id`) | ✅ exercised by `run-now.test.ts` | Automations |
+| `automation_runs` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cross-tenant retry/cancel/pause/resume are no-ops) | Automations |
+| `automation_waits` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cancel consumes; resume reads — exercised via the control actions) | Automations |
+| `automation_audit_log` | ✅ (SELECT-only for owner; writes service-role) | `user_id` | ☐ (read RLS-scoped by the couple Automations feed) | Automations |
 
 **Per-page DoD requires** an integration test of the
 `couples.test.ts` shape (owner reads ok / other tenant cannot

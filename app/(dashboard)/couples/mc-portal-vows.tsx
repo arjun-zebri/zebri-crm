@@ -125,6 +125,23 @@ function HistoryPopover({
   )
 }
 
+/** Skeleton placeholder mirroring the two-card vows grid while data loads. */
+function VowsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-2 auto-rows-fr gap-6 flex-1 min-h-0 animate-pulse">
+      {[0, 1].map((i) => (
+        <div key={i} className="flex flex-col min-h-[280px]">
+          <div className="flex items-center justify-between mb-2 px-3">
+            <div className="h-4 w-28 rounded bg-gray-100" />
+            <div className="h-4 w-20 rounded bg-gray-100" />
+          </div>
+          <div className="flex-1 w-full rounded-md bg-gray-100" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 interface McPortalVowsProps {
   coupleId: string
   primaryName: string
@@ -175,7 +192,7 @@ export function McPortalVows({ coupleId, primaryName, secondaryName }: McPortalV
     setBusy(false)
   }
 
-  if (isLoading) return <p className="text-sm text-text-muted">Loading vows…</p>
+  if (isLoading) return <VowsSkeleton />
   if (vows.length === 0) {
     return <p className="text-sm text-text-muted">The couple hasn&apos;t written any vows yet.</p>
   }

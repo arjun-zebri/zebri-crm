@@ -1,8 +1,9 @@
 'use client'
 
+import { Plus, Trash2, Music, Pencil, ChevronDown } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
-import { Plus, Trash2, Music, Pencil } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
+
 import { Modal } from '@/components/ui/modal'
 import type { PortalSong, PortalSongCategory } from './page'
 
@@ -160,46 +161,85 @@ interface CategoryGroupProps {
 
 function CategoryGroup({ category, songs, onAdd, onEdit }: CategoryGroupProps) {
   const categorySongs = songs.filter((s) => s.category === category.key)
+  const [expanded, setExpanded] = useState(categorySongs.length > 0)
+  const isAvoidCategory = category.key === 'avoid'
 
   return (
     <div className="space-y-2.5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-500">{category.label}</p>
-          <p className="text-sm text-gray-400">{category.description}</p>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={`w-full flex items-center justify-between p-0 transition cursor-pointer ${isAvoidCategory ? 'hover:opacity-80' : ''}`}
+      >
+        <div className="flex-1 text-left">
+          <p className={`text-body font-medium ${isAvoidCategory ? 'text-danger' : 'text-text-muted'}`}>
+            {category.label}
+          </p>
+          {category.description && (
+            <p className={`text-caption ${isAvoidCategory ? 'text-danger/70' : 'text-text-subtle'}`}>
+              {category.description}
+            </p>
+          )}
         </div>
-        <button
-          onClick={onAdd}
-          className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1 transition cursor-pointer shrink-0"
-        >
-          <Plus size={14} strokeWidth={1.5} />
-          Add
-        </button>
-      </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-caption ${isAvoidCategory ? 'text-danger' : 'text-text-subtle'}`}>
+            {categorySongs.length}
+          </span>
+          <ChevronDown
+            size={16}
+            strokeWidth={1.5}
+            className={`text-text-muted transition-transform ${expanded ? '' : '-rotate-90'}`}
+          />
+        </div>
+      </button>
 
-      {categorySongs.length === 0 ? (
-        <div className="border border-dashed border-gray-200 rounded-xl py-3.5 flex items-center justify-center gap-1.5">
-          <Music size={14} strokeWidth={1.5} className="text-gray-300" />
-          <span className="text-sm text-gray-300">No songs yet</span>
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {categorySongs.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center gap-3 border border-gray-200 rounded-xl px-5 py-3.5 bg-white hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer"
-              onClick={() => onEdit(s)}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-medium text-gray-900">{s.title}</p>
-                <p className="text-sm text-gray-500">
-                  {[s.artist, s.notes].filter(Boolean).join(' · ')}
-                </p>
-              </div>
-              <Pencil size={13} strokeWidth={1.5} className="text-gray-300 shrink-0" />
+      {expanded && (
+        <>
+          {categorySongs.length === 0 ? (
+            <div className={`border border-dashed rounded-card py-3.5 flex items-center justify-center gap-1.5 ${isAvoidCategory ? 'border-danger/30 bg-danger/5' : 'border-border bg-surface-muted'}`}>
+              <Music size={14} strokeWidth={1.5} className={isAvoidCategory ? 'text-danger/50' : 'text-text-subtle'} />
+              <span className={`text-caption ${isAvoidCategory ? 'text-danger/70' : 'text-text-subtle'}`}>
+                No songs yet
+              </span>
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {categorySongs.map((s) => (
+                <div
+                  key={s.id}
+                  className={`flex items-center gap-3 border rounded-card px-5 py-3.5 transition cursor-pointer ${
+                    isAvoidCategory
+                      ? 'bg-danger/5 border-danger/20 hover:border-danger/40'
+                      : 'bg-surface border-border hover:border-border-strong hover:bg-surface-muted'
+                  }`}
+                  onClick={() => onEdit(s)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-body font-medium ${isAvoidCategory ? 'text-danger' : 'text-text'}`}>
+                      {s.title}
+                    </p>
+                    <p className={`text-caption ${isAvoidCategory ? 'text-danger/70' : 'text-text-muted'}`}>
+                      {[s.artist, s.notes].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <Pencil size={13} strokeWidth={1.5} className={isAvoidCategory ? 'text-danger/50' : 'text-text-subtle'} />
+                </div>
+              ))}
+            </div>
+          )}
+          {categorySongs.length >= 0 && (
+            <button
+              onClick={onAdd}
+              className={`w-full text-caption font-medium rounded-control px-3 py-2 transition cursor-pointer ${
+                isAvoidCategory
+                  ? 'text-danger border border-dashed border-danger/30 hover:bg-danger/5'
+                  : 'text-text-muted border border-dashed border-border hover:bg-surface-muted'
+              }`}
+            >
+              <Plus size={13} strokeWidth={1.5} className="inline mr-1" />
+              Add song
+            </button>
+          )}
+        </>
       )}
     </div>
   )
@@ -287,9 +327,9 @@ export function SongsSection({ token, initialSongs, initialCategories }: SongsSe
   }, [editingSong, token])
 
   return (
-    <div className="space-y-6 divide-y divide-gray-100">
+    <div className="space-y-4 divide-y divide-border">
       {categories.map((cat, i) => (
-        <div key={cat.key} className={i > 0 ? 'pt-6' : ''}>
+        <div key={cat.key} className={i > 0 ? 'pt-4' : ''}>
           <CategoryGroup
             category={cat}
             songs={songs}

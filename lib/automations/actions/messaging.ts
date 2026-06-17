@@ -84,15 +84,41 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       return { kind: 'error', message: 'send_email requires a couple context' }
     }
 
+    const subject = renderTemplate(config.subject, ctx)
+    const bodyText = renderTemplate(config.body, ctx)
+    const html = config.wrap ? wrapAutomationHtml(bodyText, ctx) : bodyText
+
+    // Test run (manual "Test automation"): route the rendered email to
+    // the MC instead of the couple, so they preview exactly what would
+    // go out without ever contacting the couple. The subject is tagged
+    // and we never resolve the couple's recipients in this path.
+    const payload = ctx.triggerEvent.payload as Record<string, unknown> | null
+    if (payload?.['test_mode']) {
+      if (!ctx.mc.email) {
+        return { kind: 'ok', output: { skipped: 'no MC email for test send' } }
+      }
+      try {
+        const { data, error } = await resend().emails.send({
+          from: FROM,
+          to: ctx.mc.email,
+          subject: `[Test] ${subject}`,
+          html,
+          replyTo: ctx.mc.email,
+        })
+        if (error || !data?.id) {
+          return { kind: 'error', message: `send_email (test): ${error?.message ?? 'no message id'}` }
+        }
+        return { kind: 'ok', output: { test: true, sent_to_mc: ctx.mc.email, message_id: data.id } }
+      } catch (err) {
+        return { kind: 'error', message: err instanceof Error ? err.message : String(err) }
+      }
+    }
+
     const supabase = createAdminClient()
     const recipients = await resolveRecipients(supabase, ctx.couple, config.recipients, ctx.mc)
     if (recipients.length === 0) {
       return { kind: 'ok', output: { skipped: 'no recipients' } }
     }
-
-    const subject = renderTemplate(config.subject, ctx)
-    const bodyText = renderTemplate(config.body, ctx)
-    const html = config.wrap ? wrapAutomationHtml(bodyText, ctx) : bodyText
 
     // CC list resolves once and applies to every outgoing message.
     // Vendors already addressed directly are dropped so nobody gets

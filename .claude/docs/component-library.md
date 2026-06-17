@@ -16,8 +16,9 @@ they share the same token vocabulary so brand changes propagate
 automatically.
 
 ### `<Button />` — `@/components/ui/button`
-Variants: `primary` (brand-fg / inverse text), `secondary` (subtle), `ghost`
-(transparent), `danger`. Sizes: `sm` / `md` / `lg`. `loading` shows a spinner,
+Variants: `primary` (brand-fg / inverse text), `secondary` (subtle grey fill +
+border), `outline` (white fill + border), `ghost` (transparent), `danger`,
+`success`. Sizes: `sm` / `md` / `lg`. `loading` shows a spinner,
 sets `aria-busy`, and disables the click. Defaults `type="button"` to avoid
 accidental form submits.
 

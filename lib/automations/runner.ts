@@ -104,6 +104,47 @@ export async function advanceLiveRuns(supabase: SupabaseClient<Database>): Promi
   return result
 }
 
+/**
+ * Drive a single run to its next resting point, synchronously.
+ *
+ * Used by the "Run an automation now" action on the couple
+ * Automations tab: after a manual run is opened it would otherwise
+ * sit `running` until the next cron tick (up to a day on the daily
+ * schedule), so we advance just this run inline until it completes,
+ * errors, or sleeps on a `wait`. Reloads the run between steps
+ * because {@link advanceOne} updates `current_action_id` in the DB,
+ * not the in-memory row. `maxSteps` is a cycle backstop.
+ *
+ * Caller must pass a **service-role** client — the runner writes
+ * `automation_audit_log`, which has no user-write policy.
+ *
+ * @param supabase - service-role client
+ * @param runId - the run to advance
+ * @param maxSteps - hard cap on action transitions (default 50)
+ */
+export async function advanceRunNow(
+  supabase: SupabaseClient<Database>,
+  runId: string,
+  maxSteps = 50,
+): Promise<void> {
+  for (let step = 0; step < maxSteps; step++) {
+    const { data } = await supabase
+      .from('automation_runs' as never)
+      .select('*')
+      .eq('id', runId)
+      .single()
+    const run = (data as AutomationRunRow | null) ?? null
+    if (!run || run.status !== 'running') return
+    try {
+      const outcome = await advanceOne(supabase, run)
+      if (outcome !== 'advanced') return
+    } catch (err) {
+      await failRun(supabase, run, err instanceof Error ? err.message : String(err))
+      return
+    }
+  }
+}
+
 async function wakeDueWaits(supabase: SupabaseClient<Database>): Promise<void> {
   const now = new Date().toISOString()
   const { data: due } = await supabase

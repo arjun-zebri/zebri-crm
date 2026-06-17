@@ -526,14 +526,15 @@ export async function deleteCoupleTaskAction(
 
 /* ─── Portal-token rotation (Phase 4B) ────────────────────────── */
 //
-// Rotating the token invalidates every outstanding `/portal/<token>`
-// + `/portal/<token>/vendor` URL. The action returns the new token
-// so the UI can refresh the visible "Couple portal link" affordance
-// without a separate cache invalidation round-trip.
+// Rotating invalidates every outstanding link for the couple — the
+// primary partner's `/portal/<portal_token>`, the secondary partner's
+// `/portal/<secondary_portal_token>`, and the `/portal/<token>/vendor`
+// URL. The action returns both new tokens so the UI can refresh the
+// visible link affordances without a separate cache-invalidation round-trip.
 
 export async function rotateCouplePortalTokenAction(
   coupleId: string,
-): Promise<ActionResult<{ portal_token: string }>> {
+): Promise<ActionResult<{ portal_token: string; secondary_portal_token: string }>> {
   const parsed = idSchema.safeParse(coupleId);
   if (!parsed.success) {
     return { ok: false, error: 'Invalid couple ID.' };
@@ -545,14 +546,16 @@ export async function rotateCouplePortalTokenAction(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
-  // Postgres' `gen_random_uuid()` generates the new token server-side
-  // so we never trust a client-supplied value. `crypto.randomUUID()`
-  // would be equivalent here but `select * from couples` after
-  // update is one less crypto dependency.
+  // Both partners' links rotate together — the primary (`portal_token`)
+  // and the secondary (`secondary_portal_token`). New values are minted
+  // client-side via `crypto.randomUUID()` so the update can echo them
+  // straight back to the UI without a re-fetch. RLS still scopes the
+  // update to the owner's couple.
   const newToken = crypto.randomUUID();
+  const newSecondaryToken = crypto.randomUUID();
   const { error } = await supabase
     .from('couples')
-    .update({ portal_token: newToken })
+    .update({ portal_token: newToken, secondary_portal_token: newSecondaryToken })
     .eq('id', parsed.data);
 
   if (error) {
@@ -564,7 +567,10 @@ export async function rotateCouplePortalTokenAction(
     return { ok: false, error: 'Could not rotate portal links.' };
   }
 
-  return { ok: true, data: { portal_token: newToken } };
+  return {
+    ok: true,
+    data: { portal_token: newToken, secondary_portal_token: newSecondaryToken },
+  };
 }
 
 /* ─── Couple ⇄ Contact link actions (Phase 4B) ────────────────── */

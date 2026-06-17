@@ -87,7 +87,10 @@ const ERROR_BUDGET = 89;
 // (removed inline date helpers + tidied import grouping) → 477 → 474.
 // Automations remaining-backlog PR (catalogue cleanup carry-over +
 // tidied portal-shell import grouping) → 474 → 468.
-const WARNING_BUDGET = 468;
+// Portal sections polish (design system tokenization + UX improvements)
+// across 8 portal sections + nav: fixed import-order + unused imports
+// during tokenization → 468 → 461.
+const WARNING_BUDGET = 461;
 
 function runEslintJson() {
   try {

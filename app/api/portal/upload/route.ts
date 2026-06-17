@@ -30,16 +30,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing token' }, { status: 400 })
   }
 
-  // Validate token
+  // Validate token. Either partner's link is accepted: the primary's
+  // `portal_token` or the secondary's `secondary_portal_token`. We then
+  // pin all storage/RPC writes to the canonical `portal_token` so every
+  // file for a couple lives under one folder regardless of who uploaded.
   const { data: couple, error: coupleErr } = await adminClient()
     .from('couples')
-    .select('id, user_id, portal_token_enabled')
-    .eq('portal_token', token)
+    .select('id, user_id, portal_token, portal_token_enabled')
+    .or(`portal_token.eq.${token},secondary_portal_token.eq.${token}`)
     .single()
 
   if (coupleErr || !couple || !couple.portal_token_enabled) {
     return NextResponse.json({ error: 'Invalid or inactive portal link' }, { status: 403 })
   }
+
+  const canonicalToken = couple.portal_token
 
   const formData = await request.formData()
   const file = formData.get('file') as File | null
@@ -70,7 +75,7 @@ export async function POST(request: NextRequest) {
 
   const ext = MIME_TO_EXT[file.type] ?? 'bin'
   const fileId = crypto.randomUUID()
-  const path = `${token}/${fileId}.${ext}`
+  const path = `${canonicalToken}/${fileId}.${ext}`
 
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
@@ -92,7 +97,7 @@ export async function POST(request: NextRequest) {
   // For file uploads, also record in portal_files via RPC
   if (type === 'file') {
     await adminClient().rpc('save_portal_file', {
-      p_token: token,
+      p_token: canonicalToken,
       p_id: fileId,
       p_name: file.name,
       p_file_url: publicUrl,

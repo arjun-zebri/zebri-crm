@@ -48,6 +48,8 @@ export interface Couple {
   kanban_position: number
   created_at: string
   portal_token?: string
+  /** Secondary partner's own portal token — a distinct private link. */
+  secondary_portal_token?: string
   portal_token_enabled?: boolean
 }
 

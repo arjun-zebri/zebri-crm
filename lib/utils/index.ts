@@ -31,6 +31,33 @@ export function formatDate(dateStr: string | null): string {
   })
 }
 
+/**
+ * Compact relative time for a full ISO **timestamp** — "just now",
+ * "2m ago", "3h ago", "5d ago", then an absolute date past a week.
+ *
+ * Unlike {@link formatRelativeDate} (day-granular, for `YYYY-MM-DD`
+ * calendar dates), this works at minute/hour granularity for run and
+ * activity timestamps. `nowMs` is passed in so callers control the
+ * clock and the function stays pure/testable.
+ *
+ * @param iso - an ISO timestamp string, or null/undefined (→ '').
+ * @param nowMs - the current instant in ms (e.g. `Date.now()`).
+ */
+export function formatRelativeTime(iso: string | null | undefined, nowMs: number): string {
+  if (!iso) return ''
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ''
+  const diffSec = Math.round((nowMs - then) / 1000)
+  if (diffSec < 45) return 'just now'
+  const diffMin = Math.round(diffSec / 60)
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.round(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDay = Math.round(diffHr / 24)
+  if (diffDay <= 7) return `${diffDay}d ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export function formatRelativeDate(due_date: string): string {
   const today = new Date()
   today.setHours(0, 0, 0, 0)

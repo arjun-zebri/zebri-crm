@@ -1,89 +1,166 @@
 'use client'
 
+import { Check, Loader2, Plus } from 'lucide-react'
+import { useCallback, useState } from 'react'
+
+import { createClient } from '@/lib/supabase/client'
+
+import { ContactDetailsCard, type ContactTriple } from './contact-details-card'
+import { EventsList } from './overview-events'
 import { PortalEvent } from './page'
+import { PortalEventModal } from './portal-event-modal'
 
 interface OverviewSectionProps {
-  coupleName: string
-  coupleEmail: string | null
+  token: string
+  /** Persisted primary partner contact triple. */
+  primary: ContactTriple
+  /** Persisted secondary partner contact triple. */
+  secondary: ContactTriple
   events: PortalEvent[]
 }
 
-function formatEventDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-AU', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
-function daysUntil(dateStr: string): number | null {
-  const eventDate = new Date(dateStr + 'T00:00:00')
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const diffTime = eventDate.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays
-}
+/**
+ * Portal Overview tab: editable contact details for both partners and a
+ * timeline of the couple's events.
+ *
+ * Either partner can edit both triples (no privacy boundary on contact
+ * info — vow privacy is handled separately). Each field commits on blur;
+ * we persist the whole couple-details set in one RPC call and surface a
+ * lightweight Saving / Saved / error affordance. Borderless throughout to
+ * match the couple-modal Overview.
+ */
+export function OverviewSection({ token, primary, secondary, events }: OverviewSectionProps) {
+  const supabase = createClient()
+  const [primaryTriple, setPrimaryTriple] = useState<ContactTriple>(primary)
+  const [secondaryTriple, setSecondaryTriple] = useState<ContactTriple>(secondary)
+  const [status, setStatus] = useState<SaveStatus>('idle')
 
-export function OverviewSection({ coupleName, coupleEmail, events }: OverviewSectionProps) {
+  // Editable events: local copy so add/edit reflect immediately.
+  const [eventList, setEventList] = useState<PortalEvent[]>(events)
+  const [eventModalOpen, setEventModalOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<PortalEvent | null>(null)
+  const [savingEvent, setSavingEvent] = useState(false)
+
+  const save = useCallback(
+    async (next: { primary: ContactTriple; secondary: ContactTriple }) => {
+      setStatus('saving')
+      const { error } = await supabase.rpc('save_portal_couple_details', {
+        p_token: token,
+        p_primary_name: next.primary.name,
+        p_primary_email: next.primary.email,
+        p_primary_phone: next.primary.phone,
+        p_secondary_name: next.secondary.name,
+        p_secondary_email: next.secondary.email,
+        p_secondary_phone: next.secondary.phone,
+      })
+      setStatus(error ? 'error' : 'saved')
+    },
+    [supabase, token],
+  )
+
+  const savePrimary = (t: ContactTriple) => {
+    setPrimaryTriple(t)
+    void save({ primary: t, secondary: secondaryTriple })
+  }
+  const saveSecondary = (t: ContactTriple) => {
+    setSecondaryTriple(t)
+    void save({ primary: primaryTriple, secondary: t })
+  }
+
+  const openAddEvent = () => {
+    setEditingEvent(null)
+    setEventModalOpen(true)
+  }
+  const openEditEvent = (event: PortalEvent) => {
+    setEditingEvent(event)
+    setEventModalOpen(true)
+  }
+
+  const handleSaveEvent = async ({ date, venue }: { date: string; venue: string }) => {
+    setSavingEvent(true)
+    const id = editingEvent?.id ?? crypto.randomUUID()
+    const { data, error } = await supabase.rpc('save_portal_event', {
+      p_token: token,
+      p_id: id,
+      p_date: date,
+      p_venue: venue,
+    })
+    if (!error) {
+      const saved: PortalEvent = {
+        id: (data as string | null) ?? id,
+        date,
+        venue: venue.trim() || null,
+        status: editingEvent?.status ?? 'upcoming',
+      }
+      setEventList((prev) =>
+        [...prev.filter((e) => e.id !== saved.id), saved].sort((a, b) => a.date.localeCompare(b.date)),
+      )
+    }
+    setSavingEvent(false)
+    setEventModalOpen(false)
+    setEditingEvent(null)
+  }
+
   return (
-    <div className="space-y-8">
-      {/* Couple info card */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <h3 className="text-sm font-medium text-gray-500 mb-4">Your details</h3>
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Name</p>
-            <p className="text-lg font-semibold text-gray-900">{coupleName}</p>
-          </div>
-          {coupleEmail && (
-            <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Email</p>
-              <p className="text-sm text-gray-700">{coupleEmail}</p>
-            </div>
-          )}
+    <div className="max-w-xl space-y-10">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-caption font-semibold uppercase tracking-wider text-text">Your details</h3>
+          <SaveIndicator status={status} />
+        </div>
+        <div className="space-y-4">
+          <ContactDetailsCard label="Primary contact" value={primaryTriple} onSave={savePrimary} />
+          <ContactDetailsCard label="Secondary contact" value={secondaryTriple} onSave={saveSecondary} />
         </div>
       </div>
 
-      {/* Events */}
-      {events.length > 0 ? (
-        <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-4">Your events</h3>
-          <div className="space-y-3">
-            {events.map((event) => {
-              const days = daysUntil(event.date)
-              const isUpcoming = days !== null && days > 0
-              const daysText = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : days !== null && isUpcoming ? `${days} days away` : null
+      <div>
+        <button
+          type="button"
+          onClick={openAddEvent}
+          className="group flex items-center gap-1.5 mb-4 cursor-pointer"
+        >
+          <h3 className="text-caption font-semibold uppercase tracking-wider text-text group-hover:text-text-muted transition">Events</h3>
+          <Plus size={13} strokeWidth={2} className="text-text group-hover:text-text-muted transition" />
+        </button>
+        <EventsList events={eventList} onAdd={openAddEvent} onEdit={openEditEvent} />
+      </div>
 
-              return (
-                <div key={event.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900">{formatEventDate(event.date)}</p>
-                      {event.venue && <p className="text-sm text-gray-500 mt-1">{event.venue}</p>}
-                    </div>
-                    {daysText && (
-                      <span className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${
-                        isUpcoming
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {daysText}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ) : (
-        <div className="border border-gray-200 rounded-xl p-6 text-center">
-          <p className="text-sm text-gray-600">No events yet. Check back when your MC adds an event.</p>
-        </div>
+      {eventModalOpen && (
+        <PortalEventModal
+          key={editingEvent?.id ?? 'new'}
+          onClose={() => { setEventModalOpen(false); setEditingEvent(null) }}
+          onSave={handleSaveEvent}
+          event={editingEvent}
+          saving={savingEvent}
+        />
       )}
     </div>
   )
+}
+
+/** Inline Saving / Saved / error affordance beside the details heading. */
+function SaveIndicator({ status }: { status: SaveStatus }) {
+  if (status === 'saving') {
+    return (
+      <span className="flex items-center gap-1.5 text-caption text-text-subtle">
+        <Loader2 size={13} strokeWidth={1.5} className="animate-spin" />
+        Saving…
+      </span>
+    )
+  }
+  if (status === 'saved') {
+    return (
+      <span className="flex items-center gap-1.5 text-caption text-success">
+        <Check size={13} strokeWidth={1.5} />
+        Saved
+      </span>
+    )
+  }
+  if (status === 'error') {
+    return <span className="text-caption text-danger">Couldn’t save — try again</span>
+  }
+  return null
 }

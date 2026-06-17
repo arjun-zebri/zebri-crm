@@ -405,12 +405,13 @@ RLS: service role only (no client access).
 
 ------------------------------------------------------------------------
 
-# Couple Portal (added 2026-04-09)
+# Couple Portal (added 2026-04-09; per-partner tokens 2026-06-16)
 
 ## couples table additions
 
-portal_token (uuid, not null, default gen_random_uuid())  -  unique token for the couple's portal link
-portal_token_enabled (boolean, not null, default true)  -  always active by default; MCs can rotate the token to invalidate old links
+portal_token (uuid, not null, default gen_random_uuid())  -  unique token for the **primary partner**'s portal link
+secondary_portal_token (uuid, not null, default gen_random_uuid(), unique)  -  unique token for the **spouse/secondary partner**'s portal link (added 2026-06-16; allows per-partner access with privacy-filtered vow content)
+portal_token_enabled (boolean, not null, default true)  -  gates both primary and secondary partner portal access; MCs can rotate portal_token to invalidate old primary links
 
 ## timeline_items table additions
 
@@ -479,18 +480,39 @@ RLS: Standard user_id = auth.uid(). MC dashboard uploads run client-side with th
 
 ## Portal RPC Functions (SECURITY DEFINER, anon-accessible)
 
-get_portal_data(token uuid)  -  returns couple name + event details + all portal_people + portal_songs + portal_files + timeline_items for first upcoming event
-get_vendor_timeline(token uuid)  -  returns event date/venue + timeline_items only (no PII)
-save_portal_person(p_token, p_id, p_category, p_full_name, p_phonetic, p_role, p_audio_url, p_position)  -  upsert
+**Helper (internal):**
+_resolve_portal_couple(p_token uuid)  -  maps either portal_token (primary) or secondary_portal_token (spouse) to (couple_id, owner_id, viewer) where viewer is 'primary' or 'spouse'. All other RPCs use this to derive authorization and viewer context.
+
+**Data retrieval:**
+get_portal_data(token uuid)  -  returns couple name + event + people + songs + files + timeline_items + payments + contracts + **vows (privacy-filtered: only the calling partner's vow)**. Adds 'viewer', 'primary_name', 'primary_email', 'primary_phone', 'secondary_name', 'secondary_email', 'secondary_phone' to result (the email/phone fields hydrate the editable Overview contact cards, added 2026-06-17). Each partner sees only their own vow content.
+get_vendor_timeline(token uuid)  -  returns event date/venue + timeline_items only (no PII). Uses portal_token only (vendor flow unchanged).
+
+**Timeline & people:**
+save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min)  -  insert with pending_review=true
+delete_portal_timeline_item(p_token, p_id)
+save_portal_person(p_token, p_id, p_category, p_full_name, p_phonetic, p_role, p_audio_url, p_position, p_notes?, p_email?, p_phone?)  -  upsert
 delete_portal_person(p_token, p_id)
+
+**Songs & contacts:**
 save_portal_song(p_token, p_id, p_category, p_title, p_artist, p_notes, p_position)  -  upsert
 delete_portal_song(p_token, p_id)
-save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min)  -  always inserts with pending_review=true into couple's first upcoming event
-delete_portal_timeline_item(p_token, p_id)
-save_portal_file(p_token, p_id, p_name, p_file_url, p_file_size)  -  insert
-delete_portal_file(p_token, p_id)
+save_portal_contact(p_token, p_name, p_email, p_phone, p_category, p_notes)  -  creates contact + links to couple
 
-All RPCs validate portal_token_enabled=true before proceeding.
+**Couple contact details (Overview tab):**
+save_portal_couple_details(p_token, p_primary_name, p_primary_email, p_primary_phone, p_secondary_name, p_secondary_email, p_secondary_phone)  -  updates the couple's primary/secondary contact triples. Either partner token may edit **both** triples (no privacy gate on contact info). Fields are trimmed + length-capped; empty strings store as NULL. (added 2026-06-17)
+
+**Events (Overview tab):**
+save_portal_event(p_token, p_id, p_date, p_venue)  -  add or edit a couple's event (date + venue) from the portal. Upserts on p_id; the `ON CONFLICT ... WHERE couple_id = <resolved>` clause is the cross-couple guard (a token can only touch its own couple's events). New rows default to status='upcoming'; status is preserved on edit. No delete path. (added 2026-06-17)
+
+**Files:**
+delete_portal_file(p_token, p_id)
+save_portal_file(p_token, p_id, p_name, p_file_url, p_file_size)  -  (called post-upload by /api/portal/upload)
+
+**Vows (privacy-gated per partner):**
+save_portal_vow(p_token, p_id, p_content)  -  insert/upsert vow; **who is automatically derived from viewer (cannot be overridden by client)**. Logs a 'couple' revision.
+delete_portal_vow(p_token, p_id)  -  **only allows deletion of the caller's own vow**
+
+All RPCs validate portal_token_enabled=true before proceeding (via _resolve_portal_couple).
 
 ------------------------------------------------------------------------
 
