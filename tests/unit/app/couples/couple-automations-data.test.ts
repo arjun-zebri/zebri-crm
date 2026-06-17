@@ -30,7 +30,7 @@ function run(over: Partial<RunWithAutomation>): RunWithAutomation {
     completed_at: '2026-06-11T04:03:01Z',
     last_payload: null,
     error_message: null,
-    automation: { id: 'auto-1', name: 'Untitled automation', trigger_type: 'invoice_overdue' },
+    automation: { id: 'auto-1', name: 'Untitled automation', trigger_type: 'invoice_overdue', status: 'active' },
     ...over,
   } as RunWithAutomation
 }
@@ -81,15 +81,15 @@ describe('groupRuns', () => {
   })
 
   it('keeps a real automation name', () => {
-    const runs = [run({ automation: { id: 'auto-1', name: 'Win-back flow', trigger_type: 'invoice_overdue' } })]
+    const runs = [run({ automation: { id: 'auto-1', name: 'Win-back flow', trigger_type: 'invoice_overdue', status: 'active' } })]
     const groups = groupRuns(runs, buildActivity(runs, []))
     expect(groups[0]?.title).toBe('Win-back flow')
   })
 
   it('floats live automations above completed ones', () => {
     const runs = [
-      run({ id: 'r1', automation_id: 'done', status: 'completed', automation: { id: 'done', name: 'Done', trigger_type: 'quote_created' } }),
-      run({ id: 'r2', automation_id: 'live', status: 'waiting', automation: { id: 'live', name: 'Live', trigger_type: 'invoice_overdue' } }),
+      run({ id: 'r1', automation_id: 'done', status: 'completed', automation: { id: 'done', name: 'Done', trigger_type: 'quote_created', status: 'active' } }),
+      run({ id: 'r2', automation_id: 'live', status: 'waiting', automation: { id: 'live', name: 'Live', trigger_type: 'invoice_overdue', status: 'active' } }),
     ]
     const groups = groupRuns(runs, buildActivity(runs, []))
     expect(groups[0]?.title).toBe('Live')
@@ -105,16 +105,16 @@ describe('groupRuns', () => {
 describe('summarizeRuns', () => {
   const NOW = new Date('2026-06-20T00:00:00Z').getTime()
 
-  it('counts distinct automations with a live run', () => {
+  it('counts distinct enabled (status active) automations, ignoring run state', () => {
     const runs = [
-      run({ id: 'r1', automation_id: 'a', status: 'running', automation: { id: 'a', name: 'A', trigger_type: 'x' } }),
-      run({ id: 'r2', automation_id: 'a', status: 'waiting', automation: { id: 'a', name: 'A', trigger_type: 'x' } }),
-      run({ id: 'r3', automation_id: 'b', status: 'waiting', automation: { id: 'b', name: 'B', trigger_type: 'x' } }),
-      run({ id: 'r4', automation_id: 'c', status: 'completed', automation: { id: 'c', name: 'C', trigger_type: 'x' } }),
+      run({ id: 'r1', automation_id: 'a', status: 'completed', automation: { id: 'a', name: 'A', trigger_type: 'x', status: 'active' } }),
+      run({ id: 'r2', automation_id: 'a', status: 'waiting', automation: { id: 'a', name: 'A', trigger_type: 'x', status: 'active' } }),
+      run({ id: 'r3', automation_id: 'b', status: 'waiting', automation: { id: 'b', name: 'B', trigger_type: 'x', status: 'paused' } }),
+      run({ id: 'r4', automation_id: 'c', status: 'completed', automation: { id: 'c', name: 'C', trigger_type: 'x', status: 'active' } }),
     ]
     const s = summarizeRuns(runs, NOW)
-    expect(s.active).toBe(2) // a + b, not c
-    expect(s.waiting).toBe(2) // r2 + r3
+    expect(s.active).toBe(2) // a + c (enabled), not b (paused)
+    expect(s.waiting).toBe(2) // r2 + r3 — waiting still tracks live runs
   })
 
   it('counts errored runs only within the last 30 days', () => {

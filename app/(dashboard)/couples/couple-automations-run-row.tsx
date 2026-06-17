@@ -93,9 +93,7 @@ export function RunRow({ run, pending, onRetry, onCancel }: Props) {
           Next step {formatTime(run.wakeAt)}
         </p>
       )}
-      {run.lines.length === 0 ? (
-        <p className="text-xs text-text-subtle pl-0.5">No recorded steps for this run.</p>
-      ) : (
+      {run.lines.length > 0 && (
         <ul className="space-y-1.5">
           {run.lines.map((line) => {
             const Icon = ICONS[line.icon] ?? Check

@@ -1,10 +1,11 @@
 /**
- * One automation's collapsible row in the couple Automations tab.
+ * One automation's card in the couple Automations tab.
  *
- * Collapsed: a single line leading with the most recent **outcome**
- * ("Sent email", "Quote follow-up failed — no email"), or the trigger
- * label when the automation is unnamed, plus a status pill. Expanded:
- * the {@link CoupleAutomationsFeed} for this couple. Split out of the
+ * Collapsed: a calm card leading with a trigger icon, the automation
+ * title + a plain-English trigger description, and a status pill —
+ * with a metadata strip underneath (last run · run count · most recent
+ * outcome) drawn from this couple's runs. Expanded: the
+ * {@link CoupleAutomationsFeed} for this couple. Split out of the
  * orchestrator to keep it a thin fetch-and-compose shell.
  *
  * @module app/(dashboard)/couples/couple-automations-group
@@ -14,6 +15,7 @@
 import { ChevronDown, Zap } from 'lucide-react'
 
 import { StatePill } from '@/components/ui/state-pill'
+import { formatRelativeTime } from '@/lib/utils'
 import { RUN_STATUS_LABELS } from '@/types/automations'
 
 import type { AutomationGroup } from './couple-automations-data'
@@ -22,6 +24,8 @@ import { STATUS_TONE } from './couple-automations-shared'
 
 interface Props {
   group: AutomationGroup
+  /** Fetch time (ms) — the clock for the "last run" relative label. */
+  nowMs: number
   open: boolean
   onToggle: () => void
   onRetry: (runId: string) => Promise<void>
@@ -30,31 +34,56 @@ interface Props {
   onResume: (automationId: string) => Promise<void>
 }
 
-/** Collapsed summary + expandable activity feed for one automation. */
-export function AutomationGroupRow({ group, open, onToggle, onRetry, onCancel, onPause, onResume }: Props) {
-  const runCount = group.runs.length
+/** One labelled cell in the metadata strip. */
+function Meta({ label, value, align = 'left' }: { label: string; value: string; align?: 'left' | 'right' }) {
   return (
-    <div>
+    <div className={`min-w-0 ${align === 'right' ? 'text-right' : ''}`}>
+      <p className="text-xs text-text-subtle">{label}</p>
+      <p className="text-sm text-text truncate mt-0.5">{value}</p>
+    </div>
+  )
+}
+
+/** Collapsed summary card + expandable activity feed for one automation. */
+export function AutomationGroupRow({
+  group,
+  nowMs,
+  open,
+  onToggle,
+  onRetry,
+  onCancel,
+  onPause,
+  onResume,
+}: Props) {
+  const runCount = group.runs.length
+  const subtitle = group.triggerDescription || group.triggerLabel
+  return (
+    <div className="rounded-xl border border-border bg-card">
       <button
         onClick={onToggle}
         aria-expanded={open}
-        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-surface-muted transition text-left border border-transparent hover:border-border cursor-pointer"
+        className="w-full flex items-start gap-3 px-4 py-3.5 text-left cursor-pointer"
       >
-        <Zap size={13} strokeWidth={1.5} className="text-text-subtle shrink-0" />
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-muted">
+          <Zap size={15} strokeWidth={1.5} className="text-text-subtle" />
+        </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-text truncate">{group.title}</p>
-          <p className="text-xs text-text-subtle truncate mt-0.5">
-            {group.lastOutcome ??
-              `${group.triggerLabel ? `${group.triggerLabel} · ` : ''}${runCount === 1 ? '1 run' : `${runCount} runs`}`}
-          </p>
+          <p className="text-sm font-medium text-text truncate">{group.title}</p>
+          {subtitle && <p className="text-xs text-text-muted truncate mt-0.5">{subtitle}</p>}
         </div>
         <StatePill tone={STATUS_TONE[group.headline]} label={RUN_STATUS_LABELS[group.headline]} className="shrink-0" />
         <ChevronDown
-          size={14}
+          size={16}
           strokeWidth={1.5}
-          className={`text-text-subtle shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+          className={`mt-0.5 text-text-subtle shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
         />
       </button>
+      <div className="px-4 pb-3.5">
+        <div className="grid grid-cols-2 gap-4 border-t border-border pt-3">
+          <Meta label="Last run" value={formatRelativeTime(group.lastRunAt, nowMs) || '—'} />
+          <Meta label="Runs" value={runCount === 1 ? '1 run' : `${runCount} runs`} align="right" />
+        </div>
+      </div>
       {/* Grid-rows 0fr→1fr animates the reveal without JS height
           measurement; the inner min-h-0 + overflow-hidden is what
           lets the row actually collapse. */}

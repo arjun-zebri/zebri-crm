@@ -69,7 +69,8 @@ export function CoupleAutomationsFeed({ runs, onRetry, onCancel, onPause, onResu
   const hasPaused = runs.some((r) => r.status === 'paused')
 
   return (
-    <div className="ml-8 mt-2 mb-4 pl-4 border-l border-border">
+    <div className="px-4 pb-4">
+      <div className="border-t border-border pt-3">
       {(hasLive || hasPaused) && (
         <div className="flex justify-end gap-2 mb-3">
           {hasLive && (
@@ -96,7 +97,7 @@ export function CoupleAutomationsFeed({ runs, onRetry, onCancel, onPause, onResu
           )}
         </div>
       )}
-      <div className="space-y-5">
+      <div className="space-y-4">
         {runs.map((run) => (
           <RunRow
             key={run.runId}
@@ -106,6 +107,7 @@ export function CoupleAutomationsFeed({ runs, onRetry, onCancel, onPause, onResu
             onCancel={() => void act(run.runId, () => onCancel(run.runId))}
           />
         ))}
+      </div>
       </div>
     </div>
   )

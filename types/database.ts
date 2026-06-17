@@ -61,6 +61,347 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_actions: {
+        Row: {
+          automation_id: string
+          branch_path: string | null
+          config: Json
+          created_at: string
+          disabled: boolean
+          id: string
+          label: string | null
+          parent_action_id: string | null
+          position: number
+          position_x: number | null
+          position_y: number | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          automation_id: string
+          branch_path?: string | null
+          config?: Json
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          label?: string | null
+          parent_action_id?: string | null
+          position: number
+          position_x?: number | null
+          position_y?: number | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          automation_id?: string
+          branch_path?: string | null
+          config?: Json
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          label?: string | null
+          parent_action_id?: string | null
+          position?: number
+          position_x?: number | null
+          position_y?: number | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_actions_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_actions_parent_action_id_fkey"
+            columns: ["parent_action_id"]
+            isOneToOne: false
+            referencedRelation: "automation_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_audit_log: {
+        Row: {
+          action_id: string | null
+          automation_id: string
+          created_at: string
+          details: Json
+          event: string
+          id: string
+          run_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action_id?: string | null
+          automation_id: string
+          created_at?: string
+          details?: Json
+          event: string
+          id?: string
+          run_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action_id?: string | null
+          automation_id?: string
+          created_at?: string
+          details?: Json
+          event?: string
+          id?: string
+          run_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_audit_log_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "automation_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_audit_log_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_audit_log_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "automation_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_events: {
+        Row: {
+          couple_id: string | null
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          source_id: string | null
+          source_table: string
+          user_id: string
+        }
+        Insert: {
+          couple_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          source_id?: string | null
+          source_table: string
+          user_id: string
+        }
+        Update: {
+          couple_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          source_id?: string | null
+          source_table?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_events_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_runs: {
+        Row: {
+          automation_id: string
+          completed_at: string | null
+          couple_id: string | null
+          current_action_id: string | null
+          error_message: string | null
+          event_id: string
+          id: string
+          last_payload: Json
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          automation_id: string
+          completed_at?: string | null
+          couple_id?: string | null
+          current_action_id?: string | null
+          error_message?: string | null
+          event_id: string
+          id?: string
+          last_payload?: Json
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          automation_id?: string
+          completed_at?: string | null
+          couple_id?: string | null
+          current_action_id?: string | null
+          error_message?: string | null
+          event_id?: string
+          id?: string
+          last_payload?: Json
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_runs_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_runs_current_action_id_fkey"
+            columns: ["current_action_id"]
+            isOneToOne: false
+            referencedRelation: "automation_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_runs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "automation_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_waits: {
+        Row: {
+          action_id: string
+          consumed_at: string | null
+          created_at: string
+          id: string
+          payload: Json
+          reason: string
+          run_id: string
+          token: string | null
+          user_id: string
+          wake_at: string
+        }
+        Insert: {
+          action_id: string
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          reason: string
+          run_id: string
+          token?: string | null
+          user_id: string
+          wake_at: string
+        }
+        Update: {
+          action_id?: string
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          reason?: string
+          run_id?: string
+          token?: string | null
+          user_id?: string
+          wake_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_waits_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "automation_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_waits_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "automation_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          branch_depth_limit: number
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          status: string
+          template_slug: string | null
+          trigger_config: Json
+          trigger_type: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          branch_depth_limit?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          status?: string
+          template_slug?: string | null
+          trigger_config?: Json
+          trigger_type: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          branch_depth_limit?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          status?: string
+          template_slug?: string | null
+          trigger_config?: Json
+          trigger_type?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
       connect_accounts: {
         Row: {
           account_id: string | null
@@ -384,6 +725,44 @@ export type Database = {
           },
         ]
       }
+      couple_custom_fields: {
+        Row: {
+          couple_id: string
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          user_id: string
+          value: Json
+        }
+        Insert: {
+          couple_id: string
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          user_id: string
+          value?: Json
+        }
+        Update: {
+          couple_id?: string
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          user_id?: string
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_custom_fields_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       couple_statuses: {
         Row: {
           color: string
@@ -433,6 +812,7 @@ export type Database = {
           secondary_email: string | null
           secondary_name: string | null
           secondary_phone: string | null
+          secondary_portal_token: string
           status: string
           user_id: string
           venue: string | null
@@ -455,6 +835,7 @@ export type Database = {
           secondary_email?: string | null
           secondary_name?: string | null
           secondary_phone?: string | null
+          secondary_portal_token?: string
           status?: string
           user_id: string
           venue?: string | null
@@ -477,6 +858,7 @@ export type Database = {
           secondary_email?: string | null
           secondary_name?: string | null
           secondary_phone?: string | null
+          secondary_portal_token?: string
           status?: string
           user_id?: string
           venue?: string | null
@@ -534,6 +916,7 @@ export type Database = {
           drive_distance_to_next_event_meters: number | null
           drive_time_from_home_seconds: number | null
           drive_time_to_next_event_seconds: number | null
+          event_type: string
           id: string
           share_token: string | null
           share_token_enabled: boolean
@@ -555,6 +938,7 @@ export type Database = {
           drive_distance_to_next_event_meters?: number | null
           drive_time_from_home_seconds?: number | null
           drive_time_to_next_event_seconds?: number | null
+          event_type?: string
           id?: string
           share_token?: string | null
           share_token_enabled?: boolean
@@ -576,6 +960,7 @@ export type Database = {
           drive_distance_to_next_event_meters?: number | null
           drive_time_from_home_seconds?: number | null
           drive_time_to_next_event_seconds?: number | null
+          event_type?: string
           id?: string
           share_token?: string | null
           share_token_enabled?: boolean
@@ -1174,7 +1559,7 @@ export type Database = {
         }
         Relationships: []
       }
-      task_statuses: {
+      task_priorities: {
         Row: {
           color: string
           created_at: string
@@ -1201,7 +1586,7 @@ export type Database = {
         }
         Relationships: []
       }
-      task_priorities: {
+      task_statuses: {
         Row: {
           color: string
           created_at: string
@@ -1484,11 +1869,92 @@ export type Database = {
         }
         Relationships: []
       }
+      vow_revisions: {
+        Row: {
+          author: string
+          content: string
+          created_at: string
+          id: string
+          user_id: string
+          vow_id: string
+        }
+        Insert: {
+          author: string
+          content: string
+          created_at?: string
+          id?: string
+          user_id: string
+          vow_id: string
+        }
+        Update: {
+          author?: string
+          content?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          vow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vow_revisions_vow_id_fkey"
+            columns: ["vow_id"]
+            isOneToOne: false
+            referencedRelation: "vows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vows: {
+        Row: {
+          content: string
+          couple_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          who: string
+        }
+        Insert: {
+          content?: string
+          couple_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          who?: string
+        }
+        Update: {
+          content?: string
+          couple_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          who?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vows_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      _resolve_portal_couple: {
+        Args: { p_token: string }
+        Returns: {
+          couple_id: string
+          owner_id: string
+          viewer: string
+        }[]
+      }
       _user_branding: { Args: { p_user_id: string }; Returns: Json }
       _user_branding_blocks: {
         Args: { p_surface: string; p_user_id: string }
@@ -1541,6 +2007,21 @@ export type Database = {
         Args: { p_id: string; p_token: string }
         Returns: undefined
       }
+      delete_portal_vow: {
+        Args: { p_id: string; p_token: string }
+        Returns: undefined
+      }
+      emit_automation_event: {
+        Args: {
+          p_couple_id?: string
+          p_event_type: string
+          p_payload?: Json
+          p_source_id: string
+          p_source_table: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       emit_contract_audit_event: {
         Args: {
           p_actor: string
@@ -1581,6 +2062,22 @@ export type Database = {
           p_phone: string
           p_token: string
         }
+        Returns: string
+      }
+      save_portal_couple_details: {
+        Args: {
+          p_primary_email: string
+          p_primary_name: string
+          p_primary_phone: string
+          p_secondary_email: string
+          p_secondary_name: string
+          p_secondary_phone: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      save_portal_event: {
+        Args: { p_date: string; p_id: string; p_token: string; p_venue: string }
         Returns: string
       }
       save_portal_file: {
@@ -1658,6 +2155,10 @@ export type Database = {
           p_title: string
           p_token: string
         }
+        Returns: string
+      }
+      save_portal_vow: {
+        Args: { p_content: string; p_id: string; p_token: string }
         Returns: string
       }
       seed_default_contract_template: {

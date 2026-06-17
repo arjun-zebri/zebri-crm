@@ -1,7 +1,7 @@
 "use client";
 
+import { Plus, ChevronDown, GripVertical } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, ChevronDown, GripVertical } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -29,7 +29,7 @@ function anonSupabase() {
 }
 
 function formatTimeDisplay(t: string): string {
-  if (!t) return "No time";
+  if (!t) return "TBD";
   const [h, m] = t.split(":").map(Number);
   const period = h < 12 ? "AM" : "PM";
   const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
@@ -86,18 +86,18 @@ function TimePicker({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-36 border border-gray-200 rounded-xl px-3 py-2 text-sm hover:bg-gray-50 transition cursor-pointer focus:outline-none"
+        className="flex items-center justify-between w-36 border border-border rounded-control px-3 py-2 text-sm bg-surface hover:bg-surface-muted transition cursor-pointer focus:outline-none"
       >
-        <span className={value ? "text-gray-900" : "text-gray-400"}>
+        <span className={value ? "text-text" : "text-text-muted"}>
           {formatTimeDisplay(value)}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-2 flex-shrink-0" />
+        <ChevronDown className="w-3.5 h-3.5 text-text-muted ml-2 flex-shrink-0" />
       </button>
 
       {open && (
         <div
           ref={listRef}
-          className="absolute z-50 mt-1 w-36 bg-white border border-gray-200 rounded-xl shadow-lg overflow-y-auto py-1"
+          className="absolute z-50 mt-1 w-36 bg-surface border border-border rounded-control shadow-lg overflow-y-auto py-1"
           style={{ maxHeight: "220px" }}
         >
           <button
@@ -106,11 +106,11 @@ function TimePicker({
               onChange("");
               setOpen(false);
             }}
-            className={`w-full text-left px-3 py-2 text-sm transition hover:bg-gray-50 ${
-              !value ? "font-medium text-gray-900" : "text-gray-400"
+            className={`w-full text-left px-3 py-2 text-sm transition hover:bg-surface-muted cursor-pointer ${
+              !value ? "font-medium text-text" : "text-text-muted"
             }`}
           >
-            No time
+            TBD
           </button>
           {ALL_TIMES.map((t) => (
             <button
@@ -120,10 +120,10 @@ function TimePicker({
                 onChange(t);
                 setOpen(false);
               }}
-              className={`w-full text-left px-3 py-2 text-sm transition hover:bg-gray-50 ${
+              className={`w-full text-left px-3 py-2 text-sm transition hover:bg-surface-muted cursor-pointer ${
                 t === value
-                  ? "bg-gray-50 font-medium text-gray-900"
-                  : "text-gray-700"
+                  ? "bg-surface-muted font-medium text-text"
+                  : "text-text-muted"
               }`}
             >
               {formatTimeDisplay(t)}
@@ -237,10 +237,10 @@ function ItemModal({
                   onDelete();
                 }}
                 disabled={loading}
-                className={`text-sm px-3 py-1.5 rounded-xl transition cursor-pointer disabled:opacity-50 ${
+                className={`text-sm px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 ${
                   deleteConfirm
-                    ? "bg-red-600 text-white hover:bg-red-700"
-                    : "text-red-600 border border-red-300 hover:bg-red-50"
+                    ? "bg-danger text-text-inverse hover:opacity-90"
+                    : "text-danger border border-danger/30 hover:bg-danger/5"
                 }`}
               >
                 {deleteConfirm ? "Confirm delete" : "Delete"}
@@ -251,14 +251,14 @@ function ItemModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-1.5 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+              className="px-4 py-1.5 text-sm border border-border rounded-control hover:bg-surface-muted transition cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={loading || !title.trim()}
-              className="px-4 py-1.5 text-sm bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+              className="px-4 py-1.5 text-sm bg-brand-fg text-text-inverse rounded-control hover:opacity-90 transition cursor-pointer disabled:opacity-50"
             >
               {loading ? "Saving..." : "Save"}
             </button>
@@ -267,24 +267,24 @@ function ItemModal({
       }
     >
       <div className="space-y-4">
-        <div className="flex items-end gap-3">
+        <div className="flex flex-col sm:flex-row items-end gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+            <label className="block text-caption font-medium text-text-subtle mb-1.5">
               From
             </label>
             <TimePicker value={startTime} onChange={handleStartChange} />
           </div>
-          <span className="text-sm text-gray-400 pb-2">to</span>
+          <span className="text-caption text-text-muted pb-2">to</span>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+            <label className="block text-caption font-medium text-text-subtle mb-1.5">
               To
             </label>
             <TimePicker value={endTime} onChange={setEndTime} />
           </div>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            What's happening <span className="text-gray-400">(required)</span>
+          <label className="block text-caption font-medium text-text-subtle mb-1.5">
+            What's happening <span className="text-text-subtle">(required)</span>
           </label>
           <input
             type="text"
@@ -295,11 +295,11 @@ function ItemModal({
             onKeyDown={(e) => {
               if (e.key === "Enter") handleSave();
             }}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent"
+            className="w-full border border-border rounded-control px-3 py-2 text-sm bg-surface text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-border/50 focus:border-border"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+          <label className="block text-caption font-medium text-text-subtle mb-1.5">
             Notes
           </label>
           <textarea
@@ -307,7 +307,7 @@ function ItemModal({
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             placeholder="Any details for your MC..."
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent resize-none"
+            className="w-full border border-border rounded-control px-3 py-2 text-sm bg-surface text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-border/50 focus:border-border resize-none"
           />
         </div>
       </div>
@@ -341,68 +341,68 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
   return (
     <div ref={setNodeRef} style={style} className="flex gap-5 group">
       {/* Left column: time rail */}
-      <div className="w-16 flex flex-col items-center">
+      <div className="flex flex-col items-center">
         {/* Drag handle + time pill */}
         <button
           {...attributes}
           {...listeners}
-          className="flex items-center justify-center text-gray-300 hover:text-gray-400 cursor-grab active:cursor-grabbing transition-colors mb-2"
+          className="flex items-center justify-center text-text-subtle hover:text-text-muted sm:group-hover:text-text-muted cursor-grab active:cursor-grabbing transition-colors mb-2 p-1"
           tabIndex={-1}
           title="Drag to reorder"
         >
-          <GripVertical size={14} strokeWidth={1.5} />
+          <GripVertical size={16} strokeWidth={1.5} />
         </button>
 
         {/* Time pill */}
         <div
-          className={`text-xs font-medium tabular-nums px-2 py-1 rounded-full whitespace-nowrap ${
+          className={`text-xs font-medium tabular-nums px-2 py-1 rounded-pill whitespace-nowrap ${
             item.start_time
               ? approved
-                ? "bg-gray-100 text-gray-700"
-                : "bg-gray-50 text-gray-500"
-              : "text-gray-300"
+                ? "bg-surface-muted text-text"
+                : "bg-surface-emphasis text-text-muted"
+              : "text-text-subtle"
           }`}
         >
           {item.start_time ? formatTimeDisplay(item.start_time) : ""}
         </div>
 
         {/* Connecting line (bottom half) */}
-        <div className="flex-1 w-px bg-gray-100 mt-2" />
+        <div className="flex-1 w-0.5 sm:w-px bg-border mt-2" />
       </div>
 
       {/* Right column: card */}
       <div
         onClick={() => onEdit(item)}
-        className={`flex-1 rounded-xl border bg-white hover:shadow-sm transition-all cursor-pointer mb-3 ${
+        className={`flex-1 rounded-card border bg-surface hover:shadow-sm transition-all cursor-pointer mb-3 ${
           approved
-            ? "border-gray-200 hover:border-gray-300"
-            : "border-amber-100 hover:border-amber-200 bg-amber-50"
+            ? "border-border hover:border-border-strong"
+            : "border-warning hover:border-warning bg-warning/10"
         }`}
       >
         <div className="flex h-full">
           <div
             className={`w-[3px] rounded-full my-3 ml-3 shrink-0 ${
-              approved ? "bg-gray-900" : "bg-amber-300"
+              approved ? "bg-brand-fg" : "bg-warning"
             }`}
           />
           <div className="flex-1 pl-3 pr-4 py-3 flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-body font-semibold text-text">
                 {item.title}
               </p>
               {item.description && (
-                <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                <p className="text-caption text-text-muted mt-1 line-clamp-2">
                   {item.description}
                 </p>
               )}
               {item.duration_min && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-caption text-text-subtle mt-1">
                   {item.duration_min} min
                 </p>
               )}
             </div>
             {item.pending_review && (
-              <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
+              <span className="shrink-0 text-caption font-medium px-2 py-1 rounded-pill bg-warning/20 text-warning whitespace-nowrap">
                 Pending
               </span>
             )}
@@ -515,7 +515,7 @@ export function TimelineSection({
 
   if (!hasEvent) {
     return (
-      <p className="text-sm text-gray-400 py-2">
+      <p className="text-body text-text-muted py-2">
         Your MC will set up a timeline for your event. Check back soon.
       </p>
     );
@@ -526,10 +526,12 @@ export function TimelineSection({
 
   return (
     <div className="space-y-4">
-      <div className="border border-gray-200 rounded-xl px-5 py-3.5">
-        <p className="text-sm text-gray-500">
-          Moments you add will be reviewed by your MC before going on the
-          official timeline. Your MC may also add items directly.
+      <div className="border border-border bg-surface rounded-card px-5 py-3.5">
+        <p className="text-body text-text-muted mb-2">
+          Add moments to suggest timing for your event. Moments you add will be reviewed by your MC before appearing on the official timeline.
+        </p>
+        <p className="text-caption text-text-subtle">
+          <strong className="text-text-muted">Pending</strong> means your MC is reviewing your suggestion.
         </p>
       </div>
 
@@ -545,11 +547,11 @@ export function TimelineSection({
           >
             <div className="relative pl-8">
               {/* Vertical line behind everything */}
-              <div className="absolute left-0 top-0 bottom-0 w-px bg-gray-200" />
+              <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
 
               <div className="space-y-2">
                 {mcItems.length > 0 && (
-                  <p className="text-sm font-medium text-gray-500 pl-8">
+                  <p className="text-body font-medium text-text-muted pl-8">
                     Added by your MC
                   </p>
                 )}
@@ -561,7 +563,7 @@ export function TimelineSection({
                   />
                 ))}
                 {pendingItems.length > 0 && (
-                  <p className="text-sm font-medium text-gray-500 pl-8 mt-6">
+                  <p className="text-body font-medium text-text-muted pl-8 mt-6">
                     Your suggestions
                   </p>
                 )}
@@ -580,7 +582,7 @@ export function TimelineSection({
 
       <button
         onClick={handleOpenAdd}
-        className="w-full text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl py-3 hover:border-gray-300 hover:bg-gray-50 transition cursor-pointer flex items-center justify-center gap-1.5"
+        className="w-full text-body text-text-muted border border-dashed border-border rounded-card py-3 hover:border-border-strong hover:bg-surface-muted transition cursor-pointer flex items-center justify-center gap-1.5"
       >
         <Plus size={14} strokeWidth={1.5} />
         Add moment

@@ -18,7 +18,6 @@ import { Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { Empty } from '@/components/ui/empty'
-import { Loading } from '@/components/ui/loading'
 import { createClient } from '@/lib/supabase/client'
 
 import {
@@ -35,6 +34,7 @@ import { AutomationGroupRow } from './couple-automations-group'
 import { CoupleAutomationsHeader } from './couple-automations-header'
 import { loadCoupleAutomations } from './couple-automations-loader'
 import { CoupleRunPicker } from './couple-automations-run-picker'
+import { CoupleAutomationsSkeleton } from './couple-automations-skeleton'
 
 interface Props {
   coupleId: string
@@ -81,7 +81,7 @@ export function CoupleAutomations({ coupleId }: Props) {
   const resumeGroup = (automationId: string) =>
     resumeAutomationForCoupleAction({ automationId, coupleId }).then(fetchAndSet)
 
-  if (runs === null) return <Loading variant="center" />
+  if (runs === null) return <CoupleAutomationsSkeleton />
 
   const groups = groupRuns(runs, activity)
   const hasLive = runs.some((r) => r.status === 'running' || r.status === 'waiting')
@@ -108,11 +108,12 @@ export function CoupleAutomations({ coupleId }: Props) {
           description="Run one now, or wait for an active automation to match this couple."
         />
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
           {groups.map((group) => (
             <AutomationGroupRow
               key={group.key}
               group={group}
+              nowMs={loadedAt}
               open={openKey === group.key}
               onToggle={() => setOpenKey(openKey === group.key ? null : group.key)}
               onRetry={retryRun}

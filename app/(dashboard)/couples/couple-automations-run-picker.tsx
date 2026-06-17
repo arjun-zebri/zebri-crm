@@ -40,15 +40,15 @@ interface Props {
 
 const MODE = {
   run: {
-    label: 'Run automation',
-    variant: 'secondary' as const,
+    label: 'Run manually',
+    variant: 'primary' as const,
     icon: Play,
     hint: 'Run for this couple now',
     action: runAutomationForCoupleAction,
   },
   test: {
     label: 'Test',
-    variant: 'ghost' as const,
+    variant: 'outline' as const,
     icon: FlaskConical,
     hint: 'Test run — any email comes to you',
     action: testAutomationForCoupleAction,

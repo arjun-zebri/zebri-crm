@@ -11,14 +11,14 @@
 import { narrateAuditEntry } from '@/lib/automations/audit-log/narrate'
 import type { AuditEventName } from '@/lib/automations/audit-log/narrate'
 import { getTriggerSpec } from '@/lib/automations/triggers'
-import type { ActionType, AutomationRunRow, RunStatus, TriggerType } from '@/types/automations'
+import type { ActionType, AutomationRunRow, AutomationStatus, RunStatus, TriggerType } from '@/types/automations'
 
 import type { RunActivity } from './couple-automations-feed'
 import { HEADLINE_PRIORITY } from './couple-automations-shared'
 
 /** A run joined to a thin slice of its automation. */
 export interface RunWithAutomation extends AutomationRunRow {
-  automation: { id: string; name: string; trigger_type: string } | null
+  automation: { id: string; name: string; trigger_type: string; status: AutomationStatus } | null
 }
 
 /** Audit row joined to its action's type + label (for narration). */
@@ -37,10 +37,14 @@ export interface AutomationGroup {
   /** Display title — the automation name, or its trigger if unnamed. */
   title: string
   triggerLabel: string
+  /** One-line plain-English description of the trigger, for the card subtitle. */
+  triggerDescription: string
   runs: RunActivity[]
   headline: RunStatus
   /** Most recent narrated outcome across the group, for the collapsed row. */
   lastOutcome: string | null
+  /** Timestamp of the most recent run (completed, else started), for "Last run". */
+  lastRunAt: string | null
 }
 
 /** Names that carry no signal — fall back to the trigger label instead. */
@@ -57,7 +61,7 @@ function latestOutcome(runs: RunActivity[]): string | null {
 
 /** At-a-glance counts for the summary strip. */
 export interface RunSummary {
-  /** Distinct automations with a live (running/waiting) run. */
+  /** Distinct *enabled* (status `active`) automations that have run for this couple. */
   active: number
   /** Runs currently waiting on a scheduled step. */
   waiting: number
@@ -74,19 +78,20 @@ const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
  * @param nowMs - current time in ms (passed in so this stays pure)
  */
 export function summarizeRuns(runs: RunWithAutomation[], nowMs: number): RunSummary {
-  const liveAutomations = new Set<string>()
+  // "Active" = how many of the automations touching this couple are still
+  // enabled (status 'active'), not how many have a run in flight — that's
+  // what reads correctly next to the list of automation cards.
+  const activeAutomations = new Set<string>()
   let waiting = 0
   let failedRecently = 0
   for (const run of runs) {
-    if (run.status === 'running' || run.status === 'waiting') {
-      liveAutomations.add(run.automation?.id ?? run.automation_id)
-    }
+    if (run.automation?.status === 'active') activeAutomations.add(run.automation.id)
     if (run.status === 'waiting') waiting += 1
     if (run.status === 'errored' && nowMs - new Date(run.started_at).getTime() <= THIRTY_DAYS_MS) {
       failedRecently += 1
     }
   }
-  return { active: liveAutomations.size, waiting, failedRecently }
+  return { active: activeAutomations.size, waiting, failedRecently }
 }
 
 /**
@@ -149,17 +154,19 @@ export function groupRuns(
   const groups = [...byAutomation.entries()].map(([key, grouped]) => {
     const first = grouped[0] as RunWithAutomation
     const name = (first.automation?.name ?? '').trim()
-    const triggerLabel = first.automation
-      ? (getTriggerSpec(first.automation.trigger_type as TriggerType)?.ui.label ?? first.automation.trigger_type)
-      : ''
+    const spec = first.automation ? getTriggerSpec(first.automation.trigger_type as TriggerType) : null
+    const triggerLabel = first.automation ? (spec?.ui.label ?? first.automation.trigger_type) : ''
     const activity = grouped.map((r) => activityByRun.get(r.id)).filter((a): a is RunActivity => Boolean(a))
     return {
       key,
       title: GENERIC_NAMES.has(name.toLowerCase()) ? triggerLabel || 'Automation' : name,
       triggerLabel,
+      triggerDescription: spec?.ui.description ?? '',
       runs: activity,
       headline: HEADLINE_PRIORITY.find((s) => grouped.some((r) => r.status === s)) ?? first.status,
       lastOutcome: latestOutcome(activity),
+      // Runs arrive newest-first, so the first run is the most recent.
+      lastRunAt: first.completed_at ?? first.started_at,
     }
   })
   const isLive = (g: AutomationGroup) => HEADLINE_PRIORITY.includes(g.headline)

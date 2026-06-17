@@ -1,6 +1,7 @@
 'use client'
 
-import { ExternalLink } from 'lucide-react'
+import { Check, Mail, ExternalLink } from 'lucide-react'
+
 import { PortalContract } from './page'
 
 interface ContractsSectionProps {
@@ -9,11 +10,11 @@ interface ContractsSectionProps {
 
 function statusColor(status: string): string {
   switch (status) {
-    case 'sent': return 'bg-blue-100 text-blue-700'
-    case 'signed': return 'bg-emerald-100 text-emerald-700'
-    case 'declined': return 'bg-red-100 text-red-700'
-    case 'expired': return 'bg-amber-100 text-amber-700'
-    default: return 'bg-gray-100 text-gray-700'
+    case 'sent': return 'bg-info/10 text-info'
+    case 'signed': return 'bg-success/10 text-success'
+    case 'declined': return 'bg-danger/10 text-danger'
+    case 'expired': return 'bg-warning/10 text-warning'
+    default: return 'bg-surface-muted text-text-muted'
   }
 }
 
@@ -26,48 +27,75 @@ function formatDate(s: string | null): string | null {
   }
 }
 
+/**
+ * Contracts section: displays contracts in a responsive grid with signing status.
+ * Unsigned contracts show prominent "Review & sign" button. Signed contracts show success tint and check.
+ */
 export function ContractsSection({ contracts }: ContractsSectionProps) {
   if (contracts.length === 0) {
     return (
-      <div className="border border-gray-200 rounded-xl p-6 text-center">
-        <p className="text-sm text-gray-600">No contracts yet. Your MC will send them here.</p>
+      <div className="border border-border rounded-card p-6 text-center">
+        <p className="text-body text-text-muted">No contracts yet. Your MC will send them here.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
       {contracts.map((c) => {
         const isSigned = c.status === 'signed'
         const sentDate = formatDate(c.email_sent_at)
         const signedDate = formatDate(c.signed_at)
         return (
-          <div key={c.id} className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="flex items-start justify-between gap-3 mb-3">
+          <div
+            key={c.id}
+            className={`border rounded-card p-4 flex flex-col ${
+              isSigned
+                ? 'bg-success/5 border-success/30'
+                : 'bg-surface border-border hover:border-border-strong'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3 mb-2.5">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900">{c.title}</p>
-                <p className="text-xs text-gray-500 mt-1">Contract #{c.contract_number}</p>
+                <p className="text-body font-medium text-text">{c.title}</p>
+                <p className="text-caption text-text-subtle mt-0.5">Contract #{c.contract_number}</p>
               </div>
-              <span className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full capitalize ${statusColor(c.status)}`}>
+              <span className={`shrink-0 text-caption font-medium px-2 py-1 rounded-pill capitalize flex items-center gap-1 ${statusColor(c.status)}`}>
+                {isSigned && <Check size={13} strokeWidth={1.5} />}
                 {c.status}
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-xs text-gray-500 space-y-0.5">
-                {sentDate && <p>Sent {sentDate}</p>}
-                {signedDate && <p>Signed {signedDate}</p>}
+
+            <div className="text-caption text-text-subtle space-y-0.5 mb-3 flex-1">
+              <div className="flex items-center gap-1">
+                <Mail size={13} strokeWidth={1.5} />
+                {sentDate ? <p>Sent {sentDate}</p> : <p>Not yet shared</p>}
               </div>
-              {c.share_token_enabled && c.share_token ? (
-                <a
-                  href={`/contract/${c.share_token}`}
-                  className="flex items-center gap-2 text-xs font-medium text-black hover:text-gray-700 transition shrink-0"
-                >
-                  {isSigned ? 'View signed' : 'Review & sign'} <ExternalLink size={12} />
-                </a>
-              ) : (
-                <span className="text-xs text-gray-400 shrink-0">Not yet shared</span>
+              {isSigned && signedDate && (
+                <div className="flex items-center gap-1 text-success">
+                  <Check size={13} strokeWidth={1.5} />
+                  Signed {signedDate}
+                </div>
               )}
             </div>
+
+            {c.share_token_enabled && c.share_token ? (
+              <a
+                href={`/contract/${c.share_token}`}
+                className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 text-caption font-medium rounded-control px-3 py-2 transition cursor-pointer ${
+                  isSigned
+                    ? 'text-brand-fg hover:text-text-muted'
+                    : 'bg-brand-fg text-text-inverse hover:opacity-90'
+                }`}
+              >
+                {isSigned ? 'View signed' : 'Review & sign'} <ExternalLink size={13} strokeWidth={1.5} />
+              </a>
+            ) : (
+              <div className="text-caption text-text-subtle px-3 py-2 text-center">
+                <p>Not yet shared</p>
+                <p className="text-text-muted mt-0.5">Ask your MC to send this contract</p>
+              </div>
+            )}
           </div>
         )
       })}

@@ -34,7 +34,7 @@ export async function loadCoupleAutomations(
 ): Promise<CoupleAutomationsData> {
   const { data: runRows } = await supabase
     .from('automation_runs' as never)
-    .select('*, automation:automations(id, name, trigger_type)')
+    .select('*, automation:automations(id, name, trigger_type, status)')
     .eq('couple_id', coupleId)
     .order('started_at', { ascending: false })
   const runs = (runRows as RunWithAutomation[] | null) ?? []

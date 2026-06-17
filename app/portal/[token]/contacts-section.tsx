@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
 import { Plus, Mail, Phone, Mic, Square, Play, Trash2, Loader2, Pencil, ChevronDown } from 'lucide-react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import * as Popover from '@radix-ui/react-popover'
+
 import { createClient } from '@/lib/supabase/client'
 import { Modal } from '@/components/ui/modal'
 import type { PortalContact, PortalPerson } from './page'
@@ -76,9 +77,9 @@ function AudioRecorder({
 
   if (uploading) {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+      <div className="flex items-center gap-1.5 text-caption text-text-subtle">
         <Loader2 size={13} className="animate-spin" />
-        Uploading…
+        Uploading audio…
       </div>
     )
   }
@@ -88,7 +89,7 @@ function AudioRecorder({
       <button
         type="button"
         onClick={stopRecording}
-        className="flex items-center gap-1 text-xs text-red-600 border border-red-200 bg-red-50 rounded-lg px-2.5 py-1.5 hover:bg-red-100 transition cursor-pointer animate-pulse"
+        className="flex items-center gap-1 text-caption text-danger border border-danger/30 bg-danger/10 rounded-control px-2.5 py-1.5 hover:bg-danger/20 transition cursor-pointer animate-pulse"
       >
         <Square size={12} strokeWidth={2} />
         Stop recording
@@ -98,12 +99,12 @@ function AudioRecorder({
 
   if (audioUrl) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5">
         <audio src={audioUrl} className="hidden" id={`audio-modal-${personId}`} />
         <button
           type="button"
           onClick={() => (document.getElementById(`audio-modal-${personId}`) as HTMLAudioElement)?.play()}
-          className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100 transition cursor-pointer"
+          className="flex items-center gap-1 text-caption text-success border border-success/30 bg-success/10 rounded-control px-2.5 py-1.5 hover:bg-success/20 transition cursor-pointer"
         >
           <Play size={12} strokeWidth={2} />
           Play
@@ -111,8 +112,8 @@ function AudioRecorder({
         <button
           type="button"
           onClick={startRecording}
-          className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
-          title="Re-record"
+          className="text-caption text-text-subtle hover:text-text-muted transition cursor-pointer"
+          title="Re-record pronunciation"
         >
           <Mic size={13} strokeWidth={1.5} />
         </button>
@@ -124,7 +125,7 @@ function AudioRecorder({
     <button
       type="button"
       onClick={startRecording}
-      className="flex items-center gap-1 text-xs text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-100 transition cursor-pointer"
+      className="flex items-center gap-1 text-caption text-text-muted border border-border rounded-control px-2.5 py-1.5 hover:bg-surface-muted transition cursor-pointer w-full sm:w-auto justify-center sm:justify-start"
     >
       <Mic size={12} strokeWidth={1.5} />
       Record pronunciation
@@ -170,7 +171,7 @@ function PersonModal({ isOpen, onClose, onSave, onDelete, person, roleOptions, t
   }, [isOpen, person])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={person ? 'Edit person' : 'Add person'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={person ? 'Edit person' : 'Add person'} size="lg">
       <div className="space-y-4">
         <div className="space-y-3">
           <div>
@@ -330,20 +331,20 @@ function PersonModal({ isOpen, onClose, onSave, onDelete, person, roleOptions, t
 function PersonRow({ person, onEdit }: { person: PortalPerson; onEdit: () => void }) {
   return (
     <div
-      className="flex items-center gap-3 border border-gray-200 rounded-xl px-5 py-3.5 bg-white hover:border-gray-300 hover:bg-gray-50/50 transition cursor-pointer"
+      className="flex items-center gap-3 border border-border rounded-card px-4 py-3 bg-surface hover:border-border-strong hover:bg-surface-muted transition cursor-pointer"
       onClick={onEdit}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-base font-medium text-gray-900">{person.full_name || 'Unnamed'}</p>
+          <p className="text-body font-medium text-text">{person.full_name || 'Unnamed'}</p>
           {person.role && (
-            <span className="text-xs text-gray-500 bg-gray-100 rounded-full px-2.5 py-0.5">
+            <span className="text-caption text-text-muted bg-surface-muted rounded-pill px-2.5 py-0.5">
               {person.role}
             </span>
           )}
         </div>
         {person.phonetic && (
-          <p className="text-sm text-gray-500 mt-0.5 font-mono">{person.phonetic}</p>
+          <p className="text-body text-text-muted mt-0.5 font-mono">{person.phonetic}</p>
         )}
       </div>
       {person.audio_url && (
@@ -351,14 +352,14 @@ function PersonRow({ person, onEdit }: { person: PortalPerson; onEdit: () => voi
           <audio src={person.audio_url} className="hidden" id={`audio-row-${person.id}`} />
           <button
             onClick={() => (document.getElementById(`audio-row-${person.id}`) as HTMLAudioElement)?.play()}
-            className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded-lg px-2.5 py-1.5 hover:bg-emerald-100 transition cursor-pointer"
+            className="flex items-center gap-1 text-caption text-success border border-success/30 bg-success/10 rounded-control px-2.5 py-1.5 hover:bg-success/20 transition cursor-pointer"
           >
             <Play size={12} strokeWidth={2} />
-            Listen
+            Play
           </button>
         </div>
       )}
-      <Pencil size={13} strokeWidth={1.5} className="text-gray-300 shrink-0" />
+      <Pencil size={13} strokeWidth={1.5} className="text-text-subtle shrink-0" />
     </div>
   )
 }
@@ -376,16 +377,36 @@ interface PeopleGroupProps {
 function PeopleGroup({ label, people, onAdd, onEdit }: PeopleGroupProps) {
   return (
     <div className="space-y-2.5">
-      <button
-        onClick={onAdd}
-        className="flex items-center gap-1.5 group cursor-pointer"
-      >
-        <p className="text-sm font-medium text-gray-500 group-hover:text-gray-700 transition">{label}</p>
-        <Plus size={13} strokeWidth={1.5} className="text-gray-400 group-hover:text-gray-600 transition" />
-      </button>
-      {people.map((p) => (
-        <PersonRow key={p.id} person={p} onEdit={() => onEdit(p)} />
-      ))}
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-body font-medium text-text-muted">{label} <span className="text-caption font-normal text-text-subtle">({people.length})</span></p>
+      </div>
+      {people.length === 0 && (
+        <div className="border border-dashed border-border rounded-card p-4 text-center bg-surface-muted/50">
+          <p className="text-caption text-text-subtle mb-2.5">No {label.toLowerCase()} yet</p>
+          <button
+            onClick={onAdd}
+            className="text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
+          >
+            Add {label.toLowerCase().slice(0, -1)}
+          </button>
+        </div>
+      )}
+      {people.length > 0 && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {people.map((p) => (
+              <PersonRow key={p.id} person={p} onEdit={() => onEdit(p)} />
+            ))}
+          </div>
+          <button
+            onClick={onAdd}
+            className="w-full flex items-center justify-center gap-1.5 text-caption font-medium text-text-muted border border-dashed border-border rounded-card py-2.5 hover:bg-surface-muted transition cursor-pointer"
+          >
+            <Plus size={14} strokeWidth={1.5} />
+            Add {label.toLowerCase().slice(0, -1)}
+          </button>
+        </>
+      )}
     </div>
   )
 }
@@ -584,47 +605,62 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
 
       {/* Vendors */}
       <div className="space-y-2.5">
-        <button
-          onClick={() => { setVendorForm({ name: '', category: '', email: '', phone: '' }); setVendorError(null); setVendorModalOpen(true) }}
-          className="flex items-center gap-1.5 group cursor-pointer"
-        >
-          <p className="text-sm font-medium text-gray-500 group-hover:text-gray-700 transition">Vendors</p>
-          <Plus size={13} strokeWidth={1.5} className="text-gray-400 group-hover:text-gray-600 transition" />
-        </button>
-
-        {contacts.length > 0 && (
-          <div className="space-y-3">
-            {contacts.map((contact) => (
-              <div key={contact.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">{contact.name}</p>
-                    {contact.category && (
-                      <span className="inline-block text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700 mt-2">
-                        {CATEGORY_LABELS[contact.category as keyof typeof CATEGORY_LABELS] || contact.category}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {(contact.email || contact.phone) && (
-                  <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
-                    {contact.email && (
-                      <a href={`mailto:${contact.email}`} className="flex items-center gap-1 hover:text-gray-900">
-                        <Mail size={14} />
-                        <span>{contact.email}</span>
-                      </a>
-                    )}
-                    {contact.phone && (
-                      <a href={`tel:${contact.phone}`} className="flex items-center gap-1 hover:text-gray-900">
-                        <Phone size={14} />
-                        <span>{contact.phone}</span>
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-body font-medium text-text-muted">Vendors <span className="text-caption font-normal text-text-subtle">({contacts.length})</span></p>
+        </div>
+        {contacts.length === 0 && (
+          <div className="border border-dashed border-border rounded-card p-4 text-center bg-surface-muted/50">
+            <p className="text-caption text-text-subtle mb-2.5">No vendors yet</p>
+            <button
+              onClick={() => { setVendorForm({ name: '', category: '', email: '', phone: '' }); setVendorError(null); setVendorModalOpen(true) }}
+              className="text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
+            >
+              Add vendor
+            </button>
           </div>
+        )}
+        {contacts.length > 0 && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              {contacts.map((contact) => (
+                <div key={contact.id} className="bg-surface border border-border rounded-card p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-body font-medium text-text">{contact.name}</p>
+                      {contact.category && (
+                        <span className="inline-block text-caption font-medium px-2 py-1 rounded-pill bg-surface-muted text-text-muted mt-1.5">
+                          {CATEGORY_LABELS[contact.category as keyof typeof CATEGORY_LABELS] || contact.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {(contact.email || contact.phone) && (
+                    <div className="flex flex-col gap-1.5 mt-2.5 text-caption text-text-muted">
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 hover:text-text transition">
+                          <Mail size={14} strokeWidth={1.5} />
+                          <span className="truncate">{contact.email}</span>
+                        </a>
+                      )}
+                      {contact.phone && (
+                        <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 hover:text-text transition">
+                          <Phone size={14} strokeWidth={1.5} />
+                          <span>{contact.phone}</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => { setVendorForm({ name: '', category: '', email: '', phone: '' }); setVendorError(null); setVendorModalOpen(true) }}
+              className="w-full flex items-center justify-center gap-1.5 text-caption font-medium text-text-muted border border-dashed border-border rounded-card py-2.5 hover:bg-surface-muted transition cursor-pointer"
+            >
+              <Plus size={14} strokeWidth={1.5} />
+              Add vendor
+            </button>
+          </>
         )}
       </div>
 
@@ -639,7 +675,7 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         saving={saving}
       />
 
-      <Modal isOpen={vendorModalOpen} onClose={() => setVendorModalOpen(false)} title="Add vendor contact">
+      <Modal isOpen={vendorModalOpen} onClose={() => setVendorModalOpen(false)} title="Add vendor contact" size="lg">
         <div className="space-y-3">
           {vendorError && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{vendorError}</div>}
           <div>

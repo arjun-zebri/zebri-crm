@@ -1,8 +1,9 @@
 'use client'
 
+import { Upload, FileText, Trash2, Loader2, Download, Image } from 'lucide-react'
 import { useState, useRef } from 'react'
-import { Upload, FileText, Trash2, Loader2, Download } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
+
 import type { PortalFile } from './page'
 
 function anonSupabase() {
@@ -10,6 +11,17 @@ function anonSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
   )
+}
+
+/**
+ * Returns the appropriate icon for a file based on its extension.
+ */
+function getFileIcon(filename: string) {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
+    return <Image size={16} strokeWidth={1.5} className="text-text-muted" />
+  }
+  return <FileText size={16} strokeWidth={1.5} className="text-text-muted" />
 }
 
 function formatSize(bytes: number | null): string {
@@ -78,12 +90,12 @@ export function FilesSection({ token, initialFiles }: FilesSectionProps) {
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`block border-2 border-dashed rounded-xl px-4 py-8 text-center cursor-pointer transition ${
+        className={`block border-2 border-dashed rounded-card px-6 py-8 text-center cursor-pointer transition ${
           dragOver
-            ? 'border-gray-400 bg-gray-50'
+            ? 'border-brand-fg bg-surface-emphasis'
             : uploading
-              ? 'border-gray-200 opacity-60 pointer-events-none'
-              : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+              ? 'border-border opacity-60 pointer-events-none'
+              : 'border-border hover:border-border-strong hover:bg-surface-muted'
         }`}
       >
         <input
@@ -95,45 +107,47 @@ export function FilesSection({ token, initialFiles }: FilesSectionProps) {
         />
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
-            <Loader2 size={20} strokeWidth={1.5} className="animate-spin text-gray-400" />
-            <p className="text-sm text-gray-400">Uploading…</p>
+            <Loader2 size={20} strokeWidth={1.5} className="animate-spin text-text-muted" />
+            <p className="text-body text-text-muted">Uploading…</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <Upload size={20} strokeWidth={1.5} className="text-gray-400" />
-            <p className="text-sm text-gray-500">Drop a file here or click to upload</p>
-            <p className="text-xs text-gray-400">PDF, Word, images. Up to 20MB.</p>
+            <Upload size={20} strokeWidth={1.5} className={dragOver ? 'text-brand-fg' : 'text-text-subtle'} />
+            <p className="text-body text-text-muted">
+              {dragOver ? 'Drop file here' : <>Drop a file here or <span className="hidden md:inline">click to upload</span><span className="md:hidden">tap to upload</span></>}
+            </p>
+            <p className="text-caption text-text-subtle">Up to 20 MB per file.</p>
           </div>
         )}
       </label>
 
       {/* File list */}
       {files.length > 0 && (
-        <div className="space-y-2.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           {files.map((file) => (
             <div
               key={file.id}
-              className="flex items-center gap-3 border border-gray-200 rounded-xl px-5 py-3.5 bg-white"
+              className="flex items-center gap-3 border border-border rounded-card px-4 py-3 bg-surface hover:bg-surface-muted transition"
             >
-              <FileText size={16} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+              {getFileIcon(file.name)}
               <div className="flex-1 min-w-0">
-                <p className="text-base text-gray-900 truncate">{file.name}</p>
+                <p className="text-body text-text truncate">{file.name}</p>
                 {file.file_size && (
-                  <p className="text-sm text-gray-500">{formatSize(file.file_size)}</p>
+                  <p className="text-caption text-text-subtle">{formatSize(file.file_size)}</p>
                 )}
               </div>
               <a
                 href={file.file_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer shrink-0"
+                className="p-2.5 text-text-subtle hover:text-text-muted transition cursor-pointer shrink-0"
                 title="Download"
               >
                 <Download size={16} strokeWidth={1.5} />
               </a>
               <button
                 onClick={() => deleteFile(file.id)}
-                className="p-1.5 text-gray-300 hover:text-red-400 transition cursor-pointer shrink-0"
+                className="p-2.5 text-text-subtle hover:text-danger transition cursor-pointer shrink-0"
                 title="Remove"
               >
                 <Trash2 size={16} strokeWidth={1.5} />

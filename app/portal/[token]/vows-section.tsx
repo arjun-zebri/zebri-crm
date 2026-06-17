@@ -1,9 +1,8 @@
 'use client'
 
 import { createBrowserClient } from '@supabase/ssr'
-import { useCallback, useState } from 'react'
-
-import { Button } from '@/components/ui/button'
+import { Heart } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { PortalVow } from './page'
 
@@ -14,80 +13,114 @@ function anonSupabase() {
   )
 }
 
-const WHO = [
-  { key: 'primary', label: 'Your vows' },
-  { key: 'spouse', label: "Your partner's vows" },
-] as const
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 interface VowsSectionProps {
   token: string
   initialVows: PortalVow[]
+  viewer: 'primary' | 'spouse'
+  primaryName: string | null
+  secondaryName: string | null
 }
 
 /**
- * Couple-facing vows capture. One text box per partner; saving upserts
- * the vow via the token-gated `save_portal_vow` RPC, which fires the
- * `couple_completed_vows` automation trigger.
+ * Couple-facing vows capture — privacy-scoped to ONE partner.
+ *
+ * Each partner opens the portal through their own link, so `initialVows`
+ * only ever contains this viewer's own vow (the server filters the other
+ * partner's out). We render a single autosaving editor plus a gentle note
+ * that the partner is writing theirs separately, so the vows stay a
+ * surprise. Saving goes through the token-gated `save_portal_vow` RPC,
+ * which derives `who` from the token itself — the client physically
+ * cannot write (or read) the other partner's vow.
  */
-export function VowsSection({ token, initialVows }: VowsSectionProps) {
-  const [vows, setVows] = useState<PortalVow[]>(initialVows)
-  const [drafts, setDrafts] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      WHO.map((w) => [w.key, initialVows.find((v) => v.who === w.key)?.content ?? '']),
-    ),
-  )
-  const [savingWho, setSavingWho] = useState<string | null>(null)
-  const [savedWho, setSavedWho] = useState<string | null>(null)
+export function VowsSection({
+  token,
+  initialVows,
+  viewer,
+  primaryName,
+  secondaryName,
+}: VowsSectionProps) {
+  const own = initialVows.find((v) => v.who === viewer)
+  const [content, setContent] = useState(own?.content ?? '')
+  const [status, setStatus] = useState<SaveStatus>('idle')
+  // Stable id for the upsert so reloads reuse the same row. Falls back
+  // to a fresh uuid for a partner who hasn't written anything yet.
+  const vowIdRef = useRef<string>(own?.id ?? crypto.randomUUID())
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const save = useCallback(
-    async (who: string) => {
-      setSavingWho(who)
-      const existing = vows.find((v) => v.who === who)
-      const id = existing?.id ?? crypto.randomUUID()
-      const content = drafts[who] ?? ''
+  const partnerName = viewer === 'primary' ? secondaryName : primaryName
+
+  const persist = useCallback(
+    async (text: string) => {
+      setStatus('saving')
       const { error } = await anonSupabase().rpc('save_portal_vow', {
         p_token: token,
-        p_id: id,
-        p_who: who,
-        p_content: content,
+        p_id: vowIdRef.current,
+        p_content: text,
       })
-      setSavingWho(null)
+      setStatus(error ? 'error' : 'saved')
       if (!error) {
-        setVows((prev) => [...prev.filter((v) => v.who !== who), { id, who, content }])
-        setSavedWho(who)
-        setTimeout(() => setSavedWho((s) => (s === who ? null : s)), 2000)
+        setTimeout(() => setStatus((s) => (s === 'saved' ? 'idle' : s)), 2000)
       }
     },
-    [vows, drafts, token],
+    [token],
+  )
+
+  // Debounced autosave — honours the portal's "everything saves
+  // automatically" promise: 800ms after the last keystroke we persist.
+  const onChange = (text: string) => {
+    setContent(text)
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => persist(text), 800)
+  }
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current)
+    },
+    [],
   )
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-gray-500">
-        Write your vows here when you&apos;re ready. Only you and your MC can see them.
+    <div className="max-w-2xl space-y-4">
+      <p className="text-sm text-text-muted">
+        These autosave as you type. Only you and your MC can see them.
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-      {WHO.map((w) => (
-        <div key={w.key} className="bg-white rounded-lg border border-gray-200 p-5">
-          <label className="block text-sm font-medium text-gray-900 mb-2" htmlFor={`vows-${w.key}`}>
-            {w.label}
+
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-2 flex items-center justify-between">
+          <label htmlFor="vows-own" className="text-sm font-medium text-text">
+            Your vows
           </label>
-          <textarea
-            id={`vows-${w.key}`}
-            className="w-full min-h-[160px] resize-none rounded-md border border-gray-300 p-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400"
-            placeholder="Write your vows here…"
-            value={drafts[w.key] ?? ''}
-            onChange={(e) => setDrafts((d) => ({ ...d, [w.key]: e.target.value }))}
-          />
-          <div className="mt-3 flex items-center gap-3">
-            <Button onClick={() => save(w.key)} disabled={savingWho === w.key}>
-              {savingWho === w.key ? 'Saving…' : 'Save vows'}
-            </Button>
-            {savedWho === w.key && <span className="text-sm text-green-600">Saved ✓</span>}
-          </div>
+          <SaveIndicator status={status} />
         </div>
-      ))}
+        <textarea
+          id="vows-own"
+          className="w-full min-h-[420px] resize-none rounded-lg border border-border bg-surface p-3 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong focus:ring-1 focus:ring-border-strong"
+          placeholder="Write your vows here…"
+          value={content}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
+
+      <div className="flex items-center gap-2 rounded-xl border border-dashed border-border bg-surface-muted px-4 py-3 text-sm text-text-muted">
+        <Heart size={15} strokeWidth={1.5} className="shrink-0 text-text-subtle" />
+        <span>
+          {partnerName ? `${partnerName} is` : 'Your partner is'} writing theirs
+          separately, kept private until the day.
+        </span>
       </div>
     </div>
   )
+}
+
+/** Inline autosave status pill shown beside the editor label. */
+function SaveIndicator({ status }: { status: SaveStatus }) {
+  if (status === 'saving') return <span className="text-xs text-text-subtle">Saving…</span>
+  if (status === 'saved') return <span className="text-xs text-brand">Saved ✓</span>
+  if (status === 'error') {
+    return <span className="text-xs text-red-600">Couldn’t save. Retries on your next edit.</span>
+  }
+  return null
 }
