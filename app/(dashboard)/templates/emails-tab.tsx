@@ -9,12 +9,11 @@
  */
 'use client'
 
-import { Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
-import { Button } from '@/components/ui/button'
 import type { EmailTemplate } from '@/types/email-template'
 
+import { StarterLibraryPanel } from './starter-library-panel'
 import { TemplateEditorModal } from './template-editor-modal'
 import { TemplatesLibrary } from './templates-library'
 import { useTemplates } from './use-templates'
@@ -28,6 +27,9 @@ export function EmailsTab({ businessName, contactName }: EmailsTabProps) {
   const { data: templates = [], isLoading, isError, refetch } = useTemplates()
   const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<EmailTemplate | null>(null)
+  const [libraryOpen, setLibraryOpen] = useState(false)
+
+  const existingNames = useMemo(() => new Set(templates.map((t) => t.name)), [templates])
 
   const openNew = () => {
     setEditing(null)
@@ -40,20 +42,13 @@ export function EmailsTab({ businessName, contactName }: EmailsTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <p className="text-sm text-text-muted">Reusable emails for every stage of the journey.</p>
-        <Button size="sm" onClick={openNew} className="shrink-0 gap-1.5">
-          <Plus size={14} strokeWidth={2} />
-          New template
-        </Button>
-      </div>
-
       <TemplatesLibrary
         templates={templates}
         isLoading={isLoading}
         isError={isError}
         onRetry={refetch}
         onNew={openNew}
+        onBrowse={() => setLibraryOpen(true)}
         onEdit={openEdit}
       />
 
@@ -67,6 +62,8 @@ export function EmailsTab({ businessName, contactName }: EmailsTabProps) {
           contactName={contactName}
         />
       )}
+
+      <StarterLibraryPanel isOpen={libraryOpen} onClose={() => setLibraryOpen(false)} existingNames={existingNames} />
     </div>
   )
 }

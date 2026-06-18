@@ -628,9 +628,12 @@ Variable resolution reuses the automation namespace via
 `resolveVariable()` in `lib/automations/variables.ts`, so a template
 renders identically whether fired by an automation or sent manually.
 
-Migration: `20260618000000_create_email_templates_feature.sql`. The
-starter library is seeded app-side (`ensureStarterTemplates()` on first
-Templates-page visit) rather than via SQL. The `automation_waits.reason`
+Migration: `20260618000000_create_email_templates_feature.sql`. Starter
+templates are **not** auto-seeded — an MC adds them on demand from the
+in-app "Browse starter templates" catalog (canonical set in
+`lib/email/starter-templates.ts`; `is_starter` flags catalog-sourced
+rows). `20260618000200_clear_seeded_starter_templates.sql` removes rows
+from the previous auto-seed model. The `automation_waits.reason`
 + `automation_audit_log.event` CHECKs are widened to include
 `missing_variables` / `missing_variables_detected` in
 `20260618000100_automation_missing_variables_wait.sql` (the send_email

@@ -29,6 +29,7 @@ export function EmailTemplatePicker({ value, onChange, label = 'Email template' 
   return (
     <Select
       label={label}
+      size="sm"
       value={value || INLINE}
       onValueChange={(v) => onChange(v === INLINE ? '' : v)}
       options={[

@@ -1,7 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import { ensureStarterTemplates, STARTER_EMAIL_TEMPLATES } from '@/lib/email/starter-templates'
-
 import {
   anonClient,
   createTestUser,
@@ -10,18 +8,17 @@ import {
 } from '../helpers/supabase'
 
 /**
- * RLS tenant isolation for `email_templates` + the starter-library
- * seeder.
+ * RLS tenant isolation for `email_templates`.
  *
  * Email templates carry an MC's personal client-facing copy (often
  * customised wording and legal celebrant language). A cross-tenant
  * read would leak it; a cross-tenant write would let a malicious user
  * silently alter the emails a competitor sends to their couples.
  *
- * Also proves {@link ensureStarterTemplates} seeds a fresh user once
- * and is idempotent thereafter.
+ * (Starter templates are no longer auto-seeded — they're added on demand
+ * from the in-app catalog — so there's no seeding path to test here.)
  */
-describe('RLS: email_templates tenant isolation + seeding', () => {
+describe('RLS: email_templates tenant isolation', () => {
   let userA: TestUser
   let userB: TestUser
   let templateAId: string
@@ -106,28 +103,5 @@ describe('RLS: email_templates tenant isolation + seeding', () => {
     const anon = anonClient()
     const { data } = await anon.from('email_templates').select('id')
     expect(data).toEqual([])
-  })
-
-  it('ensureStarterTemplates seeds a fresh user once, then is idempotent', async () => {
-    // userB has no templates yet — seed should populate the full set.
-    const inserted = await ensureStarterTemplates(userB.client, userB.id)
-    expect(inserted).toBe(STARTER_EMAIL_TEMPLATES.length)
-
-    const { count } = await userB.client
-      .from('email_templates')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userB.id)
-    expect(count).toBe(STARTER_EMAIL_TEMPLATES.length)
-
-    // Second call is a no-op (user already has templates).
-    const again = await ensureStarterTemplates(userB.client, userB.id)
-    expect(again).toBe(0)
-
-    // Seeded rows are flagged as starters and tenant-scoped.
-    const { data: starters } = await userB.client
-      .from('email_templates')
-      .select('is_starter')
-      .eq('user_id', userB.id)
-    expect(starters?.every((r) => r.is_starter)).toBe(true)
   })
 })

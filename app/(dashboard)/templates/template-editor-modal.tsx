@@ -93,10 +93,10 @@ export function TemplateEditorModal({
       title={template ? 'Edit template' : 'New template'}
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>
+          <Button size="sm" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={save} loading={saving}>
+          <Button size="sm" onClick={save} loading={saving}>
             Save template
           </Button>
         </div>

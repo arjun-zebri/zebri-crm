@@ -4,8 +4,8 @@
  * Every action is Zod-validated and runs through the RLS-scoped server
  * client (never the service role), returning a tagged
  * `{ ok, data } | { ok: false, error }` the hook pattern-matches.
- * Listing + seeding happen in the server `page.tsx`; these cover the
- * library's create / update / delete / clone mutations.
+ * These cover the library's create / update / delete / clone mutations
+ * plus adding starter templates from the catalog by name.
  *
  * @module app/(dashboard)/templates/actions
  */
@@ -15,6 +15,7 @@ import type { JSONContent } from '@tiptap/react'
 import { z } from 'zod'
 
 import { logger } from '@/lib/alerts/logger'
+import { starterTemplatesByName } from '@/lib/email/starter-templates'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
 import { LIFECYCLE_STAGES, type EmailTemplate } from '@/types/email-template'
@@ -191,4 +192,57 @@ export async function cloneTemplateAction(id: string): Promise<ActionResult<Emai
     return { ok: false, error: 'Could not clone template.' }
   }
   return { ok: true, data: toTemplate(data) }
+}
+
+/* ─── addStarterTemplatesAction ────────────────────────────────── */
+
+const starterNamesSchema = z.array(z.string().trim().min(1)).min(1).max(50)
+
+/**
+ * Add starter templates from the catalog to the MC's library by name.
+ *
+ * Content is resolved **server-side** from the canonical catalog
+ * (`starterTemplatesByName`) — the client only sends names, never body
+ * JSON. Names the MC already has are skipped (so re-adding is a no-op),
+ * and new rows are appended after the current max position and flagged
+ * `is_starter` for provenance.
+ *
+ * @returns The number of templates actually inserted.
+ */
+export async function addStarterTemplatesAction(names: string[]): Promise<ActionResult<{ added: number }>> {
+  const parsed = starterNamesSchema.safeParse(names)
+  if (!parsed.success) return { ok: false, error: 'Invalid request.' }
+
+  const { supabase, user } = await requireUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const starters = starterTemplatesByName(parsed.data)
+  if (starters.length === 0) return { ok: true, data: { added: 0 } }
+
+  // Skip ones already in the library (by name) and append after the
+  // current highest position.
+  const { data: existing } = await supabase.from('email_templates').select('name, position').eq('user_id', user.id)
+  const have = new Set((existing ?? []).map((r) => r.name))
+  const maxPosition = (existing ?? []).reduce((m, r) => Math.max(m, r.position), 0)
+
+  const toInsert = starters.filter((t) => !have.has(t.name))
+  if (toInsert.length === 0) return { ok: true, data: { added: 0 } }
+
+  const rows = toInsert.map((t, i) => ({
+    user_id: user.id,
+    name: t.name,
+    description: t.description,
+    subject: t.subject,
+    content: t.content as Database['public']['Tables']['email_templates']['Insert']['content'],
+    lifecycle_stage: t.lifecycleStage,
+    is_starter: true,
+    position: maxPosition + (i + 1) * 10,
+  }))
+
+  const { error } = await supabase.from('email_templates').insert(rows)
+  if (error) {
+    logger.error('[templates/actions] addStarterTemplatesAction failed', error, { userId: user.id })
+    return { ok: false, error: 'Could not add templates.' }
+  }
+  return { ok: true, data: { added: rows.length } }
 }

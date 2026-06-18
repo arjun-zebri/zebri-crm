@@ -1,16 +1,15 @@
 /**
  * Templates page (server orchestrator).
  *
- * Seeds the MC's starter library on first visit, then hands off to the
- * client orchestrator. Auth is enforced by middleware; we read the
- * business / contact name from user metadata to personalise the
- * library preview's sign-off.
+ * Hands off to the client orchestrator. Auth is enforced by middleware;
+ * we read the business / contact name from user metadata to personalise
+ * the library preview's sign-off. Nothing is auto-seeded — MCs add
+ * starters from the in-app "Browse starter templates" catalog.
  *
  * @module app/(dashboard)/templates/page
  */
 import { redirect } from 'next/navigation'
 
-import { ensureStarterTemplates } from '@/lib/email/starter-templates'
 import { createClient } from '@/lib/supabase/server'
 
 import { TemplatesClient } from './templates-client'
@@ -22,8 +21,8 @@ export default async function TemplatesPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  await ensureStarterTemplates(supabase, user.id)
-
+  // No auto-seeding — MCs add starters from the "Browse starter
+  // templates" catalog on the Emails tab.
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>
   return (
     <TemplatesClient

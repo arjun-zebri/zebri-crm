@@ -1106,16 +1106,25 @@ the quote builder's.
 
 - **Loading**: `TemplatesSkeleton` — search box + stage-grouped row
   placeholders mirroring the real layout (no spinner, no reflow).
-- **Empty** (no templates — rare, since starters auto-seed): `Empty`
-  with a New-template CTA.
+- **Empty** (no templates — the default for a new MC, since nothing is
+  auto-seeded): `Empty` offering **Browse starter templates** + **New
+  template**.
 - **Error**: `ErrorState` with retry.
 
-## Seeding
+## Starter templates (opt-in catalog — no auto-seed)
 
-The server `page.tsx` calls `ensureStarterTemplates()` on first visit,
-auto-seeding ~27 editable starter templates (incl. celebrant AU-legal:
-NOIM, document request, ceremony script, certificate info). Idempotent
-— only seeds when the MC has zero templates.
+Nothing is auto-seeded. The Emails tab has a **Browse starter
+templates** button (and an empty-state CTA) opening
+`StarterLibraryPanel` — the catalog of ~26 starters (the canonical set
+in `lib/email/starter-templates.ts`, incl. the celebrant AU-legal ones:
+NOIM, document request, ceremony script, certificate info), grouped by
+stage. Catalog entries already in the library are hidden; **Add** (or
+**Add all**) inserts copies via `addStarterTemplatesAction`, which
+resolves content server-side from the catalog by name (client sends
+names only) and skips duplicates. Migration
+`20260618000200_clear_seeded_starter_templates.sql` removes the rows
+from the old auto-seed model (only `is_starter` rows; user-created
+templates untouched).
 
 ## Variables & the missing-variable rule
 
@@ -1130,7 +1139,8 @@ variable applies at send time (manual modal + automation handler).
 
 ```
 app/(dashboard)/templates/
-  page.tsx                  -  server: auth + seed + hand off
+  page.tsx                  -  server: auth + hand off (no seeding)
+  starter-library-panel.tsx -  "Browse starter templates" catalog modal
   templates-client.tsx      -  tab orchestrator (Emails/Quotes/Timelines/Contracts)
   templates-tabs.tsx        -  underline tab nav
   emails-tab.tsx            -  Emails tab: library + editor modal + New button
@@ -1149,7 +1159,7 @@ app/(dashboard)/templates/
 lib/email/
   templates.ts              -  render + detectMissingVariables (shared)
   template-variables.ts     -  editor variable list + sample context
-  starter-templates.ts      -  canonical starter set + ensureStarterTemplates
+  starter-templates.ts      -  canonical starter catalog + starterTemplatesByName
 types/email-template.ts     -  EmailTemplate + LifecycleStage
 ```
 

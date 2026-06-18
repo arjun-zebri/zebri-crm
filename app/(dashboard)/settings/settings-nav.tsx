@@ -13,9 +13,9 @@ import {
   CreditCard,
   FileText,
   Landmark,
-  Lock,
   Shield,
   User,
+  UserCog,
 } from 'lucide-react';
 
 export type SettingsTabId =
@@ -34,7 +34,7 @@ export interface SettingsNavItem {
 
 export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { key: 'personal-info', label: 'Personal Info', icon: <User size={18} strokeWidth={1.5} /> },
-  { key: 'account', label: 'Account', icon: <Lock size={18} strokeWidth={1.5} /> },
+  { key: 'account', label: 'Account', icon: <UserCog size={18} strokeWidth={1.5} /> },
   { key: 'billing', label: 'Plans & Billing', icon: <CreditCard size={18} strokeWidth={1.5} /> },
   { key: 'payments', label: 'Receive Payments', icon: <Landmark size={18} strokeWidth={1.5} /> },
   { key: 'privacy', label: 'Privacy', icon: <Shield size={18} strokeWidth={1.5} /> },

@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { EmailTemplate } from '@/types/email-template'
 
 import {
+  addStarterTemplatesAction,
   cloneTemplateAction,
   createTemplateAction,
   deleteTemplateAction,
@@ -80,6 +81,15 @@ export function useCloneTemplate() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => unwrap(await cloneTemplateAction(id)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
+/** Add starter templates from the catalog by name; returns how many landed. */
+export function useAddStarterTemplates() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (names: string[]) => unwrap(await addStarterTemplatesAction(names)),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   })
 }

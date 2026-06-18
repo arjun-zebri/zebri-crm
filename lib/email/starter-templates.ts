@@ -19,10 +19,8 @@
  * @module lib/email/starter-templates
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { JSONContent } from '@tiptap/react'
 
-import type { Database } from '@/types/database'
 import type { LifecycleStage } from '@/types/email-template'
 
 /** A canonical starter template definition. */
@@ -411,39 +409,20 @@ export const STARTER_EMAIL_TEMPLATES: readonly StarterTemplate[] = [
   },
 ]
 
+/** Lookup by name (names are unique across the catalog). */
+const STARTER_BY_NAME = new Map(STARTER_EMAIL_TEMPLATES.map((t) => [t.name, t]))
+
 /**
- * Auto-seed a user's starter library if they have none yet.
+ * Resolve a list of starter-template names to their catalog entries,
+ * preserving request order and silently dropping unknown names.
  *
- * Idempotent: only seeds when the user currently has zero templates,
- * so re-running (e.g. on every Templates page load) is safe and never
- * resurrects templates the user has since edited. Called from the
- * Templates page loader and the automation template-picker loader so a
- * brand-new MC always sees a full library.
- *
- * @returns The number of templates inserted (0 when already seeded).
+ * The library is **not** auto-seeded — an MC adds the ones they want
+ * from the "Browse starter templates" catalog on the Emails tab. This
+ * is the server-trusted lookup the add action uses so the inserted
+ * content always comes from the canonical catalog, never the client.
  */
-export async function ensureStarterTemplates(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-): Promise<number> {
-  const { count, error: countError } = await supabase
-    .from('email_templates')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-  if (countError || (count ?? 0) > 0) return 0
-
-  const rows = STARTER_EMAIL_TEMPLATES.map((t, i) => ({
-    user_id: userId,
-    name: t.name,
-    description: t.description,
-    subject: t.subject,
-    content: t.content as Database['public']['Tables']['email_templates']['Insert']['content'],
-    lifecycle_stage: t.lifecycleStage,
-    is_starter: true,
-    position: i * 10,
-  }))
-
-  const { error: insertError } = await supabase.from('email_templates').insert(rows)
-  if (insertError) return 0
-  return rows.length
+export function starterTemplatesByName(names: string[]): StarterTemplate[] {
+  return names
+    .map((name) => STARTER_BY_NAME.get(name))
+    .filter((t): t is StarterTemplate => t !== undefined)
 }

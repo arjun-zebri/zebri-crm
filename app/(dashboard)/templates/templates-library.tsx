@@ -12,7 +12,7 @@
  */
 'use client'
 
-import { Copy, Mail, Pencil, Trash2 } from 'lucide-react'
+import { Copy, Library, Mail, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,8 @@ interface TemplatesLibraryProps {
   isError: boolean
   onRetry: () => void
   onNew: () => void
+  /** Open the "Browse starter templates" catalog (empty-state CTA). */
+  onBrowse: () => void
   onEdit: (template: EmailTemplate) => void
 }
 
@@ -47,7 +49,7 @@ interface StageGroup {
 /** Render order: the journey stages first, then un-tagged templates. */
 const GROUP_ORDER: (LifecycleStage | null)[] = [...LIFECYCLE_STAGES, null]
 
-export function TemplatesLibrary({ templates, isLoading, isError, onRetry, onNew, onEdit }: TemplatesLibraryProps) {
+export function TemplatesLibrary({ templates, isLoading, isError, onRetry, onNew, onBrowse, onEdit }: TemplatesLibraryProps) {
   const { toast } = useToast()
   const clone = useCloneTemplate()
   const remove = useDeleteTemplate()
@@ -82,18 +84,41 @@ export function TemplatesLibrary({ templates, isLoading, isError, onRetry, onNew
   if (templates.length === 0) {
     return (
       <Empty
+        size="sm"
+        className="min-h-[60vh]"
         icon={Mail}
         title="No templates yet"
-        description="Create a reusable email your couples will love."
-        action={<Button onClick={onNew}>New template</Button>}
+        description="Add ready-made starters from the catalog, or write your own from scratch."
+        action={
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={onBrowse}>
+              Browse starter templates
+            </Button>
+            <Button size="sm" onClick={onNew}>
+              New template
+            </Button>
+          </div>
+        }
       />
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="sm:max-w-xs">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search templates…" size="sm" />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="w-full sm:w-64">
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search templates…" size="sm" />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button size="sm" variant="outline" onClick={onBrowse} className="gap-1.5">
+            <Library size={14} strokeWidth={1.5} />
+            Browse starter templates
+          </Button>
+          <Button size="sm" onClick={onNew} className="gap-1.5">
+            <Plus size={14} strokeWidth={2} />
+            New template
+          </Button>
+        </div>
       </div>
 
       {groups.length === 0 ? (
