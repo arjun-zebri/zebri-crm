@@ -28,11 +28,20 @@ export function SettingsModal() {
   const searchParams = useSearchParams();
   const [data, setData] = useState<SettingsData | null>(null);
 
+  // The active tab is LOCAL state, seeded once from `?tab=` so deep
+  // links open the right section. It is deliberately NOT driven by the
+  // router: this modal renders inside an intercepting route, and a
+  // same-route `router.replace('/settings?tab=…')` on every tab click
+  // re-resolves the route tree and bounces back to the underlying page
+  // (remounting the modal and resetting the tab). Local state mirrors
+  // the working `couple-profile` overlay, which never navigates on a
+  // tab change.
   const rawTab = searchParams.get('tab');
-  const activeTab: SettingsTabId =
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(
     rawTab && VALID_TABS.includes(rawTab as SettingsTabId)
       ? (rawTab as SettingsTabId)
-      : 'personal-info';
+      : 'personal-info',
+  );
 
   // Legacy deep-link compatibility: branding/portal live under
   // /branding now; templates moved to /templates.
@@ -83,7 +92,7 @@ export function SettingsModal() {
   }, []);
 
   const handleTabChange = (id: SettingsTabId) => {
-    router.replace(`/settings?tab=${id}`);
+    setActiveTab(id);
   };
 
   return (
