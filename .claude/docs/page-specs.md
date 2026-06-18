@@ -780,13 +780,43 @@ Route: `/settings`
 
 Route group: `(dashboard)`
 
-Purpose: Unified settings page with horizontal tab navigation.
+Purpose: Unified settings, rendered as an **overlay modal** (not a
+full page) styled to match the Couple Profile overlay — centered
+`rounded-2xl` card with a left side-tab nav.
 
-Header shows "Settings" title with user name and email below.
+## Rendering: intercepting-route modal
+
+Settings opens as an overlay over the current page via Next.js
+parallel + intercepting routes:
+
+- `app/(dashboard)/@modal/(.)settings/page.tsx` intercepts **soft
+  navigation** to `/settings` (the sidebar link) and renders
+  `<SettingsModal/>` over whatever page the user was on. The
+  `@modal` slot is wired into `app/(dashboard)/layout.tsx`;
+  `@modal/default.tsx` renders nothing when not on settings.
+- `app/(dashboard)/settings/page.tsx` is the **hard-load / refresh
+  fallback**: it renders the dashboard home as the backdrop plus the
+  same `<SettingsModal/>` on top.
+- Close (backdrop click / `Esc` / the header `X`) calls
+  `router.back()`, falling back to `/` when there is no history.
+- The modal shell mirrors `couple-profile.tsx`:
+  `bg-black/40 backdrop-blur-sm` backdrop, `bg-white rounded-2xl
+  shadow-xl`, `sm:max-w-[1100px] h-[90vh]`, `animate-modal-in`. The
+  header is just the "Settings" title + close button.
+
+Component layout (each ≤ ~150 lines): `settings-modal.tsx`
+(orchestrator: loads the auth user, owns the active tab), reusing
+`settings-nav.tsx` (the side nav) and `settings-body.tsx` (section
+switch). The existing section components are reused unchanged.
 
 ## Tab Navigation
 
-Horizontal underline tabs (Vercel/Beyond.so style). Active tab driven by `?tab=` search param, default `personal-info`.
+Left **side-tab nav** with Lucide icons (desktop: 200px vertical
+sidebar; mobile ≤ sm: horizontal scrollable pill row) — same pattern
+as `couple-profile-nav.tsx`. Active tab driven by `?tab=` search
+param (deep-linkable; tab clicks `router.replace` it), default
+`personal-info`. Legacy `?tab=branding` / `?tab=portal` redirect to
+`/branding`; `?tab=templates` redirects to `/templates`.
 
 Tabs:
 
@@ -874,6 +904,19 @@ Placeholder empty state. Coming soon.
 ### Notifications (`?tab=notifications`)
 
 Placeholder empty state. Coming soon.
+
+### Privacy (`?tab=privacy`)
+
+Inline Privacy Policy copy (`privacy-section.tsx`), mirroring
+zebri.com.au/privacy. Shows a "Last updated" line and a canonical
+"View the latest at zebri.com.au/privacy" external link. Read-only —
+no actions. Shares the `legal-section.tsx` prose chrome with Terms.
+
+### Terms (`?tab=terms`)
+
+Inline Terms of Service copy (`terms-section.tsx`), mirroring
+zebri.com.au/terms. Same `legal-section.tsx` chrome + canonical link
+as Privacy. Read-only.
 
 ---
 
@@ -997,3 +1040,124 @@ app/timeline/
     page.tsx            -  server component, fetches + renders
     timeline-item.tsx   -  presentational component for each item row
 ```
+
+# Templates Page (all reusable templates)
+
+Top-level sidebar page (`/templates`, `FileStack` icon) — the single
+home for every reusable-template kind. **Tabbed** (`templates-tabs.tsx`,
+underline tabs matching the Settings chrome):
+
+- **Emails** — the email-template library (below); used by automations
+  and the manual couple "Send email" flow.
+- **Packages** — `PackagesManager` (reusable priced service bundles;
+  table `packages` + `package_items`). Sits before Quotes because
+  quotes/invoices are built from packages.
+- **Quotes** — `QuoteTemplateManager` (reusable line-item sets; table
+  `quote_templates` + `quote_template_items`).
+- **Invoices** — `InvoiceTemplatesManager` (reusable invoices; table
+  `invoice_templates` + `invoice_template_items`). The editor's
+  **"Add from package or quote"** picker snapshots a package's or quote
+  template's line items in (referencing by copy, not live FK).
+- **Timelines** — `TimelineTemplateManager` (reusable run-sheet item
+  sets; `timeline_templates` + `timeline_template_items`).
+- **Contracts** — `ContractTemplateManager` (`contract_templates`).
+
+Tab order follows the money flow (packages → quotes → invoices build on
+each other). Quotes / Timelines / Contracts moved here out of
+**Settings → Templates** (that tab is removed; `/settings?tab=templates`
+redirects to `/templates`). Remaining: wiring the *couple-facing* quote
+and invoice **builders** to reference packages (templates already do).
+
+## Emails tab layout
+
+- Header row: email subtitle + "New template" button (`size="sm"` with
+  a `Plus` icon, matching the Couples "New couple" button).
+- Library: a slim search box, then templates **grouped by lifecycle
+  stage** (Enquiry · Quote · Booking · Planning · Wedding week ·
+  Follow-up, then an "Other" bucket for un-tagged templates) under
+  quiet uppercase subheaders — matching the calm couple-overview /
+  automations surfaces. Each row shows name + rendered subject; whole-
+  row click opens the editor, and Edit / Duplicate / Delete live in a
+  hover-revealed `⋯` overflow menu (`RowActionsMenu`, `alwaysVisible`
+  so touch users can reach it). No filter chips and no per-row stage
+  chip — the group subheaders carry the stage; search filters by name
+  or subject and only non-empty groups render.
+- Editor modal (fullscreen): left = name, lifecycle Select, subject
+  (mustache, with Insert-variable popover), TipTap body editor wired to
+  the email variable catalogue; right = **live preview** filled with
+  sample data via the shared renderer (`lib/email/templates`).
+
+## Page States
+
+- **Loading**: `TemplatesSkeleton` — search box + stage-grouped row
+  placeholders mirroring the real layout (no spinner, no reflow).
+- **Empty** (no templates — rare, since starters auto-seed): `Empty`
+  with a New-template CTA.
+- **Error**: `ErrorState` with retry.
+
+## Seeding
+
+The server `page.tsx` calls `ensureStarterTemplates()` on first visit,
+auto-seeding ~27 editable starter templates (incl. celebrant AU-legal:
+NOIM, document request, ceremony script, certificate info). Idempotent
+— only seeds when the MC has zero templates.
+
+## Variables & the missing-variable rule
+
+Body mention nodes / subject tokens carry a namespaced automation
+variable key (`couple.primary_name`, `event.date | friendly`). The
+renderer resolves them through the automation resolver and returns the
+set of **unresolved** variables. The library preview uses sample data
+(everything resolves); the gate that blocks an email with a missing
+variable applies at send time (manual modal + automation handler).
+
+## File Structure
+
+```
+app/(dashboard)/templates/
+  page.tsx                  -  server: auth + seed + hand off
+  templates-client.tsx      -  tab orchestrator (Emails/Quotes/Timelines/Contracts)
+  templates-tabs.tsx        -  underline tab nav
+  emails-tab.tsx            -  Emails tab: library + editor modal + New button
+  templates-library.tsx     -  stage-grouped list, search, row actions
+  templates-skeleton.tsx    -  loading skeleton mirroring the grouped list
+  template-editor-modal.tsx -  create/edit (editor + live preview)
+  template-preview.tsx      -  shared filled-in preview
+  subject-field.tsx         -  subject input + variable popover
+  actions.ts                -  create/update/delete/clone (Zod + RLS)
+  use-templates.ts          -  React Query hooks
+  packages-manager.tsx          -  Packages tab (packages + package_items)
+  invoice-templates-manager.tsx -  Invoices tab (+ "Add from package/quote" picker)
+  quote-template-manager.tsx    -  Quotes tab (moved from settings/)
+  timeline-template-manager.tsx -  Timelines tab (moved from settings/)
+  contract-template-manager.tsx -  Contracts tab (moved from settings/)
+lib/email/
+  templates.ts              -  render + detectMissingVariables (shared)
+  template-variables.ts     -  editor variable list + sample context
+  starter-templates.ts      -  canonical starter set + ensureStarterTemplates
+types/email-template.ts     -  EmailTemplate + LifecycleStage
+```
+
+## Manual send — couple "Send email" modal
+
+Entry point: a "Send email" button in the couple Overview (`couple-overview.tsx`).
+Opens `couple-send-email.tsx`:
+
+- Pick a saved template (inline compose is a planned follow-on).
+- Live preview filled against the **real couple** via
+  `loadSendContextAction` (couple + MC snapshot + stamped document
+  links). Unresolved variables are highlighted amber.
+- `SendEmailMissingPanel` lists every missing variable with an inline
+  input — values are **temporary for this send only**, never written to
+  the couple record.
+- Send is **blocked** while any variable is missing; an explicit **"Send
+  anyway"** button overrides. The authoritative gate is re-applied in
+  `POST /api/email/send-template` (422 when blocked without `sendAnyway`).
+
+Files: `couple-send-email.tsx`, `send-email-missing-panel.tsx`,
+`send-email-actions.ts`, `app/api/email/send-template/route.ts`,
+`lib/email/send-context.ts`.
+
+Deferred sub-items: static-file attachment upload UI (the route + bucket
+already support `attachmentFileIds`; the upload/attach UI lands with the
+template editor), and inline (template-less) compose.
