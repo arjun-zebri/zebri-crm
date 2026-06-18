@@ -32,6 +32,7 @@ import { createClient } from '@/lib/supabase/client';
 
 import type { ChangePasswordResult } from './account/action-state';
 import { changePasswordAction } from './account/actions';
+import { AutoSaveStatus, type SaveState } from './auto-save-status';
 
 interface EmailPreferencesData {
   product_updates?: boolean;
@@ -164,47 +165,44 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
     bookingReminders: initial?.booking_reminders ?? true,
     tips: initial?.tips ?? false,
   };
-  const [saved, setSaved] = useState(initialPrefs);
   const [prefs, setPrefs] = useState(initialPrefs);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
 
-  const dirty =
-    prefs.productUpdates !== saved.productUpdates ||
-    prefs.bookingReminders !== saved.bookingReminders ||
-    prefs.tips !== saved.tips;
-
-  async function save() {
-    setSaving(true);
+  // Persist the given preference set immediately. The toggled value is
+  // passed in (not read from state) so the save reflects the click that
+  // triggered it rather than the pre-toggle closure.
+  async function save(next: typeof prefs) {
+    setSaveState('saving');
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
       toast('Unable to load user data.', 'error');
-      setSaving(false);
+      setSaveState('error');
       return;
     }
-    const updated = {
-      ...(user.user_metadata ?? {}),
-      email_preferences: {
-        product_updates: prefs.productUpdates,
-        booking_reminders: prefs.bookingReminders,
-        tips: prefs.tips,
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        ...(user.user_metadata ?? {}),
+        email_preferences: {
+          product_updates: next.productUpdates,
+          booking_reminders: next.bookingReminders,
+          tips: next.tips,
+        },
       },
-    };
-    const { error } = await supabase.auth.updateUser({ data: updated });
+    });
+    setSaveState(error ? 'error' : 'saved');
     if (error) toast(error.message, 'error');
-    else {
-      toast('Email preferences saved.');
-      setSaved({ ...prefs });
-    }
-    setSaving(false);
   }
 
   return (
     <section>
-      <h3 className="mb-4 text-sm font-medium text-text">Email preferences</h3>
-      <div className="mb-4 space-y-3">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-medium text-text">Email preferences</h3>
+        <AutoSaveStatus state={saveState} />
+      </div>
+      <div className="space-y-3">
         {(
           [
             ['productUpdates', 'Product updates and announcements'],
@@ -216,18 +214,16 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
             <input
               type="checkbox"
               checked={prefs[key]}
-              onChange={(e) => setPrefs({ ...prefs, [key]: e.target.checked })}
+              onChange={(e) => {
+                const next = { ...prefs, [key]: e.target.checked };
+                setPrefs(next);
+                void save(next);
+              }}
               className="h-4 w-4 rounded border-border accent-brand-fg"
             />
             <span className="text-sm text-text">{label}</span>
           </label>
         ))}
-      </div>
-      <div className="flex items-center gap-3">
-        <Button type="button" onClick={save} loading={saving} disabled={!dirty}>
-          {saving ? 'Saving…' : 'Save preferences'}
-        </Button>
-        {dirty ? <span className="text-caption text-text-muted">Unsaved changes</span> : null}
       </div>
     </section>
   );

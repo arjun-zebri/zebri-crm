@@ -824,13 +824,22 @@ Tabs:
 
 Fields: Display Name, Business Name, Phone, Avatar URL
 
-Action: Save Changes (updates user_metadata — these are user-owned fields, not entitlements; safe to write via `auth.updateUser({ data })`)
+**Auto-saves** — no Save button. Text fields persist on blur; the
+business-type picker and address selection persist on change (writes
+`user_metadata` via `auth.updateUser({ data })` — user-owned fields,
+not entitlements). A change to the email field is the one case that
+toasts (a confirmation link is sent; it isn't live until confirmed).
+A calm inline "Saving… / Saved" hint (`auto-save-status.tsx`) replaces
+the button.
 
 ### Account (`?tab=account`)
 
-Fields: New Password, Confirm Password
+Change password + email preferences + danger zone.
 
-Action: Change Password
+- **Change password** — explicit `Change password` button (security
+  action: requires the current password; not auto-saved).
+- **Email preferences** — toggles **auto-save** immediately on change.
+- **Danger zone** — explicit `Delete account` button (destructive).
 
 ### Plans & Billing (`?tab=billing`)
 
@@ -893,7 +902,7 @@ opens.
 
 Two sections:
 
-**Bank details**  -  Account name, BSB, Account number inputs. Save button updates `user_metadata` (user-owned fields — `bank_account_name`, `bank_bsb`, `bank_account_number`). Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
+**Bank details**  -  Account name, BSB, Account number inputs. **Auto-save on blur** (no Save button) — updates `user_metadata` (user-owned fields — `bank_account_name`, `bank_bsb`, `bank_account_number`), with the shared inline "Saving… / Saved" hint. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
 
 **Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. The Connect callback writes `stripe_connect_account_id` and `stripe_connect_enabled` to **`app_metadata`** via `updateEntitlements()` (entitlements, not user-owned — they govern access to the public Pay button). Disconnect clears those fields the same way.
 

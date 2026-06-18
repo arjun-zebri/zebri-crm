@@ -44,13 +44,15 @@ import {
   ConnectNotificationBanner,
 } from '@stripe/react-connect-js';
 import { AlertTriangle, CreditCard } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { ConnectStatusPanel } from '@/components/settings/connect-status-panel';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import type { ConnectAccountState } from '@/lib/payments/connect-account';
 import { createClient } from '@/lib/supabase/client';
+
+import { AutoSaveStatus, type SaveState } from './auto-save-status';
 
 interface PaymentSettingsSectionProps {
   initialBankAccountName: string;
@@ -74,7 +76,14 @@ export function PaymentSettingsSection({
   const [bankAccountName, setBankAccountName] = useState(initialBankAccountName);
   const [bankBsb, setBankBsb] = useState(initialBankBsb);
   const [bankAccountNumber, setBankAccountNumber] = useState(initialBankAccountNumber);
-  const [bankSaving, setBankSaving] = useState(false);
+  const [bankSaveState, setBankSaveState] = useState<SaveState>('idle');
+  // Last-persisted baseline so a blur with no real change is a no-op.
+  const savedBankRef = useRef({
+    name: initialBankAccountName,
+    bsb: initialBankBsb,
+    number: initialBankAccountNumber,
+  });
+  const bankSavingRef = useRef(false);
 
   /* ─── Connect state ─────────────────────────────────────────── */
   const [accountId, setAccountId] = useState<string | null>(
@@ -150,14 +159,22 @@ export function PaymentSettingsSection({
     });
   }, [accountId, publishableKey]);
 
-  /* ─── Bank details save ─────────────────────────────────────── */
+  /* ─── Bank details auto-save (on blur) ──────────────────────── */
   const saveBankDetails = async () => {
-    setBankSaving(true);
+    const s = savedBankRef.current;
+    const dirty =
+      bankAccountName !== s.name ||
+      bankBsb !== s.bsb ||
+      bankAccountNumber !== s.number;
+    if (bankSavingRef.current || !dirty) return;
+    bankSavingRef.current = true;
+    setBankSaveState('saving');
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      setBankSaving(false);
+      setBankSaveState('error');
+      bankSavingRef.current = false;
       return;
     }
     const { error } = await supabase.auth.updateUser({
@@ -168,12 +185,14 @@ export function PaymentSettingsSection({
         bank_account_number: bankAccountNumber,
       },
     });
-    setBankSaving(false);
     if (error) {
       toast(error.message, 'error');
+      setBankSaveState('error');
     } else {
-      toast('Bank details saved.');
+      savedBankRef.current = { name: bankAccountName, bsb: bankBsb, number: bankAccountNumber };
+      setBankSaveState('saved');
     }
+    bankSavingRef.current = false;
   };
 
   /* ─── Connect kickoff / disconnect ──────────────────────────── */
@@ -241,33 +260,34 @@ export function PaymentSettingsSection({
     <div className="max-w-3xl space-y-12">
       {/* ─── Bank details ─────────────────────────────────────── */}
       <Section label="Bank details">
-        <p className="mb-5 text-body text-text-muted">
-          Auto-filled into invoice notes when you create a new invoice.
-        </p>
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <p className="text-body text-text-muted">
+            Auto-filled into invoice notes when you create a new invoice. Changes save automatically.
+          </p>
+          <AutoSaveStatus state={bankSaveState} />
+        </div>
         <div className="space-y-4">
           <BankField
             label="Account name"
             placeholder="e.g. John Smith Events"
             value={bankAccountName}
             onChange={setBankAccountName}
+            onBlur={saveBankDetails}
           />
           <BankField
             label="BSB"
             placeholder="e.g. 062-000"
             value={bankBsb}
             onChange={setBankBsb}
+            onBlur={saveBankDetails}
           />
           <BankField
             label="Account number"
             placeholder="e.g. 12345678"
             value={bankAccountNumber}
             onChange={setBankAccountNumber}
+            onBlur={saveBankDetails}
           />
-        </div>
-        <div className="mt-5 flex justify-end">
-          <Button onClick={saveBankDetails} loading={bankSaving}>
-            Save bank details
-          </Button>
         </div>
       </Section>
 
@@ -382,11 +402,13 @@ function BankField({
   placeholder,
   value,
   onChange,
+  onBlur,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur: () => void;
 }) {
   return (
     <div>
@@ -395,6 +417,7 @@ function BankField({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         className="w-full border border-border rounded-xl px-3 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
       />
