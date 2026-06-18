@@ -1065,8 +1065,14 @@ underline tabs matching the Settings chrome):
 Tab order follows the money flow (packages → quotes → invoices build on
 each other). Quotes / Timelines / Contracts moved here out of
 **Settings → Templates** (that tab is removed; `/settings?tab=templates`
-redirects to `/templates`). Remaining: wiring the *couple-facing* quote
-and invoice **builders** to reference packages (templates already do).
+redirects to `/templates`).
+
+The couple-facing **quote and invoice builders** also reference packages:
+their "Apply package or template" picker (shared `TemplatePicker`, fed by
+`useApplySources` — quote templates + packages, namespaced `qt:`/`pkg:`
+ids) snapshots a source's line items + notes into the document. The
+invoice builder previously had no apply-from picker at all; it now shares
+the quote builder's.
 
 ## Emails tab layout
 

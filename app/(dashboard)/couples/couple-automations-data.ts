@@ -106,6 +106,7 @@ export function buildActivity(
   runs: RunWithAutomation[],
   audit: AuditRow[],
   wakeByRun: Map<string, string> = new Map(),
+  missingVarRuns: Set<string> = new Set(),
 ): Map<string, RunActivity> {
   const linesByRun = new Map<string, AuditRow[]>()
   for (const row of audit) linesByRun.set(row.run_id, [...(linesByRun.get(row.run_id) ?? []), row])
@@ -129,6 +130,7 @@ export function buildActivity(
       startedAt: run.started_at,
       completedAt: run.completed_at,
       wakeAt: wakeByRun.get(run.id) ?? null,
+      blockedMissingVars: missingVarRuns.has(run.id),
       lines,
     })
   }

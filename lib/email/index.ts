@@ -21,6 +21,73 @@ function resend(): Resend {
 
 const FROM = "Zebri <noreply@app.zebri.com.au>";
 
+/**
+ * Wrap an already-rendered (HTML) email body in the standard
+ * Zebri-branded shell. Unlike the automation `wrapAutomationHtml`
+ * (which escapes a plain-text body), this embeds trusted, sanitised
+ * HTML produced by `renderEmailTemplate`.
+ */
+export function wrapTemplateHtml(bodyHtml: string, mcBusinessName: string): string {
+  const safeName = mcBusinessName
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f9f9f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
+        <tr><td style="padding:40px;font-size:15px;color:#374151;line-height:1.6;">${bodyHtml}</td></tr>
+        <tr><td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
+          <p style="margin:0;font-size:12px;color:#9ca3af;">Sent by ${safeName} via Zebri</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+/** A Resend-ready attachment. */
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+}
+
+/**
+ * Send a fully-rendered template email (subject + HTML body already
+ * resolved). The single send path for the manual compose flow and the
+ * automation template handler.
+ */
+export async function sendTemplateEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+  bcc?: string;
+  attachments?: EmailAttachment[];
+}): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  try {
+    const { data, error } = await resend().emails.send({
+      from: FROM,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+      ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+      ...(opts.bcc ? { bcc: opts.bcc } : {}),
+      ...(opts.attachments?.length
+        ? { attachments: opts.attachments.map((a) => ({ filename: a.filename, content: a.content })) }
+        : {}),
+    });
+    if (error || !data?.id) {
+      return { ok: false, error: error?.message ?? "Resend returned no message id" };
+    }
+    return { ok: true, messageId: data.id };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 export function quoteHtml(opts: {
   coupleName: string;
   quoteNumber: string;

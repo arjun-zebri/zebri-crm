@@ -41,6 +41,7 @@ export async function loadCoupleAutomations(
 
   let audit: AuditRow[] = []
   const wakeByRun = new Map<string, string>()
+  const missingVarRuns = new Set<string>()
   if (runs.length > 0) {
     const runIds = runs.map((r) => r.id)
     const [{ data: auditRows }, { data: waitRows }] = await Promise.all([
@@ -51,15 +52,21 @@ export async function loadCoupleAutomations(
         .order('created_at', { ascending: true }),
       supabase
         .from('automation_waits' as never)
-        .select('run_id, wake_at')
+        .select('run_id, wake_at, reason')
         .in('run_id', runIds)
         .is('consumed_at', null),
     ])
     audit = (auditRows as AuditRow[] | null) ?? []
-    for (const w of (waitRows as { run_id: string; wake_at: string }[] | null) ?? []) {
-      // Earliest pending wake wins (a run has at most one live wait).
-      if (!wakeByRun.has(w.run_id)) wakeByRun.set(w.run_id, w.wake_at)
+    for (const w of (waitRows as { run_id: string; wake_at: string; reason: string }[] | null) ?? []) {
+      // A run paused on a missing variable needs a "Fix & retry", not a
+      // timed wake — track it separately from scheduled waits.
+      if (w.reason === 'missing_variables') missingVarRuns.add(w.run_id)
+      else if (!wakeByRun.has(w.run_id)) wakeByRun.set(w.run_id, w.wake_at)
     }
   }
-  return { runs, activity: buildActivity(runs, audit, wakeByRun), loadedAt: Date.now() }
+  return {
+    runs,
+    activity: buildActivity(runs, audit, wakeByRun, missingVarRuns),
+    loadedAt: Date.now(),
+  }
 }

@@ -1322,6 +1322,20 @@ Each page/section is its own small PR(s) and must meet the §5 DoD before it's "
 13. **Admin / Shadow mode**
 14. **Workflows / automation** — Phase 14a (foundation + builder + recipe library + linear engine) **shipped 2026-06-04** on `staging`. See `.claude/docs/automations.md` for the trigger/action catalogue + architecture. 14b (SMS / WhatsApp / IG / AI helpers / questionnaire editor / run-as-batch) is the follow-up.
 15. **Cron + email pipeline**
+16. **Email Templates** — reusable per-MC email templates (TipTap body +
+    mustache subject) usable in the automation `send_email` action and a
+    manual couple "Send email" flow. Core guarantee: **never send with a
+    missing variable** — a shared renderer (`lib/email/templates.ts`)
+    returns the unresolved-variable set; manual sends block (with an
+    explicit "Send anyway"), automation sends pause the run on a
+    `missing_variables` wait + fire a Slack alert + offer "Fix & retry"
+    on the couple Automations tab. Top-level `/templates` library
+    auto-seeds ~27 lifecycle starters incl. celebrant AU-legal. Shipped
+    on `staging` (this batch). **Deferred:** static-file attachment UI +
+    inline (template-less) compose (route/bucket already support them);
+    dynamic-doc PDF attachments dropped in favour of body links (no
+    server-PDF infra). See `page-specs.md` (Templates), `database-schema.md`,
+    `alerts.md`, `security.md`.
 
 (Order can be revisited after Phase 0; security-critical surfaces stay first.)
 

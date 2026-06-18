@@ -582,3 +582,113 @@ event when the contract locks.
 Migration: `20260528000000_create_contract_audit_log.sql`. Includes
 a back-fill that synthesises one audit row per pre-existing
 contract from its current status + denormalised inline columns.
+
+## email_templates / email_template_files (Email Templates feature)
+
+Reusable, per-MC email templates used in both the automation
+`send_email` action and the manual "Send email" compose flow. The
+defining rule: an email never sends with an unfilled variable — the
+shared renderer (`lib/email/templates.ts`) detects unresolved
+variables so the caller can block (automations) or gate behind an
+explicit "Send anyway" (manual).
+
+`email_templates` columns:
+id (uuid, primary key)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+name (text, not null)
+description (text, nullable)
+subject (text, not null, default '')  -  mustache string, e.g. `Quote for {{couple.name}}`
+content (jsonb, not null, default '{}')  -  TipTap JSON body; mention nodes carry a namespaced variable key in `attrs.id` (e.g. `couple.primary_name`, `event.date | friendly`)
+lifecycle_stage (text, nullable, check in: enquiry | quote | booking | planning | wedding_week | follow_up)
+is_starter (boolean, not null, default false)  -  provenance badge for seeded library rows; starters stay fully editable
+position (integer, not null, default 0)
+created_at / updated_at (timestamptz; updated_at kept fresh by trigger `email_templates_set_updated_at`)
+
+`email_template_files` columns (metadata for static attachment uploads;
+the binary lives in the private `email-template-files` storage bucket
+at `{user_id}/{template_id}/{id}`):
+id (uuid, primary key)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+template_id (uuid, FK email_templates.id, on delete cascade)
+file_name / mime_type / storage_path (text, not null)
+file_size (integer, not null)
+created_at (timestamptz)
+
+Indexes: `email_templates(user_id)`, partial
+`email_templates(user_id, lifecycle_stage)`, `email_template_files(user_id)`,
+`email_template_files(template_id)`.
+
+RLS: base owner policy `user_id = auth.uid()` (USING + WITH CHECK) on
+both tables. The `email-template-files` storage bucket is **private**
+(25 MB cap, PDF/DOCX/PNG/JPEG MIME whitelist) with owner-only
+insert/select/update/delete policies keyed on the first path segment
+(`auth.uid()::text = split_part(name, '/', 1)`).
+
+Variable resolution reuses the automation namespace via
+`resolveVariable()` in `lib/automations/variables.ts`, so a template
+renders identically whether fired by an automation or sent manually.
+
+Migration: `20260618000000_create_email_templates_feature.sql`. The
+starter library is seeded app-side (`ensureStarterTemplates()` on first
+Templates-page visit) rather than via SQL. The `automation_waits.reason`
++ `automation_audit_log.event` CHECKs are widened to include
+`missing_variables` / `missing_variables_detected` in
+`20260618000100_automation_missing_variables_wait.sql` (the send_email
+template path pauses a run on an unresolved variable; see `alerts.md`).
+
+## packages / package_items (Templates page — Packages tab)
+
+Reusable, per-MC service bundles surfaced on the **Packages** tab of
+`/templates`. A package is a named set of priced line items the MC can
+drop into quotes and invoices. Structurally mirrors `quote_templates` /
+`quote_template_items` so referencing maps 1:1 in a later phase.
+
+`packages` columns:
+id (uuid, primary key)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+name (text, not null)
+description (text, nullable)
+notes (text, nullable)  -  short subtitle shown on the list row
+position (integer, not null, default 0)  -  drag-reorder order
+created_at / updated_at (timestamptz)
+
+`package_items` columns:
+id (uuid, primary key)
+package_id (uuid, FK packages.id, on delete cascade)
+user_id (uuid, not null)  -  RLS key (denormalised)
+description (text, not null)
+amount (numeric(10,2), not null)
+position (integer, not null)
+created_at (timestamptz)
+
+Indexes: `packages(user_id)`, `package_items(package_id)`.
+
+RLS: base owner policy `user_id = auth.uid()` on both tables
+(`for all using (...)`, which Postgres reuses as the INSERT WITH CHECK).
+
+Migration: `20260618000300_create_packages.sql`.
+
+## invoice_templates / invoice_template_items (Templates page — Invoices tab)
+
+Reusable invoice skeletons on the **Invoices** tab of `/templates`.
+Built from scratch or seeded from a package / quote template via the
+editor's "Add from…" picker, which **snapshots** the source's line items
+in (no live FK — a later package price edit never silently changes a
+saved invoice template). Mirrors `packages` structurally.
+
+`invoice_templates` columns: id, user_id (RLS key, FK auth.users on
+delete cascade), name (not null), description (nullable), notes
+(nullable subtitle), position (default 0), created_at / updated_at.
+
+`invoice_template_items` columns: id, invoice_template_id (FK
+invoice_templates on delete cascade), user_id (RLS key), description
+(not null), amount (numeric(10,2), not null), position (not null),
+created_at.
+
+Indexes: `invoice_templates(user_id)`,
+`invoice_template_items(invoice_template_id)`.
+
+RLS: owner-only `user_id = auth.uid()` on both (USING doubles as INSERT
+WITH CHECK).
+
+Migration: `20260618000400_create_invoice_templates.sql`.

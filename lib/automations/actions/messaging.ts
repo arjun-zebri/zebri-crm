@@ -9,11 +9,18 @@
  * @module lib/automations/actions/messaging
  */
 
+import type { JSONContent } from '@tiptap/react'
 import { Resend } from 'resend'
 import { z } from 'zod'
 
+import { wrapTemplateHtml } from '@/lib/email'
+import {
+  detectMissingVariables,
+  renderEmailSubject,
+  renderEmailTemplate,
+} from '@/lib/email/templates'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { ActionType, RecipientSpec, RunContext } from '@/types/automations'
+import type { ActionResult, ActionType, RecipientSpec, RunContext } from '@/types/automations'
 
 import { resolveRecipients } from '../recipients'
 import { renderTemplate } from '../variables'
@@ -36,6 +43,28 @@ function resend(): Resend {
 // send_email
 // ────────────────────────────────────────────────────────────────
 
+/**
+ * Load a saved email template's subject + body for the send_email
+ * action. Uses the admin client (the runner has no user session) but
+ * scopes the read to the run's owner so it can't reach another tenant.
+ */
+async function loadTemplateParts(
+  ctx: RunContext,
+  templateId: string,
+): Promise<{ kind: 'ok'; tplSubject: string; tplContent: JSONContent } | Extract<ActionResult, { kind: 'error' }>> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('email_templates')
+    .select('subject, content')
+    .eq('id', templateId)
+    .eq('user_id', ctx.userId)
+    .single()
+  if (error || !data) {
+    return { kind: 'error', message: 'send_email: email template not found', recoverable: false }
+  }
+  return { kind: 'ok', tplSubject: data.subject, tplContent: (data.content ?? {}) as JSONContent }
+}
+
 const recipientSpecSchema: z.ZodSchema<RecipientSpec> = z.object({
   roles: z.array(z.enum(['primary', 'spouse', 'family', 'vendor', 'custom', 'me'])).min(1),
   customTag: z.string().optional(),
@@ -44,8 +73,15 @@ const recipientSpecSchema: z.ZodSchema<RecipientSpec> = z.object({
 
 const sendEmailConfigSchema = z.object({
   recipients: recipientSpecSchema,
-  subject: z.string().min(1).max(200),
-  body: z.string().min(1),
+  /**
+   * Use a saved email template instead of an inline subject/body. When
+   * set, the template's subject + TipTap body are rendered and the
+   * run is BLOCKED (paused) if any variable can't be resolved.
+   */
+  templateId: z.uuid().optional(),
+  // Inline subject/body — optional now that a template can supply them.
+  subject: z.string().min(1).max(200).optional(),
+  body: z.string().min(1).optional(),
   /** Wrap the body in the standard Zebri-branded HTML shell. */
   wrap: z.boolean().default(true),
   /** Override the Reply-To header (defaults to the MC's email). */
@@ -84,9 +120,35 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       return { kind: 'error', message: 'send_email requires a couple context' }
     }
 
-    const subject = renderTemplate(config.subject, ctx)
-    const bodyText = renderTemplate(config.body, ctx)
-    const html = config.wrap ? wrapAutomationHtml(bodyText, ctx) : bodyText
+    // Resolve subject + body. The template path enforces the
+    // never-send-with-missing-variables rule: if any variable is
+    // unresolved the action returns a `missing_variables` sleep, which
+    // the runner turns into a paused run + Slack alert.
+    let subject: string
+    let html: string
+    if (config.templateId) {
+      const tplResult = await loadTemplateParts(ctx, config.templateId)
+      if (tplResult.kind === 'error') return tplResult
+      const { tplSubject, tplContent } = tplResult
+      const missing = detectMissingVariables({ subject: tplSubject, content: tplContent }, ctx)
+      if (missing.blocked) {
+        return {
+          kind: 'sleep',
+          reason: 'missing_variables',
+          // Far-future so wakeDueWaits never auto-resumes; the run is
+          // paused and an MC retries it manually after fixing the data.
+          wakeAt: '9999-12-31T00:00:00.000Z',
+          payload: { missing: missing.missing, couple_name: ctx.couple.name },
+        }
+      }
+      subject = renderEmailSubject(tplSubject, ctx, 'send')
+      const rendered = renderEmailTemplate(tplContent, ctx, 'send').html
+      html = config.wrap ? wrapTemplateHtml(rendered, ctx.mc.businessName) : rendered
+    } else {
+      subject = renderTemplate(config.subject ?? '', ctx)
+      const bodyText = renderTemplate(config.body ?? '', ctx)
+      html = config.wrap ? wrapAutomationHtml(bodyText, ctx) : bodyText
+    }
 
     // Test run (manual "Test automation"): route the rendered email to
     // the MC instead of the couple, so they preview exactly what would

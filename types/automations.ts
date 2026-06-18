@@ -290,7 +290,7 @@ export type BranchPath = 'yes' | 'no'
 
 export type AutomationStatus = 'draft' | 'active' | 'paused' | 'archived'
 export type RunStatus = 'running' | 'waiting' | 'paused' | 'completed' | 'errored' | 'cancelled'
-export type WaitReason = 'wait' | 'approval' | 'quiet_hours'
+export type WaitReason = 'wait' | 'approval' | 'quiet_hours' | 'missing_variables'
 
 export interface AutomationRow {
   id: string
@@ -394,6 +394,7 @@ export interface AutomationAuditLogRow {
     | 'approval_denied'
     | 'approval_timeout'
     | 'quiet_hours_deferred'
+    | 'missing_variables_detected'
   details: Json
   created_at: string
 }

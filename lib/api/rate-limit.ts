@@ -190,6 +190,7 @@ export type StripeRateLimitKey = keyof typeof STRIPE_RATE_LIMITS;
 export const EMAIL_RATE_LIMITS = {
   sendQuote: { windowMs: 60_000, max: 5 },
   sendInvoice: { windowMs: 60_000, max: 5 },
+  sendTemplate: { windowMs: 60_000, max: 5 },
 } as const satisfies Record<string, LimiterOptions>;
 
 export type EmailRateLimitKey = keyof typeof EMAIL_RATE_LIMITS;

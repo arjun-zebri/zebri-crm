@@ -1,12 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
-import { isAdmin } from "@/lib/auth/entitlements";
-import { clearShadowCookies } from "@/app/admin/actions";
 import {
   LayoutDashboard,
   Target,
@@ -21,8 +16,16 @@ import {
   ChevronRight,
   Paintbrush,
   Sparkles,
+  FileStack,
 } from "lucide-react";
-import type { User } from "@supabase/supabase-js";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+
+import { clearShadowCookies } from "@/app/admin/actions";
+import { isAdmin } from "@/lib/auth/entitlements";
+import { createClient } from "@/lib/supabase/client";
+
 
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -32,6 +35,7 @@ const navItems = [
   { label: "Contacts", href: "/contacts", icon: Contact },
   { label: "Payments", href: "/payments", icon: CreditCard },
   { label: "Automations", href: "/automations", icon: Sparkles },
+  { label: "Templates", href: "/templates", icon: FileStack },
 ];
 
 const bottomItems = [

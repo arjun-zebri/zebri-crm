@@ -16,6 +16,7 @@
 import { ChevronRight, Repeat2, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { EmailTemplatePicker } from '@/app/(dashboard)/templates/email-template-picker'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
@@ -1262,21 +1263,36 @@ function SendEmailForm({
   recipients,
   updateRecipients,
 }: ConfigProps & { recipients?: RecipientConfig; updateRecipients: (r: RecipientConfig) => void }) {
+  const templateId = (config['templateId'] as string) ?? ''
   return (
     <>
       <RecipientsField recipients={recipients} update={updateRecipients} />
-      <TextInput
-        label="Subject"
-        value={(config['subject'] as string) ?? ''}
-        onChange={(v) => updateConfig({ subject: v })}
+      <EmailTemplatePicker
+        value={templateId}
+        onChange={(id) => updateConfig({ templateId: id || undefined })}
       />
-      <TextArea
-        label="Body"
-        rows={8}
-        value={(config['body'] as string) ?? ''}
-        onChange={(v) => updateConfig({ body: v })}
-      />
-      <InlineVariableHint />
+      {templateId ? (
+        <p className="text-xs text-text-muted">
+          This email uses a saved template — edit its subject and body in Templates. If a variable
+          can&apos;t be filled for a couple, the run pauses and you&apos;ll be alerted to fix &amp;
+          retry.
+        </p>
+      ) : (
+        <>
+          <TextInput
+            label="Subject"
+            value={(config['subject'] as string) ?? ''}
+            onChange={(v) => updateConfig({ subject: v })}
+          />
+          <TextArea
+            label="Body"
+            rows={8}
+            value={(config['body'] as string) ?? ''}
+            onChange={(v) => updateConfig({ body: v })}
+          />
+          <InlineVariableHint />
+        </>
+      )}
       <CheckboxField
         label="Wrap with Zebri-branded HTML shell"
         checked={config['wrap'] !== false}

@@ -25,6 +25,7 @@
  */
 
 import { friendlyRunError } from '@/lib/automations/config-errors'
+import { variableLabel } from '@/lib/automations/variables'
 import type { ActionType } from '@/types/automations'
 
 /** The `event` discriminator stored on every `automation_audit_log` row. */
@@ -44,6 +45,7 @@ export type AuditEventName =
   | 'approval_denied'
   | 'approval_timeout'
   | 'quiet_hours_deferred'
+  | 'missing_variables_detected'
 
 /** One audit row, reduced to the fields narration needs. */
 export interface NarrationInput {
@@ -164,6 +166,16 @@ export function narrateAuditEntry(input: NarrationInput): Narration | null {
 
     case 'approval_requested':
       return { icon: 'Clock', tone: 'warning', text: 'Waiting for approval' }
+
+    case 'missing_variables_detected': {
+      const raw = details['missing']
+      const labels = Array.isArray(raw) ? raw.map((v) => variableLabel(String(v))).join(', ') : ''
+      return {
+        icon: 'AlertTriangle',
+        tone: 'danger',
+        text: labels ? `Email paused — missing ${labels}` : 'Email paused — missing details',
+      }
+    }
 
     case 'run_cancelled':
       return { icon: 'Ban', tone: 'neutral', text: 'Run cancelled' }

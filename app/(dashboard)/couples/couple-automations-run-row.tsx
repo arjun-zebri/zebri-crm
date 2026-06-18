@@ -75,6 +75,11 @@ export function RunRow({ run, pending, onRetry, onCancel }: Props) {
             Retry
           </Button>
         )}
+        {run.blockedMissingVars && (
+          <Button variant="ghost" size="sm" loading={pending} onClick={onRetry} className="cursor-pointer text-brand">
+            Fix &amp; retry
+          </Button>
+        )}
         {CANCELLABLE.has(run.status) && (
           <Button
             variant="ghost"

@@ -1,17 +1,25 @@
 'use client'
 
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
+import * as Popover from '@radix-ui/react-popover'
 import Mention from '@tiptap/extension-mention'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useEffect, useRef, useState } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
 import type { JSONContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
 import {
   Bold, Italic, List, ListOrdered, Heading1, Heading2, Quote,
   Undo, Redo, AtSign,
 } from 'lucide-react'
-import * as Popover from '@radix-ui/react-popover'
+import { useEffect, useRef, useState } from 'react'
+
 import { CONTRACT_VARIABLES } from '@/lib/contracts/contract-variables'
+
+/** A mergeable variable for the "Insert variable" popover. */
+export interface EditorVariable {
+  id: string
+  label: string
+  description: string
+}
 
 interface RichTextEditorProps {
   value: JSONContent
@@ -19,6 +27,12 @@ interface RichTextEditorProps {
   placeholder?: string
   editable?: boolean
   className?: string
+  /**
+   * Variables offered in the "Insert variable" popover. Defaults to the
+   * contract variable set; email templates pass their own namespaced
+   * list. The mention node stores the chosen `id` verbatim.
+   */
+  variables?: readonly EditorVariable[]
 }
 
 export function RichTextEditor({
@@ -27,6 +41,7 @@ export function RichTextEditor({
   placeholder = 'Start writing your contract…',
   editable = true,
   className = '',
+  variables = CONTRACT_VARIABLES,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -82,7 +97,7 @@ export function RichTextEditor({
   return (
     <div className={`border border-gray-200 rounded-xl overflow-hidden bg-white ${className}`}>
       {editable && (
-        <ToolbarRow editor={editor} onInsertVariable={insertVariable} />
+        <ToolbarRow editor={editor} onInsertVariable={insertVariable} variables={variables} />
       )}
       <EditorContent
         editor={editor}
@@ -120,9 +135,11 @@ function ToolbarButton({
 function ToolbarRow({
   editor,
   onInsertVariable,
+  variables,
 }: {
   editor: ReturnType<typeof useEditor>
   onInsertVariable: (id: string) => void
+  variables: readonly EditorVariable[]
 }) {
   const [open, setOpen] = useState(false)
   if (!editor) return null
@@ -213,7 +230,7 @@ function ToolbarRow({
               Auto-filled from the couple, quote and settings
             </div>
             <div className="max-h-72 overflow-y-auto">
-              {CONTRACT_VARIABLES.map((v) => (
+              {variables.map((v) => (
                 <button
                   key={v.id}
                   type="button"

@@ -1,6 +1,6 @@
 'use client'
 
-import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, X } from 'lucide-react'
+import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, X, Settings2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import {
@@ -16,6 +16,7 @@ interface CouplesHeaderProps {
   couples: Couple[]
   statuses: CoupleStatusRecord[]
   onAddClick: () => void
+  onManageStatuses: () => void
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
   search: string
@@ -31,6 +32,7 @@ export function CouplesHeader({
   couples,
   statuses,
   onAddClick,
+  onManageStatuses,
   viewMode,
   onViewModeChange,
   search,
@@ -224,8 +226,19 @@ export function CouplesHeader({
           )}
         </div>
 
-        {/* New couple button - desktop only */}
+        {/* Status manager + New couple button */}
         <div className="ml-auto flex items-center gap-2">
+          {/* Gear opens the status editor (rename/recolour/reorder/add/delete).
+              Statuses define the kanban columns, so management lives here
+              rather than under Settings. Visible in both List and Board views. */}
+          <button
+            onClick={onManageStatuses}
+            className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            aria-label="Manage statuses"
+            title="Manage statuses"
+          >
+            <Settings2 size={11} strokeWidth={1.5} />
+          </button>
           <button
             onClick={onAddClick}
             className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
