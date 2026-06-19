@@ -12,6 +12,7 @@ import {
   detectMissingVariables,
   renderEmailSubject,
   renderEmailTemplate,
+  resolveTemplateContent,
 } from '@/lib/email/templates'
 import type { RunContext } from '@/types/automations'
 
@@ -118,6 +119,33 @@ describe('renderEmailTemplate', () => {
     const { html, unresolved } = renderEmailTemplate(body, ctx)
     expect(unresolved).toEqual([])
     expect(html).toContain('your partner')
+  })
+})
+
+describe('resolveTemplateContent', () => {
+  /** Flatten a resolved doc to its concatenated text. */
+  function flat(node: JSONContent): string {
+    if (node.type === 'text') return node.text ?? ''
+    return (node.content ?? []).map(flat).join('')
+  }
+
+  /** Collect every node type in the doc (for asserting on mentions). */
+  function types(node: JSONContent): string[] {
+    return [node.type ?? '', ...(node.content ?? []).flatMap(types)]
+  }
+
+  it('replaces resolvable mentions with their value as plain text', () => {
+    const body = doc(text('Hi '), mention('couple.primary_name'), text('!'))
+    const resolved = resolveTemplateContent(body, makeCtx())
+    expect(flat(resolved)).toBe('Hi Sam!')
+    expect(types(resolved)).not.toContain('mention')
+  })
+
+  it('leaves an unresolvable variable as a mention so the editor can highlight it', () => {
+    const ctx = makeCtx({ couple: { ...makeCtx().couple!, eventDate: null } })
+    const body = doc(text('On '), mention('event.date | friendly'))
+    const resolved = resolveTemplateContent(body, ctx)
+    expect(types(resolved)).toContain('mention')
   })
 })
 

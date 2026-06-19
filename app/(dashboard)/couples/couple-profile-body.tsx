@@ -13,8 +13,10 @@ import type { Couple } from '@/types/couple';
 
 import { CoupleAutomations } from './couple-automations';
 import { CoupleContracts } from './couple-contracts';
+import { CoupleEmails } from './couple-emails';
 import { CoupleOverview } from './couple-overview';
 import { CouplePayments } from './couple-payments';
+import type { CoupleProfileSection } from './couple-profile-types';
 import { CouplePulse } from './couple-pulse';
 import { CoupleTasks } from './couple-tasks';
 import { CoupleTimeline } from './couple-timeline';
@@ -22,7 +24,6 @@ import { McPortalContacts } from './mc-portal-contacts';
 import { McPortalFiles } from './mc-portal-files';
 import { McPortalSongs } from './mc-portal-songs';
 import { McPortalVows } from './mc-portal-vows';
-import type { CoupleProfileSection } from './couple-profile-types';
 import type { usePortalData } from './use-portal-data';
 
 export interface CoupleProfileBodyProps {
@@ -96,6 +97,8 @@ export function CoupleProfileBody({
       {activeSection === 'automations' && (
         <CoupleAutomations coupleId={couple.id} />
       )}
+
+      {activeSection === 'emails' && <CoupleEmails coupleId={couple.id} coupleName={couple.name} />}
     </div>
   );
 }

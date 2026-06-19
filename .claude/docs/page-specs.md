@@ -272,7 +272,18 @@ Opens as a centered full-screen modal (not a slide-over). Overlay covers the ful
 - Mobile: horizontal scrollable tab strip (`overflow-x-auto`) below header  -  icon + label per tab, `whitespace-nowrap`
 - Desktop: vertical 200px sidebar on left  -  same tabs as icon + label rows
 
-**Tabs:** Overview, Payments, Timeline, Names (MC Portal Names), Songs, Files, Pulse
+**Tabs:** Overview, Pulse, Tasks, Contacts, Timeline, Songs, Files, Vows,
+Payments, Contracts, Automations, **Templates**.
+
+The **Templates** tab (Mail icon, after Automations) is where the MC
+emails this couple. Header has two actions: **Send email** (compose from
+a saved template → sends to the couple) and **Test template** (same
+compose, but sends to the MC's own inbox with a `[Test]` subject, not
+logged). Below is the sent-history — newest first, each row showing
+subject, source template, recipient, a status pill, and relative sent
+time (calm card list mirroring Automations). Backed by `couple_emails`;
+the send route logs a row on each real send. (The "Send email" entry
+point moved here off the Overview's General section.)
 
 **Overview tab (default):**
 - Two-column grid on `lg+` (`grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16`), stacks to 1-col on mobile
@@ -1126,6 +1137,36 @@ names only) and skips duplicates. Migration
 from the old auto-seed model (only `is_starter` rows; user-created
 templates untouched).
 
+## Packages / Quotes / Invoices / Contracts tabs (email-consistent)
+
+These four tabs mirror the Emails treatment so every Templates tab feels
+identical:
+
+- **Empty state**: the `Empty` primitive (per-type icon), with **Browse
+  starters** (`outline`) + **New …** actions. A "Browse starters" button
+  also sits beside the header "New" button.
+- **List rows**: borderless, token-styled
+  (`rounded-xl px-3 py-2.5 hover:bg-surface-muted`) with a 2-line text
+  block and a `RowActionsMenu` (Edit / Delete). The money tabs keep
+  dnd-kit drag-reorder (muted `GripVertical` handle); contracts have no
+  reorder. (Emails group by lifecycle stage instead of reordering.)
+- **In-modal preview**: the money editors show a live `LineItemPreview`
+  card (shared `template-preview` chrome — name/subtitle header + priced
+  line items + total). Contracts edit in the TipTap editor.
+- **Starter catalogs**: each tab has its own opt-in catalog surfaced
+  through the shared `StarterCatalogModal` (flat list, no stage grouping).
+  Catalogs:
+  `lib/payments/starter-line-item-templates.ts` (4 packages, 3 quote
+  templates, 3 invoice templates with suggested AU amounts) and
+  `lib/contracts/starter-contracts.ts` (Wedding MC Service Agreement +
+  Deposit & Cancellation Terms). Adds run through
+  `addStarterPackagesAction` / `addStarterQuoteTemplatesAction` /
+  `addStarterInvoiceTemplatesAction` / `addStarterContractsAction` in
+  `starter-actions.ts`: names sent from the client, content resolved
+  server-side, names already owned skipped, rows flagged `is_starter`.
+  The legacy single contract default still auto-seeds on signup
+  (`seed_default_contract_template`); the contract catalog is additive.
+
 ## Variables & the missing-variable rule
 
 Body mention nodes / subject tokens carry a namespaced automation
@@ -1168,20 +1209,27 @@ types/email-template.ts     -  EmailTemplate + LifecycleStage
 Entry point: a "Send email" button in the couple Overview (`couple-overview.tsx`).
 Opens `couple-send-email.tsx`:
 
-- Pick a saved template (inline compose is a planned follow-on).
-- Live preview filled against the **real couple** via
+- Pick a saved template (in the picker popover; inline compose is a
+  planned follow-on).
+- The template is resolved against the **real couple** via
   `loadSendContextAction` (couple + MC snapshot + stamped document
-  links). Unresolved variables are highlighted amber.
-- `SendEmailMissingPanel` lists every missing variable with an inline
-  input — values are **temporary for this send only**, never written to
-  the couple record.
-- Send is **blocked** while any variable is missing; an explicit **"Send
-  anyway"** button overrides. The authoritative gate is re-applied in
-  `POST /api/email/send-template` (422 when blocked without `sendAnyway`).
+  links) into an **editable** subject + body. The MC edits the finished
+  email directly before sending — what they see is what goes out.
+- Any variable the couple can't fill is shown as its label in the body
+  (editable in place) and flagged once in an amber banner — **no
+  separate input panel**. Fills are part of this one email only; they
+  never touch the couple record.
+- On send, the edited subject + body go out **inline**
+  (`inlineSubject` / `inlineBody`) via `POST /api/email/send-template`;
+  the `templateId` is still passed so the send is logged under the
+  template's name. Inline content takes precedence over the stored
+  template server-side.
 
-Files: `couple-send-email.tsx`, `send-email-missing-panel.tsx`,
-`send-email-actions.ts`, `app/api/email/send-template/route.ts`,
-`lib/email/send-context.ts`.
+Files: `couple-send-email.tsx`, `send-email-actions.ts`,
+`app/api/email/send-template/route.ts`, `lib/email/send-context.ts`.
+The editable preview reuses `components/ui/rich-text-editor.tsx`
+(`showVariableInserter={false}`); `resolveTemplateContent`
+(`lib/email/templates.ts`) seeds it with the filled-in body.
 
 Deferred sub-items: static-file attachment upload UI (the route + bucket
 already support `attachmentFileIds`; the upload/attach UI lands with the

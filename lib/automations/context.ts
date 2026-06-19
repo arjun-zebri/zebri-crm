@@ -12,7 +12,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { resolveCoupleEmail } from '@/lib/couples/email'
-import type { Database } from '@/types/database'
 import type {
   AutomationEventRow,
   AutomationRunRow,
@@ -20,6 +19,7 @@ import type {
   McSnapshot,
   RunContext,
 } from '@/types/automations'
+import type { Database } from '@/types/database'
 
 const DEFAULT_TIMEZONE = 'Australia/Sydney'
 
@@ -61,7 +61,10 @@ export async function loadCoupleSnapshot(
 
   const { primaryName, spouseName } = splitCoupleName(data.name)
 
-  const spouseDetails = await loadSpouseDetails(supabase, coupleId)
+  const [spouseDetails, primaryEvent] = await Promise.all([
+    loadSpouseDetails(supabase, coupleId),
+    loadPrimaryEvent(supabase, coupleId),
+  ])
   // Post partner-triples migration, new couples carry only the
   // `primary_*` / `secondary_*` columns — the legacy couple-level
   // email/phone stay empty. Prefer the partner columns, fall back
@@ -73,8 +76,14 @@ export async function loadCoupleSnapshot(
     name: data.name,
     email: resolveCoupleEmail(data),
     phone: data.primary_phone?.trim() || data.phone || null,
-    eventDate: data.event_date ?? null,
-    venue: data.venue || null,
+    // Event date/venue live on the couple's events (managed via the
+    // Events tab) — the legacy couple-level columns aren't captured for
+    // new couples. Prefer the couple's earliest event (matching the
+    // contract/quote senders), fall back to the legacy columns for
+    // pre-events-table couples. Without this, `{{event.date}}` /
+    // `{{venue.name}}` resolve empty on every manual send + automation.
+    eventDate: primaryEvent?.date ?? data.event_date ?? null,
+    venue: primaryEvent?.venue || data.venue || null,
     status: data.status,
     primaryName: data.primary_name?.trim() || primaryName,
     spouseName: spouseDetails.name ?? data.secondary_name ?? spouseName,
@@ -82,6 +91,26 @@ export async function loadCoupleSnapshot(
     spousePhone: spouseDetails.phone ?? data.secondary_phone,
     timezone: DEFAULT_TIMEZONE,
   }
+}
+
+/**
+ * The couple's representative event (date + venue) for variable
+ * resolution: the earliest event row, matching how the contract / quote
+ * senders pick `firstEvent`. Returns null when the couple has no events
+ * yet, so the caller falls back to the legacy couple-level columns.
+ */
+async function loadPrimaryEvent(
+  supabase: SupabaseClient<Database>,
+  coupleId: string,
+): Promise<{ date: string | null; venue: string | null } | null> {
+  const { data } = await supabase
+    .from('events')
+    .select('date, venue')
+    .eq('couple_id', coupleId)
+    .order('date', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  return data ?? null
 }
 
 /**

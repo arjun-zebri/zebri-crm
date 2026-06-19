@@ -552,6 +552,7 @@ export type Database = {
           description: string | null
           id: string
           is_default: boolean
+          is_starter: boolean
           name: string
           position: number
           updated_at: string
@@ -563,6 +564,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_default?: boolean
+          is_starter?: boolean
           name: string
           position?: number
           updated_at?: string
@@ -574,6 +576,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_default?: boolean
+          is_starter?: boolean
           name?: string
           position?: number
           updated_at?: string
@@ -759,6 +762,63 @@ export type Database = {
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couple_emails: {
+        Row: {
+          couple_id: string
+          created_at: string
+          id: string
+          sent_at: string
+          source: string
+          status: string
+          subject: string
+          template_id: string | null
+          template_name: string | null
+          to_email: string
+          user_id: string
+        }
+        Insert: {
+          couple_id: string
+          created_at?: string
+          id?: string
+          sent_at?: string
+          source?: string
+          status?: string
+          subject: string
+          template_id?: string | null
+          template_name?: string | null
+          to_email: string
+          user_id: string
+        }
+        Update: {
+          couple_id?: string
+          created_at?: string
+          id?: string
+          sent_at?: string
+          source?: string
+          status?: string
+          subject?: string
+          template_id?: string | null
+          template_name?: string | null
+          to_email?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_emails_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_emails_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1154,6 +1214,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_starter: boolean
           name: string
           notes: string | null
           position: number
@@ -1164,6 +1225,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_starter?: boolean
           name: string
           notes?: string | null
           position?: number
@@ -1174,6 +1236,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_starter?: boolean
           name?: string
           notes?: string | null
           position?: number
@@ -1554,6 +1617,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_starter: boolean
           name: string
           notes: string | null
           position: number
@@ -1564,6 +1628,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_starter?: boolean
           name: string
           notes?: string | null
           position?: number
@@ -1574,6 +1639,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_starter?: boolean
           name?: string
           notes?: string | null
           position?: number
@@ -1625,6 +1691,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_starter: boolean
           name: string
           notes: string | null
           position: number
@@ -1635,6 +1702,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_starter?: boolean
           name: string
           notes?: string | null
           position?: number
@@ -1645,6 +1713,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_starter?: boolean
           name?: string
           notes?: string | null
           position?: number

@@ -64,7 +64,7 @@ export function StarterLibraryPanel({ isOpen, onClose, existingNames }: StarterL
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm text-text-muted">
-              Add the templates you want — including the celebrant-specific ones. Nothing is added unless you choose it.
+              Add the templates you want, including the celebrant-specific ones. Nothing is added unless you choose it.
             </p>
             <Button
               size="sm"

@@ -653,6 +653,7 @@ name (text, not null)
 description (text, nullable)
 notes (text, nullable)  -  short subtitle shown on the list row
 position (integer, not null, default 0)  -  drag-reorder order
+is_starter (boolean, not null, default false)  -  provenance badge for catalog-added rows; starters stay fully editable
 created_at / updated_at (timestamptz)
 
 `package_items` columns:
@@ -669,7 +670,10 @@ Indexes: `packages(user_id)`, `package_items(package_id)`.
 RLS: base owner policy `user_id = auth.uid()` on both tables
 (`for all using (...)`, which Postgres reuses as the INSERT WITH CHECK).
 
-Migration: `20260618000300_create_packages.sql`.
+Migrations: `20260618000300_create_packages.sql`; `is_starter` added in
+`20260619000100_add_is_starter_to_templates.sql`. Starter packages are an
+opt-in catalog (`lib/payments/starter-line-item-templates.ts`), added via
+the `addStarterPackagesAction` server action; nothing is auto-seeded.
 
 ## invoice_templates / invoice_template_items (Templates page — Invoices tab)
 
@@ -681,7 +685,8 @@ saved invoice template). Mirrors `packages` structurally.
 
 `invoice_templates` columns: id, user_id (RLS key, FK auth.users on
 delete cascade), name (not null), description (nullable), notes
-(nullable subtitle), position (default 0), created_at / updated_at.
+(nullable subtitle), position (default 0), is_starter (boolean, not null,
+default false  -  catalog provenance badge), created_at / updated_at.
 
 `invoice_template_items` columns: id, invoice_template_id (FK
 invoice_templates on delete cascade), user_id (RLS key), description
@@ -694,4 +699,26 @@ Indexes: `invoice_templates(user_id)`,
 RLS: owner-only `user_id = auth.uid()` on both (USING doubles as INSERT
 WITH CHECK).
 
-Migration: `20260618000400_create_invoice_templates.sql`.
+Migrations: `20260618000400_create_invoice_templates.sql`; `is_starter`
+added in `20260619000100_add_is_starter_to_templates.sql`. Starter invoice
+templates are an opt-in catalog
+(`lib/payments/starter-line-item-templates.ts`) added via
+`addStarterInvoiceTemplatesAction`.
+
+## couple_emails (Couple profile — Emails tab)
+
+A sent-history log of emails the MC sends a couple from the manual
+"Send email" flow (`/api/email/send-template` inserts a row after a
+successful send). Powers the **Emails** tab on the couple profile.
+
+Columns: id, user_id (RLS key, FK auth.users cascade), couple_id (FK
+couples cascade), template_id (FK email_templates **on delete set
+null**, nullable), template_name (text snapshot — survives template
+deletion/rename), subject (rendered subject sent), to_email, source
+(`manual` today; `automation` can log here later without a schema
+change), status (default `sent`), sent_at, created_at.
+
+Indexes: `couple_emails(couple_id)`, `couple_emails(user_id)`.
+RLS: owner-only `user_id = auth.uid()`.
+
+Migration: `20260619000000_create_couple_emails.sql`.

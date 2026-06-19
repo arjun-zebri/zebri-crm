@@ -122,6 +122,24 @@ export function renderEmailTemplate(
 }
 
 /**
+ * Resolve a template body for the editable compose preview: every
+ * variable the couple **can** fill becomes plain text (its value), while
+ * a variable that **can't** be filled is left as its mention node so the
+ * editor can highlight it in place as a "fill me" chip.
+ *
+ * Used by the manual compose modal to seed an **editable** preview: the
+ * MC edits the finished email directly (replacing each highlighted gap)
+ * rather than supplying per-variable overrides.
+ */
+export function resolveTemplateContent(
+  content: JSONContent,
+  ctx: RunContext,
+  overrides?: VariableOverrides,
+): JSONContent {
+  return fillMentions(content, ctx, overrides)
+}
+
+/**
  * Render a template subject (mustache string) against a context.
  *
  * In `preview` mode unresolved tokens render as a bracketed label
@@ -210,6 +228,22 @@ function substituteMentions(
       ...node,
       content: node.content.map((c) => substituteMentions(c, ctx, mode, unresolved, overrides)),
     }
+  }
+  return node
+}
+
+/**
+ * Walk the tree replacing each resolvable mention with its value as a
+ * text node, and leaving an unresolvable mention untouched so the editor
+ * can render it as a highlighted "fill me" chip.
+ */
+function fillMentions(node: JSONContent, ctx: RunContext, overrides?: VariableOverrides): JSONContent {
+  if (node.type === 'mention' && node.attrs?.id) {
+    const value = resolveWith(String(node.attrs.id), ctx, overrides)
+    return value ? { type: 'text', text: value } : node
+  }
+  if (Array.isArray(node.content)) {
+    return { ...node, content: node.content.map((c) => fillMentions(c, ctx, overrides)) }
   }
   return node
 }

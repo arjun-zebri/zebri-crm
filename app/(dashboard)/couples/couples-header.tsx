@@ -252,16 +252,6 @@ export function CouplesHeader({
       {/* View mode tabs */}
       <div className="flex items-center gap-6 border-b border-gray-200 mt-6">
         <button
-          onClick={() => onViewModeChange('list')}
-          className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
-            viewMode === 'list'
-              ? 'border-gray-900 text-gray-900'
-              : 'border-transparent text-gray-400 hover:text-gray-600'
-          }`}
-        >
-          <List size={15} strokeWidth={1.5} /> List
-        </button>
-        <button
           onClick={() => onViewModeChange('kanban')}
           className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
             viewMode === 'kanban'
@@ -270,6 +260,16 @@ export function CouplesHeader({
           }`}
         >
           <LayoutGrid size={15} strokeWidth={1.5} /> Board
+        </button>
+        <button
+          onClick={() => onViewModeChange('list')}
+          className={`pb-2 text-sm font-medium transition border-b-2 -mb-px flex items-center gap-1.5 cursor-pointer ${
+            viewMode === 'list'
+              ? 'border-gray-900 text-gray-900'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          <List size={15} strokeWidth={1.5} /> List
         </button>
       </div>
 

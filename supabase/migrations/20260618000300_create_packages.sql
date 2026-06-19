@@ -31,7 +31,11 @@ create table if not exists package_items (
 alter table packages enable row level security;
 alter table package_items enable row level security;
 
+-- drop-if-exists keeps this replayable against a DB where a partial
+-- earlier run already created the policy (CREATE POLICY isn't idempotent).
+drop policy if exists "Users manage own packages" on packages;
 create policy "Users manage own packages" on packages for all using (user_id = auth.uid());
+drop policy if exists "Users manage own package_items" on package_items;
 create policy "Users manage own package_items" on package_items for all using (user_id = auth.uid());
 
 -- Indexes: owner lookups + the items→package foreign key.

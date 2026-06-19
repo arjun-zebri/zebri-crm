@@ -30,7 +30,10 @@ create table if not exists invoice_template_items (
 alter table invoice_templates enable row level security;
 alter table invoice_template_items enable row level security;
 
+-- drop-if-exists keeps this replayable against a partially-migrated DB.
+drop policy if exists "Users manage own invoice_templates" on invoice_templates;
 create policy "Users manage own invoice_templates" on invoice_templates for all using (user_id = auth.uid());
+drop policy if exists "Users manage own invoice_template_items" on invoice_template_items;
 create policy "Users manage own invoice_template_items" on invoice_template_items for all using (user_id = auth.uid());
 
 create index if not exists invoice_templates_user_id_idx on invoice_templates(user_id);

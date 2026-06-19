@@ -3,7 +3,7 @@
  *
  * Mirrors `couple-profile-nav`: a vertical sidebar on desktop and a
  * horizontal scrollable pill row on mobile, driven by one nav-item
- * array. Stateless — the parent owns `activeTab`.
+ * array. Stateless: the parent owns `activeTab`.
  *
  * @module app/(dashboard)/settings/settings-nav
  */
@@ -12,6 +12,7 @@
 import {
   CreditCard,
   FileText,
+  Globe,
   Landmark,
   Shield,
   User,
@@ -23,6 +24,7 @@ export type SettingsTabId =
   | 'account'
   | 'billing'
   | 'payments'
+  | 'public'
   | 'privacy'
   | 'terms';
 
@@ -37,6 +39,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { key: 'account', label: 'Account', icon: <UserCog size={18} strokeWidth={1.5} /> },
   { key: 'billing', label: 'Plans & Billing', icon: <CreditCard size={18} strokeWidth={1.5} /> },
   { key: 'payments', label: 'Receive Payments', icon: <Landmark size={18} strokeWidth={1.5} /> },
+  { key: 'public', label: 'Public Page', icon: <Globe size={18} strokeWidth={1.5} /> },
   { key: 'privacy', label: 'Privacy', icon: <Shield size={18} strokeWidth={1.5} /> },
   { key: 'terms', label: 'Terms', icon: <FileText size={18} strokeWidth={1.5} /> },
 ];

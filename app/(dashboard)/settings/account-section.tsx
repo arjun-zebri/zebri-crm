@@ -2,13 +2,13 @@
  * Settings → Account tab section.
  *
  * Three sub-features:
- *   1. **Change password** — posts to {@link changePasswordAction}
+ *   1. **Change password**: posts to {@link changePasswordAction}
  *      (server action) which re-authenticates with the current
  *      password before updating, rate-limits per session, and
  *      validates against the shared {@link changePasswordSchema}.
- *   2. **Email preferences** — toggle which email categories the
+ *   2. **Email preferences**: toggle which email categories the
  *      user wants (user-owned data, `user_metadata.email_preferences`).
- *   3. **Danger zone** — request account deletion. Currently
+ *   3. **Danger zone**: request account deletion. Currently
  *      delegates to the existing fake-delete behaviour (signs out);
  *      proper destructive deletion is tracked for Phase 13 (Admin /
  *      Shadow) since it has Stripe-subscription implications.
@@ -48,7 +48,7 @@ const emptyChangeState: ChangePasswordResult = {};
 
 export function AccountSection({ emailPreferences: initialEmailPreferences }: AccountSectionProps) {
   return (
-    <div className="max-w-2xl space-y-10">
+    <div className="space-y-10">
       <ChangePasswordCard />
       {initialEmailPreferences ? (
         <EmailPreferencesCard initial={initialEmailPreferences} />
@@ -74,7 +74,7 @@ function ChangePasswordCard() {
   // React 19 form actions re-apply React-owned state).
   const [formKey, setFormKey] = useState(0);
   // Track which state object we've already toasted by capturing the
-  // identity in a ref — useEffect reads the previous identity and
+  // identity in a ref, useEffect reads the previous identity and
   // updates it inside the same effect, which is the canonical
   // post-action notification pattern (no state setter cascade).
   const handledStateRef = useRef<typeof state | null>(null);
@@ -231,7 +231,7 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
 
 /* ──────────────────────────────────────────────────────────────────
    Danger zone
-   TODO: Phase 13 — implement true destructive deletion server-side
+   TODO: Phase 13: implement true destructive deletion server-side
    (admin.deleteUser + Stripe subscription cancellation). For now the
    UI sign-out behaviour is preserved.
 ─────────────────────────────────────────────────────────────────── */

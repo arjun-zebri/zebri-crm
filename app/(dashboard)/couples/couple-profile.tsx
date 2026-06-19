@@ -26,6 +26,7 @@ import {
   FileSignature,
   Heart,
   LayoutDashboard,
+  Mail,
   Music,
   Paperclip,
   Receipt,
@@ -106,6 +107,11 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'automations',
     label: 'Automations',
     icon: <Sparkles size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: 'emails',
+    label: 'Emails',
+    icon: <Mail size={18} strokeWidth={1.5} />,
   },
 ];
 

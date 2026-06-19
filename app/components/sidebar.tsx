@@ -17,6 +17,7 @@ import {
   Paintbrush,
   Sparkles,
   FileStack,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -40,6 +41,9 @@ const navItems = [
 
 const bottomItems = [
   { label: "Branding", href: "/branding", icon: Paintbrush },
+  // Docs lives on the marketing site, so it navigates out of the app
+  // (rendered as a plain anchor rather than a client-side <Link>).
+  { label: "Docs", href: "https://zebri.com.au/docs", icon: BookOpen, external: true },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -93,8 +97,11 @@ export function Sidebar({ mobileOpen, onMobileClose, isExpanded, onToggle }: Sid
       >
         {/* Inner wrapper scrolls vertically when the viewport is shorter
             than the full nav + bottom block (e.g. iPhone SE + shadow
-            banner). `min-w-0` keeps text from overflowing when collapsed. */}
-        <div className="flex flex-col flex-1 overflow-y-auto min-w-0">
+            banner). `min-w-0` keeps text from overflowing when collapsed.
+            The scrollbar is hidden in every state (Firefox `scrollbar-width`,
+            WebKit pseudo-element) so it never flashes mid-transition while
+            the content stays scrollable. */}
+        <div className="flex flex-col flex-1 overflow-y-auto min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <Link
           href="/"
           onClick={onMobileClose}
@@ -147,24 +154,44 @@ export function Sidebar({ mobileOpen, onMobileClose, isExpanded, onToggle }: Sid
                 ? [{ label: "Admin", href: "/admin", icon: Shield }]
                 : []),
             ].map((item) => {
-              const isActive = pathname.startsWith(item.href);
+              const external = "external" in item && item.external;
+              // External items (e.g. Docs) never reflect app routes, so
+              // they're never the active item.
+              const isActive = !external && pathname.startsWith(item.href);
               const Icon = item.icon;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onMobileClose}
-                  className={`flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-xl text-base transition whitespace-nowrap ${
-                    isActive
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                >
+              const className = `flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-xl text-base transition whitespace-nowrap ${
+                isActive
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
+              }`;
+              const inner = (
+                <>
                   <Icon size={18} strokeWidth={1.5} className="flex-shrink-0" />
                   <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
                     {item.label}
                   </span>
+                </>
+              );
+
+              return external ? (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onMobileClose}
+                  className={className}
+                >
+                  {inner}
+                </a>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onMobileClose}
+                  className={className}
+                >
+                  {inner}
                 </Link>
               );
             })}

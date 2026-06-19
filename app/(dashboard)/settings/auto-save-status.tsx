@@ -1,6 +1,6 @@
 /**
  * Tiny inline status indicator for the auto-saving settings sections.
- * Replaces the old explicit Save buttons — fields persist on blur /
+ * Replaces the old explicit Save buttons: fields persist on blur /
  * change, and this shows a calm "Saving… / Saved" hint instead of a
  * toast on every edit (errors still toast at the call site).
  *
@@ -30,7 +30,7 @@ export function AutoSaveStatus({ state }: { state: SaveState }) {
     );
   }
   if (state === 'error') {
-    return <span className="text-xs text-red-500">Couldn’t save — try again</span>;
+    return <span className="text-xs text-red-500">Couldn’t save. Try again</span>;
   }
   return null;
 }

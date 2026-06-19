@@ -1,6 +1,6 @@
 /**
  * Renders the active section inside the Settings modal. Pure switch on
- * `activeTab` — owns no data fetching; the modal loads the user once
+ * `activeTab`, owns no data fetching; the modal loads the user once
  * and passes it down. Existing section components are reused unchanged.
  *
  * @module app/(dashboard)/settings/settings-body
@@ -25,6 +25,7 @@ import { BillingSection } from './billing-section';
 import { PaymentSettingsSection } from './payment-settings-section';
 import { PersonalInfoSection } from './personal-info-section';
 import { PrivacySection } from './privacy-section';
+import { PublicPageSection } from './public-page-section';
 import type { SettingsTabId } from './settings-nav';
 import { TermsSection } from './terms-section';
 
@@ -123,6 +124,9 @@ export function SettingsBody({ activeTab, data }: SettingsBodyProps) {
             stripeConnectAccountId={stripeConnectAccountId(entitlements) ?? null}
             stripeConnectEnabled={stripeConnectEnabled(entitlements)}
           />
+        )}
+        {activeTab === 'public' && (
+          <PublicPageSection seedName={metadata?.business_name || metadata?.display_name || ''} />
         )}
         {activeTab === 'privacy' && <PrivacySection />}
         {activeTab === 'terms' && <TermsSection />}

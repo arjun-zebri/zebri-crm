@@ -1,15 +1,15 @@
 /**
  * Settings → Receive Payments tab.
  *
- * Document-style composition matching the Plans & Billing tab — small
+ * Document-style composition matching the Plans & Billing tab: small
  * UPPERCASE section labels + thin dividers, no nested bordered cards
  * for top-level layout. Two sections:
  *
- * 1. **Bank details** — auto-filled into invoice notes. Stored in
+ * 1. **Bank details**: auto-filled into invoice notes. Stored in
  *    `user_metadata`. The Save button lives at the section footer
  *    (right-aligned), not in the middle of the form.
  *
- * 2. **Card payments via Stripe Connect** — Phase 2D.1. Mounts the
+ * 2. **Card payments via Stripe Connect**: Phase 2D.1. Mounts the
  *    Stripe embedded Connect components (`<ConnectAccountOnboarding>`
  *    / `<ConnectAccountManagement>` + `<ConnectNotificationBanner>`)
  *    inline. The MC never leaves Zebri.
@@ -22,7 +22,7 @@
  *    - **Publishable key missing** → shows a clear error explaining
  *      the env-var gap so dev setups don't render an empty section.
  *
- *    Disconnect routes through `/api/stripe/connect/disconnect` —
+ *    Disconnect routes through `/api/stripe/connect/disconnect`:
  *    the §7.4 client-side `user_metadata` write is closed.
  *
  * @module app/(dashboard)/settings/payment-settings-section
@@ -32,7 +32,7 @@
 // `/pure` skips the side-effectful auto-load of ConnectJS at module
 // eval time, which Next.js triggers during SSR / static page gen
 // and which Stripe explicitly warns against. The runtime behaviour
-// is identical — the script loads on first call to
+// is identical, the script loads on first call to
 // `loadConnectAndInitialize`. See
 // https://github.com/stripe/connect-js#importing-loadconnect-without-side-effects
 import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
@@ -109,7 +109,7 @@ export function PaymentSettingsSection({
   /**
    * Sync the mirror directly from Stripe (bypassing the webhook).
    * The webhook is the source of truth in production, but it has
-   * lag — and in local dev without `stripe listen`, it never fires
+   * lag, and in local dev without `stripe listen`, it never fires
    * at all. Calling this on embedded-component exit closes both
    * gaps. Followed by a status refresh to pick up the new mirror.
    */
@@ -209,7 +209,7 @@ export function PaymentSettingsSection({
       // settings page sees the binding consistently.
       await supabase.auth.refreshSession();
       setAccountId(newId);
-      toast('Stripe account created — complete the verification below.');
+      toast('Stripe account created, complete the verification below.');
     } catch {
       toast('Could not start Stripe setup', 'error');
     } finally {
@@ -228,7 +228,7 @@ export function PaymentSettingsSection({
           error?: string;
           detail?: string;
         };
-        // Surface the real reason — generic "Could not disconnect"
+        // Surface the real reason: generic "Could not disconnect"
         // hides the underlying Supabase / Stripe error and makes
         // dev debugging impossible.
         const reason = body.detail ?? body.error ?? `HTTP ${res.status}`;
@@ -236,7 +236,7 @@ export function PaymentSettingsSection({
         throw new Error(reason);
       }
       // The server cleared app_metadata but the user's JWT still
-      // carries the stale `stripe_connect_account_id` — Supabase
+      // carries the stale `stripe_connect_account_id`, Supabase
       // doesn't auto-refresh JWTs when admin updates app_metadata.
       // Refresh the session so the next render sees the cleared
       // entitlement, then reload so the parent settings page
@@ -257,7 +257,7 @@ export function PaymentSettingsSection({
   const chargesLive = connectState?.chargesEnabled ?? stripeConnectEnabled;
 
   return (
-    <div className="max-w-3xl space-y-12">
+    <div className="space-y-12">
       {/* ─── Bank details ─────────────────────────────────────── */}
       <Section label="Bank details">
         <div className="mb-5 flex items-center justify-between gap-4">
@@ -348,7 +348,7 @@ export function PaymentSettingsSection({
                 Stripe account is stale (created against a different
                 API key, deleted on Stripe's side, etc.) the
                 embedded SDK shows its own "Something went wrong"
-                error and the status panel never loads — leaving
+                error and the status panel never loads, leaving
                 the MC stuck. This footer link is the escape hatch:
                 clears `app_metadata.stripe_connect_*` server-side
                 so the section flips back to the empty-state CTA
@@ -379,7 +379,7 @@ export function PaymentSettingsSection({
 /* ────────────────────────────────────────────────────────────── */
 
 /**
- * Document-style section header — matches the Billing tab pattern
+ * Document-style section header: matches the Billing tab pattern
  * (small UPPERCASE label on the left + a thin divider line filling
  * the rest of the row).
  */
@@ -427,7 +427,7 @@ function BankField({
 
 /**
  * The "no Stripe account yet" hero card. Mirrors the layout language
- * of CurrentPlanCard on the Billing tab — a single rounded surface
+ * of CurrentPlanCard on the Billing tab: a single rounded surface
  * with an icon, a one-line value prop, and a primary CTA.
  */
 function EmptyCardPaymentsCard({
@@ -453,7 +453,7 @@ function EmptyCardPaymentsCard({
           </p>
           <p className="mt-1 text-caption text-text-muted">
             Connect a Stripe account so couples can pay invoices by card.
-            Verification happens inside Zebri — Stripe handles ID checks,
+            Verification happens inside Zebri, Stripe handles ID checks,
             documents, and payouts.
           </p>
         </div>
@@ -468,7 +468,7 @@ function EmptyCardPaymentsCard({
 }
 
 /**
- * Dev-config error UI — shown when an MC has a connected Stripe
+ * Dev-config error UI: shown when an MC has a connected Stripe
  * account but the embedded SDK can't initialise because
  * NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY isn't set. Without this
  * fallback the section would silently render empty.
@@ -487,7 +487,7 @@ function PublishableKeyMissingCard() {
           The embedded Connect onboarding component needs
           <code className="font-mono px-1">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>
           in your <code className="font-mono">.env.local</code>. Set it and
-          reload — the onboarding form will mount here.
+          reload, the onboarding form will mount here).
         </p>
       </div>
     </div>

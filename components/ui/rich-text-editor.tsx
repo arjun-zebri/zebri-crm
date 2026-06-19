@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { variableLabel } from '@/lib/automations/variables'
 import { CONTRACT_VARIABLES } from '@/lib/contracts/contract-variables'
 
 /** A mergeable variable for the "Insert variable" popover. */
@@ -33,6 +34,19 @@ interface RichTextEditorProps {
    * list. The mention node stores the chosen `id` verbatim.
    */
   variables?: readonly EditorVariable[]
+  /**
+   * Show the "Insert variable" toolbar button. Off for surfaces that
+   * edit an already-resolved email (the manual send preview), where
+   * inserting a fresh `{{variable}}` would never get filled.
+   */
+  showVariableInserter?: boolean
+  /**
+   * How a mention node renders. `'token'` (default) shows the raw
+   * `{{variable}}` in emerald — the template builder. `'label'` shows the
+   * variable's human label in a red "fill me" chip — the manual send
+   * preview, where a leftover mention is an unfilled gap to highlight.
+   */
+  mentionDisplay?: 'token' | 'label'
 }
 
 export function RichTextEditor({
@@ -42,6 +56,8 @@ export function RichTextEditor({
   editable = true,
   className = '',
   variables = CONTRACT_VARIABLES,
+  showVariableInserter = true,
+  mentionDisplay = 'token',
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -50,13 +66,16 @@ export function RichTextEditor({
       Mention.configure({
         HTMLAttributes: {
           class:
-            'inline-block rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-sm font-medium',
+            mentionDisplay === 'label'
+              ? 'inline-block rounded bg-red-100 text-red-700 px-1.5 py-0.5 text-sm font-medium'
+              : 'inline-block rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-sm font-medium',
         },
         renderHTML({ options, node }) {
+          const id = String(node.attrs.id)
           return [
             'span',
             options.HTMLAttributes,
-            `{{${node.attrs.id}}}`,
+            mentionDisplay === 'label' ? variableLabel(id) : `{{${id}}}`,
           ]
         },
       }),
@@ -97,7 +116,12 @@ export function RichTextEditor({
   return (
     <div className={`border border-gray-200 rounded-xl overflow-hidden bg-white ${className}`}>
       {editable && (
-        <ToolbarRow editor={editor} onInsertVariable={insertVariable} variables={variables} />
+        <ToolbarRow
+          editor={editor}
+          onInsertVariable={insertVariable}
+          variables={variables}
+          showVariableInserter={showVariableInserter}
+        />
       )}
       <EditorContent
         editor={editor}
@@ -136,10 +160,12 @@ function ToolbarRow({
   editor,
   onInsertVariable,
   variables,
+  showVariableInserter,
 }: {
   editor: ReturnType<typeof useEditor>
   onInsertVariable: (id: string) => void
   variables: readonly EditorVariable[]
+  showVariableInserter: boolean
 }) {
   const [open, setOpen] = useState(false)
   if (!editor) return null
@@ -210,6 +236,7 @@ function ToolbarRow({
         <Redo size={16} strokeWidth={1.5} />
       </ToolbarButton>
       <div className="flex-1" />
+      {showVariableInserter && (
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
           <button
@@ -248,6 +275,7 @@ function ToolbarRow({
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
+      )}
     </div>
   )
 }

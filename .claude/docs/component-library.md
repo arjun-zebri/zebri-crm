@@ -369,5 +369,18 @@ Props:
   Duplicate (`Copy`) / Delete (`ConfirmDialog`) row actions and
   `Loading` / `Empty` / `ErrorState` states.
 
+Shared across the non-email tabs (Packages / Quotes / Invoices /
+Contracts):
+
+- `StarterCatalogModal`: generic "Browse starters" catalog modal (flat
+  list, no lifecycle grouping). Props: `title`, `blurb`, `noun`,
+  `catalog` (`{name, subtitle}[]`), `existingNames` (hidden when already
+  owned), and `onAdd(names) => Promise<number>` (caller owns the insert +
+  cache invalidation; the modal owns the toast). Mirrors the Emails
+  `StarterLibraryPanel`.
+- `LineItemPreview`: the line-item counterpart to `TemplatePreview`,
+  reusing the same card chrome. Renders a name/subtitle header + priced
+  line items + total for package / quote / invoice editors.
+
 All use semantic tokens (`bg-card`, `text-text`, `border-border`,
 `bg-brand`) and the shared primitives — no ad-hoc colours.

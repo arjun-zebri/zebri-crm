@@ -1,7 +1,7 @@
 "use client";
 
 import * as Popover from "@radix-ui/react-popover";
-import { Mail, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useState, useCallback } from "react";
 
 import {
@@ -12,7 +12,6 @@ import {
 } from '@/types/couple';
 
 import { CoupleEvents } from "./couple-events";
-import { CoupleSendEmail } from "./couple-send-email";
 
 interface CoupleOverviewProps {
   couple: Couple;
@@ -46,7 +45,6 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
   const [leadSource, setLeadSource] = useState(couple.lead_source || "");
   const [notes, setNotes] = useState(couple.notes ?? "");
   const [leadSourceOpen, setLeadSourceOpen] = useState(false);
-  const [sendEmailOpen, setSendEmailOpen] = useState(false);
 
   const leadSourceLabel = leadSource
     ? LEAD_SOURCE_LABELS[leadSource as LeadSource] ?? leadSource
@@ -111,14 +109,6 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       <div className="flex flex-col">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900">General</h3>
-          <button
-            type="button"
-            onClick={() => setSendEmailOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50 cursor-pointer"
-          >
-            <Mail size={13} strokeWidth={1.5} />
-            Send email
-          </button>
         </div>
 
         {/* Primary + Secondary partner contacts. Six inline-editable
@@ -277,13 +267,6 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
         <CoupleEvents couple={couple} onLoadingChange={handleEventsLoading} />
       </div>
     </div>
-
-    <CoupleSendEmail
-      isOpen={sendEmailOpen}
-      onClose={() => setSendEmailOpen(false)}
-      coupleId={couple.id}
-      coupleName={couple.name}
-    />
   </>
   );
 }

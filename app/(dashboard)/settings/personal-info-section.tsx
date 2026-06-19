@@ -62,7 +62,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
   const addressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('idle')
-  // Bumping this requests a save *after* the next render — used by the
+  // Bumping this requests a save *after* the next render, used by the
   // programmatic changes (business-type picker, address selection) so
   // `autoSave` reads the freshly-committed state, not a stale closure.
   const [saveSignal, setSaveSignal] = useState(0)
@@ -212,7 +212,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
         savingRef.current = false
         return
       }
-      // Email is the one change worth a toast — it isn't live until the
+      // Email is the one change worth a toast, it isn't live until the
       // confirmation link is clicked.
       toast('A confirmation link will be sent to your new email.')
     }
@@ -240,7 +240,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   }
 
   // Run a requested save once the triggering state has committed.
-  // `autoSave` is intentionally excluded from deps — it's re-created
+  // `autoSave` is intentionally excluded from deps, it's re-created
   // every render and we only want to fire on an explicit signal bump.
   useEffect(() => {
     if (saveSignal > 0) void autoSave()
@@ -256,7 +256,7 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     .join(', ')
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <h2 className="text-xl font-semibold text-gray-900 mb-1">Personal info</h2>
       <p className="text-sm text-gray-500 mb-5">Update your name, contact details, and business information. Changes save automatically.</p>
       {/* Auto-save on blur: `onBlur` on the form catches the bubbled
