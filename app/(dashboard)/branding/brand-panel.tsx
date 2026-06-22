@@ -1,11 +1,25 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import * as Popover from '@radix-ui/react-popover'
 import {
   ChevronDown, Check, Upload, Plus, RotateCcw, Paintbrush, Type as TypeIcon,
   Layout, Sparkles, Trash2, ImageIcon,
 } from 'lucide-react'
-import * as Popover from '@radix-ui/react-popover'
+import { useRef, useState } from 'react'
+
+import { ColorPopover } from '@/components/ui/color-popover'
+import { getContrastRatio, getWcagLevel } from '@/lib/branding/contrast'
+import {
+  HEADING_FONTS,
+  BODY_FONTS,
+  FONT_LABELS,
+  FONT_STACKS,
+  FONT_WEIGHTS,
+  FONT_WEIGHT_LABELS,
+  type HeadingFont,
+  type BodyFont,
+  type FontWeight,
+} from '@/lib/branding/fonts'
 import {
   THEME_PRESETS,
   THEME_IDS,
@@ -18,20 +32,9 @@ import {
   type ThemeIdOrCustom,
   type Density,
 } from '@/lib/branding/themes'
-import {
-  HEADING_FONTS,
-  BODY_FONTS,
-  FONT_LABELS,
-  FONT_STACKS,
-  FONT_WEIGHTS,
-  FONT_WEIGHT_LABELS,
-  type HeadingFont,
-  type BodyFont,
-  type FontWeight,
-} from '@/lib/branding/fonts'
+
 import { Slider } from './components/slider'
-import { ColorPopover } from './components/color-popover'
-import { getContrastRatio, getWcagLevel } from '@/lib/branding/contrast'
+
 
 interface BrandPanelProps {
   themePreset: ThemeIdOrCustom

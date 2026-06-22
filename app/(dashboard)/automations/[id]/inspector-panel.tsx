@@ -21,7 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { actionRegistry } from '@/lib/automations/actions'
+import { actionUi } from '@/lib/automations/actions/ui'
 import {
   ANY_SENTINEL,
   CONTACT_CATEGORIES,
@@ -184,8 +184,8 @@ function actionDescription(action: AutomationActionRow): string {
   if (action.type === 'wait' || action.type === 'branch' || action.type === 'stop' || action.type === 'approval' || action.type === 'sub_flow') {
     return ''
   }
-  const spec = actionRegistry[action.type as ActionType]
-  return spec?.ui.description ?? ''
+  const ui = actionUi[action.type as ActionType]
+  return ui?.description ?? ''
 }
 
 /* ─── Configure tab ───────────────────────────────────────────── */
@@ -1991,8 +1991,8 @@ function actionHeaderLabel(action: AutomationActionRow): string {
   if (action.type === 'wait' || action.type === 'branch' || action.type === 'stop' || action.type === 'approval' || action.type === 'sub_flow') {
     return action.type[0]!.toUpperCase() + action.type.slice(1)
   }
-  const spec = actionRegistry[action.type as ActionType]
-  return spec?.ui.label ?? 'Action'
+  const ui = actionUi[action.type as ActionType]
+  return ui?.label ?? 'Action'
 }
 
 function actionSubLabel(action: AutomationActionRow): string {

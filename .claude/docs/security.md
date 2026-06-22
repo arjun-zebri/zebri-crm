@@ -499,12 +499,25 @@ DELETE (sampled clean across the migrations).
 | `stripe_customers` | ✅ (RLS enabled, no policy — service-role only) | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
 | `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) | Branding |
+| `user_public_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/user-public-settings.test.ts` (5 tests — cross-tenant read/update/insert denial incl. encrypted OAuth tokens + global subdomain uniqueness) | Settings — Public Page |
 | `automations` | ✅ | `user_id` | ✅ `tests/integration/automations/run-now.test.ts` (cross-tenant: cannot manually run another MC's automation) | Automations |
 | `automation_events` | ✅ (SELECT-only; writes via SECURITY DEFINER RPC + service-role) | `user_id` | ✅ exercised by `run-now.test.ts` (manual-fire event opens only the owner's run) | Automations |
 | `automation_actions` | ✅ | `automation_id` (→ `automations.user_id`) | ✅ exercised by `run-now.test.ts` | Automations |
 | `automation_runs` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cross-tenant retry/cancel/pause/resume are no-ops) | Automations |
 | `automation_waits` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cancel consumes; resume reads — exercised via the control actions) | Automations |
 | `automation_audit_log` | ✅ (SELECT-only for owner; writes service-role) | `user_id` | ☐ (read RLS-scoped by the couple Automations feed) | Automations |
+
+**Connect-your-own-mailbox (OAuth) controls** (Settings → Public Page →
+Email; routes `app/api/oauth/{authorize,callback}`): the Gmail/Outlook
+OAuth refresh + access tokens are encrypted at rest with AES-256-GCM
+(`lib/crypto/secret-box`, key `EMAIL_CRED_KEY`), never selected back to
+the client, and decrypted only server-side at send/refresh time. The
+authorize→callback flow is CSRF-protected by a random `state` pinned in a
+signed httpOnly cookie and re-checked on callback; the callback binds the
+tokens to the MC via their existing Supabase session. Both routes are
+per-user rate-limited; `disconnectMailboxAction` best-effort revokes at
+the provider. Scopes are minimal (Google `gmail.send` send-only; Microsoft
+`Mail.Send`).
 
 The Templates starter-add server actions (`addStarterPackagesAction`,
 `addStarterQuoteTemplatesAction`, `addStarterInvoiceTemplatesAction`,

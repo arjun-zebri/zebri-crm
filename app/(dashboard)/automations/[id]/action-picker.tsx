@@ -14,7 +14,7 @@
 
 import { Clock, GitBranch, type LucideIcon, Square } from 'lucide-react'
 
-import { actionRegistry } from '@/lib/automations/actions'
+import { actionUi } from '@/lib/automations/actions/ui'
 import { isActionLaunchVisible } from '@/lib/automations/launch-catalogue'
 import type { ActionType, AutomationActionRow } from '@/types/automations'
 
@@ -101,14 +101,14 @@ export function ActionPicker({
     // to-wire stubs); the launch allowlist hides dead tiles. The one
     // exception is `send_sms`, which stays listed but greyed via its
     // `comingSoon` flag (kept per the catalogue review).
-    ...Object.values(actionRegistry)
-      .filter((spec) => isActionLaunchVisible(spec.type))
-      .map((spec) => ({
-        id: `action:${spec.type}`,
-        group: spec.ui.category,
-        label: spec.ui.comingSoon ? `${spec.ui.label} (coming soon)` : spec.ui.label,
-        description: spec.ui.description,
-        icon: getLucideIcon(spec.ui.icon),
+    ...Object.entries(actionUi)
+      .filter(([type]) => isActionLaunchVisible(type as ActionType))
+      .map(([type, ui]) => ({
+        id: `action:${type}`,
+        group: ui.category,
+        label: ui.comingSoon ? `${ui.label} (coming soon)` : ui.label,
+        description: ui.description,
+        icon: getLucideIcon(ui.icon),
       })),
   ]
 

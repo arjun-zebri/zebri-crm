@@ -14,6 +14,7 @@ import {
   FileText,
   Globe,
   Landmark,
+  PenLine,
   Shield,
   User,
   UserCog,
@@ -25,6 +26,7 @@ export type SettingsTabId =
   | 'billing'
   | 'payments'
   | 'public'
+  | 'signature'
   | 'privacy'
   | 'terms';
 
@@ -40,6 +42,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { key: 'billing', label: 'Plans & Billing', icon: <CreditCard size={18} strokeWidth={1.5} /> },
   { key: 'payments', label: 'Receive Payments', icon: <Landmark size={18} strokeWidth={1.5} /> },
   { key: 'public', label: 'Public Page', icon: <Globe size={18} strokeWidth={1.5} /> },
+  { key: 'signature', label: 'Signature', icon: <PenLine size={18} strokeWidth={1.5} /> },
   { key: 'privacy', label: 'Privacy', icon: <Shield size={18} strokeWidth={1.5} /> },
   { key: 'terms', label: 'Terms', icon: <FileText size={18} strokeWidth={1.5} /> },
 ];

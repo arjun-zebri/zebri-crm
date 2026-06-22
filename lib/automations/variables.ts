@@ -219,9 +219,37 @@ function readMc(mc: McSnapshot, key: string): string {
       return mc.email
     case 'phone':
       return mc.phone ?? ''
+    case 'signature':
+      // The signature is rich TipTap JSON. The string resolver (subjects,
+      // SMS, plain renderTemplate) gets its flattened text; the email-body
+      // renderer special-cases the mention to inject formatted HTML.
+      return flattenSignatureText(mc.signature)
     default:
       return ''
   }
+}
+
+/** A minimal structural view of a TipTap node, enough to read its text. */
+interface TextishNode {
+  type?: string
+  text?: string
+  content?: TextishNode[]
+}
+
+/**
+ * Flatten a TipTap signature doc to plain text: inline text concatenated
+ * within each block, blocks joined by a single space. Returns an empty
+ * string for a null / empty doc.
+ */
+function flattenSignatureText(doc: TextishNode | null | undefined): string {
+  if (!doc?.content) return ''
+  const blockText = (node: TextishNode): string =>
+    node.type === 'text' ? node.text ?? '' : (node.content ?? []).map(blockText).join('')
+  return doc.content
+    .map(blockText)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function readPortal(ctx: RunContext, key: string): string {
@@ -322,6 +350,7 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
       { token: '{{mc.business_name}}', label: 'Your business name', example: 'Acme MC Co' },
       { token: '{{mc.contact_name}}', label: 'Your name', example: 'Charlie Park' },
       { token: '{{mc.email}}', label: 'Your email', example: 'hello@acmemc.com' },
+      { token: '{{mc.signature}}', label: 'Your email signature', example: 'Cheers, Charlie' },
     ],
   },
   {

@@ -177,5 +177,6 @@ export async function loadMcSnapshot(
     quietHoursStart: (metadata['quiet_hours_start'] as string) ?? '21:00',
     quietHoursEnd: (metadata['quiet_hours_end'] as string) ?? '08:00',
     quietHoursTimezone: (metadata['timezone'] as string) ?? (appMetadata['timezone'] as string) ?? DEFAULT_TIMEZONE,
+    signature: (metadata['email_signature'] as McSnapshot['signature']) ?? null,
   }
 }

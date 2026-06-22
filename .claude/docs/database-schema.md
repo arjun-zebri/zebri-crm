@@ -37,6 +37,13 @@ metadata_on_insert` trigger).
 
 These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`. See `.claude/docs/branding.md` for full spec.
 
+**Email fields (stored in `user_metadata`, user-owned):**
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `mc_signature_name` | text | null | Typed signature name rendered on contracts |
+| `email_signature` | TipTap JSON | null | Reusable email signature (rich text, Gmail/Outlook-style, no variables inside it), edited in Settings → Signature. Surfaced to templates via the `{{mc.signature}}` variable: rich HTML in a body, flattened text in a subject. |
+
 **Address fields (stored in `user_metadata`, user-owned):**
 
 | Field | Type | Notes |
@@ -722,3 +729,34 @@ Indexes: `couple_emails(couple_id)`, `couple_emails(user_id)`.
 RLS: owner-only `user_id = auth.uid()`.
 
 Migration: `20260619000000_create_couple_emails.sql`.
+
+## user_public_settings (Settings — Public Page)
+
+One RLS-owned row per MC backing the Public Page settings: the branded
+Zebri subdomain and a connected email mailbox (OAuth — Gmail/Outlook).
+Kept out of `user_metadata` (JWT-bloat + it's user-writable) in its own
+table, same ownership shape as `user_branding`.
+
+Columns: user_id (PK, FK auth.users cascade), subdomain (nullable branded
+slug), email_mode (`zebri` | `oauth`, default `zebri`), oauth_provider
+(`google` | `microsoft`), oauth_email (connected address; the `from`),
+oauth_from_name, **oauth_refresh_token_encrypted** + **oauth_access_token_encrypted**
+(AES-256-GCM ciphertext, `v1:<iv>.<tag>.<data>` — never plaintext, never
+sent to the client), oauth_token_expires_at, oauth_status (`none` |
+`connected` | `failed`, default `none`), oauth_last_error,
+oauth_connected_at, created_at, updated_at.
+
+Subdomain uniqueness: partial unique index on `lower(subdomain) where
+subdomain is not null` — global, enforced at the DB level (RLS hides
+other tenants' rows, so the server action relies on the 23505 to detect
+a clash). RLS: four owner-only policies (`auth.uid() = user_id`). The
+encrypted tokens are additionally never selected back to the client by
+the loaders/actions.
+
+Read at send time by `resolveSender` (`lib/email/sender-identity`) to
+pick each MC's transport (their OAuth mailbox or the shared Zebri/Resend
+address), refreshing the access token when expired. Written by the OAuth
+callback route + the Public Page server actions
+(`app/(dashboard)/settings/public/actions.ts`).
+
+Migration: `20260621000000_create_user_public_settings.sql`.

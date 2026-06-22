@@ -334,8 +334,7 @@ export function QuoteTemplateManager() {
       if (error) throw error
       const grouped: Record<string, TemplateItem[]> = {}
       ;(data ?? []).forEach((item) => {
-        if (!grouped[item.template_id]) grouped[item.template_id] = []
-        grouped[item.template_id].push({
+        ;(grouped[item.template_id] ??= []).push({
           id: item.id,
           description: item.description,
           amount: item.amount,
@@ -506,10 +505,12 @@ export function QuoteTemplateManager() {
     mutationFn: async (reordered: Template[]) => {
       if (!userId) throw new Error('User not authenticated')
       for (let i = 0; i < reordered.length; i++) {
+        const row = reordered[i]
+        if (!row) continue
         const { error } = await supabase
           .from('quote_templates')
           .update({ position: (i + 1) * 1000 })
-          .eq('id', reordered[i].id)
+          .eq('id', row.id)
           .eq('user_id', userId)
         if (error) throw error
       }

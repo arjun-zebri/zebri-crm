@@ -10,10 +10,11 @@
  */
 
 import type { JSONContent } from '@tiptap/react'
-import { Resend } from 'resend'
 import { z } from 'zod'
 
 import { wrapTemplateHtml } from '@/lib/email'
+import { dispatchEmail } from '@/lib/email/dispatch'
+import { DEFAULT_FROM, resolveSender, type ResolvedSender } from '@/lib/email/sender-identity'
 import {
   detectMissingVariables,
   renderEmailSubject,
@@ -26,18 +27,6 @@ import { resolveRecipients } from '../recipients'
 import { renderTemplate } from '../variables'
 
 import type { ActionSpec } from './index'
-
-const FROM = 'Zebri <noreply@app.zebri.com.au>'
-
-let _resend: Resend | undefined
-function resend(): Resend {
-  if (!_resend) {
-    const key = process.env.RESEND_API_KEY
-    if (!key) throw new Error('RESEND_API_KEY is not set')
-    _resend = new Resend(key)
-  }
-  return _resend
-}
 
 // ────────────────────────────────────────────────────────────────
 // send_email
@@ -150,6 +139,21 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       html = config.wrap ? wrapAutomationHtml(bodyText, ctx) : bodyText
     }
 
+    // Resolve the sender once: a connected SMTP mailbox (Settings →
+    // Public Page → Email) sends through the MC's own inbox, otherwise the
+    // shared Zebri address. Uses the admin client because automations run
+    // without a user session; the same client is reused for recipients.
+    // A missing service-role config (degraded env) falls back to the shared
+    // Zebri address rather than failing the send.
+    let supabase: ReturnType<typeof createAdminClient> | null = null
+    let sender: ResolvedSender = { transport: 'resend', from: DEFAULT_FROM }
+    try {
+      supabase = createAdminClient()
+      sender = await resolveSender(supabase, ctx.userId, ctx.mc.businessName)
+    } catch {
+      sender = { transport: 'resend', from: DEFAULT_FROM }
+    }
+
     // Test run (manual "Test automation"): route the rendered email to
     // the MC instead of the couple, so they preview exactly what would
     // go out without ever contacting the couple. The subject is tagged
@@ -159,24 +163,24 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       if (!ctx.mc.email) {
         return { kind: 'ok', output: { skipped: 'no MC email for test send' } }
       }
-      try {
-        const { data, error } = await resend().emails.send({
-          from: FROM,
-          to: ctx.mc.email,
-          subject: `[Test] ${subject}`,
-          html,
-          replyTo: ctx.mc.email,
-        })
-        if (error || !data?.id) {
-          return { kind: 'error', message: `send_email (test): ${error?.message ?? 'no message id'}` }
-        }
-        return { kind: 'ok', output: { test: true, sent_to_mc: ctx.mc.email, message_id: data.id } }
-      } catch (err) {
-        return { kind: 'error', message: err instanceof Error ? err.message : String(err) }
+      const res = await dispatchEmail(sender, {
+        to: ctx.mc.email,
+        subject: `[Test] ${subject}`,
+        html,
+        replyTo: ctx.mc.email,
+      })
+      if (!res.ok || !res.messageId) {
+        return { kind: 'error', message: `send_email (test): ${res.error ?? 'no message id'}` }
       }
+      return { kind: 'ok', output: { test: true, sent_to_mc: ctx.mc.email, message_id: res.messageId } }
     }
 
-    const supabase = createAdminClient()
+    // The non-test path resolves the couple's recipients, which needs the
+    // admin client; if it couldn't be built we can't proceed.
+    if (!supabase) {
+      return { kind: 'error', message: 'send_email: admin client unavailable' }
+    }
+
     const recipients = await resolveRecipients(supabase, ctx.couple, config.recipients, ctx.mc)
     if (recipients.length === 0) {
       return { kind: 'ok', output: { skipped: 'no recipients' } }
@@ -211,25 +215,21 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
 
     const messageIds: string[] = []
     let lastError: string | null = null
+    const replyTo = config.replyToOverride ?? ctx.mc.email
     for (const r of addressable) {
-      try {
-        const { data, error } = await resend().emails.send({
-          from: FROM,
-          to: r.email!,
-          subject,
-          html,
-          replyTo: config.replyToOverride ?? ctx.mc.email,
-          ...(config.bccSelf ? { bcc: ctx.mc.email } : {}),
-          ...(cc ? { cc } : {}),
-        })
-        if (error || !data?.id) {
-          lastError = error?.message ?? 'Resend returned no message id'
-          continue
-        }
-        messageIds.push(data.id)
-      } catch (err) {
-        lastError = err instanceof Error ? err.message : String(err)
+      const res = await dispatchEmail(sender, {
+        to: r.email!,
+        subject,
+        html,
+        ...(replyTo ? { replyTo } : {}),
+        ...(config.bccSelf && ctx.mc.email ? { bcc: ctx.mc.email } : {}),
+        ...(cc ? { cc } : {}),
+      })
+      if (!res.ok || !res.messageId) {
+        lastError = res.error ?? 'Send returned no message id'
+        continue
       }
+      messageIds.push(res.messageId)
     }
 
     const sent = messageIds.length

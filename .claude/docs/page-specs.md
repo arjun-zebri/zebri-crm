@@ -843,6 +843,87 @@ toasts (a confirmation link is sent; it isn't live until confirmed).
 A calm inline "Saving… / Saved" hint (`auto-save-status.tsx`) replaces
 the button.
 
+### Public Page (`?tab=public`)
+
+Outward-facing config couples see. Persisted to `user_public_settings`
+(one RLS-owned row per MC) — not `user_metadata`. Components:
+`public-page-section.tsx` (orchestrator: subdomain + surfaces) and
+`public-page-email.tsx` (the email subsection). Server actions live in
+`app/(dashboard)/settings/public/actions.ts`.
+
+**Zebri address (subdomain).** A branded slug fronting the public
+surfaces (`name.zebri.com.au`). **Auto-saves on blur** via
+`saveSubdomainAction` (same calm `auto-save-status.tsx` hint).
+Normalised to a DNS-safe slug, reserved words rejected, and **globally
+unique** (a partial unique index on `lower(subdomain)`; a clash returns
+"already taken"). Today this is a stored preference and a preview list —
+routing the subdomain to the app (wildcard DNS + tenant middleware) is a
+separate infra task.
+
+**Email sending.** Two modes, persisted in `email_mode`, available on
+every plan (no gate):
+
+- **Send from Zebri** (default): mail goes from the shared Zebri address
+  via Resend. Works instantly, no setup.
+- **Connect your own email** (OAuth — Gmail or Outlook): the MC clicks
+  "Connect Gmail" / "Connect Outlook" and authorizes. Connecting is the
+  redirect flow in `app/api/oauth/{authorize,callback}` — `authorize`
+  pins a CSRF `state` in a signed httpOnly cookie and 302s to the
+  provider's consent screen; `callback` verifies the state, exchanges the
+  code (`lib/oauth/tokens`), looks up the connected address, encrypts the
+  tokens (`lib/crypto/secret-box`, AES-256-GCM), and persists
+  `oauth_status = 'connected'`. `disconnectMailboxAction` revokes + clears.
+  The tokens are never returned to the client.
+
+At send time every couple-facing email resolves its transport via
+`resolveSender` (`lib/email/sender-identity`) → `dispatchEmail`
+(`lib/email/dispatch`): the MC's mailbox via the **Gmail API** /
+**Microsoft Graph** when `email_mode = 'oauth'` **and**
+`oauth_status = 'connected'` (the access token is auto-refreshed when
+expired), otherwise the shared Zebri address over Resend (fail-safe — any
+lookup/decrypt/refresh error never blocks a send). Sending through the
+MC's own mailbox means mail lands in their Sent folder and replies come
+back to them, at no per-MC cost to Zebri.
+
+Note: Gmail's `gmail.send` is a Google *restricted* scope — usable
+unverified for <100 connected accounts, then needs Google verification +
+a CASA assessment. Microsoft's `Mail.Send` has no equivalent gate. The
+Google Cloud OAuth client + Azure app registration are operational
+prerequisites (`.env.example`).
+
+### Signature (`?tab=signature`)
+
+Listed **below Public Page** in the nav. A single reusable **email
+signature** edited in a Gmail/Outlook-style rich editor
+(`signature-editor.tsx` + `signature-toolbar.tsx`): font family (a
+preview-in-its-own-font dropdown of web-safe families), font size, bold /
+italic / underline, text + highlight colour (the shared branding
+`ColorPopover` with swatches + hex + eyedropper, now at
+`components/ui/color-popover.tsx`), link, image, alignment, and lists.
+Links auto-normalise a bare host (`test.com.au` to `https://test.com.au`)
+so they are absolute, not app-relative. Images upload to the public
+`branding` bucket and can be **resized** (drag handle) or **deleted**
+(hover control) via a NodeView (`signature-image-view.tsx`); the chosen
+width persists into the rendered email. The editor content uses the
+shared `.contract-content` styles, so lists, links, and headings render
+the same as the contract / template editors. No template variables inside
+it. The editor and the server-side email render share one extension set
+(`lib/email/signature-extensions.ts`) so stored JSON round-trips. Toolbar
+popovers render at `z-[70]` to sit above the `z-[60]` Settings modal.
+**Auto-saves**: a debounced save 800ms after the last edit, with a blur
+out of the editor as an immediate backstop; both go through one
+idempotent save that no-ops when nothing changed, persisting the TipTap
+JSON to `user_metadata.email_signature` via `auth.updateUser({ data })`.
+The editor ignores parent re-renders that echo its own emitted value, so
+typing can't flick back to a saved version. Same calm
+`auto-save-status.tsx` hint as Personal Info.
+
+Templates drop the whole signature in with the **Your email signature**
+variable (`{{mc.signature}}`): rich HTML when used in an email body,
+flattened text in a subject. An empty signature renders to nothing and
+never blocks a send (it is exempt from the missing-variable gate). See
+`lib/email/templates.ts` for the rendering path.
+
 ### Account (`?tab=account`)
 
 Change password + email preferences + danger zone.

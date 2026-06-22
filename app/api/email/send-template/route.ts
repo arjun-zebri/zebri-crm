@@ -26,6 +26,7 @@ import { EMAIL_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit'
 import { parseJsonBody } from '@/lib/api/validate'
 import { sendTemplateEmail, wrapTemplateHtml } from '@/lib/email'
 import { buildManualSendContext, downloadStaticAttachments } from '@/lib/email/send-context'
+import { resolveSender } from '@/lib/email/sender-identity'
 import {
   detectMissingVariables,
   renderEmailSubject,
@@ -129,6 +130,7 @@ export async function POST(request: NextRequest) {
     to: recipient,
     subject: test ? `[Test] ${finalSubject}` : finalSubject,
     html: wrapTemplateHtml(html, ctx.mc.businessName),
+    sender: await resolveSender(supabase, user.id, ctx.mc.businessName),
     replyTo: ctx.mc.email,
     ...(attachments.length ? { attachments } : {}),
   })

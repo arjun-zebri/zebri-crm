@@ -54,7 +54,7 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-export function Sidebar({ mobileOpen, onMobileClose, isExpanded, onToggle }: SidebarProps) {
+export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();

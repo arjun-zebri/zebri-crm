@@ -35,6 +35,8 @@ import sanitizeHtml from 'sanitize-html'
 import { extractTokens, resolveVariable, variableLabel } from '@/lib/automations/variables'
 import type { RunContext } from '@/types/automations'
 
+import { renderSignatureHtml } from './signature'
+
 /** How a template should be rendered. */
 export type RenderMode =
   /** Inline-highlight unresolved variables (editor / compose preview). */
@@ -84,6 +86,18 @@ export interface MissingVariableResult {
 const MISSING_OPEN = '\uE000'
 const MISSING_CLOSE = '\uE001'
 
+// Sentinels for the `{{mc.signature}}` variable. The signature is rich
+// HTML (it can contain bold, links, line breaks), but mention nodes
+// otherwise resolve to plain text. So we emit an indexed placeholder
+// here and splice the separately-rendered, already-sanitised signature
+// HTML back in AFTER the parent body is sanitised \u2014 the same trick the
+// missing-variable highlights use.
+const SIG_OPEN = '\uE002'
+const SIG_CLOSE = '\uE003'
+
+/** The variable path that injects the MC's email signature. */
+const SIGNATURE_PATH = 'mc.signature'
+
 const SANITIZE_OPTS: sanitizeHtml.IOptions = {
   allowedTags: [
     'p', 'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li',
@@ -110,7 +124,10 @@ export function renderEmailTemplate(
   overrides?: VariableOverrides,
 ): EmailRenderResult {
   const unresolved = new Set<string>()
-  const substituted = substituteMentions(content, ctx, mode, unresolved, overrides)
+  // Sanitised HTML fragments for each `{{mc.signature}}` occurrence,
+  // referenced by index from a sentinel placeholder in the tree.
+  const sigFragments: string[] = []
+  const substituted = substituteMentions(content, ctx, mode, unresolved, overrides, sigFragments)
   const raw = generateHTML(substituted, [
     StarterKit,
     Mention.configure({
@@ -118,7 +135,20 @@ export function renderEmailTemplate(
     }),
   ])
   const clean = sanitizeHtml(raw, SANITIZE_OPTS)
-  return { html: applyMissingHighlights(clean), unresolved: [...unresolved] }
+  return {
+    html: fillEmptyParagraphs(applySignatureFragments(applyMissingHighlights(clean), sigFragments)),
+    unresolved: [...unresolved],
+  }
+}
+
+/**
+ * Give empty paragraphs height so the MC's intentional blank lines survive.
+ * A bare `<p></p>` collapses to zero height in email clients (and the
+ * compose preview), so the spacing the MC typed silently disappears. A
+ * `<br>` inside is the email-safe way to keep the blank line.
+ */
+function fillEmptyParagraphs(html: string): string {
+  return html.replace(/<p([^>]*)>\s*<\/p>/g, '<p$1><br></p>')
 }
 
 /**
@@ -136,7 +166,8 @@ export function resolveTemplateContent(
   ctx: RunContext,
   overrides?: VariableOverrides,
 ): JSONContent {
-  return fillMentions(content, ctx, overrides)
+  // The root is always a doc, never a mention, so this never drops to null.
+  return fillMentions(content, ctx, overrides) ?? content
 }
 
 /**
@@ -172,6 +203,9 @@ export function detectMissingVariables(
   const missing = new Set<string>()
 
   for (const expr of extractTokens(template.subject)) {
+    // The signature is always optional. An empty one is valid, never a
+    // blocking gap.
+    if (basePath(expr) === SIGNATURE_PATH) continue
     if (resolveWith(expr, ctx, overrides) === '') missing.add(basePath(expr))
   }
   collectUnresolvedMentions(template.content, ctx, missing, overrides)
@@ -193,6 +227,18 @@ function basePath(expr: string): string {
   return (expr.split('|')[0] ?? expr).trim()
 }
 
+/**
+ * The variable expression carried by a mention node, or `''` when the
+ * node is malformed — i.e. it lost its `attrs.id`. A corrupted mention
+ * (commonly from an HTML copy-paste round-trip in the editor, which can
+ * strip the id) must be treated as unresolved, never handed to TipTap's
+ * default Mention renderer, which would stringify the null id as `@null`.
+ */
+function mentionExpr(node: JSONContent): string {
+  const id = node.attrs?.id
+  return typeof id === 'string' ? id.trim() : ''
+}
+
 /** Resolve an expression, preferring a non-empty inline override. */
 function resolveWith(expr: string, ctx: RunContext, overrides?: VariableOverrides): string {
   const override = overrides?.[basePath(expr)]
@@ -210,10 +256,35 @@ function substituteMentions(
   ctx: RunContext,
   mode: RenderMode,
   unresolved: Set<string>,
-  overrides?: VariableOverrides,
+  overrides: VariableOverrides | undefined,
+  sigFragments: string[],
 ): JSONContent {
-  if (node.type === 'mention' && node.attrs?.id) {
-    const expr = String(node.attrs.id)
+  if (node.type === 'mention') {
+    const expr = mentionExpr(node)
+    // Malformed mention (no usable variable id): collapse it rather than
+    // letting TipTap's default renderer print `@null`. Empty in send mode,
+    // a neutral highlight in preview so the MC can see something's off.
+    if (!expr) {
+      return {
+        type: 'text',
+        text: mode === 'preview' ? `${MISSING_OPEN}Variable${MISSING_CLOSE}` : ' ',
+      }
+    }
+    // The signature is rich HTML, not a plain value: render it on its own
+    // (with the signature stripped from the context so a nested
+    // `{{mc.signature}}` can't recurse) and leave an indexed placeholder
+    // that gets the formatted HTML spliced in after sanitising. An empty
+    // signature collapses to nothing and is never treated as missing.
+    if (basePath(expr) === SIGNATURE_PATH) {
+      // The signature is rich HTML (colours, fonts, images), not a plain
+      // value: render it on its own and leave an indexed placeholder that
+      // gets the formatted HTML spliced in after sanitising. Routing even
+      // an empty signature through a placeholder (fragment = '') avoids
+      // emitting an empty text node, which the ProseMirror schema rejects.
+      const html = renderSignatureHtml(ctx.mc.signature)
+      const index = sigFragments.push(html) - 1
+      return { type: 'text', text: `${SIG_OPEN}${index}${SIG_CLOSE}` }
+    }
     const value = resolveWith(expr, ctx, overrides)
     if (value) return { type: 'text', text: value }
     unresolved.add(basePath(expr))
@@ -226,7 +297,9 @@ function substituteMentions(
   if (Array.isArray(node.content)) {
     return {
       ...node,
-      content: node.content.map((c) => substituteMentions(c, ctx, mode, unresolved, overrides)),
+      content: node.content.map((c) =>
+        substituteMentions(c, ctx, mode, unresolved, overrides, sigFragments),
+      ),
     }
   }
   return node
@@ -237,13 +310,33 @@ function substituteMentions(
  * text node, and leaving an unresolvable mention untouched so the editor
  * can render it as a highlighted "fill me" chip.
  */
-function fillMentions(node: JSONContent, ctx: RunContext, overrides?: VariableOverrides): JSONContent {
-  if (node.type === 'mention' && node.attrs?.id) {
-    const value = resolveWith(String(node.attrs.id), ctx, overrides)
+function fillMentions(
+  node: JSONContent,
+  ctx: RunContext,
+  overrides?: VariableOverrides,
+): JSONContent | null {
+  if (node.type === 'mention') {
+    const expr = mentionExpr(node)
+    // Corrupted mention (lost its id): drop it entirely. Returning an
+    // empty text node would be rejected by the editor's ProseMirror
+    // schema; leaving the mention would render as a "null" chip.
+    if (!expr) return null
+    // Keep the signature as a mention node so the authoritative send
+    // (substituteMentions) injects it as rich HTML — fonts, links, images.
+    // Flattening it to plain text here would strip that formatting from
+    // the outgoing email, since the editable preview's content is what
+    // gets sent verbatim. An empty signature collapses to nothing on send.
+    if (basePath(expr) === SIGNATURE_PATH) return node
+    const value = resolveWith(expr, ctx, overrides)
     return value ? { type: 'text', text: value } : node
   }
   if (Array.isArray(node.content)) {
-    return { ...node, content: node.content.map((c) => fillMentions(c, ctx, overrides)) }
+    return {
+      ...node,
+      content: node.content
+        .map((c) => fillMentions(c, ctx, overrides))
+        .filter((c): c is JSONContent => c !== null),
+    }
   }
   return node
 }
@@ -257,11 +350,21 @@ function collectUnresolvedMentions(
 ): void {
   if (node.type === 'mention' && node.attrs?.id) {
     const expr = String(node.attrs.id)
-    if (resolveWith(expr, ctx, overrides) === '') missing.add(basePath(expr))
+    // Signature is optional. See the subject scan above.
+    if (basePath(expr) !== SIGNATURE_PATH && resolveWith(expr, ctx, overrides) === '') {
+      missing.add(basePath(expr))
+    }
   }
   if (Array.isArray(node.content)) {
     for (const child of node.content) collectUnresolvedMentions(child, ctx, missing, overrides)
   }
+}
+
+/** Splice each rendered signature fragment back in at its placeholder. */
+function applySignatureFragments(html: string, fragments: string[]): string {
+  if (fragments.length === 0) return html
+  const pattern = new RegExp(`${SIG_OPEN}(\\d+)${SIG_CLOSE}`, 'g')
+  return html.replace(pattern, (_m, index: string) => fragments[Number(index)] ?? '')
 }
 
 /** Swap missing-variable sentinels for amber highlight spans. */

@@ -13,7 +13,7 @@
 
 import { useMemo } from 'react';
 
-import { contractHtml, invoiceHtml, quoteHtml } from '@/lib/email';
+import { contractHtml, invoiceHtml, quoteHtml } from '@/lib/email/html';
 
 import type { PreviewDoc } from './preview-shared';
 

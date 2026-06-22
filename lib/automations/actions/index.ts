@@ -29,27 +29,13 @@ import { messagingActions } from './messaging'
 import { postEventActions } from './post-event'
 import { taskActions } from './task'
 import { timelineActions } from './timeline'
+import type { ActionUi } from './ui'
 
-export interface ActionUi {
-  category:
-    | 'general'
-    | 'couple'
-    | 'calendar'
-    | 'consultation'
-    | 'payments'
-    | 'compliance'
-    | 'segmentation'
-    | 'integration'
-    | 'post_event'
-    | 'flow'
-  label: string
-  description: string
-  icon: string
-  /** Render the picker tile in a disabled "coming soon" state. */
-  comingSoon?: boolean
-  /** Pre-fill a label when the action is added (the user can rename). */
-  defaultLabel?: string
-}
+// `ActionUi` + the client-safe `actionUi` metadata catalogue live in
+// `./ui` (no handler imports), so client components read action metadata
+// without bundling the server-only handlers (and their nodemailer /
+// node:crypto / service-role deps) into the browser.
+export type { ActionUi } from './ui'
 
 export interface ActionSpec<Config = unknown> {
   type: ActionType

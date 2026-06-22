@@ -103,6 +103,19 @@ export function buildSampleContext(businessName?: string, contactName?: string):
       quietHoursStart: '21:00',
       quietHoursEnd: '08:00',
       quietHoursTimezone: 'Australia/Sydney',
+      // A representative static signature so a template that uses
+      // `{{mc.signature}}` previews filled in. Plain rich text, no
+      // variables (signatures are Gmail/Outlook-style sign-offs).
+      signature: {
+        type: 'doc',
+        content: [
+          { type: 'paragraph', content: [{ type: 'text', text: 'Warm regards,' }] },
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: businessName?.trim() || 'Your business' }],
+          },
+        ],
+      },
     },
     actionResults: {},
   }

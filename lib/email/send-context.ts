@@ -147,6 +147,7 @@ export async function buildManualSendContext(
       quietHoursStart: (meta['quiet_hours_start'] as string) ?? '21:00',
       quietHoursEnd: (meta['quiet_hours_end'] as string) ?? '08:00',
       quietHoursTimezone: (meta['timezone'] as string) ?? DEFAULT_TIMEZONE,
+      signature: (meta['email_signature'] as RunContext['mc']['signature']) ?? null,
     },
     actionResults: {},
   }

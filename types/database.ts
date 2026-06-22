@@ -2163,6 +2163,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_public_settings: {
+        Row: {
+          created_at: string
+          email_mode: string
+          oauth_access_token_encrypted: string | null
+          oauth_connected_at: string | null
+          oauth_email: string | null
+          oauth_from_name: string | null
+          oauth_last_error: string | null
+          oauth_provider: string | null
+          oauth_refresh_token_encrypted: string | null
+          oauth_status: string
+          oauth_token_expires_at: string | null
+          subdomain: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_mode?: string
+          oauth_access_token_encrypted?: string | null
+          oauth_connected_at?: string | null
+          oauth_email?: string | null
+          oauth_from_name?: string | null
+          oauth_last_error?: string | null
+          oauth_provider?: string | null
+          oauth_refresh_token_encrypted?: string | null
+          oauth_status?: string
+          oauth_token_expires_at?: string | null
+          subdomain?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_mode?: string
+          oauth_access_token_encrypted?: string | null
+          oauth_connected_at?: string | null
+          oauth_email?: string | null
+          oauth_from_name?: string | null
+          oauth_last_error?: string | null
+          oauth_provider?: string | null
+          oauth_refresh_token_encrypted?: string | null
+          oauth_status?: string
+          oauth_token_expires_at?: string | null
+          subdomain?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       vow_revisions: {
         Row: {
           author: string

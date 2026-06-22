@@ -35,3 +35,32 @@ test.describe('Email Templates library', () => {
     await expect(page.getByText(name).first()).toBeVisible()
   })
 })
+
+/**
+ * The non-email tabs (Packages / Quotes / Invoices / Contracts) share the
+ * Emails chrome: each exposes a "Browse starters" action that opens the
+ * starter catalog modal. This is a render-only walk (no Add) — the actual
+ * starter insert is covered by the integration test against a clean local
+ * DB, since `npm run dev` here points at the shared remote DB.
+ */
+test.describe('Templates tabs — starter catalogs', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page)
+    await page.goto('/templates', { waitUntil: 'networkidle' })
+  })
+
+  for (const tab of ['Packages', 'Quotes', 'Invoices', 'Contracts']) {
+    test(`${tab} tab exposes a starter catalog`, async ({ page }) => {
+      await page.getByRole('button', { name: tab, exact: true }).click()
+
+      const browse = page.getByRole('button', { name: 'Browse starters' }).first()
+      await expect(browse).toBeVisible()
+
+      await browse.click()
+      // The catalog modal renders either an "Add all" action (addable rows)
+      // or the "added every starter" message when the account already has
+      // them all. The shared Modal uses plain divs, so assert on content.
+      await expect(page.getByText(/Add all|added every starter/i).first()).toBeVisible()
+    })
+  }
+})

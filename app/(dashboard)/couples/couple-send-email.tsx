@@ -15,7 +15,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { JSONContent } from '@tiptap/react'
 import { AlertTriangle } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,7 @@ import { Modal } from '@/components/ui/modal'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
 import { useToast } from '@/components/ui/toast'
 import { variableLabel } from '@/lib/automations/variables'
+import { renderSignatureHtml } from '@/lib/email/signature'
 import {
   detectMissingVariables,
   renderEmailSubject,
@@ -86,16 +87,20 @@ export function CoupleSendEmail({
 
   // The editable email — seeded once (per template) with the template
   // resolved against the real couple, then owned by the MC's edits.
+  // `seeded` gates the editor mount: we render the skeleton until the
+  // resolved content exists, so the editor is created *with* the filled
+  // body rather than mounting empty and racing a sync effect to catch up.
+  // That race is what made variables resolve on the first open but not the
+  // next. `seeded` resets with the component on every open (fresh mount).
   const [editSubject, setEditSubject] = useState('')
   const [editContent, setEditContent] = useState<JSONContent>(EMPTY_DOC)
-  const seededFor = useRef<string | null>(null)
+  const [seeded, setSeeded] = useState(false)
   useEffect(() => {
-    if (!selected || !ctx) return
-    if (seededFor.current === selected.id) return
-    seededFor.current = selected.id
+    if (seeded || !selected || !ctx) return
     setEditSubject(renderEmailSubject(selected.subject, ctx, 'preview'))
     setEditContent(resolveTemplateContent(selected.content ?? EMPTY_DOC, ctx))
-  }, [selected, ctx])
+    setSeeded(true)
+  }, [seeded, selected, ctx])
 
   // Heads-up only: which variables the template couldn't fill from the
   // couple. The MC fixes these by editing the email below — there's no
@@ -104,6 +109,11 @@ export function CoupleSendEmail({
     if (!ctx || !selected) return [] as string[]
     return detectMissingVariables({ subject: selected.subject, content: selected.content }, ctx).missing
   }, [ctx, selected])
+
+  // Pre-rendered, sanitised signature HTML so the editor can show the
+  // `{{mc.signature}}` mention inline as the finished block. Empty string
+  // when the MC hasn't set a signature.
+  const signatureHtml = useMemo(() => (ctx ? renderSignatureHtml(ctx.mc.signature) : ''), [ctx])
 
   const send = async () => {
     if (!selected) return
@@ -136,45 +146,20 @@ export function CoupleSendEmail({
     }
   }
 
-  // The editor can't seed until both the template and the couple context
-  // have loaded. `fullscreen` locks the modal to the couple-overlay's
-  // dimensions so it doesn't jump from a loading box to its full size.
-  const loading = !selected || !ctx
+  // The editor can't mount until the template + couple context have loaded
+  // AND the body has been seeded with the resolved content.
+  const loading = !selected || !ctx || !seeded
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="fullscreen" title={isTest ? 'Test template' : `Email ${coupleName}`}>
-      <div className="flex h-full flex-col">
-        <div className="flex-1 space-y-4 overflow-y-auto">
-          {loading ? (
-            <ComposeSkeleton />
-          ) : (
-            <>
-              {missing.length > 0 && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3">
-                  <AlertTriangle size={16} strokeWidth={1.5} className="mt-0.5 shrink-0 text-red-600" />
-                  <p className="text-xs text-red-700">
-                    This couple is missing{' '}
-                    <span className="font-medium">{missing.map(variableLabel).join(', ')}</span>. Fill{' '}
-                    {missing.length === 1 ? 'the highlighted gap' : 'the highlighted gaps'} in the email below before
-                    sending. It won&apos;t change their record.
-                  </p>
-                </div>
-              )}
-              <Input label="Subject" value={editSubject} onChange={(e) => setEditSubject(e.target.value)} />
-              <div>
-                <p className="mb-1.5 text-sm font-medium text-text">Email</p>
-                <RichTextEditor
-                  value={editContent}
-                  onChange={setEditContent}
-                  showVariableInserter={false}
-                  mentionDisplay="label"
-                  placeholder="Write your email…"
-                />
-              </div>
-            </>
-          )}
-        </div>
-        <div className="flex items-center justify-end gap-2 pt-4">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      // Sized to an email's width (not fullscreen) so the compose surface
+      // reads like the message it composes.
+      size="lg"
+      title={isTest ? 'Test template' : `Email ${coupleName}`}
+      footer={
+        <div className="flex items-center justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
@@ -182,13 +167,48 @@ export function CoupleSendEmail({
             {isTest ? 'Send test to me' : 'Send email'}
           </Button>
         </div>
+      }
+    >
+      <div className="space-y-4">
+        {loading || !ctx ? (
+          <ComposeSkeleton />
+        ) : (
+          <>
+            {missing.length > 0 && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3">
+                <AlertTriangle size={16} strokeWidth={1.5} className="mt-0.5 shrink-0 text-red-600" />
+                <p className="text-xs text-red-700">
+                  This couple is missing{' '}
+                  <span className="font-medium">{missing.map(variableLabel).join(', ')}</span>. Fill{' '}
+                  {missing.length === 1 ? 'the highlighted gap' : 'the highlighted gaps'} in the email below before
+                  sending. It won&apos;t change their record.
+                </p>
+              </div>
+            )}
+            <Input label="Subject" value={editSubject} onChange={(e) => setEditSubject(e.target.value)} />
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-text">Email</p>
+              {/* `signatureHtml` makes the `{{mc.signature}}` mention render
+                  inline as the finished signature; select it and press
+                  Delete to remove it. */}
+              <RichTextEditor
+                value={editContent}
+                onChange={setEditContent}
+                showVariableInserter={false}
+                mentionDisplay="label"
+                signatureHtml={signatureHtml}
+                placeholder="Write your email…"
+              />
+            </div>
+          </>
+        )}
       </div>
     </Modal>
   )
 }
 
 /** Pulsing placeholder mirroring the compose form while it loads, so the
- *  fullscreen modal stays a fixed size instead of snapping in. */
+ *  modal doesn't snap from a loading box to its full height. */
 function ComposeSkeleton() {
   return (
     <div aria-hidden="true" className="space-y-4">

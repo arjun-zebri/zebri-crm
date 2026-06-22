@@ -228,7 +228,9 @@ export async function addStarterContractsAction(names: string[]): Promise<Action
     user_id: user.id,
     name: c.name,
     description: c.description,
-    content: c.content as Database['public']['Tables']['contract_templates']['Insert']['content'],
+    // Cast via the Row (non-optional `Json`) type: Insert['content'] is
+    // `Json | undefined`, which exactOptionalPropertyTypes rejects here.
+    content: c.content as Database['public']['Tables']['contract_templates']['Row']['content'],
     is_starter: true,
     position: maxPosition + (i + 1) * POSITION_STEP,
   }))

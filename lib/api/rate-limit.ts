@@ -194,3 +194,19 @@ export const EMAIL_RATE_LIMITS = {
 } as const satisfies Record<string, LimiterOptions>;
 
 export type EmailRateLimitKey = keyof typeof EMAIL_RATE_LIMITS;
+
+/**
+ * Public Page settings rate-limits.
+ *
+ * - **saveSubdomain**: 20/min/user — a debounced auto-save field; a
+ *   human typing fires a handful, we just stop runaway loops.
+ * - **mailboxMutation**: 10/min/user — covers the connected-mailbox
+ *   actions (disconnect, mode toggle). The OAuth connect/callback flow
+ *   is rate-limited in its own routes.
+ */
+export const PUBLIC_PAGE_RATE_LIMITS = {
+  saveSubdomain: { windowMs: 60_000, max: 20 },
+  mailboxMutation: { windowMs: 60_000, max: 10 },
+} as const satisfies Record<string, LimiterOptions>;
+
+export type PublicPageRateLimitKey = keyof typeof PUBLIC_PAGE_RATE_LIMITS;
