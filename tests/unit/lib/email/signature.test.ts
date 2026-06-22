@@ -15,7 +15,8 @@ import { isSignatureEmpty, renderSignatureHtml } from '@/lib/email/signature'
 function para(...nodes: JSONContent[]): JSONContent {
   return { type: 'doc', content: [{ type: 'paragraph', content: nodes }] }
 }
-const text = (t: string, marks?: JSONContent['marks']): JSONContent => ({ type: 'text', text: t, marks })
+const text = (t: string, marks?: JSONContent['marks']): JSONContent =>
+  marks ? { type: 'text', text: t, marks } : { type: 'text', text: t }
 
 describe('isSignatureEmpty', () => {
   it('treats null and an empty paragraph as empty', () => {

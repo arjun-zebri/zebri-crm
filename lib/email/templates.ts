@@ -211,11 +211,12 @@ export function detectMissingVariables(
   collectUnresolvedMentions(template.content, ctx, missing, overrides)
 
   const list = [...missing]
-  return {
-    missing: list,
-    blocked: list.length > 0,
-    message: list.length ? `Missing: ${list.map(variableLabel).join(', ')}` : undefined,
-  }
+  // Omit `message` entirely when nothing is missing — under
+  // exactOptionalPropertyTypes an explicit `undefined` is not assignable
+  // to the optional `message?: string`.
+  return list.length
+    ? { missing: list, blocked: true, message: `Missing: ${list.map(variableLabel).join(', ')}` }
+    : { missing: list, blocked: false }
 }
 
 // ────────────────────────────────────────────────────────────────
