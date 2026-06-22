@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { isCronAuthorized } from '@/lib/api/cron-auth'
 import { sendContractReminderEmail } from '@/lib/email'
+import { resolveSender } from '@/lib/email/sender-identity'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 
 interface ReminderRow {
@@ -27,6 +29,10 @@ async function handle(request: NextRequest) {
   }
 
   const supabase = await createServerClient()
+  // No user session in a cron run, so per-MC sender lookups must use the
+  // admin client — RLS would otherwise hide every MC's `user_public_settings`
+  // row and silently fall back to the shared Zebri address.
+  const admin = createAdminClient()
 
   const { data: rows, error } = await supabase.rpc('contracts_due_for_reminder')
   if (error) {
@@ -45,6 +51,7 @@ async function handle(request: NextRequest) {
       expiresAt: row.expires_at,
       shareUrl,
       mcBusinessName: row.mc_business_name,
+      sender: await resolveSender(admin, row.user_id, row.mc_business_name),
     })
 
     if (res.ok) {

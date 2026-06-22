@@ -1,9 +1,9 @@
 /**
- * Plans & Billing tab — orchestrator.
+ * Plans & Billing tab, orchestrator.
  *
  * Document-style composition: section labels + thin dividers + clean
  * sections, instead of stacked bordered cards. The 3-tier comparison
- * lives in a focused modal — opens only when the user clicks
+ * lives in a focused modal (opens only when the user clicks
  * "Compare plans", so the main flow stays calm.
  *
  * @module app/(dashboard)/settings/billing-section
@@ -34,7 +34,7 @@ export interface BillingSectionProps {
   cancelAtPeriodEnd: boolean;
   isSubscribed: boolean;
   isComped: boolean;
-  /** Auth user's `created_at` — surfaced as "Joined {date}" in the
+  /** Auth user's `created_at`, surfaced as "Joined {date}" in the
    *  status line so the card carries a little warmth + history. */
   userCreatedAt: string | null;
 }
@@ -65,14 +65,14 @@ export function BillingSection(props: BillingSectionProps) {
   // the parent settings page re-fetches user data.
   //
   // Polling for 60s gives the webhook a generous window. After that
-  // we surface a manual "Refresh" button — the most common failure in
-  // local dev is "I forgot to start `stripe listen`", and the user
+  // we surface a manual "Refresh" button (the most common failure in
+  // local dev is "I forgot to start `stripe listen`"), and the user
   // needs an out that doesn't require closing the tab.
   useEffect(() => {
     if (!pollingTrigger) return;
     if ((justSubscribed || justChanged) && props.isSubscribed && justChanged) {
       // Plan change returned but the page already reflects an
-      // updated subscription — drop the query param.
+      // updated subscription, drop the query param.
       router.replace('/settings?tab=billing');
       return;
     }
@@ -118,9 +118,9 @@ export function BillingSection(props: BillingSectionProps) {
           meta.subscription_status === 'trialing';
         // For checkout completion we wait for active/subscribed. For
         // post-action polling (cancel/resume/switch) we just wait for
-        // ANY observable change from the snapshot — webhook updates
+        // ANY observable change from the snapshot (webhook updates
         // arrive together so seeing one field flip means the others
-        // are fresh too.
+        // are fresh too).
         const changed =
           (meta.subscription_status ?? '') !== snapshot.subscription_status ||
           (meta.subscription_plan ?? '') !== snapshot.subscription_plan ||
@@ -155,7 +155,7 @@ export function BillingSection(props: BillingSectionProps) {
     return () => {
       cancelled = true;
     };
-    // We deliberately don't include the prop fields in the dep array —
+    // We deliberately don't include the prop fields in the dep array,
     // they're captured into `snapshot` once when polling starts, and
     // we want to keep polling against that snapshot until something
     // changes (or we time out).
@@ -168,8 +168,8 @@ export function BillingSection(props: BillingSectionProps) {
       const supabase = createClient();
       await supabase.auth.refreshSession();
     } finally {
-      // Force a full reload regardless — picks up new app_metadata via
-      // the parent's user fetch.
+      // Force a full reload regardless (picks up new app_metadata via
+      // the parent's user fetch).
       window.location.assign('/settings?tab=billing');
     }
   }
@@ -182,7 +182,7 @@ export function BillingSection(props: BillingSectionProps) {
       setCancelBusy(false);
       return;
     }
-    toast('Cancellation scheduled — page will refresh shortly.');
+    toast('Cancellation scheduled, page will refresh shortly.');
     setCancelOpen(false);
     setCancelBusy(false);
     setActionTick((t) => t + 1);
@@ -260,7 +260,7 @@ function ActivationBanner({
 }) {
   const headline =
     kind === 'payment'
-      ? 'Payment successful — finalising your subscription…'
+      ? 'Payment successful, finalising your subscription…'
       : 'Updating subscription…';
 
   if (activation === 'timed_out') {
@@ -275,7 +275,7 @@ function ActivationBanner({
                 : "Your change went through, but we haven't received the update event yet."}
             </p>
             <p className="mt-1 text-caption text-text-muted">
-              This usually clears in a moment — try refreshing. If it persists, the Stripe webhook
+              This usually clears in a moment, try refreshing. If it persists, the Stripe webhook
               may not be reaching the app (local dev: ensure <code className="font-mono">stripe
               listen --forward-to localhost:3000/api/stripe/webhook</code> is running).
             </p>
@@ -307,7 +307,7 @@ function ActivationBanner({
 /* ────────────────────────────────────────────────────────────── */
 
 /**
- * Document-style section header — small label on the left + a thin
+ * Document-style section header: small label on the left + a thin
  * divider line filling the rest of the row.
  */
 function Section({ label, children }: { label: string; children: ReactNode }) {

@@ -1,16 +1,19 @@
 'use client'
 
+import { LayoutDashboard, Users2, Clock, Music, FileText, FileSignature, Receipt, Heart } from 'lucide-react'
 import { useState } from 'react'
-import { LayoutDashboard, Users2, Clock, Music, FileText, FileSignature, Receipt } from 'lucide-react'
+
 import { PortalSectionNav } from '@/app/(dashboard)/couples/portal-section-nav'
-import { OverviewSection } from './overview-section'
-import { TimelineSection } from './timeline-section'
+
 import { ContactsSection } from './contacts-section'
 import { ContractsSection } from './contracts-section'
-import { SongsSection } from './songs-section'
-import { PaymentsSection } from './payments-section'
 import { FilesSection } from './files-section'
+import { OverviewSection } from './overview-section'
 import type { PortalData } from './page'
+import { PaymentsSection } from './payments-section'
+import { SongsSection } from './songs-section'
+import { TimelineSection } from './timeline-section'
+import { VowsSection } from './vows-section'
 
 const ALL_SECTIONS = [
   { id: 'overview', label: 'Overview', icon: <LayoutDashboard />, subtitle: 'Your details and upcoming events' },
@@ -20,6 +23,7 @@ const ALL_SECTIONS = [
   { id: 'contracts', label: 'Contracts', icon: <FileSignature />, subtitle: 'Review and sign your agreements' },
   { id: 'songs', label: 'Songs', icon: <Music />, subtitle: 'Music for each part of your ceremony and reception' },
   { id: 'files', label: 'Files', icon: <FileText />, subtitle: 'Contracts, seating charts, photos. Anything your MC needs.' },
+  { id: 'vows', label: 'Vows', icon: <Heart />, subtitle: 'Write your vows for the ceremony' },
 ]
 
 interface PortalShellProps {
@@ -50,6 +54,7 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
             : s.id === 'contracts' ? (initialData.contracts?.length ?? 0)
             : s.id === 'songs' ? initialData.songs.length
             : s.id === 'files' ? initialData.files.length
+            : s.id === 'vows' ? initialData.vows.length
             : undefined,
         }))}
         activeSection={activeSection}
@@ -58,12 +63,25 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
 
       <div className="flex-1 min-w-0">
         <div className="mb-5">
-          <h2 className="text-lg font-semibold text-gray-900">{active.label}</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{active.subtitle}</p>
+          <h2 className="text-lg font-semibold text-text">{active.label}</h2>
+          <p className="text-sm text-text-muted mt-0.5">{active.subtitle}</p>
         </div>
 
         {activeSection === 'overview' && (
-          <OverviewSection coupleName={initialData.couple_name} coupleEmail={initialData.couple_email} events={initialData.events} />
+          <OverviewSection
+            token={token}
+            primary={{
+              name: initialData.primary_name ?? '',
+              email: initialData.primary_email ?? '',
+              phone: initialData.primary_phone ?? '',
+            }}
+            secondary={{
+              name: initialData.secondary_name ?? '',
+              email: initialData.secondary_email ?? '',
+              phone: initialData.secondary_phone ?? '',
+            }}
+            events={initialData.events}
+          />
         )}
         {activeSection === 'timeline' && (
           <TimelineSection token={token} initialItems={initialData.timeline_items} hasEvent={!!initialData.event} />
@@ -82,6 +100,15 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
         )}
         {activeSection === 'files' && (
           <FilesSection token={token} initialFiles={initialData.files} />
+        )}
+        {activeSection === 'vows' && (
+          <VowsSection
+            token={token}
+            initialVows={initialData.vows}
+            viewer={initialData.viewer}
+            primaryName={initialData.primary_name}
+            secondaryName={initialData.secondary_name}
+          />
         )}
       </div>
     </div>

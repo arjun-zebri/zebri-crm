@@ -51,6 +51,7 @@ interface UserMetadata {
     contracts?: boolean
     songs?: boolean
     files?: boolean
+    vows?: boolean
   }
 }
 
@@ -64,6 +65,7 @@ interface UserBrandingRow {
     contracts?: boolean
     songs?: boolean
     files?: boolean
+    vows?: boolean
   } | null
 }
 
@@ -204,6 +206,7 @@ export default function BrandingPage() {
           contracts: portalSrc.contracts ?? true,
           songs: portalSrc.songs ?? true,
           files: portalSrc.files ?? true,
+          vows: portalSrc.vows ?? true,
         },
       }}
     />

@@ -1,15 +1,20 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw, Minus, AlignLeft, AlignCenter, AlignRight, Equal } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
-import { TextStyleControls } from './text-style-controls'
-import { ColorPopover } from '../components/color-popover'
-import { Slider } from '../components/slider'
+import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw, Minus, AlignLeft, AlignCenter, AlignRight, Equal } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+
+
+import { ColorPopover } from '@/components/ui/color-popover'
 import { Tooltip } from '@/components/ui/tooltip'
-import { COLOR_PALETTE } from '@/lib/branding/themes'
 import { getTextColor } from '@/lib/branding/contrast'
+import { COLOR_PALETTE } from '@/lib/branding/themes'
+import type { BrandPreviewState } from '@/types/branding-preview'
+
+import { Slider } from '../components/slider'
+
 import type { TextStyleDefaults } from './text-style'
+import { TextStyleControls } from './text-style-controls'
 import type {
   Block,
   TextStyle,
@@ -25,7 +30,6 @@ import type {
   HeaderBannerBlock,
   FooterBlock,
 } from './types'
-import type { BrandPreviewState } from '@/types/branding-preview'
 
 interface BlockToolbarProps {
   block: Block

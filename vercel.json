@@ -12,6 +12,10 @@
     {
       "path": "/api/cron/prune-stripe-events",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/automations-tick",
+      "schedule": "0 1 * * *"
     }
   ]
 }

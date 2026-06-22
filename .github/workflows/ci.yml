@@ -100,7 +100,18 @@ jobs:
       # platform detection; it's the same install path Supabase
       # itself recommends for local-dev pipelines.
       - name: Set up Supabase CLI
-        run: npm install -g supabase
+        # Pinned to 2.65.5, installed from the GitHub release binary.
+        # Two reasons not to use npm: (1) `npm install -g supabase` is
+        # rejected by the package's postinstall ("global install not
+        # supported"); (2) leaving it unpinned pulled a newer CLI whose
+        # `supabase start` changed the local stack so `service_role`
+        # lost its grant on public tables — every integration suite then
+        # died at the setup probe ("permission denied for table couples")
+        # with no repo change. Bump deliberately + re-verify integration.
+        run: |
+          curl -fsSL https://github.com/supabase/cli/releases/download/v2.65.5/supabase_linux_amd64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin supabase
+          supabase --version
 
       - name: Start local Supabase
         id: supabase_start

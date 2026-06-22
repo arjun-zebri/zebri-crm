@@ -272,7 +272,18 @@ Opens as a centered full-screen modal (not a slide-over). Overlay covers the ful
 - Mobile: horizontal scrollable tab strip (`overflow-x-auto`) below header  -  icon + label per tab, `whitespace-nowrap`
 - Desktop: vertical 200px sidebar on left  -  same tabs as icon + label rows
 
-**Tabs:** Overview, Payments, Timeline, Names (MC Portal Names), Songs, Files, Pulse
+**Tabs:** Overview, Pulse, Tasks, Contacts, Timeline, Songs, Files, Vows,
+Payments, Contracts, Automations, **Templates**.
+
+The **Templates** tab (Mail icon, after Automations) is where the MC
+emails this couple. Header has two actions: **Send email** (compose from
+a saved template → sends to the couple) and **Test template** (same
+compose, but sends to the MC's own inbox with a `[Test]` subject, not
+logged). Below is the sent-history — newest first, each row showing
+subject, source template, recipient, a status pill, and relative sent
+time (calm card list mirroring Automations). Backed by `couple_emails`;
+the send route logs a row on each real send. (The "Send email" entry
+point moved here off the Overview's General section.)
 
 **Overview tab (default):**
 - Two-column grid on `lg+` (`grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16`), stacks to 1-col on mobile
@@ -546,7 +557,7 @@ Table Columns (matching couples/vendors style):
 - Number (quote #, gray text)
 - Title
 - Couple (name)
-- Status (badge: gray=draft, blue=sent, emerald=accepted, red=declined, amber=expired)
+- Status (badge: gray=draft, blue=sent, emerald=accepted, red=declined, amber=expired). "Expired" begins the day *after* `expires_at` — a quote expiring today is still active (derived via `isPastDue` in `@/lib/utils`).
 - Total (right-aligned, currency formatted AUD)
 - Expiry Date (right-aligned, formatted date)
 
@@ -563,7 +574,7 @@ Table Columns (matching couples/vendors style):
 - Number (invoice #, gray text)
 - Title
 - Couple (name)
-- Status (badge: gray=draft, blue=sent, emerald=paid, red=overdue, gray=cancelled)
+- Status (badge: gray=draft, blue=sent, emerald=paid, red=overdue, gray=cancelled). "Overdue" begins the day *after* `due_date` — an invoice due today is not yet overdue (derived via `isPastDue` in `@/lib/utils`; same boundary the A4 `invoice_overdue` automation uses).
 - Total (right-aligned, currency formatted AUD)
 - Due Date (right-aligned, formatted date, red if overdue)
 
@@ -582,7 +593,7 @@ Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phas
 - Top of the modal: document number (e.g. `Q-001` / `INV-001`) + inline `StatePill` (the same tonal pill used on the Billing tab).
 - Right side of the header: status-aware contextual primary CTA + `⋯` overflow menu for destructive / revert actions.
 - Body: hero title input (large unbordered text — Notion-style) followed by the composed parts.
-- Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple).
+- Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple). While the doc is still a draft, a subtle "Mark as sent" text button sits next to Copy link / Open — it flips the status draft→sent **without** firing an email (for MCs who shared the link out-of-band via SMS/WhatsApp). It leaves `email_sent_at` null, so the primary stays "Send to couple".
 - New `previewPane` prop carries the right-side preview content. When provided, the shell switches to a 2-column grid (`grid-cols-1 lg:grid-cols-2`) and the modal upgrades to `fullscreen` size.
 
 ### Preview pane (`builder-preview-pane.tsx`)
@@ -607,7 +618,7 @@ Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phas
 - Totals panel: Subtotal · (optional Discount) · (optional GST 10%) · **Total** (bold).
 - Notes & terms textarea at the bottom.
 - Overflow menu: "Convert to invoice" (when accepted) · "Delete quote".
-- Save flow: `Save changes` (footer, secondary) + `Send to couple` (footer, primary). Send saves any dirty changes, enables the share token, and fires the email in one click. After first send, the primary becomes `Resend` + a small "Sent {date}" timestamp.
+- Save flow: `Save changes` (footer, secondary) + `Send to couple` (footer, primary). Send saves any dirty changes, ensures the share token is enabled, flips a draft to `sent`, and fires the email in one click. After first send, the primary becomes `Resend` + a small "Sent {date}" timestamp. A draft also shows a "Mark as sent" link (flips status without emailing — see the shell footer note above).
 - State pill map: Draft (muted) · Sent (info + hollow dot) · Accepted (success + filled dot) · Declined (danger) · Expired (muted).
 
 ### `InvoiceBuilderModal`
@@ -631,7 +642,7 @@ Mutations no longer happen inline. Saves flow through:
 - `saveQuoteAction(input)` — Zod-validated, RLS-scoped, transactional (replace-line-items pattern).
 - `saveInvoiceAction(input)` — same shape, plus payment schedule fields + `quantity=1`/`unit_price=amount` invariant.
 - `deleteQuoteAction(id)` / `deleteInvoiceAction(id)` — RLS-scoped destructive.
-- Status mutations (mark paid / revert / cancel) remain inline one-line UPDATEs in the modal — they don't justify their own server actions.
+- Status mutations (mark sent / mark paid / revert / cancel) remain inline one-line UPDATEs in the modal — they don't justify their own server actions. "Mark sent" flips a draft to `sent` + ensures `share_token_enabled`, without sending an email.
 
 ## Couple Profile Integration
 
@@ -780,13 +791,43 @@ Route: `/settings`
 
 Route group: `(dashboard)`
 
-Purpose: Unified settings page with horizontal tab navigation.
+Purpose: Unified settings, rendered as an **overlay modal** (not a
+full page) styled to match the Couple Profile overlay — centered
+`rounded-2xl` card with a left side-tab nav.
 
-Header shows "Settings" title with user name and email below.
+## Rendering: intercepting-route modal
+
+Settings opens as an overlay over the current page via Next.js
+parallel + intercepting routes:
+
+- `app/(dashboard)/@modal/(.)settings/page.tsx` intercepts **soft
+  navigation** to `/settings` (the sidebar link) and renders
+  `<SettingsModal/>` over whatever page the user was on. The
+  `@modal` slot is wired into `app/(dashboard)/layout.tsx`;
+  `@modal/default.tsx` renders nothing when not on settings.
+- `app/(dashboard)/settings/page.tsx` is the **hard-load / refresh
+  fallback**: it renders the dashboard home as the backdrop plus the
+  same `<SettingsModal/>` on top.
+- Close (backdrop click / `Esc` / the header `X`) calls
+  `router.back()`, falling back to `/` when there is no history.
+- The modal shell mirrors `couple-profile.tsx`:
+  `bg-black/40 backdrop-blur-sm` backdrop, `bg-white rounded-2xl
+  shadow-xl`, `sm:max-w-[1100px] h-[90vh]`, `animate-modal-in`. The
+  header is just the "Settings" title + close button.
+
+Component layout (each ≤ ~150 lines): `settings-modal.tsx`
+(orchestrator: loads the auth user, owns the active tab), reusing
+`settings-nav.tsx` (the side nav) and `settings-body.tsx` (section
+switch). The existing section components are reused unchanged.
 
 ## Tab Navigation
 
-Horizontal underline tabs (Vercel/Beyond.so style). Active tab driven by `?tab=` search param, default `personal-info`.
+Left **side-tab nav** with Lucide icons (desktop: 200px vertical
+sidebar; mobile ≤ sm: horizontal scrollable pill row) — same pattern
+as `couple-profile-nav.tsx`. Active tab driven by `?tab=` search
+param (deep-linkable; tab clicks `router.replace` it), default
+`personal-info`. Legacy `?tab=branding` / `?tab=portal` redirect to
+`/branding`; `?tab=templates` redirects to `/templates`.
 
 Tabs:
 
@@ -794,13 +835,103 @@ Tabs:
 
 Fields: Display Name, Business Name, Phone, Avatar URL
 
-Action: Save Changes (updates user_metadata — these are user-owned fields, not entitlements; safe to write via `auth.updateUser({ data })`)
+**Auto-saves** — no Save button. Text fields persist on blur; the
+business-type picker and address selection persist on change (writes
+`user_metadata` via `auth.updateUser({ data })` — user-owned fields,
+not entitlements). A change to the email field is the one case that
+toasts (a confirmation link is sent; it isn't live until confirmed).
+A calm inline "Saving… / Saved" hint (`auto-save-status.tsx`) replaces
+the button.
+
+### Public Page (`?tab=public`)
+
+Outward-facing config couples see. Persisted to `user_public_settings`
+(one RLS-owned row per MC) — not `user_metadata`. Components:
+`public-page-section.tsx` (orchestrator: subdomain + surfaces) and
+`public-page-email.tsx` (the email subsection). Server actions live in
+`app/(dashboard)/settings/public/actions.ts`.
+
+**Zebri address (subdomain).** A branded slug fronting the public
+surfaces (`name.zebri.com.au`). **Auto-saves on blur** via
+`saveSubdomainAction` (same calm `auto-save-status.tsx` hint).
+Normalised to a DNS-safe slug, reserved words rejected, and **globally
+unique** (a partial unique index on `lower(subdomain)`; a clash returns
+"already taken"). Today this is a stored preference and a preview list —
+routing the subdomain to the app (wildcard DNS + tenant middleware) is a
+separate infra task.
+
+**Email sending.** Two modes, persisted in `email_mode`, available on
+every plan (no gate):
+
+- **Send from Zebri** (default): mail goes from the shared Zebri address
+  via Resend. Works instantly, no setup.
+- **Connect your own email** (OAuth — Gmail or Outlook): the MC clicks
+  "Connect Gmail" / "Connect Outlook" and authorizes. Connecting is the
+  redirect flow in `app/api/oauth/{authorize,callback}` — `authorize`
+  pins a CSRF `state` in a signed httpOnly cookie and 302s to the
+  provider's consent screen; `callback` verifies the state, exchanges the
+  code (`lib/oauth/tokens`), looks up the connected address, encrypts the
+  tokens (`lib/crypto/secret-box`, AES-256-GCM), and persists
+  `oauth_status = 'connected'`. `disconnectMailboxAction` revokes + clears.
+  The tokens are never returned to the client.
+
+At send time every couple-facing email resolves its transport via
+`resolveSender` (`lib/email/sender-identity`) → `dispatchEmail`
+(`lib/email/dispatch`): the MC's mailbox via the **Gmail API** /
+**Microsoft Graph** when `email_mode = 'oauth'` **and**
+`oauth_status = 'connected'` (the access token is auto-refreshed when
+expired), otherwise the shared Zebri address over Resend (fail-safe — any
+lookup/decrypt/refresh error never blocks a send). Sending through the
+MC's own mailbox means mail lands in their Sent folder and replies come
+back to them, at no per-MC cost to Zebri.
+
+Note: Gmail's `gmail.send` is a Google *restricted* scope — usable
+unverified for <100 connected accounts, then needs Google verification +
+a CASA assessment. Microsoft's `Mail.Send` has no equivalent gate. The
+Google Cloud OAuth client + Azure app registration are operational
+prerequisites (`.env.example`).
+
+### Signature (`?tab=signature`)
+
+Listed **below Public Page** in the nav. A single reusable **email
+signature** edited in a Gmail/Outlook-style rich editor
+(`signature-editor.tsx` + `signature-toolbar.tsx`): font family (a
+preview-in-its-own-font dropdown of web-safe families), font size, bold /
+italic / underline, text + highlight colour (the shared branding
+`ColorPopover` with swatches + hex + eyedropper, now at
+`components/ui/color-popover.tsx`), link, image, alignment, and lists.
+Links auto-normalise a bare host (`test.com.au` to `https://test.com.au`)
+so they are absolute, not app-relative. Images upload to the public
+`branding` bucket and can be **resized** (drag handle) or **deleted**
+(hover control) via a NodeView (`signature-image-view.tsx`); the chosen
+width persists into the rendered email. The editor content uses the
+shared `.contract-content` styles, so lists, links, and headings render
+the same as the contract / template editors. No template variables inside
+it. The editor and the server-side email render share one extension set
+(`lib/email/signature-extensions.ts`) so stored JSON round-trips. Toolbar
+popovers render at `z-[70]` to sit above the `z-[60]` Settings modal.
+**Auto-saves**: a debounced save 800ms after the last edit, with a blur
+out of the editor as an immediate backstop; both go through one
+idempotent save that no-ops when nothing changed, persisting the TipTap
+JSON to `user_metadata.email_signature` via `auth.updateUser({ data })`.
+The editor ignores parent re-renders that echo its own emitted value, so
+typing can't flick back to a saved version. Same calm
+`auto-save-status.tsx` hint as Personal Info.
+
+Templates drop the whole signature in with the **Your email signature**
+variable (`{{mc.signature}}`): rich HTML when used in an email body,
+flattened text in a subject. An empty signature renders to nothing and
+never blocks a send (it is exempt from the missing-variable gate). See
+`lib/email/templates.ts` for the rendering path.
 
 ### Account (`?tab=account`)
 
-Fields: New Password, Confirm Password
+Change password + email preferences + danger zone.
 
-Action: Change Password
+- **Change password** — explicit `Change password` button (security
+  action: requires the current password; not auto-saved).
+- **Email preferences** — toggles **auto-save** immediately on change.
+- **Danger zone** — explicit `Delete account` button (destructive).
 
 ### Plans & Billing (`?tab=billing`)
 
@@ -863,7 +994,7 @@ opens.
 
 Two sections:
 
-**Bank details**  -  Account name, BSB, Account number inputs. Save button updates `user_metadata` (user-owned fields — `bank_account_name`, `bank_bsb`, `bank_account_number`). Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
+**Bank details**  -  Account name, BSB, Account number inputs. **Auto-save on blur** (no Save button) — updates `user_metadata` (user-owned fields — `bank_account_name`, `bank_bsb`, `bank_account_number`), with the shared inline "Saving… / Saved" hint. Helper text: "These details will be auto-filled in the Notes field when you create a new invoice."
 
 **Card payments**  -  "Connect Stripe" button (`window.location.href = '/api/stripe/connect'`). Once connected, shows "Connected" emerald badge + masked account ID + "Disconnect" ghost button. The Connect callback writes `stripe_connect_account_id` and `stripe_connect_enabled` to **`app_metadata`** via `updateEntitlements()` (entitlements, not user-owned — they govern access to the public Pay button). Disconnect clears those fields the same way.
 
@@ -874,6 +1005,19 @@ Placeholder empty state. Coming soon.
 ### Notifications (`?tab=notifications`)
 
 Placeholder empty state. Coming soon.
+
+### Privacy (`?tab=privacy`)
+
+Inline Privacy Policy copy (`privacy-section.tsx`), mirroring
+zebri.com.au/privacy. Shows a "Last updated" line and a canonical
+"View the latest at zebri.com.au/privacy" external link. Read-only —
+no actions. Shares the `legal-section.tsx` prose chrome with Terms.
+
+### Terms (`?tab=terms`)
+
+Inline Terms of Service copy (`terms-section.tsx`), mirroring
+zebri.com.au/terms. Same `legal-section.tsx` chrome + canonical link
+as Privacy. Read-only.
 
 ---
 
@@ -997,3 +1141,177 @@ app/timeline/
     page.tsx            -  server component, fetches + renders
     timeline-item.tsx   -  presentational component for each item row
 ```
+
+# Templates Page (all reusable templates)
+
+Top-level sidebar page (`/templates`, `FileStack` icon) — the single
+home for every reusable-template kind. **Tabbed** (`templates-tabs.tsx`,
+underline tabs matching the Settings chrome):
+
+- **Emails** — the email-template library (below); used by automations
+  and the manual couple "Send email" flow.
+- **Packages** — `PackagesManager` (reusable priced service bundles;
+  table `packages` + `package_items`). Sits before Quotes because
+  quotes/invoices are built from packages.
+- **Quotes** — `QuoteTemplateManager` (reusable line-item sets; table
+  `quote_templates` + `quote_template_items`).
+- **Invoices** — `InvoiceTemplatesManager` (reusable invoices; table
+  `invoice_templates` + `invoice_template_items`). The editor's
+  **"Add from package or quote"** picker snapshots a package's or quote
+  template's line items in (referencing by copy, not live FK).
+- **Timelines** — `TimelineTemplateManager` (reusable run-sheet item
+  sets; `timeline_templates` + `timeline_template_items`).
+- **Contracts** — `ContractTemplateManager` (`contract_templates`).
+
+Tab order follows the money flow (packages → quotes → invoices build on
+each other). Quotes / Timelines / Contracts moved here out of
+**Settings → Templates** (that tab is removed; `/settings?tab=templates`
+redirects to `/templates`).
+
+The couple-facing **quote and invoice builders** also reference packages:
+their "Apply package or template" picker (shared `TemplatePicker`, fed by
+`useApplySources` — quote templates + packages, namespaced `qt:`/`pkg:`
+ids) snapshots a source's line items + notes into the document. The
+invoice builder previously had no apply-from picker at all; it now shares
+the quote builder's.
+
+## Emails tab layout
+
+- Header row: email subtitle + "New template" button (`size="sm"` with
+  a `Plus` icon, matching the Couples "New couple" button).
+- Library: a slim search box, then templates **grouped by lifecycle
+  stage** (Enquiry · Quote · Booking · Planning · Wedding week ·
+  Follow-up, then an "Other" bucket for un-tagged templates) under
+  quiet uppercase subheaders — matching the calm couple-overview /
+  automations surfaces. Each row shows name + rendered subject; whole-
+  row click opens the editor, and Edit / Duplicate / Delete live in a
+  hover-revealed `⋯` overflow menu (`RowActionsMenu`, `alwaysVisible`
+  so touch users can reach it). No filter chips and no per-row stage
+  chip — the group subheaders carry the stage; search filters by name
+  or subject and only non-empty groups render.
+- Editor modal (fullscreen): left = name, lifecycle Select, subject
+  (mustache, with Insert-variable popover), TipTap body editor wired to
+  the email variable catalogue; right = **live preview** filled with
+  sample data via the shared renderer (`lib/email/templates`).
+
+## Page States
+
+- **Loading**: `TemplatesSkeleton` — search box + stage-grouped row
+  placeholders mirroring the real layout (no spinner, no reflow).
+- **Empty** (no templates — the default for a new MC, since nothing is
+  auto-seeded): `Empty` offering **Browse starter templates** + **New
+  template**.
+- **Error**: `ErrorState` with retry.
+
+## Starter templates (opt-in catalog — no auto-seed)
+
+Nothing is auto-seeded. The Emails tab has a **Browse starter
+templates** button (and an empty-state CTA) opening
+`StarterLibraryPanel` — the catalog of ~26 starters (the canonical set
+in `lib/email/starter-templates.ts`, incl. the celebrant AU-legal ones:
+NOIM, document request, ceremony script, certificate info), grouped by
+stage. Catalog entries already in the library are hidden; **Add** (or
+**Add all**) inserts copies via `addStarterTemplatesAction`, which
+resolves content server-side from the catalog by name (client sends
+names only) and skips duplicates. Migration
+`20260618000200_clear_seeded_starter_templates.sql` removes the rows
+from the old auto-seed model (only `is_starter` rows; user-created
+templates untouched).
+
+## Packages / Quotes / Invoices / Contracts tabs (email-consistent)
+
+These four tabs mirror the Emails treatment so every Templates tab feels
+identical:
+
+- **Empty state**: the `Empty` primitive (per-type icon), with **Browse
+  starters** (`outline`) + **New …** actions. A "Browse starters" button
+  also sits beside the header "New" button.
+- **List rows**: borderless, token-styled
+  (`rounded-xl px-3 py-2.5 hover:bg-surface-muted`) with a 2-line text
+  block and a `RowActionsMenu` (Edit / Delete). The money tabs keep
+  dnd-kit drag-reorder (muted `GripVertical` handle); contracts have no
+  reorder. (Emails group by lifecycle stage instead of reordering.)
+- **In-modal preview**: the money editors show a live `LineItemPreview`
+  card (shared `template-preview` chrome — name/subtitle header + priced
+  line items + total). Contracts edit in the TipTap editor.
+- **Starter catalogs**: each tab has its own opt-in catalog surfaced
+  through the shared `StarterCatalogModal` (flat list, no stage grouping).
+  Catalogs:
+  `lib/payments/starter-line-item-templates.ts` (4 packages, 3 quote
+  templates, 3 invoice templates with suggested AU amounts) and
+  `lib/contracts/starter-contracts.ts` (Wedding MC Service Agreement +
+  Deposit & Cancellation Terms). Adds run through
+  `addStarterPackagesAction` / `addStarterQuoteTemplatesAction` /
+  `addStarterInvoiceTemplatesAction` / `addStarterContractsAction` in
+  `starter-actions.ts`: names sent from the client, content resolved
+  server-side, names already owned skipped, rows flagged `is_starter`.
+  The legacy single contract default still auto-seeds on signup
+  (`seed_default_contract_template`); the contract catalog is additive.
+
+## Variables & the missing-variable rule
+
+Body mention nodes / subject tokens carry a namespaced automation
+variable key (`couple.primary_name`, `event.date | friendly`). The
+renderer resolves them through the automation resolver and returns the
+set of **unresolved** variables. The library preview uses sample data
+(everything resolves); the gate that blocks an email with a missing
+variable applies at send time (manual modal + automation handler).
+
+## File Structure
+
+```
+app/(dashboard)/templates/
+  page.tsx                  -  server: auth + hand off (no seeding)
+  starter-library-panel.tsx -  "Browse starter templates" catalog modal
+  templates-client.tsx      -  tab orchestrator (Emails/Quotes/Timelines/Contracts)
+  templates-tabs.tsx        -  underline tab nav
+  emails-tab.tsx            -  Emails tab: library + editor modal + New button
+  templates-library.tsx     -  stage-grouped list, search, row actions
+  templates-skeleton.tsx    -  loading skeleton mirroring the grouped list
+  template-editor-modal.tsx -  create/edit (editor + live preview)
+  template-preview.tsx      -  shared filled-in preview
+  subject-field.tsx         -  subject input + variable popover
+  actions.ts                -  create/update/delete/clone (Zod + RLS)
+  use-templates.ts          -  React Query hooks
+  packages-manager.tsx          -  Packages tab (packages + package_items)
+  invoice-templates-manager.tsx -  Invoices tab (+ "Add from package/quote" picker)
+  quote-template-manager.tsx    -  Quotes tab (moved from settings/)
+  timeline-template-manager.tsx -  Timelines tab (moved from settings/)
+  contract-template-manager.tsx -  Contracts tab (moved from settings/)
+lib/email/
+  templates.ts              -  render + detectMissingVariables (shared)
+  template-variables.ts     -  editor variable list + sample context
+  starter-templates.ts      -  canonical starter catalog + starterTemplatesByName
+types/email-template.ts     -  EmailTemplate + LifecycleStage
+```
+
+## Manual send — couple "Send email" modal
+
+Entry point: a "Send email" button in the couple Overview (`couple-overview.tsx`).
+Opens `couple-send-email.tsx`:
+
+- Pick a saved template (in the picker popover; inline compose is a
+  planned follow-on).
+- The template is resolved against the **real couple** via
+  `loadSendContextAction` (couple + MC snapshot + stamped document
+  links) into an **editable** subject + body. The MC edits the finished
+  email directly before sending — what they see is what goes out.
+- Any variable the couple can't fill is shown as its label in the body
+  (editable in place) and flagged once in an amber banner — **no
+  separate input panel**. Fills are part of this one email only; they
+  never touch the couple record.
+- On send, the edited subject + body go out **inline**
+  (`inlineSubject` / `inlineBody`) via `POST /api/email/send-template`;
+  the `templateId` is still passed so the send is logged under the
+  template's name. Inline content takes precedence over the stored
+  template server-side.
+
+Files: `couple-send-email.tsx`, `send-email-actions.ts`,
+`app/api/email/send-template/route.ts`, `lib/email/send-context.ts`.
+The editable preview reuses `components/ui/rich-text-editor.tsx`
+(`showVariableInserter={false}`); `resolveTemplateContent`
+(`lib/email/templates.ts`) seeds it with the filled-in body.
+
+Deferred sub-items: static-file attachment upload UI (the route + bucket
+already support `attachmentFileIds`; the upload/attach UI lands with the
+template editor), and inline (template-less) compose.

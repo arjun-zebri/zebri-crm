@@ -23,7 +23,9 @@ import { sendAlert } from '@/lib/alerts';
 import { logger } from '@/lib/alerts/logger';
 import { EMAIL_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
+import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendQuoteEmail } from '@/lib/email';
+import { resolveSender } from '@/lib/email/sender-identity';
 import { createClient } from '@/lib/supabase/server';
 
 const bodySchema = z.object({
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
     .select(
-      'id, quote_number, title, share_token, share_token_enabled, status, couples(email, name)',
+      'id, quote_number, title, share_token, share_token_enabled, status, couples(email, primary_email, name)',
     )
     .eq('id', quoteId)
     .eq('user_id', user.id)
@@ -78,7 +80,9 @@ export async function POST(request: NextRequest) {
   }
 
   const couple = Array.isArray(quote.couples) ? quote.couples[0] : quote.couples;
-  const coupleEmail = couple?.email?.trim();
+  // New couples only carry `primary_email` (the modal no longer
+  // writes the legacy `email` column) — resolve through the helper.
+  const coupleEmail = resolveCoupleEmail(couple);
   const coupleName = couple?.name || 'there';
 
   if (!coupleEmail) {
@@ -88,16 +92,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Auto-enable the share link if it isn't already. The send action
-  // implicitly says "I want the couple to be able to view this".
-  if (!quote.share_token_enabled) {
-    await supabase
-      .from('quotes')
-      .update({
-        share_token_enabled: true,
-        status: quote.status === 'draft' ? 'sent' : quote.status,
-      })
-      .eq('id', quoteId);
+  // Sending implicitly says "I want the couple to be able to view
+  // this" and "this quote is no longer a draft". The two flips were
+  // previously bundled inside one if-block gated on
+  // `!share_token_enabled` — but a later migration made
+  // `share_token_enabled` default to `true` on insert, so for any
+  // newly-created quote the gate was always false and the status
+  // flip never ran. Now they fire independently so each transitions
+  // on its own merit.
+  const updates: Record<string, unknown> = {};
+  if (!quote.share_token_enabled) updates.share_token_enabled = true;
+  if (quote.status === 'draft') updates.status = 'sent';
+  if (Object.keys(updates).length > 0) {
+    await supabase.from('quotes').update(updates).eq('id', quoteId);
   }
 
   const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/quote/${quote.share_token}`;
@@ -113,6 +120,7 @@ export async function POST(request: NextRequest) {
     quoteTitle: quote.title,
     shareUrl,
     mcBusinessName,
+    sender: await resolveSender(supabase, user.id, mcBusinessName),
   });
 
   if (!result.ok) {

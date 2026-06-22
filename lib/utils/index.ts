@@ -1,3 +1,26 @@
+/**
+ * True when a `YYYY-MM-DD` calendar date is strictly *before* today —
+ * i.e. the date has fully passed. The date itself ("due today") is
+ * NOT past due; overdue/expired begins the following day.
+ *
+ * Both sides are pinned to **local midnight** so the current
+ * time-of-day never leaks into the comparison. The bug this guards
+ * against: comparing a date's midnight directly to `new Date()` (the
+ * current instant) made anything due *today* read as overdue the
+ * moment the clock passed midnight. Use this for every "overdue" /
+ * "expired" derivation on quotes, invoices, contracts and tasks.
+ *
+ * @param dateStr - a `YYYY-MM-DD` date, or null/undefined (→ false).
+ */
+export function isPastDue(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false
+  const due = new Date(dateStr + 'T00:00:00')
+  if (Number.isNaN(due.getTime())) return false
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return due < today
+}
+
 export function formatDate(dateStr: string | null): string {
   if (!dateStr) return ''
   const date = new Date(dateStr + 'T00:00:00')
@@ -6,6 +29,53 @@ export function formatDate(dateStr: string | null): string {
     month: 'short',
     year: 'numeric',
   })
+}
+
+/**
+ * Compact relative time for a full ISO **timestamp** — "just now",
+ * "2m ago", "3h ago", "5d ago", then an absolute date past a week.
+ *
+ * Unlike {@link formatRelativeDate} (day-granular, for `YYYY-MM-DD`
+ * calendar dates), this works at minute/hour granularity for run and
+ * activity timestamps. `nowMs` is passed in so callers control the
+ * clock and the function stays pure/testable.
+ *
+ * @param iso - an ISO timestamp string, or null/undefined (→ '').
+ * @param nowMs - the current instant in ms (e.g. `Date.now()`).
+ */
+export function formatRelativeTime(iso: string | null | undefined, nowMs: number): string {
+  if (!iso) return ''
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ''
+  const diffSec = Math.round((nowMs - then) / 1000)
+  if (diffSec < 45) return 'just now'
+  const diffMin = Math.round(diffSec / 60)
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.round(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDay = Math.round(diffHr / 24)
+  if (diffDay <= 7) return `${diffDay}d ago`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/**
+ * Deep-clone a value into plain objects with the standard `Object`
+ * prototype, normalising any null-prototype objects along the way.
+ *
+ * Why this exists: TipTap / ProseMirror's `editor.getJSON()` returns each
+ * node's `attrs` as a **null-prototype** object (`Object.create(null)`).
+ * `JSON.stringify` handles those fine, but React Server Action argument
+ * serialisation only keeps plain objects and **silently drops**
+ * null-prototype ones — so a mention's `attrs` (and thus its variable id)
+ * vanished in transit to a server action, persisting `{{null}}`. Running
+ * the editor's JSON through this before it enters React state guarantees
+ * every downstream consumer (server actions included) sees plain objects.
+ *
+ * @param value - any JSON-serialisable value.
+ * @returns a structurally-identical value built from plain objects/arrays.
+ */
+export function toPlainJSON<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
 }
 
 export function formatRelativeDate(due_date: string): string {

@@ -13,6 +13,8 @@
 import { Receipt } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { isPastDue } from '@/lib/utils';
+
 import { formatCurrency, PaymentsTable, PaymentsTableIcons } from './payments-table';
 import type { Invoice } from './use-payments-data';
 
@@ -48,9 +50,7 @@ export interface InvoiceWithDerived extends Invoice {
 export function deriveInvoices(invoices: Invoice[]): InvoiceWithDerived[] {
   return invoices.map((inv) => {
     const isOverdue = Boolean(
-      inv.due_date &&
-        new Date(inv.due_date + 'T00:00:00') < new Date() &&
-        !['paid', 'cancelled'].includes(inv.status),
+      isPastDue(inv.due_date) && !['paid', 'cancelled'].includes(inv.status),
     );
     return {
       ...inv,

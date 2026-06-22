@@ -24,10 +24,13 @@ import {
   CheckSquare,
   Clock,
   FileSignature,
+  Heart,
   LayoutDashboard,
+  Mail,
   Music,
   Paperclip,
   Receipt,
+  Sparkles,
   Users,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -86,6 +89,11 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     icon: <Paperclip size={18} strokeWidth={1.5} />,
   },
   {
+    key: 'vows',
+    label: 'Vows',
+    icon: <Heart size={18} strokeWidth={1.5} />,
+  },
+  {
     key: 'payments',
     label: 'Payments',
     icon: <Receipt size={18} strokeWidth={1.5} />,
@@ -94,6 +102,16 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'contracts',
     label: 'Contracts',
     icon: <FileSignature size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: 'automations',
+    label: 'Automations',
+    icon: <Sparkles size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: 'emails',
+    label: 'Emails',
+    icon: <Mail size={18} strokeWidth={1.5} />,
   },
 ];
 

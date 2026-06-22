@@ -21,7 +21,9 @@ import { sendAlert } from '@/lib/alerts';
 import { logger } from '@/lib/alerts/logger';
 import { EMAIL_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
+import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendInvoiceEmail } from '@/lib/email';
+import { resolveSender } from '@/lib/email/sender-identity';
 import { createClient } from '@/lib/supabase/server';
 
 const bodySchema = z.object({
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
     .select(
-      'id, invoice_number, title, share_token, share_token_enabled, status, due_date, couples(email, name)',
+      'id, invoice_number, title, share_token, share_token_enabled, status, due_date, couples(email, primary_email, name)',
     )
     .eq('id', invoiceId)
     .eq('user_id', user.id)
@@ -73,7 +75,9 @@ export async function POST(request: NextRequest) {
   }
 
   const couple = Array.isArray(invoice.couples) ? invoice.couples[0] : invoice.couples;
-  const coupleEmail = couple?.email?.trim();
+  // New couples only carry `primary_email` (the modal no longer
+  // writes the legacy `email` column) — resolve through the helper.
+  const coupleEmail = resolveCoupleEmail(couple);
   const coupleName = couple?.name || 'there';
 
   if (!coupleEmail) {
@@ -83,14 +87,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!invoice.share_token_enabled) {
-    await supabase
-      .from('invoices')
-      .update({
-        share_token_enabled: true,
-        status: invoice.status === 'draft' ? 'sent' : invoice.status,
-      })
-      .eq('id', invoiceId);
+  // Sending implicitly says "the couple may view this" and "this is
+  // no longer a draft". These two flips were previously bundled in one
+  // if-block gated on `!share_token_enabled` — but `share_token_enabled`
+  // defaults to `true` on insert, so for any newly-created invoice the
+  // gate was always false and the status flip never ran (the invoice
+  // stayed `draft` after a successful send). This is the same bug A1
+  // fixed in `send-quote`; the invoice route was never updated. Fire
+  // each flip independently so each transitions on its own merit.
+  const updates: Record<string, unknown> = {};
+  if (!invoice.share_token_enabled) updates.share_token_enabled = true;
+  if (invoice.status === 'draft') updates.status = 'sent';
+  if (Object.keys(updates).length > 0) {
+    await supabase.from('invoices').update(updates).eq('id', invoiceId);
   }
 
   const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invoice/${invoice.share_token}`;
@@ -115,6 +124,7 @@ export async function POST(request: NextRequest) {
     dueDate,
     shareUrl,
     mcBusinessName,
+    sender: await resolveSender(supabase, user.id, mcBusinessName),
   });
 
   if (!result.ok) {

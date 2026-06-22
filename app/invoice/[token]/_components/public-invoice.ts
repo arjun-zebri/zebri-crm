@@ -13,6 +13,7 @@
  */
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 import type { PublicBranding } from '@/lib/branding/public-surface';
+import { isPastDue } from '@/lib/utils';
 
 export interface InvoiceItem {
   id: string;
@@ -66,7 +67,7 @@ export function deriveState(invoice: PublicInvoice | null): PageState {
   if (!invoice) return 'not_found';
   if (invoice.status === 'paid') return 'paid';
   if (invoice.status === 'cancelled') return 'cancelled';
-  if (invoice.due_date && new Date(invoice.due_date + 'T00:00:00') < new Date()) {
+  if (isPastDue(invoice.due_date)) {
     return 'overdue';
   }
   return 'active';

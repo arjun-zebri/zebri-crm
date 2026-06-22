@@ -9,6 +9,7 @@
  */
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 import type { PublicBranding } from '@/lib/branding/public-surface';
+import { isPastDue } from '@/lib/utils';
 
 export interface PublicContract extends PublicBranding {
   id: string;
@@ -47,10 +48,7 @@ export function deriveState(contract: PublicContract | null): PageState {
   if (!contract) return 'not_found';
   if (contract.status === 'signed') return 'signed';
   if (contract.status === 'declined') return 'declined';
-  if (
-    contract.expires_at &&
-    new Date(contract.expires_at + 'T00:00:00') < new Date()
-  ) {
+  if (isPastDue(contract.expires_at)) {
     return 'expired';
   }
   return 'active';

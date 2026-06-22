@@ -1,6 +1,9 @@
 'use client'
 
 import { Loader2 } from 'lucide-react'
+
+import { isPastDue } from '@/lib/utils'
+
 import { useDashboardInvoices } from './use-dashboard'
 
 interface DashboardInvoicesProps {
@@ -11,12 +14,7 @@ function formatCurrency(n: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
 }
 
-function isOverdue(dateStr: string | null): boolean {
-  if (!dateStr) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return new Date(dateStr + 'T00:00:00') < today
-}
+const isOverdue = isPastDue
 
 function formatDueDate(dateStr: string | null): string {
   if (!dateStr) return '-'

@@ -159,7 +159,7 @@ export type AlertEvent =
   | (BaseEvent & {
       type: 'email_rate_limit_hit';
       severity: 'warn';
-      action: 'sendQuote' | 'sendInvoice';
+      action: 'sendQuote' | 'sendInvoice' | 'sendTemplate';
       userId: string;
       ip: string;
     })
@@ -246,6 +246,34 @@ export type AlertEvent =
       targetEmail: string;
       amountCents: number;
       paymentIntentId?: string;
+    })
+
+  // ───── Automations ─────────────────────────────────────────────────
+  | (BaseEvent & {
+      type: 'automation_failed';
+      severity: 'error';
+      automationId: string;
+      runId: string;
+      message: string;
+    })
+  | (BaseEvent & {
+      type: 'automation_paused_missing_variables';
+      severity: 'warn';
+      automationId: string;
+      runId: string;
+      coupleName: string | null;
+      missingVariables: string[];
+    })
+  | (BaseEvent & {
+      type: 'automation_tick_slow';
+      severity: 'warn';
+      durationMs: number;
+      actionsExecuted: number;
+    })
+  | (BaseEvent & {
+      type: 'automation_tick_backlog';
+      severity: 'warn';
+      pendingEvents: number;
     })
 
   // ───── Catch-all ──────────────────────────────────────────────────

@@ -40,7 +40,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function statusLabel(s: string | null): string {
-  if (!s) return '—';
+  if (!s) return '-';
   return STATUS_LABEL[s] ?? s;
 }
 
@@ -88,7 +88,7 @@ export function BillingHistory() {
   return (
     <div>
       {invoices.length > 0 ? (
-        // No flex-1 on individual cells — items sit tightly next to
+        // No flex-1 on individual cells, items sit tightly next to
         // each other instead of being justify-between. On mobile, if
         // the natural row width exceeds the viewport, the wrapper's
         // overflow-x-auto kicks in and the user scrolls horizontally.
@@ -146,7 +146,7 @@ export function BillingHistory() {
 }
 
 /**
- * Skeleton state — mirrors the final row layout (date · amount ·
+ * Skeleton state: mirrors the final row layout (date · amount ·
  * status · view/pdf links) plus a "next charge" line so the
  * transition to real data doesn't jump.
  */

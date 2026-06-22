@@ -53,7 +53,8 @@ default emoji and routing.
 | `stripe_connect_onboarding_failed` | warn | Connect onboarding errored | `/api/stripe/connect/*` |
 | `stripe_connect_disabled` | warn | `account.updated` webhook reported a non-null `requirements.disabled_reason` — Stripe paused some capability and the MC needs to action it (Phase 2D.1) | `/api/stripe/webhook` (Connect branch) |
 | `stripe_connect_deauthorized` | warn | MC removed our platform from their Stripe account via the Stripe Dashboard (Phase 2D.1) | `/api/stripe/webhook` (Connect branch) |
-| `email_rate_limit_hit` | warn | Per-user send-quote / send-invoice limit hit (Phase 2C) | `/api/email/send-{quote,invoice}` |
+| `email_rate_limit_hit` | warn | Per-user send-quote / send-invoice / send-template limit hit (Phase 2C; `action` discriminates) | `/api/email/send-{quote,invoice,template}` |
+| `automation_paused_missing_variables` | warn | A `send_email` automation using a saved template hit an unresolved variable for a couple — the run is paused (not auto-resumed) until the MC fixes the data and clicks "Fix & retry" on the couple Automations tab (Email Templates feature) | `lib/automations/runner.ts` |
 | `resend_send_failed` | error | Resend API rejected / errored | `/api/email/*` |
 | `resend_bounced` | warn | Bounce reported | `/api/resend/webhook` |
 | `cron_job_failed` | error | Cron handler threw | `/api/cron/*` |

@@ -316,7 +316,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
           {triggerContent}
         </button>
         {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 min-w-[260px] bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20">
+          <div className="absolute top-full left-0 right-0 mt-1 min-w-[260px] bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 animate-fade-in">
             {calendarBody}
           </div>
         )}
@@ -329,7 +329,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     <div
       ref={dropdownRef}
       style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 200 }}
-      className="bg-white border border-gray-200 rounded-xl shadow-lg p-3"
+      className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 animate-fade-in"
     >
       {calendarBody}
     </div>,

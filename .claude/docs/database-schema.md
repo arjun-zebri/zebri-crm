@@ -37,6 +37,13 @@ metadata_on_insert` trigger).
 
 These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`. See `.claude/docs/branding.md` for full spec.
 
+**Email fields (stored in `user_metadata`, user-owned):**
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `mc_signature_name` | text | null | Typed signature name rendered on contracts |
+| `email_signature` | TipTap JSON | null | Reusable email signature (rich text, Gmail/Outlook-style, no variables inside it), edited in Settings → Signature. Surfaced to templates via the `{{mc.signature}}` variable: rich HTML in a body, flattened text in a subject. |
+
 **Address fields (stored in `user_metadata`, user-owned):**
 
 | Field | Type | Notes |
@@ -59,6 +66,20 @@ Columns:
 
 id (uuid) user_id (uuid, not null) name (text) email (text) phone (text) event_date (date) venue
 (text) notes (text) status (text)
+
+Partner contact triples (added 2026-06-03, `add_couple_partner_contacts`):
+
+primary_name (text) primary_email (text) primary_phone (text)
+secondary_name (text) secondary_email (text) secondary_phone (text)
+
+**The couple modal writes only the `primary_*` / `secondary_*` triples** — the
+legacy `name`-level `email` / `phone` columns are kept for old API contracts
+(pre-migration rows were backfilled into `primary_*`) but stay **empty** for
+couples created through the new flow. Anything that emails a couple must
+resolve the address via `resolveCoupleEmail()` in `lib/couples/email.ts`
+(primary_email first, legacy email fallback) — never read `couples.email`
+directly. The automations couple snapshot (`loadCoupleSnapshot`) applies the
+same precedence for phone and partner names.
 
 Status values: stored as custom couple status slug (e.g. 'new', 'contacted', 'confirmed', 'paid', 'complete'). See couple_statuses table for user-defined statuses.
 
@@ -272,7 +293,7 @@ expires_at (date, nullable)
 
 share_token (uuid, not null, default gen_random_uuid())  -  unique URL key; generated on row creation
 
-share_token_enabled (boolean, not null, default false)  -  link inactive until MC explicitly enables it
+share_token_enabled (boolean, not null, default true)  -  link is live from creation so the MC can copy/share it out-of-band (default flipped false→true + all rows back-filled by `20260527000000_share_token_enabled_by_default`). Disabling (e.g. cancelling an invoice) preserves the token; the public RPC 404s while it is false
 
 accepted_at (timestamp with time zone, nullable)
 
@@ -346,7 +367,7 @@ stripe_payment_intent_id (text, nullable)  -  Stripe payment intent ID, set when
 
 share_token (uuid, not null, default gen_random_uuid())  -  unique URL key; generated on row creation
 
-share_token_enabled (boolean, not null, default false)  -  link inactive until MC explicitly enables it
+share_token_enabled (boolean, not null, default true)  -  link is live from creation so the MC can copy/share it out-of-band (default flipped false→true + all rows back-filled by `20260527000000_share_token_enabled_by_default`). Disabling (e.g. cancelling an invoice) preserves the token; the public RPC 404s while it is false
 
 paid_at (timestamp with time zone, nullable)
 
@@ -391,12 +412,13 @@ RLS: service role only (no client access).
 
 ------------------------------------------------------------------------
 
-# Couple Portal (added 2026-04-09)
+# Couple Portal (added 2026-04-09; per-partner tokens 2026-06-16)
 
 ## couples table additions
 
-portal_token (uuid, not null, default gen_random_uuid())  -  unique token for the couple's portal link
-portal_token_enabled (boolean, not null, default true)  -  always active by default; MCs can rotate the token to invalidate old links
+portal_token (uuid, not null, default gen_random_uuid())  -  unique token for the **primary partner**'s portal link
+secondary_portal_token (uuid, not null, default gen_random_uuid(), unique)  -  unique token for the **spouse/secondary partner**'s portal link (added 2026-06-16; allows per-partner access with privacy-filtered vow content)
+portal_token_enabled (boolean, not null, default true)  -  gates both primary and secondary partner portal access; MCs can rotate portal_token to invalidate old primary links
 
 ## timeline_items table additions
 
@@ -465,18 +487,39 @@ RLS: Standard user_id = auth.uid(). MC dashboard uploads run client-side with th
 
 ## Portal RPC Functions (SECURITY DEFINER, anon-accessible)
 
-get_portal_data(token uuid)  -  returns couple name + event details + all portal_people + portal_songs + portal_files + timeline_items for first upcoming event
-get_vendor_timeline(token uuid)  -  returns event date/venue + timeline_items only (no PII)
-save_portal_person(p_token, p_id, p_category, p_full_name, p_phonetic, p_role, p_audio_url, p_position)  -  upsert
+**Helper (internal):**
+_resolve_portal_couple(p_token uuid)  -  maps either portal_token (primary) or secondary_portal_token (spouse) to (couple_id, owner_id, viewer) where viewer is 'primary' or 'spouse'. All other RPCs use this to derive authorization and viewer context.
+
+**Data retrieval:**
+get_portal_data(token uuid)  -  returns couple name + event + people + songs + files + timeline_items + payments + contracts + **vows (privacy-filtered: only the calling partner's vow)**. Adds 'viewer', 'primary_name', 'primary_email', 'primary_phone', 'secondary_name', 'secondary_email', 'secondary_phone' to result (the email/phone fields hydrate the editable Overview contact cards, added 2026-06-17). Each partner sees only their own vow content.
+get_vendor_timeline(token uuid)  -  returns event date/venue + timeline_items only (no PII). Uses portal_token only (vendor flow unchanged).
+
+**Timeline & people:**
+save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min)  -  insert with pending_review=true
+delete_portal_timeline_item(p_token, p_id)
+save_portal_person(p_token, p_id, p_category, p_full_name, p_phonetic, p_role, p_audio_url, p_position, p_notes?, p_email?, p_phone?)  -  upsert
 delete_portal_person(p_token, p_id)
+
+**Songs & contacts:**
 save_portal_song(p_token, p_id, p_category, p_title, p_artist, p_notes, p_position)  -  upsert
 delete_portal_song(p_token, p_id)
-save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min)  -  always inserts with pending_review=true into couple's first upcoming event
-delete_portal_timeline_item(p_token, p_id)
-save_portal_file(p_token, p_id, p_name, p_file_url, p_file_size)  -  insert
-delete_portal_file(p_token, p_id)
+save_portal_contact(p_token, p_name, p_email, p_phone, p_category, p_notes)  -  creates contact + links to couple
 
-All RPCs validate portal_token_enabled=true before proceeding.
+**Couple contact details (Overview tab):**
+save_portal_couple_details(p_token, p_primary_name, p_primary_email, p_primary_phone, p_secondary_name, p_secondary_email, p_secondary_phone)  -  updates the couple's primary/secondary contact triples. Either partner token may edit **both** triples (no privacy gate on contact info). Fields are trimmed + length-capped; empty strings store as NULL. (added 2026-06-17)
+
+**Events (Overview tab):**
+save_portal_event(p_token, p_id, p_date, p_venue)  -  add or edit a couple's event (date + venue) from the portal. Upserts on p_id; the `ON CONFLICT ... WHERE couple_id = <resolved>` clause is the cross-couple guard (a token can only touch its own couple's events). New rows default to status='upcoming'; status is preserved on edit. No delete path. (added 2026-06-17)
+
+**Files:**
+delete_portal_file(p_token, p_id)
+save_portal_file(p_token, p_id, p_name, p_file_url, p_file_size)  -  (called post-upload by /api/portal/upload)
+
+**Vows (privacy-gated per partner):**
+save_portal_vow(p_token, p_id, p_content)  -  insert/upsert vow; **who is automatically derived from viewer (cannot be overridden by client)**. Logs a 'couple' revision.
+delete_portal_vow(p_token, p_id)  -  **only allows deletion of the caller's own vow**
+
+All RPCs validate portal_token_enabled=true before proceeding (via _resolve_portal_couple).
 
 ------------------------------------------------------------------------
 
@@ -546,3 +589,174 @@ event when the contract locks.
 Migration: `20260528000000_create_contract_audit_log.sql`. Includes
 a back-fill that synthesises one audit row per pre-existing
 contract from its current status + denormalised inline columns.
+
+## email_templates / email_template_files (Email Templates feature)
+
+Reusable, per-MC email templates used in both the automation
+`send_email` action and the manual "Send email" compose flow. The
+defining rule: an email never sends with an unfilled variable — the
+shared renderer (`lib/email/templates.ts`) detects unresolved
+variables so the caller can block (automations) or gate behind an
+explicit "Send anyway" (manual).
+
+`email_templates` columns:
+id (uuid, primary key)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+name (text, not null)
+description (text, nullable)
+subject (text, not null, default '')  -  mustache string, e.g. `Quote for {{couple.name}}`
+content (jsonb, not null, default '{}')  -  TipTap JSON body; mention nodes carry a namespaced variable key in `attrs.id` (e.g. `couple.primary_name`, `event.date | friendly`)
+lifecycle_stage (text, nullable, check in: enquiry | quote | booking | planning | wedding_week | follow_up)
+is_starter (boolean, not null, default false)  -  provenance badge for seeded library rows; starters stay fully editable
+position (integer, not null, default 0)
+created_at / updated_at (timestamptz; updated_at kept fresh by trigger `email_templates_set_updated_at`)
+
+`email_template_files` columns (metadata for static attachment uploads;
+the binary lives in the private `email-template-files` storage bucket
+at `{user_id}/{template_id}/{id}`):
+id (uuid, primary key)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+template_id (uuid, FK email_templates.id, on delete cascade)
+file_name / mime_type / storage_path (text, not null)
+file_size (integer, not null)
+created_at (timestamptz)
+
+Indexes: `email_templates(user_id)`, partial
+`email_templates(user_id, lifecycle_stage)`, `email_template_files(user_id)`,
+`email_template_files(template_id)`.
+
+RLS: base owner policy `user_id = auth.uid()` (USING + WITH CHECK) on
+both tables. The `email-template-files` storage bucket is **private**
+(25 MB cap, PDF/DOCX/PNG/JPEG MIME whitelist) with owner-only
+insert/select/update/delete policies keyed on the first path segment
+(`auth.uid()::text = split_part(name, '/', 1)`).
+
+Variable resolution reuses the automation namespace via
+`resolveVariable()` in `lib/automations/variables.ts`, so a template
+renders identically whether fired by an automation or sent manually.
+
+Migration: `20260618000000_create_email_templates_feature.sql`. Starter
+templates are **not** auto-seeded — an MC adds them on demand from the
+in-app "Browse starter templates" catalog (canonical set in
+`lib/email/starter-templates.ts`; `is_starter` flags catalog-sourced
+rows). `20260618000200_clear_seeded_starter_templates.sql` removes rows
+from the previous auto-seed model. The `automation_waits.reason`
++ `automation_audit_log.event` CHECKs are widened to include
+`missing_variables` / `missing_variables_detected` in
+`20260618000100_automation_missing_variables_wait.sql` (the send_email
+template path pauses a run on an unresolved variable; see `alerts.md`).
+
+## packages / package_items (Templates page — Packages tab)
+
+Reusable, per-MC service bundles surfaced on the **Packages** tab of
+`/templates`. A package is a named set of priced line items the MC can
+drop into quotes and invoices. Structurally mirrors `quote_templates` /
+`quote_template_items` so referencing maps 1:1 in a later phase.
+
+`packages` columns:
+id (uuid, primary key)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+name (text, not null)
+description (text, nullable)
+notes (text, nullable)  -  short subtitle shown on the list row
+position (integer, not null, default 0)  -  drag-reorder order
+is_starter (boolean, not null, default false)  -  provenance badge for catalog-added rows; starters stay fully editable
+created_at / updated_at (timestamptz)
+
+`package_items` columns:
+id (uuid, primary key)
+package_id (uuid, FK packages.id, on delete cascade)
+user_id (uuid, not null)  -  RLS key (denormalised)
+description (text, not null)
+amount (numeric(10,2), not null)
+position (integer, not null)
+created_at (timestamptz)
+
+Indexes: `packages(user_id)`, `package_items(package_id)`.
+
+RLS: base owner policy `user_id = auth.uid()` on both tables
+(`for all using (...)`, which Postgres reuses as the INSERT WITH CHECK).
+
+Migrations: `20260618000300_create_packages.sql`; `is_starter` added in
+`20260619000100_add_is_starter_to_templates.sql`. Starter packages are an
+opt-in catalog (`lib/payments/starter-line-item-templates.ts`), added via
+the `addStarterPackagesAction` server action; nothing is auto-seeded.
+
+## invoice_templates / invoice_template_items (Templates page — Invoices tab)
+
+Reusable invoice skeletons on the **Invoices** tab of `/templates`.
+Built from scratch or seeded from a package / quote template via the
+editor's "Add from…" picker, which **snapshots** the source's line items
+in (no live FK — a later package price edit never silently changes a
+saved invoice template). Mirrors `packages` structurally.
+
+`invoice_templates` columns: id, user_id (RLS key, FK auth.users on
+delete cascade), name (not null), description (nullable), notes
+(nullable subtitle), position (default 0), is_starter (boolean, not null,
+default false  -  catalog provenance badge), created_at / updated_at.
+
+`invoice_template_items` columns: id, invoice_template_id (FK
+invoice_templates on delete cascade), user_id (RLS key), description
+(not null), amount (numeric(10,2), not null), position (not null),
+created_at.
+
+Indexes: `invoice_templates(user_id)`,
+`invoice_template_items(invoice_template_id)`.
+
+RLS: owner-only `user_id = auth.uid()` on both (USING doubles as INSERT
+WITH CHECK).
+
+Migrations: `20260618000400_create_invoice_templates.sql`; `is_starter`
+added in `20260619000100_add_is_starter_to_templates.sql`. Starter invoice
+templates are an opt-in catalog
+(`lib/payments/starter-line-item-templates.ts`) added via
+`addStarterInvoiceTemplatesAction`.
+
+## couple_emails (Couple profile — Emails tab)
+
+A sent-history log of emails the MC sends a couple from the manual
+"Send email" flow (`/api/email/send-template` inserts a row after a
+successful send). Powers the **Emails** tab on the couple profile.
+
+Columns: id, user_id (RLS key, FK auth.users cascade), couple_id (FK
+couples cascade), template_id (FK email_templates **on delete set
+null**, nullable), template_name (text snapshot — survives template
+deletion/rename), subject (rendered subject sent), to_email, source
+(`manual` today; `automation` can log here later without a schema
+change), status (default `sent`), sent_at, created_at.
+
+Indexes: `couple_emails(couple_id)`, `couple_emails(user_id)`.
+RLS: owner-only `user_id = auth.uid()`.
+
+Migration: `20260619000000_create_couple_emails.sql`.
+
+## user_public_settings (Settings — Public Page)
+
+One RLS-owned row per MC backing the Public Page settings: the branded
+Zebri subdomain and a connected email mailbox (OAuth — Gmail/Outlook).
+Kept out of `user_metadata` (JWT-bloat + it's user-writable) in its own
+table, same ownership shape as `user_branding`.
+
+Columns: user_id (PK, FK auth.users cascade), subdomain (nullable branded
+slug), email_mode (`zebri` | `oauth`, default `zebri`), oauth_provider
+(`google` | `microsoft`), oauth_email (connected address; the `from`),
+oauth_from_name, **oauth_refresh_token_encrypted** + **oauth_access_token_encrypted**
+(AES-256-GCM ciphertext, `v1:<iv>.<tag>.<data>` — never plaintext, never
+sent to the client), oauth_token_expires_at, oauth_status (`none` |
+`connected` | `failed`, default `none`), oauth_last_error,
+oauth_connected_at, created_at, updated_at.
+
+Subdomain uniqueness: partial unique index on `lower(subdomain) where
+subdomain is not null` — global, enforced at the DB level (RLS hides
+other tenants' rows, so the server action relies on the 23505 to detect
+a clash). RLS: four owner-only policies (`auth.uid() = user_id`). The
+encrypted tokens are additionally never selected back to the client by
+the loaders/actions.
+
+Read at send time by `resolveSender` (`lib/email/sender-identity`) to
+pick each MC's transport (their OAuth mailbox or the shared Zebri/Resend
+address), refreshing the access token when expired. Written by the OAuth
+callback route + the Public Page server actions
+(`app/(dashboard)/settings/public/actions.ts`).
+
+Migration: `20260621000000_create_user_public_settings.sql`.

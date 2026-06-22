@@ -46,11 +46,9 @@ import { NotesField } from '@/components/builders/parts/notes-field';
 import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { TaxControl } from '@/components/builders/parts/tax-control';
-import {
-  type QuoteTemplate,
-  TemplatePicker,
-} from '@/components/builders/parts/template-picker';
+import { TemplatePicker } from '@/components/builders/parts/template-picker';
 import { TotalsPanel } from '@/components/builders/parts/totals-panel';
+import { useApplySources } from '@/components/builders/parts/use-apply-sources';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
@@ -72,20 +70,6 @@ interface Quote {
   discount_type: 'percentage' | 'fixed' | null;
   discount_value: number | null;
   tax_rate: number | null;
-}
-
-interface DbQuoteTemplate {
-  id: string;
-  name: string;
-  notes: string | null;
-}
-
-interface DbQuoteTemplateItem {
-  id: string;
-  template_id: string;
-  description: string;
-  amount: number;
-  position: number;
 }
 
 export interface QuoteBuilderModalProps {
@@ -183,29 +167,8 @@ export function QuoteBuilderModal({
     },
   });
 
-  const { data: templates } = useQuery({
-    queryKey: ['quote-templates-with-items'],
-    queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return { templates: [] as DbQuoteTemplate[], items: {} as Record<string, DbQuoteTemplateItem[]> };
-      const { data: tpls } = await supabase
-        .from('quote_templates')
-        .select('id, name, notes')
-        .eq('user_id', user.user.id)
-        .order('position', { ascending: true });
-      const { data: tplItems } = await supabase
-        .from('quote_template_items')
-        .select('*')
-        .eq('user_id', user.user.id)
-        .order('position', { ascending: true });
-      const grouped: Record<string, DbQuoteTemplateItem[]> = {};
-      (tplItems ?? []).forEach((item) => {
-        if (!grouped[item.template_id]) grouped[item.template_id] = [];
-        grouped[item.template_id]!.push(item as DbQuoteTemplateItem);
-      });
-      return { templates: (tpls ?? []) as DbQuoteTemplate[], items: grouped };
-    },
-  });
+  // Quote templates + packages, both offered as "start from" sources.
+  const { data: applySources } = useApplySources();
 
   /* ─── hydrate state from DB ─────────────────────────────────── */
   useEffect(() => {
@@ -322,8 +285,42 @@ export function QuoteBuilderModal({
       toast('Sent to couple');
       queryClient.invalidateQueries({ queryKey: ['quote', id] });
       queryClient.invalidateQueries({ queryKey: ['all-quotes'] });
+      // The same modal is opened from the couple profile too, where
+      // the parent list keys on ['couple-quotes', coupleId]. Without
+      // this, sending from a couple profile leaves the list showing
+      // `draft` until the user manually refreshes.
+      queryClient.invalidateQueries({ queryKey: ['couple-quotes'] });
     },
     onError: (err) => toast(err instanceof Error ? err.message : 'Failed to send', 'error'),
+  });
+
+  // Mark sent WITHOUT emailing — for when the MC shared the link
+  // out-of-band (copied it, texted it). Saves any pending edits first,
+  // then flips draft→sent and ensures the public link is live.
+  // Deliberately leaves `email_sent_at` null (no email went out), so
+  // the footer still offers "Send to couple" afterwards.
+  const markSent = useMutation({
+    mutationFn: async () => {
+      let targetId = effectiveId;
+      if (dirty || !targetId) {
+        targetId = await save.mutateAsync();
+      }
+      if (!targetId) throw new Error('No quote to mark as sent');
+      const { error } = await supabase
+        .from('quotes')
+        .update({ status: 'sent', share_token_enabled: true })
+        .eq('id', targetId);
+      if (error) throw error;
+      return targetId;
+    },
+    onSuccess: (id) => {
+      queryClient.invalidateQueries({ queryKey: ['quote', id] });
+      queryClient.invalidateQueries({ queryKey: ['all-quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['couple-quotes'] });
+      toast('Marked as sent');
+    },
+    onError: (err) =>
+      toast(err instanceof Error ? err.message : 'Failed to mark as sent', 'error'),
   });
 
   const remove = useMutation({
@@ -421,19 +418,18 @@ export function QuoteBuilderModal({
     setDirty(true);
   }
 
-  function applyTemplate(templateId: string) {
-    const tpl = templates?.templates.find((t) => t.id === templateId);
-    const tplItems = templates?.items[templateId] ?? [];
-    if (!tpl) return;
+  function applyTemplate(sourceId: string) {
+    const source = applySources?.applyMap[sourceId];
+    if (!source) return;
     setItems(
-      tplItems.map((item, idx) => ({
+      source.items.map((item, idx) => ({
         id: `new-${crypto.randomUUID()}`,
         description: item.description,
         amount: item.amount,
         position: idx,
       })),
     );
-    if (tpl.notes && !notes) setNotes(tpl.notes);
+    if (source.notes && !notes) setNotes(source.notes);
     setDirty(true);
   }
 
@@ -456,12 +452,7 @@ export function QuoteBuilderModal({
   // footer is the main action.
   const primaryAction: BuilderModalPrimaryAction | undefined = undefined;
 
-  const templateOptions: QuoteTemplate[] = (templates?.templates ?? []).map((t) => ({
-    id: t.id,
-    name: t.name,
-    notes: t.notes,
-    itemCount: templates?.items[t.id]?.length ?? 0,
-  }));
+  const templateOptions = applySources?.options ?? [];
 
   // Live preview doc — re-derived on every render from the local
   // form state so the right pane updates without a save round-trip.
@@ -520,6 +511,9 @@ export function QuoteBuilderModal({
             hasCouple={!!coupleId}
             onSave={() => save.mutate()}
             onSend={() => sendEmail.mutate()}
+            canMarkSent={status === 'draft'}
+            markingSent={markSent.isPending}
+            onMarkSent={() => markSent.mutate()}
           />
         }
       >

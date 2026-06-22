@@ -16,8 +16,9 @@ they share the same token vocabulary so brand changes propagate
 automatically.
 
 ### `<Button />` — `@/components/ui/button`
-Variants: `primary` (brand-fg / inverse text), `secondary` (subtle), `ghost`
-(transparent), `danger`. Sizes: `sm` / `md` / `lg`. `loading` shows a spinner,
+Variants: `primary` (brand-fg / inverse text), `secondary` (subtle grey fill +
+border), `outline` (white fill + border), `ghost` (transparent), `danger`,
+`success`. Sizes: `sm` / `md` / `lg`. `loading` shows a spinner,
 sets `aria-busy`, and disables the click. Defaults `type="button"` to avoid
 accidental form submits.
 
@@ -32,9 +33,16 @@ match `<Input />`. Pass an `options: { value, label }[]` array and a
 controlled `value` + `onValueChange` (or uncontrolled `defaultValue`).
 Standalone (no companion components to import).
 
+### `<Checkbox />` — `@/components/ui/checkbox`
+Custom `<button role="checkbox">` per the frontend-design §Checkboxes
+spec (emerald fill + white checkmark when checked) — never a native
+`<input type="checkbox">`. Takes controlled `checked` + `onChange`
+and an optional clickable `label`. Always visible (form variant);
+table rows keep their own hover-reveal selection checkbox.
+
 Conventions:
-- All three use design tokens only — no raw hex / arbitrary values.
-- Unit-tested in `tests/unit/components/ui/{button,input,select}.test.tsx`.
+- All of the above use design tokens only — no raw hex / arbitrary values.
+- Unit-tested in `tests/unit/components/ui/{button,input,select,checkbox}.test.tsx`.
 - Existing raw-button / raw-input call sites stay until each page is
   hardened (per-page adoption, consistent with the ratchets).
 
@@ -331,3 +339,48 @@ Behavior:
 - Shows vendor name + category badge
 - Max height with scrollable overflow
 - Inline presentation (does not open a modal)
+
+## RichTextEditor — `components/ui/rich-text-editor.tsx`
+
+TipTap rich-text editor with a toolbar + an "Insert variable" popover.
+Originally the contract editor; now generalised with an optional
+`variables` prop so other surfaces (email templates) can supply their
+own merge-field list.
+
+Props:
+- `value: JSONContent` / `onChange: (v: JSONContent) => void`
+- `placeholder?`, `editable?`, `className?`
+- `variables?: EditorVariable[]` — popover list; defaults to
+  `CONTRACT_VARIABLES`. Email templates pass `EMAIL_TEMPLATE_VARIABLES`
+  (`lib/email/template-variables`). The chosen `id` is stored verbatim
+  on the inserted mention node (`attrs.id`).
+
+## Email Templates components — `app/(dashboard)/templates/*`
+
+- `TemplatePreview` — renders subject + body through
+  `lib/email/templates`, highlighting unresolved variables in amber
+  (`preview` mode). Reused by the library editor (sample context) and
+  the couple Send-email modal (real context).
+- `SubjectField` — labelled subject input + Insert-variable popover
+  that appends `{{ expression }}` tokens.
+- `TemplateEditorModal` — fullscreen create/edit (editor + live
+  preview), uses the `Button`, `Modal`, `Input`, `Select` primitives.
+- `TemplatesLibrary` — stage-filtered, searchable list with Edit /
+  Duplicate (`Copy`) / Delete (`ConfirmDialog`) row actions and
+  `Loading` / `Empty` / `ErrorState` states.
+
+Shared across the non-email tabs (Packages / Quotes / Invoices /
+Contracts):
+
+- `StarterCatalogModal`: generic "Browse starters" catalog modal (flat
+  list, no lifecycle grouping). Props: `title`, `blurb`, `noun`,
+  `catalog` (`{name, subtitle}[]`), `existingNames` (hidden when already
+  owned), and `onAdd(names) => Promise<number>` (caller owns the insert +
+  cache invalidation; the modal owns the toast). Mirrors the Emails
+  `StarterLibraryPanel`.
+- `LineItemPreview`: the line-item counterpart to `TemplatePreview`,
+  reusing the same card chrome. Renders a name/subtitle header + priced
+  line items + total for package / quote / invoice editors.
+
+All use semantic tokens (`bg-card`, `text-text`, `border-border`,
+`bg-brand`) and the shared primitives — no ad-hoc colours.

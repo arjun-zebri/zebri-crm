@@ -112,10 +112,34 @@ export interface PortalSongCategory {
   position: number
 }
 
+export interface PortalVow {
+  id: string
+  who: string
+  content: string
+}
+
 export interface PortalData {
   couple_id: string
   couple_name: string
   couple_email: string | null
+  /**
+   * Which partner this link belongs to. Derived server-side from the
+   * token (primary `portal_token` → 'primary', `secondary_portal_token`
+   * → 'spouse'). Drives the Vows section's own-vow-only view.
+   */
+  viewer: 'primary' | 'spouse'
+  /** Primary partner's display name (for vow labels / the partner note). */
+  primary_name: string | null
+  /** Primary partner's email — editable from the Overview tab. */
+  primary_email: string | null
+  /** Primary partner's phone — editable from the Overview tab. */
+  primary_phone: string | null
+  /** Secondary partner's display name. */
+  secondary_name: string | null
+  /** Secondary partner's email — editable from the Overview tab. */
+  secondary_email: string | null
+  /** Secondary partner's phone — editable from the Overview tab. */
+  secondary_phone: string | null
   event: { id: string; date: string; venue: string } | null
   events: PortalEvent[]
   people: PortalPerson[]
@@ -123,6 +147,7 @@ export interface PortalData {
   songs: PortalSong[]
   song_categories: PortalSongCategory[]
   files: PortalFile[]
+  vows: PortalVow[]
   timeline_items: PortalTimelineItem[]
   payments: {
     quotes: PortalQuote[]
@@ -215,7 +240,7 @@ export default async function PortalPage({
     >
       <BrandingHead branding={branding} />
 
-      <div className="max-w-4xl mx-auto px-4 pb-20">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-20">
 
         {hasBlocks && branding ? (
           preBlocks.length > 0 && (

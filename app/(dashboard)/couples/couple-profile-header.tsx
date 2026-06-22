@@ -25,6 +25,7 @@ import * as Popover from '@radix-ui/react-popover';
 import {
   Check,
   Copy,
+  FileDown,
   Link,
   Mail,
   MoreHorizontal,
@@ -39,6 +40,8 @@ import { PiWhatsappLogoLight } from 'react-icons/pi';
 
 import { Couple, CoupleStatusRecord, getStatusClasses } from '@/types/couple';
 
+import { printTimelinePdf, printVowPdf } from './print-couple-docs';
+
 export interface CoupleProfileHeaderProps {
   couple: Couple;
   statuses: CoupleStatusRecord[];
@@ -50,7 +53,8 @@ export interface CoupleProfileHeaderProps {
   onDeleteRequest: () => void;
 }
 
-type CopiedKind = 'couple' | 'vendor' | null;
+type LinkKind = 'primary' | 'secondary' | 'vendor';
+type CopiedKind = LinkKind | null;
 
 export function CoupleProfileHeader({
   couple,
@@ -65,6 +69,7 @@ export function CoupleProfileHeader({
   const [statusOpen, setStatusOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
   const [copied, setCopied] = useState<CopiedKind>(null);
 
   const hasPhone = !!couple.phone;
@@ -98,14 +103,47 @@ export function CoupleProfileHeader({
     });
   };
 
-  const copyLink = (type: 'couple' | 'vendor') => {
+  // Each partner gets their OWN portal link so they can't see each
+  // other's vows: the primary uses `portal_token`, the secondary uses
+  // `secondary_portal_token`. The vendor link reuses the primary token
+  // with the `/vendor` path (vendors aren't partners).
+  const copyLink = (type: LinkKind) => {
     if (!couple.portal_token) return;
-    const base = `${window.location.origin}/portal/${couple.portal_token}`;
-    const url = type === 'vendor' ? `${base}/vendor` : base;
+    const origin = window.location.origin;
+    let url: string;
+    if (type === 'vendor') {
+      url = `${origin}/portal/${couple.portal_token}/vendor`;
+    } else if (type === 'secondary') {
+      if (!couple.secondary_portal_token) return;
+      url = `${origin}/portal/${couple.secondary_portal_token}`;
+    } else {
+      url = `${origin}/portal/${couple.portal_token}`;
+    }
     navigator.clipboard.writeText(url);
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
   };
+
+  // Link rows shared by the mobile overflow menu and the desktop
+  // popover. The secondary partner's link only appears once a secondary
+  // contact has been captured.
+  const linkTargets: { kind: LinkKind; label: string }[] = [
+    {
+      kind: 'primary',
+      label: couple.primary_name
+        ? `${couple.primary_name}'s link`
+        : 'Primary partner link',
+    },
+    ...(couple.secondary_name
+      ? [
+          {
+            kind: 'secondary' as const,
+            label: `${couple.secondary_name}'s link`,
+          },
+        ]
+      : []),
+    { kind: 'vendor' as const, label: 'Vendor link' },
+  ];
 
   return (
     <div className="shrink-0 border-b border-gray-200 px-4 sm:px-6 py-3">
@@ -263,42 +301,27 @@ export function CoupleProfileHeader({
                 </a>
 
                 <div className="border-t border-gray-100 mt-1 pt-1">
-                  <button
-                    onClick={() => {
-                      copyLink('couple');
-                      setTimeout(() => setActionsOpen(false), 900);
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer"
-                  >
-                    <span>Couple portal link</span>
-                    {copied === 'couple' ? (
-                      <Check
-                        size={12}
-                        strokeWidth={2}
-                        className="text-emerald-500"
-                      />
-                    ) : (
-                      <Copy size={12} strokeWidth={1.5} />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => {
-                      copyLink('vendor');
-                      setTimeout(() => setActionsOpen(false), 900);
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer"
-                  >
-                    <span>Vendor link</span>
-                    {copied === 'vendor' ? (
-                      <Check
-                        size={12}
-                        strokeWidth={2}
-                        className="text-emerald-500"
-                      />
-                    ) : (
-                      <Copy size={12} strokeWidth={1.5} />
-                    )}
-                  </button>
+                  {linkTargets.map((t) => (
+                    <button
+                      key={t.kind}
+                      onClick={() => {
+                        copyLink(t.kind);
+                        setTimeout(() => setActionsOpen(false), 900);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+                    >
+                      <span>{t.label}</span>
+                      {copied === t.kind ? (
+                        <Check
+                          size={12}
+                          strokeWidth={2}
+                          className="text-emerald-500"
+                        />
+                      ) : (
+                        <Copy size={12} strokeWidth={1.5} />
+                      )}
+                    </button>
+                  ))}
                   <button
                     onClick={() => {
                       onRotateLinks();
@@ -352,44 +375,29 @@ export function CoupleProfileHeader({
                 side="bottom"
                 align="end"
                 sideOffset={6}
-                className="z-[80] w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
+                className="z-[80] w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
               >
-                <button
-                  onClick={() => {
-                    copyLink('couple');
-                    setTimeout(() => setLinkOpen(false), 900);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                >
-                  <span>Couple portal link</span>
-                  {copied === 'couple' ? (
-                    <Check
-                      size={13}
-                      strokeWidth={2}
-                      className="text-emerald-500"
-                    />
-                  ) : (
-                    <Copy size={13} strokeWidth={1.5} />
-                  )}
-                </button>
-                <button
-                  onClick={() => {
-                    copyLink('vendor');
-                    setTimeout(() => setLinkOpen(false), 900);
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                >
-                  <span>Vendor link</span>
-                  {copied === 'vendor' ? (
-                    <Check
-                      size={13}
-                      strokeWidth={2}
-                      className="text-emerald-500"
-                    />
-                  ) : (
-                    <Copy size={13} strokeWidth={1.5} />
-                  )}
-                </button>
+                {linkTargets.map((t) => (
+                  <button
+                    key={t.kind}
+                    onClick={() => {
+                      copyLink(t.kind);
+                      setTimeout(() => setLinkOpen(false), 900);
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    <span>{t.label}</span>
+                    {copied === t.kind ? (
+                      <Check
+                        size={13}
+                        strokeWidth={2}
+                        className="text-emerald-500"
+                      />
+                    ) : (
+                      <Copy size={13} strokeWidth={1.5} />
+                    )}
+                  </button>
+                ))}
                 <div className="border-t border-gray-100 mt-1 pt-1">
                   <button
                     onClick={() => {
@@ -402,6 +410,55 @@ export function CoupleProfileHeader({
                     <RefreshCw size={13} strokeWidth={1.5} />
                   </button>
                 </div>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+          <Popover.Root open={pdfOpen} onOpenChange={setPdfOpen}>
+            <Popover.Trigger asChild>
+              <button
+                title="Download documents"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+              >
+                <FileDown size={16} strokeWidth={1.5} />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                side="bottom"
+                align="end"
+                sideOffset={6}
+                className="z-[80] w-60 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
+              >
+                <button
+                  onClick={() => {
+                    void printVowPdf(couple.id, 'primary', couple.primary_name ?? couple.name);
+                    setPdfOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <span className="truncate">Download vow for {couple.primary_name ?? couple.name}</span>
+                  <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                </button>
+                <button
+                  onClick={() => {
+                    void printVowPdf(couple.id, 'spouse', couple.secondary_name ?? 'partner');
+                    setPdfOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <span className="truncate">Download vow for {couple.secondary_name ?? 'partner'}</span>
+                  <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                </button>
+                <button
+                  onClick={() => {
+                    void printTimelinePdf(couple.id, couple.name);
+                    setPdfOpen(false);
+                  }}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <span>Download timeline</span>
+                  <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                </button>
               </Popover.Content>
             </Popover.Portal>
           </Popover.Root>
