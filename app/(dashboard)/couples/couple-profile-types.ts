@@ -30,7 +30,8 @@ export type CoupleProfileSection =
   | 'vows'
   | 'payments'
   | 'contracts'
-  | 'automations';
+  | 'automations'
+  | 'emails';
 
 export interface CoupleProfileNavItem {
   key: CoupleProfileSection;

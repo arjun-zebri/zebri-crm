@@ -3,7 +3,7 @@
  *
  * Distinct from the post-magic-link `/update-password` flow because
  * it requires re-authentication with the current password before
- * setting the new one — protecting against session hijack /
+ * setting the new one, protecting against session hijack /
  * shoulder-surfing scenarios where an attacker briefly has access to
  * an authenticated browser.
  *
@@ -11,7 +11,7 @@
  *   1. Parse FormData via {@link changePasswordSchema}.
  *   2. Re-authenticate with the current password
  *      (`signInWithPassword`).
- *   3. Rate-limit per session (per user-id, not per IP) — protects
+ *   3. Rate-limit per session (per user-id, not per IP): protects
  *      against scripted password-guessing inside a hijacked session.
  *   4. Update the password (`auth.updateUser({ password })`).
  *
@@ -59,13 +59,13 @@ export async function changePasswordAction(
       type: 'auth_rate_limit_hit',
       severity: 'warn',
       action: 'changePassword',
-      ip: 'session', // per-session limiter — IP not the key
+      ip: 'session', // per-session limiter, IP not the key
       userId: user.id,
     });
     return { error: 'Too many attempts. Please wait a moment and try again.' };
   }
 
-  // Re-authenticate. signInWithPassword refreshes the session — fine.
+  // Re-authenticate. signInWithPassword refreshes the session, fine.
   const { error: reauthError } = await supabase.auth.signInWithPassword({
     email: user.email,
     password: parsed.data.currentPassword,

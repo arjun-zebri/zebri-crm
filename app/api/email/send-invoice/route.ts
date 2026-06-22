@@ -23,6 +23,7 @@ import { EMAIL_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
 import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendInvoiceEmail } from '@/lib/email';
+import { resolveSender } from '@/lib/email/sender-identity';
 import { createClient } from '@/lib/supabase/server';
 
 const bodySchema = z.object({
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
     dueDate,
     shareUrl,
     mcBusinessName,
+    sender: await resolveSender(supabase, user.id, mcBusinessName),
   });
 
   if (!result.ok) {

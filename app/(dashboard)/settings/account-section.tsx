@@ -2,13 +2,13 @@
  * Settings → Account tab section.
  *
  * Three sub-features:
- *   1. **Change password** — posts to {@link changePasswordAction}
+ *   1. **Change password**: posts to {@link changePasswordAction}
  *      (server action) which re-authenticates with the current
  *      password before updating, rate-limits per session, and
  *      validates against the shared {@link changePasswordSchema}.
- *   2. **Email preferences** — toggle which email categories the
+ *   2. **Email preferences**: toggle which email categories the
  *      user wants (user-owned data, `user_metadata.email_preferences`).
- *   3. **Danger zone** — request account deletion. Currently
+ *   3. **Danger zone**: request account deletion. Currently
  *      delegates to the existing fake-delete behaviour (signs out);
  *      proper destructive deletion is tracked for Phase 13 (Admin /
  *      Shadow) since it has Stripe-subscription implications.
@@ -32,6 +32,7 @@ import { createClient } from '@/lib/supabase/client';
 
 import type { ChangePasswordResult } from './account/action-state';
 import { changePasswordAction } from './account/actions';
+import { AutoSaveStatus, type SaveState } from './auto-save-status';
 
 interface EmailPreferencesData {
   product_updates?: boolean;
@@ -47,7 +48,7 @@ const emptyChangeState: ChangePasswordResult = {};
 
 export function AccountSection({ emailPreferences: initialEmailPreferences }: AccountSectionProps) {
   return (
-    <div className="max-w-2xl space-y-10">
+    <div className="space-y-10">
       <ChangePasswordCard />
       {initialEmailPreferences ? (
         <EmailPreferencesCard initial={initialEmailPreferences} />
@@ -73,7 +74,7 @@ function ChangePasswordCard() {
   // React 19 form actions re-apply React-owned state).
   const [formKey, setFormKey] = useState(0);
   // Track which state object we've already toasted by capturing the
-  // identity in a ref — useEffect reads the previous identity and
+  // identity in a ref, useEffect reads the previous identity and
   // updates it inside the same effect, which is the canonical
   // post-action notification pattern (no state setter cascade).
   const handledStateRef = useRef<typeof state | null>(null);
@@ -164,47 +165,44 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
     bookingReminders: initial?.booking_reminders ?? true,
     tips: initial?.tips ?? false,
   };
-  const [saved, setSaved] = useState(initialPrefs);
   const [prefs, setPrefs] = useState(initialPrefs);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
 
-  const dirty =
-    prefs.productUpdates !== saved.productUpdates ||
-    prefs.bookingReminders !== saved.bookingReminders ||
-    prefs.tips !== saved.tips;
-
-  async function save() {
-    setSaving(true);
+  // Persist the given preference set immediately. The toggled value is
+  // passed in (not read from state) so the save reflects the click that
+  // triggered it rather than the pre-toggle closure.
+  async function save(next: typeof prefs) {
+    setSaveState('saving');
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
       toast('Unable to load user data.', 'error');
-      setSaving(false);
+      setSaveState('error');
       return;
     }
-    const updated = {
-      ...(user.user_metadata ?? {}),
-      email_preferences: {
-        product_updates: prefs.productUpdates,
-        booking_reminders: prefs.bookingReminders,
-        tips: prefs.tips,
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        ...(user.user_metadata ?? {}),
+        email_preferences: {
+          product_updates: next.productUpdates,
+          booking_reminders: next.bookingReminders,
+          tips: next.tips,
+        },
       },
-    };
-    const { error } = await supabase.auth.updateUser({ data: updated });
+    });
+    setSaveState(error ? 'error' : 'saved');
     if (error) toast(error.message, 'error');
-    else {
-      toast('Email preferences saved.');
-      setSaved({ ...prefs });
-    }
-    setSaving(false);
   }
 
   return (
     <section>
-      <h3 className="mb-4 text-sm font-medium text-text">Email preferences</h3>
-      <div className="mb-4 space-y-3">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-medium text-text">Email preferences</h3>
+        <AutoSaveStatus state={saveState} />
+      </div>
+      <div className="space-y-3">
         {(
           [
             ['productUpdates', 'Product updates and announcements'],
@@ -216,18 +214,16 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
             <input
               type="checkbox"
               checked={prefs[key]}
-              onChange={(e) => setPrefs({ ...prefs, [key]: e.target.checked })}
+              onChange={(e) => {
+                const next = { ...prefs, [key]: e.target.checked };
+                setPrefs(next);
+                void save(next);
+              }}
               className="h-4 w-4 rounded border-border accent-brand-fg"
             />
             <span className="text-sm text-text">{label}</span>
           </label>
         ))}
-      </div>
-      <div className="flex items-center gap-3">
-        <Button type="button" onClick={save} loading={saving} disabled={!dirty}>
-          {saving ? 'Saving…' : 'Save preferences'}
-        </Button>
-        {dirty ? <span className="text-caption text-text-muted">Unsaved changes</span> : null}
       </div>
     </section>
   );
@@ -235,7 +231,7 @@ function EmailPreferencesCard({ initial }: EmailPreferencesCardProps) {
 
 /* ──────────────────────────────────────────────────────────────────
    Danger zone
-   TODO: Phase 13 — implement true destructive deletion server-side
+   TODO: Phase 13: implement true destructive deletion server-side
    (admin.deleteUser + Stripe subscription cancellation). For now the
    UI sign-out behaviour is preserved.
 ─────────────────────────────────────────────────────────────────── */

@@ -53,6 +53,31 @@ const FILTERS: Record<string, FilterFn> = {
 }
 
 /**
+ * Resolve a single variable expression (`path | filter:arg | …`)
+ * against a run context.
+ *
+ * This is the atom both {@link renderTemplate} (mustache strings) and
+ * the email-template renderer (TipTap mention nodes) call, so the two
+ * surfaces resolve variables identically. An expression that reads to
+ * nothing returns the empty string — callers that need to *flag*
+ * missing variables (email templates) treat an empty result as
+ * "unresolved" unless a `default:` filter supplied a fallback.
+ *
+ * @param expr - The inside of a `{{ }}`, e.g. `event.date | friendly`.
+ */
+export function resolveVariable(expr: string, ctx: RunContext): string {
+  const [pathPart, ...filterParts] = expr.split('|').map((s) => s.trim())
+  if (!pathPart) return ''
+  let value = readPath(pathPart, ctx)
+  for (const filter of filterParts) {
+    const [name, arg] = filter.split(':').map((s) => s.trim())
+    const fn = FILTERS[name ?? '']
+    if (fn) value = fn(value, arg)
+  }
+  return value
+}
+
+/**
  * Render a template string against a run context.
  *
  * Pure function - no I/O, no Supabase reads. The context is
@@ -60,17 +85,48 @@ const FILTERS: Record<string, FilterFn> = {
  */
 export function renderTemplate(input: string, ctx: RunContext): string {
   if (!input) return ''
-  return input.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, expr: string) => {
-    const [pathPart, ...filterParts] = expr.split('|').map((s) => s.trim())
-    if (!pathPart) return ''
-    let value = readPath(pathPart, ctx)
-    for (const filter of filterParts) {
-      const [name, arg] = filter.split(':').map((s) => s.trim())
-      const fn = FILTERS[name ?? '']
-      if (fn) value = fn(value, arg)
+  return input.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_match, expr: string) =>
+    resolveVariable(expr, ctx),
+  )
+}
+
+/**
+ * Extract the raw variable expressions from a mustache string, in
+ * document order (duplicates preserved). Used by the email-template
+ * missing-variable detector to scan a subject line.
+ *
+ * @param input - A mustache string, e.g. `Hi {{ couple.primary_name }}`.
+ * @returns The inner expressions, e.g. `['couple.primary_name']`.
+ */
+export function extractTokens(input: string): string[] {
+  if (!input) return []
+  const out: string[] = []
+  for (const match of input.matchAll(/\{\{\s*([^}]+?)\s*\}\}/g)) {
+    const expr = match[1]?.trim()
+    if (expr) out.push(expr)
+  }
+  return out
+}
+
+/**
+ * Human label for a variable path, used in "Missing: …" warnings and
+ * the editor's missing-variable highlights. Prefers the
+ * {@link VARIABLE_CATALOGUE} label; falls back to a title-cased key.
+ *
+ * @param expr - A variable path or full expression (filters ignored),
+ *   e.g. `couple.primary_name` or `event.date | friendly`.
+ */
+export function variableLabel(expr: string): string {
+  const base = (expr.split('|')[0] ?? expr).trim()
+  for (const group of VARIABLE_CATALOGUE) {
+    for (const v of group.variables) {
+      const token = v.token.replace(/[{}]/g, '')
+      const tokenBase = (token.split('|')[0] ?? token).trim()
+      if (tokenBase === base) return v.label
     }
-    return value
-  })
+  }
+  const key = base.split('.').slice(1).join(' ') || base
+  return key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 }
 
 function readPath(path: string, ctx: RunContext): string {
@@ -163,9 +219,37 @@ function readMc(mc: McSnapshot, key: string): string {
       return mc.email
     case 'phone':
       return mc.phone ?? ''
+    case 'signature':
+      // The signature is rich TipTap JSON. The string resolver (subjects,
+      // SMS, plain renderTemplate) gets its flattened text; the email-body
+      // renderer special-cases the mention to inject formatted HTML.
+      return flattenSignatureText(mc.signature)
     default:
       return ''
   }
+}
+
+/** A minimal structural view of a TipTap node, enough to read its text. */
+interface TextishNode {
+  type?: string
+  text?: string
+  content?: TextishNode[]
+}
+
+/**
+ * Flatten a TipTap signature doc to plain text: inline text concatenated
+ * within each block, blocks joined by a single space. Returns an empty
+ * string for a null / empty doc.
+ */
+function flattenSignatureText(doc: TextishNode | null | undefined): string {
+  if (!doc?.content) return ''
+  const blockText = (node: TextishNode): string =>
+    node.type === 'text' ? node.text ?? '' : (node.content ?? []).map(blockText).join('')
+  return doc.content
+    .map(blockText)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function readPortal(ctx: RunContext, key: string): string {
@@ -266,6 +350,7 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
       { token: '{{mc.business_name}}', label: 'Your business name', example: 'Acme MC Co' },
       { token: '{{mc.contact_name}}', label: 'Your name', example: 'Charlie Park' },
       { token: '{{mc.email}}', label: 'Your email', example: 'hello@acmemc.com' },
+      { token: '{{mc.signature}}', label: 'Your email signature', example: 'Cheers, Charlie' },
     ],
   },
   {

@@ -103,6 +103,8 @@ export function CoupleAutomations({ coupleId }: Props) {
       />
       {runs.length === 0 ? (
         <Empty
+          size="sm"
+          className="min-h-[36vh]"
           icon={Sparkles}
           title="No automations have run for this couple yet"
           description="Run one now, or wait for an active automation to match this couple."

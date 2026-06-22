@@ -16,11 +16,12 @@
 import { ChevronRight, Repeat2, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { EmailTemplatePicker } from '@/app/(dashboard)/templates/email-template-picker'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { actionRegistry } from '@/lib/automations/actions'
+import { actionUi } from '@/lib/automations/actions/ui'
 import {
   ANY_SENTINEL,
   CONTACT_CATEGORIES,
@@ -183,8 +184,8 @@ function actionDescription(action: AutomationActionRow): string {
   if (action.type === 'wait' || action.type === 'branch' || action.type === 'stop' || action.type === 'approval' || action.type === 'sub_flow') {
     return ''
   }
-  const spec = actionRegistry[action.type as ActionType]
-  return spec?.ui.description ?? ''
+  const ui = actionUi[action.type as ActionType]
+  return ui?.description ?? ''
 }
 
 /* ─── Configure tab ───────────────────────────────────────────── */
@@ -1262,21 +1263,36 @@ function SendEmailForm({
   recipients,
   updateRecipients,
 }: ConfigProps & { recipients?: RecipientConfig; updateRecipients: (r: RecipientConfig) => void }) {
+  const templateId = (config['templateId'] as string) ?? ''
   return (
     <>
       <RecipientsField recipients={recipients} update={updateRecipients} />
-      <TextInput
-        label="Subject"
-        value={(config['subject'] as string) ?? ''}
-        onChange={(v) => updateConfig({ subject: v })}
+      <EmailTemplatePicker
+        value={templateId}
+        onChange={(id) => updateConfig({ templateId: id || undefined })}
       />
-      <TextArea
-        label="Body"
-        rows={8}
-        value={(config['body'] as string) ?? ''}
-        onChange={(v) => updateConfig({ body: v })}
-      />
-      <InlineVariableHint />
+      {templateId ? (
+        <p className="text-xs text-text-muted">
+          This email uses a saved template — edit its subject and body in Templates. If a variable
+          can&apos;t be filled for a couple, the run pauses and you&apos;ll be alerted to fix &amp;
+          retry.
+        </p>
+      ) : (
+        <>
+          <TextInput
+            label="Subject"
+            value={(config['subject'] as string) ?? ''}
+            onChange={(v) => updateConfig({ subject: v })}
+          />
+          <TextArea
+            label="Body"
+            rows={8}
+            value={(config['body'] as string) ?? ''}
+            onChange={(v) => updateConfig({ body: v })}
+          />
+          <InlineVariableHint />
+        </>
+      )}
       <CheckboxField
         label="Wrap with Zebri-branded HTML shell"
         checked={config['wrap'] !== false}
@@ -1975,8 +1991,8 @@ function actionHeaderLabel(action: AutomationActionRow): string {
   if (action.type === 'wait' || action.type === 'branch' || action.type === 'stop' || action.type === 'approval' || action.type === 'sub_flow') {
     return action.type[0]!.toUpperCase() + action.type.slice(1)
   }
-  const spec = actionRegistry[action.type as ActionType]
-  return spec?.ui.label ?? 'Action'
+  const ui = actionUi[action.type as ActionType]
+  return ui?.label ?? 'Action'
 }
 
 function actionSubLabel(action: AutomationActionRow): string {

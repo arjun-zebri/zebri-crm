@@ -48,6 +48,26 @@ rows; another tenant cannot SELECT/UPDATE/DELETE them; anon cannot read.
 Prereq: `supabase start` (and `supabase db reset` to (re)apply migrations +
 seed). The integration project runs serially in one process (shared DB).
 
+### Public Page / connect-your-own-mailbox (OAuth)
+
+- Unit: `tests/unit/lib/crypto/secret-box.test.ts` (AES-GCM round-trip +
+  tamper rejection); `tests/unit/lib/oauth/tokens.test.ts` (code exchange,
+  refresh, userinfo — `fetch` mocked); `tests/unit/lib/settings/public-page.test.ts`
+  (subdomain helpers + `from`-header composer);
+  `tests/unit/lib/email/sender-identity.test.ts` (`resolveSender` fail-safe
+  — OAuth only when connected + tokens usable, refresh-on-expiry, Resend
+  otherwise, never throws); `tests/unit/lib/email/dispatch.test.ts`
+  (transport routing — Gmail API / Graph / Resend, with `fetch` + Resend
+  mocked).
+- Integration: `tests/integration/rls/user-public-settings.test.ts`
+  (cross-tenant denial incl. the encrypted OAuth tokens, + global
+  subdomain uniqueness via 23505).
+- E2E for the connect flow is **deferred**: it needs real Google/Azure
+  OAuth apps and `npm run dev` targets the **remote** Supabase (no table
+  until the migration deploys via CI). Assert UI states (mode toggle,
+  connected summary, persisted subdomain) from seeded rows once the
+  migration is on the e2e DB.
+
 ### Regenerating DB types
 After any migration: `supabase gen types typescript --local --schema public > types/database.ts`
 

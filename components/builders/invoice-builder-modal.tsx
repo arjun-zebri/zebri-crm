@@ -55,7 +55,9 @@ import { PaymentSchedule } from '@/components/builders/parts/payment-schedule';
 import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
 import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { TaxControl } from '@/components/builders/parts/tax-control';
+import { TemplatePicker } from '@/components/builders/parts/template-picker';
 import { TotalsPanel } from '@/components/builders/parts/totals-panel';
+import { useApplySources } from '@/components/builders/parts/use-apply-sources';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
@@ -184,6 +186,9 @@ export function InvoiceBuilderModal({
     },
   });
 
+  // Quote templates + packages, offered as "start from" sources.
+  const { data: applySources } = useApplySources();
+
   const { data: couples } = useQuery({
     queryKey: ['all-couples-for-invoice'],
     queryFn: async () => {
@@ -204,6 +209,7 @@ export function InvoiceBuilderModal({
   const isOverdue = rawStatus === 'sent' && isPastDue(dueDate);
   const status = isOverdue ? 'overdue' : rawStatus;
   const canEdit = !['paid', 'cancelled'].includes(rawStatus);
+  const templateOptions = applySources?.options ?? [];
   const hasDepositSchedule = depositEnabled && !!depositDueDate;
   const shareEnabled = invoice?.share_token_enabled ?? false;
   const shareUrl =
@@ -325,6 +331,22 @@ export function InvoiceBuilderModal({
 
   function reorderItems(next: LineItem[]) {
     setItems(next);
+    setDirty(true);
+  }
+
+  // Apply a saved set of line items (a quote template or a package).
+  function applyTemplate(sourceId: string) {
+    const source = applySources?.applyMap[sourceId];
+    if (!source) return;
+    setItems(
+      source.items.map((item, idx) => ({
+        id: `new-${crypto.randomUUID()}`,
+        description: item.description,
+        amount: item.amount,
+        position: idx,
+      })),
+    );
+    if (source.notes && !notes) setNotes(source.notes);
     setDirty(true);
   }
 
@@ -690,6 +712,25 @@ export function InvoiceBuilderModal({
             onRemove={removeItem}
             onReorder={reorderItems}
             onAdd={addItem}
+            headerAccessory={
+              items.length === 0 && canEdit ? (
+                <TemplatePicker
+                  variant="empty-state"
+                  templates={templateOptions}
+                  canApply={canEdit}
+                  onApply={applyTemplate}
+                />
+              ) : items.length > 0 && canEdit && templateOptions.length > 0 ? (
+                <div className="flex justify-end">
+                  <TemplatePicker
+                    variant="inline"
+                    templates={templateOptions}
+                    canApply={canEdit}
+                    onApply={applyTemplate}
+                  />
+                </div>
+              ) : null
+            }
           />
         </div>
 

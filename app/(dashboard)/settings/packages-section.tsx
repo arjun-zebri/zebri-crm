@@ -1,7 +1,0 @@
-'use client'
-
-import { QuoteTemplateManager } from './quote-template-manager'
-
-export function PackagesSection() {
-  return <QuoteTemplateManager />
-}

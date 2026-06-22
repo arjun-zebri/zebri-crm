@@ -41,7 +41,10 @@ import { execSync } from 'node:child_process';
 // couple-overview rewrite). None of the new errors are in A1
 // code; all came in via the merge. Re-anchored again at 89.
 // Burn-down target: back to 74.
-const ERROR_BUDGET = 89;
+// Templates email-consistency PR (restyle of packages/quotes/invoices/
+// contracts tabs to primitives + tokens, plus the bundled settings/
+// couples tokenization): 89 → 80.
+const ERROR_BUDGET = 80;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -90,7 +93,10 @@ const ERROR_BUDGET = 89;
 // Portal sections polish (design system tokenization + UX improvements)
 // across 8 portal sections + nav: fixed import-order + unused imports
 // during tokenization → 468 → 461.
-const WARNING_BUDGET = 461;
+// Templates email-consistency PR (primitives + token swaps across the
+// four manager tabs, plus the bundled settings/couples tokenization):
+// 461 → 442.
+const WARNING_BUDGET = 442;
 
 function runEslintJson() {
   try {

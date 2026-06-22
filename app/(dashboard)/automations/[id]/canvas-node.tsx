@@ -24,7 +24,7 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { Clock, GitBranch, Pause, Plus, Sparkles, Square, type LucideIcon } from 'lucide-react'
 
-import { actionRegistry } from '@/lib/automations/actions'
+import { actionUi } from '@/lib/automations/actions/ui'
 import { triggerRegistry } from '@/lib/automations/triggers'
 import type { ActionType, AutomationActionRow, TriggerType } from '@/types/automations'
 
@@ -204,12 +204,12 @@ function actionMeta(action: AutomationActionRow): ActionMeta {
     case 'sub_flow':
       return { icon: Sparkles, title: 'Run automation', subtitle: 'Trigger another automation' }
     default: {
-      // For registered actions, look up in the registry
-      const spec = actionRegistry[action.type as ActionType]
+      // For registered actions, look up the client-safe UI catalogue.
+      const ui = actionUi[action.type as ActionType]
       return {
-        icon: getLucideIcon(spec?.ui.icon),
-        title: spec?.ui.label ?? 'Action',
-        subtitle: spec?.ui.description ?? '',
+        icon: getLucideIcon(ui?.icon),
+        title: ui?.label ?? 'Action',
+        subtitle: ui?.description ?? '',
       }
     }
   }

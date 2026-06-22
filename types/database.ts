@@ -552,6 +552,7 @@ export type Database = {
           description: string | null
           id: string
           is_default: boolean
+          is_starter: boolean
           name: string
           position: number
           updated_at: string
@@ -563,6 +564,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_default?: boolean
+          is_starter?: boolean
           name: string
           position?: number
           updated_at?: string
@@ -574,6 +576,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_default?: boolean
+          is_starter?: boolean
           name?: string
           position?: number
           updated_at?: string
@@ -763,6 +766,63 @@ export type Database = {
           },
         ]
       }
+      couple_emails: {
+        Row: {
+          couple_id: string
+          created_at: string
+          id: string
+          sent_at: string
+          source: string
+          status: string
+          subject: string
+          template_id: string | null
+          template_name: string | null
+          to_email: string
+          user_id: string
+        }
+        Insert: {
+          couple_id: string
+          created_at?: string
+          id?: string
+          sent_at?: string
+          source?: string
+          status?: string
+          subject: string
+          template_id?: string | null
+          template_name?: string | null
+          to_email: string
+          user_id: string
+        }
+        Update: {
+          couple_id?: string
+          created_at?: string
+          id?: string
+          sent_at?: string
+          source?: string
+          status?: string
+          subject?: string
+          template_id?: string | null
+          template_name?: string | null
+          to_email?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_emails_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_emails_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       couple_statuses: {
         Row: {
           color: string
@@ -862,6 +922,89 @@ export type Database = {
           status?: string
           user_id?: string
           venue?: string | null
+        }
+        Relationships: []
+      }
+      email_template_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number
+          id: string
+          mime_type: string
+          storage_path: string
+          template_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size: number
+          id?: string
+          mime_type: string
+          storage_path: string
+          template_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          id?: string
+          mime_type?: string
+          storage_path?: string
+          template_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_template_files_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          content: Json
+          created_at: string
+          description: string | null
+          id: string
+          is_starter: boolean
+          lifecycle_stage: string | null
+          name: string
+          position: number
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_starter?: boolean
+          lifecycle_stage?: string | null
+          name: string
+          position?: number
+          subject?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_starter?: boolean
+          lifecycle_stage?: string | null
+          name?: string
+          position?: number
+          subject?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1027,6 +1170,80 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      invoice_template_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          invoice_template_id: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          invoice_template_id: string
+          position: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_template_id?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_template_items_template_id_fkey"
+            columns: ["invoice_template_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_starter: boolean
+          name: string
+          notes: string | null
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_starter?: boolean
+          name: string
+          notes?: string | null
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_starter?: boolean
+          name?: string
+          notes?: string | null
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       invoices: {
         Row: {
@@ -1357,6 +1574,80 @@ export type Database = {
           },
         ]
       }
+      package_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          package_id: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          package_id: string
+          position: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          package_id?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packages: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_starter: boolean
+          name: string
+          notes: string | null
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_starter?: boolean
+          name: string
+          notes?: string | null
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_starter?: boolean
+          name?: string
+          notes?: string | null
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       quote_template_items: {
         Row: {
           amount: number
@@ -1400,6 +1691,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_starter: boolean
           name: string
           notes: string | null
           position: number
@@ -1410,6 +1702,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_starter?: boolean
           name: string
           notes?: string | null
           position?: number
@@ -1420,6 +1713,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_starter?: boolean
           name?: string
           notes?: string | null
           position?: number
@@ -1864,6 +2158,57 @@ export type Database = {
           brand_kits?: Json
           branding_blocks?: Json | null
           portal_sections?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_public_settings: {
+        Row: {
+          created_at: string
+          email_mode: string
+          oauth_access_token_encrypted: string | null
+          oauth_connected_at: string | null
+          oauth_email: string | null
+          oauth_from_name: string | null
+          oauth_last_error: string | null
+          oauth_provider: string | null
+          oauth_refresh_token_encrypted: string | null
+          oauth_status: string
+          oauth_token_expires_at: string | null
+          subdomain: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_mode?: string
+          oauth_access_token_encrypted?: string | null
+          oauth_connected_at?: string | null
+          oauth_email?: string | null
+          oauth_from_name?: string | null
+          oauth_last_error?: string | null
+          oauth_provider?: string | null
+          oauth_refresh_token_encrypted?: string | null
+          oauth_status?: string
+          oauth_token_expires_at?: string | null
+          subdomain?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_mode?: string
+          oauth_access_token_encrypted?: string | null
+          oauth_connected_at?: string | null
+          oauth_email?: string | null
+          oauth_from_name?: string | null
+          oauth_last_error?: string | null
+          oauth_provider?: string | null
+          oauth_refresh_token_encrypted?: string | null
+          oauth_status?: string
+          oauth_token_expires_at?: string | null
+          subdomain?: string | null
           updated_at?: string
           user_id?: string
         }

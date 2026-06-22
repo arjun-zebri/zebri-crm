@@ -16,17 +16,17 @@
  * @module lib/automations/actions/documents
  */
 
-import { Resend } from 'resend'
 import { z } from 'zod'
 
 import { sendContractEmail, sendInvoiceEmail, sendQuoteEmail } from '@/lib/email'
+import { dispatchEmail } from '@/lib/email/dispatch'
+import { resolveSender, type ResolvedSender } from '@/lib/email/sender-identity'
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { ActionType, RunContext } from '@/types/automations'
 
 import type { ActionSpec } from './index'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
-const FROM = 'Zebri <noreply@app.zebri.com.au>'
 
 /**
  * Best-effort send of the run-sheet link. Returns true if it went out.
@@ -38,21 +38,17 @@ async function emailRunSheetLink(
   to: string[],
   coupleName: string,
   url: string,
+  sender: ResolvedSender,
 ): Promise<boolean> {
-  const key = process.env.RESEND_API_KEY
-  if (!key || to.length === 0) return false
-  try {
-    const resend = new Resend(key)
-    await resend.emails.send({
-      from: FROM,
-      to,
-      subject: `Run sheet — ${coupleName}`,
-      html: `<p>Here's the run sheet for ${coupleName}.</p><p><a href="${url}">Open the run sheet</a></p><p>${url}</p>`,
-    })
-    return true
-  } catch {
-    return false
-  }
+  if (to.length === 0) return false
+  // Best-effort: dispatchEmail never throws and returns ok:false when the
+  // transport isn't configured (e.g. no RESEND_API_KEY in integration tests).
+  const res = await dispatchEmail(sender, {
+    to,
+    subject: `Run sheet — ${coupleName}`,
+    html: `<p>Here's the run sheet for ${coupleName}.</p><p><a href="${url}">Open the run sheet</a></p><p>${url}</p>`,
+  })
+  return res.ok
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -93,6 +89,7 @@ const sendQuote: ActionSpec<z.infer<typeof sendQuoteSchema>> = {
       quoteTitle: quote.title,
       shareUrl: url,
       mcBusinessName: ctx.mc.businessName,
+      sender: await resolveSender(supabase, ctx.userId, ctx.mc.businessName),
     })
     return { kind: 'ok', output: { quote_id: quote.id, quote_link: url } }
   },
@@ -134,6 +131,7 @@ const sendContract: ActionSpec<z.infer<typeof sendContractSchema>> = {
       shareUrl: url,
       mcBusinessName: ctx.mc.businessName,
       expiresAt: contract.expires_at ?? null,
+      sender: await resolveSender(supabase, ctx.userId, ctx.mc.businessName),
     })
     return { kind: 'ok', output: { contract_id: contract.id, contract_link: url } }
   },
@@ -175,6 +173,7 @@ const sendInvoice: ActionSpec<z.infer<typeof sendInvoiceSchema>> = {
       dueDate: invoice.due_date,
       shareUrl: url,
       mcBusinessName: ctx.mc.businessName,
+      sender: await resolveSender(supabase, ctx.userId, ctx.mc.businessName),
     })
     return { kind: 'ok', output: { invoice_id: invoice.id, invoice_link: url } }
   },
@@ -271,7 +270,8 @@ const generateRunSheetPdf: ActionSpec<z.infer<typeof generateRunSheetSchema>> = 
       ctx.mc.email,
       ...(config.sendToCouple && ctx.couple.email ? [ctx.couple.email] : []),
     ].filter(Boolean)
-    const emailed = await emailRunSheetLink(recipients, ctx.couple.name, url)
+    const sender = await resolveSender(supabase, ctx.userId, ctx.mc.businessName)
+    const emailed = await emailRunSheetLink(recipients, ctx.couple.name, url, sender)
 
     return { kind: 'ok', output: { run_sheet_link: url, event_id: ev.id, emailed } }
   },

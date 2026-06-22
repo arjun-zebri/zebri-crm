@@ -107,7 +107,9 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 h-full ${isLoading ? 'hidden' : ''}`}>
       {/* Column 1: General Info */}
       <div className="flex flex-col">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">General</h3>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900">General</h3>
+        </div>
 
         {/* Primary + Secondary partner contacts. Six inline-editable
             rows in total, grouped under quiet section subheaders so

@@ -17,6 +17,9 @@
   --surface: #ffffff;
   --surface-muted: #fafafa;
   --surface-emphasis: #f3f4f6;
+  /* Elevated card / popover surface. Opaque so floating surfaces
+     (popovers, preview panes) never let content bleed through. */
+  --card: #ffffff;
 
   /* Text */
   --text: #111827;        /* gray-900 */
@@ -56,6 +59,7 @@
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-surface-emphasis: var(--surface-emphasis);
+  --color-card: var(--card);
 
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);

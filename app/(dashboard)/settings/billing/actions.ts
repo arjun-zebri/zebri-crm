@@ -2,7 +2,7 @@
  * Billing tab server actions.
  *
  * Plan changes (upgrade / downgrade) hand off to Stripe's hosted
- * Customer Portal in the `subscription_update_confirm` flow — Stripe
+ * Customer Portal in the `subscription_update_confirm` flow, Stripe
  * shows the user a confirmation page with the prorated amount, the
  * user accepts, and Stripe redirects back. Cancel / resume happen
  * in-place via the Stripe API and also update `app_metadata`
@@ -58,7 +58,7 @@ export interface BillingRedirectResult {
  * Limiters live at module scope so the bucket persists across
  * action invocations within the same Node process (Vercel keeps
  * a function warm for ~15 min). Cold-start drops the bucket;
- * that's acceptable — the limiter exists to stop accidental
+ * that's acceptable, the limiter exists to stop accidental
  * loops + naive abuse, not determined attackers (who'd hit the
  * Stripe API rate-limit before our cap mattered anyway).
  */
@@ -105,7 +105,7 @@ function priceFor(plan: 'pro' | 'max'): string | undefined {
  * or credit issued (for downgrades) per the portal's proration
  * settings, then Stripe redirects back to `/settings?tab=billing`.
  *
- * Use this for both upgrade (Pro → Max) and downgrade (Max → Pro) —
+ * Use this for both upgrade (Pro → Max) and downgrade (Max → Pro):
  * the portal handles both transparently.
  */
 export async function createPlanChangeSessionAction(
@@ -166,7 +166,7 @@ export async function createPlanChangeSessionAction(
  * Schedule the user's subscription for cancellation at the end of the
  * current billing period. Writes `cancel_at_period_end` and
  * `subscription_end` to `app_metadata` synchronously from Stripe's
- * response — the UI doesn't have to wait on the webhook to render
+ * response, the UI doesn't have to wait on the webhook to render
  * the grace-period end date.
  *
  * The webhook still fires asynchronously and re-writes the same

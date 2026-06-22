@@ -1,5 +1,5 @@
 /**
- * Current-plan surface — no outer border, document-style layout.
+ * Current-plan surface: no outer border, document-style layout.
  *
  * Refined header: plan name on the left, inline price on the right.
  * Confident state pill below the name (green for active, amber for
@@ -112,13 +112,13 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
       setBusy(null);
       return;
     }
-    toast('Subscription resumed — page will refresh shortly.');
+    toast('Subscription resumed, page will refresh shortly.');
     props.onAfterAction();
   }
 
   return (
     <div>
-      {/* Header — plan name + state pill inline + price right-aligned */}
+      {/* Header: plan name + state pill inline + price right-aligned */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -151,7 +151,7 @@ export function CurrentPlanCard(props: CurrentPlanCardProps) {
         </div>
       ) : null}
 
-      {/* Prose feature summary — replaces the previous 2-col checklist */}
+      {/* Prose feature summary: replaces the previous 2-col checklist */}
       <p className="mt-6 max-w-2xl text-body text-text-muted">{PLAN_SUMMARY[planId]}</p>
 
       {/* Starter usage */}
