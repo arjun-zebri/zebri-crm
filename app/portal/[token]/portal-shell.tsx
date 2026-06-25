@@ -84,7 +84,12 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
           />
         )}
         {activeSection === 'timeline' && (
-          <TimelineSection token={token} initialItems={initialData.timeline_items} hasEvent={!!initialData.event} />
+          <TimelineSection
+            token={token}
+            initialItems={initialData.timeline_items}
+            events={initialData.events}
+            hasEvent={!!initialData.event}
+          />
         )}
         {activeSection === 'contacts' && (
           <ContactsSection token={token} initialContacts={initialData.contacts} initialPeople={initialData.people} />

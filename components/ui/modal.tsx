@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Tracks how many Modal instances are currently open so only the topmost
 // one responds to Escape - prevents nested modals from closing their parent.
@@ -72,6 +72,19 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
+  // Only close on a backdrop click whose press ALSO started on the
+  // backdrop. Without this, dragging to select text inside an input and
+  // releasing outside it makes the browser fire `click` on the nearest
+  // common ancestor (this wrapper), which would otherwise close the modal.
+  const pressedOnBackdrop = useRef(false);
+  const handleBackdropMouseDown = (e: React.MouseEvent) => {
+    pressedOnBackdrop.current = e.target === e.currentTarget;
+  };
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && pressedOnBackdrop.current) onClose();
+    pressedOnBackdrop.current = false;
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -84,11 +97,13 @@ export function Modal({
           regression caught during Phase 2B UI verification). */}
       <div
         className={`fixed inset-0 h-screen bg-black/40 animate-fade-in ${nested ? 'z-[75]' : 'z-50'}`}
-        onClick={onClose}
+        onMouseDown={handleBackdropMouseDown}
+        onClick={handleBackdropClick}
       />
       <div
         className={`fixed inset-0 flex items-center justify-center p-4 ${nested ? 'z-[80]' : 'z-[60]'}`}
-        onClick={onClose}
+        onMouseDown={handleBackdropMouseDown}
+        onClick={handleBackdropClick}
       >
         <div
           className={`bg-white rounded-2xl border border-border w-full flex flex-col overflow-hidden animate-modal-in ${SIZE_CLASS[size]} ${

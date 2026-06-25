@@ -53,10 +53,14 @@ export function useCouplesView(couples: Couple[]): UseCouplesViewResult {
   }, [couples, search, statusFilter]);
 
   const filteredCouples = useMemo(() => {
+    // The `event_date` sort targets the couple's resolved next event
+    // (`next_event_date`), since the legacy couple-level `event_date`
+    // column is no longer populated — the schedule lives in `events`.
+    const sortKey = sortField === 'event_date' ? 'next_event_date' : sortField;
     return [...baseFiltered].sort((a, b) => {
       const dir = sortDirection === 'asc' ? 1 : -1;
-      const valA = a[sortField] ?? '';
-      const valB = b[sortField] ?? '';
+      const valA = a[sortKey] ?? '';
+      const valB = b[sortKey] ?? '';
       if (valA < valB) return -1 * dir;
       if (valA > valB) return 1 * dir;
       return 0;

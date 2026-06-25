@@ -20,13 +20,17 @@ import { createClient } from '@/lib/supabase/client';
 import { Couple } from '@/types/couple';
 
 import {
+  bulkCreateCouplesAction,
   bulkDeleteCouplesAction,
   bulkMoveCouplesAction,
   bulkUpdateCouplesStatusAction,
   createCoupleAction,
   deleteCoupleAction,
   updateCoupleAction,
+  upsertCoupleEventDateAction,
+  type BulkImportSummary,
   type CoupleInput,
+  type UpsertCoupleEventDateInput,
 } from './actions';
 
 export class StarterLimitError extends Error {
@@ -50,6 +54,30 @@ function unwrap<T>(result: { ok: true; data: T } | { ok: false; error: string; c
   throw new Error(result.error);
 }
 
+/** Minimal shape pulled from the embedded `events` relation — only the
+ *  fields the list needs to resolve a couple's next event. */
+type EmbeddedEvent = { date: string | null; venue: string | null };
+
+/**
+ * Resolve a couple's "next event" for list display: the soonest event
+ * dated today-or-later, falling back to the most recent past event when
+ * none are upcoming. Returns `null` when the couple has no dated events.
+ */
+function pickNextEvent(events: EmbeddedEvent[]): EmbeddedEvent | null {
+  const dated = events.filter((e) => e.date);
+  if (dated.length === 0) return null;
+  // Lexicographic sort is correct for ISO `YYYY-MM-DD` date strings.
+  const sorted = [...dated].sort((a, b) =>
+    a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : 0,
+  );
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = sorted.find((e) => e.date! >= today);
+  // `sorted` is non-empty here (guarded above), but indexed access is
+  // `T | undefined` under strict — fall back to null to satisfy the
+  // `EmbeddedEvent | null` return contract.
+  return upcoming ?? sorted[sorted.length - 1] ?? null;
+}
+
 export function useCouples() {
   const supabase = createClient();
 
@@ -59,14 +87,25 @@ export function useCouples() {
       const { data: user, error: userError } = await supabase.auth.getUser();
       if (userError || !user.user) throw new Error('Not authenticated');
 
+      // Embed the couple-owned `events` so the list can show the next
+      // event's date + venue. RLS scopes the embedded rows automatically.
       const { data, error } = await supabase
         .from('couples')
-        .select('*')
+        .select('*, events(date, venue)')
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data as Couple[]) || [];
+
+      const rows = (data as (Couple & { events?: EmbeddedEvent[] })[]) || [];
+      return rows.map(({ events, ...couple }) => {
+        const next = pickNextEvent(events ?? []);
+        return {
+          ...couple,
+          next_event_date: next?.date ?? null,
+          next_event_venue: next?.venue ?? null,
+        } satisfies Couple;
+      });
     },
   });
 
@@ -78,6 +117,38 @@ export function useCreateCouple() {
 
   return useMutation({
     mutationFn: async (couple: CoupleInput) => unwrap(await createCoupleAction(couple)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couples'] });
+    },
+  });
+}
+
+/** Bulk-create couples from a CSV import. Returns the import summary
+ *  (created / skipped / invalid) so the caller can message the result.
+ *  Not optimistic — the row count is unknown until the server slices
+ *  for the plan cap, so we just invalidate on success. */
+export function useBulkCreateCouples() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (rows: CoupleInput[]): Promise<BulkImportSummary> =>
+      unwrap(await bulkCreateCouplesAction(rows)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['couples'] });
+    },
+  });
+}
+
+/** Set a couple's wedding date by creating/updating its real `events`
+ *  row. The couple-level `event_date` column is dead, so this is what
+ *  actually surfaces the date on the calendar + list. */
+export function useUpsertCoupleEventDate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: UpsertCoupleEventDateInput) => {
+      unwrap(await upsertCoupleEventDateAction(input));
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['couples'] });
     },

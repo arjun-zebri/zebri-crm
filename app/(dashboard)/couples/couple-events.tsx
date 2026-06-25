@@ -313,6 +313,9 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
               duration_min: 30,
               position: 1000,
               pending_review: false,
+              // MC-only planning cue (golden-hour photos). Kept off the
+              // couple portal and vendor run sheet.
+              internal: true,
             })
           }
         } catch {

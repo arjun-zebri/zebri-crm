@@ -32,10 +32,12 @@ import { computeKanbanUpdates } from '@/lib/couples/kanban-positions';
 import { downloadCsv } from '@/lib/utils/csv';
 import { Couple, ViewMode } from '@/types/couple';
 
+import type { CoupleInput } from './actions';
 import { BulkActionBar } from './bulk-action-bar';
-import { CoupleModal } from './couple-modal';
+import { CoupleModal, type CoupleEventInput } from './couple-modal';
 import { CoupleProfile } from './couple-profile';
 import { CouplesHeader } from './couples-header';
+import { CouplesImportModal } from './couples-import-modal';
 import { CouplesKanban } from './couples-kanban';
 import { CouplesList } from './couples-list';
 import { StarterCapLockModal } from './starter-cap-lock-modal';
@@ -50,6 +52,8 @@ import {
   useBulkMoveCouples,
   useBulkUpdateCouplesStatus,
   useBulkDeleteCouples,
+  useBulkCreateCouples,
+  useUpsertCoupleEventDate,
   StarterLimitError,
 } from './use-couples';
 import { useCouplesShortcuts } from './use-couples-shortcuts';
@@ -70,6 +74,8 @@ function CouplesPageContent() {
   const bulkMoveCouples = useBulkMoveCouples();
   const bulkUpdateStatus = useBulkUpdateCouplesStatus();
   const bulkDeleteCouples = useBulkDeleteCouples();
+  const bulkCreateCouples = useBulkCreateCouples();
+  const upsertEventDate = useUpsertCoupleEventDate();
 
   const {
     search,
@@ -84,6 +90,7 @@ function CouplesPageContent() {
   } = useCouplesView(couples);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -153,6 +160,7 @@ function CouplesPageContent() {
 
   const handleAddCouple = async (
     data: Omit<Couple, 'id' | 'user_id' | 'created_at'> & { id?: string },
+    event: CoupleEventInput,
   ) => {
     const positionsInStatus = couples
       .filter((c) => c.status === data.status)
@@ -160,7 +168,24 @@ function CouplesPageContent() {
     const nextPosition =
       positionsInStatus.length > 0 ? Math.max(...positionsInStatus) + 1 : 0;
     try {
-      await createCouple.mutateAsync({ ...data, kanban_position: nextPosition });
+      const created = await createCouple.mutateAsync({
+        ...data,
+        kanban_position: nextPosition,
+      });
+      // A wedding date entered in the modal becomes the couple's first
+      // real event with its venue (the legacy `event_date` / `venue`
+      // columns aren't displayed).
+      if (event.date) {
+        await upsertEventDate.mutateAsync({
+          coupleId: created.id,
+          date: event.date,
+          venue: event.venue || null,
+          venue_phone: event.venue_phone,
+          venue_website: event.venue_website,
+          venue_lat: event.venue_lat,
+          venue_lng: event.venue_lng,
+        });
+      }
       toast('Couple added');
       setAddModalOpen(false);
     } catch (e) {
@@ -170,6 +195,29 @@ function CouplesPageContent() {
         return;
       }
       toast(e instanceof Error ? e.message : 'Failed to add couple', 'error');
+    }
+  };
+
+  // CSV import: the modal hands us the validated, status-resolved
+  // rows; we own the mutation + result toast + cap surface. The server
+  // action slices to the plan quota, so a Starter overflow comes back
+  // as `skippedForLimit` rather than an error — we then surface the
+  // existing upgrade modal for the rows that didn't fit.
+  const handleImportCouples = async (rows: CoupleInput[]) => {
+    try {
+      const summary = await bulkCreateCouples.mutateAsync(rows);
+      setImportModalOpen(false);
+      const parts = [
+        `${summary.created} ${summary.created === 1 ? 'couple' : 'couples'} imported`,
+      ];
+      if (summary.skippedForLimit > 0)
+        parts.push(`${summary.skippedForLimit} skipped (couple limit)`);
+      if (summary.invalidRows.length > 0)
+        parts.push(`${summary.invalidRows.length} invalid`);
+      toast(parts.join(', '));
+      if (summary.skippedForLimit > 0) setCapLockOpen(true);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Failed to import couples', 'error');
     }
   };
 
@@ -272,6 +320,7 @@ function CouplesPageContent() {
           couples={couples}
           statuses={statuses}
           onAddClick={() => tryOpenAdd()}
+          onImportClick={() => setImportModalOpen(true)}
           onManageStatuses={() => setStatusesOpen(true)}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
@@ -331,6 +380,20 @@ function CouplesPageContent() {
         statuses={statuses}
         defaultStatus={defaultStatus}
         loading={createCouple.isPending}
+      />
+
+      <CouplesImportModal
+        key={importModalOpen ? 'import-open' : 'import-closed'}
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        statuses={statuses}
+        existing={couples.map((c) => ({
+          name: c.name,
+          primary_email: c.primary_email ?? null,
+        }))}
+        defaultStatusSlug={statuses[0]?.slug ?? 'new'}
+        importing={bulkCreateCouples.isPending}
+        onImport={handleImportCouples}
       />
 
       <BulkActionBar

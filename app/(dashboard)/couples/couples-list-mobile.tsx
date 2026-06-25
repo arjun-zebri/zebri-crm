@@ -52,8 +52,8 @@ export function CouplesListMobile({
               status?.name ||
               couple.status.charAt(0).toUpperCase() + couple.status.slice(1);
             const secondary = [
-              couple.event_date && formatDate(couple.event_date),
-              couple.venue,
+              couple.next_event_date && formatDate(couple.next_event_date),
+              couple.next_event_venue,
             ]
               .filter(Boolean)
               .join(' · ');

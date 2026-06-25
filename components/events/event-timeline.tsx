@@ -41,14 +41,6 @@ function unwrap<T>(
   throw new Error(result.error)
 }
 
-interface EventContact {
-  contact_id: string
-  contact: {
-    id: string
-    name: string
-    category: string
-  }
-}
 
 interface EventShare {
   share_token: string | null
@@ -203,23 +195,6 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
     },
   })
 
-  // Fetch event contacts for the modal picker
-  const { data: eventContacts = [] } = useQuery({
-    queryKey: ['event-contacts', eventId],
-    queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('Not authenticated')
-
-      const { data, error } = await supabase
-        .from('event_contacts')
-        .select('contact_id, contact:contact_id(id, name, category)')
-        .eq('event_id', eventId)
-        .eq('user_id', user.user.id)
-
-      if (error) throw error
-      return (data || []) as unknown as EventContact[]
-    },
-  })
 
   // Fetch event share settings
   const { data: shareData } = useQuery({
@@ -464,7 +439,6 @@ export function EventTimeline({ eventId }: EventTimelineProps) {
         onSave={handleSave}
         onDelete={editingItem ? () => deleteItem.mutate(editingItem.id) : undefined}
         item={editingItem}
-        eventContacts={eventContacts}
         loading={mutating}
       />
     </>

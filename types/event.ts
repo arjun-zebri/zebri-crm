@@ -48,6 +48,12 @@ export interface TimelineItem {
   contact_id: string | null
   position: number
   pending_review?: boolean
+  /**
+   * MC-only item. When true the row is hidden from every public surface
+   * (couple portal, vendor run sheet, public timeline link) and renders
+   * only on the MC dashboard. Set on the auto-inserted Sunset item.
+   */
+  internal?: boolean
   created_at: string
   contact?: {
     id: string

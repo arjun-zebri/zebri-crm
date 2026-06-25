@@ -4,16 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { TimelineItem } from '@/types/event'
-import { CATEGORY_LABELS } from '@/types/contact'
-
-interface EventContact {
-  contact_id: string
-  contact: {
-    id: string
-    name: string
-    category: string
-  }
-}
 
 interface EventTimelineModalProps {
   isOpen: boolean
@@ -22,7 +12,6 @@ interface EventTimelineModalProps {
   onDelete?: () => void
   item?: TimelineItem | null
   initialTime?: string
-  eventContacts: EventContact[]
   loading: boolean
   showStatus?: boolean
 }
@@ -46,7 +35,18 @@ for (let i = 0; i < 96; i++) {
   ALL_TIMES.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
 }
 
-export function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function TimePicker({
+  value,
+  onChange,
+  variant = 'box',
+}: {
+  value: string
+  onChange: (v: string) => void
+  /** `box` is the standalone bordered pill (template manager rows).
+   *  `underline` matches the couple/event modal field vocabulary so the
+   *  three forms read as one product. */
+  variant?: 'box' | 'underline'
+}) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -80,7 +80,11 @@ export function TimePicker({ value, onChange }: { value: string; onChange: (v: s
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-36 border border-gray-200 rounded-xl px-3 py-2 text-sm hover:bg-gray-50 transition cursor-pointer focus:outline-none"
+        className={`flex items-center justify-between w-36 text-sm transition cursor-pointer focus:outline-none ${
+          variant === 'underline'
+            ? 'border-0 border-b border-gray-200 bg-transparent px-0 py-2 hover:border-gray-400 focus:border-gray-400'
+            : 'border border-gray-200 rounded-xl px-3 py-2 hover:bg-gray-50'
+        }`}
       >
         <span className={value ? 'text-gray-900' : 'text-gray-400'}>
           {formatTimeDisplay(value)}
@@ -137,6 +141,13 @@ export function addMinutesToTime(t: string, mins: number): string {
 
 // ─── Modal ───────────────────────────────────────────────────────────────────
 
+// Underline field + label vocabulary shared with the couple and event
+// modals (`border-b`, transparent background, calm focus). All three open
+// off the couple profile, so they should read as one product.
+const inputClass =
+  'w-full border-0 border-b border-gray-200 bg-transparent px-0 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition'
+const labelClass = 'block text-sm text-gray-600 mb-1'
+
 export function EventTimelineModal({
   isOpen,
   onClose,
@@ -144,7 +155,6 @@ export function EventTimelineModal({
   onDelete,
   item,
   initialTime = '',
-  eventContacts,
   loading,
   showStatus,
 }: EventTimelineModalProps) {
@@ -170,9 +180,13 @@ export function EventTimelineModal({
       setDescription(item?.description ?? '')
       setContactId(item?.contact_id ?? '')
       setDeleteConfirm(false)
-      setStatusSelection(item?.pending_review ? 'review' : item?.start_time ? 'timeline' : 'unscheduled')
+      // A brand-new item added from the grid has no `item` but does carry an
+      // `initialTime`, so it's a scheduled (timeline) item. Without folding
+      // `initialTime` in here it defaulted to 'unscheduled', which applied
+      // `pointer-events-none` to the From/To row and froze the time pickers.
+      setStatusSelection(item?.pending_review ? 'review' : (item?.start_time || initialTime) ? 'timeline' : 'unscheduled')
     }
-  }, [item, isOpen])
+  }, [item, isOpen, initialTime])
 
   const handleStartChange = (val: string) => {
     if (val && endTime) {
@@ -195,7 +209,10 @@ export function EventTimelineModal({
 
   const handleSave = () => {
     if (!title.trim()) return
-    const isUnscheduledStatus = showStatus && statusSelection === 'unscheduled'
+    // The status toggle (and its 'unscheduled' lock) only exists for an
+    // existing `item`. A new item is always driven straight off the From/To
+    // pickers, so the times must never be discarded here.
+    const isUnscheduledStatus = showStatus && !!item && statusSelection === 'unscheduled'
     const effectiveStart = isUnscheduledStatus ? '' : startTime
     const effectiveEnd = isUnscheduledStatus ? '' : endTime
     const durationMin = effectiveStart && effectiveEnd
@@ -232,10 +249,10 @@ export function EventTimelineModal({
               <button
                 onClick={handleDelete}
                 disabled={loading}
-                className={`text-sm px-3 py-1.5 rounded-xl transition cursor-pointer disabled:opacity-50 ${
+                className={`text-xs px-3 py-1.5 rounded-md transition cursor-pointer disabled:opacity-50 ${
                   deleteConfirm
                     ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'text-red-600 border border-red-300 hover:bg-red-50'
+                    : 'bg-red-50 text-red-600 hover:bg-red-100'
                 }`}
               >
                 {deleteConfirm ? 'Confirm delete' : 'Delete'}
@@ -246,14 +263,14 @@ export function EventTimelineModal({
             <button
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-1.5 text-sm border border-gray-200 rounded-xl hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+              className="text-xs px-3 py-1.5 rounded-md bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={loading || !title.trim()}
-              className="px-4 py-1.5 text-sm bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition cursor-pointer disabled:opacity-50"
+              className="text-xs px-3 py-1.5 rounded-md bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? 'Saving...' : 'Save'}
             </button>
@@ -261,10 +278,10 @@ export function EventTimelineModal({
         </div>
       }
     >
-      <div className="space-y-4">
+      <div className="space-y-6">
         {showStatus && item && (
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Status</label>
+            <label className={labelClass}>Status</label>
             <div className="flex border border-gray-200 rounded-xl overflow-hidden">
               {(['timeline', 'unscheduled', 'review'] as const).map((s) => (
                 <button
@@ -286,21 +303,21 @@ export function EventTimelineModal({
           </div>
         )}
 
-        <div className={`flex items-end gap-3 ${showStatus && statusSelection === 'unscheduled' ? 'opacity-40 pointer-events-none' : ''}`}>
+        <div className={`flex items-end gap-3 ${showStatus && item && statusSelection === 'unscheduled' ? 'opacity-40 pointer-events-none' : ''}`}>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">From</label>
-            <TimePicker value={startTime} onChange={handleStartChange} />
+            <label className={labelClass}>From</label>
+            <TimePicker value={startTime} onChange={handleStartChange} variant="underline" />
           </div>
           <span className="text-sm text-gray-400 pb-2">→</span>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">To</label>
-            <TimePicker value={endTime} onChange={setEndTime} />
+            <label className={labelClass}>To</label>
+            <TimePicker value={endTime} onChange={setEndTime} variant="underline" />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            Title <span className="text-gray-400">(required)</span>
+          <label className={labelClass}>
+            Title <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -308,40 +325,20 @@ export function EventTimelineModal({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Bridal party entrance"
             autoFocus
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent"
+            className={inputClass}
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">Notes</label>
+          <label className={labelClass}>Notes</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={7}
             placeholder="Cues, reminders, things to remember..."
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent resize-none"
+            className={`${inputClass} resize-none`}
           />
         </div>
-
-        {eventContacts.length > 0 && (
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Assigned contact</label>
-            <select
-              value={contactId}
-              onChange={(e) => setContactId(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent bg-white"
-            >
-              <option value="">None</option>
-              {eventContacts.map((ec) => (
-                <option key={ec.contact_id} value={ec.contact_id}>
-                  {ec.contact.name}  - {' '}
-                  {CATEGORY_LABELS[ec.contact.category as keyof typeof CATEGORY_LABELS] ||
-                    ec.contact.category}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
     </Modal>
   )

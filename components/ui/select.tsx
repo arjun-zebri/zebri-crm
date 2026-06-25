@@ -65,6 +65,10 @@ export interface SelectProps {
   size?: SelectSize;
   /** Extra classes on the wrapper. */
   className?: string;
+  /** Classes for the portalled dropdown panel — owns its `z-index`.
+   *  Defaults to `z-50`; raise it (e.g. `z-[90]`) when the select lives
+   *  inside a modal so the menu sits above the modal panel. */
+  contentClassName?: string;
   /** Optional form name (for native form submission via the Radix hidden input). */
   name?: string;
 }
@@ -108,6 +112,7 @@ export function Select({
   required,
   size = 'md',
   className,
+  contentClassName = 'z-[90]',
   name,
 }: SelectProps) {
   const autoId = useId();
@@ -153,12 +158,12 @@ export function Select({
           <RadixSelect.Content
             position="popper"
             sideOffset={4}
-            // z-[90] (popover tier) so the panel renders ABOVE modals
-            // (z-[60]) and nested modals / dialogs (z-[80]); at z-50 it
-            // opened *behind* any modal it was used in. Capped to the
-            // space available below the trigger so long lists scroll
-            // instead of running off-screen.
-            className="z-[90] max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-card border border-border bg-surface text-text shadow-lg animate-fade-in"
+            // contentClassName defaults to z-[90] (popover tier) so the panel
+            // renders ABOVE modals (z-[60]) and nested modals / dialogs
+            // (z-[80]); at z-50 it opened *behind* any modal it was used in.
+            // Callers may override. Height is capped to the space below the
+            // trigger so long lists scroll instead of running off-screen.
+            className={`${contentClassName} max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden rounded-card border border-border bg-surface text-text shadow-lg animate-fade-in`}
           >
             <RadixSelect.Viewport className="max-h-(--radix-select-content-available-height) overflow-y-auto p-1">
               {options.map((opt) => (

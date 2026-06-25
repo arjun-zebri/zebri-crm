@@ -208,7 +208,7 @@ Purpose:
 
 Manage enquiries from couples.
 
-Header: Title "Couples" + total count. Compact Notion-style toolbar inline: expandable search icon, sort dropdown (ArrowUpDown icon), filter dropdown (SlidersHorizontal icon), small black "New" button. List/Board tabs below with larger gap from title.
+Header: Title "Couples" + total count. Compact Notion-style toolbar inline: expandable search icon, sort dropdown (ArrowUpDown icon), filter dropdown (SlidersHorizontal icon), small black "New couple" button. The "New couple" button is a split menu with two items: "Add manually" (opens the Add Couple modal) and "Import from CSV" (opens the import modal). On mobile the same menu hangs off the circular + button. List/Board tabs below with larger gap from title.
 
 Status values: new, contacted, confirmed, paid, complete
 
@@ -221,6 +221,17 @@ Sorting: Controlled via sort dropdown in header toolbar (name, event date, creat
 Actions:
 
 Add Couple Edit Couple Convert to Booking
+
+CSV import ("Import from CSV"):
+
+Three-step modal for bulk-creating couples from a spreadsheet.
+
+- **Step 1 (Upload):** a short numbered walkthrough (1. download the template / use your own `.csv`, 2. one couple per row with `couple_name` + `primary_name` required, 3. upload to map + preview), a click-to-select `.csv` dropzone, and the column list shown as helper text. Fields: `couple_name` (required), `primary_name` (required), `primary_email`, `primary_phone`, `secondary_name`, `secondary_email`, `secondary_phone`, `event_date`, `venue`, `status`. An empty file is rejected with a message.
+- **Step 2 (Map):** the file is parsed into a grid (the first row is treated as headers when ≥2 cells look like known field names). Each Zebri field gets a dropdown to pick which source column feeds it, auto-guessed from the header name + aliases (e.g. "Bride" → `primary_name`, "Wedding Date" → `event_date`) or by position when there are no headers. A "First row contains column names" toggle handles files whose header row is missing or garbage. Couple name + primary name must be mapped to continue. `event_date` parses leniently: year-first (`2026-9-1`) or day-first AU (`1/9/2026`, `01-09-2026`, `1.9.26`, 2-digit year as `20YY`), normalized to ISO.
+- **Step 3 (Preview):** a scrollable table showing every mapped column and cell value, one row per parsed line, with a per-row checkbox and a header select-all. Status column tags each row Ready (valid, pre-checked), Possible duplicate (matches an existing couple by primary email or couple name, or an earlier row in the file; unchecked but selectable), or invalid (shows the reason, e.g. "Missing couple name"; not selectable). Only `couple_name` and `primary_name` are required; a bad value in an optional field (unreadable date, malformed email) is dropped to null and shown in red in its cell, and the couple still imports. A summary line reads "N of M rows will import." Import creates only the checked rows. The modal widens to its 2xl size for this step.
+- `status` falls back to the user's first status when blank or unrecognized.
+- **Event date is a real event.** The couple-level `event_date` column is legacy/dead (the schedule lives in `events`), so an imported row with a date creates an `events` row (date + venue) for the couple, which then shows on the calendar and the list. The Add Couple modal has **Wedding date** (the shared `DatePicker`, `underline` variant) and **Venue** (the shared `VenueAutocomplete`, Google Places maps autofill capturing venue + phone/website/lat/lng) fields that do the same via `upsertCoupleEventDateAction` (creates the couple's first event, or updates its soonest). `VenueAutocomplete` is shared with the Event modal. Modal Save/Cancel/Delete use the compact button size (`text-xs`, `rounded-md`).
+- The Starter couple cap is respected: the server fills the remaining quota and reports the overflow; the toast reports created / skipped / invalid counts, and the upgrade modal opens when rows were skipped for the cap. Capped at 500 rows per file. Parsing/mapping/validation/dedup live in `lib/utils/csv-import.ts`; the bulk insert is `bulkCreateCouplesAction` (re-validates every row, stamps `user_id` from the session, creates events).
 
 Views: List (table), Kanban (5 columns, drag-and-drop), and Calendar (month view).
 

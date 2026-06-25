@@ -167,7 +167,7 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
     },
   })
 
-  const { data: eventContacts = [], isLoading: contactsLoading } = useQuery({
+  const { isLoading: contactsLoading } = useQuery({
     queryKey: ['event-contacts', activeEventId],
     enabled: !!activeEventId,
     queryFn: async () => {
@@ -504,7 +504,6 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
         }}
         onDelete={editingItem ? () => deleteItem.mutate(editingItem.id, { onSuccess: () => { setEditModalOpen(false); setEditingItem(null) } }) : undefined}
         item={editingItem}
-        eventContacts={eventContacts}
         loading={updateItem.isPending || deleteItem.isPending}
         showStatus
       />

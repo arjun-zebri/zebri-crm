@@ -40,11 +40,16 @@ import { execSync } from 'node:child_process';
 // updated automations canvas-header + command-palette + the
 // couple-overview rewrite). None of the new errors are in A1
 // code; all came in via the merge. Re-anchored again at 89.
+// Timeline internal flag + multi-day portals: deleted the dead
+// run-sheet-section.tsx (a stale duplicate of timeline-section that
+// carried setState-in-effect errors) → 89 → 88.
 // Burn-down target: back to 74.
 // Templates email-consistency PR (restyle of packages/quotes/invoices/
 // contracts tabs to primitives + tokens, plus the bundled settings/
 // couples tokenization): 89 → 80.
-const ERROR_BUDGET = 80;
+// Merge of main into the timeline branch: both reductions combine
+// (main's 80 + the dead-file deletion). Re-measured post-merge → 79.
+const ERROR_BUDGET = 79;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -93,10 +98,19 @@ const ERROR_BUDGET = 80;
 // Portal sections polish (design system tokenization + UX improvements)
 // across 8 portal sections + nav: fixed import-order + unused imports
 // during tokenization → 468 → 461.
+// Couples CSV import: cleaned up a brittle e2e locator + tidied
+// imports → 461 → 456.
+// Timeline internal flag + multi-day portals: deleting the dead
+// run-sheet-section.tsx + clean new portal/vendor day-selector code
+// dropped import-order/unused warnings → 456 → 452.
 // Templates email-consistency PR (primitives + token swaps across the
 // four manager tabs, plus the bundled settings/couples tokenization):
 // 461 → 442.
-const WARNING_BUDGET = 442;
+// Merge of main into the timeline branch: both reductions combine.
+// Re-measured post-merge → 405.
+// Timeline Add-item modal: removed the unused Assigned-contact field +
+// its event-contacts queries across three callers → 405 → 403.
+const WARNING_BUDGET = 403;
 
 function runEslintJson() {
   try {
