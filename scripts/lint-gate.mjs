@@ -108,7 +108,9 @@ const ERROR_BUDGET = 79;
 // 461 → 442.
 // Merge of main into the timeline branch: both reductions combine.
 // Re-measured post-merge → 405.
-const WARNING_BUDGET = 405;
+// Timeline Add-item modal: removed the unused Assigned-contact field +
+// its event-contacts queries across three callers → 405 → 403.
+const WARNING_BUDGET = 403;
 
 function runEslintJson() {
   try {
