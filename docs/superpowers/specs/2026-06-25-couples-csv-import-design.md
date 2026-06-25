@@ -74,7 +74,7 @@ header match):
 | Header            | Required | Notes                                        |
 |-------------------|----------|----------------------------------------------|
 | `couple_name`     | Yes      | Non-empty, max 200 chars.                    |
-| `primary_name`    | No       |                                              |
+| `primary_name`    | Yes      |                                              |
 | `primary_email`   | No       | Validated as email when present.             |
 | `primary_phone`   | No       |                                              |
 | `secondary_name`  | No       |                                              |

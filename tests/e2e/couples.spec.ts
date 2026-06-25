@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { login, addCouple, deleteCouple, openCoupleProfile, search, uniqueName } from './helpers'
+
+import { login, addCouple, deleteCouple, openAddCoupleModal, search, uniqueName } from './helpers'
 
 test.describe('Couple Management', () => {
   test.beforeEach(async ({ page }) => {
@@ -101,8 +102,7 @@ test.describe('Couple Management', () => {
 
   // ── 8. Save disabled until Name is filled ─────────────────────────────────
   test('Save button disabled until Name is filled', async ({ page }) => {
-    await page.locator('button:has-text("New")').first().click()
-    await page.waitForSelector('h2:has-text("Add Couple")')
+    await openAddCoupleModal(page)
     const saveBtn = page.locator('button:has-text("Save")')
     await expect(saveBtn).toBeDisabled()
     await page.locator('input[placeholder="Couple\'s name"]').fill('Someone')
@@ -114,8 +114,7 @@ test.describe('Couple Management', () => {
   // ── 9. Cancel closes modal without saving ────────────────────────────────
   test('Cancel closes modal without saving', async ({ page }) => {
     const name = uniqueName('Cancel Test')
-    await page.locator('button:has-text("New")').first().click()
-    await page.waitForSelector('h2:has-text("Add Couple")')
+    await openAddCoupleModal(page)
     await page.locator('input[placeholder="Couple\'s name"]').fill(name)
     await page.locator('button:has-text("Cancel")').click()
     await expect(page.locator('h2:has-text("Add Couple")')).not.toBeVisible()
@@ -126,8 +125,7 @@ test.describe('Couple Management', () => {
 
   // ── 10. Escape closes modal ───────────────────────────────────────────────
   test('Escape key closes the Add Couple modal', async ({ page }) => {
-    await page.locator('button:has-text("New")').first().click()
-    await page.waitForSelector('h2:has-text("Add Couple")')
+    await openAddCoupleModal(page)
     await page.keyboard.press('Escape')
     await expect(page.locator('h2:has-text("Add Couple")')).not.toBeVisible()
   })
@@ -168,14 +166,8 @@ test.describe('Couple Management', () => {
 
   // ── 14. Status filter ─────────────────────────────────────────────────────
   test('status filter opens a dropdown with status options', async ({ page }) => {
-    const filterBtn = page.locator('button').filter({ has: page.locator('svg[class*="lucide-sliders"]') })
-      .or(page.locator('button[class*="SlidersHorizontal"]'))
-    // Use SVG data from layout — it's the SlidersHorizontal button in header
-    // Locate by aria or by svg path; fall back to any button containing svg near "New"
-    const slidersBtn = page.locator('button').nth(2) // search, sort, filter, new
-    // More reliable: click the button right before "New" that renders SlidersHorizontal
-    await page.locator('button:has-text("New")').first()
-      .locator('..').locator('button').nth(-2).click()
+    // The toolbar Filter button shows "Filter" when no status is active.
+    await page.locator('button:has-text("Filter")').first().click()
     // Filter dropdown should be open — look for "All" option
     await expect(page.locator('button:has-text("All")')).toBeVisible()
   })

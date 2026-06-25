@@ -56,6 +56,12 @@ export interface PortalTimelineItem {
   duration_min: number | null
   position: number
   pending_review: boolean
+  /**
+   * The event this moment belongs to. A couple can have several events
+   * (and several on the same day); the Timeline section groups items by
+   * the event's date so each day shows as its own run sheet.
+   */
+  event_id: string
 }
 
 export interface PortalEvent {

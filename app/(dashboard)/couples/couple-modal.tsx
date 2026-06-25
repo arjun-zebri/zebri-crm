@@ -39,6 +39,7 @@ export function CoupleModal({
   const [secondaryEmail, setSecondaryEmail] = useState("");
   const [secondaryPhone, setSecondaryPhone] = useState("");
   const [status, setStatus] = useState<string>("new");
+  const [eventDate, setEventDate] = useState("");
   const [notes, setNotes] = useState("");
   const [leadSource, setLeadSource] = useState<string>("");
   const [statusOpen, setStatusOpen] = useState(false);
@@ -55,6 +56,9 @@ export function CoupleModal({
       setSecondaryEmail(couple.secondary_email ?? "");
       setSecondaryPhone(couple.secondary_phone ?? "");
       setStatus(couple.status);
+      // Prefill from the couple's displayed event (the real `events`
+      // row), falling back to the legacy column for older records.
+      setEventDate(couple.next_event_date ?? couple.event_date ?? "");
       setLeadSource(couple.lead_source || "");
       setNotes(couple.notes);
     } else {
@@ -75,6 +79,7 @@ export function CoupleModal({
     setSecondaryEmail("");
     setSecondaryPhone("");
     setStatus("new");
+    setEventDate("");
     setLeadSource("");
     setNotes("");
   };
@@ -98,7 +103,9 @@ export function CoupleModal({
       secondary_name: trim(secondaryName),
       secondary_email: trim(secondaryEmail),
       secondary_phone: trim(secondaryPhone),
-      event_date: couple?.event_date ?? null,
+      // Drives the couple's real event via the page's upsert; the
+      // legacy `event_date` column is no longer the source of truth.
+      event_date: eventDate || null,
       venue: couple?.venue ?? "",
       status: status as any,
       lead_source: leadSource || null,
@@ -236,6 +243,21 @@ export function CoupleModal({
                 />
               </div>
             </div>
+          </div>
+
+          {/* Wedding date. Optional — when set, the page creates the
+              couple's first event (or updates its soonest), since the
+              schedule lives in the `events` table, not on the couple. */}
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              Wedding date
+            </label>
+            <input
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              className={inputClass}
+            />
           </div>
 
           {/* Status + Lead Source share a row on sm+ - both are

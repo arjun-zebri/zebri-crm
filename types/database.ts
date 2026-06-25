@@ -1728,6 +1728,7 @@ export type Database = {
           duration_min: number | null
           event_id: string
           id: string
+          internal: boolean
           pending_review: boolean
           position: number
           start_time: string | null
@@ -1741,6 +1742,7 @@ export type Database = {
           duration_min?: number | null
           event_id: string
           id?: string
+          internal?: boolean
           pending_review?: boolean
           position?: number
           start_time?: string | null
@@ -1754,6 +1756,7 @@ export type Database = {
           duration_min?: number | null
           event_id?: string
           id?: string
+          internal?: boolean
           pending_review?: boolean
           position?: number
           start_time?: string | null
@@ -2148,10 +2151,11 @@ export type Database = {
       }
       save_portal_timeline_item: {
         Args: {
-          p_description: string
-          p_duration_min: number
+          p_description: string | null
+          p_duration_min: number | null
+          p_event_id?: string | null
           p_id: string
-          p_start_time: string
+          p_start_time: string | null
           p_title: string
           p_token: string
         }

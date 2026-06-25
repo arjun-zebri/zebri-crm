@@ -25,8 +25,8 @@ export const COL_WIDTHS: Record<string, string> = {
   name: '25%',
   email: '23%',
   phone: '13%',
-  event_date: '12%',
-  venue: '17%',
+  next_event_date: '12%',
+  next_event_venue: '17%',
   status: '10%',
 };
 
@@ -60,52 +60,60 @@ export function createCouplesListColumns(statuses: CoupleStatusRecord[]) {
       header: () => (
         <HeaderLabel
           icon={<Mail size={12} strokeWidth={1.5} />}
-          label="Email"
+          label="Primary email"
         />
       ),
       enableSorting: false,
       meta: { hidden: 'hidden sm:table-cell' },
-      cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
-          {info.getValue()}
-        </span>
-      ),
+      // Prefer the primary partner contact; fall back to the couple-level
+      // email for pre-partner-contacts rows.
+      cell: (info) => {
+        const couple = info.row.original;
+        return (
+          <span className="text-sm text-gray-500 group-hover:text-gray-900 truncate block">
+            {couple.primary_email || couple.email}
+          </span>
+        );
+      },
     }),
     columnHelper.accessor('phone', {
       header: () => (
         <HeaderLabel
           icon={<Phone size={12} strokeWidth={1.5} />}
-          label="Phone"
+          label="Primary phone"
         />
       ),
       enableSorting: false,
       meta: { hidden: 'hidden lg:table-cell' },
-      cell: (info) => (
-        <span className="text-sm text-gray-500 group-hover:text-gray-900">
-          {info.getValue()}
-        </span>
-      ),
+      cell: (info) => {
+        const couple = info.row.original;
+        return (
+          <span className="text-sm text-gray-500 group-hover:text-gray-900">
+            {couple.primary_phone || couple.phone}
+          </span>
+        );
+      },
     }),
-    columnHelper.accessor('event_date', {
+    columnHelper.accessor('next_event_date', {
       header: () => (
         <HeaderLabel
           icon={<Calendar size={12} strokeWidth={1.5} />}
-          label="Event date"
+          label="Next event date"
         />
       ),
       enableSorting: false,
       meta: { hidden: 'hidden sm:table-cell' },
       cell: (info) => (
         <span className="text-sm text-gray-500 group-hover:text-gray-900">
-          {formatDate(info.getValue())}
+          {formatDate(info.getValue() ?? null)}
         </span>
       ),
     }),
-    columnHelper.accessor('venue', {
+    columnHelper.accessor('next_event_venue', {
       header: () => (
         <HeaderLabel
           icon={<MapPin size={12} strokeWidth={1.5} />}
-          label="Venue"
+          label="Next event venue"
         />
       ),
       enableSorting: false,

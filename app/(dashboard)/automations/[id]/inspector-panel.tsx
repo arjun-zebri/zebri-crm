@@ -17,6 +17,7 @@ import { ChevronRight, Repeat2, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Checkbox } from '@/components/ui/checkbox'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -109,6 +110,11 @@ interface Props {
 }
 
 export function InspectorPanel({ selection, automationId, onClose, onSaved, onChangeTrigger, onDeleteAction }: Props) {
+  // Confirm-before-delete is routed through the shared ConfirmDialog
+  // modal rather than the browser's native confirm() (banned by the
+  // design system).
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
   const meta = selection.kind === 'trigger'
     ? {
         kindLabel: 'Trigger',
@@ -146,10 +152,7 @@ export function InspectorPanel({ selection, automationId, onClose, onSaved, onCh
           {selection.kind === 'action' && onDeleteAction && (
             <button
               type="button"
-              onClick={async () => {
-                if (!confirm('Delete this action?')) return
-                await onDeleteAction(selection.action.id)
-              }}
+              onClick={() => setConfirmOpen(true)}
               className="text-text-muted hover:text-danger cursor-pointer p-1"
               aria-label="Delete action"
               title="Delete action"
@@ -175,6 +178,20 @@ export function InspectorPanel({ selection, automationId, onClose, onSaved, onCh
           onSaved={onSaved}
         />
       </div>
+
+      {selection.kind === 'action' && onDeleteAction && (
+        <ConfirmDialog
+          open={confirmOpen}
+          title="Delete action"
+          description="Delete this action? This cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={() => {
+            setConfirmOpen(false)
+            void onDeleteAction(selection.action.id)
+          }}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
     </aside>
   )
 }

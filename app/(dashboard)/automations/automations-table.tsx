@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import type {
   AutomationStatus,
   EnrichedAutomationRow,
@@ -164,6 +165,8 @@ function Row({
 }) {
   const a = automation
   const [menuOpen, setMenuOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const borderClass = isLast ? '' : 'border-b border-gray-100'
 
   async function toggle(e: React.MouseEvent) {
@@ -173,11 +176,20 @@ function Row({
     onChange()
   }
 
-  async function remove(e: React.MouseEvent) {
+  function remove(e: React.MouseEvent) {
+    // Open the confirm modal instead of firing the destructive delete
+    // straight from the menu - native confirm() is banned by the
+    // design system, so we route through the shared ConfirmDialog.
     e.stopPropagation()
     setMenuOpen(false)
-    if (!confirm('Delete this automation? Any running instances will stop.')) return
+    setConfirmOpen(true)
+  }
+
+  async function confirmRemove() {
+    setDeleting(true)
     await deleteAutomationAction({ automationId: a.id })
+    setDeleting(false)
+    setConfirmOpen(false)
     onChange()
   }
 
@@ -246,6 +258,14 @@ function Row({
             </button>
           </div>
         )}
+        <ConfirmDialog
+          open={confirmOpen}
+          title="Delete automation"
+          description="Delete this automation? Any running instances will stop."
+          loading={deleting}
+          onConfirm={confirmRemove}
+          onCancel={() => setConfirmOpen(false)}
+        />
       </td>
     </tr>
   )

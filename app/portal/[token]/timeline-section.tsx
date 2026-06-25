@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, ChevronDown, GripVertical } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -19,7 +19,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { createBrowserClient } from "@supabase/ssr";
 import { Modal } from "@/components/ui/modal";
-import type { PortalTimelineItem } from "./page";
+import type { PortalEvent, PortalTimelineItem } from "./page";
 
 function anonSupabase() {
   return createBrowserClient(
@@ -413,15 +413,122 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
   );
 }
 
+/** "Saturday, 22 April" — the day a run sheet belongs to. */
+function formatDayLabel(date: string): string {
+  return new Date(date + "T00:00:00").toLocaleDateString("en-AU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
+/** A distinct calendar day plus the event ids that fall on it. */
+interface PortalDay {
+  date: string;
+  eventIds: string[];
+}
+
+/**
+ * Collapse the couple's events into distinct days, sorted chronologically.
+ * A couple can have more than one event, and more than one on the same
+ * day, so a day groups every event that shares its date.
+ */
+function buildDays(events: PortalEvent[]): PortalDay[] {
+  const byDate = new Map<string, string[]>();
+  for (const ev of events) {
+    const ids = byDate.get(ev.date) ?? [];
+    ids.push(ev.id);
+    byDate.set(ev.date, ids);
+  }
+  return [...byDate.entries()]
+    .map(([date, eventIds]) => ({ date, eventIds }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * The day to land on first: the soonest day that hasn't passed, else the
+ * most recent past day. Mirrors how the portal RPC picks the headline event.
+ */
+function defaultDay(days: PortalDay[]): string | null {
+  if (days.length === 0) return null;
+  const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, local
+  const upcoming = days.find((d) => d.date >= today);
+  return (upcoming ?? days[days.length - 1])?.date ?? null;
+}
+
+/** Per-day dropdown, mirroring the time picker's popover styling. */
+function DaySelector({
+  days,
+  value,
+  onChange,
+}: {
+  days: PortalDay[];
+  value: string;
+  onChange: (date: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between gap-2 border border-border rounded-control px-3 py-2 text-sm bg-surface hover:bg-surface-muted transition cursor-pointer focus:outline-none"
+      >
+        <span className="text-text font-medium">{formatDayLabel(value)}</span>
+        <ChevronDown className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 min-w-full bg-surface border border-border rounded-control shadow-lg overflow-hidden py-1">
+          {days.map((d) => (
+            <button
+              key={d.date}
+              type="button"
+              onClick={() => {
+                onChange(d.date);
+                setOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-2 text-sm whitespace-nowrap transition hover:bg-surface-muted cursor-pointer ${
+                d.date === value
+                  ? "bg-surface-muted font-medium text-text"
+                  : "text-text-muted"
+              }`}
+            >
+              {formatDayLabel(d.date)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface TimelineSectionProps {
   token: string;
   initialItems: PortalTimelineItem[];
+  events: PortalEvent[];
   hasEvent: boolean;
 }
 
 export function TimelineSection({
   token,
   initialItems,
+  events,
   hasEvent,
 }: TimelineSectionProps) {
   const [items, setItems] = useState<PortalTimelineItem[]>(initialItems);
@@ -430,6 +537,23 @@ export function TimelineSection({
     null
   );
   const [saving, setSaving] = useState(false);
+
+  const days = useMemo(() => buildDays(events), [events]);
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+
+  // Derive the day in view from render rather than syncing through an
+  // effect: the couple's pick if it's still a valid day, otherwise the
+  // soonest upcoming day. This keeps render the single source of truth.
+  const selectedDay =
+    pickedDay && days.some((d) => d.date === pickedDay)
+      ? pickedDay
+      : defaultDay(days);
+
+  // The event a new suggestion attaches to: the first event on the day
+  // the couple is currently viewing.
+  const activeDay = days.find((d) => d.date === selectedDay) ?? null;
+  const targetEventId = activeDay?.eventIds[0] ?? null;
+  const dayEventIds = new Set(activeDay?.eventIds ?? []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -459,6 +583,9 @@ export function TimelineSection({
     setSaving(true);
     const supabase = anonSupabase();
     const newId = editingItem?.id ?? crypto.randomUUID();
+    // New suggestions attach to the day being viewed; edits keep their
+    // own event so they stay on the right day.
+    const eventId = editingItem?.event_id ?? targetEventId;
 
     const { data: returnedId } = await supabase.rpc(
       "save_portal_timeline_item",
@@ -469,6 +596,7 @@ export function TimelineSection({
         p_title: data.title,
         p_description: data.description,
         p_duration_min: data.duration_min,
+        p_event_id: eventId,
       }
     );
 
@@ -477,7 +605,7 @@ export function TimelineSection({
         setItems((prev) =>
           prev.map((i) => (i.id === editingItem.id ? { ...i, ...data } : i))
         );
-      } else {
+      } else if (eventId) {
         setItems((prev) => [
           ...prev,
           {
@@ -485,6 +613,7 @@ export function TimelineSection({
             ...data,
             position: (prev.length + 1) * 1000,
             pending_review: true,
+            event_id: eventId,
           },
         ]);
       }
@@ -521,8 +650,11 @@ export function TimelineSection({
     );
   }
 
-  const mcItems = items.filter((i) => !i.pending_review);
-  const pendingItems = items.filter((i) => i.pending_review);
+  // Only the moments for the day in view — a couple with several events
+  // (including more than one on the same day) sees one run sheet at a time.
+  const dayItems = items.filter((i) => dayEventIds.has(i.event_id));
+  const mcItems = dayItems.filter((i) => !i.pending_review);
+  const pendingItems = dayItems.filter((i) => i.pending_review);
 
   return (
     <div className="space-y-4">
@@ -535,14 +667,25 @@ export function TimelineSection({
         </p>
       </div>
 
-      {items.length > 0 && (
+      {days.length > 1 && selectedDay && (
+        <div className="flex items-center gap-2">
+          <span className="text-caption font-medium text-text-subtle">Day</span>
+          <DaySelector
+            days={days}
+            value={selectedDay}
+            onChange={setPickedDay}
+          />
+        </div>
+      )}
+
+      {dayItems.length > 0 && (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={items.map((i) => i.id)}
+            items={dayItems.map((i) => i.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="relative pl-8">

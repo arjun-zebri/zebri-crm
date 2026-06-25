@@ -65,6 +65,10 @@ export interface SelectProps {
   size?: SelectSize;
   /** Extra classes on the wrapper. */
   className?: string;
+  /** Classes for the portalled dropdown panel — owns its `z-index`.
+   *  Defaults to `z-50`; raise it (e.g. `z-[90]`) when the select lives
+   *  inside a modal so the menu sits above the modal panel. */
+  contentClassName?: string;
   /** Optional form name (for native form submission via the Radix hidden input). */
   name?: string;
 }
@@ -105,6 +109,7 @@ export function Select({
   required,
   size = 'md',
   className,
+  contentClassName = 'z-50',
   name,
 }: SelectProps) {
   const autoId = useId();
@@ -150,7 +155,7 @@ export function Select({
           <RadixSelect.Content
             position="popper"
             sideOffset={4}
-            className="z-50 min-w-(--radix-select-trigger-width) overflow-hidden rounded-card border border-border bg-surface text-text shadow-lg animate-fade-in"
+            className={`${contentClassName} min-w-(--radix-select-trigger-width) overflow-hidden rounded-card border border-border bg-surface text-text shadow-lg animate-fade-in`}
           >
             <RadixSelect.Viewport className="p-1">
               {options.map((opt) => (

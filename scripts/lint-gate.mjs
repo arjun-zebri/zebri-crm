@@ -40,8 +40,11 @@ import { execSync } from 'node:child_process';
 // updated automations canvas-header + command-palette + the
 // couple-overview rewrite). None of the new errors are in A1
 // code; all came in via the merge. Re-anchored again at 89.
+// Timeline internal flag + multi-day portals: deleted the dead
+// run-sheet-section.tsx (a stale duplicate of timeline-section that
+// carried setState-in-effect errors) → 89 → 88.
 // Burn-down target: back to 74.
-const ERROR_BUDGET = 89;
+const ERROR_BUDGET = 88;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -90,7 +93,12 @@ const ERROR_BUDGET = 89;
 // Portal sections polish (design system tokenization + UX improvements)
 // across 8 portal sections + nav: fixed import-order + unused imports
 // during tokenization → 468 → 461.
-const WARNING_BUDGET = 461;
+// Couples CSV import: cleaned up a brittle e2e locator + tidied
+// imports → 461 → 456.
+// Timeline internal flag + multi-day portals: deleting the dead
+// run-sheet-section.tsx + clean new portal/vendor day-selector code
+// dropped import-order/unused warnings → 456 → 452.
+const WARNING_BUDGET = 452;
 
 function runEslintJson() {
   try {

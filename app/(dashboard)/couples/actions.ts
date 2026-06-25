@@ -29,7 +29,9 @@
 
 import { z } from 'zod';
 
+import { sendAlert } from '@/lib/alerts';
 import { logger } from '@/lib/alerts/logger';
+import { currentPlan } from '@/lib/auth/entitlements';
 import { createClient } from '@/lib/supabase/server';
 import type { Couple } from '@/types/couple';
 
@@ -145,6 +147,292 @@ export async function createCoupleAction(
   }
 
   return { ok: true, data: data as Couple };
+}
+
+/* ─── Couple event date (writes the real `events` row) ────────── */
+//
+// The couple-level `event_date` column is legacy/dead — the schedule
+// lives in the couple-owned `events` table (calendar + list read from
+// there). So setting a couple's wedding date, whether typed in the Add
+// Couple modal or imported from CSV, must create/update a real event.
+
+type RlsClient = Awaited<ReturnType<typeof createClient>>;
+
+const dateOrNullStrict = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD')
+  .nullable();
+
+/**
+ * Pick the event a couple "shows" as its next one: the soonest
+ * upcoming (today-or-later), falling back to the most recent past. This
+ * mirrors `pickNextEvent` on the list so an edit updates the same row
+ * the user sees. `events` must be non-empty.
+ */
+function pickDisplayEventId(events: { id: string; date: string }[]): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const sorted = [...events].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : 0,
+  );
+  const upcoming = sorted.find((e) => e.date >= today);
+  return (upcoming ?? sorted[sorted.length - 1]!).id;
+}
+
+const upsertEventDateSchema = z.object({
+  coupleId: z.uuid('Couple id must be a UUID'),
+  date: dateOrNullStrict,
+  venue: z.string().trim().max(300).nullable().default(null),
+});
+
+export type UpsertCoupleEventDateInput = z.input<typeof upsertEventDateSchema>;
+
+/**
+ * Set a couple's wedding date by creating or updating its event.
+ *
+ * If the couple has no events yet, a new one is created; otherwise the
+ * couple's displayed event (see {@link pickDisplayEventId}) is updated
+ * in place so a repeated set never piles up duplicate rows. A `null`
+ * date is a no-op (we never delete events here). RLS scopes every read
+ * and write to the owner, so a cross-tenant `coupleId` finds no events
+ * and the INSERT/UPDATE is filtered out.
+ */
+export async function upsertCoupleEventDateAction(
+  input: UpsertCoupleEventDateInput,
+): Promise<ActionResult<void>> {
+  const parsed = upsertEventDateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: 'Invalid event date.' };
+  }
+  const { coupleId, date, venue } = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  // Clearing the date is intentionally a no-op — removing a wedding
+  // date shouldn't silently delete the whole event + its timeline.
+  if (date === null) return { ok: true, data: undefined };
+
+  // Confirm the couple is ours before touching events. The `events`
+  // RLS INSERT policy only checks `user_id`, so without this a caller
+  // could attach an event (under their own id) to someone else's
+  // couple. The couples SELECT policy scopes this read to the owner.
+  const { data: couple } = await supabase
+    .from('couples')
+    .select('id')
+    .eq('id', coupleId)
+    .maybeSingle();
+  if (!couple) return { ok: true, data: undefined };
+
+  const { data: events, error: readError } = await supabase
+    .from('events')
+    .select('id, date')
+    .eq('couple_id', coupleId);
+  if (readError) {
+    logger.error('[couples/actions] upsert event read failed', readError, {
+      userId: user.id,
+      coupleId,
+    });
+    return { ok: false, error: 'Could not set event date.' };
+  }
+
+  const error =
+    events && events.length > 0
+      ? await updateExistingEvent(supabase, pickDisplayEventId(events), date, venue)
+      : await insertCoupleEvent(supabase, user.id, coupleId, date, venue);
+
+  if (error) {
+    logger.error('[couples/actions] upsert event write failed', error, {
+      userId: user.id,
+      coupleId,
+    });
+    return { ok: false, error: 'Could not set event date.' };
+  }
+  return { ok: true, data: undefined };
+}
+
+/** Insert a wedding event for a couple. Returns the error (or null). */
+async function insertCoupleEvent(
+  supabase: RlsClient,
+  userId: string,
+  coupleId: string,
+  date: string,
+  venue: string | null,
+): Promise<{ message?: string } | null> {
+  const { error } = await supabase.from('events').insert({
+    user_id: userId,
+    couple_id: coupleId,
+    date,
+    venue: venue ?? null,
+    status: 'upcoming',
+  });
+  return error;
+}
+
+/** Update an existing event's date (and venue when one was supplied). */
+async function updateExistingEvent(
+  supabase: RlsClient,
+  eventId: string,
+  date: string,
+  venue: string | null,
+): Promise<{ message?: string } | null> {
+  const patch: { date: string; venue?: string } = { date };
+  if (venue !== null) patch.venue = venue;
+  const { error } = await supabase.from('events').update(patch).eq('id', eventId);
+  return error;
+}
+
+/* ─── bulkCreateCouplesAction (CSV import) ────────────────────── */
+
+/** Hard ceiling on a single import payload — a basic abuse guard so a
+ *  pasted megafile can't tie up a request. The UI caps well below this. */
+const MAX_IMPORT_ROWS = 500;
+
+/** Starter free-tier couple cap. Mirrors the Postgres
+ *  `enforce_starter_couple_limit` trigger (5). Kept in sync by hand —
+ *  the trigger is the authoritative backstop, this just lets us slice
+ *  the batch up-front instead of tripping it mid-insert. */
+const STARTER_COUPLE_LIMIT_COUNT = 5;
+
+export interface BulkImportSummary {
+  /** Rows actually inserted. */
+  created: number;
+  /** Valid rows dropped because they'd exceed the Starter cap. */
+  skippedForLimit: number;
+  /** Rows that failed server-side validation, with the first reason. */
+  invalidRows: { index: number; reason: string }[];
+}
+
+/**
+ * Bulk-create couples from a CSV import. The client preview is
+ * convenience only — every row is **re-validated here** with the same
+ * `coupleInputSchema` the single-create path uses, and `user_id` is
+ * taken from the session (never the payload), so RLS owns tenancy.
+ *
+ * Starter users are sliced to their remaining quota up-front: a single
+ * multi-row insert is atomic, so relying on the Postgres cap trigger
+ * mid-batch would roll back the whole import the moment one row tripped
+ * it. The trigger remains the backstop for the race where couples are
+ * added between our count and the insert.
+ *
+ * @param rows - validated-shape couple inputs (status already resolved
+ *   to a real slug by the caller).
+ * @returns a summary of created / limit-skipped / invalid rows. Only a
+ *   genuine DB failure returns `{ ok: false }`.
+ */
+export async function bulkCreateCouplesAction(
+  rows: CoupleInput[],
+): Promise<ActionResult<BulkImportSummary>> {
+  if (!Array.isArray(rows)) {
+    return { ok: false, error: 'Invalid import payload.' };
+  }
+  if (rows.length > MAX_IMPORT_ROWS) {
+    return {
+      ok: false,
+      error: `You can import at most ${MAX_IMPORT_ROWS} couples at once.`,
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  // Re-validate every row; collect the survivors and the rejects.
+  const valid: z.infer<typeof coupleInputSchema>[] = [];
+  const invalidRows: { index: number; reason: string }[] = [];
+  rows.forEach((raw, index) => {
+    const parsed = coupleInputSchema.safeParse(raw);
+    if (parsed.success) valid.push(parsed.data);
+    else
+      invalidRows.push({
+        index,
+        reason: parsed.error.issues[0]?.message ?? 'Invalid row',
+      });
+  });
+
+  // Starter is capped; Pro/Max are uncapped (remaining = ∞).
+  let remaining = Number.POSITIVE_INFINITY;
+  if (currentPlan(user) === 'starter') {
+    const { count } = await supabase
+      .from('couples')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+    remaining = Math.max(0, STARTER_COUPLE_LIMIT_COUNT - (count ?? 0));
+  }
+
+  const insertCount = Number.isFinite(remaining)
+    ? Math.min(valid.length, remaining)
+    : valid.length;
+  const toInsert = valid.slice(0, insertCount);
+  const skippedForLimit = valid.length - toInsert.length;
+
+  if (toInsert.length === 0) {
+    return { ok: true, data: { created: 0, skippedForLimit, invalidRows } };
+  }
+
+  // `.select('id')` returns the inserted rows in input order, so we can
+  // pair each new couple with its source row to create the event.
+  const { data: insertedCouples, error } = await supabase
+    .from('couples')
+    .insert(toInsert.map((c) => ({ ...c, user_id: user.id })))
+    .select('id');
+
+  if (error || !insertedCouples) {
+    if (error && isStarterLimit(error)) {
+      // Race: the cap filled between our count and this insert. The
+      // atomic batch rolled back, so nothing was created — report the
+      // whole attempt as limit-skipped rather than a hard failure.
+      return {
+        ok: true,
+        data: {
+          created: 0,
+          skippedForLimit: skippedForLimit + toInsert.length,
+          invalidRows,
+        },
+      };
+    }
+    logger.error('[couples/actions] bulkCreateCouplesAction failed', error, {
+      userId: user.id,
+      attempted: toInsert.length,
+    });
+    await sendAlert({
+      type: 'app_error',
+      severity: 'error',
+      message: `Couples CSV import failed for ${user.id}: ${error?.message ?? 'no rows returned'}`,
+      source: 'couples/bulkCreateCouplesAction',
+    });
+    return { ok: false, error: 'Could not import couples.' };
+  }
+
+  // Create a wedding event for every imported couple that carried a
+  // date — the couple-level `event_date` column is dead, so the date
+  // only shows up once it's a real `events` row. Best-effort: an event
+  // failure is logged but doesn't fail the (already committed) import.
+  const events = insertedCouples
+    .map((couple, i) => ({ couple, src: toInsert[i] }))
+    .filter(({ src }) => src?.event_date)
+    .map(({ couple, src }) => ({
+      user_id: user.id,
+      couple_id: couple.id,
+      date: src!.event_date as string,
+      venue: src!.venue || null,
+      status: 'upcoming',
+    }));
+  if (events.length > 0) {
+    const { error: eventError } = await supabase.from('events').insert(events);
+    if (eventError) {
+      logger.error('[couples/actions] import event insert failed', eventError, {
+        userId: user.id,
+        count: events.length,
+      });
+    }
+  }
+
+  return { ok: true, data: { created: toInsert.length, skippedForLimit, invalidRows } };
 }
 
 /* ─── updateCoupleAction ──────────────────────────────────────── */

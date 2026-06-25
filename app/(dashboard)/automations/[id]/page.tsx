@@ -71,6 +71,12 @@ import { TriggerPicker } from './trigger-picker'
 const TRIGGER_NODE_ID = '__trigger__'
 const ADD_ACTION_NODE_ID = '__add_action__'
 
+/**
+ * Feature flag for the Zebri AI copilot on the automation canvas. Hidden for
+ * now; set to `true` to bring the panel and its open button back.
+ */
+const SHOW_ZEBRI_AI = false
+
 const nodeTypes = { canvasNode: CanvasNode }
 
 export default function AutomationCanvasPage() {
@@ -417,9 +423,12 @@ function AutomationCanvas() {
         onShowRuns={() => setRunsOpen(true)}
       />
       <div className="flex flex-1 min-h-0 overflow-hidden relative">
-        <AiCopilotPanel open={copilotOpen} onClose={() => setCopilotOpen(false)} />
+        {/* Zebri AI copilot temporarily hidden. Flip SHOW_ZEBRI_AI to re-enable. */}
+        {SHOW_ZEBRI_AI && (
+          <AiCopilotPanel open={copilotOpen} onClose={() => setCopilotOpen(false)} />
+        )}
         <div className="flex-1 relative">
-          {!copilotOpen && (
+          {SHOW_ZEBRI_AI && !copilotOpen && (
             <button
               type="button"
               onClick={() => setCopilotOpen(true)}

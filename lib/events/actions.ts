@@ -420,6 +420,9 @@ const createTimelineItemSchema = z.object({
   contact_id: uuidSchema.nullable().default(null),
   position: z.number().int().default(0),
   pending_review: z.boolean().default(false),
+  // MC-only item — hidden from every public surface, shown only on the
+  // MC dashboard. Used by the auto-inserted Sunset item.
+  internal: z.boolean().default(false),
 });
 
 export type CreateTimelineItemInput = z.input<typeof createTimelineItemSchema>;
@@ -438,9 +441,18 @@ export async function createTimelineItemAction(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
+  // Only send `internal` when it's actually set. The column defaults to
+  // false in Postgres, so omitting it keeps a normal insert byte-identical
+  // to the pre-`internal` schema — important because the column may not
+  // exist on the target DB until this feature's migration is deployed.
+  const { internal, ...rest } = parsed.data;
+  const payload = internal
+    ? { ...rest, internal, user_id: user.id }
+    : { ...rest, user_id: user.id };
+
   const { data, error } = await supabase
     .from('timeline_items')
-    .insert({ ...parsed.data, user_id: user.id })
+    .insert(payload)
     .select('id')
     .single();
 
