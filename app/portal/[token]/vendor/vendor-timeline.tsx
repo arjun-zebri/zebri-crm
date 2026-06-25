@@ -69,6 +69,12 @@ function defaultDay(days: VendorDay[]): string | null {
   return (upcoming ?? days[days.length - 1])?.date ?? null
 }
 
+/** Date plus the day's venue(s), so same-day events stay distinguishable. */
+function dayLabel(day: VendorDay): string {
+  const date = formatEventDate(day.date)
+  return day.venues.length > 0 ? `${date} · ${day.venues.join(', ')}` : date
+}
+
 /** Per-day dropdown for the run sheet. */
 function DaySelector({
   days,
@@ -81,6 +87,7 @@ function DaySelector({
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const active = days.find((d) => d.date === value) ?? null
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -99,7 +106,9 @@ function DaySelector({
         onClick={() => setOpen(!open)}
         className="flex items-center justify-between gap-2 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none"
       >
-        <span className="text-gray-900 font-medium">{formatEventDate(value)}</span>
+        <span className="text-gray-900 font-medium">
+          {active ? dayLabel(active) : formatEventDate(value)}
+        </span>
         <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
       </button>
 
@@ -117,7 +126,7 @@ function DaySelector({
                 d.date === value ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-500'
               }`}
             >
-              {formatEventDate(d.date)}
+              {dayLabel(d)}
             </button>
           ))}
         </div>

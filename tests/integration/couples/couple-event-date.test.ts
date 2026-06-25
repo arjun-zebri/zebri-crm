@@ -59,17 +59,22 @@ describe('upsertCoupleEventDateAction', () => {
         coupleId,
         date: '2026-09-14',
         venue: 'Town Hall',
+        venue_phone: '02 9000 0000',
+        venue_lat: -33.87,
+        venue_lng: 151.21,
       });
       expect(result.ok).toBe(true);
 
       const admin = serviceClient();
       const { data: events } = await admin
         .from('events')
-        .select('date, venue')
+        .select('date, venue, venue_phone, venue_lat')
         .eq('couple_id', coupleId);
       expect(events).toHaveLength(1);
       expect(events?.[0]?.date).toBe('2026-09-14');
       expect(events?.[0]?.venue).toBe('Town Hall');
+      expect(events?.[0]?.venue_phone).toBe('02 9000 0000');
+      expect(events?.[0]?.venue_lat).toBe(-33.87);
     } finally {
       await user.cleanup();
     }

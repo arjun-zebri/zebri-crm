@@ -422,27 +422,34 @@ function formatDayLabel(date: string): string {
   });
 }
 
-/** A distinct calendar day plus the event ids that fall on it. */
+/** A distinct calendar day plus the events (and venues) that fall on it. */
 interface PortalDay {
   date: string;
   eventIds: string[];
+  venues: string[];
 }
 
 /**
  * Collapse the couple's events into distinct days, sorted chronologically.
  * A couple can have more than one event, and more than one on the same
- * day, so a day groups every event that shares its date.
+ * day, so a day groups every event that shares its date (and its venues,
+ * which the day selector shows so same-day events stay distinguishable).
  */
 function buildDays(events: PortalEvent[]): PortalDay[] {
-  const byDate = new Map<string, string[]>();
+  const byDate = new Map<string, PortalDay>();
   for (const ev of events) {
-    const ids = byDate.get(ev.date) ?? [];
-    ids.push(ev.id);
-    byDate.set(ev.date, ids);
+    const day = byDate.get(ev.date) ?? { date: ev.date, eventIds: [], venues: [] };
+    day.eventIds.push(ev.id);
+    if (ev.venue && !day.venues.includes(ev.venue)) day.venues.push(ev.venue);
+    byDate.set(ev.date, day);
   }
-  return [...byDate.entries()]
-    .map(([date, eventIds]) => ({ date, eventIds }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** "Sunday 21 June · Park Hyatt Sydney" — date plus the day's venue(s). */
+function dayLabel(day: PortalDay): string {
+  const date = formatDayLabel(day.date);
+  return day.venues.length > 0 ? `${date} · ${day.venues.join(", ")}` : date;
 }
 
 /**
@@ -468,6 +475,7 @@ function DaySelector({
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const active = days.find((d) => d.date === value) ?? null;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -489,7 +497,9 @@ function DaySelector({
         onClick={() => setOpen(!open)}
         className="flex items-center justify-between gap-2 border border-border rounded-control px-3 py-2 text-sm bg-surface hover:bg-surface-muted transition cursor-pointer focus:outline-none"
       >
-        <span className="text-text font-medium">{formatDayLabel(value)}</span>
+        <span className="text-text font-medium">
+          {active ? dayLabel(active) : formatDayLabel(value)}
+        </span>
         <ChevronDown className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
       </button>
 
@@ -509,7 +519,7 @@ function DaySelector({
                   : "text-text-muted"
               }`}
             >
-              {formatDayLabel(d.date)}
+              {dayLabel(d)}
             </button>
           ))}
         </div>

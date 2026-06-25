@@ -34,7 +34,7 @@ import { Couple, ViewMode } from '@/types/couple';
 
 import type { CoupleInput } from './actions';
 import { BulkActionBar } from './bulk-action-bar';
-import { CoupleModal } from './couple-modal';
+import { CoupleModal, type CoupleEventInput } from './couple-modal';
 import { CoupleProfile } from './couple-profile';
 import { CouplesHeader } from './couples-header';
 import { CouplesImportModal } from './couples-import-modal';
@@ -160,6 +160,7 @@ function CouplesPageContent() {
 
   const handleAddCouple = async (
     data: Omit<Couple, 'id' | 'user_id' | 'created_at'> & { id?: string },
+    event: CoupleEventInput,
   ) => {
     const positionsInStatus = couples
       .filter((c) => c.status === data.status)
@@ -172,11 +173,17 @@ function CouplesPageContent() {
         kanban_position: nextPosition,
       });
       // A wedding date entered in the modal becomes the couple's first
-      // real event (the legacy `event_date` column isn't displayed).
-      if (data.event_date) {
+      // real event with its venue (the legacy `event_date` / `venue`
+      // columns aren't displayed).
+      if (event.date) {
         await upsertEventDate.mutateAsync({
           coupleId: created.id,
-          date: data.event_date,
+          date: event.date,
+          venue: event.venue || null,
+          venue_phone: event.venue_phone,
+          venue_website: event.venue_website,
+          venue_lat: event.venue_lat,
+          venue_lng: event.venue_lng,
         });
       }
       toast('Couple added');

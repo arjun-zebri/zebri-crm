@@ -85,7 +85,6 @@ export function EventModal({
   const [title, setTitle] = useState('')
   const [date, setDate] = useState('')
   const [dateError, setDateError] = useState<string | null>(null)
-  const [titleError, setTitleError] = useState<string | null>(null)
   const [venue, setVenue] = useState('')
   const [venuePhone, setVenuePhone] = useState<string | null>(null)
   const [venueWebsite, setVenueWebsite] = useState<string | null>(null)
@@ -151,7 +150,6 @@ export function EventModal({
       setNotes('')
     }
     setDateError(null)
-    setTitleError(null)
     setSelectedVendorIds(initialVendorIds || [])
     setShowDeleteModal(false)
     setVenueSuggestions([])
@@ -217,28 +215,19 @@ export function EventModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Validate both fields up front so the user sees every missing
-    // requirement at once instead of fixing-saving-fixing.
-    let invalid = false
-    if (!title.trim()) {
-      setTitleError('Title is required')
-      invalid = true
-    } else {
-      setTitleError(null)
-    }
+    // Date is the only required field — title is optional (an event is
+    // identified by its date + venue when left blank).
     if (!date.trim()) {
       setDateError('Date is required')
-      invalid = true
-    } else {
-      setDateError(null)
+      return
     }
-    if (invalid) return
+    setDateError(null)
 
     onSave({
       ...(event?.id ? { id: event.id } : {}),
       couple_id: coupleId,
       date,
-      title: title.trim(),
+      title: title.trim() || null,
       venue,
       venue_phone: venuePhone,
       venue_website: venueWebsite,
@@ -296,7 +285,7 @@ export function EventModal({
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={loading || !title.trim() || !date.trim()}
+                disabled={loading || !date.trim()}
                 className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? 'Saving...' : 'Save'}
@@ -306,26 +295,18 @@ export function EventModal({
         }
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Title - required short label distinguishing ceremony
+          {/* Title - optional short label distinguishing ceremony
               / reception / engagement party. Goes first because it's
               the line users will see in the events list. */}
           <div>
-            <label className={labelClass}>
-              Title <span className="text-red-500">*</span>
-            </label>
+            <label className={labelClass}>Title</label>
             <input
               type="text"
               value={title}
-              onChange={(e) => {
-                setTitle(e.target.value)
-                if (titleError) setTitleError(null)
-              }}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Ceremony"
               className={inputClass}
             />
-            {titleError && (
-              <p className="text-xs text-red-500 mt-1">{titleError}</p>
-            )}
           </div>
 
           {/* Date + Status share a row - both compact controls. */}

@@ -165,16 +165,6 @@ export interface PortalData {
   branding_blocks: Block[] | null
 }
 
-function formatEventDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-AU', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-}
-
 const PORTAL_DOC: PublicDocData = { title: '', refNumber: '', expiresAt: null, items: [], subtotal: 0, taxRate: 0 }
 
 export default async function PortalPage({
@@ -327,12 +317,6 @@ export default async function PortalPage({
           >
             {portal.couple_name}
           </h1>
-          {portal.event && (
-            <p className="text-sm" style={{ color: mutedColor }}>
-              {formatEventDate(portal.event.date)}
-              {portal.event.venue ? ` · ${portal.event.venue.replace(/\s*[—–]\s*/g, ', ')}` : ''}
-            </p>
-          )}
           <p className="mt-3 text-sm" style={{ color: mutedColor }}>
             Fill in your details below. Everything saves automatically. You can come back anytime.
           </p>

@@ -182,9 +182,21 @@ const upsertEventDateSchema = z.object({
   coupleId: z.uuid('Couple id must be a UUID'),
   date: dateOrNullStrict,
   venue: z.string().trim().max(300).nullable().default(null),
+  // Place-autocomplete metadata, optional — present when the venue was
+  // picked from the maps suggestions rather than typed free-hand.
+  venue_phone: z.string().trim().max(50).nullable().default(null),
+  venue_website: z.string().trim().max(500).nullable().default(null),
+  venue_lat: z.number().nullable().default(null),
+  venue_lng: z.number().nullable().default(null),
 });
 
 export type UpsertCoupleEventDateInput = z.input<typeof upsertEventDateSchema>;
+
+/** The event-venue columns written by an upsert (shared insert/update shape). */
+type EventVenueFields = Pick<
+  z.infer<typeof upsertEventDateSchema>,
+  'venue' | 'venue_phone' | 'venue_website' | 'venue_lat' | 'venue_lng'
+>;
 
 /**
  * Set a couple's wedding date by creating or updating its event.
@@ -203,7 +215,7 @@ export async function upsertCoupleEventDateAction(
   if (!parsed.success) {
     return { ok: false, error: 'Invalid event date.' };
   }
-  const { coupleId, date, venue } = parsed.data;
+  const { coupleId, date, ...venueFields } = parsed.data;
 
   const supabase = await createClient();
   const {
@@ -240,8 +252,13 @@ export async function upsertCoupleEventDateAction(
 
   const error =
     events && events.length > 0
-      ? await updateExistingEvent(supabase, pickDisplayEventId(events), date, venue)
-      : await insertCoupleEvent(supabase, user.id, coupleId, date, venue);
+      ? await updateExistingEvent(
+          supabase,
+          pickDisplayEventId(events),
+          date,
+          venueFields,
+        )
+      : await insertCoupleEvent(supabase, user.id, coupleId, date, venueFields);
 
   if (error) {
     logger.error('[couples/actions] upsert event write failed', error, {
@@ -259,27 +276,42 @@ async function insertCoupleEvent(
   userId: string,
   coupleId: string,
   date: string,
-  venue: string | null,
+  venueFields: EventVenueFields,
 ): Promise<{ message?: string } | null> {
   const { error } = await supabase.from('events').insert({
     user_id: userId,
     couple_id: coupleId,
     date,
-    venue: venue ?? null,
+    venue: venueFields.venue ?? null,
+    venue_phone: venueFields.venue_phone,
+    venue_website: venueFields.venue_website,
+    venue_lat: venueFields.venue_lat,
+    venue_lng: venueFields.venue_lng,
     status: 'upcoming',
   });
   return error;
 }
 
-/** Update an existing event's date (and venue when one was supplied). */
+/**
+ * Update an existing event's date, plus any venue fields the caller
+ * supplied. A `null` venue means "venue not provided by this edit" (the
+ * date-only path), so we leave the stored venue untouched; a non-null
+ * venue replaces it along with its place metadata.
+ */
 async function updateExistingEvent(
   supabase: RlsClient,
   eventId: string,
   date: string,
-  venue: string | null,
+  venueFields: EventVenueFields,
 ): Promise<{ message?: string } | null> {
-  const patch: { date: string; venue?: string } = { date };
-  if (venue !== null) patch.venue = venue;
+  const patch: { date: string } & Partial<EventVenueFields> = { date };
+  if (venueFields.venue !== null) {
+    patch.venue = venueFields.venue;
+    patch.venue_phone = venueFields.venue_phone;
+    patch.venue_website = venueFields.venue_website;
+    patch.venue_lat = venueFields.venue_lat;
+    patch.venue_lng = venueFields.venue_lng;
+  }
   const { error } = await supabase.from('events').update(patch).eq('id', eventId);
   return error;
 }
