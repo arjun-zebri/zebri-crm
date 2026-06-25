@@ -58,8 +58,8 @@ export async function addCouple(
   page: Page,
   opts: { name: string; email?: string; phone?: string; notes?: string }
 ) {
-  await page.locator('button:has-text("New")').first().click()
-  await page.waitForSelector('h2:has-text("Add Couple")')
+  // "New couple" is a split menu (Add manually / Import from CSV).
+  await openAddCoupleModal(page)
   await page.locator('input[placeholder="Couple\'s name"]').fill(opts.name)
   if (opts.email) await page.locator('input[type="email"]').fill(opts.email)
   if (opts.phone) await page.locator('input[type="tel"]').fill(opts.phone)
@@ -67,6 +67,20 @@ export async function addCouple(
   await page.locator('button:has-text("Save")').click()
   await page.waitForSelector('h2:has-text("Add Couple")', { state: 'hidden' })
   await page.waitForLoadState('networkidle')
+}
+
+/** Open the manual "Add Couple" modal via the New-couple split menu. */
+export async function openAddCoupleModal(page: Page) {
+  await page.locator('button:has-text("New couple")').first().click()
+  await page.locator('button:has-text("Add manually")').click()
+  await page.waitForSelector('h2:has-text("Add Couple")')
+}
+
+/** Open the "Import couples" modal via the New-couple split menu. */
+export async function openImportCouplesModal(page: Page) {
+  await page.locator('button:has-text("New couple")').first().click()
+  await page.locator('button:has-text("Import from CSV")').click()
+  await page.waitForSelector('h2:has-text("Import couples")')
 }
 
 export async function openCoupleProfile(page: Page, name: string) {

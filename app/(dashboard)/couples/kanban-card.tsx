@@ -6,7 +6,7 @@ import {
   NotDraggingStyle,
   DraggableStateSnapshot,
 } from "@hello-pangea/dnd";
-import { GripVertical } from "lucide-react";
+import { Calendar, GripVertical, Mail, MapPin, Phone } from "lucide-react";
 
 import { formatDate } from "@/lib/utils";
 import { Couple } from '@/types/couple';
@@ -31,6 +31,14 @@ function getDragStyle(
 }
 
 function CardBody({ couple }: { couple: Couple }) {
+  // Primary partner contact, falling back to the couple-level fields for
+  // pre-partner-contacts rows. Event date/venue come from the resolved
+  // next event (`next_event_*`), since the couple-level columns are legacy.
+  const email = couple.primary_email || couple.email;
+  const phone = couple.primary_phone || couple.phone;
+  const hasDetails =
+    email || phone || couple.next_event_date || couple.next_event_venue;
+
   return (
     <>
       <div className="hidden sm:block mt-0.5 shrink-0 text-gray-300">
@@ -38,10 +46,32 @@ function CardBody({ couple }: { couple: Couple }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="font-medium text-sm text-gray-900">{couple.name}</div>
-        {(couple.event_date || couple.venue) && (
+        {hasDetails && (
           <div className="mt-1 text-xs text-gray-400 space-y-0.5">
-            {couple.event_date && <div>{formatDate(couple.event_date)}</div>}
-            {couple.venue && <div className="truncate">{couple.venue}</div>}
+            {email && (
+              <div className="flex items-center gap-1.5 truncate">
+                <Mail size={12} strokeWidth={1.5} className="shrink-0" />
+                <span className="truncate">{email}</span>
+              </div>
+            )}
+            {phone && (
+              <div className="flex items-center gap-1.5">
+                <Phone size={12} strokeWidth={1.5} className="shrink-0" />
+                <span className="truncate">{phone}</span>
+              </div>
+            )}
+            {couple.next_event_date && (
+              <div className="flex items-center gap-1.5">
+                <Calendar size={12} strokeWidth={1.5} className="shrink-0" />
+                <span>{formatDate(couple.next_event_date)}</span>
+              </div>
+            )}
+            {couple.next_event_venue && (
+              <div className="flex items-center gap-1.5 truncate">
+                <MapPin size={12} strokeWidth={1.5} className="shrink-0" />
+                <span className="truncate">{couple.next_event_venue}</span>
+              </div>
+            )}
           </div>
         )}
       </div>

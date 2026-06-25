@@ -401,24 +401,6 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
     },
   });
 
-  const { data: eventContacts = [] } = useQuery({
-    queryKey: ["event-contacts", eventId],
-    queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("Not authenticated");
-      const { data, error } = await supabase
-        .from("event_contacts")
-        .select("contact_id, contact:contact_id(id, name, category)")
-        .eq("event_id", eventId)
-        .eq("user_id", user.user.id);
-      if (error) throw error;
-      return (data ?? []) as unknown as Array<{
-        contact_id: string;
-        contact: { id: string; name: string; category: string };
-      }>;
-    },
-  });
-
   const { data: shareData } = useQuery({
     queryKey: ["event-share", eventId],
     queryFn: async () => {
@@ -861,7 +843,6 @@ export function EventDayCalendar({ eventId, hideShareLink, hideUnscheduled, skip
         }
         item={editingItem}
         initialTime={clickTime}
-        eventContacts={eventContacts}
         loading={mutating}
         showStatus={showItemStatus}
       />

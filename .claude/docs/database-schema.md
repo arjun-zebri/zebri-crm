@@ -175,9 +175,11 @@ contact_id (uuid, nullable, FK to contacts.id, on delete set null)  -  the conta
 
 position (integer, not null)  -  ordering; stored as multiples of 1000 on creation to allow insertion between items without a full renumber
 
+internal (boolean, not null, default false)  -  MC-only item. When true the row is hidden from every public surface (couple portal, vendor run sheet, public timeline link) and renders only on the MC dashboard. Set on the auto-inserted "Sunset" planning cue (golden-hour photos). Added 2026-06-25; the three public RPCs filter `internal = false`.
+
 created_at (timestamp)
 
-RLS: Standard user_id = auth.uid() policy for authenticated CRUD. Anon SELECT is granted via a SECURITY DEFINER Supabase function get_public_timeline(token uuid)  -  returns event + items only when share_token_enabled = true; returns null otherwise. This avoids complex anon policy joins.
+RLS: Standard user_id = auth.uid() policy for authenticated CRUD. Anon SELECT is granted via a SECURITY DEFINER Supabase function get_public_timeline(token uuid)  -  returns event + items only when share_token_enabled = true; returns null otherwise. This avoids complex anon policy joins. Public RPCs exclude `internal = true` rows.
 
 ------------------------------------------------------------------------
 
@@ -491,11 +493,11 @@ RLS: Standard user_id = auth.uid(). MC dashboard uploads run client-side with th
 _resolve_portal_couple(p_token uuid)  -  maps either portal_token (primary) or secondary_portal_token (spouse) to (couple_id, owner_id, viewer) where viewer is 'primary' or 'spouse'. All other RPCs use this to derive authorization and viewer context.
 
 **Data retrieval:**
-get_portal_data(token uuid)  -  returns couple name + event + people + songs + files + timeline_items + payments + contracts + **vows (privacy-filtered: only the calling partner's vow)**. Adds 'viewer', 'primary_name', 'primary_email', 'primary_phone', 'secondary_name', 'secondary_email', 'secondary_phone' to result (the email/phone fields hydrate the editable Overview contact cards, added 2026-06-17). Each partner sees only their own vow content.
-get_vendor_timeline(token uuid)  -  returns event date/venue + timeline_items only (no PII). Uses portal_token only (vendor flow unchanged).
+get_portal_data(token uuid)  -  returns couple name + event + people + songs + files + timeline_items + payments + contracts + **vows (privacy-filtered: only the calling partner's vow)**. Adds 'viewer', 'primary_name', 'primary_email', 'primary_phone', 'secondary_name', 'secondary_email', 'secondary_phone' to result (the email/phone fields hydrate the editable Overview contact cards, added 2026-06-17). Each partner sees only their own vow content. As of 2026-06-25 `timeline_items` spans **all** of the couple's events (not just the soonest) and each item carries `event_id`, so the portal can group moments by day; `internal = true` items are excluded.
+get_vendor_timeline(token uuid)  -  returns the couple's `events` list (id/date/venue) + `timeline_items` across all events (each tagged with `event_id`), no PII. Uses portal_token only. As of 2026-06-25 it returns the full event list (was a single event) so the run sheet can offer a per-day selector; `internal = true` items are excluded.
 
 **Timeline & people:**
-save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min)  -  insert with pending_review=true
+save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min, p_event_id?)  -  insert with pending_review=true. As of 2026-06-25 takes an optional `p_event_id` so a suggestion lands on the day the couple is viewing; when omitted (or not owned by the couple) it falls back to the soonest event. Couple suggestions are always `internal = false`.
 delete_portal_timeline_item(p_token, p_id)
 save_portal_person(p_token, p_id, p_category, p_full_name, p_phonetic, p_role, p_audio_url, p_position, p_notes?, p_email?, p_phone?)  -  upsert
 delete_portal_person(p_token, p_id)

@@ -205,6 +205,36 @@ describe('createTimelineItemAction', () => {
     });
     expect(result.ok).toBe(false);
   });
+
+  it('forwards the internal flag into the insert (Sunset is MC-only)', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { createTimelineItemAction } = await loadActions();
+    const result = await createTimelineItemAction({
+      event_id: validUuid,
+      title: 'Sunset',
+      start_time: '19:00',
+      position: 1000,
+      internal: true,
+    });
+    expect(result.ok).toBe(true);
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ internal: true, user_id: 'u1' }),
+    );
+  });
+
+  it('omits internal from the insert when not set (forward-compatible)', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const { createTimelineItemAction } = await loadActions();
+    const result = await createTimelineItemAction({
+      event_id: validUuid,
+      title: 'Ceremony',
+      position: 0,
+    });
+    expect(result.ok).toBe(true);
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({ internal: expect.anything() }),
+    );
+  });
 });
 
 describe('updateTimelineItemAction', () => {

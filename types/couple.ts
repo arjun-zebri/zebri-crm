@@ -51,6 +51,16 @@ export interface Couple {
   /** Secondary partner's own portal token — a distinct private link. */
   secondary_portal_token?: string
   portal_token_enabled?: boolean
+  /**
+   * Derived, list-only fields. NOT persisted columns — populated by
+   * `useCouples()` from the couple's embedded `events`. The couple-level
+   * `event_date` / `venue` columns are legacy denormalised fields; the
+   * real schedule now lives in the couple-owned `events` table, so the
+   * list resolves the soonest upcoming event (falling back to the most
+   * recent past one) for display and date sorting.
+   */
+  next_event_date?: string | null
+  next_event_venue?: string | null
 }
 
 export interface CoupleStatusRecord {

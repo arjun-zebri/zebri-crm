@@ -56,6 +56,12 @@ export interface PortalTimelineItem {
   duration_min: number | null
   position: number
   pending_review: boolean
+  /**
+   * The event this moment belongs to. A couple can have several events
+   * (and several on the same day); the Timeline section groups items by
+   * the event's date so each day shows as its own run sheet.
+   */
+  event_id: string
 }
 
 export interface PortalEvent {
@@ -157,16 +163,6 @@ export interface PortalData {
   enabled_sections: string[] | null
   branding: PublicBranding | null
   branding_blocks: Block[] | null
-}
-
-function formatEventDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-AU', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
 }
 
 const PORTAL_DOC: PublicDocData = { title: '', refNumber: '', expiresAt: null, items: [], subtotal: 0, taxRate: 0 }
@@ -321,12 +317,6 @@ export default async function PortalPage({
           >
             {portal.couple_name}
           </h1>
-          {portal.event && (
-            <p className="text-sm" style={{ color: mutedColor }}>
-              {formatEventDate(portal.event.date)}
-              {portal.event.venue ? ` · ${portal.event.venue.replace(/\s*[—–]\s*/g, ', ')}` : ''}
-            </p>
-          )}
           <p className="mt-3 text-sm" style={{ color: mutedColor }}>
             Fill in your details below. Everything saves automatically. You can come back anytime.
           </p>

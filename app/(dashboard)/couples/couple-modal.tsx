@@ -5,14 +5,22 @@ import { ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Modal } from "@/components/ui/modal";
 import { Couple, CoupleStatusRecord, LeadSource, LEAD_SOURCES, LEAD_SOURCE_LABELS } from '@/types/couple';
+
+import { VenueAutocomplete, EMPTY_VENUE, type VenueDetails } from "./venue-autocomplete";
+
+/** The first-event payload captured alongside the couple — the date and
+ *  venue feed the couple's real `events` row via the page's upsert. */
+export type CoupleEventInput = { date: string | null } & VenueDetails;
 
 interface CoupleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (
-    couple: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string }
+    couple: Omit<Couple, "id" | "user_id" | "created_at"> & { id?: string },
+    event: CoupleEventInput,
   ) => void;
   onDelete: (id: string) => void;
   couple?: Couple | undefined;
@@ -39,6 +47,8 @@ export function CoupleModal({
   const [secondaryEmail, setSecondaryEmail] = useState("");
   const [secondaryPhone, setSecondaryPhone] = useState("");
   const [status, setStatus] = useState<string>("new");
+  const [eventDate, setEventDate] = useState("");
+  const [venue, setVenue] = useState<VenueDetails>(EMPTY_VENUE);
   const [notes, setNotes] = useState("");
   const [leadSource, setLeadSource] = useState<string>("");
   const [statusOpen, setStatusOpen] = useState(false);
@@ -55,6 +65,15 @@ export function CoupleModal({
       setSecondaryEmail(couple.secondary_email ?? "");
       setSecondaryPhone(couple.secondary_phone ?? "");
       setStatus(couple.status);
+      // Prefill from the couple's displayed event (the real `events`
+      // row), falling back to the legacy column for older records.
+      setEventDate(couple.next_event_date ?? couple.event_date ?? "");
+      // We only know the venue *name* on the couple row; place metadata
+      // lives on the event and is re-fetched if the user reselects.
+      setVenue({
+        ...EMPTY_VENUE,
+        venue: couple.next_event_venue ?? couple.venue ?? "",
+      });
       setLeadSource(couple.lead_source || "");
       setNotes(couple.notes);
     } else {
@@ -75,6 +94,8 @@ export function CoupleModal({
     setSecondaryEmail("");
     setSecondaryPhone("");
     setStatus("new");
+    setEventDate("");
+    setVenue(EMPTY_VENUE);
     setLeadSource("");
     setNotes("");
   };
@@ -98,13 +119,16 @@ export function CoupleModal({
       secondary_name: trim(secondaryName),
       secondary_email: trim(secondaryEmail),
       secondary_phone: trim(secondaryPhone),
-      event_date: couple?.event_date ?? null,
+      // The legacy `event_date` / `venue` columns are no longer the
+      // source of truth; the date + venue flow into the real `events`
+      // row via the page's upsert (the `event` arg below).
+      event_date: eventDate || null,
       venue: couple?.venue ?? "",
       status: status as any,
       lead_source: leadSource || null,
       kanban_position: couple?.kanban_position ?? 0,
       notes,
-    });
+    }, { date: eventDate || null, ...venue });
   };
 
   const handleDelete = () => {
@@ -129,23 +153,23 @@ export function CoupleModal({
             <button
               onClick={handleDelete}
               disabled={loading}
-              className="text-sm px-4 py-2 rounded-xl transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
+              className="text-xs px-3 py-1.5 rounded-md transition cursor-pointer bg-red-50 text-red-600 hover:bg-red-100"
             >
               Delete
             </button>
           )}
-          <div className="flex gap-3 ml-auto">
+          <div className="flex gap-2 ml-auto">
             <button
               onClick={onClose}
               disabled={loading}
-              className="text-sm px-4 py-2 rounded-xl bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
+              className="text-xs px-3 py-1.5 rounded-md bg-gray-100 text-gray-900 hover:bg-gray-200 transition disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={loading || !name.trim() || !primaryName.trim()}
-              className="text-sm px-4 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
+              className="text-xs px-3 py-1.5 rounded-md bg-black text-white hover:bg-neutral-800 transition disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Saving..." : "Save"}
             </button>
@@ -235,6 +259,34 @@ export function CoupleModal({
                   placeholder="Phone"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Wedding date + venue. Optional — when set, the page creates
+              the couple's first event (or updates its soonest), since the
+              schedule lives in the `events` table, not on the couple. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                Wedding date
+              </label>
+              <DatePicker
+                value={eventDate}
+                onChange={setEventDate}
+                variant="underline"
+                placeholder="Select date"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                Venue
+              </label>
+              <VenueAutocomplete
+                value={venue}
+                onChange={setVenue}
+                inputClassName={inputClass}
+                showDetails={false}
+              />
             </div>
           </div>
 

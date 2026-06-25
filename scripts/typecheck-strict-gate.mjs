@@ -34,7 +34,10 @@ import { execSync } from 'node:child_process';
 // A1 staging merge: 324 → 323 (one strict error removed via the
 // auto-fix sweep inside the admin redesign commits that came in
 // with the staging merge into this PR). Locking the gain in.
-const STRICT_BUDGET = 323;
+// Timeline internal flag + multi-day portals: 323 → 315 (deleted the
+// dead run-sheet-section.tsx, which carried several strict errors;
+// new portal/vendor day-selector code is strict-clean). Locking in.
+const STRICT_BUDGET = 315;
 
 function runTscStrict() {
   try {
