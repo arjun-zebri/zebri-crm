@@ -1,17 +1,27 @@
 'use client'
 
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Mention from '@tiptap/extension-mention'
+import * as Popover from '@radix-ui/react-popover'
+import Mention, { type MentionOptions } from '@tiptap/extension-mention'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useEffect, useRef, useState } from 'react'
-import type { JSONContent } from '@tiptap/react'
+import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
+import type { JSONContent, NodeViewProps } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
 import {
   Bold, Italic, List, ListOrdered, Heading1, Heading2, Quote,
   Undo, Redo, AtSign,
 } from 'lucide-react'
-import * as Popover from '@radix-ui/react-popover'
+import { useEffect, useRef, useState } from 'react'
+
+import { variableLabel } from '@/lib/automations/variables'
 import { CONTRACT_VARIABLES } from '@/lib/contracts/contract-variables'
+import { toPlainJSON } from '@/lib/utils'
+
+/** A mergeable variable for the "Insert variable" popover. */
+export interface EditorVariable {
+  id: string
+  label: string
+  description: string
+}
 
 interface RichTextEditorProps {
   value: JSONContent
@@ -19,6 +29,81 @@ interface RichTextEditorProps {
   placeholder?: string
   editable?: boolean
   className?: string
+  /**
+   * Variables offered in the "Insert variable" popover. Defaults to the
+   * contract variable set; email templates pass their own namespaced
+   * list. The mention node stores the chosen `id` verbatim.
+   */
+  variables?: readonly EditorVariable[]
+  /**
+   * Show the "Insert variable" toolbar button. Off for surfaces that
+   * edit an already-resolved email (the manual send preview), where
+   * inserting a fresh `{{variable}}` would never get filled.
+   */
+  showVariableInserter?: boolean
+  /**
+   * How a mention node renders. `'token'` (default) shows the raw
+   * `{{variable}}` in emerald — the template builder. `'label'` shows the
+   * variable's human label in a red "fill me" chip — the manual send
+   * preview, where a leftover mention is an unfilled gap to highlight.
+   */
+  mentionDisplay?: 'token' | 'label'
+  /**
+   * Pre-rendered, sanitised HTML for the MC's email signature. When
+   * provided, a `{{mc.signature}}` mention renders **inline as this rich
+   * block** (with a remove button) instead of a chip — so the compose
+   * editor shows the finished signature in place and the MC can delete it
+   * right there. Other surfaces omit this and signatures stay chips.
+   */
+  signatureHtml?: string | null
+}
+
+/** The variable path that injects the MC's email signature. */
+const SIGNATURE_PATH = 'mc.signature'
+
+/**
+ * NodeView for mention nodes in the compose editor. The `{{mc.signature}}`
+ * mention renders inline as the finished signature (rich HTML); click to
+ * select it (a ring shows the selection) and press Delete/Backspace to
+ * remove it. Every other mention falls back to the red "fill me" chip.
+ * Only used when {@link RichTextEditor} is given `signatureHtml`.
+ */
+function MentionNodeView({ node, selected, extension }: NodeViewProps) {
+  const id = String(node.attrs?.id ?? '')
+  const signatureHtml = (extension.options as { signatureHtml?: string | null }).signatureHtml
+
+  if (id === SIGNATURE_PATH) {
+    if (!signatureHtml) {
+      return (
+        <NodeViewWrapper as="span" contentEditable={false} className="text-sm text-text-subtle">
+          (no signature set)
+        </NodeViewWrapper>
+      )
+    }
+    return (
+      <NodeViewWrapper
+        as="div"
+        contentEditable={false}
+        className={`email-preview my-1 rounded-lg text-sm leading-relaxed text-text [&_a]:text-brand [&_p]:my-1 [&_img]:my-1 ${
+          selected ? 'ring-2 ring-brand ring-offset-2' : ''
+        }`}
+        // Sanitised upstream by renderSignatureHtml before being passed in.
+        dangerouslySetInnerHTML={{ __html: signatureHtml }}
+      />
+    )
+  }
+
+  return (
+    <NodeViewWrapper
+      as="span"
+      contentEditable={false}
+      className={`inline-block rounded bg-red-100 px-1.5 py-0.5 text-sm font-medium text-red-700 ${
+        selected ? 'ring-2 ring-red-400' : ''
+      }`}
+    >
+      {variableLabel(id)}
+    </NodeViewWrapper>
+  )
 }
 
 export function RichTextEditor({
@@ -27,29 +112,60 @@ export function RichTextEditor({
   placeholder = 'Start writing your contract…',
   editable = true,
   className = '',
+  variables = CONTRACT_VARIABLES,
+  showVariableInserter = true,
+  mentionDisplay = 'token',
+  signatureHtml,
 }: RichTextEditorProps) {
+  // When a signature is supplied (compose editor), the mention extension
+  // gets a React NodeView so `{{mc.signature}}` renders inline as the rich
+  // signature block. Everywhere else, the lightweight `renderHTML` chip is
+  // used — keeping template / contract editors untouched.
+  const mentionExtension =
+    signatureHtml !== undefined
+      ? Mention.extend<MentionOptions & { signatureHtml: string | null }>({
+          // Make mentions selectable so the rendered signature (and any
+          // fill-me chip) can be clicked and removed with Delete/Backspace.
+          selectable: true,
+          addOptions() {
+            return { ...this.parent?.(), signatureHtml } as MentionOptions & {
+              signatureHtml: string | null
+            }
+          },
+          addNodeView() {
+            return ReactNodeViewRenderer(MentionNodeView)
+          },
+        })
+      : Mention.configure({
+          HTMLAttributes: {
+            class:
+              mentionDisplay === 'label'
+                ? 'inline-block rounded bg-red-100 text-red-700 px-1.5 py-0.5 text-sm font-medium'
+                : 'inline-block rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-sm font-medium',
+          },
+          renderHTML({ options, node }) {
+            const id = String(node.attrs.id)
+            return [
+              'span',
+              options.HTMLAttributes,
+              mentionDisplay === 'label' ? variableLabel(id) : `{{${id}}}`,
+            ]
+          },
+        })
+
   const editor = useEditor({
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder }),
-      Mention.configure({
-        HTMLAttributes: {
-          class:
-            'inline-block rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 text-sm font-medium',
-        },
-        renderHTML({ options, node }) {
-          return [
-            'span',
-            options.HTMLAttributes,
-            `{{${node.attrs.id}}}`,
-          ]
-        },
-      }),
+      mentionExtension,
     ],
     content: value && Object.keys(value).length > 0 ? value : { type: 'doc', content: [{ type: 'paragraph' }] },
     editable,
     immediatelyRender: false,
-    onUpdate: ({ editor }) => onChange(editor.getJSON()),
+    // `getJSON()` returns mention `attrs` as null-prototype objects, which
+    // React Server Action serialisation silently drops (the variable id is
+    // lost, saving `{{null}}`). Normalise to plain objects on the way out.
+    onUpdate: ({ editor }) => onChange(toPlainJSON(editor.getJSON())),
   })
 
   // Sync external value changes (e.g. when a template is applied)
@@ -82,7 +198,12 @@ export function RichTextEditor({
   return (
     <div className={`border border-gray-200 rounded-xl overflow-hidden bg-white ${className}`}>
       {editable && (
-        <ToolbarRow editor={editor} onInsertVariable={insertVariable} />
+        <ToolbarRow
+          editor={editor}
+          onInsertVariable={insertVariable}
+          variables={variables}
+          showVariableInserter={showVariableInserter}
+        />
       )}
       <EditorContent
         editor={editor}
@@ -120,9 +241,13 @@ function ToolbarButton({
 function ToolbarRow({
   editor,
   onInsertVariable,
+  variables,
+  showVariableInserter,
 }: {
   editor: ReturnType<typeof useEditor>
   onInsertVariable: (id: string) => void
+  variables: readonly EditorVariable[]
+  showVariableInserter: boolean
 }) {
   const [open, setOpen] = useState(false)
   if (!editor) return null
@@ -193,6 +318,7 @@ function ToolbarRow({
         <Redo size={16} strokeWidth={1.5} />
       </ToolbarButton>
       <div className="flex-1" />
+      {showVariableInserter && (
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
           <button
@@ -213,7 +339,7 @@ function ToolbarRow({
               Auto-filled from the couple, quote and settings
             </div>
             <div className="max-h-72 overflow-y-auto">
-              {CONTRACT_VARIABLES.map((v) => (
+              {variables.map((v) => (
                 <button
                   key={v.id}
                   type="button"
@@ -231,6 +357,7 @@ function ToolbarRow({
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
+      )}
     </div>
   )
 }

@@ -1,15 +1,15 @@
 /**
  * Settings → Receive Payments tab.
  *
- * Document-style composition matching the Plans & Billing tab — small
+ * Document-style composition matching the Plans & Billing tab: small
  * UPPERCASE section labels + thin dividers, no nested bordered cards
  * for top-level layout. Two sections:
  *
- * 1. **Bank details** — auto-filled into invoice notes. Stored in
+ * 1. **Bank details**: auto-filled into invoice notes. Stored in
  *    `user_metadata`. The Save button lives at the section footer
  *    (right-aligned), not in the middle of the form.
  *
- * 2. **Card payments via Stripe Connect** — Phase 2D.1. Mounts the
+ * 2. **Card payments via Stripe Connect**: Phase 2D.1. Mounts the
  *    Stripe embedded Connect components (`<ConnectAccountOnboarding>`
  *    / `<ConnectAccountManagement>` + `<ConnectNotificationBanner>`)
  *    inline. The MC never leaves Zebri.
@@ -22,7 +22,7 @@
  *    - **Publishable key missing** → shows a clear error explaining
  *      the env-var gap so dev setups don't render an empty section.
  *
- *    Disconnect routes through `/api/stripe/connect/disconnect` —
+ *    Disconnect routes through `/api/stripe/connect/disconnect`:
  *    the §7.4 client-side `user_metadata` write is closed.
  *
  * @module app/(dashboard)/settings/payment-settings-section
@@ -32,7 +32,7 @@
 // `/pure` skips the side-effectful auto-load of ConnectJS at module
 // eval time, which Next.js triggers during SSR / static page gen
 // and which Stripe explicitly warns against. The runtime behaviour
-// is identical — the script loads on first call to
+// is identical, the script loads on first call to
 // `loadConnectAndInitialize`. See
 // https://github.com/stripe/connect-js#importing-loadconnect-without-side-effects
 import { loadConnectAndInitialize } from '@stripe/connect-js/pure';
@@ -44,13 +44,15 @@ import {
   ConnectNotificationBanner,
 } from '@stripe/react-connect-js';
 import { AlertTriangle, CreditCard } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { ConnectStatusPanel } from '@/components/settings/connect-status-panel';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import type { ConnectAccountState } from '@/lib/payments/connect-account';
 import { createClient } from '@/lib/supabase/client';
+
+import { AutoSaveStatus, type SaveState } from './auto-save-status';
 
 interface PaymentSettingsSectionProps {
   initialBankAccountName: string;
@@ -74,7 +76,14 @@ export function PaymentSettingsSection({
   const [bankAccountName, setBankAccountName] = useState(initialBankAccountName);
   const [bankBsb, setBankBsb] = useState(initialBankBsb);
   const [bankAccountNumber, setBankAccountNumber] = useState(initialBankAccountNumber);
-  const [bankSaving, setBankSaving] = useState(false);
+  const [bankSaveState, setBankSaveState] = useState<SaveState>('idle');
+  // Last-persisted baseline so a blur with no real change is a no-op.
+  const savedBankRef = useRef({
+    name: initialBankAccountName,
+    bsb: initialBankBsb,
+    number: initialBankAccountNumber,
+  });
+  const bankSavingRef = useRef(false);
 
   /* ─── Connect state ─────────────────────────────────────────── */
   const [accountId, setAccountId] = useState<string | null>(
@@ -100,7 +109,7 @@ export function PaymentSettingsSection({
   /**
    * Sync the mirror directly from Stripe (bypassing the webhook).
    * The webhook is the source of truth in production, but it has
-   * lag — and in local dev without `stripe listen`, it never fires
+   * lag, and in local dev without `stripe listen`, it never fires
    * at all. Calling this on embedded-component exit closes both
    * gaps. Followed by a status refresh to pick up the new mirror.
    */
@@ -150,14 +159,22 @@ export function PaymentSettingsSection({
     });
   }, [accountId, publishableKey]);
 
-  /* ─── Bank details save ─────────────────────────────────────── */
+  /* ─── Bank details auto-save (on blur) ──────────────────────── */
   const saveBankDetails = async () => {
-    setBankSaving(true);
+    const s = savedBankRef.current;
+    const dirty =
+      bankAccountName !== s.name ||
+      bankBsb !== s.bsb ||
+      bankAccountNumber !== s.number;
+    if (bankSavingRef.current || !dirty) return;
+    bankSavingRef.current = true;
+    setBankSaveState('saving');
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      setBankSaving(false);
+      setBankSaveState('error');
+      bankSavingRef.current = false;
       return;
     }
     const { error } = await supabase.auth.updateUser({
@@ -168,12 +185,14 @@ export function PaymentSettingsSection({
         bank_account_number: bankAccountNumber,
       },
     });
-    setBankSaving(false);
     if (error) {
       toast(error.message, 'error');
+      setBankSaveState('error');
     } else {
-      toast('Bank details saved.');
+      savedBankRef.current = { name: bankAccountName, bsb: bankBsb, number: bankAccountNumber };
+      setBankSaveState('saved');
     }
+    bankSavingRef.current = false;
   };
 
   /* ─── Connect kickoff / disconnect ──────────────────────────── */
@@ -190,7 +209,7 @@ export function PaymentSettingsSection({
       // settings page sees the binding consistently.
       await supabase.auth.refreshSession();
       setAccountId(newId);
-      toast('Stripe account created — complete the verification below.');
+      toast('Stripe account created, complete the verification below.');
     } catch {
       toast('Could not start Stripe setup', 'error');
     } finally {
@@ -209,7 +228,7 @@ export function PaymentSettingsSection({
           error?: string;
           detail?: string;
         };
-        // Surface the real reason — generic "Could not disconnect"
+        // Surface the real reason: generic "Could not disconnect"
         // hides the underlying Supabase / Stripe error and makes
         // dev debugging impossible.
         const reason = body.detail ?? body.error ?? `HTTP ${res.status}`;
@@ -217,7 +236,7 @@ export function PaymentSettingsSection({
         throw new Error(reason);
       }
       // The server cleared app_metadata but the user's JWT still
-      // carries the stale `stripe_connect_account_id` — Supabase
+      // carries the stale `stripe_connect_account_id`, Supabase
       // doesn't auto-refresh JWTs when admin updates app_metadata.
       // Refresh the session so the next render sees the cleared
       // entitlement, then reload so the parent settings page
@@ -238,36 +257,37 @@ export function PaymentSettingsSection({
   const chargesLive = connectState?.chargesEnabled ?? stripeConnectEnabled;
 
   return (
-    <div className="max-w-3xl space-y-12">
+    <div className="space-y-12">
       {/* ─── Bank details ─────────────────────────────────────── */}
       <Section label="Bank details">
-        <p className="mb-5 text-body text-text-muted">
-          Auto-filled into invoice notes when you create a new invoice.
-        </p>
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <p className="text-body text-text-muted">
+            Auto-filled into invoice notes when you create a new invoice. Changes save automatically.
+          </p>
+          <AutoSaveStatus state={bankSaveState} />
+        </div>
         <div className="space-y-4">
           <BankField
             label="Account name"
             placeholder="e.g. John Smith Events"
             value={bankAccountName}
             onChange={setBankAccountName}
+            onBlur={saveBankDetails}
           />
           <BankField
             label="BSB"
             placeholder="e.g. 062-000"
             value={bankBsb}
             onChange={setBankBsb}
+            onBlur={saveBankDetails}
           />
           <BankField
             label="Account number"
             placeholder="e.g. 12345678"
             value={bankAccountNumber}
             onChange={setBankAccountNumber}
+            onBlur={saveBankDetails}
           />
-        </div>
-        <div className="mt-5 flex justify-end">
-          <Button onClick={saveBankDetails} loading={bankSaving}>
-            Save bank details
-          </Button>
         </div>
       </Section>
 
@@ -328,7 +348,7 @@ export function PaymentSettingsSection({
                 Stripe account is stale (created against a different
                 API key, deleted on Stripe's side, etc.) the
                 embedded SDK shows its own "Something went wrong"
-                error and the status panel never loads — leaving
+                error and the status panel never loads, leaving
                 the MC stuck. This footer link is the escape hatch:
                 clears `app_metadata.stripe_connect_*` server-side
                 so the section flips back to the empty-state CTA
@@ -359,7 +379,7 @@ export function PaymentSettingsSection({
 /* ────────────────────────────────────────────────────────────── */
 
 /**
- * Document-style section header — matches the Billing tab pattern
+ * Document-style section header: matches the Billing tab pattern
  * (small UPPERCASE label on the left + a thin divider line filling
  * the rest of the row).
  */
@@ -382,11 +402,13 @@ function BankField({
   placeholder,
   value,
   onChange,
+  onBlur,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur: () => void;
 }) {
   return (
     <div>
@@ -395,6 +417,7 @@ function BankField({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         className="w-full border border-border rounded-xl px-3 py-2 text-body text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition"
       />
@@ -404,7 +427,7 @@ function BankField({
 
 /**
  * The "no Stripe account yet" hero card. Mirrors the layout language
- * of CurrentPlanCard on the Billing tab — a single rounded surface
+ * of CurrentPlanCard on the Billing tab: a single rounded surface
  * with an icon, a one-line value prop, and a primary CTA.
  */
 function EmptyCardPaymentsCard({
@@ -430,7 +453,7 @@ function EmptyCardPaymentsCard({
           </p>
           <p className="mt-1 text-caption text-text-muted">
             Connect a Stripe account so couples can pay invoices by card.
-            Verification happens inside Zebri — Stripe handles ID checks,
+            Verification happens inside Zebri, Stripe handles ID checks,
             documents, and payouts.
           </p>
         </div>
@@ -445,7 +468,7 @@ function EmptyCardPaymentsCard({
 }
 
 /**
- * Dev-config error UI — shown when an MC has a connected Stripe
+ * Dev-config error UI: shown when an MC has a connected Stripe
  * account but the embedded SDK can't initialise because
  * NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY isn't set. Without this
  * fallback the section would silently render empty.
@@ -464,7 +487,7 @@ function PublishableKeyMissingCard() {
           The embedded Connect onboarding component needs
           <code className="font-mono px-1">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>
           in your <code className="font-mono">.env.local</code>. Set it and
-          reload — the onboarding form will mount here.
+          reload, the onboarding form will mount here).
         </p>
       </div>
     </div>

@@ -18,7 +18,13 @@ import { useEffect, useState } from 'react';
 
 import { createClient } from '@/lib/supabase/client';
 
-import { SettingsBody, type EntitlementSource, type SettingsData, type UserMetadata } from './settings-body';
+import {
+  SettingsBody,
+  type EntitlementSource,
+  type PublicSettingsData,
+  type SettingsData,
+  type UserMetadata,
+} from './settings-body';
 import { SETTINGS_NAV_ITEMS, SettingsNav, type SettingsTabId } from './settings-nav';
 
 const VALID_TABS = SETTINGS_NAV_ITEMS.map((i) => i.key) as SettingsTabId[];
@@ -59,6 +65,29 @@ export function SettingsModal() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
+      // Public Page settings live in their own RLS-owned table; load the
+      // row alongside the user so the section renders the saved state.
+      let publicSettings: PublicSettingsData | null = null;
+      if (user) {
+        // Note: the encrypted OAuth tokens are deliberately NOT selected —
+        // the client never needs (or should see) them.
+        const { data: row } = await supabase
+          .from('user_public_settings')
+          .select('subdomain, email_mode, oauth_provider, oauth_email, oauth_status')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (row) {
+          publicSettings = {
+            subdomain: row.subdomain,
+            emailMode: row.email_mode === 'oauth' ? 'oauth' : 'zebri',
+            oauthProvider: (row.oauth_provider as PublicSettingsData['oauthProvider']) ?? null,
+            oauthEmail: row.oauth_email,
+            oauthStatus: (row.oauth_status as PublicSettingsData['oauthStatus']) ?? 'none',
+          };
+        }
+      }
+
       setData({
         metadata: (user?.user_metadata as UserMetadata) ?? null,
         entitlements: user
@@ -66,6 +95,7 @@ export function SettingsModal() {
           : null,
         email: user?.email ?? null,
         userCreatedAt: user?.created_at ?? null,
+        publicSettings,
       });
     };
     load();

@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Pipette } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { Pipette } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface ColorPopoverProps {
   value: string
@@ -26,7 +26,7 @@ export function ColorPopover({
         <Popover.Content
           align={align}
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[280px] animate-modal-in"
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[70] w-[280px] animate-modal-in"
         >
           <ColorPickerBody value={value} onChange={onChange} swatches={swatches} />
         </Popover.Content>

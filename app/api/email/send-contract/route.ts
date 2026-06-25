@@ -31,6 +31,7 @@ import {
 } from '@/lib/contracts/contract-variables';
 import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendContractEmail } from '@/lib/email';
+import { resolveSender } from '@/lib/email/sender-identity';
 import { createClient } from '@/lib/supabase/server';
 
 // 10 / min / IP. Each call sends a real email (Resend spend) and
@@ -201,6 +202,7 @@ export async function POST(request: NextRequest) {
     expiresAt: contract.expires_at,
     shareUrl,
     mcBusinessName,
+    sender: await resolveSender(supabase, user.id, mcBusinessName),
   });
 
   if (!result.ok) {

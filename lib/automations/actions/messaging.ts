@@ -9,32 +9,50 @@
  * @module lib/automations/actions/messaging
  */
 
-import { Resend } from 'resend'
+import type { JSONContent } from '@tiptap/react'
 import { z } from 'zod'
 
+import { wrapTemplateHtml } from '@/lib/email'
+import { dispatchEmail } from '@/lib/email/dispatch'
+import { DEFAULT_FROM, resolveSender, type ResolvedSender } from '@/lib/email/sender-identity'
+import {
+  detectMissingVariables,
+  renderEmailSubject,
+  renderEmailTemplate,
+} from '@/lib/email/templates'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { ActionType, RecipientSpec, RunContext } from '@/types/automations'
+import type { ActionResult, ActionType, RecipientSpec, RunContext } from '@/types/automations'
 
 import { resolveRecipients } from '../recipients'
 import { renderTemplate } from '../variables'
 
 import type { ActionSpec } from './index'
 
-const FROM = 'Zebri <noreply@app.zebri.com.au>'
-
-let _resend: Resend | undefined
-function resend(): Resend {
-  if (!_resend) {
-    const key = process.env.RESEND_API_KEY
-    if (!key) throw new Error('RESEND_API_KEY is not set')
-    _resend = new Resend(key)
-  }
-  return _resend
-}
-
 // ────────────────────────────────────────────────────────────────
 // send_email
 // ────────────────────────────────────────────────────────────────
+
+/**
+ * Load a saved email template's subject + body for the send_email
+ * action. Uses the admin client (the runner has no user session) but
+ * scopes the read to the run's owner so it can't reach another tenant.
+ */
+async function loadTemplateParts(
+  ctx: RunContext,
+  templateId: string,
+): Promise<{ kind: 'ok'; tplSubject: string; tplContent: JSONContent } | Extract<ActionResult, { kind: 'error' }>> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('email_templates')
+    .select('subject, content')
+    .eq('id', templateId)
+    .eq('user_id', ctx.userId)
+    .single()
+  if (error || !data) {
+    return { kind: 'error', message: 'send_email: email template not found', recoverable: false }
+  }
+  return { kind: 'ok', tplSubject: data.subject, tplContent: (data.content ?? {}) as JSONContent }
+}
 
 const recipientSpecSchema: z.ZodSchema<RecipientSpec> = z.object({
   roles: z.array(z.enum(['primary', 'spouse', 'family', 'vendor', 'custom', 'me'])).min(1),
@@ -44,8 +62,15 @@ const recipientSpecSchema: z.ZodSchema<RecipientSpec> = z.object({
 
 const sendEmailConfigSchema = z.object({
   recipients: recipientSpecSchema,
-  subject: z.string().min(1).max(200),
-  body: z.string().min(1),
+  /**
+   * Use a saved email template instead of an inline subject/body. When
+   * set, the template's subject + TipTap body are rendered and the
+   * run is BLOCKED (paused) if any variable can't be resolved.
+   */
+  templateId: z.uuid().optional(),
+  // Inline subject/body — optional now that a template can supply them.
+  subject: z.string().min(1).max(200).optional(),
+  body: z.string().min(1).optional(),
   /** Wrap the body in the standard Zebri-branded HTML shell. */
   wrap: z.boolean().default(true),
   /** Override the Reply-To header (defaults to the MC's email). */
@@ -84,9 +109,50 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       return { kind: 'error', message: 'send_email requires a couple context' }
     }
 
-    const subject = renderTemplate(config.subject, ctx)
-    const bodyText = renderTemplate(config.body, ctx)
-    const html = config.wrap ? wrapAutomationHtml(bodyText, ctx) : bodyText
+    // Resolve subject + body. The template path enforces the
+    // never-send-with-missing-variables rule: if any variable is
+    // unresolved the action returns a `missing_variables` sleep, which
+    // the runner turns into a paused run + Slack alert.
+    let subject: string
+    let html: string
+    if (config.templateId) {
+      const tplResult = await loadTemplateParts(ctx, config.templateId)
+      if (tplResult.kind === 'error') return tplResult
+      const { tplSubject, tplContent } = tplResult
+      const missing = detectMissingVariables({ subject: tplSubject, content: tplContent }, ctx)
+      if (missing.blocked) {
+        return {
+          kind: 'sleep',
+          reason: 'missing_variables',
+          // Far-future so wakeDueWaits never auto-resumes; the run is
+          // paused and an MC retries it manually after fixing the data.
+          wakeAt: '9999-12-31T00:00:00.000Z',
+          payload: { missing: missing.missing, couple_name: ctx.couple.name },
+        }
+      }
+      subject = renderEmailSubject(tplSubject, ctx, 'send')
+      const rendered = renderEmailTemplate(tplContent, ctx, 'send').html
+      html = config.wrap ? wrapTemplateHtml(rendered, ctx.mc.businessName) : rendered
+    } else {
+      subject = renderTemplate(config.subject ?? '', ctx)
+      const bodyText = renderTemplate(config.body ?? '', ctx)
+      html = config.wrap ? wrapAutomationHtml(bodyText, ctx) : bodyText
+    }
+
+    // Resolve the sender once: a connected SMTP mailbox (Settings →
+    // Public Page → Email) sends through the MC's own inbox, otherwise the
+    // shared Zebri address. Uses the admin client because automations run
+    // without a user session; the same client is reused for recipients.
+    // A missing service-role config (degraded env) falls back to the shared
+    // Zebri address rather than failing the send.
+    let supabase: ReturnType<typeof createAdminClient> | null = null
+    let sender: ResolvedSender = { transport: 'resend', from: DEFAULT_FROM }
+    try {
+      supabase = createAdminClient()
+      sender = await resolveSender(supabase, ctx.userId, ctx.mc.businessName)
+    } catch {
+      sender = { transport: 'resend', from: DEFAULT_FROM }
+    }
 
     // Test run (manual "Test automation"): route the rendered email to
     // the MC instead of the couple, so they preview exactly what would
@@ -97,24 +163,24 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       if (!ctx.mc.email) {
         return { kind: 'ok', output: { skipped: 'no MC email for test send' } }
       }
-      try {
-        const { data, error } = await resend().emails.send({
-          from: FROM,
-          to: ctx.mc.email,
-          subject: `[Test] ${subject}`,
-          html,
-          replyTo: ctx.mc.email,
-        })
-        if (error || !data?.id) {
-          return { kind: 'error', message: `send_email (test): ${error?.message ?? 'no message id'}` }
-        }
-        return { kind: 'ok', output: { test: true, sent_to_mc: ctx.mc.email, message_id: data.id } }
-      } catch (err) {
-        return { kind: 'error', message: err instanceof Error ? err.message : String(err) }
+      const res = await dispatchEmail(sender, {
+        to: ctx.mc.email,
+        subject: `[Test] ${subject}`,
+        html,
+        replyTo: ctx.mc.email,
+      })
+      if (!res.ok || !res.messageId) {
+        return { kind: 'error', message: `send_email (test): ${res.error ?? 'no message id'}` }
       }
+      return { kind: 'ok', output: { test: true, sent_to_mc: ctx.mc.email, message_id: res.messageId } }
     }
 
-    const supabase = createAdminClient()
+    // The non-test path resolves the couple's recipients, which needs the
+    // admin client; if it couldn't be built we can't proceed.
+    if (!supabase) {
+      return { kind: 'error', message: 'send_email: admin client unavailable' }
+    }
+
     const recipients = await resolveRecipients(supabase, ctx.couple, config.recipients, ctx.mc)
     if (recipients.length === 0) {
       return { kind: 'ok', output: { skipped: 'no recipients' } }
@@ -149,25 +215,21 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
 
     const messageIds: string[] = []
     let lastError: string | null = null
+    const replyTo = config.replyToOverride ?? ctx.mc.email
     for (const r of addressable) {
-      try {
-        const { data, error } = await resend().emails.send({
-          from: FROM,
-          to: r.email!,
-          subject,
-          html,
-          replyTo: config.replyToOverride ?? ctx.mc.email,
-          ...(config.bccSelf ? { bcc: ctx.mc.email } : {}),
-          ...(cc ? { cc } : {}),
-        })
-        if (error || !data?.id) {
-          lastError = error?.message ?? 'Resend returned no message id'
-          continue
-        }
-        messageIds.push(data.id)
-      } catch (err) {
-        lastError = err instanceof Error ? err.message : String(err)
+      const res = await dispatchEmail(sender, {
+        to: r.email!,
+        subject,
+        html,
+        ...(replyTo ? { replyTo } : {}),
+        ...(config.bccSelf && ctx.mc.email ? { bcc: ctx.mc.email } : {}),
+        ...(cc ? { cc } : {}),
+      })
+      if (!res.ok || !res.messageId) {
+        lastError = res.error ?? 'Send returned no message id'
+        continue
       }
+      messageIds.push(res.messageId)
     }
 
     const sent = messageIds.length

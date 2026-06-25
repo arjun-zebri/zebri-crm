@@ -24,8 +24,10 @@ export async function login(page: Page) {
   // Full login flow
   await page.goto('/login', { waitUntil: 'networkidle' })
 
-  const emailInput = page.locator('input[id="email"]')
-  const passwordInput = page.locator('input[id="password"]')
+  // The login form uses the <Input name="…"> primitive (auto-generated
+  // ids), so target by name, not a hard-coded id.
+  const emailInput = page.locator('input[name="email"]')
+  const passwordInput = page.locator('input[name="password"]')
   const submitButton = page.locator('button[type="submit"]')
 
   await emailInput.waitFor({ state: 'visible', timeout: 10000 })

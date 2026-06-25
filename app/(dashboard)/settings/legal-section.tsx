@@ -5,7 +5,7 @@
  *
  * NOTE: the body copy mirrors the published policy at the canonical
  * URL. Confirm verbatim before relying on it as the legal source of
- * truth — the published page remains canonical.
+ * truth, the published page remains canonical.
  *
  * @module app/(dashboard)/settings/legal-section
  */
@@ -22,7 +22,7 @@ export interface LegalSectionProps {
 
 export function LegalSection({ title, lastUpdated, canonicalUrl, children }: LegalSectionProps) {
   return (
-    <div className="max-w-2xl">
+    <div>
       <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
       <p className="mt-1 text-xs text-gray-400">Last updated: {lastUpdated}</p>
       <a

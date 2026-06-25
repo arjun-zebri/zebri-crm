@@ -1,6 +1,6 @@
 'use client'
 
-import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, Upload, X } from 'lucide-react'
+import { List, LayoutGrid, Plus, Search, SlidersHorizontal, ArrowUpDown, Upload, X, Settings2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import {
@@ -17,6 +17,7 @@ interface CouplesHeaderProps {
   statuses: CoupleStatusRecord[]
   onAddClick: () => void
   onImportClick: () => void
+  onManageStatuses: () => void
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
   search: string
@@ -33,6 +34,7 @@ export function CouplesHeader({
   statuses,
   onAddClick,
   onImportClick,
+  onManageStatuses,
   viewMode,
   onViewModeChange,
   search,
@@ -254,33 +256,49 @@ export function CouplesHeader({
           )}
         </div>
 
-        {/* New couple dropdown - desktop only. Splits the primary
-            action into "Add manually" and "Import from CSV" so the
-            bulk path is discoverable without crowding the toolbar. */}
-        <div className="ml-auto hidden sm:block relative" ref={addRef}>
+        {/* Status manager + New couple. The gear opens the status editor
+            (statuses define the kanban columns); the split button covers
+            "Add manually" and "Import from CSV". */}
+        <div className="ml-auto flex items-center gap-2">
+          {/* Gear opens the status editor (rename/recolour/reorder/add/delete).
+              Statuses define the kanban columns, so management lives here
+              rather than under Settings. Visible in both List and Board views. */}
           <button
-            onClick={() => setAddOpen((o) => !o)}
-            className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
+            onClick={onManageStatuses}
+            className="flex items-center gap-1 border border-gray-200 rounded-md px-2 py-2 text-xs text-gray-500 hover:bg-gray-50 transition whitespace-nowrap cursor-pointer"
+            aria-label="Manage statuses"
+            title="Manage statuses"
           >
-            <Plus size={11} strokeWidth={2} />
-            New couple
+            <Settings2 size={11} strokeWidth={1.5} />
           </button>
-          {addOpen && (
-            <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-30 min-w-44 py-1">
-              <button
-                onClick={() => { setAddOpen(false); onAddClick() }}
-                className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-              >
-                <Plus size={13} strokeWidth={1.5} /> Add manually
-              </button>
-              <button
-                onClick={() => { setAddOpen(false); onImportClick() }}
-                className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-              >
-                <Upload size={13} strokeWidth={1.5} /> Import from CSV
-              </button>
-            </div>
-          )}
+          {/* New couple dropdown - desktop only. Splits the primary action
+              into "Add manually" and "Import from CSV" so the bulk path is
+              discoverable without crowding the toolbar. */}
+          <div className="hidden sm:block relative" ref={addRef}>
+            <button
+              onClick={() => setAddOpen((o) => !o)}
+              className="inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
+            >
+              <Plus size={11} strokeWidth={2} />
+              New couple
+            </button>
+            {addOpen && (
+              <div className="absolute top-full mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-30 min-w-44 py-1">
+                <button
+                  onClick={() => { setAddOpen(false); onAddClick() }}
+                  className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <Plus size={13} strokeWidth={1.5} /> Add manually
+                </button>
+                <button
+                  onClick={() => { setAddOpen(false); onImportClick() }}
+                  className="w-full text-left flex items-center gap-2 px-2.5 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <Upload size={13} strokeWidth={1.5} /> Import from CSV
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

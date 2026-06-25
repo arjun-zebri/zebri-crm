@@ -3,7 +3,7 @@
  *
  * Shared by the "Cancel subscription" text link on the current plan
  * card AND the "Cancel" button in the Starter column of the plan
- * comparison modal — both go through the same confirmation step so
+ * comparison modal: both go through the same confirmation step so
  * the user always sees the grace-period end date before committing.
  *
  * Lives in the parent `BillingSection` so both children can trigger

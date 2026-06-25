@@ -317,6 +317,32 @@ async function applyResult(
         token: result.token ?? null,
         payload: result.payload ?? {},
       } as never)
+
+      // `missing_variables` is a human-action block, not a timed sleep:
+      // the run is PAUSED (so wakeDueWaits never auto-resumes it — that
+      // would loop forever while the variable stays empty) and the MC
+      // resumes it from the couple Automations tab after fixing the
+      // data. Every other reason is a timed/approval wait → 'waiting'.
+      if (result.reason === 'missing_variables') {
+        await supabase
+          .from('automation_runs' as never)
+          .update({ status: 'paused' } as never)
+          .eq('id', run.id)
+        const payload = (result.payload ?? {}) as { missing?: string[]; couple_name?: string | null }
+        await audit(supabase, run, action, 'missing_variables_detected', {
+          missing: payload.missing ?? [],
+        })
+        void sendAlert({
+          type: 'automation_paused_missing_variables',
+          severity: 'warn',
+          automationId: run.automation_id,
+          runId: run.id,
+          coupleName: payload.couple_name ?? null,
+          missingVariables: payload.missing ?? [],
+        })
+        return 'slept'
+      }
+
       await supabase
         .from('automation_runs' as never)
         .update({ status: 'waiting' } as never)

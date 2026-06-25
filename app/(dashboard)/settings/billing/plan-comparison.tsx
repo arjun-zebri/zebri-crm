@@ -1,16 +1,16 @@
 /**
- * Plan comparison dialog — focused modal that opens from the
+ * Plan comparison dialog: focused modal that opens from the
  * "Change plan" button.
  *
  * 3-column feature table with fixed widths so the per-column tint
  * stays put when buttons enter their loading state. The action row
  * at the bottom carries the actual switch buttons; the column
- * headers stay quiet (no "Current" pill — the bottom row is
+ * headers stay quiet (no "Current" pill: the bottom row is
  * unambiguous already).
  *
  * The "current" column's tint is rendered as an absolutely
  * positioned div behind the table (not as per-cell `bg-`) so it
- * fills the entire modal body — including the empty space below the
+ * fills the entire modal body: including the empty space below the
  * table content that the body's `flex-1` expands into. This is the
  * only way to make the tint reach the modal's rounded bottom edge
  * regardless of how tall the body ends up being.
@@ -98,7 +98,7 @@ export function PlanComparisonDialog({
           Inner relative wrapper holds the absolute-positioned tint
           and the table. Body is now content-sized (flushBottom on
           Modal drops flex-1) so the inner wrapper's height equals
-          the table height equals the body height — the abs tint at
+          the table height equals the body height, the abs tint at
           inset-y-0 reaches the modal's rounded bottom edge. */}
       <div className="overflow-x-auto">
         <div className="relative min-w-[36rem]">

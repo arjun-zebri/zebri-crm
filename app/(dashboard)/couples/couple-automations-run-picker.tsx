@@ -17,6 +17,20 @@ import { useQuery } from '@tanstack/react-query'
 import { FlaskConical, Loader2, Play } from 'lucide-react'
 import { useState } from 'react'
 
+/** Pulsing placeholder rows shown while the automation list loads. */
+function PickerSkeleton() {
+  return (
+    <div aria-hidden="true">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between gap-3 px-3 py-2">
+          <div className="h-3.5 flex-1 animate-pulse rounded bg-surface-muted" />
+          <div className="size-3 shrink-0 animate-pulse rounded bg-surface-muted" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 import { Button } from '@/components/ui/button'
 import { getTriggerSpec } from '@/lib/automations/triggers'
 import type { TriggerType } from '@/types/automations'
@@ -50,14 +64,14 @@ const MODE = {
     label: 'Test',
     variant: 'outline' as const,
     icon: FlaskConical,
-    hint: 'Test run — any email comes to you',
+    hint: 'Test run. Any email comes to you',
     action: testAutomationForCoupleAction,
   },
 }
 
 const GENERIC_NAMES = new Set(['', 'untitled automation', 'automation'])
 
-/** Display label — automation name, or its trigger when unnamed. */
+/** Display label: automation name, or its trigger when unnamed. */
 function labelFor(a: RunnableAutomation): string {
   const name = a.name.trim()
   if (!GENERIC_NAMES.has(name.toLowerCase())) return name
@@ -109,9 +123,7 @@ export function CoupleRunPicker({ coupleId, mode, onRan }: Props) {
         >
           <p className="px-3 py-1.5 text-xs text-text-subtle">{cfg.hint}</p>
           {isLoading ? (
-            <div className="flex items-center gap-2 px-3 py-2 text-sm text-text-muted">
-              <Loader2 size={14} className="animate-spin" /> Loading…
-            </div>
+            <PickerSkeleton />
           ) : (list ?? []).length === 0 ? (
             <p className="px-3 py-2 text-sm text-text-muted">No active automations to run.</p>
           ) : (

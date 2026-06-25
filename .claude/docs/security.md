@@ -133,6 +133,7 @@ anyway, but we cap on our side so the alert fires on our schedule.
 | `app/api/email/send-quote/route.ts` | ✅ `z.object({ quoteId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendQuote`; hit fires `email_rate_limit_hit` | RLS scopes the quote SELECT to the authenticated user |
 | `app/api/email/send-invoice/route.ts` | ✅ `z.object({ invoiceId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendInvoice` | Same RLS scoping |
 | `app/api/email/send-contract/route.ts` | ☐ Phase 3 (Contracts) | ☐ Phase 3 | Not in 2C scope |
+| `app/api/email/send-template/route.ts` | ✅ `z.object({ coupleId, templateId?, inlineSubject?, inlineBody?, overrides, sendAnyway, attachmentFileIds })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendTemplate`; hit fires `email_rate_limit_hit` (`action: 'sendTemplate'`) | RLS scopes template + couple loads to the caller. **Safety property:** the send is **blocked (422)** when `detectMissingVariables` finds an unresolved variable, unless `sendAnyway` is set — re-checked server-side so the client can't bypass it. Static attachments downloaded via the owner-only `email-template-files` bucket |
 | `app/api/email/send-contract-reminders/route.ts` | n/a (cron) | n/a (cron-secret gated) | Already uses `isCronAuthorized` |
 
 ### Public RPC audit — `get_public_quote` / `get_public_invoice` (Phase 2C)
@@ -474,6 +475,13 @@ DELETE (sampled clean across the migrations).
 | `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
 | `contract_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/contract-templates.test.ts` (Phase 12, 6 tests) | Contracts |
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
+| `email_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/email-templates.test.ts` (7 tests — incl. starter seeding) | Email Templates |
+| `email_template_files` | ✅ | `user_id` | ☐ (added with static-upload flow) | Email Templates |
+| `packages` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (6 tests) | Templates |
+| `package_items` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (covered via parent) | Templates |
+| `invoice_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (6 tests) | Templates |
+| `invoice_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (covered via parent) | Templates |
+| `couple_emails` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-emails.test.ts` (6 tests) | Couples & Events |
 | `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
@@ -491,12 +499,33 @@ DELETE (sampled clean across the migrations).
 | `stripe_customers` | ✅ (RLS enabled, no policy — service-role only) | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
 | `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) | Branding |
+| `user_public_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/user-public-settings.test.ts` (5 tests — cross-tenant read/update/insert denial incl. encrypted OAuth tokens + global subdomain uniqueness) | Settings — Public Page |
 | `automations` | ✅ | `user_id` | ✅ `tests/integration/automations/run-now.test.ts` (cross-tenant: cannot manually run another MC's automation) | Automations |
 | `automation_events` | ✅ (SELECT-only; writes via SECURITY DEFINER RPC + service-role) | `user_id` | ✅ exercised by `run-now.test.ts` (manual-fire event opens only the owner's run) | Automations |
 | `automation_actions` | ✅ | `automation_id` (→ `automations.user_id`) | ✅ exercised by `run-now.test.ts` | Automations |
 | `automation_runs` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cross-tenant retry/cancel/pause/resume are no-ops) | Automations |
 | `automation_waits` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cancel consumes; resume reads — exercised via the control actions) | Automations |
 | `automation_audit_log` | ✅ (SELECT-only for owner; writes service-role) | `user_id` | ☐ (read RLS-scoped by the couple Automations feed) | Automations |
+
+**Connect-your-own-mailbox (OAuth) controls** (Settings → Public Page →
+Email; routes `app/api/oauth/{authorize,callback}`): the Gmail/Outlook
+OAuth refresh + access tokens are encrypted at rest with AES-256-GCM
+(`lib/crypto/secret-box`, key `EMAIL_CRED_KEY`), never selected back to
+the client, and decrypted only server-side at send/refresh time. The
+authorize→callback flow is CSRF-protected by a random `state` pinned in a
+signed httpOnly cookie and re-checked on callback; the callback binds the
+tokens to the MC via their existing Supabase session. Both routes are
+per-user rate-limited; `disconnectMailboxAction` best-effort revokes at
+the provider. Scopes are minimal (Google `gmail.send` send-only; Microsoft
+`Mail.Send`).
+
+The Templates starter-add server actions (`addStarterPackagesAction`,
+`addStarterQuoteTemplatesAction`, `addStarterInvoiceTemplatesAction`,
+`addStarterContractsAction`) are Zod-validated, run through the
+RLS-scoped server client, resolve content server-side by name (the client
+never sends body/amount data), skip names the MC already owns, and flag
+inserted rows `is_starter`. Behaviour covered by
+`tests/integration/templates/starter-actions.test.ts` (6 tests).
 
 **Per-page DoD requires** an integration test of the
 `couples.test.ts` shape (owner reads ok / other tenant cannot

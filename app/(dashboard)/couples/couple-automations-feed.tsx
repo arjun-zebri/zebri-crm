@@ -34,6 +34,8 @@ export interface RunActivity {
   completedAt: string | null
   /** Next scheduled step time, for a `waiting` run (else null). */
   wakeAt: string | null
+  /** Paused on an unresolved email-template variable (needs Fix & retry). */
+  blockedMissingVars: boolean
   lines: FeedLine[]
 }
 

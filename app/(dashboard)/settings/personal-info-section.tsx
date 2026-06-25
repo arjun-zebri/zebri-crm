@@ -2,10 +2,12 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { ChevronDown } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
+
+import { AutoSaveStatus, type SaveState } from './auto-save-status'
 
 
 const businessTypeOptions = [
@@ -59,21 +61,50 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([])
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
   const addressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [saveState, setSaveState] = useState<SaveState>('idle')
+  // Bumping this requests a save *after* the next render, used by the
+  // programmatic changes (business-type picker, address selection) so
+  // `autoSave` reads the freshly-committed state, not a stale closure.
+  const [saveSignal, setSaveSignal] = useState(0)
   const { toast } = useToast()
 
+  // Last-persisted baseline. Auto-save compares the live fields against
+  // this (not the immutable initial props) so a successful save resets
+  // "dirty" without remounting, and a blur with no real change is a
+  // no-op. `savedRef` mirrors it for the async closure.
   const initialBusinessTypes = parseBusinessTypes(initialData.businessType)
-  const isDirty =
-    displayName !== initialData.displayName ||
-    emailValue !== email ||
-    businessName !== initialData.businessName ||
-    phone !== initialData.phone ||
-    website !== initialData.website ||
-    instagramUrl !== initialData.instagramUrl ||
-    facebookUrl !== initialData.facebookUrl ||
-    JSON.stringify([...businessTypes].sort()) !== JSON.stringify([...initialBusinessTypes].sort()) ||
-    mcSignatureName !== initialData.mcSignatureName ||
-    addressText !== initialData.addressText
+  const savedRef = useRef({
+    displayName: initialData.displayName,
+    email,
+    businessName: initialData.businessName,
+    phone: initialData.phone,
+    website: initialData.website,
+    instagramUrl: initialData.instagramUrl,
+    facebookUrl: initialData.facebookUrl,
+    businessTypes: initialBusinessTypes,
+    mcSignatureName: initialData.mcSignatureName,
+    addressText: initialData.addressText,
+    addressLat: initialData.addressLat,
+    addressLng: initialData.addressLng,
+  })
+
+  const isDirty = () => {
+    const s = savedRef.current
+    return (
+      displayName !== s.displayName ||
+      emailValue !== s.email ||
+      businessName !== s.businessName ||
+      phone !== s.phone ||
+      website !== s.website ||
+      instagramUrl !== s.instagramUrl ||
+      facebookUrl !== s.facebookUrl ||
+      JSON.stringify([...businessTypes].sort()) !== JSON.stringify([...s.businessTypes].sort()) ||
+      mcSignatureName !== s.mcSignatureName ||
+      addressText !== s.addressText ||
+      addressLat !== s.addressLat ||
+      addressLng !== s.addressLng
+    )
+  }
 
   const handleAddressChange = (value: string) => {
     setAddressText(value)
@@ -115,61 +146,106 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     } catch {
       // lat/lng optional - address text is still saved
     }
+    // Persist the chosen address (+ coords) after this render commits.
+    setSaveSignal((n) => n + 1)
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setLoading(true)
+  // Persist on blur / selection change. No-op when nothing changed
+  // since the last save, and skipped while a save is already running so
+  // overlapping blurs don't double-fire. Errors surface via toast +
+  // the inline status; success is silent beyond the "Saved" hint
+  // (a toast on every blur would be noisy).
+  // `pendingRef` covers the address-autocomplete race: picking a
+  // suggestion blurs the input (kicking off a save) and then resolves
+  // lat/lng a moment later. If a save is already running, we mark a
+  // re-run so the freshly-set coordinates still persist.
+  const savingRef = useRef(false)
+  const pendingRef = useRef(false)
+  const autoSave = async () => {
+    if (!isDirty()) return
+    if (savingRef.current) {
+      pendingRef.current = true
+      return
+    }
+    savingRef.current = true
+    setSaveState('saving')
 
     const supabase = createClient()
-
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       toast('Unable to load user data.', 'error')
-      setLoading(false)
+      setSaveState('error')
+      savingRef.current = false
       return
     }
 
-    const existingMetadata = user.user_metadata || {}
-    const updatedMetadata = {
-      ...existingMetadata,
-      display_name: displayName,
-      business_name: businessName,
-      phone,
-      website,
-      instagram_url: instagramUrl,
-      facebook_url: facebookUrl,
-      business_type: businessTypes,
-      mc_signature_name: mcSignatureName,
-      address_text: addressText,
-      address_lat: addressLat,
-      address_lng: addressLng,
-    }
-
+    const emailChanged = emailValue !== savedRef.current.email
     const { error: metaError } = await supabase.auth.updateUser({
-      data: updatedMetadata,
+      data: {
+        ...(user.user_metadata || {}),
+        display_name: displayName,
+        business_name: businessName,
+        phone,
+        website,
+        instagram_url: instagramUrl,
+        facebook_url: facebookUrl,
+        business_type: businessTypes,
+        mc_signature_name: mcSignatureName,
+        address_text: addressText,
+        address_lat: addressLat,
+        address_lng: addressLng,
+      },
     })
 
     if (metaError) {
       toast(metaError.message, 'error')
-      setLoading(false)
+      setSaveState('error')
+      savingRef.current = false
       return
     }
 
-    if (emailValue !== email) {
+    if (emailChanged) {
       const { error: emailError } = await supabase.auth.updateUser({ email: emailValue })
       if (emailError) {
         toast(emailError.message, 'error')
-        setLoading(false)
+        setSaveState('error')
+        savingRef.current = false
         return
       }
-      toast('Profile updated. A confirmation link will be sent to your new email.')
-    } else {
-      toast('Profile updated.')
+      // Email is the one change worth a toast, it isn't live until the
+      // confirmation link is clicked.
+      toast('A confirmation link will be sent to your new email.')
     }
 
-    setLoading(false)
+    savedRef.current = {
+      displayName,
+      email: emailValue,
+      businessName,
+      phone,
+      website,
+      instagramUrl,
+      facebookUrl,
+      businessTypes,
+      mcSignatureName,
+      addressText,
+      addressLat,
+      addressLng,
+    }
+    setSaveState('saved')
+    savingRef.current = false
+    if (pendingRef.current) {
+      pendingRef.current = false
+      void autoSave()
+    }
   }
+
+  // Run a requested save once the triggering state has committed.
+  // `autoSave` is intentionally excluded from deps, it's re-created
+  // every render and we only want to fire on an explicit signal bump.
+  useEffect(() => {
+    if (saveSignal > 0) void autoSave()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveSignal])
 
   const inputClass =
     'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-transparent transition'
@@ -180,10 +256,13 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     .join(', ')
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <h2 className="text-xl font-semibold text-gray-900 mb-1">Personal info</h2>
-      <p className="text-sm text-gray-500 mb-5">Update your name, contact details, and business information.</p>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-sm text-gray-500 mb-5">Update your name, contact details, and business information. Changes save automatically.</p>
+      {/* Auto-save on blur: `onBlur` on the form catches the bubbled
+          focusout of any field within it, so leaving a field persists
+          it. `autoSave` no-ops when nothing changed. */}
+      <form onBlur={autoSave} onSubmit={(e) => e.preventDefault()} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
@@ -220,7 +299,14 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
-            <Popover.Root open={businessTypeOpen} onOpenChange={setBusinessTypeOpen}>
+            <Popover.Root
+              open={businessTypeOpen}
+              onOpenChange={(open) => {
+                setBusinessTypeOpen(open)
+                // Persist the multi-select once the picker closes.
+                if (!open) setSaveSignal((n) => n + 1)
+              }}
+            >
               <Popover.Trigger asChild>
                 <button
                   type="button"
@@ -365,18 +451,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
           </div>
         </div>
 
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={loading || !isDirty}
-            className="bg-black text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
-          >
-            {loading ? 'Saving...' : 'Save Changes'}
-          </button>
-
-          {isDirty && (
-            <span className="text-sm text-gray-400">Unsaved changes</span>
-          )}
+        <div className="flex items-center gap-3 pt-2 h-5">
+          <AutoSaveStatus state={saveState} />
         </div>
       </form>
     </div>

@@ -41,6 +41,7 @@ import { CouplesImportModal } from './couples-import-modal';
 import { CouplesKanban } from './couples-kanban';
 import { CouplesList } from './couples-list';
 import { StarterCapLockModal } from './starter-cap-lock-modal';
+import { StatusesModal } from './statuses-modal';
 import { useCoupleProfileSync } from './use-couple-profile-sync';
 import { useCoupleStatuses } from './use-couple-statuses';
 import {
@@ -94,6 +95,7 @@ function CouplesPageContent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [capLockOpen, setCapLockOpen] = useState(false);
+  const [statusesOpen, setStatusesOpen] = useState(false);
   const { toast } = useToast();
   const capLock = useStarterCapLock(couples.length);
   const { selectedCouple, setSelectedCouple } = useCoupleProfileSync(couples);
@@ -312,6 +314,7 @@ function CouplesPageContent() {
           statuses={statuses}
           onAddClick={() => tryOpenAdd()}
           onImportClick={() => setImportModalOpen(true)}
+          onManageStatuses={() => setStatusesOpen(true)}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
           search={search}
@@ -410,6 +413,11 @@ function CouplesPageContent() {
         onClose={() => setCapLockOpen(false)}
         count={couples.length}
         cap={capLock.cap}
+      />
+
+      <StatusesModal
+        isOpen={statusesOpen}
+        onClose={() => setStatusesOpen(false)}
       />
     </div>
   );

@@ -44,7 +44,12 @@ import { execSync } from 'node:child_process';
 // run-sheet-section.tsx (a stale duplicate of timeline-section that
 // carried setState-in-effect errors) → 89 → 88.
 // Burn-down target: back to 74.
-const ERROR_BUDGET = 88;
+// Templates email-consistency PR (restyle of packages/quotes/invoices/
+// contracts tabs to primitives + tokens, plus the bundled settings/
+// couples tokenization): 89 → 80.
+// Merge of main into the timeline branch: both reductions combine
+// (main's 80 + the dead-file deletion). Re-measured post-merge → 79.
+const ERROR_BUDGET = 79;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -98,7 +103,12 @@ const ERROR_BUDGET = 88;
 // Timeline internal flag + multi-day portals: deleting the dead
 // run-sheet-section.tsx + clean new portal/vendor day-selector code
 // dropped import-order/unused warnings → 456 → 452.
-const WARNING_BUDGET = 452;
+// Templates email-consistency PR (primitives + token swaps across the
+// four manager tabs, plus the bundled settings/couples tokenization):
+// 461 → 442.
+// Merge of main into the timeline branch: both reductions combine.
+// Re-measured post-merge → 405.
+const WARNING_BUDGET = 405;
 
 function runEslintJson() {
   try {

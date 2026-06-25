@@ -62,10 +62,10 @@ function EmptyStateCard({
     <div className="rounded-card border border-border bg-surface-muted/40 p-4 space-y-3">
       <div className="flex items-center gap-2">
         <Layers size={14} strokeWidth={1.5} className="text-text-muted" />
-        <p className="text-body font-medium text-text">Start from a template</p>
+        <p className="text-body font-medium text-text">Start from a package or template</p>
       </div>
       <p className="text-caption text-text-muted">
-        Apply a saved set of items + notes to get going faster.
+        Apply a saved package or quote template&apos;s items + notes to get going faster.
       </p>
       <div className="flex flex-wrap gap-2">
         {templates.map((t) => (
@@ -108,7 +108,7 @@ function InlinePicker({
           className="inline-flex items-center gap-1.5 text-caption text-text-muted hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <Layers size={12} strokeWidth={1.5} />
-          Apply template
+          Apply package or template
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -118,7 +118,7 @@ function InlinePicker({
           className="z-[90] w-64 rounded-card border border-border bg-surface shadow-lg p-1 animate-fade-in"
         >
           <p className="px-2 py-1 text-caption font-medium uppercase tracking-wide text-text-muted">
-            Templates
+            Packages &amp; templates
           </p>
           <div className="max-h-64 overflow-y-auto">
             {templates.map((t) => (

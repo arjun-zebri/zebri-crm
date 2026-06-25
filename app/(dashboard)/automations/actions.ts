@@ -294,12 +294,38 @@ export async function retryRunAction(
   const parsed = runIdSchema.safeParse(input)
   if (!parsed.success) return { ok: false, error: parsed.error.message }
   const supabase = await createClient()
+  const runId = parsed.data.runId
+
+  // Standard retry: an errored run resumes from its current action.
   const { error } = await supabase
     .from('automation_runs' as never)
     .update({ status: 'running', error_message: null, completed_at: null } as never)
-    .eq('id', parsed.data.runId)
+    .eq('id', runId)
     .eq('status', 'errored')
   if (error) return { ok: false, error: error.message }
+
+  // "Fix & retry" on a missing-variable block: a paused run holds an
+  // open `missing_variables` wait. Consume it and resume so the runner
+  // re-checks the now-fixed couple data on the next tick.
+  const { data: wait } = await supabase
+    .from('automation_waits' as never)
+    .select('id')
+    .eq('run_id', runId)
+    .eq('reason', 'missing_variables')
+    .is('consumed_at', null)
+    .maybeSingle()
+  if (wait) {
+    const id = (wait as { id: string }).id
+    await supabase
+      .from('automation_waits' as never)
+      .update({ consumed_at: new Date().toISOString() } as never)
+      .eq('id', id)
+    await supabase
+      .from('automation_runs' as never)
+      .update({ status: 'running' } as never)
+      .eq('id', runId)
+      .eq('status', 'paused')
+  }
   return { ok: true, data: null }
 }
 

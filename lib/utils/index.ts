@@ -58,6 +58,26 @@ export function formatRelativeTime(iso: string | null | undefined, nowMs: number
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+/**
+ * Deep-clone a value into plain objects with the standard `Object`
+ * prototype, normalising any null-prototype objects along the way.
+ *
+ * Why this exists: TipTap / ProseMirror's `editor.getJSON()` returns each
+ * node's `attrs` as a **null-prototype** object (`Object.create(null)`).
+ * `JSON.stringify` handles those fine, but React Server Action argument
+ * serialisation only keeps plain objects and **silently drops**
+ * null-prototype ones — so a mention's `attrs` (and thus its variable id)
+ * vanished in transit to a server action, persisting `{{null}}`. Running
+ * the editor's JSON through this before it enters React state guarantees
+ * every downstream consumer (server actions included) sees plain objects.
+ *
+ * @param value - any JSON-serialisable value.
+ * @returns a structurally-identical value built from plain objects/arrays.
+ */
+export function toPlainJSON<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
 export function formatRelativeDate(due_date: string): string {
   const today = new Date()
   today.setHours(0, 0, 0, 0)

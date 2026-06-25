@@ -1,7 +1,10 @@
 'use client'
 
-import { AlignLeft, AlignCenter, AlignRight, Italic, Underline, Type, ChevronDown } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { AlignLeft, AlignCenter, AlignRight, Italic, Underline, Type, ChevronDown } from 'lucide-react'
+
+import { ColorPopover } from '@/components/ui/color-popover'
+import { Tooltip } from '@/components/ui/tooltip'
 import {
   HEADING_FONTS,
   BODY_FONTS,
@@ -13,10 +16,11 @@ import {
   type BodyFont,
   type FontWeight,
 } from '@/lib/branding/fonts'
+
 import { Select, type SelectOption } from '../components/select'
-import { ColorPopover } from '../components/color-popover'
 import { Slider } from '../components/slider'
-import { Tooltip } from '@/components/ui/tooltip'
+
+
 import { TEXT_COLOR_PRESETS, type TextStyleDefaults } from './text-style'
 import type { TextStyle, TextAlign } from './types'
 

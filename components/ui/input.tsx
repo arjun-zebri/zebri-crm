@@ -46,15 +46,16 @@ const SIZE_CLASSES: Record<InputSize, string> = {
   md: 'h-9 px-3 text-body',
 };
 
-// Focus uses a 1px ring tight against the border (no offset). With
-// `ring-offset-2` you'd see two stacked borders on focus - the
-// original border + the ring sitting 2px outside it - which reads as
-// an ugly double border. Same pattern as Linear / Notion: subtle, no
-// gap.
+// Focus = the 1px border simply darkens to brand-fg. We deliberately
+// do NOT add a ring: a ring of the same colour stacks on top of the
+// border, and because the ring's outer corner radius is 1px larger
+// than the border's they don't nest, rendering an uneven doubled edge
+// at the corners. A single crisp border is the Linear / Notion look:
+// subtle, clean, no doubling.
 const BASE_CLASSES =
   'block w-full rounded-control bg-surface text-text placeholder:text-text-subtle ' +
   'border transition-colors ' +
-  'focus-visible:outline-none focus-visible:ring-1 ' +
+  'focus-visible:outline-none ' +
   'disabled:opacity-50 disabled:cursor-not-allowed read-only:bg-surface-muted';
 
 /** Token-driven labelled input. See {@link InputProps}. */
@@ -76,8 +77,8 @@ export function Input({
   const describedBy = [helpId, errorId].filter(Boolean).join(' ') || undefined;
 
   const borderClass = error
-    ? 'border-danger focus-visible:ring-danger'
-    : 'border-border focus-visible:ring-brand-fg focus-visible:border-brand-fg';
+    ? 'border-danger'
+    : 'border-border focus-visible:border-brand-fg';
 
   return (
     <div className={`space-y-1${className ? ` ${className}` : ''}`}>

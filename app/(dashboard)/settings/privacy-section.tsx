@@ -21,7 +21,7 @@ export function PrivacySection() {
       <h3>1. Information we collect</h3>
       <ul>
         <li><strong>Account information:</strong> name and email at registration; billing data via Stripe for paid plans. We do not store full payment card details.</li>
-        <li><strong>Content you create:</strong> couple records, contact details, run sheets, timelines, vendor information, notes, scripts, invoices, and files — all of which belong to you.</li>
+        <li><strong>Content you create:</strong> couple records, contact details, run sheets, timelines, vendor information, notes, scripts, invoices, and files, all of which belong to you.</li>
         <li><strong>Usage data:</strong> pages visited, features used, session duration, browser type, operating system, and IP address (via PostHog).</li>
         <li><strong>Communications:</strong> support enquiries and contact details, retained for response and record-keeping.</li>
         <li><strong>Cookies:</strong> session management and analytics only. We do not use advertising or tracking cookies.</li>
@@ -36,11 +36,11 @@ export function PrivacySection() {
 
       <h3>3. Third-party processors</h3>
       <ul>
-        <li>Vercel — infrastructure (SOC 2 Type 2)</li>
-        <li>Supabase — database and authentication</li>
-        <li>Stripe — payment processing (PCI DSS Level 1)</li>
-        <li>Resend — transactional email</li>
-        <li>PostHog — anonymised usage analytics</li>
+        <li>Vercel: infrastructure (SOC 2 Type 2)</li>
+        <li>Supabase: database and authentication</li>
+        <li>Stripe: payment processing (PCI DSS Level 1)</li>
+        <li>Resend: transactional email</li>
+        <li>PostHog: anonymised usage analytics</li>
       </ul>
 
       <h3>4. Data retention</h3>
@@ -66,7 +66,7 @@ export function PrivacySection() {
       <p>
         Under the Australian Privacy Principles you may access, correct, delete, and
         opt out, and lodge a complaint with the OAIC (oaic.gov.au). Contact
-        hello@zebri.com.au — we respond within 30 days.
+        hello@zebri.com.au, we respond within 30 days.
       </p>
 
       <h3>8. Children</h3>

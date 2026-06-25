@@ -1,5 +1,5 @@
 /**
- * Plan catalogue — single source of truth for the Plans & Billing
+ * Plan catalogue: single source of truth for the Plans & Billing
  * tab. Each plan has a short tagline used in the compact "current
  * plan" card and a feature list used in the expandable comparison.
  *
@@ -11,7 +11,7 @@ export type PlanId = 'starter' | 'pro' | 'max';
 export interface PlanFeature {
   label: string;
   included: boolean;
-  /** Tag the feature as "Soon" — included in the tier but not yet shipped. */
+  /** Tag the feature as "Soon": included in the tier but not yet shipped. */
   soon?: boolean;
 }
 
@@ -97,7 +97,7 @@ export function planById(id: string | null | undefined): Plan {
 
 /**
  * One-line prose summary of each tier. Renders below the plan
- * header as a single wrapped paragraph — replaces the previous
+ * header as a single wrapped paragraph: replaces the previous
  * "INCLUDES" label + 6-bullet feature grid for a more confident
  * "this is what you pay for" line.
  */
@@ -111,7 +111,7 @@ export const PLAN_SUMMARY: Record<PlanId, string> = {
 };
 
 /**
- * The user-visible highlights for each tier — still used by the
+ * The user-visible highlights for each tier: still used by the
  * comparison modal's per-tier feature list (the inline summary
  * above replaces the bulleted version on the main plan card).
  */
@@ -141,7 +141,7 @@ export const PLAN_HIGHLIGHTS: Record<PlanId, string[]> = {
 
 /**
  * Row schema for the compact comparison table. Each cell is either
- * a string ("Free", "$49/mo", "5"), a boolean (rendered as ✓ / —),
+ * a string ("Free", "$49/mo", "5"), a boolean (rendered as ✓ / -),
  * or the literal `'soon'` for "included in this tier but not yet
  * shipped".
  */
