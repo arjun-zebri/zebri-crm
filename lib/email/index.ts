@@ -3,6 +3,7 @@ import {
   contractHtml,
   contractReminderHtml,
   invoiceHtml,
+  questionnaireHtml,
   quoteHtml,
 } from "./html";
 import { DEFAULT_FROM, type ResolvedSender } from "./sender-identity";
@@ -12,7 +13,7 @@ export type { EmailAttachment } from "./dispatch";
 // them from `@/lib/email`. Client code (e.g. the email preview) must import
 // them from `@/lib/email/html` directly to avoid bundling the transport
 // layer (Resend + nodemailer) into the browser.
-export { contractHtml, invoiceHtml, quoteHtml, wrapTemplateHtml } from "./html";
+export { contractHtml, invoiceHtml, questionnaireHtml, quoteHtml, wrapTemplateHtml } from "./html";
 
 /**
  * Default transport for couple-facing mail: Resend, from the shared Zebri
@@ -61,6 +62,23 @@ export async function sendQuoteEmail(opts: {
     to: opts.coupleEmail,
     subject: `Quote from ${opts.mcBusinessName} - ${opts.quoteNumber}`,
     html: quoteHtml(opts),
+  });
+  return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
+}
+
+export async function sendQuestionnaireEmail(opts: {
+  coupleEmail: string;
+  coupleName: string;
+  title: string;
+  shareUrl: string;
+  mcBusinessName: string;
+  /** Resolved transport. Defaults to the shared Zebri address (Resend). */
+  sender?: ResolvedSender;
+}): Promise<{ ok: boolean; error?: string }> {
+  const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
+    to: opts.coupleEmail,
+    subject: `${opts.mcBusinessName} sent you a few questions`,
+    html: questionnaireHtml(opts),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }

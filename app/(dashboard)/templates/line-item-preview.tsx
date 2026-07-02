@@ -21,6 +21,12 @@ interface LineItemPreviewProps {
   name: string
   subtitle?: string
   items: PreviewLineItem[]
+  /**
+   * Render the name/subtitle header block. Detail panes that already show
+   * the name in their own heading pass `false` so the card is just the
+   * itemized receipt (no duplicated name). Defaults to `true`.
+   */
+  showHeader?: boolean
 }
 
 /** AUD, whole dollars — matches the Templates managers' display. */
@@ -33,18 +39,20 @@ function formatAUD(amount: number) {
   }).format(amount)
 }
 
-export function LineItemPreview({ name, subtitle, items }: LineItemPreviewProps) {
+export function LineItemPreview({ name, subtitle, items, showHeader = true }: LineItemPreviewProps) {
   const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
-      <div className="border-b border-border px-4 py-3">
-        <p className="text-xs text-text-subtle">Name</p>
-        <p className="text-sm font-medium text-text">
-          {name.trim() || <span className="text-text-subtle">Untitled</span>}
-        </p>
-        {subtitle ? <p className="mt-0.5 text-xs text-text-muted">{subtitle}</p> : null}
-      </div>
+      {showHeader ? (
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-xs text-text-subtle">Name</p>
+          <p className="text-sm font-medium text-text">
+            {name.trim() || <span className="text-text-subtle">Untitled</span>}
+          </p>
+          {subtitle ? <p className="mt-0.5 text-xs text-text-muted">{subtitle}</p> : null}
+        </div>
+      ) : null}
       <div className="px-4 py-4 text-sm">
         {items.length === 0 ? (
           <p className="text-text-subtle">No line items yet.</p>

@@ -1,41 +1,34 @@
 /**
- * Email-template library list.
+ * Email-template master list (left pane of the Emails master-detail).
  *
  * Browses templates grouped by wedding-lifecycle stage — quiet stage
- * subheaders with calm, click-to-edit rows beneath, mirroring the
- * couple Overview / Automations surfaces. A slim search narrows by
- * name or subject; per-row Edit / Duplicate / Delete live in a
- * hover-revealed overflow menu so the list stays scannable. Create/edit
- * open the editor modal via the orchestrator.
+ * subheaders with calm, click-to-select rows beneath, mirroring the couple
+ * Overview / Automations surfaces. Selecting a row drives the preview pane;
+ * the row's edit/duplicate/delete actions live on that preview, so the list
+ * itself stays scannable. Filtered by the toolbar `search`.
  *
  * @module app/(dashboard)/templates/templates-library
  */
 'use client'
 
-import { Copy, Library, Mail, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Mail } from 'lucide-react'
+import { useMemo } from 'react'
 
-import { Button } from '@/components/ui/button'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Empty } from '@/components/ui/empty'
 import { ErrorState } from '@/components/ui/error-state'
-import { Input } from '@/components/ui/input'
-import { RowActionsMenu } from '@/components/ui/row-actions-menu'
-import { useToast } from '@/components/ui/toast'
 import { LIFECYCLE_LABELS, LIFECYCLE_STAGES, type EmailTemplate, type LifecycleStage } from '@/types/email-template'
 
 import { TemplatesSkeleton } from './templates-skeleton'
-import { useCloneTemplate, useDeleteTemplate } from './use-templates'
 
 interface TemplatesLibraryProps {
   templates: EmailTemplate[]
   isLoading: boolean
   isError: boolean
   onRetry: () => void
-  onNew: () => void
-  /** Open the "Browse starter templates" catalog (empty-state CTA). */
-  onBrowse: () => void
-  onEdit: (template: EmailTemplate) => void
+  /** Search query from the toolbar — filters by template name or subject. */
+  search: string
+  /** Currently-selected template id (drives the preview + row highlight). */
+  selectedId: string | null
+  onSelect: (template: EmailTemplate) => void
 }
 
 /** One lifecycle bucket plus its matching templates. `null` stage is the
@@ -49,13 +42,7 @@ interface StageGroup {
 /** Render order: the journey stages first, then un-tagged templates. */
 const GROUP_ORDER: (LifecycleStage | null)[] = [...LIFECYCLE_STAGES, null]
 
-export function TemplatesLibrary({ templates, isLoading, isError, onRetry, onNew, onBrowse, onEdit }: TemplatesLibraryProps) {
-  const { toast } = useToast()
-  const clone = useCloneTemplate()
-  const remove = useDeleteTemplate()
-  const [search, setSearch] = useState('')
-  const [pendingDelete, setPendingDelete] = useState<EmailTemplate | null>(null)
-
+export function TemplatesLibrary({ templates, isLoading, isError, onRetry, search, selectedId, onSelect }: TemplatesLibraryProps) {
   // Group by lifecycle stage, preserving the position order the query
   // returns within each bucket. Search filters by name or subject; only
   // non-empty groups render so the page never shows a bare header.
@@ -70,111 +57,48 @@ export function TemplatesLibrary({ templates, isLoading, isError, onRetry, onNew
     })).filter((g) => g.items.length > 0)
   }, [templates, search])
 
-  async function handleClone(t: EmailTemplate) {
-    try {
-      await clone.mutateAsync(t.id)
-      toast('Template duplicated', 'success')
-    } catch {
-      toast('Could not duplicate', 'error')
-    }
-  }
-
   if (isLoading) return <TemplatesSkeleton />
   if (isError) return <ErrorState title="Couldn't load templates" onRetry={onRetry} />
-  if (templates.length === 0) {
-    return (
-      <Empty
-        size="sm"
-        className="min-h-[60vh]"
-        icon={Mail}
-        title="No templates yet"
-        description="Add ready-made starters from the catalog, or write your own from scratch."
-        action={
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onBrowse}>
-              Browse starter templates
-            </Button>
-            <Button size="sm" onClick={onNew}>
-              New template
-            </Button>
-          </div>
-        }
-      />
-    )
+  if (groups.length === 0) {
+    return <p className="py-8 text-center text-sm text-text-subtle">No templates match your search.</p>
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="w-full sm:w-64">
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search templates…" size="sm" />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button size="sm" variant="outline" onClick={onBrowse} className="gap-1.5">
-            <Library size={14} strokeWidth={1.5} />
-            Browse starter templates
-          </Button>
-          <Button size="sm" onClick={onNew} className="gap-1.5">
-            <Plus size={14} strokeWidth={2} />
-            New template
-          </Button>
-        </div>
-      </div>
-
-      {groups.length === 0 ? (
-        <p className="py-8 text-center text-sm text-text-subtle">No templates match your search.</p>
-      ) : (
-        groups.map((group) => (
-          <section key={group.key}>
-            <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-text-subtle">{group.label}</h3>
-            <ul className="mt-1">
-              {group.items.map((t) => (
-                <li
-                  key={t.id}
-                  className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-surface-muted"
-                >
-                  <button type="button" onClick={() => onEdit(t)} className="min-w-0 flex-1 cursor-pointer text-left">
-                    <p className="truncate text-sm font-medium text-text">{t.name}</p>
-                    <p className="truncate text-xs text-text-subtle">{t.subject || 'No subject'}</p>
+    <div className="space-y-5">
+      {groups.map((group) => (
+        <section key={group.key}>
+          <h3 className="px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">{group.label}</h3>
+          <ul className="mt-1 space-y-0.5">
+            {group.items.map((t) => {
+              const active = t.id === selectedId
+              return (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(t)}
+                    aria-current={active ? 'true' : undefined}
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition ${
+                      active ? 'bg-surface-muted' : 'hover:bg-surface-muted'
+                    }`}
+                  >
+                    <span
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                        active ? 'bg-text text-card' : 'bg-surface-muted text-text-muted'
+                      }`}
+                    >
+                      <Mail size={16} strokeWidth={1.5} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-text">{t.name}</span>
+                      <span className="block truncate text-xs text-text-subtle">{t.subject || 'No subject'}</span>
+                    </span>
                   </button>
-                  <RowActionsMenu
-                    alwaysVisible
-                    actions={[
-                      { label: 'Edit', icon: <Pencil size={15} strokeWidth={1.5} />, onSelect: () => onEdit(t) },
-                      { label: 'Duplicate', icon: <Copy size={15} strokeWidth={1.5} />, onSelect: () => void handleClone(t) },
-                      {
-                        label: 'Delete',
-                        destructive: true,
-                        icon: <Trash2 size={15} strokeWidth={1.5} />,
-                        onSelect: () => setPendingDelete(t),
-                      },
-                    ]}
-                  />
                 </li>
-              ))}
-            </ul>
-          </section>
-        ))
-      )}
-
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Delete template?"
-        description={`"${pendingDelete?.name}" will be permanently removed. This can't be undone.`}
-        loading={remove.isPending}
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={async () => {
-          if (!pendingDelete) return
-          try {
-            await remove.mutateAsync(pendingDelete.id)
-            toast('Template deleted', 'success')
-          } catch {
-            toast('Could not delete', 'error')
-          } finally {
-            setPendingDelete(null)
-          }
-        }}
-      />
+              )
+            })}
+          </ul>
+        </section>
+      ))}
     </div>
   )
 }

@@ -2,9 +2,10 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Play, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Play, Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS, Contact } from '@/types/contact'
@@ -12,7 +13,7 @@ import type { Couple } from '@/types/couple'
 
 import { ContactModal } from '../contacts/contact-modal'
 
-import { ContactPopover } from './contact-popover'
+import { CoupleTabEmpty, CoupleTabShell } from './couple-tab-shell'
 import {
   addCoupleContactLinkAction,
   deleteContactAction,
@@ -20,7 +21,7 @@ import {
   updateContactAction,
 } from './portal-actions'
 import type { PortalPerson } from './use-portal-data'
-import { PARTNER_ROLES, BRIDAL_ROLES, FAMILY_ROLES } from './use-portal-data'
+import { BRIDAL_ROLES, FAMILY_ROLES } from './use-portal-data'
 
 /** Throw on `ok: false` so React Query treats it as an error. */
 function unwrap<T>(
@@ -252,93 +253,92 @@ export function McPortalContacts({
   const isEmpty =
     !isLoading && !hasPeople && !hasVendors && !hasCouplePartners
   const modalLoading = updateContact.isPending || deleteContact.isPending
+  // Count only people in the surfaced categories (legacy `partner` rows aren't
+  // shown, and the couple itself comes from `couplePartners`) so the stat
+  // matches the visible sections.
+  const visiblePeopleCount = people.filter((p) =>
+    PEOPLE_CATEGORIES.some((c) => c.category === p.category),
+  ).length
+  const contactsCount =
+    couplePartners.length + visiblePeopleCount + (vendors?.length ?? 0)
 
-  return (
-    <div className="pt-3">
-      {/* Left-aligned header-style action, matching the Events tab
-          pattern on the Overview surface. The trailing "+" anchors
-          the popover that branches into Wedding Party / Vendor. */}
-      <div className="mb-3">
-        <Popover.Root
-          open={addMode !== 'closed'}
-          onOpenChange={(o) => {
-            if (!o) {
-              setAddMode('closed')
-              setVendorSearch('')
-            } else if (addMode === 'closed') {
-              setAddMode('type')
-            }
+  const actions = (
+    <Popover.Root
+      open={addMode !== 'closed'}
+      onOpenChange={(o) => {
+        if (!o) {
+          setAddMode('closed')
+          setVendorSearch('')
+        } else if (addMode === 'closed') {
+          setAddMode('type')
+        }
+      }}
+    >
+      <Popover.Trigger asChild>
+        <Button size="sm" className="cursor-pointer gap-1.5">
+          <Plus size={14} strokeWidth={1.5} />
+          Add contact
+        </Button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          className={`bg-white border border-gray-200 rounded-xl shadow-lg z-[70] py-1 ${addMode === 'vendor' ? 'w-72' : 'w-44'}`}
+          sideOffset={6}
+          align="end"
+          onOpenAutoFocus={(e) => {
+            if (addMode === 'vendor') e.preventDefault()
           }}
         >
-          <Popover.Trigger asChild>
-            <button className="group flex items-center gap-1.5 cursor-pointer">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">
-                Add contact
-              </h3>
-              <Plus
-                size={12}
-                strokeWidth={2}
-                className="text-gray-900 group-hover:text-gray-600 transition"
-              />
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              className={`bg-white border border-gray-200 rounded-xl shadow-lg z-[70] py-1 ${addMode === 'vendor' ? 'w-72' : 'w-44'}`}
-              sideOffset={6}
-              align="start"
-              onOpenAutoFocus={(e) => {
-                // Don't pull focus into the vendor search input until
-                // the user actually switches to vendor mode.
-                if (addMode === 'vendor') e.preventDefault()
+          {addMode === 'type' && (
+            <>
+              <p className="px-3 pt-2 pb-1 text-xs text-gray-400">Wedding party</p>
+              {MENU_CATEGORIES.map(({ label, category, roles }) => (
+                <button
+                  key={category}
+                  onClick={() => { setAddMode('closed'); onAddPerson(category, roles) }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  {label}
+                </button>
+              ))}
+              <div className="border-t border-gray-100 my-1" />
+              <button
+                onClick={() => setAddMode('vendor')}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+              >
+                Vendor
+              </button>
+            </>
+          )}
+
+          {addMode === 'vendor' && (
+            <VendorPickerBody
+              search={vendorSearch}
+              setSearch={setVendorSearch}
+              contacts={allContacts ?? []}
+              excludeIds={vendors?.map((v) => v.contact_id) ?? []}
+              onPick={(id) => {
+                addVendor.mutate(id)
+                setVendorSearch('')
+                setAddMode('closed')
               }}
-            >
-              {addMode === 'type' && (
-                <>
-                  <p className="px-3 pt-2 pb-1 text-xs text-gray-400">Wedding party</p>
-                  {MENU_CATEGORIES.map(({ label, category, roles }) => (
-                    <button
-                      key={category}
-                      onClick={() => { setAddMode('closed'); onAddPerson(category, roles) }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  <div className="border-t border-gray-100 my-1" />
-                  <button
-                    onClick={() => setAddMode('vendor')}
-                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                  >
-                    Vendor
-                  </button>
-                </>
-              )}
+              onCreate={() => {
+                setAddMode('closed')
+                setCreateOpen(true)
+              }}
+            />
+          )}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
 
-              {addMode === 'vendor' && (
-                <VendorPickerBody
-                  search={vendorSearch}
-                  setSearch={setVendorSearch}
-                  contacts={allContacts ?? []}
-                  excludeIds={vendors?.map((v) => v.contact_id) ?? []}
-                  onPick={(id) => {
-                    addVendor.mutate(id)
-                    setVendorSearch('')
-                    setAddMode('closed')
-                  }}
-                  onCreate={() => {
-                    // Close the popover before opening the create
-                    // modal so the two surfaces don't visually stack.
-                    setAddMode('closed')
-                    setCreateOpen(true)
-                  }}
-                />
-              )}
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-      </div>
-
+  return (
+    <CoupleTabShell
+      title="Contacts"
+      stats={contactsCount > 0 ? [{ label: `${contactsCount} total` }] : undefined}
+      actions={actions}
+    >
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -351,12 +351,14 @@ export function McPortalContacts({
             </div>
           ))}
         </div>
+      ) : isEmpty ? (
+        <CoupleTabEmpty
+          icon={Users}
+          title="No contacts yet"
+          description="Add a wedding party member or vendor with the button above."
+        />
       ) : (
         <>
-          {isEmpty && !hasCouplePartners && (
-            <p className="text-sm text-gray-400">No contacts added yet.</p>
-          )}
-
           {hasCouplePartners && (
             <div className="mb-1">
               <div className="flex items-center gap-2 mb-2">
@@ -494,7 +496,7 @@ export function McPortalContacts({
         vendor={editingContact}
         loading={modalLoading}
       />
-    </div>
+    </CoupleTabShell>
   )
 }
 

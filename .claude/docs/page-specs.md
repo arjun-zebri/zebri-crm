@@ -283,6 +283,19 @@ Opens as a centered full-screen modal (not a slide-over). Overlay covers the ful
 - Mobile: horizontal scrollable tab strip (`overflow-x-auto`) below header  -  icon + label per tab, `whitespace-nowrap`
 - Desktop: vertical 200px sidebar on left  -  same tabs as icon + label rows
 
+**Tab settings (gear):** A Settings (gear) button sits next to Delete in the
+header (desktop inline row; mobile actions popover), with a smooth rotate/fade
+when toggled. It flips the nav into an inline "settings mode" — a vertical,
+drag-to-reorder list of every tab, each row with an eye / eye-off button to hide
+or show that tab (Overview is locked visible — the guaranteed fallback). Edits
+live in a working draft so the nav updates instantly (no flicker when toggling
+the gear back). The layout is **per-user and global across couples** (not
+per-couple) and is **saved when the modal closes** (overlay / Esc / ✕) to
+`user_public_settings.couple_profile_tabs_config` via
+`updateCoupleProfileTabsConfigAction`. Hidden tabs and order apply everywhere;
+hiding the active tab falls the body back to the first visible tab. Derive logic
+tolerates drift (unknown stored keys dropped, newly added tabs appended).
+
 **Tabs:** Overview, Pulse, Tasks, Contacts, Timeline, Songs, Files, Vows,
 Payments, Contracts, Automations, **Templates**.
 
@@ -1326,3 +1339,52 @@ The editable preview reuses `components/ui/rich-text-editor.tsx`
 Deferred sub-items: static-file attachment upload UI (the route + bucket
 already support `attachmentFileIds`; the upload/attach UI lands with the
 template editor), and inline (template-less) compose.
+
+# Couple Questionnaires
+
+MCs build reusable questionnaires, send them to couples, and read the answers
+back inside the couple profile. Structurally modelled on contracts (template →
+token-gated instance → branded public page). Question types (v1): short text,
+long text, single choice, multiple choice, date, time, yes/no, number, and a
+non-input section heading. Schema + validation: `lib/questionnaires/`.
+
+## Template builder — Templates page → Questionnaires tab
+
+`questionnaire-template-manager.tsx` lists the MC's templates (create from
+scratch or clone a starter from `STARTER_QUESTIONNAIRES`).
+`questionnaire-builder-modal.tsx` is a two-pane modal: the left pane edits
+name/description and a dnd-kit-sortable question list
+(`questionnaire-question-row.tsx`); the right pane is a live, non-interactive
+preview (`questionnaire-preview.tsx`). List edits route through the pure
+helpers in `lib/questionnaires/builder-state.ts`.
+
+## Send + view — couple profile → Questionnaires tab
+
+`couple-questionnaires.tsx` lists this couple's questionnaires with a status
+pill (draft/sent/completed) and sent/completed dates. "Send" picks a template
+and calls `sendCoupleQuestionnaireAction` (`questionnaire-actions.ts`), which
+snapshots the template's questions into a `couple_questionnaires` row, enables
+the share token, and emails the couple the link. Clicking a row opens a side
+panel with the answers read-only (`couple-questionnaire-answers.tsx`). Answers
+are display-only in v1 (no completion trigger / answer merge-tags yet).
+
+## Public fill-in page — `/questionnaire/[token]`
+
+A calm, Typeform-style flow: one question per screen, progress bar,
+keyboard-advance (Enter), choice/yes-no answers auto-advance, debounced
+autosave to `/api/questionnaire/save`, and a final submit to
+`/api/questionnaire/submit`. Loads via `get_public_questionnaire(token)`;
+branded with the MC's colours/fonts (`useBrandingHead`). States: loading,
+not-found (generic 404 for a missing/disabled token), active flow, and a
+thank-you screen. Files: `app/questionnaire/[token]/page.tsx` +
+`_components/{questionnaire-flow,question-field,public-questionnaire}`.
+
+## Other entry points
+
+- **Client portal:** a Questionnaires section lists the couple's sent
+  questionnaires, each linking to the standalone fill-in page
+  (`app/portal/[token]/questionnaires-section.tsx`, fed by
+  `get_portal_questionnaires`).
+- **Automations:** the `send_couple_questionnaire` action sends a
+  questionnaire mid-flow; `{{questionnaire.link}}` resolves in a later email
+  from that action's output.

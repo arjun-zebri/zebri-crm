@@ -853,6 +853,72 @@ export type Database = {
         }
         Relationships: []
       }
+      couple_questionnaires: {
+        Row: {
+          completed_at: string | null
+          couple_id: string
+          created_at: string
+          id: string
+          questions: Json
+          responses: Json
+          sent_at: string | null
+          share_token: string
+          share_token_enabled: boolean
+          status: string
+          template_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          couple_id: string
+          created_at?: string
+          id?: string
+          questions?: Json
+          responses?: Json
+          sent_at?: string | null
+          share_token?: string
+          share_token_enabled?: boolean
+          status?: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          couple_id?: string
+          created_at?: string
+          id?: string
+          questions?: Json
+          responses?: Json
+          sent_at?: string | null
+          share_token?: string
+          share_token_enabled?: boolean
+          status?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_questionnaires_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_questionnaires_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaire_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       couples: {
         Row: {
           created_at: string
@@ -1536,6 +1602,42 @@ export type Database = {
           },
         ]
       }
+      questionnaire_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_starter: boolean
+          name: string
+          position: number
+          questions: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_starter?: boolean
+          name: string
+          position?: number
+          questions?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_starter?: boolean
+          name?: string
+          position?: number
+          questions?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       quote_items: {
         Row: {
           amount: number
@@ -2168,6 +2270,7 @@ export type Database = {
       }
       user_public_settings: {
         Row: {
+          couple_profile_tabs_config: Json
           created_at: string
           email_mode: string
           oauth_access_token_encrypted: string | null
@@ -2184,6 +2287,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          couple_profile_tabs_config?: Json
           created_at?: string
           email_mode?: string
           oauth_access_token_encrypted?: string | null
@@ -2200,6 +2304,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          couple_profile_tabs_config?: Json
           created_at?: string
           email_mode?: string
           oauth_access_token_encrypted?: string | null
@@ -2389,8 +2494,10 @@ export type Database = {
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
       generate_quote_number: { Args: { p_user_id: string }; Returns: string }
       get_portal_data: { Args: { token: string }; Returns: Json }
+      get_portal_questionnaires: { Args: { token: string }; Returns: Json }
       get_public_contract: { Args: { token: string }; Returns: Json }
       get_public_invoice: { Args: { token: string }; Returns: Json }
+      get_public_questionnaire: { Args: { token: string }; Returns: Json }
       get_public_quote: { Args: { token: string }; Returns: Json }
       get_public_timeline: { Args: { token: string }; Returns: Json }
       get_vendor_timeline: { Args: { token: string }; Returns: Json }
@@ -2514,6 +2621,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      save_questionnaire_progress: {
+        Args: { p_responses: Json; token: string }
+        Returns: Json
+      }
       sign_contract: {
         Args: {
           p_signer_ip: string
@@ -2521,6 +2632,10 @@ export type Database = {
           p_signer_user_agent: string
           token: string
         }
+        Returns: Json
+      }
+      submit_questionnaire: {
+        Args: { p_responses: Json; token: string }
         Returns: Json
       }
     }

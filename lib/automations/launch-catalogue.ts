@@ -108,6 +108,7 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'send_quote',
   'send_contract',
   'send_invoice',
+  'send_couple_questionnaire',
   'trigger_payment_reminder',
   'create_timeline_event',
   'send_timeline_to_vendors',

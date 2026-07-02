@@ -142,6 +142,12 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
       "description": "Email the couple an invoice",
       "icon": "Receipt"
     },
+    "send_couple_questionnaire": {
+      "category": "couple",
+      "label": "Send questionnaire",
+      "description": "Email the couple a questionnaire to fill in",
+      "icon": "ClipboardList"
+    },
     "trigger_payment_reminder": {
       "category": "payments",
       "label": "Send payment reminder",

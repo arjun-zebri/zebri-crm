@@ -97,4 +97,15 @@ describe('renderTemplate', () => {
     })
     expect(renderTemplate('{{quote.link}}', ctx)).toBe('https://example.com/q/abc')
   })
+
+  it('resolves {{questionnaire.link}} from a prior send-questionnaire action', () => {
+    const ctx = makeCtx({
+      actionResults: { 'action-1': { questionnaire_link: 'https://example.com/questionnaire/xyz' } as never },
+    })
+    expect(renderTemplate('{{questionnaire.link}}', ctx)).toBe('https://example.com/questionnaire/xyz')
+  })
+
+  it('leaves {{questionnaire.link}} empty when no questionnaire is in context', () => {
+    expect(renderTemplate('{{questionnaire.link}}', makeCtx())).toBe('')
+  })
 })

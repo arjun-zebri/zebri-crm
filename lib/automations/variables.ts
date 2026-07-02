@@ -146,11 +146,14 @@ function readPath(path: string, ctx: RunContext): string {
     case 'quote':
     case 'invoice':
     case 'contract':
+    case 'questionnaire':
     case 'task':
       // These read from the triggering event's payload or the
       // accumulated action results. The dispatcher denormalises
       // common fields onto trigger payloads so most reads here
-      // are zero-hop.
+      // are zero-hop. `{{questionnaire.link}}` resolves from a
+      // preceding "Send questionnaire" action's `questionnaire_link`
+      // output in the same run.
       return readEventField(ctx, namespace, key)
     default:
       return ''
@@ -360,6 +363,7 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
       { token: '{{quote.link}}', label: 'Quote share link', example: 'https://zebri.app/q/…' },
       { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/i/…' },
       { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/c/…' },
+      { token: '{{questionnaire.link}}', label: 'Questionnaire link', example: 'https://zebri.app/questionnaire/…' },
     ],
   },
 ]

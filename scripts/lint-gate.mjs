@@ -110,7 +110,17 @@ const ERROR_BUDGET = 79;
 // Re-measured post-merge → 405.
 // Timeline Add-item modal: removed the unused Assigned-contact field +
 // its event-contacts queries across three callers → 405 → 403.
-const WARNING_BUDGET = 403;
+// Couple-profile tab standardization (shared CoupleTabShell across all
+// tabs): dropped a cluster of import-order/unused-import warnings → 403 → 400.
+// Templates tab-row toolbar: moved per-tab actions into a shared slot and
+// replaced the Timeline tab's off-token empty state/buttons with primitives,
+// clearing two off-token-colour warnings → 400 → 398.
+// Couple-profile tab settings (hide/reorder/default-tab layout): net-clean new
+// code that also cleared one stray warning → 398 → 397.
+// Templates master-detail (two-pane + previews): converting the email/list
+// rows to selectable buttons + dropping the off-token timeline row dropped
+// two warnings → 397 → 395.
+const WARNING_BUDGET = 395;
 
 function runEslintJson() {
   try {

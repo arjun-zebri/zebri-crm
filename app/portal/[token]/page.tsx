@@ -111,6 +111,16 @@ export interface PortalContract {
   signed_at: string | null
 }
 
+export interface PortalQuestionnaire {
+  id: string
+  title: string
+  status: string
+  share_token: string | null
+  share_token_enabled: boolean
+  sent_at: string | null
+  completed_at: string | null
+}
+
 export interface PortalSongCategory {
   key: string
   label: string
@@ -160,6 +170,7 @@ export interface PortalData {
     invoices: PortalInvoice[]
   }
   contracts: PortalContract[]
+  questionnaires: PortalQuestionnaire[]
   enabled_sections: string[] | null
   branding: PublicBranding | null
   branding_blocks: Block[] | null
@@ -204,6 +215,12 @@ export default async function PortalPage({
       </div>
     )
   }
+
+  // Questionnaires live in their own lightweight RPC (keeps the large
+  // get_portal_data payload untouched). Attach them to the portal object the
+  // shell already consumes.
+  const { data: qData } = await supabase.rpc('get_portal_questionnaires', { token })
+  portal.questionnaires = (qData as PortalQuestionnaire[] | null) ?? []
 
   const branding = portal.branding
   const pageBg = branding?.surface_color || '#ffffff'

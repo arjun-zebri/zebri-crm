@@ -452,6 +452,17 @@ portal's, but for completeness the limiter should cover them too.
 | `app/api/stripe/invoice-payment/route.ts` | ✅ `bodySchema` (invoiceId UUID, shareToken min/max, paymentType enum) | ✅ 10/min/IP via `inMemoryLimiter` | Generic 404 on missing-or-mismatched-token (no info leak). `success_url` carries `session_id={CHECKOUT_SESSION_ID}` for the payment-success re-verification. `metadata.connected_account_id` cross-checked on the success page. Stripe-failure path uses `logger.error`; raw error message NOT returned to the couple (returns generic 502). |
 | `app/invoice/payment-success/page.tsx` | n/a (server component) | n/a | Server-side `stripe.checkout.sessions.retrieve(session_id, { expand: ['payment_intent'] })`. Five-check verification: invoice exists + MC has Connect account + session.metadata.invoice_id matches + session.metadata.connected_account_id matches + payment_intent.status === 'succeeded'. Any mismatch → notFound() + `payment_success_param_tampered` Slack alert. Idempotent. |
 
+### Public questionnaire routes — Couple questionnaires
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/questionnaire/save/route.ts` | ✅ `questionnaireWriteSchema` (token UUID + `responses` record) | ✅ 30/min/IP via `inMemoryLimiter` (autosave fires often) | Calls `save_questionnaire_progress` (SECURITY DEFINER, token-gated). Generic error on RPC failure; detail logged. Refuses once completed. |
+| `app/api/questionnaire/submit/route.ts` | ✅ `questionnaireWriteSchema` | ✅ 5/min/IP via `inMemoryLimiter` (one-shot) | Calls `submit_questionnaire` (SECURITY DEFINER). Typed RPC errors (`already_completed`) surfaced as 400; transport failures return generic 500 with `logger.error`. |
+
+Both are unauthenticated — the share token IS the capability, validated DB-side
+against `share_token_enabled = true`. The public page (`/questionnaire/[token]`)
+loads via the `get_public_questionnaire` RPC (anon, branding-merged).
+
 ---
 
 ## RLS coverage matrix
@@ -482,6 +493,8 @@ DELETE (sampled clean across the migrations).
 | `invoice_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (6 tests) | Templates |
 | `invoice_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (covered via parent) | Templates |
 | `couple_emails` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-emails.test.ts` (6 tests) | Couples & Events |
+| `questionnaire_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/questionnaire-templates.test.ts` (6 tests) | Questionnaires |
+| `couple_questionnaires` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-questionnaires.test.ts` (8 tests — RLS + public RPC token gating + submit/double-submit) + `tests/integration/rls/portal-questionnaires.test.ts` (3 tests — portal RPC) | Questionnaires |
 | `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |

@@ -17,7 +17,7 @@ import { CoupleEmails } from './couple-emails';
 import { CoupleOverview } from './couple-overview';
 import { CouplePayments } from './couple-payments';
 import type { CoupleProfileSection } from './couple-profile-types';
-import { CouplePulse } from './couple-pulse';
+import { CoupleQuestionnaires } from './couple-questionnaires';
 import { CoupleTasks } from './couple-tasks';
 import { CoupleTimeline } from './couple-timeline';
 import { McPortalContacts } from './mc-portal-contacts';
@@ -49,8 +49,6 @@ export function CoupleProfileBody({
         </div>
       )}
 
-      {activeSection === 'pulse' && <CouplePulse couple={couple} />}
-
       {activeSection === 'tasks' && <CoupleTasks coupleId={couple.id} />}
 
       {activeSection === 'payments' && (
@@ -60,6 +58,8 @@ export function CoupleProfileBody({
       {activeSection === 'contracts' && (
         <CoupleContracts coupleId={couple.id} coupleName={couple.name} />
       )}
+
+      {activeSection === 'questionnaires' && <CoupleQuestionnaires coupleId={couple.id} />}
 
       {activeSection === 'contacts' && (
         <McPortalContacts

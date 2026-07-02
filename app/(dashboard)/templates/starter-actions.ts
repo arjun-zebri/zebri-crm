@@ -25,6 +25,7 @@ import {
   startersByName,
   type StarterLineItemSet,
 } from '@/lib/payments/starter-line-item-templates'
+import { starterQuestionnairesByName } from '@/lib/questionnaires/starter-questionnaires'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
 
@@ -239,6 +240,48 @@ export async function addStarterContractsAction(names: string[]): Promise<Action
   if (error) {
     logger.error('[templates/starter-actions] add contract_templates failed', error, { userId: user.id })
     return { ok: false, error: 'Could not add contract templates.' }
+  }
+  return { ok: true, data: { added: rows.length } }
+}
+
+/* ─── Questionnaire starters ───────────────────────────────────── */
+
+/** Add starter questionnaire templates (one `questionnaire_templates` row each). */
+export async function addStarterQuestionnairesAction(names: string[]): Promise<ActionResult<{ added: number }>> {
+  const parsed = namesSchema.safeParse(names)
+  if (!parsed.success) return { ok: false, error: 'Invalid request.' }
+
+  const { supabase, user } = await requireUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const starters = starterQuestionnairesByName(parsed.data)
+  if (starters.length === 0) return { ok: true, data: { added: 0 } }
+
+  const { data: existing } = await supabase
+    .from('questionnaire_templates')
+    .select('name, position')
+    .eq('user_id', user.id)
+  const have = new Set((existing ?? []).map((r) => r.name))
+  const maxPosition = (existing ?? []).reduce((m, r) => Math.max(m, r.position), 0)
+
+  const toInsert = starters.filter((q) => !have.has(q.name))
+  if (toInsert.length === 0) return { ok: true, data: { added: 0 } }
+
+  const rows: Database['public']['Tables']['questionnaire_templates']['Insert'][] = toInsert.map((q, i) => ({
+    user_id: user.id,
+    name: q.name,
+    description: q.description,
+    // Cast via the Row (non-optional `Json`) type: Insert['questions'] is
+    // `Json | undefined`, which exactOptionalPropertyTypes rejects here.
+    questions: q.questions as Database['public']['Tables']['questionnaire_templates']['Row']['questions'],
+    is_starter: true,
+    position: maxPosition + (i + 1) * POSITION_STEP,
+  }))
+
+  const { error } = await supabase.from('questionnaire_templates').insert(rows)
+  if (error) {
+    logger.error('[templates/starter-actions] add questionnaire_templates failed', error, { userId: user.id })
+    return { ok: false, error: 'Could not add questionnaire templates.' }
   }
   return { ok: true, data: { added: rows.length } }
 }

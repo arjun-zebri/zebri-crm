@@ -1,8 +1,8 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient, QueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2, Plus } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Pencil } from 'lucide-react'
+import { useState, useEffect, useImperativeHandle, type Ref } from 'react'
 
 import { useToast } from '@/components/ui/toast'
 import {
@@ -13,7 +13,6 @@ import {
   updateEventAction,
 } from '@/lib/events/actions'
 import { createClient } from '@/lib/supabase/client'
-import { formatDate } from '@/lib/utils'
 import { Couple } from '@/types/couple'
 import { Event } from '@/types/event'
 
@@ -29,9 +28,16 @@ function unwrap<T>(
   throw new Error(result.error)
 }
 
+/** Imperative handle so a parent (the Overview header) can open the add-event modal. */
+export interface CoupleEventsHandle {
+  openAdd: () => void
+}
+
 interface CoupleEventsProps {
   couple: Couple
   onLoadingChange?: (loading: boolean) => void
+  /** React 19 ref-as-prop exposing {@link CoupleEventsHandle}. */
+  ref?: Ref<CoupleEventsHandle>
 }
 
 async function recalculateDriveTimes(coupleId: string, date: string, queryClient: QueryClient) {
@@ -141,7 +147,7 @@ function formatEventTime(time: string | null | undefined): string | null {
   return `${hour12}:${m.toString().padStart(2, '0')} ${period}`
 }
 
-export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
+export function CoupleEvents({ couple, onLoadingChange, ref }: CoupleEventsProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { toast } = useToast()
@@ -149,6 +155,13 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
   const [editingEvent, setEditingEvent] = useState<Event | undefined>()
   const [editingVendorIds, setEditingVendorIds] = useState<string[]>([])
   const [calculatingDriveTime, setCalculatingDriveTime] = useState(false)
+
+  const openAdd = () => {
+    setEditingEvent(undefined)
+    setEditingVendorIds([])
+    setShowModal(true)
+  }
+  useImperativeHandle(ref, () => ({ openAdd }), [])
 
   const { data: events, isLoading } = useQuery({
     queryKey: ['couple-events', couple.id],
@@ -505,18 +518,8 @@ export function CoupleEvents({ couple, onLoadingChange }: CoupleEventsProps) {
   return (
     <>
       <div className="space-y-3">
-        {/* Header */}
-        <button
-          onClick={() => {
-            setEditingEvent(undefined)
-            setEditingVendorIds([])
-            setShowModal(true)
-          }}
-          className="group flex items-center gap-1.5 mb-3 cursor-pointer"
-        >
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">Events</h3>
-          <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
-        </button>
+        {/* Section label — the add action lives in the Overview header (top right). */}
+        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-900">Events</h3>
 
         {isLoading ? (
           <div className="space-y-2">

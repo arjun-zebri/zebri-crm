@@ -27,6 +27,7 @@ import { documentActions } from './documents'
 import { extendedActions } from './extended'
 import { messagingActions } from './messaging'
 import { postEventActions } from './post-event'
+import { questionnaireActions } from './questionnaire'
 import { taskActions } from './task'
 import { timelineActions } from './timeline'
 import type { ActionUi } from './ui'
@@ -49,6 +50,7 @@ export const actionRegistry: Partial<Record<ActionType, ActionSpec<any>>> = {
   ...coupleActions,
   ...taskActions,
   ...documentActions,
+  ...questionnaireActions,
   ...timelineActions,
   ...postEventActions,
   // Phase 14a UI-only stubs (handlers throw a clear "not wired" error).

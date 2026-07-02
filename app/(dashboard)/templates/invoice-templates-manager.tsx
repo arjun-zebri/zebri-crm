@@ -24,14 +24,13 @@ import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } 
 import { CSS } from '@dnd-kit/utilities'
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, GripVertical, Pencil, Package as PackageIcon, ChevronDown, Receipt, Library } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Package as PackageIcon, ChevronDown, Receipt, Library } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Empty } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-import { RowActionsMenu } from '@/components/ui/row-actions-menu'
 import { useToast } from '@/components/ui/toast'
 import { STARTER_INVOICE_TEMPLATES } from '@/lib/payments/starter-line-item-templates'
 import { createClient } from '@/lib/supabase/client'
@@ -39,6 +38,9 @@ import { createClient } from '@/lib/supabase/client'
 import { LineItemPreview } from './line-item-preview'
 import { addStarterInvoiceTemplatesAction } from './starter-actions'
 import { StarterCatalogModal } from './starter-catalog-modal'
+import { TemplatePreviewHeader } from './template-preview-header'
+import { TemplatesActions } from './templates-actions-slot'
+import { TemplatesTwoPane } from './templates-two-pane'
 
 interface InvoiceItem {
   id: string
@@ -82,14 +84,16 @@ function formatCurrency(amount: number) {
 
 function TemplateRow({
   template,
-  onEdit,
-  onDelete,
+  selected,
+  onSelect,
+  disabled,
 }: {
   template: InvoiceTemplate
-  onEdit: (id: string) => void
-  onDelete: (id: string) => void
+  selected: boolean
+  onSelect: (id: string) => void
+  disabled: boolean
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: template.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: template.id, disabled })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -101,43 +105,38 @@ function TemplateRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-surface-muted"
+      className={`group flex items-center gap-2 rounded-xl pr-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
     >
+      {!disabled && (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="shrink-0 cursor-grab pl-1 text-text-subtle transition active:cursor-grabbing"
+        >
+          <GripVertical size={16} strokeWidth={1.5} />
+        </button>
+      )}
+
       <button
         type="button"
-        {...attributes}
-        {...listeners}
-        className="shrink-0 cursor-grab active:cursor-grabbing text-text-subtle transition"
+        onClick={() => onSelect(template.id)}
+        aria-current={selected ? 'true' : undefined}
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-2.5 pl-1 text-left"
       >
-        <GripVertical size={16} strokeWidth={1.5} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-text">{template.name}</span>
+          <span className="block truncate text-xs text-text-subtle">{template.notes || ''}</span>
+        </span>
+        <span className="shrink-0 text-right">
+          {(template.total ?? 0) > 0 ? (
+            <span className="block text-sm font-medium text-text">{formatCurrency(template.total ?? 0)}</span>
+          ) : null}
+          <span className="block text-xs text-text-muted">
+            {template.item_count || 0} item{(template.item_count || 0) !== 1 ? 's' : ''}
+          </span>
+        </span>
       </button>
-
-      <button type="button" onClick={() => onEdit(template.id)} className="min-w-0 flex-1 cursor-pointer text-left">
-        <p className="truncate text-sm font-medium text-text">{template.name}</p>
-        <p className="truncate text-xs text-text-subtle">{template.notes || ''}</p>
-      </button>
-
-      <div className="text-right shrink-0">
-        {(template.total ?? 0) > 0 ? (
-          <p className="text-sm font-medium text-text">{formatCurrency(template.total ?? 0)}</p>
-        ) : null}
-        <p className="text-xs text-text-muted">
-          {template.item_count || 0} item{(template.item_count || 0) !== 1 ? 's' : ''}
-        </p>
-      </div>
-
-      <RowActionsMenu
-        alwaysVisible
-        actions={[
-          { label: 'Edit', icon: <Pencil size={15} strokeWidth={1.5} />, onSelect: () => onEdit(template.id) },
-          {
-            label: 'Delete',
-            destructive: true,
-            icon: <Trash2 size={15} strokeWidth={1.5} />,
-            onSelect: () => onDelete(template.id),
-          },
-        ]}
-      />
     </div>
   )
 }
@@ -382,6 +381,13 @@ export function InvoiceTemplatesManager() {
   const [isCreating, setIsCreating] = useState(false)
   const [showStarters, setShowStarters] = useState(false)
   const [localTemplates, setLocalTemplates] = useState<InvoiceTemplate[]>([])
+  const [search, setSearch] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  const isSearching = search.trim().length > 0
+  const visible = isSearching
+    ? localTemplates.filter((t) => t.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : localTemplates
 
   useEffect(() => {
     const getUser = async () => {
@@ -618,7 +624,7 @@ export function InvoiceTemplatesManager() {
 
   if (isLoading) {
     return (
-      <div className="max-w-2xl space-y-3 animate-pulse">
+      <div className="space-y-3 animate-pulse">
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-12 bg-surface-muted rounded-xl" />
         ))}
@@ -628,24 +634,29 @@ export function InvoiceTemplatesManager() {
 
   const existingNames = new Set(localTemplates.map((t) => t.name))
 
+  const effectiveId =
+    selectedId && localTemplates.some((t) => t.id === selectedId) ? selectedId : (localTemplates[0]?.id ?? null)
+  const selectedTpl = localTemplates.find((t) => t.id === effectiveId) ?? null
+
   return (
-    <div className="max-w-4xl space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-xl font-semibold text-text">Invoice Templates</h3>
-          <p className="text-sm text-text-muted mt-1">Reusable invoices — build from scratch or pull in a package or quote.</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
-            <Library size={14} strokeWidth={1.5} />
-            Browse starters
-          </Button>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
-            <Plus size={14} strokeWidth={1.5} />
-            New Template
-          </Button>
-        </div>
-      </div>
+    <div className="flex h-full flex-col">
+      <TemplatesActions>
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search invoice templates…"
+          size="sm"
+          className="w-36 sm:w-48"
+        />
+        <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
+          <Library size={14} strokeWidth={1.5} />
+          Browse starters
+        </Button>
+        <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Plus size={14} strokeWidth={1.5} />
+          New Template
+        </Button>
+      </TemplatesActions>
 
       <Modal isOpen={isCreating} onClose={() => setIsCreating(false)} title="New Invoice Template">
         <EditInvoiceTemplateForm
@@ -680,43 +691,66 @@ export function InvoiceTemplatesManager() {
         onAdd={handleAddStarters}
       />
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={localTemplates.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
-            {localTemplates.length === 0 ? (
-              <Empty
-                size="sm"
-                className="min-h-[40vh]"
-                icon={Receipt}
-                title="No invoice templates yet"
-                description="Save a reusable invoice, optionally from a package or quote."
-                action={
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setShowStarters(true)}>
-                      Browse starter templates
-                    </Button>
-                    <Button size="sm" onClick={openCreate}>
-                      New Template
-                    </Button>
+      {localTemplates.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center pb-[10vh]">
+          <Empty
+            size="sm"
+            icon={Receipt}
+            title="No invoice templates yet"
+            description="Save a reusable invoice, optionally from a package or quote."
+          />
+        </div>
+      ) : (
+        <TemplatesTwoPane
+          selected={!!selectedId}
+          onBack={() => setSelectedId(null)}
+          list={
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={visible.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                {visible.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {visible.map((template) => (
+                      <TemplateRow
+                        key={template.id}
+                        template={template}
+                        selected={template.id === effectiveId}
+                        onSelect={setSelectedId}
+                        disabled={isSearching}
+                      />
+                    ))}
                   </div>
-                }
-              />
-            ) : (
-              localTemplates.map((template) => (
-                <TemplateRow
-                  key={template.id}
-                  template={template}
-                  onEdit={(id) => {
+                )}
+              </SortableContext>
+            </DndContext>
+          }
+          detail={
+            selectedTpl ? (
+              <div className="space-y-4">
+                <TemplatePreviewHeader
+                  title={selectedTpl.name}
+                  editLabel="Edit template"
+                  onEdit={() => {
                     setIsCreating(false)
-                    setEditingId(id)
+                    setEditingId(selectedTpl.id)
                   }}
-                  onDelete={(id) => deleteMutation.mutate(id)}
+                  onDelete={() => deleteMutation.mutate(selectedTpl.id)}
                 />
-              ))
-            )}
-          </div>
-        </SortableContext>
-      </DndContext>
+                <LineItemPreview
+                  name={selectedTpl.name}
+                  subtitle={selectedTpl.notes ?? ''}
+                  items={allItems?.[selectedTpl.id] ?? []}
+                />
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center pb-[10vh]">
+                <p className="text-sm text-text-subtle">Select a template to preview.</p>
+              </div>
+            )
+          }
+        />
+      )}
     </div>
   )
 }

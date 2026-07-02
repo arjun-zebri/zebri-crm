@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { JSONContent } from '@tiptap/react'
-import { Plus, Pencil, Trash2, FileSignature, Loader2, Library } from 'lucide-react'
+import { Plus, FileSignature, Loader2, Library } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -10,13 +10,16 @@ import { Empty } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
-import { RowActionsMenu } from '@/components/ui/row-actions-menu'
 import { useToast } from '@/components/ui/toast'
 import { STARTER_CONTRACTS } from '@/lib/contracts/starter-contracts'
 import { createClient } from '@/lib/supabase/client'
 
+import { ContractTemplatePreview } from './contract-template-preview'
 import { addStarterContractsAction } from './starter-actions'
 import { StarterCatalogModal } from './starter-catalog-modal'
+import { TemplatePreviewHeader } from './template-preview-header'
+import { TemplatesActions } from './templates-actions-slot'
+import { TemplatesTwoPane } from './templates-two-pane'
 
 interface ContractTemplate {
   id: string
@@ -40,6 +43,8 @@ export function ContractTemplateManager() {
   const [editing, setEditing] = useState<ContractTemplate | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [showStarters, setShowStarters] = useState(false)
+  const [search, setSearch] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ['contract-templates'],
@@ -52,6 +57,11 @@ export function ContractTemplateManager() {
       return (data as ContractTemplate[]) || []
     },
   })
+
+  const isSearching = search.trim().length > 0
+  const visible = isSearching
+    ? (templates ?? []).filter((t) => t.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : templates ?? []
 
   const createTemplate = useMutation({
     mutationFn: async () => {
@@ -120,35 +130,40 @@ export function ContractTemplateManager() {
 
   const existingNames = new Set((templates || []).map((t) => t.name))
 
+  const all = templates ?? []
+  const effectiveId = selectedId && all.some((t) => t.id === selectedId) ? selectedId : (all[0]?.id ?? null)
+  const selectedC = all.find((t) => t.id === effectiveId) ?? null
+
   return (
-    <div className="max-w-4xl">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-xl font-semibold text-text">Contract templates</h3>
-          <p className="text-sm text-text-muted">Pre-written agreements you can start from.</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowStarters(true)}
-            disabled={createTemplate.isPending}
-            className="gap-1.5"
-          >
-            <Library size={14} strokeWidth={1.5} />
-            Browse starters
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => createTemplate.mutate()}
-            disabled={createTemplate.isPending}
-            className="gap-1.5"
-          >
-            <Plus size={14} strokeWidth={1.5} />
-            New template
-          </Button>
-        </div>
-      </div>
+    <div className="flex h-full flex-col">
+      <TemplatesActions>
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search contract templates…"
+          size="sm"
+          className="w-36 sm:w-48"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowStarters(true)}
+          disabled={createTemplate.isPending}
+          className="gap-1.5"
+        >
+          <Library size={14} strokeWidth={1.5} />
+          Browse starters
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => createTemplate.mutate()}
+          disabled={createTemplate.isPending}
+          className="gap-1.5"
+        >
+          <Plus size={14} strokeWidth={1.5} />
+          New template
+        </Button>
+      </TemplatesActions>
 
       {isLoading ? (
         <div className="space-y-2">
@@ -157,50 +172,64 @@ export function ContractTemplateManager() {
           ))}
         </div>
       ) : (templates?.length ?? 0) === 0 ? (
-        <Empty
-          size="sm"
-          className="min-h-[40vh]"
-          icon={FileSignature}
-          title="No contract templates yet"
-          description="Create one from scratch or add from the starter library."
-          action={
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => setShowStarters(true)}>
-                Browse starters
-              </Button>
-              <Button size="sm" onClick={() => createTemplate.mutate()}>
-                New template
-              </Button>
-            </div>
+        <div className="flex flex-1 items-center justify-center pb-[10vh]">
+          <Empty
+            size="sm"
+            icon={FileSignature}
+            title="No contract templates yet"
+            description="Create one from scratch or add from the starter library."
+          />
+        </div>
+      ) : (
+        <TemplatesTwoPane
+          selected={!!selectedId}
+          onBack={() => setSelectedId(null)}
+          list={
+            visible.length === 0 ? (
+              <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+            ) : (
+              <div className="space-y-0.5">
+                {visible.map((t) => {
+                  const active = t.id === effectiveId
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setSelectedId(t.id)}
+                      aria-current={active ? 'true' : undefined}
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition ${
+                        active ? 'bg-surface-muted' : 'hover:bg-surface-muted'
+                      }`}
+                    >
+                      <FileSignature size={16} strokeWidth={1.5} className="shrink-0 text-text-muted" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-text">{t.name}</span>
+                        {t.description && <span className="block truncate text-xs text-text-subtle">{t.description}</span>}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          }
+          detail={
+            selectedC ? (
+              <div className="space-y-4">
+                <TemplatePreviewHeader
+                  title={selectedC.name}
+                  editLabel="Edit template"
+                  onEdit={() => setEditing(selectedC)}
+                  onDelete={() => setConfirmDelete(selectedC.id)}
+                />
+                <ContractTemplatePreview content={selectedC.content} />
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center pb-[10vh]">
+                <p className="text-sm text-text-subtle">Select a template to preview.</p>
+              </div>
+            )
           }
         />
-      ) : (
-        <div className="space-y-2">
-          {(templates || []).map((t) => (
-            <div
-              key={t.id}
-              className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-surface-muted"
-            >
-              <FileSignature size={16} strokeWidth={1.5} className="text-text-muted shrink-0" />
-              <button type="button" onClick={() => setEditing(t)} className="min-w-0 flex-1 cursor-pointer text-left">
-                <p className="text-sm font-medium text-text truncate">{t.name}</p>
-                {t.description && <p className="text-xs text-text-subtle truncate">{t.description}</p>}
-              </button>
-              <RowActionsMenu
-                alwaysVisible
-                actions={[
-                  { label: 'Edit', icon: <Pencil size={15} strokeWidth={1.5} />, onSelect: () => setEditing(t) },
-                  {
-                    label: 'Delete',
-                    destructive: true,
-                    icon: <Trash2 size={15} strokeWidth={1.5} />,
-                    onSelect: () => setConfirmDelete(t.id),
-                  },
-                ]}
-              />
-            </div>
-          ))}
-        </div>
       )}
 
       <StarterCatalogModal

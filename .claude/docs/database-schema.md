@@ -732,6 +732,46 @@ RLS: owner-only `user_id = auth.uid()`.
 
 Migration: `20260619000000_create_couple_emails.sql`.
 
+## questionnaire_templates / couple_questionnaires (Couple questionnaires)
+
+Couples fill in MC-built questionnaires on a calm, one-question-at-a-time
+public page. Structurally a twin of contracts: a reusable template plus a
+per-couple token-gated instance.
+
+**questionnaire_templates** (Templates page — Questionnaires tab). The MC's
+reusable forms. Columns: id, user_id (RLS key, FK auth.users cascade), name,
+description (nullable), `questions` (jsonb — ordered array of
+`{ id, type, label, help_text?, required, options? }`; types live in
+`lib/questionnaires/question-schema.ts`), is_starter (provenance for cloned
+starters), position, created_at, updated_at. Index: `(user_id)`. RLS:
+owner-only `user_id = auth.uid()`.
+
+**couple_questionnaires** (Couple profile — Questionnaires tab). One per send.
+Columns: id, user_id (RLS key), couple_id (FK couples cascade), template_id (FK
+questionnaire_templates **on delete set null**), title, `questions` (jsonb
+**snapshot** taken at send time so later template edits never change a sent
+questionnaire — same principle as the contract content lock), `responses`
+(jsonb, answers keyed by question id), status (`draft | sent | completed`),
+share_token (uuid), share_token_enabled (default false), sent_at, completed_at,
+created_at, updated_at. Indexes: `(user_id)`, `(couple_id)`, `(template_id)`,
+`(share_token)`. RLS: owner-only.
+
+Anon access via SECURITY DEFINER RPCs (all token-gated, granted to `anon`):
+- `get_public_questionnaire(token)` — returns the questionnaire + current
+  responses + status with branding merged top-level (via `_user_branding`);
+  null when the token is missing or `share_token_enabled = false`.
+- `save_questionnaire_progress(token, p_responses)` — autosave of partial
+  answers; refuses once completed.
+- `submit_questionnaire(token, p_responses)` — stores answers, stamps
+  `completed_at`, flips status to `completed`, and spawns a follow-up task for
+  the MC; refuses a second submission.
+- `get_portal_questionnaires(token)` — lists a couple's sent/completed
+  questionnaires for the client portal, gated by the portal token via
+  `_resolve_portal_couple`.
+
+Migrations: `20260626000000_create_questionnaires_feature.sql`,
+`20260626000100_portal_questionnaires.sql`.
+
 ## user_public_settings (Settings — Public Page)
 
 One RLS-owned row per MC backing the Public Page settings: the branded
@@ -746,7 +786,18 @@ oauth_from_name, **oauth_refresh_token_encrypted** + **oauth_access_token_encryp
 (AES-256-GCM ciphertext, `v1:<iv>.<tag>.<data>` — never plaintext, never
 sent to the client), oauth_token_expires_at, oauth_status (`none` |
 `connected` | `failed`, default `none`), oauth_last_error,
-oauth_connected_at, created_at, updated_at.
+oauth_connected_at, created_at, updated_at,
+**couple_profile_tabs_config** (jsonb, not null, default
+`{"hidden_tabs":[],"tab_order":[]}`).
+
+`couple_profile_tabs_config` is the MC's per-user, global-across-couples layout
+for the couple profile tab nav: `hidden_tabs` (tab keys hidden everywhere,
+never includes `overview`) and `tab_order` (ordered tab keys; empty means the
+code default order). Read/written by
+`app/(dashboard)/couples/profile-settings-actions.ts`
+(`read`/`updateCoupleProfileTabsConfigAction`) behind the couple-profile gear
+"settings mode"; saved when the modal closes. Migration:
+`20260627000000_add_couple_profile_tabs_config.sql`.
 
 Subdomain uniqueness: partial unique index on `lower(subdomain) where
 subdomain is not null` — global, enforced at the DB level (RLS hides

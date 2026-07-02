@@ -1,14 +1,18 @@
 'use client'
 
+import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { FileText, Receipt, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal'
 import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal'
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 import { isPastDue } from '@/lib/utils'
+
+import { CoupleTabEmpty, CoupleTabShell, tabStat, type TabStat } from './couple-tab-shell'
 
 interface CouplePaymentsProps {
   coupleId: string
@@ -169,22 +173,76 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
   const quotesTotal = allQuotes.reduce((sum, q) => sum + q.subtotal, 0)
   const invoicesTotal = allInvoices.reduce((sum, i) => sum + i.subtotal, 0)
 
+  // Single centred empty only when the whole tab is empty; once either
+  // section has data we fall back to the stacked two-column layout.
+  const isLoading = isQuotesLoading || isInvoicesLoading
+  const isEmpty = !isLoading && allQuotes.length === 0 && allInvoices.length === 0
+
+  // Counts + key statuses on the left; the dollar totals sit in the bottom row.
+  const acceptedCount = allQuotes.filter((q) => q.status === 'accepted').length
+  const paidCount = allInvoices.filter((i) => i.status === 'paid').length
+  const stats: TabStat[] = []
+  if (allQuotes.length > 0) stats.push({ label: tabStat(allQuotes.length, 'quote') })
+  if (allInvoices.length > 0) stats.push({ label: tabStat(allInvoices.length, 'invoice') })
+  if (acceptedCount > 0) stats.push({ label: `${acceptedCount} accepted`, tone: 'success' })
+  if (paidCount > 0) stats.push({ label: `${paidCount} paid`, tone: 'success' })
+
+  const actions = (
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <Button size="sm" className="cursor-pointer gap-1.5">
+          <Plus size={14} strokeWidth={1.5} />
+          New
+        </Button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          side="bottom"
+          align="end"
+          sideOffset={6}
+          className="z-[80] w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
+        >
+          <Popover.Close asChild>
+            <button
+              onClick={() => createQuote.mutate()}
+              disabled={createQuote.isPending}
+              className="w-full flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+            >
+              <FileText size={14} strokeWidth={1.5} className="text-gray-400" />
+              New quote
+            </button>
+          </Popover.Close>
+          <Popover.Close asChild>
+            <button
+              onClick={() => createInvoice.mutate()}
+              disabled={createInvoice.isPending}
+              className="w-full flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+            >
+              <Receipt size={14} strokeWidth={1.5} className="text-gray-400" />
+              New invoice
+            </button>
+          </Popover.Close>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+
   return (
-    <>
+    <CoupleTabShell title="Payments" stats={isEmpty ? undefined : stats} actions={actions}>
+      {isEmpty ? (
+        <CoupleTabEmpty
+          icon={Receipt}
+          title="No payments yet"
+          description="Create a quote or invoice with the button above."
+        />
+      ) : (
       <div className="flex flex-col flex-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-16 flex-1">
           {/* Quotes column */}
           <div>
-            <button
-              onClick={() => createQuote.mutate()}
-              disabled={createQuote.isPending}
-              className="group flex items-center gap-1.5 mb-4 cursor-pointer disabled:opacity-50"
-            >
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">
-                Quotes
-              </h3>
-              <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
-            </button>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-900">
+              Quotes
+            </h3>
 
             {isQuotesLoading ? (
               <div className="space-y-2">
@@ -225,16 +283,9 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
 
           {/* Invoices column */}
           <div>
-            <button
-              onClick={() => createInvoice.mutate()}
-              disabled={createInvoice.isPending}
-              className="group flex items-center gap-1.5 mb-4 cursor-pointer disabled:opacity-50"
-            >
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 group-hover:text-gray-600 transition">
-                Invoices
-              </h3>
-              <Plus size={12} strokeWidth={2} className="text-gray-900 group-hover:text-gray-600 transition" />
-            </button>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-900">
+              Invoices
+            </h3>
 
             {isInvoicesLoading ? (
               <div className="space-y-2">
@@ -306,6 +357,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           </div>
         </div>
       </div>
+      )}
 
       {!!activeQuoteId && (
         <QuoteBuilderModal
@@ -327,6 +379,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           onClose={() => setActiveInvoiceId(null)}
         />
       )}
-    </>
+    </CoupleTabShell>
   )
 }

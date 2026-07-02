@@ -192,6 +192,8 @@ export type ActionType =
   | 'send_quote'
   | 'send_contract'
   | 'send_invoice'
+  // Couple questionnaires
+  | 'send_couple_questionnaire'
   | 'trigger_payment_reminder'
   // Post-event
   | 'send_thank_you_message'

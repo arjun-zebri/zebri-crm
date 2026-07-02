@@ -12,6 +12,7 @@
  */
 'use client'
 
+import { useQuery } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
 
 import { Checkbox } from '@/components/ui/checkbox'
@@ -59,6 +60,7 @@ import {
   WEBHOOK_SOURCES,
   WEBHOOK_SOURCE_LABELS,
 } from '@/lib/automations/trigger-constants'
+import { createClient } from '@/lib/supabase/client'
 import type { ActionType, TriggerType } from '@/types/automations'
 
 /* ─── Field primitives (small wrappers around the design system) ─ */
@@ -757,6 +759,8 @@ export function ExtendedActionForm({
       return <CreateQuoteFromTemplateForm config={config} updateConfig={updateConfig} />
     case 'create_contract_from_template':
       return <CreateContractFromTemplateForm config={config} updateConfig={updateConfig} />
+    case 'send_couple_questionnaire':
+      return <SendQuestionnaireForm config={config} updateConfig={updateConfig} />
     case 'void_quote':
     case 'void_invoice':
     case 'revoke_contract':
@@ -967,6 +971,34 @@ function CreateQuoteFromTemplateForm({ config, updateConfig }: FormProps) {
       <TextField label="Template ID" value={(config['templateId'] as string) ?? ''} onChange={(v) => updateConfig({ templateId: v })} />
       <Check label="Prefill from couple data" checked={config['prefillFromCoupleData'] === true} onChange={(v) => updateConfig({ prefillFromCoupleData: v })} />
       <NumField label="Discount (optional)" value={(config['discount'] as number | undefined) ?? 0} onChange={(v) => updateConfig({ discount: v || undefined })} />
+    </>
+  )
+}
+
+function SendQuestionnaireForm({ config, updateConfig }: FormProps) {
+  const supabase = createClient()
+  const { data: templates } = useQuery({
+    queryKey: ['questionnaire-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('questionnaire_templates').select('id, name').order('position')
+      if (error) throw error
+      return data ?? []
+    },
+  })
+  return (
+    <>
+      <SelectField
+        label="Questionnaire"
+        value={(config['questionnaireTemplateId'] as string) ?? ''}
+        onChange={(v) => updateConfig({ questionnaireTemplateId: v || undefined })}
+        options={(templates ?? []).map((t) => ({ value: t.id, label: t.name }))}
+      />
+      <TextField
+        label="Title (optional)"
+        value={(config['title'] as string) ?? ''}
+        onChange={(v) => updateConfig({ title: v || undefined })}
+        placeholder="Defaults to the template name"
+      />
     </>
   )
 }
