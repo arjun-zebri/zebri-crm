@@ -25,6 +25,8 @@ export interface QuoteTemplate {
   id: string;
   name: string;
   itemCount: number;
+  /** Optional add-ons offered on apply (packages only). */
+  addOnCount?: number;
   notes: string | null;
 }
 
@@ -80,6 +82,7 @@ function EmptyStateCard({
             <span>{t.name}</span>
             <span className="text-caption text-text-muted">
               {t.itemCount} {t.itemCount === 1 ? 'item' : 'items'}
+              {t.addOnCount ? ` · ${t.addOnCount} add-on${t.addOnCount === 1 ? '' : 's'}` : ''}
             </span>
           </button>
         ))}

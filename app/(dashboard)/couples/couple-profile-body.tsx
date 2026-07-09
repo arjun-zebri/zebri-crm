@@ -59,7 +59,7 @@ export function CoupleProfileBody({
         <CoupleContracts coupleId={couple.id} coupleName={couple.name} />
       )}
 
-      {activeSection === 'questionnaires' && <CoupleQuestionnaires coupleId={couple.id} />}
+      {activeSection === 'questionnaires' && <CoupleQuestionnaires coupleId={couple.id} coupleName={couple.name} />}
 
       {activeSection === 'contacts' && (
         <McPortalContacts

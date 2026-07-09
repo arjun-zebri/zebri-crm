@@ -143,17 +143,16 @@ function readPath(path: string, ctx: RunContext): string {
       return readMc(ctx.mc, key)
     case 'portal':
       return readPortal(ctx, key)
+    case 'questionnaire':
+      return readQuestionnaire(ctx, key)
     case 'quote':
     case 'invoice':
     case 'contract':
-    case 'questionnaire':
     case 'task':
       // These read from the triggering event's payload or the
       // accumulated action results. The dispatcher denormalises
       // common fields onto trigger payloads so most reads here
-      // are zero-hop. `{{questionnaire.link}}` resolves from a
-      // preceding "Send questionnaire" action's `questionnaire_link`
-      // output in the same run.
+      // are zero-hop.
       return readEventField(ctx, namespace, key)
     default:
       return ''
@@ -266,6 +265,28 @@ function readPortal(ctx: RunContext, key: string): string {
   return typeof link === 'string' ? link : ''
 }
 
+/**
+ * Questionnaire reads come from two directions: a preceding "Send
+ * questionnaire" action writes `questionnaire_link` / `questionnaire_id` into
+ * its action results, and the `questionnaire_completed` trigger payload
+ * carries `title` + `share_token`. `link` falls back to building the fill URL
+ * from the trigger's share token so a thank-you email can still reference it.
+ */
+function readQuestionnaire(ctx: RunContext, key: string): string {
+  const direct = readEventField(ctx, 'questionnaire', key)
+  if (direct) return direct
+  if (key === 'link') {
+    const payload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
+    const token = payload['share_token']
+    // Only a questionnaire event's share_token belongs to this namespace.
+    if (payload['questionnaire_id'] != null && typeof token === 'string' && token) {
+      const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
+      return `${base}/questionnaire/${token}`
+    }
+  }
+  return ''
+}
+
 function readEventField(ctx: RunContext, namespace: string, key: string): string {
   const payload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
   const candidates = [`${namespace}_${key}`, key, `${namespace}_${key.replace(/-/g, '_')}`]
@@ -364,6 +385,12 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
       { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/i/…' },
       { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/c/…' },
       { token: '{{questionnaire.link}}', label: 'Questionnaire link', example: 'https://zebri.app/questionnaire/…' },
+    ],
+  },
+  {
+    group: 'Questionnaire',
+    variables: [
+      { token: '{{questionnaire.title}}', label: 'Questionnaire title', example: 'Ceremony details' },
     ],
   },
 ]

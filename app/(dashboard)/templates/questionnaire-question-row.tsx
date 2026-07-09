@@ -12,7 +12,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Plus, Trash2, X } from 'lucide-react'
+import { Copy, GripVertical, Plus, Trash2, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -22,13 +22,16 @@ import { QUESTION_TYPE_META, QUESTION_TYPES, type Question } from '@/lib/questio
 
 interface QuestionRowProps {
   question: Question
+  /** Validation problem to surface under the row (null = none / not shown). */
+  issue?: string | null
   onChange: (patch: Partial<Question>) => void
+  onDuplicate: () => void
   onDelete: () => void
 }
 
 const TYPE_OPTIONS = QUESTION_TYPES.map((t) => ({ value: t, label: QUESTION_TYPE_META[t].label }))
 
-export function QuestionnaireQuestionRow({ question, onChange, onDelete }: QuestionRowProps) {
+export function QuestionnaireQuestionRow({ question, issue = null, onChange, onDuplicate, onDelete }: QuestionRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: question.id })
   const meta = QUESTION_TYPE_META[question.type]
   const isSection = question.type === 'section'
@@ -104,11 +107,18 @@ export function QuestionnaireQuestionRow({ question, onChange, onDelete }: Quest
           {!isSection && (
             <Checkbox checked={question.required} onChange={(v) => onChange({ required: v })} label="Required" />
           )}
+
+          {issue && <p className="text-xs text-red-600">{issue}</p>}
         </div>
 
-        <button type="button" aria-label="Delete question" onClick={onDelete} className="mt-2 cursor-pointer text-text-subtle hover:text-red-600">
-          <Trash2 size={16} strokeWidth={1.5} />
-        </button>
+        <div className="mt-2 flex flex-col gap-2">
+          <button type="button" aria-label="Duplicate question" onClick={onDuplicate} className="cursor-pointer text-text-subtle hover:text-text">
+            <Copy size={15} strokeWidth={1.5} />
+          </button>
+          <button type="button" aria-label="Delete question" onClick={onDelete} className="cursor-pointer text-text-subtle hover:text-red-600">
+            <Trash2 size={16} strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -823,6 +823,78 @@ export type Database = {
           },
         ]
       }
+      couple_questionnaires: {
+        Row: {
+          completed_at: string | null
+          couple_id: string
+          created_at: string
+          display_mode: string
+          id: string
+          questions: Json
+          responses: Json
+          sent_at: string | null
+          share_token: string
+          share_token_enabled: boolean
+          status: string
+          template_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          couple_id: string
+          created_at?: string
+          display_mode?: string
+          id?: string
+          questions?: Json
+          responses?: Json
+          sent_at?: string | null
+          share_token?: string
+          share_token_enabled?: boolean
+          status?: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          couple_id?: string
+          created_at?: string
+          display_mode?: string
+          id?: string
+          questions?: Json
+          responses?: Json
+          sent_at?: string | null
+          share_token?: string
+          share_token_enabled?: boolean
+          status?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_questionnaires_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_questionnaires_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaire_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       couple_statuses: {
         Row: {
           color: string
@@ -852,72 +924,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      couple_questionnaires: {
-        Row: {
-          completed_at: string | null
-          couple_id: string
-          created_at: string
-          id: string
-          questions: Json
-          responses: Json
-          sent_at: string | null
-          share_token: string
-          share_token_enabled: boolean
-          status: string
-          template_id: string | null
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          completed_at?: string | null
-          couple_id: string
-          created_at?: string
-          id?: string
-          questions?: Json
-          responses?: Json
-          sent_at?: string | null
-          share_token?: string
-          share_token_enabled?: boolean
-          status?: string
-          template_id?: string | null
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          completed_at?: string | null
-          couple_id?: string
-          created_at?: string
-          id?: string
-          questions?: Json
-          responses?: Json
-          sent_at?: string | null
-          share_token?: string
-          share_token_enabled?: boolean
-          status?: string
-          template_id?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "couple_questionnaires_couple_id_fkey"
-            columns: ["couple_id"]
-            isOneToOne: false
-            referencedRelation: "couples"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "couple_questionnaires_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "questionnaire_templates"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       couples: {
         Row: {
@@ -991,6 +997,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_template_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_template_files: {
         Row: {
           created_at: string
@@ -1034,6 +1070,7 @@ export type Database = {
       }
       email_templates: {
         Row: {
+          category_id: string | null
           content: Json
           created_at: string
           description: string | null
@@ -1047,6 +1084,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category_id?: string | null
           content?: Json
           created_at?: string
           description?: string | null
@@ -1060,6 +1098,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category_id?: string | null
           content?: Json
           created_at?: string
           description?: string | null
@@ -1072,7 +1111,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "email_template_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_contacts: {
         Row: {
@@ -1267,7 +1314,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "invoice_template_items_template_id_fkey"
+            foreignKeyName: "invoice_template_items_invoice_template_id_fkey"
             columns: ["invoice_template_id"]
             isOneToOne: false
             referencedRelation: "invoice_templates"
@@ -1422,6 +1469,98 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      package_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          optional: boolean
+          package_id: string
+          position: number
+          quantity: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          optional?: boolean
+          package_id: string
+          position: number
+          quantity?: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          optional?: boolean
+          package_id?: string
+          position?: number
+          quantity?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packages: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          deposit_percent: number | null
+          description: string | null
+          gst_inclusive: boolean
+          id: string
+          is_starter: boolean
+          name: string
+          notes: string | null
+          position: number
+          updated_at: string
+          user_id: string
+          weekend_loading_percent: number | null
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          deposit_percent?: number | null
+          description?: string | null
+          gst_inclusive?: boolean
+          id?: string
+          is_starter?: boolean
+          name: string
+          notes?: string | null
+          position?: number
+          updated_at?: string
+          user_id: string
+          weekend_loading_percent?: number | null
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          deposit_percent?: number | null
+          description?: string | null
+          gst_inclusive?: boolean
+          id?: string
+          is_starter?: boolean
+          name?: string
+          notes?: string | null
+          position?: number
+          updated_at?: string
+          user_id?: string
+          weekend_loading_percent?: number | null
+        }
+        Relationships: []
       }
       portal_files: {
         Row: {
@@ -1606,6 +1745,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          display_mode: string
           id: string
           is_starter: boolean
           name: string
@@ -1617,6 +1757,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          display_mode?: string
           id?: string
           is_starter?: boolean
           name: string
@@ -1628,6 +1769,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          display_mode?: string
           id?: string
           is_starter?: boolean
           name?: string
@@ -1675,80 +1817,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      package_items: {
-        Row: {
-          amount: number
-          created_at: string
-          description: string
-          id: string
-          package_id: string
-          position: number
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          description: string
-          id?: string
-          package_id: string
-          position: number
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          description?: string
-          id?: string
-          package_id?: string
-          position?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "package_items_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      packages: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          is_starter: boolean
-          name: string
-          notes: string | null
-          position: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_starter?: boolean
-          name: string
-          notes?: string | null
-          position?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_starter?: boolean
-          name?: string
-          notes?: string | null
-          position?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       quote_template_items: {
         Row: {
@@ -1838,6 +1906,7 @@ export type Database = {
           quote_number: string
           share_token: string
           share_token_enabled: boolean
+          source_package_id: string | null
           status: string
           subtotal: number
           tax_rate: number
@@ -1857,6 +1926,7 @@ export type Database = {
           quote_number: string
           share_token?: string
           share_token_enabled?: boolean
+          source_package_id?: string | null
           status?: string
           subtotal?: number
           tax_rate?: number
@@ -1876,6 +1946,7 @@ export type Database = {
           quote_number?: string
           share_token?: string
           share_token_enabled?: boolean
+          source_package_id?: string | null
           status?: string
           subtotal?: number
           tax_rate?: number
@@ -1888,6 +1959,13 @@ export type Database = {
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_source_package_id_fkey"
+            columns: ["source_package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
             referencedColumns: ["id"]
           },
         ]
@@ -2617,13 +2695,13 @@ export type Database = {
         Args: { p_content: string; p_id: string; p_token: string }
         Returns: string
       }
-      seed_default_contract_template: {
-        Args: { p_user_id: string }
-        Returns: undefined
-      }
       save_questionnaire_progress: {
         Args: { p_responses: Json; token: string }
         Returns: Json
+      }
+      seed_default_contract_template: {
+        Args: { p_user_id: string }
+        Returns: undefined
       }
       sign_contract: {
         Args: {

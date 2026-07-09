@@ -2,16 +2,16 @@
  * Email-template picker — a Select bound to the MC's saved templates.
  *
  * Reused by the automation `send_email` inspector to choose a template
- * (or write inline). Suggests templates whose lifecycle stage matches a
- * hint, but never hides the rest.
+ * (or write inline). Labels each option with its category so long
+ * libraries stay scannable.
  *
  * @module app/(dashboard)/templates/email-template-picker
  */
 'use client'
 
 import { Select } from '@/components/ui/select'
-import { LIFECYCLE_LABELS } from '@/types/email-template'
 
+import { useCategories } from './use-categories'
 import { useTemplates } from './use-templates'
 
 // Radix Select forbids an empty-string item value; the "write inline"
@@ -26,6 +26,8 @@ interface EmailTemplatePickerProps {
 
 export function EmailTemplatePicker({ value, onChange, label = 'Email template' }: EmailTemplatePickerProps) {
   const { data: templates = [] } = useTemplates()
+  const { data: categories = [] } = useCategories()
+  const categoryName = (id: string | null) => categories.find((c) => c.id === id)?.name
   return (
     <Select
       label={label}
@@ -34,10 +36,10 @@ export function EmailTemplatePicker({ value, onChange, label = 'Email template' 
       onValueChange={(v) => onChange(v === INLINE ? '' : v)}
       options={[
         { value: INLINE, label: 'Write inline (no template)' },
-        ...templates.map((t) => ({
-          value: t.id,
-          label: t.lifecycle_stage ? `${t.name} · ${LIFECYCLE_LABELS[t.lifecycle_stage]}` : t.name,
-        })),
+        ...templates.map((t) => {
+          const category = categoryName(t.category_id)
+          return { value: t.id, label: category ? `${t.name} · ${category}` : t.name }
+        }),
       ]}
     />
   )

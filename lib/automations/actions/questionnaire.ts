@@ -41,7 +41,7 @@ const sendCoupleQuestionnaire: ActionSpec<z.infer<typeof sendQuestionnaireSchema
     // Scope the template to the run's MC — never trust the config id alone.
     const { data: template } = await supabase
       .from('questionnaire_templates')
-      .select('name, questions')
+      .select('name, questions, display_mode')
       .eq('id', config.questionnaireTemplateId)
       .eq('user_id', ctx.userId)
       .single()
@@ -56,6 +56,8 @@ const sendCoupleQuestionnaire: ActionSpec<z.infer<typeof sendQuestionnaireSchema
         template_id: config.questionnaireTemplateId,
         title,
         questions: template.questions as Database['public']['Tables']['couple_questionnaires']['Row']['questions'],
+        // Snapshot the display style with the questions.
+        display_mode: template.display_mode,
         status: 'sent',
         share_token_enabled: true,
         sent_at: new Date().toISOString(),

@@ -79,6 +79,7 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   'couple_uploaded_file', // P1
   'couple_added_song_to_playlist', // P2
   'couple_completed_vows', // P3
+  'questionnaire_completed', // P4 — emitted by tg_couple_questionnaires_emit_completed
 ])
 
 /**

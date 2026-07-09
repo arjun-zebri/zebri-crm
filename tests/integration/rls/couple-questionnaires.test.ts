@@ -138,4 +138,121 @@ describe('RLS + RPCs: couple_questionnaires', () => {
     const { data } = await anonClient().rpc('submit_questionnaire', { token: liveToken, p_responses: {} })
     expect((data as { error?: string }).error).toBe('already_completed')
   })
+
+  it('get_public_questionnaire returns display_mode', async () => {
+    const { data } = await anonClient().rpc('get_public_questionnaire', { token: liveToken })
+    const payload = data as { display_mode?: string } | null
+    expect(payload?.display_mode).toBe('typeform')
+  })
+
+  it('get_public_questionnaire stamps viewed_at on first access only', async () => {
+    const admin = serviceClient()
+
+    // Create a fresh questionnaire to test viewed_at stamping
+    const { data: couple } = await userA.client
+      .from('couples')
+      .insert({ user_id: userA.id, name: 'Test couple', email: 'test@example.com', status: 'new' })
+      .select('id')
+      .single()
+
+    const questions = [{ id: 'q1', type: 'short_text', label: 'Test question', required: true }]
+
+    const { data: newQuestionnaire } = await userA.client
+      .from('couple_questionnaires')
+      .insert({
+        user_id: userA.id,
+        couple_id: couple!.id,
+        title: 'Test questionnaire',
+        questions,
+        status: 'sent',
+        share_token_enabled: true,
+      })
+      .select('id, share_token, viewed_at')
+      .single()
+
+    const newQuestId = newQuestionnaire!.id
+    const newToken = newQuestionnaire!.share_token
+
+    // Verify viewed_at is null initially
+    expect(newQuestionnaire?.viewed_at).toBeNull()
+
+    // First access to get_public_questionnaire should stamp viewed_at
+    const firstAccess = await anonClient().rpc('get_public_questionnaire', { token: newToken })
+    expect(firstAccess.data).not.toBeNull()
+
+    const { data: afterFirstAccess } = await admin
+      .from('couple_questionnaires')
+      .select('viewed_at')
+      .eq('id', newQuestId)
+      .single()
+    expect(afterFirstAccess?.viewed_at).not.toBeNull()
+    const firstViewedAt = afterFirstAccess?.viewed_at
+
+    // Wait a moment and access again
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    const secondAccess = await anonClient().rpc('get_public_questionnaire', { token: newToken })
+    expect(secondAccess.data).not.toBeNull()
+
+    const { data: afterSecondAccess } = await admin
+      .from('couple_questionnaires')
+      .select('viewed_at')
+      .eq('id', newQuestId)
+      .single()
+
+    // viewed_at should not change on second access
+    expect(afterSecondAccess?.viewed_at).toBe(firstViewedAt)
+  })
+
+  it('submit_questionnaire emits an automation event', async () => {
+    const admin = serviceClient()
+
+    // Create a fresh couple and questionnaire for this test
+    const { data: testCouple } = await userA.client
+      .from('couples')
+      .insert({ user_id: userA.id, name: 'Automation test couple', email: 'auto@example.com', status: 'new' })
+      .select('id')
+      .single()
+
+    const questions = [{ id: 'q1', type: 'short_text', label: 'Test', required: true }]
+
+    const { data: questionnaire } = await userA.client
+      .from('couple_questionnaires')
+      .insert({
+        user_id: userA.id,
+        couple_id: testCouple!.id,
+        title: 'Automation test questionnaire',
+        questions,
+        status: 'sent',
+        share_token_enabled: true,
+      })
+      .select('id, share_token')
+      .single()
+
+    const questId = questionnaire!.id
+    const questToken = questionnaire!.share_token
+
+    // Submit the questionnaire
+    const { data } = await anonClient().rpc('submit_questionnaire', {
+      token: questToken,
+      p_responses: { q1: 'Test answer' },
+    })
+    expect((data as { success?: boolean }).success).toBe(true)
+
+    // Check that an automation_events row was created
+    const { data: events } = await admin
+      .from('automation_events')
+      .select('event_type, payload')
+      .eq('user_id', userA.id)
+      .eq('source_table', 'couple_questionnaires')
+      .eq('source_id', questId)
+
+    const completedEvent = (events ?? []).find((e) => e.event_type === 'questionnaire_completed')
+    expect(completedEvent).toBeDefined()
+    expect(completedEvent?.payload).toMatchObject({
+      questionnaire_id: questId,
+      couple_id: testCouple!.id,
+      title: 'Automation test questionnaire',
+    })
+  })
 })

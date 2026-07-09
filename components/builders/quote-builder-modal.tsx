@@ -30,6 +30,7 @@ import {
   saveQuoteAction,
   type SaveQuoteInput,
 } from '@/app/(dashboard)/payments/actions';
+import { AddOnPickerDialog } from '@/components/builders/parts/add-on-picker-dialog';
 import { BuilderMetaRow } from '@/components/builders/parts/builder-meta-row';
 import {
   type BuilderModalPrimaryAction,
@@ -48,10 +49,15 @@ import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { TaxControl } from '@/components/builders/parts/tax-control';
 import { TemplatePicker } from '@/components/builders/parts/template-picker';
 import { TotalsPanel } from '@/components/builders/parts/totals-panel';
-import { useApplySources } from '@/components/builders/parts/use-apply-sources';
+import {
+  useApplySources,
+  type ApplyItem,
+  type ApplySource,
+} from '@/components/builders/parts/use-apply-sources';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
+import { weekendLoadingLine } from '@/lib/payments/package-math';
 import { createClient } from '@/lib/supabase/client';
 
 interface Quote {
@@ -70,6 +76,8 @@ interface Quote {
   discount_type: 'percentage' | 'fixed' | null;
   discount_value: number | null;
   tax_rate: number | null;
+  /** Provenance: the package this quote was started from, if any. */
+  source_package_id?: string | null;
 }
 
 export interface QuoteBuilderModalProps {
@@ -114,6 +122,9 @@ export function QuoteBuilderModal({
   const [taxRate, setTaxRate] = useState<number | null>(10);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | null>(null);
   const [discountValue, setDiscountValue] = useState<number | null>(null);
+  const [sourcePackageId, setSourcePackageId] = useState<string | null>(null);
+  // A picked package whose add-ons still need choosing before apply.
+  const [pendingApply, setPendingApply] = useState<{ name: string; source: ApplySource } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // Auto-animate refs for the totals area + chip container, so any
@@ -184,6 +195,7 @@ export function QuoteBuilderModal({
       setTaxRate(10);
       setDiscountType(null);
       setDiscountValue(null);
+      setSourcePackageId(null);
       setDirty(false);
       return;
     }
@@ -196,6 +208,7 @@ export function QuoteBuilderModal({
       setTaxRate(quote.tax_rate != null && quote.tax_rate > 0 ? quote.tax_rate : null);
       setDiscountType(quote.discount_type);
       setDiscountValue(quote.discount_value);
+      setSourcePackageId(quote.source_package_id ?? null);
       setDirty(false);
     }
   }, [quote?.id, isNewQuote, initialCoupleId, couples]);
@@ -241,6 +254,7 @@ export function QuoteBuilderModal({
           discountType && discountValue != null && discountValue > 0
             ? { type: discountType, value: discountValue }
             : null,
+        sourcePackageId,
         items: items.map((item, idx) => ({
           id: item.id,
           description: item.description,
@@ -421,8 +435,25 @@ export function QuoteBuilderModal({
   function applyTemplate(sourceId: string) {
     const source = applySources?.applyMap[sourceId];
     if (!source) return;
+    // A package with add-ons needs the "which extras?" step first.
+    if (source.addOns.length > 0) {
+      const name = applySources?.options.find((o) => o.id === sourceId)?.name ?? 'This package';
+      setPendingApply({ name, source });
+      return;
+    }
+    commitApply(source, []);
+  }
+
+  function commitApply(source: ApplySource, chosenAddOns: ApplyItem[]) {
+    const lines = [...source.items, ...chosenAddOns];
+    // Peak-rate packages append a transparent loading line the MC
+    // deletes for an off-peak date.
+    const loading = weekendLoadingLine(
+      lines.reduce((sum, i) => sum + i.amount, 0),
+      source.package?.weekendLoadingPercent,
+    );
     setItems(
-      source.items.map((item, idx) => ({
+      [...lines, ...(loading ? [loading] : [])].map((item, idx) => ({
         id: `new-${crypto.randomUUID()}`,
         description: item.description,
         amount: item.amount,
@@ -430,6 +461,16 @@ export function QuoteBuilderModal({
       })),
     );
     if (source.notes && !notes) setNotes(source.notes);
+    if (source.package) {
+      // Provenance for per-package conversion stats (items stay a copy).
+      setSourcePackageId(source.package.id);
+      // GST-inclusive prices already carry the tax; adding 10% on top
+      // would misquote. Exclusive packages keep GST on top.
+      setTaxRate(source.package.gstInclusive ? null : 10);
+    } else {
+      setSourcePackageId(null);
+    }
+    setPendingApply(null);
     setDirty(true);
   }
 
@@ -631,6 +672,15 @@ export function QuoteBuilderModal({
           />
         </div>
       </BuilderModalShell>
+
+      {/* Add-on selection when applying a package with optional extras */}
+      <AddOnPickerDialog
+        open={!!pendingApply}
+        packageName={pendingApply?.name ?? ''}
+        addOns={pendingApply?.source.addOns ?? []}
+        onApply={(chosen) => pendingApply && commitApply(pendingApply.source, chosen)}
+        onCancel={() => setPendingApply(null)}
+      />
 
       {/* Delete confirmation */}
       <ConfirmDialog

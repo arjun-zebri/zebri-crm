@@ -29,6 +29,9 @@ interface TemplatePreviewHeaderProps {
   editLabel?: string
   onEdit: () => void
   onDuplicate?: () => void
+  /** Extra menu entries, slotted between Duplicate and Delete
+   *  (e.g. the Packages tab's Archive / Unarchive). */
+  extraActions?: { label: string; icon?: ReactNode; onSelect: () => void }[]
   onDelete?: () => void
 }
 
@@ -40,6 +43,7 @@ export function TemplatePreviewHeader({
   editLabel = 'Edit template',
   onEdit,
   onDuplicate,
+  extraActions,
   onDelete,
 }: TemplatePreviewHeaderProps) {
   // Capture "now" once at mount via a lazy initializer (Date.now() during
@@ -52,6 +56,7 @@ export function TemplatePreviewHeader({
     ...(onDuplicate
       ? [{ label: 'Duplicate', icon: <Copy size={15} strokeWidth={1.5} />, onSelect: onDuplicate }]
       : []),
+    ...(extraActions ?? []),
     ...(onDelete
       ? [{ label: 'Delete', destructive: true, icon: <Trash2 size={15} strokeWidth={1.5} />, onSelect: onDelete }]
       : []),

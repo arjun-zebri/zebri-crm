@@ -1,0 +1,161 @@
+/**
+ * Pure branding assembly — no React, no Supabase, no 'use client'.
+ *
+ * `buildPublicBranding` turns raw `user_metadata` into the resolved
+ * {@link PublicBranding} every branded surface consumes (public pages,
+ * the builder preview, and the branded email shell). It lives here —
+ * not in `use-current-branding.ts` — so **server** code (the email send
+ * route, the automation runner, server components) can assemble
+ * branding too; the client hook re-exports it for compatibility.
+ *
+ * @module lib/branding/public-branding
+ */
+
+import {
+  BODY_FONTS,
+  HEADING_FONTS,
+  type BodyFont,
+  type FontWeight,
+  type HeadingFont,
+} from './fonts'
+import type { Density } from './themes'
+import { THEME_PRESETS } from './themes'
+
+/** The resolved branding shape every branded surface renders from. */
+export interface PublicBranding {
+  logo_url: string | null
+  favicon_url: string | null
+  header_image_url: string | null
+  brand_color: string
+  accent_color: string
+  surface_color: string
+  text_color: string
+  muted_color: string
+  secondary_color: string
+  secondary_text_color: string
+  business_name: string | null
+  tagline: string | null
+  abn: string | null
+  phone: string | null
+  website: string | null
+  instagram_url: string | null
+  facebook_url: string | null
+  show_contact_on_documents: boolean
+  /** Real bank settings (present on the invoice surface). The paymentDetails
+   *  block prefers these over its own placeholder values when available. */
+  bank_account_name?: string | null
+  bank_bsb?: string | null
+  bank_account_number?: string | null
+  font_heading: HeadingFont
+  font_body: BodyFont
+  font_weight: FontWeight
+  font_body_weight: FontWeight
+  font_scale: number
+  density: Density
+  corner_radius: number
+  theme_preset: string
+  /** Email shell: render the logo/wordmark header. */
+  email_show_logo: boolean
+  /** Email shell: logo/wordmark alignment. */
+  email_logo_align: 'left' | 'center'
+  /** Email shell: render the brand-colour accent bar. */
+  email_show_accent: boolean
+}
+
+/** The `user_metadata` fields branding is assembled from. */
+export interface UserMetadata {
+  logo_url?: string
+  favicon_url?: string
+  header_image_url?: string
+  brand_color?: string
+  accent_color?: string
+  surface_color?: string
+  text_color?: string
+  muted_color?: string
+  secondary_color?: string
+  secondary_text_color?: string
+  business_name?: string
+  tagline?: string
+  abn?: string
+  phone?: string
+  website?: string
+  instagram_url?: string
+  facebook_url?: string
+  show_contact_on_documents?: boolean
+  font_heading?: string
+  font_body?: string
+  font_weight?: number
+  font_body_weight?: number
+  font_scale?: number
+  density?: Density
+  corner_radius?: number
+  theme_preset?: string
+  bank_account_name?: string
+  bank_bsb?: string
+  bank_account_number?: string
+  email_shell_show_logo?: boolean
+  email_shell_logo_align?: string
+  email_shell_show_accent?: boolean
+}
+
+function sanitizeHeadingFont(v: string | undefined, fallback: HeadingFont): HeadingFont {
+  return HEADING_FONTS.includes(v as HeadingFont) ? (v as HeadingFont) : fallback
+}
+
+function sanitizeBodyFont(v: string | undefined, fallback: BodyFont): BodyFont {
+  return BODY_FONTS.includes(v as BodyFont) ? (v as BodyFont) : fallback
+}
+
+function sanitizeWeight(v: number | undefined, fallback: FontWeight): FontWeight {
+  const allowed = [400, 500, 600, 700] as const
+  return (allowed.includes(v as 400) ? v : fallback) as FontWeight
+}
+
+/**
+ * Assemble a `PublicBranding` object from `user_metadata` + an
+ * optional theme preset fallback. Pure — usable server-side and in
+ * tests without standing up the client hook.
+ */
+export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
+  const themeId = metadata.theme_preset ?? 'minimal'
+  const fallback =
+    themeId === 'custom' ? THEME_PRESETS.minimal! : (THEME_PRESETS[themeId] ?? THEME_PRESETS.minimal!)
+
+  return {
+    logo_url: metadata.logo_url ?? null,
+    favicon_url: metadata.favicon_url ?? null,
+    header_image_url: metadata.header_image_url ?? null,
+    brand_color: metadata.brand_color ?? fallback.color,
+    accent_color: metadata.accent_color ?? fallback.accent,
+    surface_color: metadata.surface_color ?? fallback.surface,
+    text_color: metadata.text_color ?? fallback.text,
+    muted_color: metadata.muted_color ?? fallback.muted,
+    secondary_color: metadata.secondary_color ?? '#FFFFFF',
+    secondary_text_color: metadata.secondary_text_color ?? '#374151',
+    business_name: metadata.business_name ?? null,
+    tagline: metadata.tagline ?? null,
+    abn: metadata.abn ?? null,
+    phone: metadata.phone ?? null,
+    website: metadata.website ?? null,
+    instagram_url: metadata.instagram_url ?? null,
+    facebook_url: metadata.facebook_url ?? null,
+    show_contact_on_documents: metadata.show_contact_on_documents ?? true,
+    bank_account_name: metadata.bank_account_name ?? null,
+    bank_bsb: metadata.bank_bsb ?? null,
+    bank_account_number: metadata.bank_account_number ?? null,
+    font_heading: sanitizeHeadingFont(metadata.font_heading, fallback.headingFont),
+    font_body: sanitizeBodyFont(metadata.font_body, fallback.bodyFont),
+    font_weight: sanitizeWeight(metadata.font_weight, fallback.headingWeight),
+    font_body_weight: sanitizeWeight(metadata.font_body_weight, fallback.bodyWeight),
+    font_scale: typeof metadata.font_scale === 'number' ? metadata.font_scale : fallback.scale,
+    density: metadata.density ?? fallback.density,
+    corner_radius:
+      typeof metadata.corner_radius === 'number' ? metadata.corner_radius : fallback.radius,
+    theme_preset: themeId,
+    // Email-shell appearance (editable from the template editor's
+    // preview). Defaults keep the branded look on.
+    email_show_logo: metadata.email_shell_show_logo ?? true,
+    email_logo_align: metadata.email_shell_logo_align === 'center' ? 'center' : 'left',
+    email_show_accent: metadata.email_shell_show_accent ?? true,
+  }
+}

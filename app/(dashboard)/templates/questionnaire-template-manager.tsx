@@ -14,18 +14,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, ClipboardList, Library } from 'lucide-react'
 import { useState } from 'react'
 
+import { QuestionnaireExperiencePreview } from '@/components/questionnaires/experience-preview'
 import { Button } from '@/components/ui/button'
 import { Empty } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useToast } from '@/components/ui/toast'
-import type { Question } from '@/lib/questionnaires/question-schema'
+import { toDisplayMode, type Question, type QuestionnaireDisplayMode } from '@/lib/questionnaires/question-schema'
 import { STARTER_QUESTIONNAIRES } from '@/lib/questionnaires/starter-questionnaires'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
 
 import { QuestionnaireBuilderModal } from './questionnaire-builder-modal'
-import { QuestionnairePreview } from './questionnaire-preview'
 import { addStarterQuestionnairesAction } from './starter-actions'
 import { StarterCatalogModal } from './starter-catalog-modal'
 import { TemplatePreviewHeader } from './template-preview-header'
@@ -37,6 +37,8 @@ export interface QuestionnaireTemplateRow {
   id: string
   name: string
   description: string | null
+  /** How couples answer: one question at a time or all on one page. */
+  display_mode: QuestionnaireDisplayMode
   questions: Question[]
   is_starter: boolean
   position: number
@@ -50,6 +52,7 @@ function toRow(r: DbRow): QuestionnaireTemplateRow {
     id: r.id,
     name: r.name,
     description: r.description,
+    display_mode: toDisplayMode(r.display_mode),
     questions: Array.isArray(r.questions) ? (r.questions as unknown as Question[]) : [],
     is_starter: r.is_starter,
     position: r.position,
@@ -110,6 +113,7 @@ export function QuestionnaireTemplateManager() {
         .update({
           name: t.name,
           description: t.description,
+          display_mode: t.display_mode,
           questions: t.questions as unknown as DbRow['questions'],
         })
         .eq('id', t.id)
@@ -121,6 +125,33 @@ export function QuestionnaireTemplateManager() {
       queryClient.invalidateQueries({ queryKey: ['questionnaire-templates'] })
     },
     onError: () => toast('Failed to save questionnaire', 'error'),
+  })
+
+  const duplicateTemplate = useMutation({
+    mutationFn: async (t: QuestionnaireTemplateRow) => {
+      const { data: user } = await supabase.auth.getUser()
+      if (!user.user) throw new Error('Not authenticated')
+      const { data, error } = await supabase
+        .from('questionnaire_templates')
+        .insert({
+          user_id: user.user.id,
+          name: `${t.name} (copy)`,
+          description: t.description,
+          display_mode: t.display_mode,
+          questions: t.questions as unknown as DbRow['questions'],
+          position: (templates?.length ?? 0) + 1,
+        })
+        .select('*')
+        .single()
+      if (error) throw error
+      return toRow(data)
+    },
+    onSuccess: (tpl) => {
+      toast('Questionnaire duplicated')
+      queryClient.invalidateQueries({ queryKey: ['questionnaire-templates'] })
+      setSelectedId(tpl.id)
+    },
+    onError: () => toast('Failed to duplicate questionnaire', 'error'),
   })
 
   const deleteTemplate = useMutation({
@@ -221,14 +252,23 @@ export function QuestionnaireTemplateManager() {
           }
           detail={
             selectedQ ? (
-              <div className="space-y-4">
+              // Fill the detail pane: the preview flexes to whatever height is
+              // left under the header instead of a fixed frame.
+              <div className="flex h-full min-h-0 flex-col gap-4">
                 <TemplatePreviewHeader
                   title={selectedQ.name}
+                  subtitle={selectedQ.display_mode === 'form' ? 'All questions on one page' : 'One question at a time'}
                   editLabel="Edit questionnaire"
                   onEdit={() => setEditing(selectedQ)}
+                  onDuplicate={() => duplicateTemplate.mutate(selectedQ)}
                   onDelete={() => setConfirmDelete(selectedQ.id)}
                 />
-                <QuestionnairePreview name={selectedQ.name} questions={selectedQ.questions} />
+                <QuestionnaireExperiencePreview
+                  title={selectedQ.name}
+                  questions={selectedQ.questions}
+                  displayMode={selectedQ.display_mode}
+                  heightClass="min-h-0 flex-1"
+                />
               </div>
             ) : (
               <div className="flex h-full items-center justify-center pb-[10vh]">

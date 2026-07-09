@@ -8,8 +8,10 @@
  *
  * @module app/(dashboard)/templates/page
  */
+import type { JSONContent } from '@tiptap/react'
 import { redirect } from 'next/navigation'
 
+import { buildPublicBranding, type UserMetadata } from '@/lib/branding/public-branding'
 import { createClient } from '@/lib/supabase/server'
 
 import { TemplatesClient } from './templates-client'
@@ -28,6 +30,9 @@ export default async function TemplatesPage() {
     <TemplatesClient
       businessName={meta['business_name'] as string | undefined}
       contactName={meta['display_name'] as string | undefined}
+      email={user.email}
+      emailSignature={(meta['email_signature'] as JSONContent | undefined) ?? null}
+      branding={buildPublicBranding(meta as UserMetadata)}
     />
   )
 }

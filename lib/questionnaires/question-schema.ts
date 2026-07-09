@@ -13,19 +13,40 @@
 import { z } from 'zod'
 
 /**
- * The question types supported in v1. `section` is a non-input heading used to
- * group questions; every other type collects an answer.
+ * The question types a questionnaire can contain. `section` is a non-input
+ * heading used to group questions; every other type collects an answer.
  */
 export type QuestionType =
   | 'short_text'
   | 'long_text'
   | 'single_choice'
   | 'multiple_choice'
+  | 'dropdown'
   | 'date'
   | 'time'
   | 'yes_no'
   | 'number'
+  | 'email'
+  | 'phone'
   | 'section'
+
+/**
+ * How a questionnaire renders for the couple: `typeform` walks through one
+ * question at a time; `form` shows every question on a single page. Stored on
+ * the template and snapshotted onto each sent questionnaire.
+ */
+export type QuestionnaireDisplayMode = 'typeform' | 'form'
+
+/** Display modes in picker order, with human labels for the builder toggle. */
+export const DISPLAY_MODES: ReadonlyArray<{ value: QuestionnaireDisplayMode; label: string }> = [
+  { value: 'typeform', label: 'One at a time' },
+  { value: 'form', label: 'All on one page' },
+]
+
+/** Narrows an untrusted string (e.g. a DB read) to a display mode. */
+export function toDisplayMode(value: unknown): QuestionnaireDisplayMode {
+  return value === 'form' ? 'form' : 'typeform'
+}
 
 /** UI + behaviour metadata for each question type. */
 export interface QuestionTypeMeta {
@@ -43,10 +64,13 @@ export const QUESTION_TYPE_META: Record<QuestionType, QuestionTypeMeta> = {
   long_text: { label: 'Long text', hasOptions: false, isInput: true },
   single_choice: { label: 'Single choice', hasOptions: true, isInput: true },
   multiple_choice: { label: 'Multiple choice', hasOptions: true, isInput: true },
+  dropdown: { label: 'Dropdown', hasOptions: true, isInput: true },
   date: { label: 'Date', hasOptions: false, isInput: true },
   time: { label: 'Time', hasOptions: false, isInput: true },
   yes_no: { label: 'Yes / No', hasOptions: false, isInput: true },
   number: { label: 'Number', hasOptions: false, isInput: true },
+  email: { label: 'Email address', hasOptions: false, isInput: true },
+  phone: { label: 'Phone number', hasOptions: false, isInput: true },
   section: { label: 'Section heading', hasOptions: false, isInput: false },
 }
 
@@ -64,10 +88,13 @@ export const questionSchema = z.object({
     'long_text',
     'single_choice',
     'multiple_choice',
+    'dropdown',
     'date',
     'time',
     'yes_no',
     'number',
+    'email',
+    'phone',
     'section',
   ]),
   label: z.string().min(1, 'Question text is required').max(500),

@@ -73,6 +73,10 @@ const saveQuoteSchema = z.object({
   /** 0 (no GST) or 10 (GST applied). */
   taxRate: z.number(),
   discount: discountSchema.nullable(),
+  /** Provenance: the package applied to start this quote (conversion
+   *  stats). Items are still snapshotted; this never feeds rendering.
+   *  Nullish so an older client bundle omitting it still validates. */
+  sourcePackageId: z.uuid().nullish(),
   items: z.array(lineItemSchema),
 });
 
@@ -85,7 +89,8 @@ export async function saveQuoteAction(
   if (!parsed.success) {
     return { ok: false, error: 'Invalid quote data.' };
   }
-  const { quoteId, coupleId, title, notes, expiresAt, taxRate, discount, items } = parsed.data;
+  const { quoteId, coupleId, title, notes, expiresAt, taxRate, discount, sourcePackageId, items } =
+    parsed.data;
 
   const supabase = await createClient();
   const {
@@ -111,6 +116,9 @@ export async function saveQuoteAction(
           tax_rate: taxRate,
           discount_type: discount?.type ?? null,
           discount_value: discount?.value ?? null,
+          // Written only when the client sent the field, so an older
+          // bundle mid-deploy can't blank existing provenance.
+          ...(sourcePackageId !== undefined ? { source_package_id: sourcePackageId } : {}),
         })
         .eq('id', effectiveId);
       if (error) throw error;
@@ -135,6 +143,7 @@ export async function saveQuoteAction(
           tax_rate: taxRate,
           discount_type: discount?.type ?? null,
           discount_value: discount?.value ?? null,
+          source_package_id: sourcePackageId ?? null,
         })
         .select('id')
         .single();

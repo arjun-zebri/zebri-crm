@@ -462,6 +462,10 @@ portal's, but for completeness the limiter should cover them too.
 Both are unauthenticated — the share token IS the capability, validated DB-side
 against `share_token_enabled = true`. The public page (`/questionnaire/[token]`)
 loads via the `get_public_questionnaire` RPC (anon, branding-merged).
+`/questionnaire` and `/api/questionnaire` are on the middleware
+`PUBLIC_ROUTES` allowlist (added 2026-07-05 — before that the middleware
+bounced logged-out couples to `/login`). The MC can revoke access per
+questionnaire via the "Turn link off" row action (`share_token_enabled`).
 
 ---
 
@@ -488,6 +492,7 @@ DELETE (sampled clean across the migrations).
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
 | `email_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/email-templates.test.ts` (7 tests — incl. starter seeding) | Email Templates |
 | `email_template_files` | ✅ | `user_id` | ☐ (added with static-upload flow) | Email Templates |
+| `email_template_categories` | ✅ | `user_id` | ✅ `tests/integration/rls/email-template-categories.test.ts` (6 tests — cross-tenant read/rename/delete/insert denial + category-delete set-null keeps templates) | Email Templates |
 | `packages` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (6 tests) | Templates |
 | `package_items` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (covered via parent) | Templates |
 | `invoice_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (6 tests) | Templates |
@@ -539,6 +544,26 @@ RLS-scoped server client, resolve content server-side by name (the client
 never sends body/amount data), skip names the MC already owns, and flag
 inserted rows `is_starter`. Behaviour covered by
 `tests/integration/templates/starter-actions.test.ts` (6 tests).
+
+**Email-template editor surfaces** (Templates → Emails, 2026-07):
+
+- Category CRUD (`category-actions.ts`) — Zod-validated, RLS-scoped;
+  `createTemplateAction` / `updateTemplateAction` verify `category_id`
+  ownership with an RLS read (`ownCategoryId`) before writing, since the
+  FK alone proves existence, not ownership. Foreign ids degrade to null.
+- Test send (`test-send-action.ts`) — the recipient is **always the
+  session user's own email** (never client-supplied, so the action can't
+  relay), rate-limited 5/min per user, Zod on input, `[Test]` subject
+  prefix, never logged to `couple_emails`.
+- Attachments (`attachment-actions.ts`) — the binary uploads browser →
+  private bucket (RLS path policies + 25 MB / MIME enforcement at the
+  bucket); the metadata action derives the storage path server-side from
+  the session user + validated ids and gates on template ownership.
+  Draft uploads (unsaved template) register with `template_id` null
+  under `{user}/drafts/`; `linkTemplateFilesAction` re-parents only
+  **unlinked** rows after re-checking target-template ownership, and
+  the editor deletes drafts on discard. Deleting removes object then
+  row. A failed register rolls the orphaned object back client-side.
 
 **Per-page DoD requires** an integration test of the
 `couples.test.ts` shape (owner reads ok / other tenant cannot

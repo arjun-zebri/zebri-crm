@@ -11,16 +11,20 @@
  */
 'use client'
 
+import type { JSONContent } from '@tiptap/react'
 import { Library, Mail, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
+
 
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Empty } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/toast'
-import { LIFECYCLE_LABELS, type EmailTemplate, type LifecycleStage } from '@/types/email-template'
+import type { PublicBranding } from '@/lib/branding/public-branding'
+import type { EmailTemplate, EmailTemplateCategory } from '@/types/email-template'
 
+import { categoryColorClasses } from './category-colors'
 import { EmailTemplatePreview } from './email-template-preview'
 import { StarterLibraryPanel } from './starter-library-panel'
 import { TemplateEditorModal } from './template-editor-modal'
@@ -28,24 +32,31 @@ import { TemplatePreviewHeader } from './template-preview-header'
 import { TemplatesActions } from './templates-actions-slot'
 import { TemplatesLibrary } from './templates-library'
 import { TemplatesTwoPane } from './templates-two-pane'
+import { useCategories } from './use-categories'
 import { useCloneTemplate, useDeleteTemplate, useTemplates } from './use-templates'
 
 interface EmailsTabProps {
-  businessName?: string
-  contactName?: string
+  businessName?: string | undefined
+  contactName?: string | undefined
+  email?: string | undefined
+  emailSignature?: JSONContent | null | undefined
+  branding?: PublicBranding | null | undefined
 }
 
-/** Uppercase lifecycle-stage chip shown beside the preview title. */
-function StageChip({ stage }: { stage: LifecycleStage }) {
+/** Uppercase category chip (in its colour) beside the preview title. */
+function CategoryChip({ category }: { category: EmailTemplateCategory }) {
   return (
-    <span className="rounded bg-surface-muted px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-text-muted">
-      {LIFECYCLE_LABELS[stage]}
+    <span
+      className={`rounded px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide ${categoryColorClasses(category.color).chip}`}
+    >
+      {category.name}
     </span>
   )
 }
 
-export function EmailsTab({ businessName, contactName }: EmailsTabProps) {
+export function EmailsTab({ businessName, contactName, email, emailSignature, branding }: EmailsTabProps) {
   const { data: templates = [], isLoading, isError, refetch } = useTemplates()
+  const { data: categories = [] } = useCategories()
   const clone = useCloneTemplate()
   const remove = useDeleteTemplate()
   const { toast } = useToast()
@@ -110,6 +121,9 @@ export function EmailsTab({ businessName, contactName }: EmailsTabProps) {
           template={editing}
           businessName={businessName}
           contactName={contactName}
+          email={email}
+          emailSignature={emailSignature}
+          branding={branding}
         />
       )}
       <StarterLibraryPanel isOpen={libraryOpen} onClose={() => setLibraryOpen(false)} existingNames={existingNames} />
@@ -174,7 +188,10 @@ export function EmailsTab({ businessName, contactName }: EmailsTabProps) {
             <div className="space-y-4">
               <TemplatePreviewHeader
                 title={selected.name}
-                meta={selected.lifecycle_stage ? <StageChip stage={selected.lifecycle_stage} /> : undefined}
+                meta={(() => {
+                  const category = categories.find((c) => c.id === selected.category_id)
+                  return category ? <CategoryChip category={category} /> : undefined
+                })()}
                 updatedAt={selected.updated_at}
                 onEdit={() => {
                   setEditing(selected)

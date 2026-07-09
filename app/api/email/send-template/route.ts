@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
   const result = await sendTemplateEmail({
     to: recipient,
     subject: test ? `[Test] ${finalSubject}` : finalSubject,
-    html: wrapTemplateHtml(html, ctx.mc.businessName),
+    html: wrapTemplateHtml(html, ctx.mc.businessName, ctx.mc.branding),
     sender: await resolveSender(supabase, user.id, ctx.mc.businessName),
     replyTo: ctx.mc.email,
     ...(attachments.length ? { attachments } : {}),

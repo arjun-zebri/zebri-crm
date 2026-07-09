@@ -38,6 +38,7 @@ import {
   saveInvoiceAction,
   type SaveInvoiceInput,
 } from '@/app/(dashboard)/payments/actions';
+import { AddOnPickerDialog } from '@/components/builders/parts/add-on-picker-dialog';
 import { BuilderMetaRow, type PaymentTerms } from '@/components/builders/parts/builder-meta-row';
 import {
   type BuilderModalPrimaryAction,
@@ -57,11 +58,16 @@ import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { TaxControl } from '@/components/builders/parts/tax-control';
 import { TemplatePicker } from '@/components/builders/parts/template-picker';
 import { TotalsPanel } from '@/components/builders/parts/totals-panel';
-import { useApplySources } from '@/components/builders/parts/use-apply-sources';
+import {
+  useApplySources,
+  type ApplyItem,
+  type ApplySource,
+} from '@/components/builders/parts/use-apply-sources';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
 import { stripeConnectEnabled } from '@/lib/auth/entitlements';
+import { weekendLoadingLine } from '@/lib/payments/package-math';
 import { createClient } from '@/lib/supabase/client';
 import { isPastDue } from '@/lib/utils';
 
@@ -147,6 +153,8 @@ export function InvoiceBuilderModal({
   const [finalDueDate, setFinalDueDate] = useState('');
   const [stripePaymentEnabled, setStripePaymentEnabled] = useState(false);
   const [stripeConnectOn, setStripeConnectOn] = useState(false);
+  // A picked package whose add-ons still need choosing before apply.
+  const [pendingApply, setPendingApply] = useState<{ name: string; source: ApplySource } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -186,8 +194,9 @@ export function InvoiceBuilderModal({
     },
   });
 
-  // Quote templates + packages, offered as "start from" sources.
-  const { data: applySources } = useApplySources();
+  // Invoice templates + quote templates + packages, offered as
+  // "start from" sources (invoice templates are invoice-builder only).
+  const { data: applySources } = useApplySources({ includeInvoiceTemplates: true });
 
   const { data: couples } = useQuery({
     queryKey: ['all-couples-for-invoice'],
@@ -338,8 +347,25 @@ export function InvoiceBuilderModal({
   function applyTemplate(sourceId: string) {
     const source = applySources?.applyMap[sourceId];
     if (!source) return;
+    // A package with add-ons needs the "which extras?" step first.
+    if (source.addOns.length > 0) {
+      const name = applySources?.options.find((o) => o.id === sourceId)?.name ?? 'This package';
+      setPendingApply({ name, source });
+      return;
+    }
+    commitApply(source, []);
+  }
+
+  function commitApply(source: ApplySource, chosenAddOns: ApplyItem[]) {
+    const lines = [...source.items, ...chosenAddOns];
+    // Peak-rate packages append a transparent loading line the MC
+    // deletes for an off-peak date.
+    const loading = weekendLoadingLine(
+      lines.reduce((sum, i) => sum + i.amount, 0),
+      source.package?.weekendLoadingPercent,
+    );
     setItems(
-      source.items.map((item, idx) => ({
+      [...lines, ...(loading ? [loading] : [])].map((item, idx) => ({
         id: `new-${crypto.randomUUID()}`,
         description: item.description,
         amount: item.amount,
@@ -347,6 +373,18 @@ export function InvoiceBuilderModal({
       })),
     );
     if (source.notes && !notes) setNotes(source.notes);
+    if (source.package) {
+      // GST-inclusive prices already carry the tax; adding 10% on top
+      // would misquote. Exclusive packages keep GST on top.
+      setTaxRate(source.package.gstInclusive ? null : 10);
+      // The package's booking-deposit rule pre-fills the payment
+      // schedule; due dates stay the MC's call.
+      if (source.package.depositPercent != null) {
+        setDepositEnabled(true);
+        setDepositPercent(source.package.depositPercent);
+      }
+    }
+    setPendingApply(null);
     setDirty(true);
   }
 
@@ -882,6 +920,15 @@ export function InvoiceBuilderModal({
           />
         </div>
       </BuilderModalShell>
+
+      {/* Add-on selection when applying a package with optional extras */}
+      <AddOnPickerDialog
+        open={!!pendingApply}
+        packageName={pendingApply?.name ?? ''}
+        addOns={pendingApply?.source.addOns ?? []}
+        onApply={(chosen) => pendingApply && commitApply(pendingApply.source, chosen)}
+        onCancel={() => setPendingApply(null)}
+      />
 
       <ConfirmDialog
         open={confirmCancel}

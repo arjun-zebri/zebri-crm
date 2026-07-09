@@ -17,6 +17,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { loadCoupleSnapshot } from '@/lib/automations/context'
+import { buildPublicBranding, type UserMetadata } from '@/lib/branding/public-branding'
 import type { EmailAttachment } from '@/lib/email'
 import type { RunContext } from '@/types/automations'
 import type { Database } from '@/types/database'
@@ -148,6 +149,9 @@ export async function buildManualSendContext(
       quietHoursEnd: (meta['quiet_hours_end'] as string) ?? '08:00',
       quietHoursTimezone: (meta['timezone'] as string) ?? DEFAULT_TIMEZONE,
       signature: (meta['email_signature'] as RunContext['mc']['signature']) ?? null,
+      // Resolved branding for the branded email shell — the compose
+      // preview and the outgoing email render from the same values.
+      branding: buildPublicBranding(meta as UserMetadata),
     },
     actionResults: {},
   }

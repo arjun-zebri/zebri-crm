@@ -4,12 +4,14 @@
  * The line-item counterpart to the Emails `TemplatePreview`: it reuses the
  * same card chrome (`rounded-xl border border-border bg-card`, header +
  * body sections) so every Templates tab previews identically. Renders the
- * name + subtitle in the header and the priced line items with a total in
- * the body.
+ * name + subtitle in the header, the priced line items with a total, and
+ * (when present) the customer-facing notes the template applies.
  *
  * @module app/(dashboard)/templates/line-item-preview
  */
 'use client'
+
+import { formatAUD } from '@/lib/payments/format'
 
 /** A priced line item to preview. */
 export interface PreviewLineItem {
@@ -22,6 +24,12 @@ interface LineItemPreviewProps {
   subtitle?: string
   items: PreviewLineItem[]
   /**
+   * Customer-facing notes appended to the quote/invoice when the
+   * template is applied (the `description` column). Rendered under the
+   * items so the MC sees exactly what a couple will.
+   */
+  notes?: string | null
+  /**
    * Render the name/subtitle header block. Detail panes that already show
    * the name in their own heading pass `false` so the card is just the
    * itemized receipt (no duplicated name). Defaults to `true`.
@@ -29,17 +37,7 @@ interface LineItemPreviewProps {
   showHeader?: boolean
 }
 
-/** AUD, whole dollars — matches the Templates managers' display. */
-function formatAUD(amount: number) {
-  return new Intl.NumberFormat('en-AU', {
-    style: 'currency',
-    currency: 'AUD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-export function LineItemPreview({ name, subtitle, items, showHeader = true }: LineItemPreviewProps) {
+export function LineItemPreview({ name, subtitle, items, notes, showHeader = true }: LineItemPreviewProps) {
   const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
 
   return (
@@ -72,6 +70,12 @@ export function LineItemPreview({ name, subtitle, items, showHeader = true }: Li
           <div className="mt-3 flex items-baseline justify-between gap-4 border-t border-border pt-3">
             <span className="text-text-subtle">Total</span>
             <span className="shrink-0 font-semibold tabular-nums text-text">{formatAUD(total)}</span>
+          </div>
+        ) : null}
+        {notes ? (
+          <div className="mt-3 border-t border-border pt-3">
+            <p className="text-xs text-text-subtle">Added to the notes when applied</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-text-muted">{notes}</p>
           </div>
         ) : null}
       </div>

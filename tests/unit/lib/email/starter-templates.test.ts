@@ -40,17 +40,20 @@ function mentionPaths(node: JSONContent, out: string[] = []): string[] {
 }
 
 describe('STARTER_EMAIL_TEMPLATES', () => {
-  it('ships a meaningful library across all lifecycle stages', () => {
-    expect(STARTER_EMAIL_TEMPLATES.length).toBeGreaterThanOrEqual(20)
-    const stages = new Set(STARTER_EMAIL_TEMPLATES.map((t) => t.lifecycleStage))
-    for (const stage of LIFECYCLE_STAGES) expect(stages).toContain(stage)
-  })
-
-  it('includes the celebrant AU-legal templates', () => {
-    const names = STARTER_EMAIL_TEMPLATES.map((t) => t.name)
-    expect(names).toContain('NOIM request (celebrant)')
-    expect(names).toContain('Required documents request (celebrant)')
-    expect(names).toContain('Ceremony script for review (celebrant)')
+  // The catalog was deliberately trimmed (2026-07-09 spec): starters are
+  // a small guide showing how a template is built, not a full library —
+  // most MCs write their own. Three exemplars spanning the funnel.
+  it('ships the agreed three exemplars spanning the funnel', () => {
+    expect(STARTER_EMAIL_TEMPLATES.map((t) => t.name)).toEqual([
+      'Enquiry acknowledgement',
+      'Quote cover email',
+      'You’re booked: confirmation',
+    ])
+    expect(STARTER_EMAIL_TEMPLATES.map((t) => t.lifecycleStage)).toEqual([
+      'enquiry',
+      'quote',
+      'booking',
+    ])
   })
 
   it('has unique names and valid, non-empty fields', () => {

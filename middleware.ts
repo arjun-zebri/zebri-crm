@@ -22,6 +22,10 @@ const PUBLIC_ROUTES = [
   "/invoice",
   "/portal",
   "/contract",
+  // Couple-facing questionnaire fill page + its save/submit endpoints —
+  // token-gated (share_token is the capability), no session expected.
+  "/questionnaire",
+  "/api/questionnaire",
 ];
 
 function withCookies(source: NextResponse, target: NextResponse): NextResponse {

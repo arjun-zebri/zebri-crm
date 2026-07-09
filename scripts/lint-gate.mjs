@@ -49,7 +49,9 @@ import { execSync } from 'node:child_process';
 // couples tokenization): 89 → 80.
 // Merge of main into the timeline branch: both reductions combine
 // (main's 80 + the dead-file deletion). Re-measured post-merge → 79.
-const ERROR_BUDGET = 79;
+// Email-template editor overhaul (categories + branded shell): new
+// surfaces landed clean and the sweep cleared one existing error → 78.
+const ERROR_BUDGET = 78;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -120,7 +122,9 @@ const ERROR_BUDGET = 79;
 // Templates master-detail (two-pane + previews): converting the email/list
 // rows to selectable buttons + dropping the off-token timeline row dropped
 // two warnings → 397 → 395.
-const WARNING_BUDGET = 395;
+// Quote/invoice templates hardening: the shared manager replaced both
+// legacy managers and their stray hook-deps suppressions → 395 → 394.
+const WARNING_BUDGET = 394;
 
 function runEslintJson() {
   try {

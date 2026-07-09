@@ -1,10 +1,12 @@
 /**
  * Questionnaire template builder.
  *
- * A two-pane modal: the left pane edits the name, description, and an ordered,
- * drag-sortable list of questions; the right pane shows a live preview of what
- * the couple will see. All list edits route through the pure helpers in
- * `lib/questionnaires/builder-state`, keeping this component a thin shell.
+ * A two-pane modal: the left pane edits the name, description, display style
+ * (one question at a time vs all on one page), and an ordered, drag-sortable
+ * list of questions; the right pane shows the real branded couple experience
+ * via {@link QuestionnaireExperiencePreview}. All list edits route through
+ * the pure helpers in `lib/questionnaires/builder-state`, keeping this
+ * component a thin shell; the same helpers validate before save.
  *
  * @module app/(dashboard)/templates/questionnaire-builder-modal
  */
@@ -21,15 +23,23 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Loader2, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
+import { QuestionnaireExperiencePreview } from '@/components/questionnaires/experience-preview'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-import { addQuestion, createQuestion, moveQuestion, removeQuestion, updateQuestion } from '@/lib/questionnaires/builder-state'
-import type { Question } from '@/lib/questionnaires/question-schema'
+import {
+  addQuestion,
+  createQuestion,
+  duplicateQuestion,
+  moveQuestion,
+  questionIssues,
+  removeQuestion,
+  updateQuestion,
+} from '@/lib/questionnaires/builder-state'
+import { DISPLAY_MODES, toDisplayMode, type Question, type QuestionnaireDisplayMode } from '@/lib/questionnaires/question-schema'
 
-import { QuestionnairePreview } from './questionnaire-preview'
 import { QuestionnaireQuestionRow } from './questionnaire-question-row'
 import type { QuestionnaireTemplateRow } from './questionnaire-template-manager'
 
@@ -43,7 +53,10 @@ interface BuilderProps {
 export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }: BuilderProps) {
   const [name, setName] = useState(template.name)
   const [description, setDescription] = useState(template.description ?? '')
+  const [displayMode, setDisplayMode] = useState<QuestionnaireDisplayMode>(toDisplayMode(template.display_mode))
   const [questions, setQuestions] = useState<Question[]>(template.questions)
+  // Validation stays quiet while building; it surfaces on a save attempt.
+  const [showIssues, setShowIssues] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -60,6 +73,18 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
   const handleAdd = () => setQuestions((qs) => addQuestion(qs, createQuestion('short_text', crypto.randomUUID())))
   const patch = (id: string, p: Partial<Question>) => setQuestions((qs) => updateQuestion(qs, id, p))
   const remove = (id: string) => setQuestions((qs) => removeQuestion(qs, id))
+  const duplicate = (id: string) => setQuestions((qs) => duplicateQuestion(qs, id, crypto.randomUUID()))
+
+  const issues = useMemo(() => questionIssues(questions), [questions])
+  const issueByQuestion = useMemo(() => new Map(issues.map((i) => [i.questionId, i.message])), [issues])
+
+  const handleSave = () => {
+    if (issues.length > 0) {
+      setShowIssues(true)
+      return
+    }
+    onSave({ ...template, name, description: description || null, display_mode: displayMode, questions })
+  }
 
   return (
     <Modal
@@ -68,15 +93,14 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
       title="Edit questionnaire"
       size="fullscreen"
       footer={
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-3">
+          {showIssues && issues.length > 0 && (
+            <p className="text-sm text-red-600">Fix the highlighted question{issues.length === 1 ? '' : 's'} to save.</p>
+          )}
           <Button onClick={onCancel} variant="outline" size="sm">
             Cancel
           </Button>
-          <Button
-            onClick={() => onSave({ ...template, name, description: description || null, questions })}
-            disabled={saving || !name.trim()}
-            size="sm"
-          >
+          <Button onClick={handleSave} disabled={saving || !name.trim()} size="sm">
             {saving ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : null}
             Save questionnaire
           </Button>
@@ -100,6 +124,23 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
                 size="sm"
               />
             </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-text">Couples answer</label>
+              <div className="inline-flex overflow-hidden rounded-xl border border-border bg-surface">
+                {DISPLAY_MODES.map((m, i) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => setDisplayMode(m.value)}
+                    className={`cursor-pointer px-3 py-1.5 text-sm font-medium transition-colors ${i > 0 ? 'border-l border-border' : ''} ${
+                      displayMode === m.value ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -107,7 +148,14 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
               <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-2">
                   {questions.map((q) => (
-                    <QuestionnaireQuestionRow key={q.id} question={q} onChange={(p) => patch(q.id, p)} onDelete={() => remove(q.id)} />
+                    <QuestionnaireQuestionRow
+                      key={q.id}
+                      question={q}
+                      issue={showIssues ? (issueByQuestion.get(q.id) ?? null) : null}
+                      onChange={(p) => patch(q.id, p)}
+                      onDuplicate={() => duplicate(q.id)}
+                      onDelete={() => remove(q.id)}
+                    />
                   ))}
                 </div>
               </SortableContext>
@@ -119,9 +167,11 @@ export function QuestionnaireBuilderModal({ template, saving, onCancel, onSave }
           </div>
         </div>
 
-        {/* Preview — sticky alongside the editor on large screens. */}
-        <div className="hidden rounded-2xl bg-surface-muted p-6 lg:sticky lg:top-0 lg:block lg:self-start">
-          <QuestionnairePreview name={name} questions={questions} />
+        {/* Preview — the real branded couple experience, sticky alongside the
+            editor on large screens. */}
+        <div className="hidden rounded-2xl bg-surface-muted p-4 lg:sticky lg:top-0 lg:block lg:self-start">
+          <p className="mb-3 px-2 text-xs uppercase tracking-wider text-text-subtle">Preview: what the couple sees</p>
+          <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} heightClass="h-[600px]" />
         </div>
       </div>
     </Modal>

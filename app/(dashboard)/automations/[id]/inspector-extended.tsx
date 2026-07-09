@@ -350,6 +350,8 @@ export function ExtendedTriggerFields({
       return <SongPlaylistExtra config={config} setConfig={setConfig} />
     case 'couple_completed_vows':
       return <VowsExtra config={config} setConfig={setConfig} />
+    case 'questionnaire_completed':
+      return <QuestionnaireCompletedExtra config={config} setConfig={setConfig} />
     case 'subscription_status_changed':
       return <SubscriptionStatusExtra config={config} setConfig={setConfig} />
     case 'subscription_trial_ending':
@@ -622,6 +624,29 @@ const FileUploadExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => n
 // couple_added_song_to_playlist (P2) fires on every song added — the
 // playlistKey / songCount filters were dropped (no backing columns).
 const SongPlaylistExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = () => null
+
+function QuestionnaireCompletedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
+  const supabase = createClient()
+  const { data: templates } = useQuery({
+    queryKey: ['questionnaire-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('questionnaire_templates').select('id, name').order('position')
+      if (error) throw error
+      return data ?? []
+    },
+  })
+  return (
+    <SelectField
+      label="Questionnaire (optional)"
+      value={(config['questionnaireTemplateId'] as string) ?? 'any'}
+      onChange={(v) => setConfig({ ...config, questionnaireTemplateId: v === 'any' ? undefined : v })}
+      options={[
+        { value: 'any', label: 'Any questionnaire' },
+        ...(templates ?? []).map((t) => ({ value: t.id, label: t.name })),
+      ]}
+    />
+  )
+}
 
 function VowsExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (

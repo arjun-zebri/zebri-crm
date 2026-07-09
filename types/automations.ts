@@ -23,6 +23,8 @@
 
 import type { JSONContent } from '@tiptap/react'
 
+import type { PublicBranding } from '@/lib/branding/public-branding'
+
 import type { Json } from './database'
 
 // ────────────────────────────────────────────────────────────────
@@ -120,6 +122,7 @@ export type TriggerType =
   | 'couple_uploaded_file'
   | 'couple_added_song_to_playlist'
   | 'couple_completed_vows'
+  | 'questionnaire_completed'
   // App / billing meta
   | 'subscription_status_changed'
   | 'subscription_trial_ending'
@@ -518,6 +521,13 @@ export interface McSnapshot {
    * subject or plain-text channel.
    */
   signature?: JSONContent | null
+  /**
+   * The MC's resolved branding (colours, fonts, logo, radius) assembled
+   * from `user_metadata` via `buildPublicBranding`. Drives the branded
+   * email shell so previews and sends look identical. Optional so older
+   * fixtures still typecheck; a missing value gets the neutral shell.
+   */
+  branding?: PublicBranding | null
 }
 
 // ────────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@ export interface PaymentsFooterProps {
   tab: PaymentsTab;
   count: number;
   /** Money total — pass undefined to omit (e.g. for contracts). */
-  total?: number;
+  total?: number | undefined;
 }
 
 export function PaymentsFooter({ tab, count, total }: PaymentsFooterProps) {

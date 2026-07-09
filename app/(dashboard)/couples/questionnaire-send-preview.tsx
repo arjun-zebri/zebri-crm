@@ -1,155 +1,106 @@
 /**
- * Faithful preview of a questionnaire exactly as the couple receives it.
+ * Pre-send preview for a questionnaire, shown in the couple-profile send flow.
  *
- * Mirrors the public couple-facing page (`/questionnaire/[token]`): the same
- * branded chrome, one-question-at-a-time wizard, progress bar, and real answer
- * controls (via the shared {@link QuestionField}). Interactive but local-only,
- * nothing is saved or submitted. Shown in the couple-profile send flow so the
- * MC sees the real thing before sending, rather than a stacked mock.
- *
- * Branding comes from {@link useCurrentBranding} so the preview uses the MC's
- * actual colours/fonts/radius; it falls back to the same defaults the public
- * page uses while branding loads.
+ * Two tabs: the questionnaire exactly as the couple will experience it (the
+ * shared {@link QuestionnaireExperiencePreview}, with a desktop / phone width
+ * toggle), and the cover email that delivers the link (the real
+ * {@link questionnaireHtml} output in a sandboxed iframe). The MC confirms
+ * what's going out before sending, mirroring the quote/invoice/contract flow.
  *
  * @module app/(dashboard)/couples/questionnaire-send-preview
  */
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Mail, Monitor, Smartphone } from 'lucide-react'
+import { useState } from 'react'
 
-import { readableTextOn } from '@/app/questionnaire/[token]/_components/public-questionnaire'
-import { QuestionField } from '@/app/questionnaire/[token]/_components/question-field'
-import { bodyFontFamily, headingFontFamily } from '@/lib/branding/public-surface'
+import { QuestionnaireExperiencePreview } from '@/components/questionnaires/experience-preview'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
-import { QUESTION_TYPE_META, type Answer, type Question, type Responses } from '@/lib/questionnaires/question-schema'
+import { questionnaireHtml } from '@/lib/email/html'
+import type { Question, QuestionnaireDisplayMode } from '@/lib/questionnaires/question-schema'
 
 interface Props {
   name: string
   questions: Question[]
+  displayMode: QuestionnaireDisplayMode
+  coupleName: string
 }
 
-/** Renders the questionnaire as a couple-facing wizard preview. */
-export function QuestionnaireSendPreview({ name, questions }: Props) {
+type Tab = 'questionnaire' | 'email'
+
+export function QuestionnaireSendPreview({ name, questions, displayMode, coupleName }: Props) {
   const { branding } = useCurrentBranding('quote')
-  const [responses, setResponses] = useState<Responses>({})
-  const [index, setIndex] = useState(0)
+  const [tab, setTab] = useState<Tab>('questionnaire')
+  const [frame, setFrame] = useState<'desktop' | 'mobile'>('desktop')
 
-  // Steps are the answerable questions, each carrying the section heading (if
-  // any) that immediately precedes it. Mirrors the live flow's stepping.
-  const steps = useMemo(() => {
-    let section: string | null = null
-    const out: { question: Question; section: string | null }[] = []
-    for (const q of questions) {
-      if (q.type === 'section') section = q.label
-      else if (QUESTION_TYPE_META[q.type].isInput) out.push({ question: q, section })
-    }
-    return out
-  }, [questions])
+  const emailHtml = questionnaireHtml({
+    coupleName: coupleName || 'there',
+    title: name,
+    // The real link only exists once the questionnaire is created on send.
+    shareUrl: 'https://…/questionnaire/…',
+    mcBusinessName: branding?.business_name || 'Your celebrant',
+  })
 
-  // Branding fallbacks match the public page defaults exactly.
-  const brand = branding?.brand_color || '#A7F3D0'
-  const pageBg = branding?.surface_color || '#fafafa'
-  const textColor = branding?.text_color || '#111827'
-  const mutedColor = branding?.muted_color || '#6B7280'
-  const radius = branding?.corner_radius ?? 16
-  const headingStack = branding ? headingFontFamily(branding) : undefined
-  const bodyStack = branding ? bodyFontFamily(branding) : undefined
-
-  const total = steps.length
-  const safeIndex = Math.min(index, Math.max(0, total - 1))
-  const step = steps[safeIndex]
-
-  if (!step) {
-    return <p className="text-sm text-text-muted">This questionnaire has no answerable questions yet.</p>
-  }
-
-  const setAnswer = (value: Answer) => setResponses((r) => ({ ...r, [step.question.id]: value }))
-  const isLast = safeIndex === total - 1
+  const tabButton = (value: Tab, label: string) => (
+    <button
+      type="button"
+      onClick={() => setTab(value)}
+      className={`cursor-pointer rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${
+        tab === value ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'
+      }`}
+    >
+      {label}
+    </button>
+  )
 
   return (
-    // Fixed height so the modal never resizes as the couple moves between
-    // questions (textarea vs choices vs help text differ in height). The
-    // question area scrolls internally; the nav stays pinned at the bottom.
-    <div
-      className="flex h-[520px] flex-col rounded-2xl p-6 sm:p-10"
-      style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
-    >
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-hidden">
-        {/* Brand header — logo + business name, as on the live page. */}
-        <div className="mb-8 flex shrink-0 items-center gap-3">
-          {branding?.logo_url ? (
-            // User-uploaded brand asset, not a next/image source.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={branding.logo_url} alt="" className="h-9 w-9 rounded-full object-cover" />
-          ) : null}
-          <span className="text-sm font-medium" style={{ color: mutedColor }}>
-            {branding?.business_name || 'Your celebrant'}
-          </span>
+    // Viewport-relative preview height: large enough to read comfortably,
+    // small enough that the whole modal (header + tabs + footer) fits on
+    // screen without clipping the wizard's nav.
+    <div className="flex flex-col gap-3">
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <div className="flex items-center gap-1">
+          {tabButton('questionnaire', 'Questionnaire')}
+          {tabButton('email', 'Email')}
         </div>
-
-        <h1 className="mb-8 shrink-0 text-3xl font-semibold" style={{ color: textColor, fontFamily: headingStack }}>
-          {name || 'Untitled questionnaire'}
-        </h1>
-
-        <div className="mb-8 h-1 w-full shrink-0 overflow-hidden rounded-full" style={{ background: '#00000014' }}>
-          <div className="h-full rounded-full transition-all" style={{ width: `${((safeIndex + 1) / total) * 100}%`, background: brand }} />
-        </div>
-
-        {/* Scrolls when a single question's content is taller than the frame,
-            keeping the overall modal height constant. */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {step.section && (
-            <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: mutedColor }}>
-              {step.section}
-            </p>
-          )}
-
-          <h2 className="mb-2 text-2xl font-semibold" style={{ color: textColor, fontFamily: headingStack }}>
-            {step.question.label}
-            {step.question.required && <span style={{ color: brand }}> *</span>}
-          </h2>
-          {step.question.help_text ? (
-            <p className="mb-5 text-sm" style={{ color: mutedColor }}>{step.question.help_text}</p>
-          ) : (
-            <div className="mb-5" />
-          )}
-
-          <QuestionField
-            question={step.question}
-            value={responses[step.question.id]}
-            onChange={setAnswer}
-            onAutoAdvance={() => !isLast && setIndex((i) => i + 1)}
-            brand={brand}
-            textColor={textColor}
-            radius={radius}
-          />
-        </div>
-
-        <div className="mt-8 flex shrink-0 items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setIndex((i) => Math.max(0, i - 1))}
-            disabled={safeIndex === 0}
-            className="cursor-pointer text-sm disabled:opacity-0"
-            style={{ color: mutedColor }}
-          >
-            Back
-          </button>
-          <div className="flex items-center gap-3">
-            <span className="text-sm" style={{ color: mutedColor }}>
-              {safeIndex + 1} of {total}
-            </span>
+        {tab === 'questionnaire' && (
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => !isLast && setIndex((i) => i + 1)}
-              disabled={isLast}
-              className="cursor-pointer px-6 py-2.5 text-base font-medium transition hover:opacity-90 disabled:opacity-60"
-              style={{ background: brand, color: readableTextOn(brand), borderRadius: radius }}
+              aria-label="Desktop preview"
+              onClick={() => setFrame('desktop')}
+              className={`cursor-pointer rounded-xl p-1.5 transition-colors ${frame === 'desktop' ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'}`}
             >
-              {isLast ? 'Submit' : 'Next'}
+              <Monitor size={15} strokeWidth={1.5} />
+            </button>
+            <button
+              type="button"
+              aria-label="Phone preview"
+              onClick={() => setFrame('mobile')}
+              className={`cursor-pointer rounded-xl p-1.5 transition-colors ${frame === 'mobile' ? 'bg-surface-muted text-text' : 'text-text-muted hover:text-text'}`}
+            >
+              <Smartphone size={15} strokeWidth={1.5} />
             </button>
           </div>
+        )}
+      </div>
+
+      {/* Both panels stay mounted; the inactive one is CSS-hidden. Remounting
+          the questionnaire panel on every tab switch would refetch branding
+          and flash the default palette (and reset the wizard position). */}
+      <div className={tab === 'questionnaire' ? '' : 'hidden'}>
+        <QuestionnaireExperiencePreview title={name} questions={questions} displayMode={displayMode} frame={frame} heightClass="h-[58vh]" />
+      </div>
+      <div className={`h-[58vh] flex-col overflow-hidden rounded-2xl border border-border ${tab === 'email' ? 'flex' : 'hidden'}`}>
+        <div className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-muted px-4 py-2.5 text-sm text-text-muted">
+          <Mail size={14} strokeWidth={1.5} />
+          <span className="truncate">
+            Subject: {branding?.business_name || 'Your celebrant'} sent you a few questions
+          </span>
         </div>
+        {/* Sandboxed: the email HTML is trusted output of questionnaireHtml,
+            but the iframe keeps its styles from leaking either way. */}
+        <iframe title="Email preview" sandbox="" srcDoc={emailHtml} className="min-h-0 w-full flex-1 bg-white" />
       </div>
     </div>
   )

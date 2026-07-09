@@ -61,14 +61,6 @@ export const STARTER_PACKAGES: readonly StarterLineItemSet[] = [
       { description: 'Reception MC & run sheet', amount: 900 },
     ],
   },
-  {
-    name: 'Add-on: Planning meeting / rehearsal',
-    subtitle: 'Optional extras booked alongside a package',
-    items: [
-      { description: 'In-person planning meeting', amount: 150 },
-      { description: 'Rehearsal attendance', amount: 200 },
-    ],
-  },
 ]
 
 /* ─── Quote templates: ready-to-send quotes ────────────────────── */

@@ -141,7 +141,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
 
       const dueDate = new Date()
       dueDate.setDate(dueDate.getDate() + 7)
-      const dueDateStr = dueDate.toISOString().split('T')[0]
+      const dueDateStr = dueDate.toISOString().slice(0, 10)
 
       const { data, error } = await supabase
         .from('invoices')

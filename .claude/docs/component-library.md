@@ -355,18 +355,37 @@ Props:
   (`lib/email/template-variables`). The chosen `id` is stored verbatim
   on the inserted mention node (`attrs.id`).
 
+Toolbar: H1/H2, bold/italic, lists, a **Link** button (set/update/remove
+an `<a>` on the selection; bare domains get `https://` prepended;
+StarterKit v3's bundled Link with `openOnClick: false`), undo/redo, and
+the Insert-variable popover. The blockquote button was removed
+(2026-07). When `showVariableInserter` is on, typing **`@` or `{{`** in
+the body opens the inline variable suggestion
+(`components/ui/variable-suggestion.tsx` — keyboard-navigable floating
+list built on TipTap's suggestion plugin; Enter/Tab inserts the mention
+and swallows the trigger).
+
 ## Email Templates components — `app/(dashboard)/templates/*`
 
 - `TemplatePreview` — renders subject + body through
   `lib/email/templates`, highlighting unresolved variables in amber
-  (`preview` mode). Reused by the library editor (sample context) and
-  the couple Send-email modal (real context).
+  (`preview` mode). With `shell` it instead renders the **finished
+  email** — the branded shell from `wrapTemplateHtml` — in a sandboxed
+  iframe (the editor's WYSIWYG preview). Reused by the library editor
+  (sample context) and the couple Send-email modal (real context).
 - `SubjectField` — labelled subject input + Insert-variable popover
   that appends `{{ expression }}` tokens.
-- `TemplateEditorModal` — fullscreen create/edit (editor + live
-  preview), uses the `Button`, `Modal`, `Input`, `Select` primitives.
-- `TemplatesLibrary` — stage-filtered, searchable list with Edit /
-  Duplicate (`Copy`) / Delete (`ConfirmDialog`) row actions and
+- `TemplateEditorModal` — fullscreen create/edit (editor + WYSIWYG
+  preview + attachments + test-send), uses the `Button`, `Modal`,
+  `Input` primitives.
+- `CategoryPicker` (+ `CategoryManageRow`, `ColorSwatches`) — the
+  Notion-style category control: Select-like trigger, pick list with
+  colour dots, inline "New category", and an Edit mode with rename /
+  recolour / delete / dnd-kit drag-reorder. Colour keys map to
+  named-palette classes in `category-colors.ts`.
+- `TemplateAttachments` — upload/list/remove the files sent with a
+  template (browser → private bucket; metadata via server actions).
+- `TemplatesLibrary` — category-grouped, searchable list with
   `Loading` / `Empty` / `ErrorState` states.
 
 Shared across the non-email tabs (Packages / Quotes / Invoices /

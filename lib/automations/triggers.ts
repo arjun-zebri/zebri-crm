@@ -1346,6 +1346,24 @@ const coupleCompletedVows: TriggerSpec<{
   ui: { category: 'portal', label: 'Couple completed vows', description: 'Vow drafts submitted by one or both partners', icon: 'Heart' },
 }
 
+const questionnaireCompleted: TriggerSpec<{
+  questionnaireTemplateId?: string | undefined
+}> = {
+  type: 'questionnaire_completed',
+  configSchema: z.object({
+    /** Optional narrowing to questionnaires sent from one template. */
+    questionnaireTemplateId: z.string().uuid().optional(),
+  }).passthrough(),
+  // The DB trigger on couple_questionnaires emits on the status flip to
+  // 'completed' with the snapshot's template_id in the payload (null when the
+  // source template was deleted — those match only the "any" config).
+  match: (event, config) => {
+    if (!config.questionnaireTemplateId) return true
+    return p(event).template_id === config.questionnaireTemplateId
+  },
+  ui: { category: 'portal', label: 'Questionnaire completed', description: 'A couple submitted their questionnaire answers', icon: 'ClipboardList' },
+}
+
 // ── Subscription / billing (MC's own plan) ─────────────────────
 
 const subscriptionStatusChanged: TriggerSpec<{
@@ -1572,6 +1590,7 @@ export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   couple_uploaded_file: coupleUploadedFile,
   couple_added_song_to_playlist: coupleAddedSongToPlaylist,
   couple_completed_vows: coupleCompletedVows,
+  questionnaire_completed: questionnaireCompleted,
   // Billing meta
   subscription_status_changed: subscriptionStatusChanged,
   subscription_trial_ending: subscriptionTrialEnding,

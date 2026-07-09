@@ -59,7 +59,7 @@ export interface CoupleTabShellProps {
    * Pass only when the tab has data so it never shows beside the centered
    * empty state.
    */
-  stats?: TabStat[];
+  stats?: TabStat[] | undefined;
   /** Primary action button(s), rendered on the right. Omit for read-only tabs (e.g. Vows). */
   actions?: ReactNode;
   /** Tab body — typically the loading / error / empty / content branch. */

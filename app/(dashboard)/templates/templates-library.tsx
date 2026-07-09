@@ -1,11 +1,11 @@
 /**
  * Email-template master list (left pane of the Emails master-detail).
  *
- * Browses templates grouped by wedding-lifecycle stage — quiet stage
- * subheaders with calm, click-to-select rows beneath, mirroring the couple
- * Overview / Automations surfaces. Selecting a row drives the preview pane;
- * the row's edit/duplicate/delete actions live on that preview, so the list
- * itself stays scannable. Filtered by the toolbar `search`.
+ * Browses templates grouped by the MC's own categories (colour-dotted
+ * subheaders in the user's drag order), with un-tagged templates in a
+ * trailing "Uncategorised" bucket. Selecting a row drives the preview
+ * pane; the row's edit/duplicate/delete actions live on that preview,
+ * so the list itself stays scannable. Filtered by the toolbar `search`.
  *
  * @module app/(dashboard)/templates/templates-library
  */
@@ -15,9 +15,11 @@ import { Mail } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { ErrorState } from '@/components/ui/error-state'
-import { LIFECYCLE_LABELS, LIFECYCLE_STAGES, type EmailTemplate, type LifecycleStage } from '@/types/email-template'
+import type { EmailTemplate } from '@/types/email-template'
 
+import { categoryColorClasses } from './category-colors'
 import { TemplatesSkeleton } from './templates-skeleton'
+import { useCategories } from './use-categories'
 
 interface TemplatesLibraryProps {
   templates: EmailTemplate[]
@@ -31,33 +33,43 @@ interface TemplatesLibraryProps {
   onSelect: (template: EmailTemplate) => void
 }
 
-/** One lifecycle bucket plus its matching templates. `null` stage is the
- *  "Other" bucket for un-tagged templates, rendered last. */
-interface StageGroup {
-  key: LifecycleStage | 'other'
+/** One category bucket plus its matching templates. `null` dot = the
+ *  trailing "Uncategorised" bucket. */
+interface CategoryGroup {
+  key: string
   label: string
+  dotClass: string | null
   items: EmailTemplate[]
 }
 
-/** Render order: the journey stages first, then un-tagged templates. */
-const GROUP_ORDER: (LifecycleStage | null)[] = [...LIFECYCLE_STAGES, null]
-
 export function TemplatesLibrary({ templates, isLoading, isError, onRetry, search, selectedId, onSelect }: TemplatesLibraryProps) {
-  // Group by lifecycle stage, preserving the position order the query
-  // returns within each bucket. Search filters by name or subject; only
-  // non-empty groups render so the page never shows a bare header.
-  const groups = useMemo<StageGroup[]>(() => {
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories()
+
+  // Group by the user's categories in their drag order, preserving the
+  // position order the template query returns within each bucket.
+  // Search filters by name or subject; only non-empty groups render so
+  // the page never shows a bare header.
+  const groups = useMemo<CategoryGroup[]>(() => {
     const q = search.trim().toLowerCase()
     const matches = (t: EmailTemplate) =>
       !q || t.name.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q)
-    return GROUP_ORDER.map((stage) => ({
-      key: (stage ?? 'other') as LifecycleStage | 'other',
-      label: stage ? LIFECYCLE_LABELS[stage] : 'Other',
-      items: templates.filter((t) => (t.lifecycle_stage ?? null) === stage && matches(t)),
-    })).filter((g) => g.items.length > 0)
-  }, [templates, search])
+    const categoryGroups = categories.map((c) => ({
+      key: c.id,
+      label: c.name,
+      dotClass: categoryColorClasses(c.color).dot,
+      items: templates.filter((t) => t.category_id === c.id && matches(t)),
+    }))
+    const known = new Set(categories.map((c) => c.id))
+    const uncategorised = {
+      key: 'uncategorised',
+      label: 'Uncategorised',
+      dotClass: null,
+      items: templates.filter((t) => (!t.category_id || !known.has(t.category_id)) && matches(t)),
+    }
+    return [...categoryGroups, uncategorised].filter((g) => g.items.length > 0)
+  }, [templates, categories, search])
 
-  if (isLoading) return <TemplatesSkeleton />
+  if (isLoading || categoriesLoading) return <TemplatesSkeleton />
   if (isError) return <ErrorState title="Couldn't load templates" onRetry={onRetry} />
   if (groups.length === 0) {
     return <p className="py-8 text-center text-sm text-text-subtle">No templates match your search.</p>
@@ -67,7 +79,10 @@ export function TemplatesLibrary({ templates, isLoading, isError, onRetry, searc
     <div className="space-y-5">
       {groups.map((group) => (
         <section key={group.key}>
-          <h3 className="px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">{group.label}</h3>
+          <h3 className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+            {group.dotClass && <span className={`h-2 w-2 rounded-full ${group.dotClass}`} />}
+            {group.label}
+          </h3>
           <ul className="mt-1 space-y-0.5">
             {group.items.map((t) => {
               const active = t.id === selectedId

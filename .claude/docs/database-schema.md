@@ -299,6 +299,8 @@ share_token_enabled (boolean, not null, default true)  -  link is live from crea
 
 accepted_at (timestamp with time zone, nullable)
 
+source_package_id (uuid, nullable, FK to packages.id, on delete set null, indexed)  -  the package applied to start this quote; provenance for per-package conversion stats only (items are snapshotted, this never feeds rendering). Added in `20260702000000_packages_v2.sql`
+
 created_at (timestamp)
 
 RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER functions get_public_quote, accept_quote, and decline_quote (see quotes.md).
@@ -608,10 +610,28 @@ name (text, not null)
 description (text, nullable)
 subject (text, not null, default '')  -  mustache string, e.g. `Quote for {{couple.name}}`
 content (jsonb, not null, default '{}')  -  TipTap JSON body; mention nodes carry a namespaced variable key in `attrs.id` (e.g. `couple.primary_name`, `event.date | friendly`)
-lifecycle_stage (text, nullable, check in: enquiry | quote | booking | planning | wedding_week | follow_up)
+lifecycle_stage (text, nullable, check in: enquiry | quote | booking | planning | wedding_week | follow_up)  -  **LEGACY**: grouping moved to `category_id`; kept for starter provenance, never dropped
+category_id (uuid, nullable, FK email_template_categories.id, **on delete set null**)  -  the user category this template is grouped under
 is_starter (boolean, not null, default false)  -  provenance badge for seeded library rows; starters stay fully editable
 position (integer, not null, default 0)
 created_at / updated_at (timestamptz; updated_at kept fresh by trigger `email_templates_set_updated_at`)
+
+`email_template_categories` (user-editable grouping, Notion-style —
+replaces the fixed lifecycle stages in the Emails-tab UI):
+id (uuid, primary key)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+name (text, not null)
+color (text, not null, default 'slate')  -  named palette key (slate | rose | amber | emerald | sky | violet | pink | stone); UI maps keys to token-safe classes in `app/(dashboard)/templates/category-colors.ts`
+position (integer, not null, default 0)  -  drag order
+created_at / updated_at (timestamptz; trigger `email_template_categories_set_updated_at`)
+
+Category seeding: migration `20260709000000_email_template_categories.sql`
+backfills the six historical stages as categories for every user who
+owned templates (and points their templates at the match). New users are
+seeded lazily by `ensureDefaultCategories()`
+(`lib/email/template-categories.ts`), guarded by
+`user_metadata.email_categories_initialized` so deleting every category
+never respawns the defaults.
 
 `email_template_files` columns (metadata for static attachment uploads;
 the binary lives in the private `email-template-files` storage bucket
@@ -624,11 +644,12 @@ file_size (integer, not null)
 created_at (timestamptz)
 
 Indexes: `email_templates(user_id)`, partial
-`email_templates(user_id, lifecycle_stage)`, `email_template_files(user_id)`,
-`email_template_files(template_id)`.
+`email_templates(user_id, lifecycle_stage)`, `email_templates(category_id)`,
+`email_template_files(user_id)`, `email_template_files(template_id)`,
+`email_template_categories(user_id)`.
 
 RLS: base owner policy `user_id = auth.uid()` (USING + WITH CHECK) on
-both tables. The `email-template-files` storage bucket is **private**
+all three tables. The `email-template-files` storage bucket is **private**
 (25 MB cap, PDF/DOCX/PNG/JPEG MIME whitelist) with owner-only
 insert/select/update/delete policies keyed on the first path segment
 (`auth.uid()::text = split_part(name, '/', 1)`).
@@ -659,10 +680,14 @@ drop into quotes and invoices. Structurally mirrors `quote_templates` /
 id (uuid, primary key)
 user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
 name (text, not null)
-description (text, nullable)
+description (text, nullable)  -  "what's included" prose shown on the preview and prepended to the applied quote/invoice notes
 notes (text, nullable)  -  short subtitle shown on the list row
-position (integer, not null, default 0)  -  drag-reorder order
+position (integer, not null, default 0)  -  list order (creation order; the Packages list is not drag-reorderable)
 is_starter (boolean, not null, default false)  -  provenance badge for catalog-added rows; starters stay fully editable
+deposit_percent (numeric(5,2), nullable)  -  booking-fee rule (e.g. 30 for "30% to secure the date"); pre-fills the invoice builder's payment schedule on apply. NULL = no default schedule
+gst_inclusive (boolean, not null, default true)  -  whether prices already include GST. Applying an inclusive package turns the builder's GST line off; an exclusive one keeps GST 10% on top
+archived_at (timestamptz, nullable)  -  soft retirement; archived packages keep history but leave the default list and the builders' apply pickers
+weekend_loading_percent (numeric(5,2), nullable)  -  peak-rate loading (e.g. 15 for "Saturday +15%"); applying appends a transparent loading line item the MC deletes off-peak
 created_at / updated_at (timestamptz)
 
 `package_items` columns:
@@ -670,7 +695,9 @@ id (uuid, primary key)
 package_id (uuid, FK packages.id, on delete cascade)
 user_id (uuid, not null)  -  RLS key (denormalised)
 description (text, not null)
-amount (numeric(10,2), not null)
+amount (numeric(10,2), not null)  -  PER-UNIT price (line total = quantity × amount; flattened to "N × description" on apply since quote/invoice builder items carry no qty)
+quantity (numeric(8,2), not null, default 1.00)
+optional (boolean, not null, default false)  -  an add-on offered alongside the base package; the builders let the MC tick which add-ons to include on apply
 position (integer, not null)
 created_at (timestamptz)
 
@@ -679,10 +706,20 @@ Indexes: `packages(user_id)`, `package_items(package_id)`.
 RLS: base owner policy `user_id = auth.uid()` on both tables
 (`for all using (...)`, which Postgres reuses as the INSERT WITH CHECK).
 
+Related: `quotes.source_package_id` (nullable uuid, FK packages.id, on
+delete **set null**, indexed) records which package a quote was started
+from, as provenance for per-package conversion stats only; items are
+still snapshotted, so the FK never feeds rendering.
+
 Migrations: `20260618000300_create_packages.sql`; `is_starter` added in
-`20260619000100_add_is_starter_to_templates.sql`. Starter packages are an
-opt-in catalog (`lib/payments/starter-line-item-templates.ts`), added via
-the `addStarterPackagesAction` server action; nothing is auto-seeded.
+`20260619000100_add_is_starter_to_templates.sql`; commercial fields
+(deposit/GST/archive/weekend loading), item `quantity`/`optional`, and
+`quotes.source_package_id` added in `20260702000000_packages_v2.sql`.
+Starter packages are an opt-in catalog
+(`lib/payments/starter-line-item-templates.ts`), added via the
+`addStarterPackagesAction` server action; nothing is auto-seeded.
+Pure package money math (line totals, base vs add-on totals, weekend
+loading line) lives in `lib/payments/package-math.ts`.
 
 ## invoice_templates / invoice_template_items (Templates page — Invoices tab)
 
@@ -734,13 +771,15 @@ Migration: `20260619000000_create_couple_emails.sql`.
 
 ## questionnaire_templates / couple_questionnaires (Couple questionnaires)
 
-Couples fill in MC-built questionnaires on a calm, one-question-at-a-time
-public page. Structurally a twin of contracts: a reusable template plus a
-per-couple token-gated instance.
+Couples fill in MC-built questionnaires on a branded public page, either one
+question at a time (typeform style) or as a classic all-on-one-page form (per
+the template's display mode). Structurally a twin of contracts: a reusable
+template plus a per-couple token-gated instance.
 
 **questionnaire_templates** (Templates page — Questionnaires tab). The MC's
 reusable forms. Columns: id, user_id (RLS key, FK auth.users cascade), name,
-description (nullable), `questions` (jsonb — ordered array of
+description (nullable), display_mode (`typeform | form`, default `typeform`,
+enforced in code like statuses), `questions` (jsonb — ordered array of
 `{ id, type, label, help_text?, required, options? }`; types live in
 `lib/questionnaires/question-schema.ts`), is_starter (provenance for cloned
 starters), position, created_at, updated_at. Index: `(user_id)`. RLS:
@@ -750,16 +789,20 @@ owner-only `user_id = auth.uid()`.
 Columns: id, user_id (RLS key), couple_id (FK couples cascade), template_id (FK
 questionnaire_templates **on delete set null**), title, `questions` (jsonb
 **snapshot** taken at send time so later template edits never change a sent
-questionnaire — same principle as the contract content lock), `responses`
-(jsonb, answers keyed by question id), status (`draft | sent | completed`),
-share_token (uuid), share_token_enabled (default false), sent_at, completed_at,
-created_at, updated_at. Indexes: `(user_id)`, `(couple_id)`, `(template_id)`,
-`(share_token)`. RLS: owner-only.
+questionnaire — same principle as the contract content lock), display_mode
+(snapshotted with the questions), `responses` (jsonb, answers keyed by
+question id), status (`draft | sent | completed`), share_token (uuid),
+share_token_enabled (default false), sent_at, viewed_at (stamped by
+`get_public_questionnaire` on the couple's first open, null until then),
+completed_at, created_at, updated_at. Indexes: `(user_id)`, `(couple_id)`,
+`(template_id)`, `(share_token)`. RLS: owner-only.
 
 Anon access via SECURITY DEFINER RPCs (all token-gated, granted to `anon`):
-- `get_public_questionnaire(token)` — returns the questionnaire + current
-  responses + status with branding merged top-level (via `_user_branding`);
-  null when the token is missing or `share_token_enabled = false`.
+- `get_public_questionnaire(token)` — returns the questionnaire (incl.
+  display_mode) + current responses + status with branding merged top-level
+  (via `_user_branding`); null when the token is missing or
+  `share_token_enabled = false`. Side effect: stamps `viewed_at` on the first
+  successful call.
 - `save_questionnaire_progress(token, p_responses)` — autosave of partial
   answers; refuses once completed.
 - `submit_questionnaire(token, p_responses)` — stores answers, stamps
@@ -769,8 +812,16 @@ Anon access via SECURITY DEFINER RPCs (all token-gated, granted to `anon`):
   questionnaires for the client portal, gated by the portal token via
   `_resolve_portal_couple`.
 
+Automation event: `tg_couple_questionnaires_emit_completed` (AFTER UPDATE)
+emits a `questionnaire_completed` event via `emit_automation_event` whenever
+status transitions to `completed` (public submit or the MC marking it done),
+with payload `{ questionnaire_id, couple_id, template_id, title, share_token,
+sent_at, completed_at }`.
+
 Migrations: `20260626000000_create_questionnaires_feature.sql`,
-`20260626000100_portal_questionnaires.sql`.
+`20260626000100_portal_questionnaires.sql`,
+`20260705000000_questionnaires_v2.sql` (display_mode, viewed_at,
+completed-event trigger).
 
 ## user_public_settings (Settings — Public Page)
 

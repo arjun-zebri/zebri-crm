@@ -46,10 +46,24 @@ export const EMAIL_TEMPLATE_VARIABLES: readonly EditorVariable[] = VARIABLE_CATA
  * data rather than missing-variable highlights — the missing-variable
  * gate only matters at send time against a real couple.
  *
- * @param businessName - The MC's real business name when known, so the
- *   preview signs off correctly.
+ * The MC-side fields (`businessName`, `contactName`, `email`,
+ * `signature`, `branding`) accept the MC's **real** values so the
+ * preview's `{{mc.*}}` variables and shell match what will actually be
+ * sent; each falls back to a neutral sample when absent.
  */
-export function buildSampleContext(businessName?: string, contactName?: string): RunContext {
+export interface SampleContextOptions {
+  businessName?: string | undefined
+  contactName?: string | undefined
+  /** The MC's real email, so `{{mc.email}}` previews truthfully. */
+  email?: string | undefined
+  /** The MC's saved signature (TipTap JSON from `user_metadata.email_signature`). */
+  signature?: RunContext['mc']['signature'] | undefined
+  /** Resolved branding for the branded shell preview. */
+  branding?: RunContext['mc']['branding'] | undefined
+}
+
+export function buildSampleContext(opts: SampleContextOptions = {}): RunContext {
+  const { businessName, contactName, email, signature, branding } = opts
   return {
     userId: 'sample',
     automationId: 'sample',
@@ -72,6 +86,13 @@ export function buildSampleContext(businessName?: string, contactName?: string):
         invoice_total: '2500',
         contract_link: 'https://app.zebri.com.au/c/sample',
         contract_number: 'CTR-001',
+        // Questionnaire namespace: stamped directly (like the other link
+        // namespaces) so the sample link doesn't depend on
+        // NEXT_PUBLIC_APP_URL — previewing localhost URLs looked broken.
+        // Without these, `{{questionnaire.*}}` were the only catalogue
+        // variables that previewed as amber "missing" chips.
+        questionnaire_link: 'https://app.zebri.com.au/questionnaire/sample',
+        questionnaire_title: 'Ceremony details',
       } as never,
       couple_id: 'sample',
       created_at: new Date().toISOString(),
@@ -96,17 +117,17 @@ export function buildSampleContext(businessName?: string, contactName?: string):
       userId: 'sample',
       businessName: businessName?.trim() || 'Your business',
       contactName: contactName?.trim() || 'You',
-      email: 'hello@example.com',
+      email: email?.trim() || 'hello@example.com',
       phone: null,
       brandColor: null,
       logoUrl: null,
       quietHoursStart: '21:00',
       quietHoursEnd: '08:00',
       quietHoursTimezone: 'Australia/Sydney',
-      // A representative static signature so a template that uses
-      // `{{mc.signature}}` previews filled in. Plain rich text, no
-      // variables (signatures are Gmail/Outlook-style sign-offs).
-      signature: {
+      // Prefer the MC's real saved signature so the preview shows what
+      // will actually be sent; fall back to a representative sign-off
+      // for MCs who haven't set one yet.
+      signature: signature ?? {
         type: 'doc',
         content: [
           { type: 'paragraph', content: [{ type: 'text', text: 'Warm regards,' }] },
@@ -116,6 +137,7 @@ export function buildSampleContext(businessName?: string, contactName?: string):
           },
         ],
       },
+      branding: branding ?? null,
     },
     actionResults: {},
   }

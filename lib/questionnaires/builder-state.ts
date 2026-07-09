@@ -39,6 +39,47 @@ export function removeQuestion(questions: Question[], id: string): Question[] {
 }
 
 /**
+ * Inserts a copy of the question with the given id directly after the
+ * original. The copy's id is caller-supplied (purity, as with
+ * {@link createQuestion}); options are cloned so later edits don't alias.
+ * A no-op when the id is missing.
+ */
+export function duplicateQuestion(questions: Question[], id: string, newId: string): Question[] {
+  const index = questions.findIndex((q) => q.id === id)
+  const source = questions[index]
+  if (!source) return questions
+  const copy: Question = { ...source, id: newId, ...(source.options ? { options: [...source.options] } : {}) }
+  const next = [...questions]
+  next.splice(index + 1, 0, copy)
+  return next
+}
+
+/** One builder validation problem, anchored to a question. */
+export interface QuestionIssue {
+  questionId: string
+  message: string
+}
+
+/**
+ * Validates a question list for the builder: every question needs text, and
+ * choice/dropdown types need at least one non-blank option. Returns an empty
+ * array when the questionnaire is saveable.
+ */
+export function questionIssues(questions: Question[]): QuestionIssue[] {
+  const issues: QuestionIssue[] = []
+  for (const q of questions) {
+    if (!q.label.trim()) {
+      issues.push({ questionId: q.id, message: q.type === 'section' ? 'Section headings need text.' : 'Questions need text.' })
+      continue
+    }
+    if (QUESTION_TYPE_META[q.type].hasOptions && !(q.options ?? []).some((o) => o.trim().length > 0)) {
+      issues.push({ questionId: q.id, message: 'Add at least one option.' })
+    }
+  }
+  return issues
+}
+
+/**
  * Moves the question identified by `activeId` to the position currently held by
  * `overId`, preserving the order of every other question. A no-op when either
  * id is missing.

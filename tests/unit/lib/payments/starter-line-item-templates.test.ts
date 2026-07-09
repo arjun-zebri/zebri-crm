@@ -25,7 +25,9 @@ const CATALOGS: Record<string, readonly StarterLineItemSet[]> = {
 
 describe('line-item starter catalogs', () => {
   it('ships the agreed counts', () => {
-    expect(STARTER_PACKAGES).toHaveLength(4)
+    // Trimmed to ~3 exemplars per tab (2026-07-09 spec): the Add-on
+    // package was dropped so packages read as a clean progression.
+    expect(STARTER_PACKAGES).toHaveLength(3)
     expect(STARTER_QUOTE_TEMPLATES).toHaveLength(3)
     expect(STARTER_INVOICE_TEMPLATES).toHaveLength(3)
   })

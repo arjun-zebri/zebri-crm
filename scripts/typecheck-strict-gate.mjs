@@ -37,7 +37,11 @@ import { execSync } from 'node:child_process';
 // Timeline internal flag + multi-day portals: 323 → 315 (deleted the
 // dead run-sheet-section.tsx, which carried several strict errors;
 // new portal/vendor day-selector code is strict-clean). Locking in.
-const STRICT_BUDGET = 315;
+// Quote/invoice templates hardening: 315 → 305 (shared manager + store
+// replaced both legacy managers; widened optional prop types on the
+// templates/payments surfaces for exactOptionalPropertyTypes; all new
+// template code is strict-clean). Locking in.
+const STRICT_BUDGET = 305;
 
 function runTscStrict() {
   try {
