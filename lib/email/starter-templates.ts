@@ -61,12 +61,19 @@ function body(...paras: JSONContent[]): JSONContent {
   return { type: 'doc', content: paras }
 }
 
-// Common sign-off reused across templates.
-const signOff = (): JSONContent[] => [p('Warm regards,'), p(v('mc.contact_name')), p(v('mc.business_name'))]
+/**
+ * An empty paragraph — the blank line an MC gets by pressing Enter
+ * twice. The renderer preserves these (`fillEmptyParagraphs`), so
+ * starters breathe the same way hand-written emails do.
+ */
+function blank(): JSONContent {
+  return { type: 'paragraph' }
+}
 
 /**
  * The canonical starter set. Order within a stage drives the seeded
- * `position`.
+ * `position`. Each one is a worked exemplar: real paragraph spacing,
+ * variables in context, and the `{{mc.signature}}` sign-off pattern.
  */
 export const STARTER_EMAIL_TEMPLATES: readonly StarterTemplate[] = [
   // ── Enquiry ──────────────────────────────────────────────────
@@ -74,14 +81,27 @@ export const STARTER_EMAIL_TEMPLATES: readonly StarterTemplate[] = [
     name: 'Enquiry acknowledgement',
     description: 'Thank a couple for their enquiry and set expectations.',
     lifecycleStage: 'enquiry',
-    subject: 'Thanks for reaching out, {{couple.primary_name}}',
+    subject: 'Thanks for reaching out, {{couple.primary_name}}!',
     content: body(
       p('Hi ', v('couple.primary_name'), ','),
+      blank(),
       p(
-        'Thank you so much for getting in touch about your wedding! I would love to hear more about your day and how I can help.',
+        'Thank you so much for getting in touch, and congratulations on your engagement! Weddings are my favourite thing in the world, and I would love to hear more about the day you two are planning.',
       ),
-      p('Could you share your event date, venue, and a little about what you have in mind? I will get back to you with availability and next steps.'),
-      ...signOff(),
+      blank(),
+      p('So I can point you in the right direction, could you share a few details when you have a moment?'),
+      blank(),
+      p('1. Your wedding date (or the dates you are considering)'),
+      p('2. Your venue, if you have locked one in'),
+      p('3. Roughly how many guests you are expecting'),
+      p('4. The feel you are going for: relaxed, formal, party-focused, or something in between'),
+      blank(),
+      p(
+        'Once I hear back I will confirm my availability and send through my packages and pricing. I usually reply within one business day, so you will not be waiting long.',
+      ),
+      blank(),
+      p('Talk soon,'),
+      p(v('mc.signature')),
     ),
   },
 
@@ -93,10 +113,27 @@ export const STARTER_EMAIL_TEMPLATES: readonly StarterTemplate[] = [
     subject: 'Your quote from {{mc.business_name}}',
     content: body(
       p('Hi ', v('couple.primary_name'), ','),
-      p('Thank you for the opportunity. I have put together a quote for your wedding on ', v('event.date | friendly'), '.'),
-      p('You can view it here: ', v('quote.link')),
-      p('Let me know if you have any questions or would like to tweak anything. I am happy to help.'),
-      ...signOff(),
+      blank(),
+      p(
+        'It was lovely to chat about your wedding on ',
+        v('event.date | friendly'),
+        '. Thank you for considering me to be part of it.',
+      ),
+      blank(),
+      p('As promised, here is your quote. You can view it, ask questions, and accept it online:'),
+      blank(),
+      p(v('quote.link')),
+      blank(),
+      p(
+        'It covers everything we discussed, and nothing is set in stone. If you would like to add, remove, or adjust anything, just reply and I will update it the same day.',
+      ),
+      blank(),
+      p(
+        'Your date is not held until the quote is accepted and the deposit is paid, so if you are keen, locking it in sooner rather than later is the safest move. No pressure either way, and I am happy to answer anything at all in the meantime.',
+      ),
+      blank(),
+      p('Warm regards,'),
+      p(v('mc.signature')),
     ),
   },
 
@@ -108,9 +145,27 @@ export const STARTER_EMAIL_TEMPLATES: readonly StarterTemplate[] = [
     subject: 'You’re booked! 🎉',
     content: body(
       p('Hi ', v('couple.name'), ','),
-      p('It is official! I am honoured to be part of your wedding on ', v('event.date | friendly'), ' at ', v('venue.name'), '.'),
-      p('I will be in touch with the next steps shortly, including your agreement and planning details. For now, congratulations and thank you for trusting me with your day.'),
-      ...signOff(),
+      blank(),
+      p(
+        'It is official: I will be your MC on ',
+        v('event.date | friendly'),
+        ' at ',
+        v('venue.name'),
+        '! Thank you for trusting me with such a special role. I am genuinely excited for your day.',
+      ),
+      blank(),
+      p('Here is what happens next:'),
+      blank(),
+      p('1. I will send through your agreement to sign, along with the deposit invoice.'),
+      p('2. Closer to the day we will sit down (in person or over a call) to plan your run sheet: timings, announcements, and all the moments that matter to you both.'),
+      p('3. In the final week I will confirm every detail with you and your venue, so you can relax and enjoy it.'),
+      blank(),
+      p(
+        'In the meantime, if any questions pop up, even tiny ones, reply here any time. There is no such thing as a silly question when you are planning a wedding.',
+      ),
+      blank(),
+      p('Congratulations again!'),
+      p(v('mc.signature')),
     ),
   },
 ]

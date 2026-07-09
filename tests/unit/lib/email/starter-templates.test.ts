@@ -21,7 +21,7 @@ const KNOWN_PATHS = new Set([
   'couple.spouse_name', 'couple.partner2', 'couple.email', 'couple.phone', 'couple.status',
   'event.date', 'event.days_until', 'event.days_since', 'event.weekday',
   'venue.name',
-  'mc.business_name', 'mc.name', 'mc.contact_name', 'mc.email', 'mc.phone',
+  'mc.business_name', 'mc.name', 'mc.contact_name', 'mc.email', 'mc.phone', 'mc.signature',
   'portal.link',
   'quote.link', 'quote.number', 'quote.total',
   'invoice.link', 'invoice.number', 'invoice.total',
