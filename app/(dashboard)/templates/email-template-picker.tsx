@@ -36,10 +36,15 @@ export function EmailTemplatePicker({ value, onChange, label = 'Email template' 
       onValueChange={(v) => onChange(v === INLINE ? '' : v)}
       options={[
         { value: INLINE, label: 'Write inline (no template)' },
-        ...templates.map((t) => {
-          const category = categoryName(t.category_id)
-          return { value: t.id, label: category ? `${t.name} · ${category}` : t.name }
-        }),
+        // Archived templates are hidden, except the one currently
+        // selected — an automation referencing it must keep displaying.
+        ...templates
+          .filter((t) => !t.archived_at || t.id === value)
+          .map((t) => {
+            const category = categoryName(t.category_id)
+            const name = t.archived_at ? `${t.name} (archived)` : t.name
+            return { value: t.id, label: category ? `${name} · ${category}` : name }
+          }),
       ]}
     />
   )

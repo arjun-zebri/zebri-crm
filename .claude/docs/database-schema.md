@@ -614,6 +614,7 @@ lifecycle_stage (text, nullable, check in: enquiry | quote | booking | planning 
 category_id (uuid, nullable, FK email_template_categories.id, **on delete set null**)  -  the user category this template is grouped under
 is_starter (boolean, not null, default false)  -  provenance badge for seeded library rows; starters stay fully editable
 position (integer, not null, default 0)
+archived_at (timestamptz, nullable)  -  soft retirement; archived templates keep history (and automation references) but leave the Emails library list and the template pickers. Added in `20260709120000_email_templates_archive.sql`
 created_at / updated_at (timestamptz; updated_at kept fresh by trigger `email_templates_set_updated_at`)
 
 `email_template_categories` (user-editable grouping, Notion-style —
@@ -682,6 +683,7 @@ user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
 name (text, not null)
 description (text, nullable)  -  "what's included" prose shown on the preview and prepended to the applied quote/invoice notes
 notes (text, nullable)  -  short subtitle shown on the list row
+category_id (uuid, nullable, FK package_categories.id, **on delete set null**)  -  the user category this package is grouped under
 position (integer, not null, default 0)  -  list order (creation order; the Packages list is not drag-reorderable)
 is_starter (boolean, not null, default false)  -  provenance badge for catalog-added rows; starters stay fully editable
 deposit_percent (numeric(5,2), nullable)  -  booking-fee rule (e.g. 30 for "30% to secure the date"); pre-fills the invoice builder's payment schedule on apply. NULL = no default schedule
@@ -701,9 +703,20 @@ optional (boolean, not null, default false)  -  an add-on offered alongside the 
 position (integer, not null)
 created_at (timestamptz)
 
-Indexes: `packages(user_id)`, `package_items(package_id)`.
+`package_categories` (user-editable grouping, Notion-style — same
+pattern as `email_template_categories` but an independent taxonomy;
+**no default seeding or backfill**, every account starts empty):
+id (uuid, primary key)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+name (text, not null)
+color (text, not null, default 'slate')  -  same named palette keys as email categories
+position (integer, not null, default 0)  -  drag order
+created_at / updated_at (timestamptz; trigger `package_categories_set_updated_at`)
 
-RLS: base owner policy `user_id = auth.uid()` on both tables
+Indexes: `packages(user_id)`, `packages(category_id)`,
+`package_items(package_id)`, `package_categories(user_id)`.
+
+RLS: base owner policy `user_id = auth.uid()` on all three tables
 (`for all using (...)`, which Postgres reuses as the INSERT WITH CHECK).
 
 Related: `quotes.source_package_id` (nullable uuid, FK packages.id, on
@@ -714,7 +727,9 @@ still snapshotted, so the FK never feeds rendering.
 Migrations: `20260618000300_create_packages.sql`; `is_starter` added in
 `20260619000100_add_is_starter_to_templates.sql`; commercial fields
 (deposit/GST/archive/weekend loading), item `quantity`/`optional`, and
-`quotes.source_package_id` added in `20260702000000_packages_v2.sql`.
+`quotes.source_package_id` added in `20260702000000_packages_v2.sql`;
+`package_categories` + `packages.category_id` added in
+`20260709130000_package_categories.sql`.
 Starter packages are an opt-in catalog
 (`lib/payments/starter-line-item-templates.ts`), added via the
 `addStarterPackagesAction` server action; nothing is auto-seeded.

@@ -63,7 +63,8 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
     enabled: open,
     queryFn: async (): Promise<TemplateRow[]> => {
       const supabase = createClient()
-      const { data, error } = await supabase.from('email_templates').select('id, name, category:email_template_categories(name)').order('position')
+      // Archived templates stay out of the picker (soft retirement).
+      const { data, error } = await supabase.from('email_templates').select('id, name, category:email_template_categories(name)').is('archived_at', null).order('position')
       if (error) throw error
       return (data ?? []) as TemplateRow[]
     },

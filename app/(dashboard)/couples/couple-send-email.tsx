@@ -70,7 +70,10 @@ export function CoupleSendEmail({
     queryFn: async (): Promise<EmailTemplate[]> => {
       const { data, error } = await supabase.from('email_templates').select('*').order('position')
       if (error) throw error
-      return (data ?? []) as unknown as EmailTemplate[]
+      // Archived templates stay out of the send picker (soft retirement).
+      // Filtered client-side so a deploy that beats the migration
+      // degrades to "no filter" instead of a failed query.
+      return ((data ?? []) as unknown as EmailTemplate[]).filter((t) => !t.archived_at)
     },
   })
 

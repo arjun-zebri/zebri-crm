@@ -13,25 +13,28 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Archive, ArchiveRestore, ChevronDown, ChevronRight, Library, Package as PackageIcon, Plus } from 'lucide-react'
+import { Archive, ArchiveRestore, ChevronDown, ChevronRight, Copy, Library, Package as PackageIcon, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Empty } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
+import { RowActionsMenu } from '@/components/ui/row-actions-menu'
 import { useToast } from '@/components/ui/toast'
 import { packageTotals } from '@/lib/payments/package-math'
 import { STARTER_PACKAGES } from '@/lib/payments/starter-line-item-templates'
 import { createClient } from '@/lib/supabase/client'
+import { formatRelativeTime } from '@/lib/utils'
 
+import { categoryColorClasses } from './category-colors'
 import { PackageEditForm, type PackageDraft, type PackageFormValue } from './package-edit-form'
 import { PackagePreview } from './package-preview'
 import { addStarterPackagesAction } from './starter-actions'
 import { StarterCatalogModal } from './starter-catalog-modal'
-import { TemplatePreviewHeader } from './template-preview-header'
 import { TemplatesActions } from './templates-actions-slot'
 import { TemplatesTwoPane } from './templates-two-pane'
+import { usePackageCategories } from './use-package-categories'
 import { usePackageUsage } from './use-package-usage'
 
 /** A single priced line item within a package. */
@@ -51,6 +54,8 @@ interface Package {
   name: string
   description: string | null
   notes: string | null
+  /** User category (see `package_categories`); null = uncategorised. */
+  category_id: string | null
   position: number
   updated_at: string | null
   deposit_percent: number | null
@@ -109,16 +114,23 @@ function PackageRow({
   )
 }
 
-/** "Used in N quotes · M accepted", hidden until there is history. */
-function PackageUsageLine({ packageId }: { packageId: string }) {
+/** Meta line for the detail card: "Used in N quotes · M accepted ·
+ *  Edited X ago". Usage parts hide until there is history. */
+function PackageCaption({ packageId, updatedAt }: { packageId: string; updatedAt?: string | null }) {
   const { data } = usePackageUsage(packageId)
-  if (!data || data.total === 0) return null
-  return (
-    <p className="text-xs text-text-muted">
-      Used in {data.total} quote{data.total !== 1 ? 's' : ''}
-      {data.accepted > 0 ? ` · ${String(data.accepted)} accepted` : ''}
-    </p>
-  )
+  // Capture "now" once at mount via a lazy initializer (Date.now() during
+  // render is impure); the relative "Edited X ago" recomputes from props.
+  const [nowMs] = useState(() => Date.now())
+
+  const parts: string[] = []
+  if (data && data.total > 0) {
+    parts.push(`Used in ${String(data.total)} quote${data.total !== 1 ? 's' : ''}`)
+    if (data.accepted > 0) parts.push(`${String(data.accepted)} accepted`)
+  }
+  if (updatedAt) parts.push(`Edited ${formatRelativeTime(updatedAt, nowMs)}`)
+  if (parts.length === 0) return null
+
+  return <p className="text-xs text-text-muted">{parts.join(' · ')}</p>
 }
 
 /**
@@ -145,6 +157,28 @@ export function PackagesManager() {
   const archived = localPackages.filter((p) => !!p.archived_at)
   const visibleActive = isSearching ? active.filter(matches) : active
   const visibleArchived = isSearching ? archived.filter(matches) : archived
+
+  const { data: categories = [] } = usePackageCategories()
+
+  // Group active packages by category (user drag order + trailing
+  // "Uncategorised"), like the Emails library. With no categories at
+  // all the list stays flat — a lone "Uncategorised" header is noise.
+  const known = new Set(categories.map((c) => c.id))
+  const groups = [
+    ...categories.map((c) => ({
+      key: c.id,
+      label: c.name,
+      dotClass: categoryColorClasses(c.color).dot,
+      items: visibleActive.filter((p) => p.category_id === c.id),
+    })),
+    {
+      key: 'uncategorised',
+      label: 'Uncategorised',
+      dotClass: null as string | null,
+      items: visibleActive.filter((p) => !p.category_id || !known.has(p.category_id)),
+    },
+  ].filter((g) => g.items.length > 0)
+  const showGroupHeaders = categories.length > 0
 
   useEffect(() => {
     const getUser = async () => {
@@ -238,6 +272,7 @@ export function PackagesManager() {
           name: draft.name,
           notes: draft.notes,
           description: draft.description,
+          category_id: draft.category_id,
           deposit_percent: draft.deposit_percent,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
@@ -271,6 +306,7 @@ export function PackagesManager() {
           name: draft.name,
           notes: draft.notes,
           description: draft.description,
+          category_id: draft.category_id,
           deposit_percent: draft.deposit_percent,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
@@ -332,6 +368,7 @@ export function PackagesManager() {
           name: `${source.name} (copy)`,
           description: source.description,
           notes: source.notes,
+          category_id: source.category_id,
           deposit_percent: source.deposit_percent,
           gst_inclusive: source.gst_inclusive ?? true,
           weekend_loading_percent: source.weekend_loading_percent,
@@ -400,6 +437,7 @@ export function PackagesManager() {
     name: pkg.name,
     notes: pkg.notes,
     description: pkg.description,
+    category_id: pkg.category_id,
     deposit_percent: pkg.deposit_percent,
     gst_inclusive: pkg.gst_inclusive ?? true,
     weekend_loading_percent: pkg.weekend_loading_percent,
@@ -439,6 +477,7 @@ export function PackagesManager() {
     name: '',
     notes: null,
     description: null,
+    category_id: null,
     deposit_percent: null,
     gst_inclusive: true,
     weekend_loading_percent: null,
@@ -513,18 +552,6 @@ export function PackagesManager() {
             icon={PackageIcon}
             title="No packages yet"
             description="Save the services you sell as reusable packages, then drop them straight into quotes and invoices."
-            action={
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
-                  <Library size={14} strokeWidth={1.5} />
-                  Browse starters
-                </Button>
-                <Button size="sm" onClick={openCreate} className="gap-1.5">
-                  <Plus size={14} strokeWidth={1.5} />
-                  New Package
-                </Button>
-              </div>
-            }
           />
         </div>
       ) : (
@@ -535,6 +562,27 @@ export function PackagesManager() {
             <>
               {visibleActive.length === 0 && visibleArchived.length === 0 ? (
                 <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+              ) : showGroupHeaders ? (
+                <div className="space-y-5">
+                  {groups.map((group) => (
+                    <section key={group.key}>
+                      <h3 className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+                        {group.dotClass && <span className={`h-2 w-2 rounded-full ${group.dotClass}`} />}
+                        {group.label}
+                      </h3>
+                      <div className="mt-1 space-y-1">
+                        {group.items.map((pkg) => (
+                          <PackageRow
+                            key={pkg.id}
+                            pkg={pkg}
+                            selected={pkg.id === effectiveId}
+                            onSelect={setSelectedId}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
               ) : (
                 <div className="space-y-1">
                   {visibleActive.map((pkg) => (
@@ -580,46 +628,59 @@ export function PackagesManager() {
           }
           detail={
             selectedPkg ? (
-              <div className="space-y-4">
-                <TemplatePreviewHeader
-                  title={selectedPkg.name}
-                  {...(selectedPkg.notes ? { subtitle: selectedPkg.notes } : {})}
-                  updatedAt={selectedPkg.updated_at}
-                  meta={
-                    selectedPkg.archived_at ? (
-                      <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-text-muted">
-                        Archived
-                      </span>
-                    ) : undefined
-                  }
-                  editLabel="Edit package"
-                  onEdit={() => {
-                    setIsCreating(false)
-                    setEditingId(selectedPkg.id)
-                  }}
-                  onDuplicate={() => duplicateMutation.mutate(selectedPkg)}
-                  extraActions={[
-                    {
-                      label: selectedPkg.archived_at ? 'Unarchive' : 'Archive',
-                      icon: selectedPkg.archived_at ? (
-                        <ArchiveRestore size={15} strokeWidth={1.5} />
-                      ) : (
-                        <Archive size={15} strokeWidth={1.5} />
-                      ),
-                      onSelect: () => archiveMutation.mutate(selectedPkg),
-                    },
-                  ]}
-                  onDelete={() => setConfirmDeleteId(selectedPkg.id)}
-                />
-                <PackageUsageLine packageId={selectedPkg.id} />
-                <PackagePreview
-                  items={allItems?.[selectedPkg.id] ?? []}
-                  description={selectedPkg.description}
-                  depositPercent={selectedPkg.deposit_percent}
-                  gstInclusive={selectedPkg.gst_inclusive ?? true}
-                  weekendLoadingPercent={selectedPkg.weekend_loading_percent}
-                />
-              </div>
+              <PackagePreview
+                name={selectedPkg.name}
+                subtitle={selectedPkg.notes}
+                archived={!!selectedPkg.archived_at}
+                category={categories.find((c) => c.id === selectedPkg.category_id) ?? null}
+                meta={<PackageCaption packageId={selectedPkg.id} updatedAt={selectedPkg.updated_at} />}
+                actions={
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => {
+                        setIsCreating(false)
+                        setEditingId(selectedPkg.id)
+                      }}
+                    >
+                      <Pencil size={14} strokeWidth={1.5} />
+                      Edit
+                    </Button>
+                    <RowActionsMenu
+                      alwaysVisible
+                      actions={[
+                        {
+                          label: 'Duplicate',
+                          icon: <Copy size={15} strokeWidth={1.5} />,
+                          onSelect: () => duplicateMutation.mutate(selectedPkg),
+                        },
+                        {
+                          label: selectedPkg.archived_at ? 'Unarchive' : 'Archive',
+                          icon: selectedPkg.archived_at ? (
+                            <ArchiveRestore size={15} strokeWidth={1.5} />
+                          ) : (
+                            <Archive size={15} strokeWidth={1.5} />
+                          ),
+                          onSelect: () => archiveMutation.mutate(selectedPkg),
+                        },
+                        {
+                          label: 'Delete',
+                          destructive: true,
+                          icon: <Trash2 size={15} strokeWidth={1.5} />,
+                          onSelect: () => setConfirmDeleteId(selectedPkg.id),
+                        },
+                      ]}
+                    />
+                  </>
+                }
+                items={allItems?.[selectedPkg.id] ?? []}
+                description={selectedPkg.description}
+                depositPercent={selectedPkg.deposit_percent}
+                gstInclusive={selectedPkg.gst_inclusive ?? true}
+                weekendLoadingPercent={selectedPkg.weekend_loading_percent}
+              />
             ) : (
               <div className="flex h-full items-center justify-center pb-[10vh]">
                 <p className="text-sm text-text-subtle">Select a package to preview.</p>

@@ -87,6 +87,9 @@ export interface EmailTemplate {
   category_id: string | null
   is_starter: boolean
   position: number
+  /** Soft retirement: set when archived (hidden from the library list and
+   *  pickers, row kept); null = active. */
+  archived_at: string | null
   created_at: string
   updated_at: string
 }

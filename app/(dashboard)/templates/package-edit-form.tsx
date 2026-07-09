@@ -1,37 +1,39 @@
 /**
  * Create/edit form for a package (v2 commercial fields).
  *
- * Single-column modal form: name, subtitle, description prose, two
- * drag-sortable item sections (base line items + optional add-ons),
- * then the pricing details that pre-fill the builders on apply
- * (booking deposit %, weekend loading %, GST-inclusive flag).
+ * Modal form in the boxed-input style: name, a subtitle + category row
+ * (the same Notion-style categories email templates use), description
+ * prose, two drag-sortable item sections in bordered cards (base line
+ * items + optional add-ons), then the pricing details that pre-fill
+ * the builders on apply (booking deposit %, weekend loading %,
+ * GST-inclusive flag). The sticky footer carries the live package
+ * total beside Cancel / Save.
  *
- * Uses the same calm underline inputs as the Add Couple / Add Event
- * modals, and owns its `Modal` (mounted only while open by the manager)
- * with the shared sticky footer for Cancel / Save. State is local; the
- * manager owns persistence and passes the saved package in / takes the
- * draft out.
+ * State is local; the manager owns persistence and passes the saved
+ * package in / takes the draft out.
  *
  * @module app/(dashboard)/templates/package-edit-form
  */
 'use client'
 
-import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { formatAUD } from '@/lib/payments/format'
 import { packageTotals } from '@/lib/payments/package-math'
 
 import { LineItemsEditor, noArrowsClass, type EditableItem } from './line-items-editor'
+import { PackageCategoryPicker } from './package-category-picker'
 
 /** The draft a save hands back to the manager. */
 export interface PackageDraft {
   name: string
   notes: string | null
   description: string | null
+  category_id: string | null
   deposit_percent: number | null
   gst_inclusive: boolean
   weekend_loading_percent: number | null
@@ -44,6 +46,7 @@ export interface PackageFormValue {
   name: string
   notes: string | null
   description: string | null
+  category_id: string | null
   deposit_percent: number | null
   gst_inclusive: boolean
   weekend_loading_percent: number | null
@@ -59,13 +62,6 @@ interface PackageEditFormProps {
   isSaving: boolean
 }
 
-/** Calm underline inputs, matching the couple/event modals. Section /
- *  field headers are full-strength text; sub-labels stay muted. */
-const labelClass = 'mb-1 block text-sm font-medium text-text'
-const subLabelClass = 'mb-1 block text-sm text-text-muted'
-const inputClass =
-  'w-full border-0 border-b border-border bg-transparent px-0 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition'
-
 /** Parse an optional percent field: '' → null, clamped to 0–100. */
 function parsePercent(raw: string): number | null {
   if (raw.trim() === '') return null
@@ -74,10 +70,21 @@ function parsePercent(raw: string): number | null {
   return Math.min(n, 100)
 }
 
+/** Bold section label with an inline muted hint, per the modal design. */
+function SectionLabel({ label, hint }: { label: string; hint: string }) {
+  return (
+    <p className="mb-2">
+      <span className="text-sm font-medium text-text">{label}</span>
+      <span className="ml-2 text-xs text-text-muted">{hint}</span>
+    </p>
+  )
+}
+
 export function PackageEditForm({ title, value, onSave, onClose, isSaving }: PackageEditFormProps) {
   const [name, setName] = useState(value.name)
   const [notes, setNotes] = useState(value.notes ?? '')
   const [description, setDescription] = useState(value.description ?? '')
+  const [categoryId, setCategoryId] = useState<string | null>(value.category_id)
   const [baseItems, setBaseItems] = useState<EditableItem[]>(value.items.filter((i) => !i.optional))
   const [addOns, setAddOns] = useState<EditableItem[]>(value.items.filter((i) => i.optional))
   const [depositPercent, setDepositPercent] = useState(value.deposit_percent?.toString() ?? '')
@@ -95,6 +102,7 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
       name: name.trim(),
       notes: notes.trim() || null,
       description: description.trim() || null,
+      category_id: categoryId,
       deposit_percent: parsePercent(depositPercent),
       gst_inclusive: gstInclusive,
       weekend_loading_percent: parsePercent(weekendLoading),
@@ -109,91 +117,115 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
     <Modal
       isOpen
       onClose={onClose}
-      title={title}
+      size="lg"
+      title={
+        <div className="min-w-0">
+          <p className="text-xl font-semibold text-text">{title}</p>
+          <p className="mt-0.5 text-sm font-normal text-text-muted">
+            Build a reusable package you can drop into any quote.
+          </p>
+        </div>
+      }
       footer={
-        <div className="flex items-center justify-end gap-2">
-          <Button onClick={onClose} disabled={isSaving} variant="outline" size="sm">
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving || !name.trim()} size="sm">
-            {isSaving ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : null}
-            Save
-          </Button>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Package total
+            </p>
+            <p className="truncate text-xl font-semibold tabular-nums text-text">
+              {formatAUD(totals.base)}
+              {totals.addOns > 0 && (
+                <span className="ml-2 text-xs font-normal tabular-nums text-text-muted">
+                  {formatAUD(totals.full)} with all add-ons
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button onClick={onClose} disabled={isSaving} variant="outline" size="sm">
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving || !name.trim()} loading={isSaving} size="sm">
+              Save package
+            </Button>
+          </div>
         </div>
       }
     >
       <div className="space-y-5">
-        <div>
-          <label className={labelClass}>
-            Package name <span className="text-danger">*</span>
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Gold Package"
-            disabled={isSaving}
-            autoFocus
-            className={inputClass}
-          />
-        </div>
+        <Input
+          label="Package name"
+          size="sm"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g., Gold Package"
+          disabled={isSaving}
+          autoFocus
+          required
+        />
 
-        <div>
-          <label className={labelClass}>Subtitle</label>
-          <input
-            type="text"
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Subtitle"
+            size="sm"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Short description shown on the package list"
+            placeholder="Short description shown on the list"
             disabled={isSaving}
-            className={inputClass}
           />
+          <PackageCategoryPicker value={categoryId} onChange={setCategoryId} />
         </div>
 
-        <div>
-          <label className={labelClass}>Description</label>
+        <div className="space-y-1">
+          <label htmlFor="package-description" className="block text-caption font-medium text-text">
+            Description
+          </label>
           <textarea
+            id="package-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="The details couples read before the prices."
             disabled={isSaving}
-            rows={4}
-            className="w-full resize-none border-0 border-b border-border bg-transparent px-0 py-1 text-sm text-text placeholder:text-text-subtle focus:border-border-strong focus:outline-none transition"
+            rows={3}
+            className="block w-full resize-none rounded-control border border-border bg-surface px-2.5 py-2 text-caption text-text placeholder:text-text-subtle transition-colors focus:border-brand-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
         <div>
-          <label className={labelClass}>Line items</label>
-          <LineItemsEditor
-            items={baseItems}
-            onChange={setBaseItems}
-            disabled={isSaving}
-            descriptionPlaceholder="e.g., MC Ceremony"
-            addLabel="Add line item"
-            showQuantity
-            amountHeader="Unit price"
-          />
+          <SectionLabel label="Line items" hint="What's included in the base price" />
+          <div className="rounded-xl border border-border px-4 pt-2 pb-1.5">
+            <LineItemsEditor
+              items={baseItems}
+              onChange={setBaseItems}
+              disabled={isSaving}
+              descriptionPlaceholder="e.g., MC Ceremony"
+              addLabel="Add line item"
+              showQuantity
+              amountHeader="Unit price"
+              compact
+            />
+          </div>
         </div>
 
         <div>
-          <label className={labelClass}>Optional add-ons</label>
-          <p className="mt-2 mb-3 text-xs text-text-muted">
-            Extras offered alongside the package. You pick which ones to include when quoting.
-          </p>
-          <LineItemsEditor
-            items={addOns}
-            onChange={setAddOns}
-            disabled={isSaving}
-            descriptionPlaceholder="e.g., Rehearsal attendance"
-            addLabel="Add add-on"
-            showQuantity
-            amountHeader="Unit price"
-          />
+          <SectionLabel label="Optional add-ons" hint="Extras you pick per quote" />
+          <div className="rounded-xl border border-border px-4 pt-2 pb-1.5">
+            <LineItemsEditor
+              items={addOns}
+              onChange={setAddOns}
+              disabled={isSaving}
+              descriptionPlaceholder="e.g., Rehearsal attendance"
+              addLabel="Add add-on"
+              showQuantity
+              amountHeader="Unit price"
+              compact
+            />
+          </div>
         </div>
 
         <div>
-          <label className={labelClass}>Pricing details</label>
-          <div className="mt-3 grid grid-cols-2 gap-4">
+          <SectionLabel label="Pricing details" hint="Pre-fills the builders when applied" />
+          <div className="grid grid-cols-2 gap-4">
             <PercentField
               label="Booking deposit"
               value={depositPercent}
@@ -215,27 +247,12 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
             label="Prices include GST"
           />
         </div>
-
-        {(baseItems.length > 0 || addOns.length > 0) && (
-          <div className="space-y-1 border-t border-border pt-3">
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm text-text-muted">Package total</span>
-              <span className="text-sm font-semibold tabular-nums text-text">{formatAUD(totals.base)}</span>
-            </div>
-            {totals.addOns > 0 && (
-              <div className="flex items-baseline justify-between">
-                <span className="text-xs text-text-muted">With all add-ons</span>
-                <span className="text-xs tabular-nums text-text-muted">{formatAUD(totals.full)}</span>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </Modal>
   )
 }
 
-/** Underline percent input with a trailing "%", matching the form's inputs. */
+/** Boxed percent input with a trailing "%", matching the Input primitive. */
 function PercentField({
   label,
   value,
@@ -248,9 +265,9 @@ function PercentField({
   disabled: boolean
 }) {
   return (
-    <div>
-      <label className={subLabelClass}>{label}</label>
-      <div className="flex items-center border-b border-border transition focus-within:border-border-strong">
+    <div className="space-y-1">
+      <label className="block text-caption font-medium text-text">{label}</label>
+      <div className="flex h-8 items-center rounded-control border border-border bg-surface px-2.5 transition-colors focus-within:border-brand-fg">
         <input
           type="number"
           value={value}
@@ -260,10 +277,10 @@ function PercentField({
           max="100"
           step="1"
           aria-label={`${label} percent`}
-          className={`w-full bg-transparent px-0 py-2 text-left text-sm tabular-nums text-text placeholder:text-text-subtle focus:outline-none ${noArrowsClass}`}
+          className={`w-full bg-transparent text-caption tabular-nums text-text placeholder:text-text-subtle focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${noArrowsClass}`}
           disabled={disabled}
         />
-        <span className="pl-1 text-sm text-text-muted">%</span>
+        <span className="pl-1 text-caption text-text-muted">%</span>
       </div>
     </div>
   )

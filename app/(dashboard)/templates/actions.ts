@@ -4,8 +4,9 @@
  * Every action is Zod-validated and runs through the RLS-scoped server
  * client (never the service role), returning a tagged
  * `{ ok, data } | { ok: false, error }` the hook pattern-matches.
- * These cover the library's create / update / delete / clone mutations
- * plus adding starter templates from the catalog by name.
+ * These cover the library's create / update / delete / clone /
+ * archive mutations plus adding starter templates from the catalog
+ * by name.
  *
  * @module app/(dashboard)/templates/actions
  */
@@ -68,6 +69,7 @@ function toTemplate(row: Row): EmailTemplate {
     category_id: row.category_id,
     is_starter: row.is_starter,
     position: row.position,
+    archived_at: row.archived_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }
@@ -178,6 +180,35 @@ export async function deleteTemplateAction(id: string): Promise<ActionResult<{ i
     return { ok: false, error: 'Could not delete template.' }
   }
   return { ok: true, data: { id } }
+}
+
+/* ─── setTemplateArchivedAction ────────────────────────────────── */
+
+/**
+ * Archive or restore a template (soft retirement). Archived templates
+ * drop out of the Emails library list and the template pickers but
+ * keep their row, so send history and automation references survive.
+ */
+export async function setTemplateArchivedAction(
+  id: string,
+  archived: boolean,
+): Promise<ActionResult<EmailTemplate>> {
+  if (!uuidSchema.safeParse(id).success) return { ok: false, error: 'Invalid template id.' }
+
+  const { supabase, user } = await requireUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const { data, error } = await supabase
+    .from('email_templates')
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error || !data) {
+    logger.error('[templates/actions] setTemplateArchivedAction failed', error, { userId: user.id, id })
+    return { ok: false, error: archived ? 'Could not archive template.' : 'Could not unarchive template.' }
+  }
+  return { ok: true, data: toTemplate(data) }
 }
 
 /* ─── cloneTemplateAction ──────────────────────────────────────── */

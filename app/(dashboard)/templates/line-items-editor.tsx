@@ -43,6 +43,9 @@ interface LineItemsEditorProps {
   showQuantity?: boolean
   /** Header over the price column. Defaults to "Amount". */
   amountHeader?: string
+  /** Caption-size cells for modals built on sm inputs (packages).
+   *  Default keeps text-sm to match the underline-style modals. */
+  compact?: boolean
 }
 
 export function LineItemsEditor({
@@ -53,6 +56,7 @@ export function LineItemsEditor({
   addLabel,
   showQuantity = false,
   amountHeader = 'Amount',
+  compact = false,
 }: LineItemsEditorProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
@@ -99,6 +103,7 @@ export function LineItemsEditor({
                 descriptionPlaceholder={descriptionPlaceholder}
                 gridClass={gridClass}
                 showQuantity={showQuantity}
+                compact={compact}
                 onUpdate={updateItem}
                 onRemove={removeItem}
               />
@@ -110,7 +115,7 @@ export function LineItemsEditor({
         type="button"
         onClick={addItem}
         disabled={disabled}
-        className="mt-2 flex items-center gap-1 py-1 text-sm text-text-muted transition hover:text-text cursor-pointer disabled:opacity-50"
+        className={`mt-2 flex items-center gap-1 py-1 ${compact ? 'text-caption' : 'text-sm'} text-text-muted transition hover:text-text cursor-pointer disabled:opacity-50`}
       >
         <Plus size={14} strokeWidth={1.5} />
         {addLabel}
@@ -125,6 +130,7 @@ function ItemRow({
   descriptionPlaceholder,
   gridClass,
   showQuantity,
+  compact,
   onUpdate,
   onRemove,
 }: {
@@ -133,6 +139,7 @@ function ItemRow({
   descriptionPlaceholder: string
   gridClass: string
   showQuantity: boolean
+  compact: boolean
   onUpdate: (id: string, patch: Partial<EditableItem>) => void
   onRemove: (id: string) => void
 }) {
@@ -147,7 +154,7 @@ function ItemRow({
     opacity: isDragging ? 0.5 : 1,
   } as React.CSSProperties
 
-  const cellInput = 'bg-transparent py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none'
+  const cellInput = `bg-transparent ${compact ? 'py-1.5 text-caption' : 'py-2 text-sm'} text-text placeholder:text-text-subtle focus:outline-none`
 
   return (
     <div ref={setNodeRef} style={style} className={`${gridClass} border-b border-border`}>
@@ -186,7 +193,7 @@ function ItemRow({
       )}
 
       <div className="relative">
-        <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-sm text-text-muted">$</span>
+        <span className={`pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 ${compact ? 'text-caption' : 'text-sm'} text-text-muted`}>$</span>
         <input
           type="number"
           value={item.amount || ''}

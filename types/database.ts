@@ -1070,6 +1070,7 @@ export type Database = {
       }
       email_templates: {
         Row: {
+          archived_at: string | null
           category_id: string | null
           content: Json
           created_at: string
@@ -1084,6 +1085,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
           category_id?: string | null
           content?: Json
           created_at?: string
@@ -1098,6 +1100,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived_at?: string | null
           category_id?: string | null
           content?: Json
           created_at?: string
@@ -1514,9 +1517,40 @@ export type Database = {
           },
         ]
       }
+      package_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       packages: {
         Row: {
           archived_at: string | null
+          category_id: string | null
           created_at: string
           deposit_percent: number | null
           description: string | null
@@ -1532,6 +1566,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
+          category_id?: string | null
           created_at?: string
           deposit_percent?: number | null
           description?: string | null
@@ -1547,6 +1582,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
+          category_id?: string | null
           created_at?: string
           deposit_percent?: number | null
           description?: string | null
@@ -1560,7 +1596,15 @@ export type Database = {
           user_id?: string
           weekend_loading_percent?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "packages_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "package_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portal_files: {
         Row: {

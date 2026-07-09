@@ -4,8 +4,9 @@
  * Sits above every tab's read-only preview: the template name, an optional
  * meta chip (lifecycle stage for emails, total for line-item tabs), an
  * "Edited X ago" line, and the actions. The preview is read-only, so
- * `Edit` opens that tab's existing editor modal. Edit / Duplicate / Delete
- * are tucked into a single `⋯` overflow popover to keep the header calm.
+ * `Edit` opens that tab's existing editor modal. On `sm+` Edit is a
+ * visible button beside a `⋯` popover holding Duplicate / Delete; on
+ * phones the button hides and Edit joins the popover instead.
  *
  * @module app/(dashboard)/templates/template-preview-header
  */
@@ -14,6 +15,7 @@
 import { Copy, Pencil, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { RowActionsMenu } from '@/components/ui/row-actions-menu'
 import { formatRelativeTime } from '@/lib/utils'
 
@@ -52,7 +54,9 @@ export function TemplatePreviewHeader({
   const edited = updatedAt ? formatRelativeTime(updatedAt, nowMs) : ''
 
   const menuActions = [
-    { label: editLabel, icon: <Pencil size={15} strokeWidth={1.5} />, onSelect: onEdit },
+    // Covered by the visible Edit button from `sm` up, so only phones
+    // see it in the popover.
+    { label: editLabel, icon: <Pencil size={15} strokeWidth={1.5} />, onSelect: onEdit, className: 'sm:hidden' },
     ...(onDuplicate
       ? [{ label: 'Duplicate', icon: <Copy size={15} strokeWidth={1.5} />, onSelect: onDuplicate }]
       : []),
@@ -73,7 +77,11 @@ export function TemplatePreviewHeader({
         {edited ? <p className="mt-0.5 text-xs text-text-muted">Edited {edited}</p> : null}
       </div>
 
-      <div className="flex shrink-0 items-center">
+      <div className="flex shrink-0 items-center gap-2">
+        <Button size="sm" variant="outline" className="hidden gap-1.5 sm:inline-flex" onClick={onEdit}>
+          <Pencil size={14} strokeWidth={1.5} />
+          Edit
+        </Button>
         <RowActionsMenu alwaysVisible actions={menuActions} />
       </div>
     </div>

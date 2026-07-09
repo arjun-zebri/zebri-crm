@@ -12,7 +12,7 @@
 'use client'
 
 import type { JSONContent } from '@tiptap/react'
-import { Library, Mail, Plus } from 'lucide-react'
+import { Archive, ArchiveRestore, Library, Mail, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 
@@ -33,7 +33,7 @@ import { TemplatesActions } from './templates-actions-slot'
 import { TemplatesLibrary } from './templates-library'
 import { TemplatesTwoPane } from './templates-two-pane'
 import { useCategories } from './use-categories'
-import { useCloneTemplate, useDeleteTemplate, useTemplates } from './use-templates'
+import { useCloneTemplate, useDeleteTemplate, useSetTemplateArchived, useTemplates } from './use-templates'
 
 interface EmailsTabProps {
   businessName?: string | undefined
@@ -59,6 +59,7 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
   const { data: categories = [] } = useCategories()
   const clone = useCloneTemplate()
   const remove = useDeleteTemplate()
+  const setArchived = useSetTemplateArchived()
   const { toast } = useToast()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -70,11 +71,17 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
 
   const existingNames = useMemo(() => new Set(templates.map((t) => t.name)), [templates])
 
+  const activeTemplates = templates.filter((t) => !t.archived_at)
+  const archivedTemplates = templates.filter((t) => t.archived_at)
+
   // Effective selection: the user's pick when still present, else the first
-  // template (so the desktop preview is never blank). Derived in render to
-  // avoid a setState-in-effect; the mobile switch keys off the raw pick.
+  // active template (so the desktop preview is never blank, and never
+  // defaults to something archived). Derived in render to avoid a
+  // setState-in-effect; the mobile switch keys off the raw pick.
   const effectiveId =
-    selectedId && templates.some((t) => t.id === selectedId) ? selectedId : (templates[0]?.id ?? null)
+    selectedId && templates.some((t) => t.id === selectedId)
+      ? selectedId
+      : (activeTemplates[0]?.id ?? templates[0]?.id ?? null)
   const selected = templates.find((t) => t.id === effectiveId) ?? null
 
   const openNew = () => {
@@ -88,6 +95,16 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
       toast('Template duplicated', 'success')
     } catch {
       toast('Could not duplicate', 'error')
+    }
+  }
+
+  async function handleArchiveToggle(t: EmailTemplate) {
+    const archiving = !t.archived_at
+    try {
+      await setArchived.mutateAsync({ id: t.id, archived: archiving })
+      toast(archiving ? 'Template archived' : 'Template restored', 'success')
+    } catch {
+      toast(archiving ? 'Could not archive' : 'Could not restore', 'error')
     }
   }
 
@@ -174,7 +191,8 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
         onBack={() => setSelectedId(null)}
         list={
           <TemplatesLibrary
-            templates={templates}
+            templates={activeTemplates}
+            archived={archivedTemplates}
             isLoading={isLoading}
             isError={isError}
             onRetry={refetch}
@@ -190,7 +208,16 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
                 title={selected.name}
                 meta={(() => {
                   const category = categories.find((c) => c.id === selected.category_id)
-                  return category ? <CategoryChip category={category} /> : undefined
+                  return (
+                    <>
+                      {category ? <CategoryChip category={category} /> : null}
+                      {selected.archived_at ? (
+                        <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-text-muted">
+                          Archived
+                        </span>
+                      ) : null}
+                    </>
+                  )
                 })()}
                 updatedAt={selected.updated_at}
                 onEdit={() => {
@@ -198,6 +225,17 @@ export function EmailsTab({ businessName, contactName, email, emailSignature, br
                   setEditorOpen(true)
                 }}
                 onDuplicate={() => handleClone(selected)}
+                extraActions={[
+                  {
+                    label: selected.archived_at ? 'Unarchive' : 'Archive',
+                    icon: selected.archived_at ? (
+                      <ArchiveRestore size={15} strokeWidth={1.5} />
+                    ) : (
+                      <Archive size={15} strokeWidth={1.5} />
+                    ),
+                    onSelect: () => handleArchiveToggle(selected),
+                  },
+                ]}
                 onDelete={() => setPendingDelete(selected)}
               />
               <EmailTemplatePreview subject={selected.subject} content={selected.content} />

@@ -9,6 +9,9 @@ export interface RowAction {
   onSelect: () => void
   destructive?: boolean
   icon?: React.ReactNode
+  /** Extra classes on the menu item — e.g. `sm:hidden` to drop an entry
+   *  once a visible button covers the same action on larger screens. */
+  className?: string
 }
 
 interface RowActionsMenuProps {
@@ -107,7 +110,7 @@ export function RowActionsMenu({ actions, submenus, alwaysVisible }: RowActionsM
                 a.destructive
                   ? 'text-red-600 hover:bg-red-50'
                   : 'text-gray-700 hover:bg-gray-50'
-              }`}
+              } ${a.className ?? ''}`}
             >
               {a.icon}
               {a.label}

@@ -1,11 +1,12 @@
 /**
- * Category control for the email-template editor.
+ * Category control for the package edit modal.
  *
  * Thin data wrapper: wires the presentational
- * {@link CategoryPickerBase} to the email-template category hooks
- * (`use-categories.ts`). See the base for the full UI behaviour.
+ * {@link CategoryPickerBase} to the package category hooks
+ * (`use-package-categories.ts`). See the base for the full UI
+ * behaviour.
  *
- * @module app/(dashboard)/templates/category-picker
+ * @module app/(dashboard)/templates/package-category-picker
  */
 'use client'
 
@@ -13,26 +14,26 @@ import { useToast } from '@/components/ui/toast'
 
 import { CategoryPickerBase } from './category-picker-base'
 import {
-  useCategories,
-  useCreateCategory,
-  useDeleteCategory,
-  useReorderCategories,
-  useUpdateCategory,
-} from './use-categories'
+  useCreatePackageCategory,
+  useDeletePackageCategory,
+  usePackageCategories,
+  useReorderPackageCategories,
+  useUpdatePackageCategory,
+} from './use-package-categories'
 
-interface CategoryPickerProps {
+interface PackageCategoryPickerProps {
   /** Selected category id (`null` = no category). */
   value: string | null
   onChange: (id: string | null) => void
 }
 
-export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
+export function PackageCategoryPicker({ value, onChange }: PackageCategoryPickerProps) {
   const { toast } = useToast()
-  const { data: categories = [] } = useCategories()
-  const create = useCreateCategory()
-  const update = useUpdateCategory()
-  const remove = useDeleteCategory()
-  const reorder = useReorderCategories()
+  const { data: categories = [] } = usePackageCategories()
+  const create = useCreatePackageCategory()
+  const update = useUpdatePackageCategory()
+  const remove = useDeletePackageCategory()
+  const reorder = useReorderPackageCategories()
 
   return (
     <CategoryPickerBase
