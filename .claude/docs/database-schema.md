@@ -736,6 +736,78 @@ Starter packages are an opt-in catalog
 Pure package money math (line totals, base vs add-on totals, weekend
 loading line) lives in `lib/payments/package-math.ts`.
 
+## proposals / proposal_options / proposal_option_items (Proposals — replacing Quotes)
+
+The send→accept surface replacing quotes (full spec:
+`.claude/docs/proposals.md`; rollout in progress, quotes coexist until
+the removal phases). A proposal offers a couple 1–N package options;
+each option snapshots a package's items AND commercial terms at apply
+time.
+
+`proposals` columns:
+id (uuid, primary key)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+couple_id (uuid, FK couples.id, on delete cascade)
+title (text, not null)
+proposal_number (text, not null)  -  sequential per user via `generate_proposal_number` ("PR-001")
+status (text, not null, default 'draft', check: draft | sent | accepted | declined)  -  "expired" is display-only, derived from expires_at
+notes (text, nullable)
+expires_at (date, nullable)
+share_token (uuid, not null, default gen_random_uuid())
+share_token_enabled (boolean, not null, default false)  -  enabled by the send action
+accepted_option_id (uuid, nullable, FK proposal_options.id, on delete set null)
+accepted_addon_selection (jsonb, nullable)  -  `{option_item_id: bool}` for the chosen option's add-ons
+accepted_at (timestamptz, nullable)
+email_sent_at (timestamptz, nullable)
+subtotal (numeric(10,2), not null, default 0)  -  denormalised list display: primary option total pre-acceptance, accepted selection total after
+created_at / updated_at (timestamptz; trigger `proposals_set_updated_at`)
+
+`proposal_options` columns:
+id (uuid, primary key)
+proposal_id (uuid, FK proposals.id, on delete cascade)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+position (integer, not null)
+title (text, not null)  -  pre-filled from the package name, editable
+description (text, nullable)
+source_package_id (uuid, nullable, FK packages.id, on delete set null)  -  provenance only
+deposit_percent (numeric(5,2), nullable) / gst_inclusive (boolean, not null, default true) / weekend_loading_percent (numeric(5,2), nullable)  -  snapshot of the package's commercial terms; feeds invoice generation
+subtotal (numeric(10,2), not null, default 0)  -  base (non-add-on) items total
+
+`proposal_option_items` columns:
+id (uuid, primary key)
+option_id (uuid, FK proposal_options.id, on delete cascade)
+user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
+description (text, not null)  -  quantities pre-flattened ("2 × Extra hour")
+amount (numeric(10,2), not null)  -  line total
+is_addon (boolean, not null, default false)
+default_included (boolean, not null, default false)  -  MC's pre-tick (only meaningful when is_addon)
+position (integer, not null)
+
+Cross-references: `invoices.proposal_id` and `contracts.proposal_id`
+(both uuid nullable, FK proposals.id on delete set null, indexed) —
+provenance for documents generated from an accepted proposal.
+
+Public RPCs (SECURITY DEFINER, anon): `get_public_proposal(token)`
+(payload + `_user_branding` merge; no user_id/share_token leakage),
+`accept_proposal(token, chosen_option_id, addon_selection)` (validates
+the choice against this proposal's own options/add-ons, records the
+selection, recomputes subtotal, advances couple to 'confirmed', creates
+the follow-up task; the accepted_at flip fires
+`tg_proposals_emit_lifecycle` → proposal_accepted event),
+`decline_proposal(token)`. Automation events proposal_sent /
+proposal_accepted / proposal_declined emit from the lifecycle trigger.
+
+Indexes: `proposals(user_id)`, `proposals(couple_id)`,
+`proposals(share_token)`, `proposal_options(proposal_id)`,
+`proposal_options(source_package_id)`,
+`proposal_option_items(option_id)`, `invoices(proposal_id)`,
+`contracts(proposal_id)`.
+
+RLS: base owner policy `user_id = auth.uid()` (USING + WITH CHECK) on
+all three tables; anon access via the RPCs only.
+
+Migration: `20260710000000_add_proposals_feature.sql`.
+
 ## invoice_templates / invoice_template_items (Templates page — Invoices tab)
 
 Reusable invoice skeletons on the **Invoices** tab of `/templates`.

@@ -485,6 +485,9 @@ DELETE (sampled clean across the migrations).
 | `quote_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments / Quotes |
 | `quote_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `quote_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `proposals` | ✅ | `user_id` | ✅ `tests/integration/payments/public-proposal-rpcs.test.ts` (Proposals Phase A — public RPC guards + cross-tenant denial) | Payments / Proposals |
+| `proposal_options` | ✅ | `user_id` | ✅ `tests/integration/payments/public-proposal-rpcs.test.ts` (Proposals Phase A) | Payments / Proposals |
+| `proposal_option_items` | ✅ | `user_id` | ✅ `tests/integration/payments/public-proposal-rpcs.test.ts` (Proposals Phase A) | Payments / Proposals |
 | `invoices` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `invoice_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
