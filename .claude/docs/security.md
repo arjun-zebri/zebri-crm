@@ -117,6 +117,9 @@ already carry their own limits in `STRIPE_RATE_LIMITS`).
 | `saveInvoiceAction` | ✅ `saveInvoiceSchema` (invoiceId nullable, coupleId uuid, payment schedule, items[]) | Writes `quantity=1, unit_price=amount` for forward-compat with existing invoice_items columns |
 | `deleteQuoteAction` | ✅ `z.uuid()` | Cascade handles items |
 | `deleteInvoiceAction` | ✅ `z.uuid()` | Cascade handles items |
+| `saveProposalAction` | ✅ `saveProposalSchema` (proposalId nullable, coupleId uuid, options[1..6] each with items[≤100]) | Transactional wipe-and-reinsert of the option/item tree. **Rejects accepted/declined proposals** — the agreement record is immutable; revisions go through duplicate |
+| `deleteProposalAction` | ✅ `z.uuid()` | Cascade handles options + items |
+| `duplicateProposalAction` | ✅ `z.uuid()` | Clones as fresh draft: new PR number, new share token, cleared acceptance |
 
 Status-change mutations (mark paid / revert / cancel) stay inline
 in the modals as one-line UPDATEs — they're RLS-protected by the
@@ -131,6 +134,7 @@ anyway, but we cap on our side so the alert fires on our schedule.
 | Route | Zod | Rate-limit | Notes |
 |---|---|---|---|
 | `app/api/email/send-quote/route.ts` | ✅ `z.object({ quoteId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendQuote`; hit fires `email_rate_limit_hit` | RLS scopes the quote SELECT to the authenticated user |
+| `app/api/email/send-proposal/route.ts` | ✅ `z.object({ proposalId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendProposal`; hit fires `email_rate_limit_hit` (`action: 'sendProposal'`) | Same RLS scoping; 400s on accepted/declined proposals (responses are final). Share-enable + draft→sent flip independently (the send-quote regression class) |
 | `app/api/email/send-invoice/route.ts` | ✅ `z.object({ invoiceId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendInvoice` | Same RLS scoping |
 | `app/api/email/send-contract/route.ts` | ☐ Phase 3 (Contracts) | ☐ Phase 3 | Not in 2C scope |
 | `app/api/email/send-template/route.ts` | ✅ `z.object({ coupleId, templateId?, inlineSubject?, inlineBody?, overrides, sendAnyway, attachmentFileIds })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendTemplate`; hit fires `email_rate_limit_hit` (`action: 'sendTemplate'`) | RLS scopes template + couple loads to the caller. **Safety property:** the send is **blocked (422)** when `detectMissingVariables` finds an unresolved variable, unless `sendAnyway` is set — re-checked server-side so the client can't bypass it. Static attachments downloaded via the owner-only `email-template-files` bucket |

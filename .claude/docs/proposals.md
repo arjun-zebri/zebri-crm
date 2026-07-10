@@ -107,9 +107,14 @@ banner**, never silently broken.
 
 ## Rollout phases
 
-A schema+RPCs → B server actions+email → C composer+payments tab →
-D public page+branding surface → E invoice generation+contract link →
-F automations+portal+docs → G delete quote code → H destructive drop
-migration (`-- @ALLOW_DESTRUCTIVE`). Every phase is its own PR to
-`staging`; quotes keep working until G. Full plan of record:
+A schema+RPCs (**done**) → B server actions+email (**done**:
+`saveProposalAction` / `deleteProposalAction` /
+`duplicateProposalAction` in `app/(dashboard)/payments/actions.ts`;
+`POST /api/email/send-proposal` + `sendProposalEmail`/`proposalHtml`;
+accepted/declined proposals are locked against edits and re-sends) →
+C composer+payments tab → D public page+branding surface → E invoice
+generation+contract link → F automations+portal+docs → G delete quote
+code → H destructive drop migration (`-- @ALLOW_DESTRUCTIVE`). Every
+phase is its own PR to `staging`; quotes keep working until G. Full
+plan of record:
 `~/.claude/plans/theres-too-much-white-parsed-mango.md` (2026-07-10).
