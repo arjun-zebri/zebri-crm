@@ -136,6 +136,38 @@ export const STARTER_EMAIL_TEMPLATES: readonly StarterTemplate[] = [
       p(v('mc.signature')),
     ),
   },
+  {
+    name: 'Proposal cover email',
+    description: 'Send the couple their proposal with a warm note.',
+    lifecycleStage: 'quote',
+    subject: 'Your proposal from {{mc.business_name}}',
+    content: body(
+      p('Hi ', v('couple.primary_name'), ','),
+      blank(),
+      p(
+        'It was lovely to chat about your wedding on ',
+        v('event.date | friendly'),
+        '. Thank you for considering me to be part of it.',
+      ),
+      blank(),
+      p(
+        'As promised, here is your proposal. You can compare the package options, pick the extras you want, and accept it online:',
+      ),
+      blank(),
+      p(v('proposal.link')),
+      blank(),
+      p(
+        'Everything is based on what we discussed, and nothing is set in stone. If you would like something adjusted, just reply and I will update it the same day.',
+      ),
+      blank(),
+      p(
+        'Your date is not held until the proposal is accepted and the deposit is paid, so if you are keen, locking it in sooner rather than later is the safest move. No pressure either way, and I am happy to answer anything at all in the meantime.',
+      ),
+      blank(),
+      p('Warm regards,'),
+      p(v('mc.signature')),
+    ),
+  },
 
   // ── Booking ──────────────────────────────────────────────────
   {

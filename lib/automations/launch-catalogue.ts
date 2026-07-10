@@ -39,13 +39,18 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   'new_enquiry',
   'couple_stage_changed',
   'booking_cancelled',
-  // Quotes
+  // Quotes / proposals
   'quote_created',
   'quote_sent',
   'quote_accepted',
   'quote_declined',
   'quote_due',
   'quote_overdue',
+  'proposal_sent',
+  'proposal_accepted',
+  'proposal_declined',
+  'proposal_due',
+  'proposal_overdue',
   // Invoices / payments
   'invoice_created',
   'invoice_sent',
@@ -107,6 +112,7 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'create_task',
   'update_task',
   'send_quote',
+  'send_proposal',
   'send_contract',
   'send_invoice',
   'send_couple_questionnaire',
@@ -119,6 +125,7 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'request_review',
   'send_referral_request',
   'create_invoice_from_quote', // AC2
+  'create_invoice_from_proposal', // AC3
   'generate_run_sheet_pdf', // AC1 (run-sheet link)
 ])
 

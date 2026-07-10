@@ -559,9 +559,11 @@ Route: `/payments`
 
 Route group: `(dashboard)`
 
-Purpose: Unified hub for managing quotes and invoices. The MC can view, create, and edit all financial documents (quotes and invoices) in one place with tab-based navigation.
+Purpose: Unified hub for managing proposals, quotes and invoices. The MC can view, create, and edit all financial documents in one place with tab-based navigation.
 
-Header: Title "Payments" + three tabs: **Quotes** | **Invoices** | **Contracts** (Contracts only renders when the user has Pro/Max via `hasContractsAccess(user)`). Search bar + "New Quote" / "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
+Header: Title "Payments" + four tabs: **Proposals** | **Quotes** | **Invoices** | **Contracts** (Proposals is the default tab; Quotes is being retired by the proposals rollout — see `.claude/docs/proposals.md`). Search bar + "New Proposal" / "New Quote" / "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
+
+**Proposals tab (Proposals Phase C+):** `proposals-list.tsx` renders the shared payments table (number PR-NNN, title, couple, status pill draft/sent/accepted/declined with display-only expired derivation, primary-option subtotal, created date). Rows open `ProposalBuilderModal` (`components/builders/proposal-builder-modal.tsx`): couple + expiry meta row, a stack of option cards (each snapshots a package: editable title/description, base items via the shared LineItemsTable, add-ons with the MC's pre-tick checkboxes, display-only terms line "25% deposit · GST incl. · weekend +15%"), packages applied via the shared TemplatePicker, "Add blank option" always available, notes, two-tab live preview (couple page summary + real cover email), ShareAndSend footer (send = `/api/email/send-proposal`). Accepted/declined proposals are locked server-side; the overflow offers "Generate invoice" (accepted: creates a draft invoice from the RECORDED selection with the option's deposit % + GST treatment, provenance `invoices.proposal_id`) and "Duplicate to revise". The couple-facing page is `/proposal/[token]` (option chooser, add-on ticks with live total, two-step accept; accepted view renders the recorded receipt).
 
 **Composition (Phase 2C decomposition):** `app/(dashboard)/payments/page.tsx` is a 262-LOC orchestrator that composes the following co-located sections:
 

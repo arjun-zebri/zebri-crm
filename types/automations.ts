@@ -58,6 +58,12 @@ export type TriggerType =
   | 'quote_due' // emitted by the tick
   | 'quote_overdue' // emitted by the tick
   | 'quote_viewed_but_not_responded' // emitted by the tick
+  // Proposals
+  | 'proposal_sent'
+  | 'proposal_accepted'
+  | 'proposal_declined'
+  | 'proposal_due' // emitted by the tick
+  | 'proposal_overdue' // emitted by the tick
   // Invoices / payments
   | 'invoice_created'
   | 'invoice_sent'
@@ -193,6 +199,7 @@ export type ActionType =
   | 'create_reminder'
   // Payments
   | 'send_quote'
+  | 'send_proposal'
   | 'send_contract'
   | 'send_invoice'
   // Couple questionnaires
@@ -228,6 +235,7 @@ export type ActionType =
   | 'enqueue_for_newsletter'
   // Payments
   | 'create_invoice_from_quote'
+  | 'create_invoice_from_proposal'
   | 'create_quote_from_template'
   | 'create_contract_from_template'
   | 'void_quote'

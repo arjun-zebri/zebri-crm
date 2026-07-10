@@ -113,14 +113,27 @@ A schema+RPCs (**done**) → B server actions+email (**done**:
 `POST /api/email/send-proposal` + `sendProposalEmail`/`proposalHtml`;
 accepted/declined proposals are locked against edits and re-sends) →
 C composer+payments tab (**done**: `proposal-builder-modal` over the
-shared builder parts with an options stack — each option card owns
-title/description, base items via LineItemsTable, add-ons with MC
-pre-ticks, and a display-only terms line; Proposals tab on /payments
-(first tab) + couple-profile section; two-tab live preview [couple
-page summary + real cover email]; e2e `tests/e2e/proposals.spec.ts`,
-validated on the isolated local-Supabase server desktop + iPhone 12
-via `playwright.iso.config.ts`) → D public page+branding surface →
-E invoice generation+contract link → F automations+portal+docs →
+shared builder parts with an options stack; Proposals tab on
+/payments (first tab) + couple-profile section; two-tab live preview;
+e2e `tests/e2e/proposals.spec.ts`, validated on the isolated
+local-Supabase server desktop + iPhone 12 via
+`playwright.iso.config.ts`) →
+D public page (**done**: `/proposal/[token]` option chooser + add-on
+ticks + two-step accept; accepted receipt view; scalar branding via
+`_user_branding`; **block-tree layouts deliberately deferred** — a
+block tree can't express the chooser; `/proposal` in middleware
+PUBLIC_ROUTES) →
+E invoice generation + contract link (**done**: invoice builder
+offers accepted proposals as `prop:` apply sources [recorded
+selection + deposit % + GST carried, `invoices.proposal_id`
+provenance]; "Generate invoice" on accepted proposals; contracts link
+to accepted proposals for {{total_amount}}/{{deposit_amount}} and
+`sign_contract`'s proposal branch auto-creates the deposit invoice at
+the accepted option's own deposit %; migration
+`20260710000100_sign_contract_proposal_branch.sql`) →
+F automations+portal+docs (in progress: `get_portal_data` returns
+payments.proposals [`20260710000200_portal_proposals.sql`] + portal
+UI section; proposal_* triggers/actions/variables/emitters) →
 G delete quote code → H destructive drop migration
 (`-- @ALLOW_DESTRUCTIVE`). Owner direction 2026-07-10: build the
 remaining phases in one continuous push (no per-phase pause); quotes

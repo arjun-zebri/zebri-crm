@@ -130,6 +130,12 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
       "description": "Email the couple a quote",
       "icon": "FileText"
     },
+    "send_proposal": {
+      "category": "payments",
+      "label": "Send proposal",
+      "description": "Email the couple a proposal",
+      "icon": "FileText"
+    },
     "send_contract": {
       "category": "payments",
       "label": "Send contract",
@@ -343,6 +349,12 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
       "category": "payments",
       "label": "Create invoice from quote",
       "description": "Auto-draft an invoice from the accepted quote",
+      "icon": "Receipt"
+    },
+    "create_invoice_from_proposal": {
+      "category": "payments",
+      "label": "Create invoice from proposal",
+      "description": "Auto-draft an invoice from the accepted proposal",
       "icon": "Receipt"
     },
     "create_quote_from_template": {

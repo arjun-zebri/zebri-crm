@@ -322,6 +322,156 @@ const createInvoiceFromQuote: ActionSpec<z.infer<typeof createInvoiceFromQuoteSc
   ui: { category: 'payments', label: 'Create invoice from quote', description: 'Auto-draft an invoice from the accepted quote', icon: 'Receipt' },
 }
 
+const createInvoiceFromProposalSchema = z.object({
+  proposalId: z.string().uuid().optional(),
+  paymentSchedule: z.enum(['deposit_only', 'full', 'split']).default('deposit_only'),
+  dueDate: z.string().optional(),
+}).passthrough()
+
+/**
+ * Resolve which proposal to invoice: an explicit config id, else the
+ * `proposal_id` on the triggering event (e.g. a `proposal_accepted` event),
+ * else the couple's most recent ACCEPTED proposal.
+ */
+async function resolveProposalId(
+  supabase: ReturnType<typeof createAdminClient>,
+  ctx: RunContext,
+  explicitId?: string,
+): Promise<string | null> {
+  if (explicitId) return explicitId
+  const payload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
+  if (typeof payload['proposal_id'] === 'string') return payload['proposal_id'] as string
+  if (!ctx.couple) return null
+  const { data } = await supabase
+    .from('proposals')
+    .select('id')
+    .eq('user_id', ctx.userId)
+    .eq('couple_id', ctx.couple.id)
+    .eq('status', 'accepted')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return (data as { id: string } | null)?.id ?? null
+}
+
+/**
+ * Draft an invoice from an accepted proposal: copies the accepted
+ * option's items and add-ons, links the same couple, leaves it `draft`
+ * for the MC to review. `paymentSchedule` seeds the deposit split —
+ * a 50% deposit is the editable default for `deposit_only` / `split`.
+ */
+const createInvoiceFromProposal: ActionSpec<z.infer<typeof createInvoiceFromProposalSchema>> = {
+  type: 'create_invoice_from_proposal',
+  configSchema: createInvoiceFromProposalSchema,
+  async handler(ctx, config) {
+    const supabase = createAdminClient()
+    const proposalId = await resolveProposalId(supabase, ctx, config.proposalId)
+    if (!proposalId) return { kind: 'ok', output: { skipped: 'no accepted proposal found' } }
+
+    const { data: proposal, error: pErr } = await supabase
+      .from('proposals')
+      .select('id, couple_id, title, status, accepted_option_id, accepted_addon_selection')
+      .eq('id', proposalId)
+      .eq('user_id', ctx.userId)
+      .maybeSingle()
+    if (pErr) return { kind: 'error', message: `load proposal: ${pErr.message}`, recoverable: true }
+    if (!proposal) return { kind: 'ok', output: { skipped: 'proposal not found' } }
+    const p = proposal as {
+      id: string; couple_id: string; title: string | null; status: string
+      accepted_option_id: string | null; accepted_addon_selection: Record<string, boolean> | null
+    }
+
+    if (p.status !== 'accepted') {
+      return { kind: 'ok', output: { skipped: 'proposal not accepted' } }
+    }
+
+    if (!p.accepted_option_id) {
+      return { kind: 'error', message: 'accepted proposal has no accepted_option_id', recoverable: true }
+    }
+
+    // Load the accepted option to get its items and GST setting.
+    const { data: option, error: oErr } = await supabase
+      .from('proposal_options')
+      .select('id, title, gst_inclusive, subtotal')
+      .eq('id', p.accepted_option_id)
+      .eq('proposal_id', p.id)
+      .maybeSingle()
+    if (oErr) return { kind: 'error', message: `load option: ${oErr.message}`, recoverable: true }
+    if (!option) return { kind: 'error', message: 'accepted option not found', recoverable: true }
+    const opt = option as {
+      id: string; title: string | null; gst_inclusive: boolean; subtotal: number
+    }
+
+    // Load the option's items.
+    const { data: optionItems, error: oiErr } = await supabase
+      .from('proposal_option_items')
+      .select('id, description, amount, is_addon, position')
+      .eq('option_id', opt.id)
+      .order('position', { ascending: true })
+    if (oiErr) return { kind: 'error', message: `load option items: ${oiErr.message}`, recoverable: true }
+
+    const items = (optionItems ?? []) as Array<{
+      id: string; description: string; amount: number; is_addon: boolean; position: number
+    }>
+
+    // Filter: base items + add-ons that were selected.
+    const addonSelection = p.accepted_addon_selection ?? {}
+    const invoiceItems = items.filter((it) => {
+      if (!it.is_addon) return true
+      return addonSelection[it.id] === true
+    })
+
+    const { data: numData, error: numErr } = await supabase.rpc('generate_invoice_number', {
+      p_user_id: ctx.userId,
+    } as never)
+    if (numErr) return { kind: 'error', message: `invoice number: ${numErr.message}`, recoverable: true }
+
+    // Tax rate: 10 if GST not included, 0 if already included.
+    const taxRate = opt.gst_inclusive ? 0 : 10
+    const depositPercent = config.paymentSchedule === 'full' ? null : 50
+    const dueDate = config.dueDate ?? null
+
+    const { data: inserted, error: insErr } = await supabase
+      .from('invoices')
+      .insert({
+        user_id: ctx.userId,
+        couple_id: p.couple_id,
+        proposal_id: p.id,
+        status: 'draft',
+        invoice_number: numData as string,
+        title: p.title ?? 'Invoice',
+        due_date: dueDate,
+        subtotal: opt.subtotal,
+        tax_rate: taxRate,
+        deposit_percent: depositPercent,
+        deposit_due_date: depositPercent ? dueDate : null,
+      } as never)
+      .select('id')
+      .single()
+    if (insErr || !inserted) {
+      return { kind: 'error', message: `create invoice: ${insErr?.message ?? 'no row'}`, recoverable: true }
+    }
+    const invoiceId = (inserted as { id: string }).id
+
+    if (invoiceItems.length > 0) {
+      const rows = invoiceItems.map((it) => ({
+        invoice_id: invoiceId,
+        user_id: ctx.userId,
+        description: it.description,
+        amount: it.amount,
+        quantity: 1,
+        unit_price: it.amount,
+        position: it.position,
+      }))
+      const { error: itErr } = await supabase.from('invoice_items').insert(rows as never)
+      if (itErr) return { kind: 'error', message: `invoice items: ${itErr.message}`, recoverable: true }
+    }
+
+    return { kind: 'ok', output: { invoice_id: invoiceId, from_proposal_id: p.id } }
+  },
+  ui: { category: 'payments', label: 'Create invoice from proposal', description: 'Auto-draft an invoice from the accepted proposal', icon: 'Receipt' },
+}
+
 const createQuoteFromTemplate = stub(
   'create_quote_from_template',
   z.object({
@@ -657,6 +807,7 @@ export const extendedActions: Partial<Record<ActionType, ActionSpec<any>>> = {
   enqueue_for_newsletter: enqueueForNewsletter,
   // Payments
   create_invoice_from_quote: createInvoiceFromQuote,
+  create_invoice_from_proposal: createInvoiceFromProposal,
   create_quote_from_template: createQuoteFromTemplate,
   create_contract_from_template: createContractFromTemplate,
   void_quote: voidQuote,

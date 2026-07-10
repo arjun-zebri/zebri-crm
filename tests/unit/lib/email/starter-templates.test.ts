@@ -24,6 +24,7 @@ const KNOWN_PATHS = new Set([
   'mc.business_name', 'mc.name', 'mc.contact_name', 'mc.email', 'mc.phone', 'mc.signature',
   'portal.link',
   'quote.link', 'quote.number', 'quote.total',
+  'proposal.link', 'proposal.number', 'proposal.total',
   'invoice.link', 'invoice.number', 'invoice.total',
   'contract.link', 'contract.number',
 ])
@@ -42,15 +43,20 @@ function mentionPaths(node: JSONContent, out: string[] = []): string[] {
 describe('STARTER_EMAIL_TEMPLATES', () => {
   // The catalog was deliberately trimmed (2026-07-09 spec): starters are
   // a small guide showing how a template is built, not a full library —
-  // most MCs write their own. Three exemplars spanning the funnel.
-  it('ships the agreed three exemplars spanning the funnel', () => {
+  // most MCs write their own. Exemplars spanning the funnel; the
+  // proposal cover email joined when proposals replaced quotes
+  // (proposals rollout, 2026-07-10 — the quote exemplar leaves with
+  // the quotes feature).
+  it('ships the agreed exemplars spanning the funnel', () => {
     expect(STARTER_EMAIL_TEMPLATES.map((t) => t.name)).toEqual([
       'Enquiry acknowledgement',
       'Quote cover email',
+      'Proposal cover email',
       'You’re booked: confirmation',
     ])
     expect(STARTER_EMAIL_TEMPLATES.map((t) => t.lifecycleStage)).toEqual([
       'enquiry',
+      'quote',
       'quote',
       'booking',
     ])

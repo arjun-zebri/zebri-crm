@@ -4,10 +4,14 @@ import { ExternalLink } from 'lucide-react'
 
 import { isPastDue } from '@/lib/utils'
 
-import { PortalQuote, PortalInvoice } from './page'
+import { PortalProposal, PortalQuote, PortalInvoice } from './page'
 
 interface PaymentsSectionProps {
-  payments: { quotes: PortalQuote[]; invoices: PortalInvoice[] }
+  payments: {
+    proposals?: PortalProposal[]
+    quotes: PortalQuote[]
+    invoices: PortalInvoice[]
+  }
 }
 
 function getStatusColor(status: string) {
@@ -41,13 +45,15 @@ function formatAUD(value: number): string {
 const isOverdue = isPastDue
 
 export function PaymentsSection({ payments }: PaymentsSectionProps) {
+  const proposals = payments.proposals ?? []
+  const hasProposals = proposals.length > 0
   const hasQuotes = payments.quotes.length > 0
   const hasInvoices = payments.invoices.length > 0
 
-  if (!hasQuotes && !hasInvoices) {
+  if (!hasProposals && !hasQuotes && !hasInvoices) {
     return (
       <div className="border border-border rounded-card p-6 text-center">
-        <p className="text-body text-text-muted">No quotes or invoices yet. Your MC will send them here.</p>
+        <p className="text-body text-text-muted">Nothing here yet. Your MC will send proposals and invoices here.</p>
       </div>
     )
   }
@@ -82,6 +88,41 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
               <p className="text-section font-semibold text-danger mt-1">{overdueInvoices.length}</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Proposals */}
+      {hasProposals && (
+        <div>
+          <h3 className="text-body font-medium text-text-muted mb-3">Proposals</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {proposals.map((proposal) => (
+              <div key={proposal.id} className="bg-surface border border-border rounded-card p-4 flex flex-col">
+                <div className="flex items-start justify-between gap-3 mb-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-body font-medium text-text">{proposal.title}</p>
+                    <p className="text-caption text-text-subtle mt-0.5">Proposal #{proposal.proposal_number}</p>
+                  </div>
+                  <span className={`shrink-0 text-caption font-medium px-2 py-1 rounded-pill capitalize ${getStatusColor(proposal.status)}`}>
+                    {proposal.status}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-auto pt-3">
+                  <p className="text-body font-semibold text-text">{formatAUD(proposal.subtotal)}</p>
+                  {proposal.share_token_enabled && proposal.share_token ? (
+                    <a
+                      href={`/proposal/${proposal.share_token}`}
+                      className="inline-flex items-center gap-1.5 text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
+                    >
+                      View <ExternalLink size={13} strokeWidth={1.5} />
+                    </a>
+                  ) : (
+                    <span className="text-caption text-text-subtle">Not yet shared</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

@@ -268,14 +268,19 @@ export function ExtendedTriggerFields({
     case 'quote_sent':
     case 'quote_accepted':
     case 'quote_declined':
+    case 'proposal_sent':
+    case 'proposal_accepted':
+    case 'proposal_declined':
     case 'invoice_created':
     case 'invoice_sent':
     case 'payment_received':
       return <PaymentDocFiltersExtra config={config} setConfig={setConfig} forPayment={triggerType === 'payment_received'} />
     case 'quote_due':
+    case 'proposal_due':
     case 'invoice_due':
       return <DueExtra config={config} setConfig={setConfig} isInvoice={triggerType === 'invoice_due'} />
     case 'quote_overdue':
+    case 'proposal_overdue':
     case 'invoice_overdue':
       return <OverdueExtra config={config} setConfig={setConfig} isInvoice={triggerType === 'invoice_overdue'} />
     case 'quote_viewed_but_not_responded':

@@ -263,6 +263,9 @@ function TriggerConfigForm({
     triggerType === 'quote_sent' ||
     triggerType === 'quote_accepted' ||
     triggerType === 'quote_declined' ||
+    triggerType === 'proposal_sent' ||
+    triggerType === 'proposal_accepted' ||
+    triggerType === 'proposal_declined' ||
     triggerType === 'invoice_created' ||
     triggerType === 'invoice_sent' ||
     triggerType === 'payment_received'
@@ -350,6 +353,14 @@ function TriggerConfigForm({
       {triggerType === 'quote_due' && (
         <NumberInput
           label="Days before due date (0 = on the day)"
+          value={Number(config['days'] ?? 0)}
+          onChange={(v) => setConfig({ ...config, days: v })}
+        />
+      )}
+
+      {triggerType === 'proposal_due' && (
+        <NumberInput
+          label="Days before expiry (0 = on the day)"
           value={Number(config['days'] ?? 0)}
           onChange={(v) => setConfig({ ...config, days: v })}
         />

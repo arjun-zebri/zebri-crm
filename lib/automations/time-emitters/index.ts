@@ -48,6 +48,8 @@ import type { Database } from '@/types/database'
 import { anniversaryOfEventEmitter } from './anniversary-of-event'
 import { invoiceDueEmitter } from './invoice-due'
 import { invoiceOverdueEmitter } from './invoice-overdue'
+import { proposalDueEmitter } from './proposal-due'
+import { proposalOverdueEmitter } from './proposal-overdue'
 import { quoteDueEmitter } from './quote-due'
 import { quoteOverdueEmitter } from './quote-overdue'
 import { taskOverdueEmitter } from './task-overdue'
@@ -78,6 +80,8 @@ export interface TimeEmitter {
 const registry: readonly TimeEmitter[] = [
   quoteDueEmitter,
   quoteOverdueEmitter,
+  proposalDueEmitter,
+  proposalOverdueEmitter,
   invoiceDueEmitter,
   invoiceOverdueEmitter,
   taskOverdueEmitter,

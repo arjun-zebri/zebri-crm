@@ -147,6 +147,7 @@ function readPath(path: string, ctx: RunContext): string {
       return readQuestionnaire(ctx, key)
     case 'quote':
     case 'invoice':
+    case 'proposal':
     case 'contract':
     case 'task':
       // These read from the triggering event's payload or the
@@ -382,9 +383,21 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
     variables: [
       { token: '{{portal.link}}', label: 'Couple portal link', example: 'https://zebri.app/p/…' },
       { token: '{{quote.link}}', label: 'Quote share link', example: 'https://zebri.app/q/…' },
+      { token: '{{proposal.link}}', label: 'Proposal share link', example: 'https://zebri.app/proposal/…' },
       { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/i/…' },
       { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/c/…' },
       { token: '{{questionnaire.link}}', label: 'Questionnaire link', example: 'https://zebri.app/questionnaire/…' },
+    ],
+  },
+  {
+    group: 'Document Numbers & Totals',
+    variables: [
+      { token: '{{quote.number}}', label: 'Quote number', example: 'QUO-001' },
+      { token: '{{quote.total}}', label: 'Quote total', example: '$2,500' },
+      { token: '{{proposal.number}}', label: 'Proposal number', example: 'PR-001' },
+      { token: '{{proposal.total}}', label: 'Proposal total', example: '$2,500' },
+      { token: '{{invoice.number}}', label: 'Invoice number', example: 'INV-001' },
+      { token: '{{contract.number}}', label: 'Contract number', example: 'CTR-001' },
     ],
   },
   {

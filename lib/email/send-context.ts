@@ -55,7 +55,7 @@ export async function downloadStaticAttachments(
 /** Latest share-enabled link of a kind, or empty stamps. */
 async function latestShareLink(
   supabase: SupabaseClient<Database>,
-  table: 'quotes' | 'invoices' | 'contracts',
+  table: 'quotes' | 'proposals' | 'invoices' | 'contracts',
   coupleId: string,
   pathPrefix: string,
 ): Promise<{ link: string; number: string } | null> {
@@ -94,21 +94,29 @@ export async function buildManualSendContext(
   // Stamp the couple's current document + portal links so link
   // variables resolve. Each is best-effort — a missing one simply
   // stays unresolved and the missing-variable gate flags it.
-  const [portalRow, quote, invoice, contract] = await Promise.all([
+  // Path prefixes are the REAL public routes — the short `/q` `/i`
+  // `/c` `/p` forms used previously have no route or rewrite and
+  // bounced couples to /login.
+  const [portalRow, quote, proposal, invoice, contract] = await Promise.all([
     supabase.from('couples').select('portal_token, portal_token_enabled').eq('id', coupleId).maybeSingle(),
-    latestShareLink(supabase, 'quotes', coupleId, 'q'),
-    latestShareLink(supabase, 'invoices', coupleId, 'i'),
-    latestShareLink(supabase, 'contracts', coupleId, 'c'),
+    latestShareLink(supabase, 'quotes', coupleId, 'quote'),
+    latestShareLink(supabase, 'proposals', coupleId, 'proposal'),
+    latestShareLink(supabase, 'invoices', coupleId, 'invoice'),
+    latestShareLink(supabase, 'contracts', coupleId, 'contract'),
   ])
 
   const portal = portalRow.data as { portal_token?: string; portal_token_enabled?: boolean } | null
   const payload: Record<string, string> = {}
   if (portal?.portal_token && portal.portal_token_enabled) {
-    payload['portal_link'] = `${APP_URL}/p/${portal.portal_token}`
+    payload['portal_link'] = `${APP_URL}/portal/${portal.portal_token}`
   }
   if (quote) {
     payload['quote_link'] = quote.link
     payload['quote_number'] = quote.number
+  }
+  if (proposal) {
+    payload['proposal_link'] = proposal.link
+    payload['proposal_number'] = proposal.number
   }
   if (invoice) {
     payload['invoice_link'] = invoice.link

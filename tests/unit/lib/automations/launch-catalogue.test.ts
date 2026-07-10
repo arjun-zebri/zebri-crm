@@ -23,10 +23,11 @@ import {
 import { triggerRegistry } from '@/lib/automations/triggers'
 
 describe('launch catalogue — triggers', () => {
-  it('lists exactly the 35 triggers that fire today', () => {
+  it('lists exactly the 40 triggers that fire today', () => {
     // 34 from the launch review + questionnaire_completed (P4 — emitted by
-    // the couple_questionnaires completion DB trigger).
-    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(35)
+    // the couple_questionnaires completion DB trigger) + 5 proposal triggers
+    // (proposal_sent, proposal_accepted, proposal_declined, proposal_due, proposal_overdue).
+    expect(LAUNCH_VISIBLE_TRIGGERS.size).toBe(40)
   })
 
   it('questionnaire_completed is launch-visible (it emits today)', () => {
@@ -72,10 +73,11 @@ describe('launch catalogue — triggers', () => {
 })
 
 describe('launch catalogue — actions', () => {
-  it('lists exactly the 24 actions offered today', () => {
+  it('lists exactly the 26 actions offered today', () => {
     // 23 from the launch review + send_couple_questionnaire (the
-    // couple-questionnaires feature added it to the catalogue).
-    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(24)
+    // couple-questionnaires feature added it to the catalogue) + send_proposal
+    // and create_invoice_from_proposal (proposal support).
+    expect(LAUNCH_VISIBLE_ACTIONS.size).toBe(26)
   })
 
   it('every visible action is a real registry entry', () => {
