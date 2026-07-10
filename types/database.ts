@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_audit_log: {
@@ -601,7 +576,6 @@ export type Database = {
           mc_signature_name: string | null
           notes: string | null
           proposal_id: string | null
-          quote_id: string | null
           reminder_count: number
           share_token: string
           share_token_enabled: boolean
@@ -631,7 +605,6 @@ export type Database = {
           mc_signature_name?: string | null
           notes?: string | null
           proposal_id?: string | null
-          quote_id?: string | null
           reminder_count?: number
           share_token?: string
           share_token_enabled?: boolean
@@ -661,7 +634,6 @@ export type Database = {
           mc_signature_name?: string | null
           notes?: string | null
           proposal_id?: string | null
-          quote_id?: string | null
           reminder_count?: number
           share_token?: string
           share_token_enabled?: boolean
@@ -688,13 +660,6 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contracts_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
@@ -1391,7 +1356,6 @@ export type Database = {
           paid_at: string | null
           payment_terms: string | null
           proposal_id: string | null
-          quote_id: string | null
           share_token: string
           share_token_enabled: boolean
           status: string
@@ -1421,7 +1385,6 @@ export type Database = {
           paid_at?: string | null
           payment_terms?: string | null
           proposal_id?: string | null
-          quote_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -1451,7 +1414,6 @@ export type Database = {
           paid_at?: string | null
           payment_terms?: string | null
           proposal_id?: string | null
-          quote_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -1484,14 +1446,37 @@ export type Database = {
             referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "invoices_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
         ]
+      }
+      package_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       package_items: {
         Row: {
@@ -1536,36 +1521,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      package_categories: {
-        Row: {
-          color: string
-          created_at: string
-          id: string
-          name: string
-          position: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          color?: string
-          created_at?: string
-          id?: string
-          name: string
-          position?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          color?: string
-          created_at?: string
-          id?: string
-          name?: string
-          position?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       packages: {
         Row: {
@@ -2022,196 +1977,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      quote_items: {
-        Row: {
-          amount: number
-          created_at: string
-          description: string
-          id: string
-          position: number
-          quote_id: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          description: string
-          id?: string
-          position: number
-          quote_id: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          description?: string
-          id?: string
-          position?: number
-          quote_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quote_items_quote_id_fkey"
-            columns: ["quote_id"]
-            isOneToOne: false
-            referencedRelation: "quotes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      quote_template_items: {
-        Row: {
-          amount: number
-          created_at: string
-          description: string
-          id: string
-          position: number
-          template_id: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          description: string
-          id?: string
-          position: number
-          template_id: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          description?: string
-          id?: string
-          position?: number
-          template_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quote_template_items_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "quote_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      quote_templates: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          is_starter: boolean
-          name: string
-          notes: string | null
-          position: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_starter?: boolean
-          name: string
-          notes?: string | null
-          position?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_starter?: boolean
-          name?: string
-          notes?: string | null
-          position?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      quotes: {
-        Row: {
-          accepted_at: string | null
-          couple_id: string
-          created_at: string
-          discount_type: string | null
-          discount_value: number | null
-          email_sent_at: string | null
-          expires_at: string | null
-          id: string
-          notes: string | null
-          quote_number: string
-          share_token: string
-          share_token_enabled: boolean
-          source_package_id: string | null
-          status: string
-          subtotal: number
-          tax_rate: number
-          title: string
-          user_id: string
-        }
-        Insert: {
-          accepted_at?: string | null
-          couple_id: string
-          created_at?: string
-          discount_type?: string | null
-          discount_value?: number | null
-          email_sent_at?: string | null
-          expires_at?: string | null
-          id?: string
-          notes?: string | null
-          quote_number: string
-          share_token?: string
-          share_token_enabled?: boolean
-          source_package_id?: string | null
-          status?: string
-          subtotal?: number
-          tax_rate?: number
-          title: string
-          user_id: string
-        }
-        Update: {
-          accepted_at?: string | null
-          couple_id?: string
-          created_at?: string
-          discount_type?: string | null
-          discount_value?: number | null
-          email_sent_at?: string | null
-          expires_at?: string | null
-          id?: string
-          notes?: string | null
-          quote_number?: string
-          share_token?: string
-          share_token_enabled?: boolean
-          source_package_id?: string | null
-          status?: string
-          subtotal?: number
-          tax_rate?: number
-          title?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quotes_couple_id_fkey"
-            columns: ["couple_id"]
-            isOneToOne: false
-            referencedRelation: "couples"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quotes_source_package_id_fkey"
-            columns: ["source_package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       stripe_customers: {
         Row: {
@@ -2742,10 +2507,6 @@ export type Database = {
         }
         Returns: Json
       }
-      decline_proposal: { Args: { token: string }; Returns: Json }
-      generate_proposal_number: { Args: { p_user_id: string }; Returns: string }
-      get_public_proposal: { Args: { token: string }; Returns: Json }
-      accept_quote: { Args: { token: string }; Returns: Json }
       contracts_due_for_reminder: {
         Args: never
         Returns: {
@@ -2775,7 +2536,7 @@ export type Database = {
             }
             Returns: Json
           }
-      decline_quote: { Args: { token: string }; Returns: Json }
+      decline_proposal: { Args: { token: string }; Returns: Json }
       delete_portal_file: {
         Args: { p_id: string; p_token: string }
         Returns: undefined
@@ -2824,13 +2585,13 @@ export type Database = {
       expire_contracts: { Args: never; Returns: string[] }
       generate_contract_number: { Args: { p_user_id: string }; Returns: string }
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
-      generate_quote_number: { Args: { p_user_id: string }; Returns: string }
+      generate_proposal_number: { Args: { p_user_id: string }; Returns: string }
       get_portal_data: { Args: { token: string }; Returns: Json }
       get_portal_questionnaires: { Args: { token: string }; Returns: Json }
       get_public_contract: { Args: { token: string }; Returns: Json }
       get_public_invoice: { Args: { token: string }; Returns: Json }
+      get_public_proposal: { Args: { token: string }; Returns: Json }
       get_public_questionnaire: { Args: { token: string }; Returns: Json }
-      get_public_quote: { Args: { token: string }; Returns: Json }
       get_public_timeline: { Args: { token: string }; Returns: Json }
       get_vendor_timeline: { Args: { token: string }; Returns: Json }
       is_own_couple: { Args: { couple_id_value: string }; Returns: boolean }
@@ -3098,9 +2859,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

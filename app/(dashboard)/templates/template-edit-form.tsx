@@ -1,5 +1,5 @@
 /**
- * Shared create/edit form for a Quote or Invoice template.
+ * Shared create/edit form for an Invoice template.
  *
  * Both tabs edit the same shape — name, subtitle, applied notes, and a
  * list of priced line items — so they share this one form. It matches
@@ -10,11 +10,11 @@
  *
  * Column semantics match packages: the "Subtitle" field binds to
  * `notes` (internal, shown in the template list) and the "Notes" field
- * binds to `description` (customer-facing, appended to the quote or
+ * binds to `description` (customer-facing, appended to the
  * invoice notes when the template is applied).
  *
  * `sources` (when provided) surfaces the "Add from…" picker, which
- * snapshots a package's or quote template's line items in.
+ * snapshots a package's line items in.
  *
  * @module app/(dashboard)/templates/template-edit-form
  */
@@ -44,21 +44,21 @@ export interface TemplateFormValue {
   name: string
   /** Internal subtitle shown in the template list. */
   notes: string | null
-  /** Customer-facing text applied to the quote/invoice notes. */
+  /** Customer-facing text applied to the invoice notes. */
   description: string | null
   items: TemplateItem[]
 }
 
-/** A package or quote template whose items can be pulled into a template. */
+/** A package whose items can be pulled into a template. */
 export interface TemplateSource {
   id: string
-  kind: 'package' | 'quote'
+  kind: 'package'
   name: string
   items: { description: string; amount: number }[]
 }
 
 interface TemplateEditFormProps {
-  /** Modal heading — e.g. "New Quote Template". */
+  /** Modal heading — e.g. "New Invoice Template". */
   title: string
   /** Muted line under the heading. */
   subtitle?: string
@@ -181,7 +181,7 @@ export function TemplateEditForm({
             id="template-notes"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Added to the quote or invoice notes when this template is applied."
+            placeholder="Added to the invoice notes when this template is applied."
             disabled={isSaving}
             rows={3}
             className="block w-full resize-none rounded-control border border-border bg-surface px-2.5 py-2 text-caption text-text placeholder:text-text-subtle transition-colors focus:border-brand-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -212,7 +212,7 @@ export function TemplateEditForm({
   )
 }
 
-/* ─── "Add from package or quote" picker ────────────────────────── */
+/* ─── "Add from package" picker ─────────────────────────────────── */
 
 function SourceGroup({
   label,
@@ -247,13 +247,12 @@ function SourceGroup({
 function SourcePicker({ sources, onPick }: { sources: TemplateSource[]; onPick: (s: TemplateSource) => void }) {
   const [open, setOpen] = useState(false)
   const packages = sources.filter((s) => s.kind === 'package')
-  const quotes = sources.filter((s) => s.kind === 'quote')
   const pick = (s: TemplateSource) => {
     onPick(s)
     setOpen(false)
   }
 
-  const triggerLabel = quotes.length > 0 ? 'Add from package or quote' : 'Add from package'
+  const triggerLabel = 'Add from package'
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -275,7 +274,6 @@ function SourcePicker({ sources, onPick }: { sources: TemplateSource[]; onPick: 
         >
           <div className="max-h-64 overflow-y-auto">
             <SourceGroup label="Packages" items={packages} onPick={pick} />
-            <SourceGroup label="Quote templates" items={quotes} onPick={pick} />
           </div>
         </Popover.Content>
       </Popover.Portal>

@@ -30,10 +30,10 @@ metadata_on_insert` trigger).
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `logo_url` | text | null | Supabase Storage URL for MC logo (`branding/{user_id}/logo`) |
-| `brand_color` | text | `#A7F3D0` | Hex accent color for public quote/invoice pages |
+| `brand_color` | text | `#A7F3D0` | Hex accent color for public proposal/invoice pages |
 | `tagline` | text | null | Optional business tagline, max 80 chars |
 | `abn` | text | null | Australian Business Number, displayed on invoice header |
-| `show_contact_on_documents` | boolean | false | Show phone/website/social on public quote and invoice pages |
+| `show_contact_on_documents` | boolean | false | Show phone/website/social on public proposal and invoice pages |
 
 These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`. See `.claude/docs/branding.md` for full spec.
 
@@ -259,69 +259,13 @@ tasks -> can relate to couple (via tasks.related_couple_id), event (via tasks.re
 
 task_groups -> have many tasks (one-to-many, set null on delete)
 
-quotes -> belong to a couple (FK couple_id); have many quote_items (cascade delete)
+proposals -> belong to a couple (FK couple_id); have many proposal_options (cascade delete), each with many proposal_option_items (cascade delete)
 
-quote_items -> belong to a quote (FK quote_id, cascade delete)
-
-invoices -> belong to a couple (FK couple_id); optionally linked to an event (FK event_id, set null on delete) and a quote (FK quote_id, set null on delete); have many invoice_items (cascade delete)
+invoices -> belong to a couple (FK couple_id); optionally linked to an event (FK event_id, set null on delete) and a proposal (FK proposal_id, set null on delete); have many invoice_items (cascade delete)
 
 invoice_items -> belong to an invoice (FK invoice_id, cascade delete)
 
 All tables -> scoped to user via user_id (RLS)
-
-------------------------------------------------------------------------
-
-# quotes
-
-Quotes and proposals sent to couples before booking confirmation.
-
-Columns:
-
-id (uuid) user_id (uuid, not null) couple_id (uuid, not null, FK to couples.id, on delete cascade)
-
-title (text, not null)  -  e.g. "Wedding MC Package  -  Smith Wedding"
-
-quote_number (text, not null)  -  auto-generated on insert as "QT-001" format (sequential count per user)
-
-status (text, not null, default 'draft')
-
-Status values: draft sent accepted declined expired
-
-subtotal (numeric(10,2), not null, default 0)  -  sum of quote_items.amount; updated on item save
-
-notes (text, nullable)  -  terms, inclusions, exclusions
-
-expires_at (date, nullable)
-
-share_token (uuid, not null, default gen_random_uuid())  -  unique URL key; generated on row creation
-
-share_token_enabled (boolean, not null, default true)  -  link is live from creation so the MC can copy/share it out-of-band (default flipped false→true + all rows back-filled by `20260527000000_share_token_enabled_by_default`). Disabling (e.g. cancelling an invoice) preserves the token; the public RPC 404s while it is false
-
-accepted_at (timestamp with time zone, nullable)
-
-source_package_id (uuid, nullable, FK to packages.id, on delete set null, indexed)  -  the package applied to start this quote; provenance for per-package conversion stats only (items are snapshotted, this never feeds rendering). Added in `20260702000000_packages_v2.sql`
-
-created_at (timestamp)
-
-RLS: Standard user_id = auth.uid() CRUD for authenticated users. Anon access via SECURITY DEFINER functions get_public_quote, accept_quote, and decline_quote (see quotes.md).
-
-------------------------------------------------------------------------
-
-# quote_items
-
-Line items for a quote.
-
-Columns:
-
-id (uuid) quote_id (uuid, not null, FK to quotes.id, on delete cascade) user_id (uuid, not null)
-
-description (text, not null)  -  e.g. "Wedding ceremony MC (2 hrs)"
-
-amount (numeric(10,2), not null)
-
-position (integer, not null)  -  ordering, multiples of 1000
-
-created_at (timestamp)
 
 ------------------------------------------------------------------------
 
@@ -335,7 +279,7 @@ id (uuid) user_id (uuid, not null) couple_id (uuid, not null, FK to couples.id, 
 
 event_id (uuid, nullable, FK to events.id, on delete set null)  -  links invoice to a specific wedding; used to update events.price when marked paid
 
-quote_id (uuid, nullable, FK to quotes.id, on delete set null)  -  preserved link if invoice was generated from a quote
+proposal_id (uuid, nullable, FK to proposals.id, on delete set null)  -  preserved link if invoice was generated from an accepted proposal (added `20260710000000_add_proposals_feature.sql`; the old `quote_id` column was dropped with the quotes feature in `20260711000000_drop_quotes_feature.sql`)
 
 invoice_number (text, not null)  -  auto-generated on insert as "INV-001" format (sequential count per user)
 
@@ -347,7 +291,7 @@ Status values: draft sent paid overdue cancelled
 
 subtotal (numeric(10,2), not null, default 0)  -  sum of invoice_items.amount; updated on item save
 
-due_date (date, nullable)  -  defaults to 7 days from creation when generated from a quote
+due_date (date, nullable)  -  defaults to 7 days from creation when generated from a proposal
 
 payment_terms (text, nullable)  -  one of: `net_7`, `net_14`, `net_30`, `due_on_receipt`, `custom`. When set to a net term, due_date is auto-calculated. `due_on_receipt` clears due_date. `custom` keeps due_date freely editable.
 
@@ -608,7 +552,7 @@ id (uuid, primary key)
 user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
 name (text, not null)
 description (text, nullable)
-subject (text, not null, default '')  -  mustache string, e.g. `Quote for {{couple.name}}`
+subject (text, not null, default '')  -  mustache string, e.g. `Proposal for {{couple.name}}`
 content (jsonb, not null, default '{}')  -  TipTap JSON body; mention nodes carry a namespaced variable key in `attrs.id` (e.g. `couple.primary_name`, `event.date | friendly`)
 lifecycle_stage (text, nullable, check in: enquiry | quote | booking | planning | wedding_week | follow_up)  -  **LEGACY**: grouping moved to `category_id`; kept for starter provenance, never dropped
 category_id (uuid, nullable, FK email_template_categories.id, **on delete set null**)  -  the user category this template is grouped under
@@ -674,14 +618,13 @@ template path pauses a run on an unresolved variable; see `alerts.md`).
 
 Reusable, per-MC service bundles surfaced on the **Packages** tab of
 `/templates`. A package is a named set of priced line items the MC can
-drop into quotes and invoices. Structurally mirrors `quote_templates` /
-`quote_template_items` so referencing maps 1:1 in a later phase.
+drop into proposals and invoices.
 
 `packages` columns:
 id (uuid, primary key)
 user_id (uuid, FK auth.users.id, on delete cascade)  -  RLS key
 name (text, not null)
-description (text, nullable)  -  "what's included" prose shown on the preview and prepended to the applied quote/invoice notes
+description (text, nullable)  -  "what's included" prose shown on the preview and prepended to the applied proposal/invoice notes
 notes (text, nullable)  -  short subtitle shown on the list row
 category_id (uuid, nullable, FK package_categories.id, **on delete set null**)  -  the user category this package is grouped under
 position (integer, not null, default 0)  -  list order (creation order; the Packages list is not drag-reorderable)
@@ -697,7 +640,7 @@ id (uuid, primary key)
 package_id (uuid, FK packages.id, on delete cascade)
 user_id (uuid, not null)  -  RLS key (denormalised)
 description (text, not null)
-amount (numeric(10,2), not null)  -  PER-UNIT price (line total = quantity × amount; flattened to "N × description" on apply since quote/invoice builder items carry no qty)
+amount (numeric(10,2), not null)  -  PER-UNIT price (line total = quantity × amount; flattened to "N × description" on apply since proposal/invoice builder items carry no qty)
 quantity (numeric(8,2), not null, default 1.00)
 optional (boolean, not null, default false)  -  an add-on offered alongside the base package; the builders let the MC tick which add-ons to include on apply
 position (integer, not null)
@@ -719,15 +662,17 @@ Indexes: `packages(user_id)`, `packages(category_id)`,
 RLS: base owner policy `user_id = auth.uid()` on all three tables
 (`for all using (...)`, which Postgres reuses as the INSERT WITH CHECK).
 
-Related: `quotes.source_package_id` (nullable uuid, FK packages.id, on
-delete **set null**, indexed) records which package a quote was started
-from, as provenance for per-package conversion stats only; items are
-still snapshotted, so the FK never feeds rendering.
+Related: `proposal_options.source_package_id` (nullable uuid, FK
+packages.id, on delete **set null**, indexed) records which package a
+proposal option was started from, as provenance for per-package
+conversion stats only; items are still snapshotted, so the FK never
+feeds rendering.
 
 Migrations: `20260618000300_create_packages.sql`; `is_starter` added in
 `20260619000100_add_is_starter_to_templates.sql`; commercial fields
-(deposit/GST/archive/weekend loading), item `quantity`/`optional`, and
-`quotes.source_package_id` added in `20260702000000_packages_v2.sql`;
+(deposit/GST/archive/weekend loading) and item `quantity`/`optional`
+added in `20260702000000_packages_v2.sql` (which also added
+`quotes.source_package_id`, since superseded by the proposals model);
 `package_categories` + `packages.category_id` added in
 `20260709130000_package_categories.sql`.
 Starter packages are an opt-in catalog
@@ -736,11 +681,12 @@ Starter packages are an opt-in catalog
 Pure package money math (line totals, base vs add-on totals, weekend
 loading line) lives in `lib/payments/package-math.ts`.
 
-## proposals / proposal_options / proposal_option_items (Proposals — replacing Quotes)
+## proposals / proposal_options / proposal_option_items
 
-The send→accept surface replacing quotes (full spec:
-`.claude/docs/proposals.md`; rollout in progress, quotes coexist until
-the removal phases). A proposal offers a couple 1–N package options;
+The send→accept surface that replaced quotes (full spec:
+`.claude/docs/proposals.md`; the legacy quote tables/RPCs were dropped
+in `20260711000000_drop_quotes_feature.sql`). A proposal offers a
+couple 1–N package options;
 each option snapshots a package's items AND commercial terms at apply
 time.
 
@@ -811,7 +757,7 @@ Migration: `20260710000000_add_proposals_feature.sql`.
 ## invoice_templates / invoice_template_items (Templates page — Invoices tab)
 
 Reusable invoice skeletons on the **Invoices** tab of `/templates`.
-Built from scratch or seeded from a package / quote template via the
+Built from scratch or seeded from a package via the
 editor's "Add from…" picker, which **snapshots** the source's line items
 in (no live FK — a later package price edit never silently changes a
 saved invoice template). Mirrors `packages` structurally.

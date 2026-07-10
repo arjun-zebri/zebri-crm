@@ -1,6 +1,6 @@
 /**
  * Well-formedness tests for the line-item starter catalogs (packages,
- * quote templates, invoice templates).
+ * invoice templates).
  *
  * These ship as suggested content an MC adds with one click, so a
  * malformed entry (blank name, no items, negative price) would surface
@@ -12,14 +12,12 @@ import { describe, expect, it } from 'vitest'
 import {
   STARTER_INVOICE_TEMPLATES,
   STARTER_PACKAGES,
-  STARTER_QUOTE_TEMPLATES,
   startersByName,
   type StarterLineItemSet,
 } from '@/lib/payments/starter-line-item-templates'
 
 const CATALOGS: Record<string, readonly StarterLineItemSet[]> = {
   packages: STARTER_PACKAGES,
-  quotes: STARTER_QUOTE_TEMPLATES,
   invoices: STARTER_INVOICE_TEMPLATES,
 }
 
@@ -28,7 +26,6 @@ describe('line-item starter catalogs', () => {
     // Trimmed to ~3 exemplars per tab (2026-07-09 spec): the Add-on
     // package was dropped so packages read as a clean progression.
     expect(STARTER_PACKAGES).toHaveLength(3)
-    expect(STARTER_QUOTE_TEMPLATES).toHaveLength(3)
     expect(STARTER_INVOICE_TEMPLATES).toHaveLength(3)
   })
 

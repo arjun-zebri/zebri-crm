@@ -125,7 +125,6 @@ begin
       end if;
     end if;
   end if;
-  end if;
 
   -- Follow-up task for the MC.
   insert into public.tasks (user_id, related_couple_id, title, status)

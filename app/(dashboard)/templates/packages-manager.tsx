@@ -114,7 +114,7 @@ function PackageRow({
   )
 }
 
-/** Meta line for the detail card: "Used in N quotes · M accepted ·
+/** Meta line for the detail card: "Used in N proposals · M accepted ·
  *  Edited X ago". Usage parts hide until there is history. */
 function PackageCaption({ packageId, updatedAt }: { packageId: string; updatedAt?: string | null }) {
   const { data } = usePackageUsage(packageId)
@@ -124,7 +124,7 @@ function PackageCaption({ packageId, updatedAt }: { packageId: string; updatedAt
 
   const parts: string[] = []
   if (data && data.total > 0) {
-    parts.push(`Used in ${String(data.total)} quote${data.total !== 1 ? 's' : ''}`)
+    parts.push(`Used in ${String(data.total)} proposal${data.total !== 1 ? 's' : ''}`)
     if (data.accepted > 0) parts.push(`${String(data.accepted)} accepted`)
   }
   if (updatedAt) parts.push(`Edited ${formatRelativeTime(updatedAt, nowMs)}`)

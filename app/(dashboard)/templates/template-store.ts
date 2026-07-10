@@ -1,11 +1,12 @@
 /**
- * Persistence layer shared by the Quotes and Invoices template tabs.
+ * Persistence layer for the Invoices template tab.
  *
- * Both tabs manage the same shape (a named, ordered set of priced line
- * items) against sibling table pairs: `quote_templates` /
- * `quote_template_items` and `invoice_templates` /
- * `invoice_template_items`. This store owns every read and write so the
- * shared manager component stays free of table-name branching.
+ * Manages a named, ordered set of priced line items against
+ * `invoice_templates` / `invoice_template_items`. This store owns every
+ * read and write so the shared manager component stays free of table
+ * plumbing. (It used to also serve a `quote` kind; quote templates were
+ * retired with the proposals rollout, but the kind parameter stays so
+ * a future sibling table pair can slot back in.)
  *
  * The Supabase client is injected (not created here) so integration
  * tests can exercise the exact production code paths with a signed-in
@@ -18,14 +19,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'
 
 /** Which template tab the store serves. */
-export type TemplateKind = 'quote' | 'invoice'
+export type TemplateKind = 'invoice'
 
 /**
  * A template row as the managers consume it.
  *
  * Column semantics match packages: `notes` is the internal subtitle
  * shown in the template list; `description` is the customer-facing text
- * appended to the quote/invoice notes when the template is applied.
+ * appended to the invoice notes when the template is applied.
  */
 export interface TemplateRecord {
   id: string
@@ -53,44 +54,24 @@ export interface TemplateDraft {
 
 type Client = SupabaseClient<Database>
 
-/**
- * Bulk-insert a draft's items in array order.
- *
- * Branched per kind because the FK column differs (`template_id` vs
- * `invoice_template_id`) and PostgREST bulk inserts require uniform
- * keys on every row.
- */
+/** Bulk-insert a draft's items in array order (uniform keys per row). */
 async function insertItems(
   client: Client,
-  kind: TemplateKind,
   uid: string,
   templateId: string,
   items: TemplateDraft['items'],
 ): Promise<void> {
   if (items.length === 0) return
-  if (kind === 'quote') {
-    const { error } = await client.from('quote_template_items').insert(
-      items.map((item, i) => ({
-        template_id: templateId,
-        user_id: uid,
-        description: item.description,
-        amount: item.amount,
-        position: (i + 1) * 1000,
-      })),
-    )
-    if (error) throw error
-  } else {
-    const { error } = await client.from('invoice_template_items').insert(
-      items.map((item, i) => ({
-        invoice_template_id: templateId,
-        user_id: uid,
-        description: item.description,
-        amount: item.amount,
-        position: (i + 1) * 1000,
-      })),
-    )
-    if (error) throw error
-  }
+  const { error } = await client.from('invoice_template_items').insert(
+    items.map((item, i) => ({
+      invoice_template_id: templateId,
+      user_id: uid,
+      description: item.description,
+      amount: item.amount,
+      position: (i + 1) * 1000,
+    })),
+  )
+  if (error) throw error
 }
 
 /**
@@ -99,17 +80,20 @@ async function insertItems(
  * All reads and writes are owner-scoped (`user_id = uid`) on top of the
  * tables' RLS, matching the rest of the templates page.
  */
-export function createTemplateStore(client: Client, kind: TemplateKind) {
+// The kind parameter is accepted (and currently unused) so callers keep
+// one construction site if a sibling table pair ever returns.
+export function createTemplateStore(client: Client, kind: TemplateKind = 'invoice') {
+  void kind
   const fields = 'id, name, notes, description, position, updated_at'
 
   return {
     /** Templates in list order. */
     async list(uid: string): Promise<TemplateRecord[]> {
-      const query =
-        kind === 'quote'
-          ? client.from('quote_templates').select(fields).eq('user_id', uid).order('position', { ascending: true })
-          : client.from('invoice_templates').select(fields).eq('user_id', uid).order('position', { ascending: true })
-      const { data, error } = await query
+      const { data, error } = await client
+        .from('invoice_templates')
+        .select(fields)
+        .eq('user_id', uid)
+        .order('position', { ascending: true })
       if (error) throw error
       return data ?? []
     },
@@ -117,30 +101,18 @@ export function createTemplateStore(client: Client, kind: TemplateKind) {
     /** All items grouped by template id, each group in item order. */
     async listItems(uid: string): Promise<Record<string, StoredItem[]>> {
       const grouped: Record<string, StoredItem[]> = {}
-      if (kind === 'quote') {
-        const { data, error } = await client
-          .from('quote_template_items')
-          .select('id, template_id, description, amount')
-          .eq('user_id', uid)
-          .order('position', { ascending: true })
-        if (error) throw error
-        for (const item of data ?? []) {
-          ;(grouped[item.template_id] ??= []).push({ id: item.id, description: item.description, amount: item.amount })
-        }
-      } else {
-        const { data, error } = await client
-          .from('invoice_template_items')
-          .select('id, invoice_template_id, description, amount')
-          .eq('user_id', uid)
-          .order('position', { ascending: true })
-        if (error) throw error
-        for (const item of data ?? []) {
-          ;(grouped[item.invoice_template_id] ??= []).push({
-            id: item.id,
-            description: item.description,
-            amount: item.amount,
-          })
-        }
+      const { data, error } = await client
+        .from('invoice_template_items')
+        .select('id, invoice_template_id, description, amount')
+        .eq('user_id', uid)
+        .order('position', { ascending: true })
+      if (error) throw error
+      for (const item of data ?? []) {
+        ;(grouped[item.invoice_template_id] ??= []).push({
+          id: item.id,
+          description: item.description,
+          amount: item.amount,
+        })
       }
       return grouped
     },
@@ -154,13 +126,9 @@ export function createTemplateStore(client: Client, kind: TemplateKind) {
         description: draft.description,
         position,
       }
-      const insert =
-        kind === 'quote'
-          ? client.from('quote_templates').insert(row).select('id').single()
-          : client.from('invoice_templates').insert(row).select('id').single()
-      const { data, error } = await insert
+      const { data, error } = await client.from('invoice_templates').insert(row).select('id').single()
       if (error) throw error
-      await insertItems(client, kind, uid, data.id, draft.items)
+      await insertItems(client, uid, data.id, draft.items)
       return data.id
     },
 
@@ -185,35 +153,20 @@ export function createTemplateStore(client: Client, kind: TemplateKind) {
         description: draft.description,
         updated_at: new Date().toISOString(),
       }
-      if (kind === 'quote') {
-        const { error } = await client.from('quote_templates').update(patch).eq('id', id).eq('user_id', uid)
-        if (error) throw error
-        const { error: wipeError } = await client
-          .from('quote_template_items')
-          .delete()
-          .eq('template_id', id)
-          .eq('user_id', uid)
-        if (wipeError) throw wipeError
-      } else {
-        const { error } = await client.from('invoice_templates').update(patch).eq('id', id).eq('user_id', uid)
-        if (error) throw error
-        const { error: wipeError } = await client
-          .from('invoice_template_items')
-          .delete()
-          .eq('invoice_template_id', id)
-          .eq('user_id', uid)
-        if (wipeError) throw wipeError
-      }
-      await insertItems(client, kind, uid, id, draft.items)
+      const { error } = await client.from('invoice_templates').update(patch).eq('id', id).eq('user_id', uid)
+      if (error) throw error
+      const { error: wipeError } = await client
+        .from('invoice_template_items')
+        .delete()
+        .eq('invoice_template_id', id)
+        .eq('user_id', uid)
+      if (wipeError) throw wipeError
+      await insertItems(client, uid, id, draft.items)
     },
 
     /** Delete a template; its items cascade at the DB level. */
     async remove(uid: string, id: string): Promise<void> {
-      const del =
-        kind === 'quote'
-          ? client.from('quote_templates').delete().eq('id', id).eq('user_id', uid)
-          : client.from('invoice_templates').delete().eq('id', id).eq('user_id', uid)
-      const { error } = await del
+      const { error } = await client.from('invoice_templates').delete().eq('id', id).eq('user_id', uid)
       if (error) throw error
     },
 
@@ -222,11 +175,11 @@ export function createTemplateStore(client: Client, kind: TemplateKind) {
       for (let i = 0; i < orderedIds.length; i++) {
         const id = orderedIds[i]
         if (!id) continue
-        const upd =
-          kind === 'quote'
-            ? client.from('quote_templates').update({ position: (i + 1) * 1000 }).eq('id', id).eq('user_id', uid)
-            : client.from('invoice_templates').update({ position: (i + 1) * 1000 }).eq('id', id).eq('user_id', uid)
-        const { error } = await upd
+        const { error } = await client
+          .from('invoice_templates')
+          .update({ position: (i + 1) * 1000 })
+          .eq('id', id)
+          .eq('user_id', uid)
         if (error) throw error
       }
     },

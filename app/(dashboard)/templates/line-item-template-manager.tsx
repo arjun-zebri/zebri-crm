@@ -232,7 +232,6 @@ export function LineItemTemplateManager({
     queryClient.invalidateQueries({ queryKey: ['line-item-template-items', kind] })
     // Builders list these templates as apply-sources; keep them fresh.
     queryClient.invalidateQueries({ queryKey: ['builder-apply-sources'] })
-    if (kind === 'quote') queryClient.invalidateQueries({ queryKey: ['template-sources', 'invoice'] })
   }
 
   const createMutation = useMutation({

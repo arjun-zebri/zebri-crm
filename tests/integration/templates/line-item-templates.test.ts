@@ -5,7 +5,7 @@ import { createTemplateStore } from '@/app/(dashboard)/templates/template-store'
 import { createTestUser, type TestUser } from '../helpers/supabase'
 
 /**
- * The shared template store behind the Quotes and Invoices tabs.
+ * The template store behind the Invoices tab.
  *
  * Proves create/update round-trips under owner RLS, that an update
  * persists the form's item order (regression: reorders used to be
@@ -28,7 +28,7 @@ describe('line-item template store', () => {
     await userB?.cleanup()
   })
 
-  for (const kind of ['quote', 'invoice'] as const) {
+  for (const kind of ['invoice'] as const) {
     describe(`${kind} templates`, () => {
       it('creates, lists, and round-trips items in order', async () => {
         const store = createTemplateStore(userA.client, kind)

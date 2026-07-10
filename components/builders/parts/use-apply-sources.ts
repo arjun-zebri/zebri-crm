@@ -2,11 +2,12 @@
  * Shared "apply a saved set of line items" source for the quote and
  * invoice builders.
  *
- * Surfaces **quote templates** and **packages** as things you can drop
+ * Surfaces **packages** (and opt-in invoice templates / accepted
+ * proposals) as things you can drop
  * into a quote or invoice, plus **invoice templates** when the caller
  * opts in (the invoice builder does; a quote never starts from an
  * invoice template). Returns picker-ready options plus an `applyMap`
- * keyed by a namespaced id (`it:<id>` / `qt:<id>` / `pkg:<id>`) so the
+ * keyed by a namespaced id (`it:<id>` / `pkg:<id>` / `prop:<id>`) so the
  * builder can resolve a pick back to its content regardless of source.
  * Items are applied by copy (snapshot), never linked live.
  *
@@ -107,9 +108,7 @@ export function useApplySources({
       const uid = auth.user?.id
       if (!uid) return EMPTY
 
-      const [tpls, tplItems, pkgs, pkgItems, invTpls, invTplItems] = await Promise.all([
-        supabase.from('quote_templates').select('id, name, description').eq('user_id', uid).order('position'),
-        supabase.from('quote_template_items').select('template_id, description, amount, position').eq('user_id', uid).order('position'),
+      const [pkgs, pkgItems, invTpls, invTplItems] = await Promise.all([
         supabase.from('packages').select('*').eq('user_id', uid).order('position'),
         supabase.from('package_items').select('*').eq('user_id', uid).order('position'),
         includeInvoiceTemplates
@@ -119,9 +118,6 @@ export function useApplySources({
           ? supabase.from('invoice_template_items').select('invoice_template_id, description, amount, position').eq('user_id', uid).order('position')
           : Promise.resolve({ data: [] as { invoice_template_id: string; description: string; amount: number }[] }),
       ])
-
-      const byTpl: Record<string, ApplyItem[]> = {}
-      for (const it of tplItems.data ?? []) (byTpl[it.template_id] ??= []).push({ description: it.description, amount: it.amount })
 
       const byInvTpl: Record<string, ApplyItem[]> = {}
       for (const it of invTplItems.data ?? []) (byInvTpl[it.invoice_template_id] ??= []).push({ description: it.description, amount: it.amount })
@@ -185,12 +181,6 @@ export function useApplySources({
       for (const t of invTpls.data ?? []) {
         const key = `it:${t.id}`
         const items = byInvTpl[t.id] ?? []
-        options.push({ id: key, name: t.name, notes: t.description, itemCount: items.length })
-        applyMap[key] = { notes: t.description, items, addOns: [], package: null }
-      }
-      for (const t of tpls.data ?? []) {
-        const key = `qt:${t.id}`
-        const items = byTpl[t.id] ?? []
         options.push({ id: key, name: t.name, notes: t.description, itemCount: items.length })
         applyMap[key] = { notes: t.description, items, addOns: [], package: null }
       }

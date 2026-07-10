@@ -5,7 +5,7 @@
  * by hand from a couple's profile: the couple snapshot (RLS-scoped),
  * an MC snapshot from the session user's metadata (no service role),
  * and the couple's current document links stamped onto the trigger
- * payload so `{{quote.link}}` / `{{invoice.link}}` / `{{contract.link}}`
+ * payload so `{{proposal.link}}` / `{{invoice.link}}` / `{{contract.link}}`
  * / `{{portal.link}}` resolve the way they do in automations.
  *
  * Used by both the preview server action and the send route, so the
@@ -55,7 +55,7 @@ export async function downloadStaticAttachments(
 /** Latest share-enabled link of a kind, or empty stamps. */
 async function latestShareLink(
   supabase: SupabaseClient<Database>,
-  table: 'quotes' | 'proposals' | 'invoices' | 'contracts',
+  table: 'proposals' | 'invoices' | 'contracts',
   coupleId: string,
   pathPrefix: string,
 ): Promise<{ link: string; number: string } | null> {
@@ -97,9 +97,8 @@ export async function buildManualSendContext(
   // Path prefixes are the REAL public routes — the short `/q` `/i`
   // `/c` `/p` forms used previously have no route or rewrite and
   // bounced couples to /login.
-  const [portalRow, quote, proposal, invoice, contract] = await Promise.all([
+  const [portalRow, proposal, invoice, contract] = await Promise.all([
     supabase.from('couples').select('portal_token, portal_token_enabled').eq('id', coupleId).maybeSingle(),
-    latestShareLink(supabase, 'quotes', coupleId, 'quote'),
     latestShareLink(supabase, 'proposals', coupleId, 'proposal'),
     latestShareLink(supabase, 'invoices', coupleId, 'invoice'),
     latestShareLink(supabase, 'contracts', coupleId, 'contract'),
@@ -109,10 +108,6 @@ export async function buildManualSendContext(
   const payload: Record<string, string> = {}
   if (portal?.portal_token && portal.portal_token_enabled) {
     payload['portal_link'] = `${APP_URL}/portal/${portal.portal_token}`
-  }
-  if (quote) {
-    payload['quote_link'] = quote.link
-    payload['quote_number'] = quote.number
   }
   if (proposal) {
     payload['proposal_link'] = proposal.link

@@ -131,11 +131,28 @@ to accepted proposals for {{total_amount}}/{{deposit_amount}} and
 `sign_contract`'s proposal branch auto-creates the deposit invoice at
 the accepted option's own deposit %; migration
 `20260710000100_sign_contract_proposal_branch.sql`) →
-F automations+portal+docs (in progress: `get_portal_data` returns
+F automations+portal+docs (**done**: `get_portal_data` returns
 payments.proposals [`20260710000200_portal_proposals.sql`] + portal
-UI section; proposal_* triggers/actions/variables/emitters) →
-G delete quote code → H destructive drop migration
-(`-- @ALLOW_DESTRUCTIVE`). Owner direction 2026-07-10: build the
-remaining phases in one continuous push (no per-phase pause); quotes
-keep working until G. Full plan of record:
+UI section; proposal_sent/accepted/declined/due/overdue triggers,
+send_proposal + create_invoice_from_proposal actions, proposal.*
+variables, time emitters on automations-tick, launch catalogue +
+starter cover email) →
+G delete quote code (**done**: builder, public page, send route,
+templates tab, automations specs, branding surface, PDF branch,
+starter templates and all 13 quote test files removed; quote-trigger
+automations archived with a "references retired Quotes" note) →
+H destructive drop migration (**done**:
+`20260711000000_drop_quotes_feature.sql`, `-- @ALLOW_DESTRUCTIVE` —
+drops quotes / quote_items / quote_templates / quote_template_items,
+the 4 quote RPCs, the quote lifecycle trigger, `invoices.quote_id` +
+`contracts.quote_id`; quote-free `sign_contract` + `get_portal_data`;
+replayed clean on local Supabase from zero, full pyramid green,
+`types/database.ts` regenerated from the final schema).
+
+**Status: complete.** All phases (A–H) built and verified locally on
+2026-07-10. NOTE: the remote/production DB receives the proposals +
+drop migrations only via the CI `supabase db push` deploy — until
+that runs, the running app on the remote DB has neither surface.
+Owner direction 2026-07-10: phases were built in one continuous push
+(no per-phase pause). Full plan of record:
 `~/.claude/plans/theres-too-much-white-parsed-mango.md` (2026-07-10).

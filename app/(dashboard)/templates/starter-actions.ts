@@ -1,6 +1,6 @@
 /**
  * Server actions for adding starter templates to the line-item template
- * surfaces (packages, quote templates, invoice templates) and contract
+ * surfaces (packages, invoice templates) and contract
  * templates.
  *
  * These mirror `addStarterTemplatesAction` in `./actions.ts`: the client
@@ -21,7 +21,6 @@ import { starterContractsByName } from '@/lib/contracts/starter-contracts'
 import {
   STARTER_INVOICE_TEMPLATES,
   STARTER_PACKAGES,
-  STARTER_QUOTE_TEMPLATES,
   startersByName,
   type StarterLineItemSet,
 } from '@/lib/payments/starter-line-item-templates'
@@ -54,10 +53,10 @@ async function requireUser() {
   return { supabase, user }
 }
 
-/* ─── Line-item starters (packages / quotes / invoices) ────────── */
+/* ─── Line-item starters (packages / invoices) ─────────────────── */
 
 /** The parent tables that hold a `name` + `position` + `is_starter`. */
-type LineItemParentTable = 'packages' | 'quote_templates' | 'invoice_templates'
+type LineItemParentTable = 'packages' | 'invoice_templates'
 
 /**
  * Shared validation + resolution for the three line-item starter types:
@@ -124,42 +123,6 @@ export async function addStarterPackagesAction(names: string[]): Promise<ActionR
       if (itemsError) {
         logger.error('[templates/starter-actions] add package_items failed', itemsError, { userId })
         return { ok: false, error: 'Could not add package items.' }
-      }
-    }
-  }
-  return { ok: true, data: { added: toInsert.length } }
-}
-
-/** Add starter quote templates (parent `quote_templates` + `quote_template_items`). */
-export async function addStarterQuoteTemplatesAction(names: string[]): Promise<ActionResult<{ added: number }>> {
-  const r = await resolveLineItemStarters('quote_templates', STARTER_QUOTE_TEMPLATES, names)
-  if (!r.ok) return r
-  const { supabase, userId, toInsert, maxPosition } = r
-
-  for (let i = 0; i < toInsert.length; i++) {
-    const set = toInsert[i]
-    if (!set) continue
-    const { data: parent, error } = await supabase
-      .from('quote_templates')
-      .insert({ user_id: userId, name: set.name, notes: set.subtitle, is_starter: true, position: maxPosition + (i + 1) * POSITION_STEP })
-      .select('id')
-      .single()
-    if (error || !parent) {
-      logger.error('[templates/starter-actions] add quote_templates failed', error, { userId })
-      return { ok: false, error: 'Could not add quote templates.' }
-    }
-    if (set.items.length > 0) {
-      const rows: Database['public']['Tables']['quote_template_items']['Insert'][] = set.items.map((it, j) => ({
-        template_id: parent.id,
-        user_id: userId,
-        description: it.description,
-        amount: it.amount,
-        position: (j + 1) * POSITION_STEP,
-      }))
-      const { error: itemsError } = await supabase.from('quote_template_items').insert(rows)
-      if (itemsError) {
-        logger.error('[templates/starter-actions] add quote_template_items failed', itemsError, { userId })
-        return { ok: false, error: 'Could not add quote template items.' }
       }
     }
   }
