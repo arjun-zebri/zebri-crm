@@ -112,9 +112,17 @@ A schema+RPCs (**done**) → B server actions+email (**done**:
 `duplicateProposalAction` in `app/(dashboard)/payments/actions.ts`;
 `POST /api/email/send-proposal` + `sendProposalEmail`/`proposalHtml`;
 accepted/declined proposals are locked against edits and re-sends) →
-C composer+payments tab → D public page+branding surface → E invoice
-generation+contract link → F automations+portal+docs → G delete quote
-code → H destructive drop migration (`-- @ALLOW_DESTRUCTIVE`). Every
-phase is its own PR to `staging`; quotes keep working until G. Full
-plan of record:
+C composer+payments tab (**done**: `proposal-builder-modal` over the
+shared builder parts with an options stack — each option card owns
+title/description, base items via LineItemsTable, add-ons with MC
+pre-ticks, and a display-only terms line; Proposals tab on /payments
+(first tab) + couple-profile section; two-tab live preview [couple
+page summary + real cover email]; e2e `tests/e2e/proposals.spec.ts`,
+validated on the isolated local-Supabase server desktop + iPhone 12
+via `playwright.iso.config.ts`) → D public page+branding surface →
+E invoice generation+contract link → F automations+portal+docs →
+G delete quote code → H destructive drop migration
+(`-- @ALLOW_DESTRUCTIVE`). Owner direction 2026-07-10: build the
+remaining phases in one continuous push (no per-phase pause); quotes
+keep working until G. Full plan of record:
 `~/.claude/plans/theres-too-much-white-parsed-mango.md` (2026-07-10).

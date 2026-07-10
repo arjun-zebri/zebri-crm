@@ -18,6 +18,18 @@ import { useQuery } from '@tanstack/react-query';
 
 import { createClient } from '@/lib/supabase/client';
 
+export interface Proposal {
+  id: string;
+  proposal_number: string;
+  title: string;
+  status: string;
+  /** Primary option total pre-acceptance; accepted total after. */
+  subtotal: number;
+  expires_at: string | null;
+  created_at: string;
+  couple: { id: string; name: string };
+}
+
 export interface Quote {
   id: string;
   quote_number: string;
@@ -47,6 +59,27 @@ export interface Contract {
   signed_at: string | null;
   created_at: string;
   couple: { id: string; name: string };
+}
+
+/** Proposals owned by the current user, newest first. */
+export function useProposals() {
+  const supabase = createClient();
+  return useQuery({
+    queryKey: ['all-proposals'],
+    queryFn: async (): Promise<Proposal[]> => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('Not authenticated');
+      const { data, error } = await supabase
+        .from('proposals')
+        .select(
+          'id, proposal_number, title, status, subtotal, expires_at, created_at, couple:couple_id(id, name)',
+        )
+        .eq('user_id', user.user.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as unknown as Proposal[]) || [];
+    },
+  });
 }
 
 /** Quotes owned by the current user, newest first. */

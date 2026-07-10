@@ -124,9 +124,11 @@ export function Modal({
             className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}
           >
             {title && (
-              <div className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+              // A real heading: screen readers announce the dialog name
+              // and e2e selectors can target `h2:has-text(...)`.
+              <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
                 {title}
-              </div>
+              </h2>
             )}
             <div className={`flex items-center gap-1 ${!title ? 'ml-auto' : ''}`}>
               {headerActions && (

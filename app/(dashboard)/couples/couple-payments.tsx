@@ -2,10 +2,11 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FileText, Receipt, Plus } from 'lucide-react'
+import { FileText, PackageOpen, Receipt, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal'
+import { ProposalBuilderModal } from '@/components/builders/proposal-builder-modal'
 import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
@@ -17,6 +18,15 @@ import { CoupleTabEmpty, CoupleTabShell, tabStat, type TabStat } from './couple-
 interface CouplePaymentsProps {
   coupleId: string
   coupleName: string
+}
+
+interface Proposal {
+  id: string
+  proposal_number: string
+  title: string
+  status: string
+  subtotal: number
+  created_at: string
 }
 
 interface Quote {
@@ -57,8 +67,27 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
   const queryClient = useQueryClient()
   const { toast } = useToast()
 
+  const [activeProposalId, setActiveProposalId] = useState<string | null>(null)
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null)
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null)
+
+  const { data: proposals, isLoading: isProposalsLoading } = useQuery({
+    queryKey: ['couple-proposals', coupleId],
+    queryFn: async () => {
+      const { data: user, error: userError } = await supabase.auth.getUser()
+      if (userError || !user.user) throw new Error('Not authenticated')
+
+      const { data, error } = await supabase
+        .from('proposals')
+        .select('id, proposal_number, title, status, subtotal, created_at')
+        .eq('couple_id', coupleId)
+        .eq('user_id', user.user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return (data as Proposal[]) || []
+    },
+  })
 
   const { data: quotes, isLoading: isQuotesLoading } = useQuery({
     queryKey: ['couple-quotes', coupleId],
@@ -167,21 +196,26 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
     onError: () => toast('Failed to create invoice'),
   })
 
+  const allProposals = proposals || []
   const allQuotes = quotes || []
   const allInvoices = invoices || []
 
   const quotesTotal = allQuotes.reduce((sum, q) => sum + q.subtotal, 0)
   const invoicesTotal = allInvoices.reduce((sum, i) => sum + i.subtotal, 0)
 
-  // Single centred empty only when the whole tab is empty; once either
+  // Single centred empty only when the whole tab is empty; once any
   // section has data we fall back to the stacked two-column layout.
-  const isLoading = isQuotesLoading || isInvoicesLoading
-  const isEmpty = !isLoading && allQuotes.length === 0 && allInvoices.length === 0
+  const isLoading = isProposalsLoading || isQuotesLoading || isInvoicesLoading
+  const isEmpty =
+    !isLoading && allProposals.length === 0 && allQuotes.length === 0 && allInvoices.length === 0
 
   // Counts + key statuses on the left; the dollar totals sit in the bottom row.
-  const acceptedCount = allQuotes.filter((q) => q.status === 'accepted').length
+  const acceptedCount =
+    allProposals.filter((p) => p.status === 'accepted').length +
+    allQuotes.filter((q) => q.status === 'accepted').length
   const paidCount = allInvoices.filter((i) => i.status === 'paid').length
   const stats: TabStat[] = []
+  if (allProposals.length > 0) stats.push({ label: tabStat(allProposals.length, 'proposal') })
   if (allQuotes.length > 0) stats.push({ label: tabStat(allQuotes.length, 'quote') })
   if (allInvoices.length > 0) stats.push({ label: tabStat(allInvoices.length, 'invoice') })
   if (acceptedCount > 0) stats.push({ label: `${acceptedCount} accepted`, tone: 'success' })
@@ -202,6 +236,15 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           sideOffset={6}
           className="z-[80] w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 text-sm"
         >
+          <Popover.Close asChild>
+            <button
+              onClick={() => setActiveProposalId('new')}
+              className="w-full flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
+            >
+              <PackageOpen size={14} strokeWidth={1.5} className="text-gray-400" />
+              New proposal
+            </button>
+          </Popover.Close>
           <Popover.Close asChild>
             <button
               onClick={() => createQuote.mutate()}
@@ -238,8 +281,49 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
       ) : (
       <div className="flex flex-col flex-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-16 flex-1">
-          {/* Quotes column */}
+          {/* Proposals + Quotes column */}
           <div>
+            {(allProposals.length > 0 || isProposalsLoading) && (
+              <div className="mb-8">
+                <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-900">
+                  Proposals
+                </h3>
+                {isProposalsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2].map((i) => (
+                      <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {allProposals.map((proposal) => (
+                      <button
+                        key={proposal.id}
+                        onClick={() => setActiveProposalId(proposal.id)}
+                        className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
+                      >
+                        <PackageOpen size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900 truncate">{proposal.title}</p>
+                          <p className="text-xs text-gray-400">{proposal.proposal_number}</p>
+                        </div>
+                        <span
+                          className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full capitalize ${
+                            STATUS_STYLES[proposal.status] || STATUS_STYLES.draft
+                          }`}
+                        >
+                          {proposal.status}
+                        </span>
+                        <span className="shrink-0 text-sm text-gray-700 font-medium tabular-nums">
+                          {formatCurrency(proposal.subtotal)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-900">
               Quotes
             </h3>
@@ -357,6 +441,16 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           </div>
         </div>
       </div>
+      )}
+
+      {!!activeProposalId && (
+        <ProposalBuilderModal
+          proposalId={activeProposalId}
+          initialCoupleId={coupleId}
+          isOpen
+          onClose={() => setActiveProposalId(null)}
+          onDuplicated={(newId) => setActiveProposalId(newId)}
+        />
       )}
 
       {!!activeQuoteId && (

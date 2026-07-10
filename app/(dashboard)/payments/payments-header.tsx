@@ -11,7 +11,7 @@
  */
 'use client';
 
-import { FileSignature, FileText, Plus, Receipt, Search, X } from 'lucide-react';
+import { FileSignature, FileText, PackageOpen, Plus, Receipt, Search, X } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
 import type { PaymentsTab } from './use-payments-shortcut';
@@ -43,7 +43,13 @@ export function PaymentsHeader({
   newButtonOverride,
 }: PaymentsHeaderProps) {
   const newLabel =
-    activeTab === 'quotes' ? 'quote' : activeTab === 'invoices' ? 'invoice' : 'contract';
+    activeTab === 'proposals'
+      ? 'proposal'
+      : activeTab === 'quotes'
+        ? 'quote'
+        : activeTab === 'invoices'
+          ? 'invoice'
+          : 'contract';
 
   const mobileNewButton = newButtonOverride ?? (
     <button
@@ -110,6 +116,12 @@ export function PaymentsHeader({
 
       {/* Tabs */}
       <div className="flex items-center gap-6 border-b border-gray-200 mt-6">
+        <TabButton
+          active={activeTab === 'proposals'}
+          onClick={() => onTabChange('proposals')}
+          icon={<PackageOpen size={15} strokeWidth={1.5} />}
+          label="Proposals"
+        />
         <TabButton
           active={activeTab === 'quotes'}
           onClick={() => onTabChange('quotes')}

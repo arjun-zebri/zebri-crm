@@ -22,18 +22,16 @@ export interface PaymentsFooterProps {
 }
 
 export function PaymentsFooter({ tab, count, total }: PaymentsFooterProps) {
-  const noun =
-    tab === 'quotes'
-      ? count === 1
+  // Singular noun per tab; pluralised below.
+  const singular =
+    tab === 'proposals'
+      ? 'proposal'
+      : tab === 'quotes'
         ? 'quote'
-        : 'quotes'
-      : tab === 'invoices'
-        ? count === 1
+        : tab === 'invoices'
           ? 'invoice'
-          : 'invoices'
-        : count === 1
-          ? 'contract'
-          : 'contracts';
+          : 'contract';
+  const noun = count === 1 ? singular : `${singular}s`;
 
   return (
     <div className="fixed bottom-0 left-0 md:left-[68px] right-0 z-30 bg-white border-t border-gray-100 px-6 py-5 flex items-center justify-between">

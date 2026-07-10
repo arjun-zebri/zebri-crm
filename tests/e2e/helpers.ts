@@ -61,8 +61,11 @@ export async function addCouple(
   // "New couple" is a split menu (Add manually / Import from CSV).
   await openAddCoupleModal(page)
   await page.locator('input[placeholder="Couple\'s name"]').fill(opts.name)
-  if (opts.email) await page.locator('input[type="email"]').fill(opts.email)
-  if (opts.phone) await page.locator('input[type="tel"]').fill(opts.phone)
+  // The partner-contact-triples form made the primary contact's full
+  // name required (Save stays disabled without it); derive one.
+  await page.locator('input[placeholder="Full name"]').first().fill(opts.name.split(' ')[0] || 'Test Contact')
+  if (opts.email) await page.locator('input[type="email"]').first().fill(opts.email)
+  if (opts.phone) await page.locator('input[type="tel"]').first().fill(opts.phone)
   if (opts.notes) await page.locator('textarea').fill(opts.notes)
   await page.locator('button:has-text("Save")').click()
   await page.waitForSelector('h2:has-text("Add Couple")', { state: 'hidden' })

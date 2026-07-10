@@ -20,6 +20,7 @@ import { useMemo, useRef, useState } from 'react';
 
 import { ContractBuilderModal } from '@/components/builders/contract-builder-modal';
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal';
+import { ProposalBuilderModal } from '@/components/builders/proposal-builder-modal';
 import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal';
 
 import { ContractsList } from './contracts-list';
@@ -27,14 +28,16 @@ import { deriveInvoices, InvoicesList } from './invoices-list';
 import { NewContractPopover } from './new-contract-popover';
 import { PaymentsFooter } from './payments-footer';
 import { PaymentsHeader } from './payments-header';
+import { displayStatus, ProposalsList } from './proposals-list';
 import { QuotesList } from './quotes-list';
-import { useContracts, useInvoices, useQuotes } from './use-payments-data';
+import { useContracts, useInvoices, useProposals, useQuotes } from './use-payments-data';
 import { type PaymentsTab, usePaymentsShortcut } from './use-payments-shortcut';
 
 export default function PaymentsPage() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [activeTab, setActiveTab] = useState<PaymentsTab>('quotes');
+  const [activeTab, setActiveTab] = useState<PaymentsTab>('proposals');
+  const [activeProposalId, setActiveProposalId] = useState<string | null>(null);
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
   const [activeContract, setActiveContract] = useState<{
@@ -42,6 +45,7 @@ export default function PaymentsPage() {
     coupleId: string;
     coupleName: string;
   } | null>(null);
+  const [proposalSearch, setProposalSearch] = useState('');
   const [quoteSearch, setQuoteSearch] = useState('');
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [contractSearch, setContractSearch] = useState('');
@@ -55,15 +59,30 @@ export default function PaymentsPage() {
   usePaymentsShortcut({
     searchInputRef,
     onClearSearch: () => {
+      setProposalSearch('');
       setQuoteSearch('');
       setInvoiceSearch('');
       setContractSearch('');
     },
   });
 
+  const { data: proposals, isLoading: proposalsLoading } = useProposals();
   const { data: quotes, isLoading: quotesLoading } = useQuotes();
   const { data: invoices, isLoading: invoicesLoading } = useInvoices();
   const { data: contracts, isLoading: contractsLoading } = useContracts();
+
+  const filteredProposals = useMemo(() => {
+    const list = proposals ?? [];
+    if (!proposalSearch) return list;
+    const s = proposalSearch.toLowerCase();
+    return list.filter(
+      (p) =>
+        p.title.toLowerCase().includes(s) ||
+        p.proposal_number.toLowerCase().includes(s) ||
+        p.couple.name.toLowerCase().includes(s) ||
+        displayStatus(p).toLowerCase().includes(s),
+    );
+  }, [proposals, proposalSearch]);
 
   const filteredQuotes = useMemo(() => {
     const list = quotes ?? [];
@@ -105,41 +124,51 @@ export default function PaymentsPage() {
   }, [contracts, contractSearch]);
 
   const currentSearch =
-    activeTab === 'quotes'
-      ? quoteSearch
-      : activeTab === 'invoices'
-        ? invoiceSearch
-        : contractSearch;
+    activeTab === 'proposals'
+      ? proposalSearch
+      : activeTab === 'quotes'
+        ? quoteSearch
+        : activeTab === 'invoices'
+          ? invoiceSearch
+          : contractSearch;
 
   function setCurrentSearch(value: string) {
-    if (activeTab === 'quotes') setQuoteSearch(value);
+    if (activeTab === 'proposals') setProposalSearch(value);
+    else if (activeTab === 'quotes') setQuoteSearch(value);
     else if (activeTab === 'invoices') setInvoiceSearch(value);
     else setContractSearch(value);
   }
 
   const count =
-    activeTab === 'quotes'
-      ? filteredQuotes.length
-      : activeTab === 'invoices'
-        ? filteredInvoices.length
-        : filteredContracts.length;
+    activeTab === 'proposals'
+      ? filteredProposals.length
+      : activeTab === 'quotes'
+        ? filteredQuotes.length
+        : activeTab === 'invoices'
+          ? filteredInvoices.length
+          : filteredContracts.length;
 
   const total =
-    activeTab === 'quotes'
-      ? filteredQuotes.reduce((sum, q) => sum + q.subtotal, 0)
-      : activeTab === 'invoices'
-        ? filteredInvoices.reduce((sum, inv) => sum + inv.subtotal, 0)
-        : undefined;
+    activeTab === 'proposals'
+      ? filteredProposals.reduce((sum, p) => sum + p.subtotal, 0)
+      : activeTab === 'quotes'
+        ? filteredQuotes.reduce((sum, q) => sum + q.subtotal, 0)
+        : activeTab === 'invoices'
+          ? filteredInvoices.reduce((sum, inv) => sum + inv.subtotal, 0)
+          : undefined;
 
   const isLoading =
-    activeTab === 'quotes'
-      ? quotesLoading
-      : activeTab === 'invoices'
-        ? invoicesLoading
-        : contractsLoading;
+    activeTab === 'proposals'
+      ? proposalsLoading
+      : activeTab === 'quotes'
+        ? quotesLoading
+        : activeTab === 'invoices'
+          ? invoicesLoading
+          : contractsLoading;
 
   function handleNew() {
-    if (activeTab === 'quotes') setActiveQuoteId('new');
+    if (activeTab === 'proposals') setActiveProposalId('new');
+    else if (activeTab === 'quotes') setActiveQuoteId('new');
     else if (activeTab === 'invoices') setActiveInvoiceId('new');
     else setNewContractOpen(true);
   }
@@ -180,6 +209,14 @@ export default function PaymentsPage() {
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-6 sm:px-[3.75rem] pb-28">
+          {activeTab === 'proposals' && (
+            <ProposalsList
+              loading={isLoading}
+              proposals={filteredProposals}
+              searching={Boolean(proposalSearch)}
+              onOpen={setActiveProposalId}
+            />
+          )}
           {activeTab === 'quotes' && (
             <QuotesList
               loading={isLoading}
@@ -208,6 +245,15 @@ export default function PaymentsPage() {
       </div>
 
       <PaymentsFooter tab={activeTab} count={count} total={total} />
+
+      {!!activeProposalId && (
+        <ProposalBuilderModal
+          proposalId={activeProposalId}
+          isOpen
+          onClose={() => setActiveProposalId(null)}
+          onDuplicated={(newId) => setActiveProposalId(newId)}
+        />
+      )}
 
       {!!activeQuoteId && (
         <QuoteBuilderModal

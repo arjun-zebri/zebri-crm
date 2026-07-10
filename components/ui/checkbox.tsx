@@ -36,6 +36,8 @@ export interface CheckboxProps {
   disabled?: boolean
   /** Extra classes on the wrapper. */
   className?: string
+  /** Accessible name for label-less checkboxes (e.g. per-row ticks). */
+  ariaLabel?: string
 }
 
 export function Checkbox({
@@ -44,12 +46,14 @@ export function Checkbox({
   label,
   disabled,
   className,
+  ariaLabel,
 }: CheckboxProps) {
   const box = (
     <button
       type="button"
       role="checkbox"
       aria-checked={checked}
+      {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`shrink-0 w-4 h-4 rounded border transition flex items-center justify-center ${
