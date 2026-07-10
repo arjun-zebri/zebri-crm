@@ -96,6 +96,9 @@ interface Invoice {
   couple_id: string;
   couple_name: string;
   event_id: string | null;
+  /** Provenance: the accepted proposal this invoice was generated
+   *  from, if any. Never feeds rendering. */
+  proposal_id?: string | null;
 }
 
 export interface InvoiceBuilderModalProps {
@@ -144,6 +147,7 @@ export function InvoiceBuilderModal({
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [coupleName, setCoupleName] = useState<string | null>(null);
   const [eventId] = useState<string | null>(null);
+  const [proposalId, setProposalId] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState<number | null>(null);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | null>(null);
   const [discountValue, setDiscountValue] = useState<number | null>(null);
@@ -196,7 +200,10 @@ export function InvoiceBuilderModal({
 
   // Invoice templates + quote templates + packages, offered as
   // "start from" sources (invoice templates are invoice-builder only).
-  const { data: applySources } = useApplySources({ includeInvoiceTemplates: true });
+  const { data: applySources } = useApplySources({
+    includeInvoiceTemplates: true,
+    includeAcceptedProposals: true,
+  });
 
   const { data: couples } = useQuery({
     queryKey: ['all-couples-for-invoice'],
@@ -256,6 +263,7 @@ export function InvoiceBuilderModal({
       setDepositDueDate('');
       setFinalDueDate('');
       setStripePaymentEnabled(false);
+      setProposalId(null);
       setDirty(false);
       return;
     }
@@ -283,6 +291,7 @@ export function InvoiceBuilderModal({
       setDepositDueDate(invoice.deposit_due_date ?? '');
       setFinalDueDate(invoice.final_due_date ?? '');
       setStripePaymentEnabled(invoice.stripe_payment_enabled);
+      setProposalId(invoice.proposal_id ?? null);
       setDirty(false);
     }
   }, [invoice?.id, isNewInvoice, initialCoupleId, couples]);
@@ -384,6 +393,18 @@ export function InvoiceBuilderModal({
         setDepositPercent(source.package.depositPercent);
       }
     }
+    if (source.proposal) {
+      // Invoicing what the couple agreed to: the accepted option's
+      // terms carry over, and the invoice records its provenance.
+      setTaxRate(source.proposal.gstInclusive ? null : 10);
+      if (source.proposal.depositPercent != null) {
+        setDepositEnabled(true);
+        setDepositPercent(source.proposal.depositPercent);
+      }
+      setProposalId(source.proposal.id);
+    } else {
+      setProposalId(null);
+    }
     setPendingApply(null);
     setDirty(true);
   }
@@ -410,6 +431,7 @@ export function InvoiceBuilderModal({
         depositDueDate: depositEnabled ? depositDueDate || null : null,
         finalDueDate: depositEnabled ? finalDueDate || null : null,
         stripePaymentEnabled,
+        proposalId,
         items: items.map((item, idx) => ({
           id: item.id,
           description: item.description,

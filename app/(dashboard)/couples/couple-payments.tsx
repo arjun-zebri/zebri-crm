@@ -450,6 +450,10 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           isOpen
           onClose={() => setActiveProposalId(null)}
           onDuplicated={(newId) => setActiveProposalId(newId)}
+          onCreateInvoice={(invId) => {
+            setActiveProposalId(null)
+            setActiveInvoiceId(invId)
+          }}
         />
       )}
 

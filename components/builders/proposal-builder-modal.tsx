@@ -57,6 +57,10 @@ export interface ProposalBuilderModalProps {
   onClose: () => void;
   /** Fired with the new draft's id after "Duplicate to revise". */
   onDuplicated?: (proposalId: string) => void;
+  /** Fired with the new invoice's id after "Generate invoice"
+   *  (accepted proposals only) — the parent opens the invoice
+   *  builder for review. */
+  onCreateInvoice?: (invoiceId: string) => void;
   onDelete?: () => void;
 }
 
@@ -88,6 +92,7 @@ export function ProposalBuilderModal({
   isOpen,
   onClose,
   onDuplicated,
+  onCreateInvoice,
   onDelete,
 }: ProposalBuilderModalProps) {
   const supabase = createClient();
@@ -285,6 +290,75 @@ export function ProposalBuilderModal({
     },
   });
 
+  // Generate a draft invoice from the RECORDED acceptance: the chosen
+  // option's base items + ticked add-ons, the option's deposit rule
+  // pre-filling the schedule, GST treatment carried, provenance set.
+  const generateInvoice = useMutation({
+    mutationFn: async () => {
+      if (!proposal || !effectiveId) throw new Error('Nothing to invoice');
+      const chosenOption = (optionDrafts ?? []).find(
+        (o) => o.key === proposal.accepted_option_id,
+      );
+      if (!chosenOption) throw new Error('Accepted option not found');
+      const ticks = proposal.accepted_addon_selection ?? {};
+      const agreedItems = [
+        ...chosenOption.items,
+        ...chosenOption.addOns.filter((addOn) => ticks[addOn.id]),
+      ];
+
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) throw new Error('Not authenticated');
+      const { data: numData, error: numErr } = await supabase.rpc('generate_invoice_number', {
+        p_user_id: auth.user.id,
+      });
+      if (numErr) throw numErr;
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 7);
+
+      const { data: inv, error } = await supabase
+        .from('invoices')
+        .insert({
+          user_id: auth.user.id,
+          couple_id: proposal.couple_id,
+          proposal_id: proposal.id,
+          invoice_number: numData as string,
+          title: proposal.title,
+          status: 'draft',
+          subtotal: agreedItems.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+          due_date: dueDate.toISOString().split('T')[0]!,
+          notes: proposal.notes,
+          tax_rate: chosenOption.gstInclusive ? 0 : 10,
+          deposit_percent: chosenOption.depositPercent,
+        })
+        .select('id')
+        .single();
+      if (error || !inv) throw error ?? new Error('invoice insert returned no row');
+
+      if (agreedItems.length > 0) {
+        const { error: itemsErr } = await supabase.from('invoice_items').insert(
+          agreedItems.map((item, idx) => ({
+            invoice_id: inv.id,
+            user_id: auth.user!.id,
+            description: item.description,
+            quantity: 1,
+            unit_price: Number(item.amount || 0),
+            amount: Number(item.amount || 0),
+            position: (idx + 1) * 1000,
+          })),
+        );
+        if (itemsErr) throw itemsErr;
+      }
+      return inv.id as string;
+    },
+    onSuccess: (id) => {
+      void queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
+      void queryClient.invalidateQueries({ queryKey: ['couple-invoices'] });
+      onCreateInvoice?.(id);
+    },
+    onError: (err) =>
+      toast(err instanceof Error ? err.message : 'Failed to create invoice', 'error'),
+  });
+
   const duplicate = useMutation({
     mutationFn: async () => {
       if (!effectiveId) throw new Error('Nothing to duplicate');
@@ -339,6 +413,9 @@ export function ProposalBuilderModal({
   /* ─── shell wiring ──────────────────────────────────────────── */
   const pillKey = (status in STATE_PILL ? status : 'draft') as keyof typeof STATE_PILL;
   const overflowItems: OverflowMenuItem[] = [];
+  if (status === 'accepted') {
+    overflowItems.push({ label: 'Generate invoice', onClick: () => generateInvoice.mutate() });
+  }
   if (effectiveId && !canEdit) {
     overflowItems.push({ label: 'Duplicate to revise', onClick: () => duplicate.mutate() });
   }

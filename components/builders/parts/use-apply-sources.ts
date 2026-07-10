@@ -45,6 +45,14 @@ export interface ApplyPackageMeta {
   weekendLoadingPercent: number | null
 }
 
+/** Accepted-proposal terms that pre-fill the invoice on apply. */
+export interface ApplyProposalMeta {
+  id: string
+  /** The accepted option's snapshotted terms. */
+  depositPercent: number | null
+  gstInclusive: boolean
+}
+
 /** Everything a builder needs to apply one picked source. */
 export interface ApplySource {
   notes: string | null
@@ -54,6 +62,10 @@ export interface ApplySource {
   addOns: ApplyItem[]
   /** Set when the source is a package; null for templates. */
   package: ApplyPackageMeta | null
+  /** Set when the source is an accepted proposal: the items are the
+   *  RECORDED selection (base + ticked add-ons) and the meta carries
+   *  the accepted option's deposit/GST terms. */
+  proposal?: ApplyProposalMeta | null
 }
 
 export interface ApplySources {
@@ -67,6 +79,10 @@ export interface ApplySources {
 interface UseApplySourcesOptions {
   /** Also offer invoice templates (`it:<id>`). Invoice builder only. */
   includeInvoiceTemplates?: boolean
+  /** Also offer ACCEPTED proposals (`prop:<id>`) — the recorded
+   *  selection becomes the invoice, terms and all. Invoice builder
+   *  only. */
+  includeAcceptedProposals?: boolean
 }
 
 const EMPTY: ApplySources = { options: [], applyMap: {} }
@@ -79,10 +95,13 @@ const EMPTY: ApplySources = { options: [], applyMap: {} }
  * hasn't received the packages-v2 migration yet: missing fields read as
  * undefined and fall back below.
  */
-export function useApplySources({ includeInvoiceTemplates = false }: UseApplySourcesOptions = {}) {
+export function useApplySources({
+  includeInvoiceTemplates = false,
+  includeAcceptedProposals = false,
+}: UseApplySourcesOptions = {}) {
   const supabase = createClient()
   return useQuery({
-    queryKey: ['builder-apply-sources', includeInvoiceTemplates],
+    queryKey: ['builder-apply-sources', includeInvoiceTemplates, includeAcceptedProposals],
     queryFn: async (): Promise<ApplySources> => {
       const { data: auth } = await supabase.auth.getUser()
       const uid = auth.user?.id
@@ -115,6 +134,53 @@ export function useApplySources({ includeInvoiceTemplates = false }: UseApplySou
 
       const options: QuoteTemplate[] = []
       const applyMap: ApplySources['applyMap'] = {}
+
+      // Accepted proposals FIRST — "invoice what the couple agreed to"
+      // is the most specific starting point the invoice builder has.
+      if (includeAcceptedProposals) {
+        const { data: proposals } = await supabase
+          .from('proposals')
+          .select(
+            'id, proposal_number, title, notes, accepted_option_id, accepted_addon_selection, proposal_options!proposals_accepted_option_id_fkey(id, title, deposit_percent, gst_inclusive)',
+          )
+          .eq('user_id', uid)
+          .eq('status', 'accepted')
+          .order('accepted_at', { ascending: false })
+        for (const p of proposals ?? []) {
+          const option = Array.isArray(p.proposal_options)
+            ? p.proposal_options[0]
+            : p.proposal_options
+          if (!option || !p.accepted_option_id) continue
+          const { data: optionItems } = await supabase
+            .from('proposal_option_items')
+            .select('id, description, amount, is_addon, position')
+            .eq('option_id', p.accepted_option_id)
+            .order('position')
+          const selection = (p.accepted_addon_selection ?? {}) as Record<string, boolean>
+          // The recorded agreement: base items + TICKED add-ons only.
+          const items = (optionItems ?? [])
+            .filter((item) => !item.is_addon || selection[item.id])
+            .map((item) => ({ description: item.description, amount: Number(item.amount) }))
+          const key = `prop:${p.id}`
+          options.push({
+            id: key,
+            name: `${p.proposal_number} — ${option.title} (accepted)`,
+            notes: p.notes,
+            itemCount: items.length,
+          })
+          applyMap[key] = {
+            notes: p.notes,
+            items,
+            addOns: [],
+            package: null,
+            proposal: {
+              id: p.id,
+              depositPercent: option.deposit_percent != null ? Number(option.deposit_percent) : null,
+              gstInclusive: option.gst_inclusive,
+            },
+          }
+        }
+      }
 
       for (const t of invTpls.data ?? []) {
         const key = `it:${t.id}`

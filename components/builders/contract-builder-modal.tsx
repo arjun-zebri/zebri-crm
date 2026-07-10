@@ -77,6 +77,8 @@ interface Contract {
   share_token: string;
   share_token_enabled: boolean;
   quote_id: string | null;
+  /** Linked accepted proposal — preferred money source over quote_id. */
+  proposal_id?: string | null;
   couple_id: string;
   signed_at: string | null;
   signer_name: string | null;
@@ -166,6 +168,7 @@ export function ContractBuilderModal({
   const [content, setContent] = useState<JSONContent>(DEFAULT_TEMPLATE);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [quoteId, setQuoteId] = useState<string | null>(null);
+  const [linkedProposalId, setLinkedProposalId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
@@ -186,18 +189,37 @@ export function ContractBuilderModal({
     },
   });
 
+  // Linkable money sources for {{total_amount}} / {{deposit_amount}}:
+  // the couple's ACCEPTED proposals (preferred — the recorded
+  // agreement) plus quotes while those still exist. Proposals are
+  // namespaced `prop:<id>` in the shared picker's option list.
   const { data: quotes } = useQuery({
     queryKey: ['couple-accepted-quotes', coupleId],
     enabled: isOpen && !!coupleId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('id, quote_number, title, status, subtotal')
-        .eq('couple_id', coupleId)
-        .in('status', ['accepted', 'sent'])
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data as ContractQuoteLinkOption[]) || [];
+      const [proposalRes, quoteRes] = await Promise.all([
+        supabase
+          .from('proposals')
+          .select('id, proposal_number, title, status, subtotal')
+          .eq('couple_id', coupleId)
+          .eq('status', 'accepted')
+          .order('accepted_at', { ascending: false }),
+        supabase
+          .from('quotes')
+          .select('id, quote_number, title, status, subtotal')
+          .eq('couple_id', coupleId)
+          .in('status', ['accepted', 'sent'])
+          .order('created_at', { ascending: false }),
+      ]);
+      if (quoteRes.error) throw quoteRes.error;
+      const proposalOptions: ContractQuoteLinkOption[] = (proposalRes.data ?? []).map((p) => ({
+        id: `prop:${p.id}`,
+        quote_number: p.proposal_number,
+        title: p.title,
+        status: p.status,
+        subtotal: Number(p.subtotal),
+      }));
+      return [...proposalOptions, ...((quoteRes.data as ContractQuoteLinkOption[]) || [])];
     },
   });
 
@@ -247,6 +269,32 @@ export function ContractBuilderModal({
     },
   });
 
+  // Optional: the linked ACCEPTED proposal — its recorded subtotal +
+  // the accepted option's deposit rule feed the same variables.
+  const { data: linkedProposal } = useQuery({
+    queryKey: ['contract-linked-proposal', linkedProposalId],
+    enabled: isOpen && !!linkedProposalId,
+    queryFn: async () => {
+      if (!linkedProposalId) return null;
+      const { data } = await supabase
+        .from('proposals')
+        .select(
+          'subtotal, proposal_options!proposals_accepted_option_id_fkey(deposit_percent)',
+        )
+        .eq('id', linkedProposalId)
+        .maybeSingle();
+      if (!data) return null;
+      const option = Array.isArray(data.proposal_options)
+        ? data.proposal_options[0]
+        : data.proposal_options;
+      return {
+        total: Number(data.subtotal),
+        depositPercent:
+          option?.deposit_percent != null ? Number(option.deposit_percent) : null,
+      };
+    },
+  });
+
   /* ─── hydrate state from DB ─────────────────────────────────── */
   useEffect(() => {
     if (!contract) return;
@@ -258,6 +306,7 @@ export function ContractBuilderModal({
     );
     setExpiresAt(contract.expires_at);
     setQuoteId(contract.quote_id);
+    setLinkedProposalId(contract.proposal_id ?? null);
     setDirty(false);
   }, [contract?.id]);
 
@@ -296,11 +345,12 @@ export function ContractBuilderModal({
       couple: { name: coupleName, email: null },
       firstEvent: firstEvent ?? null,
       quote: linkedQuote ?? null,
+      proposal: linkedProposal ?? null,
       userMeta,
       depositPercent,
     });
     return renderContractHtml(content, vars);
-  }, [canEdit, contract?.locked_content_html, content, coupleName, firstEvent, linkedQuote, userMeta]);
+  }, [canEdit, contract?.locked_content_html, content, coupleName, firstEvent, linkedQuote, linkedProposal, userMeta]);
 
   /* ─── mutations ─────────────────────────────────────────────── */
   const save = useMutation({
@@ -311,6 +361,7 @@ export function ContractBuilderModal({
         content,
         expiresAt: expiresAt,
         quoteId,
+        proposalId: linkedProposalId,
       };
       const result = await saveContractAction(input);
       if (!result.ok) throw new Error(result.error);
@@ -528,11 +579,19 @@ export function ContractBuilderModal({
             width than the meta-row's date / terms slots. */}
         <div className="mt-3">
           <ContractQuoteLink
-            selectedQuoteId={quoteId}
+            selectedQuoteId={linkedProposalId ? `prop:${linkedProposalId}` : quoteId}
             options={quotes ?? []}
             canEdit={canEdit}
             onSelect={(id) => {
-              setQuoteId(id);
+              // Proposals arrive namespaced (`prop:<id>`) from the
+              // combined options list; a link is one-or-the-other.
+              if (id?.startsWith('prop:')) {
+                setLinkedProposalId(id.slice(5));
+                setQuoteId(null);
+              } else {
+                setQuoteId(id);
+                setLinkedProposalId(null);
+              }
               setDirty(true);
             }}
           />

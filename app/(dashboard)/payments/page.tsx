@@ -252,6 +252,10 @@ export default function PaymentsPage() {
           isOpen
           onClose={() => setActiveProposalId(null)}
           onDuplicated={(newId) => setActiveProposalId(newId)}
+          onCreateInvoice={(invId) => {
+            setActiveProposalId(null);
+            setActiveInvoiceId(invId);
+          }}
         />
       )}
 

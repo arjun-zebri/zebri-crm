@@ -80,19 +80,29 @@ export function buildContractVariables(input: {
     discount_type: 'percentage' | 'fixed' | null
     discount_value: number | null
   } | null
+  /** Linked ACCEPTED proposal: `total` is the recorded selection's
+   *  subtotal, `depositPercent` the accepted option's rule. Takes
+   *  precedence over `quote` when both are set. */
+  proposal?: { total: number; depositPercent: number | null } | null
   userMeta: Record<string, unknown>
   depositPercent: number
 }): ContractVariableValues {
-  const total = input.quote ? calcQuoteTotal(input.quote) : 0
-  const deposit = (total * (input.depositPercent || 25)) / 100
+  const total = input.proposal
+    ? Number(input.proposal.total) || 0
+    : input.quote
+      ? calcQuoteTotal(input.quote)
+      : 0
+  const effectiveDepositPct = input.proposal?.depositPercent ?? input.depositPercent ?? 25
+  const deposit = (total * (effectiveDepositPct || 25)) / 100
+  const hasMoneySource = !!(input.proposal || input.quote)
 
   return {
     couple_name: input.couple.name || '-',
     couple_email: input.couple.email || '-',
     event_date: formatDate(input.firstEvent?.date ?? null),
     venue: input.firstEvent?.venue || '-',
-    total_amount: input.quote ? formatCurrency(total) : '-',
-    deposit_amount: input.quote ? formatCurrency(deposit) : '-',
+    total_amount: hasMoneySource ? formatCurrency(total) : '-',
+    deposit_amount: hasMoneySource ? formatCurrency(deposit) : '-',
     mc_business_name: (input.userMeta.business_name as string) || '-',
     mc_signature_name:
       (input.userMeta.mc_signature_name as string) ||

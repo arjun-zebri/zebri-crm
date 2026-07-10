@@ -193,6 +193,10 @@ const saveInvoiceSchema = z.object({
   depositDueDate: z.string().nullable(),
   finalDueDate: z.string().nullable(),
   stripePaymentEnabled: z.boolean(),
+  /** Provenance: the accepted proposal this invoice was generated
+   *  from. Items stay a snapshot; this never feeds rendering.
+   *  Nullish so an older client bundle omitting it still validates. */
+  proposalId: z.uuid().nullish(),
   items: z.array(lineItemSchema),
 });
 
@@ -219,6 +223,7 @@ export async function saveInvoiceAction(
     depositDueDate,
     finalDueDate,
     stripePaymentEnabled,
+    proposalId,
     items,
   } = parsed.data;
 
@@ -248,6 +253,9 @@ export async function saveInvoiceAction(
       deposit_due_date: depositDueDate,
       final_due_date: finalDueDate,
       stripe_payment_enabled: stripePaymentEnabled,
+      // Written only when the client sent the field, so an older
+      // bundle mid-deploy can't blank existing provenance.
+      ...(proposalId !== undefined ? { proposal_id: proposalId } : {}),
     };
 
     if (effectiveId) {
@@ -371,6 +379,10 @@ const saveContractSchema = z.object({
   content: z.record(z.string(), z.unknown()),
   expiresAt: z.string().nullable(),
   quoteId: z.uuid().nullable(),
+  /** Linked accepted proposal: drives {{total_amount}} /
+   *  {{deposit_amount}} and the signed→deposit-invoice path.
+   *  Nullish so an older client bundle omitting it still validates. */
+  proposalId: z.uuid().nullish(),
 });
 
 export type SaveContractInput = z.infer<typeof saveContractSchema>;
@@ -382,7 +394,7 @@ export async function saveContractAction(
   if (!parsed.success) {
     return { ok: false, error: 'Invalid contract data.' };
   }
-  const { contractId, title, content, expiresAt, quoteId } = parsed.data;
+  const { contractId, title, content, expiresAt, quoteId, proposalId } = parsed.data;
 
   const supabase = await createClient();
   const {
@@ -402,6 +414,7 @@ export async function saveContractAction(
         content: content as unknown as Json,
         expires_at: expiresAt,
         quote_id: quoteId,
+        ...(proposalId !== undefined ? { proposal_id: proposalId } : {}),
       })
       .eq('id', contractId);
     if (error) throw error;
