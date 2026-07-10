@@ -13,7 +13,7 @@
 
 import { useMemo } from 'react';
 
-import { contractHtml, invoiceHtml, quoteHtml } from '@/lib/email/html';
+import { contractHtml, invoiceHtml } from '@/lib/email/html';
 
 import type { PreviewDoc } from './preview-shared';
 
@@ -23,9 +23,6 @@ export interface PreviewEmailProps {
 }
 
 function buildSubject(doc: PreviewDoc): string {
-  if (doc.kind === 'quote') {
-    return `Quote ${doc.documentNumber} from ${doc.businessName ?? 'your MC'}`;
-  }
   if (doc.kind === 'contract') {
     return `Contract ${doc.documentNumber} from ${doc.businessName ?? 'your MC'}`;
   }
@@ -43,15 +40,6 @@ function formatDueDate(iso: string | null | undefined): string | null {
 
 export function PreviewEmail({ doc, coupleEmail }: PreviewEmailProps) {
   const html = useMemo(() => {
-    if (doc.kind === 'quote') {
-      return quoteHtml({
-        coupleName: doc.coupleName ?? 'there',
-        quoteNumber: doc.documentNumber,
-        quoteTitle: doc.title || `Quote ${doc.documentNumber}`,
-        shareUrl: doc.shareUrl,
-        mcBusinessName: doc.businessName ?? 'Your MC',
-      });
-    }
     if (doc.kind === 'contract') {
       return contractHtml({
         coupleName: doc.coupleName ?? 'there',

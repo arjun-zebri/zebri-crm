@@ -1,7 +1,7 @@
 /**
  * Document-sharing actions.
  *
- * send_quote / send_contract / send_invoice  flip share_token_enabled
+ * send_proposal / send_contract / send_invoice  flip share_token_enabled
  *                                            to true and send the
  *                                            corresponding email
  *                                            via the existing
@@ -18,7 +18,7 @@
 
 import { z } from 'zod'
 
-import { sendContractEmail, sendInvoiceEmail, sendProposalEmail, sendQuoteEmail } from '@/lib/email'
+import { sendContractEmail, sendInvoiceEmail, sendProposalEmail } from '@/lib/email'
 import { dispatchEmail } from '@/lib/email/dispatch'
 import { resolveSender, type ResolvedSender } from '@/lib/email/sender-identity'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -49,51 +49,6 @@ async function emailRunSheetLink(
     html: `<p>Here's the run sheet for ${coupleName}.</p><p><a href="${url}">Open the run sheet</a></p><p>${url}</p>`,
   })
   return res.ok
-}
-
-// ────────────────────────────────────────────────────────────────
-// send_quote
-// ────────────────────────────────────────────────────────────────
-
-const sendQuoteSchema = z.object({
-  /** If omitted, pick the most recent draft quote for this couple. */
-  quoteId: z.string().uuid().optional(),
-  /** Specific saved quote template to render (overrides existing draft contents). */
-  templateId: z.string().optional(),
-  /** Days until the quote expires. */
-  expiryDays: z.number().int().min(1).max(365).optional(),
-  /** Optional personal message above the quote link. */
-  customMessage: z.string().optional(),
-  /** Additional file storage keys to attach (brochure, testimonial doc). */
-  attachAdditionalFiles: z.array(z.string()).optional(),
-  /** CC list (assistant / partner). */
-  cc: z.array(z.string().email()).optional(),
-}).passthrough()
-
-const sendQuote: ActionSpec<z.infer<typeof sendQuoteSchema>> = {
-  type: 'send_quote',
-  configSchema: sendQuoteSchema,
-  async handler(ctx, config) {
-    if (!ctx.couple?.email) return { kind: 'ok', output: { skipped: 'no primary email' } }
-    const supabase = createAdminClient()
-    const quote = await pickQuote(supabase, ctx, config.quoteId)
-    if (!quote) return { kind: 'ok', output: { skipped: 'no quote found' } }
-    if (!quote.share_token_enabled) {
-      await supabase.from('quotes').update({ share_token_enabled: true } as never).eq('id', quote.id)
-    }
-    const url = `${APP_URL}/quote/${quote.share_token}`
-    await sendQuoteEmail({
-      coupleEmail: ctx.couple.email,
-      coupleName: ctx.couple.name,
-      quoteNumber: quote.quote_number,
-      quoteTitle: quote.title,
-      shareUrl: url,
-      mcBusinessName: ctx.mc.businessName,
-      sender: await resolveSender(supabase, ctx.userId, ctx.mc.businessName),
-    })
-    return { kind: 'ok', output: { quote_id: quote.id, quote_link: url } }
-  },
-  ui: { category: 'payments', label: 'Send quote', description: 'Email the couple a quote', icon: 'FileText' },
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -368,34 +323,6 @@ async function pickProposal(
   return data ?? null
 }
 
-async function pickQuote(
-  supabase: ReturnType<typeof createAdminClient>,
-  ctx: RunContext,
-  explicitId?: string,
-) {
-  if (explicitId) {
-    const { data } = await supabase
-      .from('quotes')
-      .select('id, quote_number, title, share_token, share_token_enabled')
-      .eq('id', explicitId)
-      .eq('user_id', ctx.userId)
-      .single()
-    return data ?? null
-  }
-  const triggerPayload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
-  const idFromTrigger = typeof triggerPayload['quote_id'] === 'string' ? (triggerPayload['quote_id'] as string) : null
-  if (idFromTrigger) return pickQuote(supabase, ctx, idFromTrigger)
-  if (!ctx.couple) return null
-  const { data } = await supabase
-    .from('quotes')
-    .select('id, quote_number, title, share_token, share_token_enabled')
-    .eq('couple_id', ctx.couple.id)
-    .eq('user_id', ctx.userId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  return data ?? null
-}
 
 async function pickContract(
   supabase: ReturnType<typeof createAdminClient>,
@@ -456,7 +383,6 @@ async function pickInvoice(
 }
 
 export const documentActions: Partial<Record<ActionType, ActionSpec<any>>> = {
-  send_quote: sendQuote,
   send_proposal: sendProposal,
   send_contract: sendContract,
   send_invoice: sendInvoice,

@@ -61,7 +61,7 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
           count: s.id === 'overview' ? initialData.events.length
             : s.id === 'timeline' ? initialData.timeline_items.length
             : s.id === 'contacts' ? initialData.contacts.length + initialData.people.length
-            : s.id === 'payments' ? (initialData.payments.quotes.length + initialData.payments.invoices.length)
+            : s.id === 'payments' ? ((initialData.payments.proposals?.length || 0) + initialData.payments.invoices.length)
             : s.id === 'contracts' ? (initialData.contracts?.length ?? 0)
             : s.id === 'questionnaires' ? (initialData.questionnaires?.length ?? 0)
             : s.id === 'songs' ? initialData.songs.length

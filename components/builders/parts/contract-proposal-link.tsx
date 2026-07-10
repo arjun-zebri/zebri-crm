@@ -1,11 +1,11 @@
 /**
- * Optional "Link to quote" picker for the contract builder.
+ * Optional "Link to proposal" picker for the contract builder.
  *
- * Linking a quote to a contract drives two pieces of downstream
+ * Linking a proposal to a contract drives two pieces of downstream
  * behaviour:
  * - The contract body can reference `{{total_amount}}` /
- *   `{{deposit_amount}}` which come from the linked quote.
- * - When the contract is signed AND the linked quote was already
+ *   `{{deposit_amount}}` which come from the linked proposal.
+ * - When the contract is signed AND the linked proposal was already
  *   accepted, `sign_contract` auto-creates a deposit invoice.
  *
  * Popover with a search input + selectable list — same style as the
@@ -13,25 +13,25 @@
  * the previous implementation; Popover wins for accessibility on
  * mobile + matches the rest of the builder modals.
  *
- * @module components/builders/parts/contract-quote-link
+ * @module components/builders/parts/contract-proposal-link
  */
 'use client';
 
 import * as Popover from '@radix-ui/react-popover';
-import { ChevronDown, FileText, Search } from 'lucide-react';
+import { ChevronDown, PackageOpen, Search } from 'lucide-react';
 import { useState } from 'react';
 
-export interface ContractQuoteLinkOption {
+export interface ContractProposalLinkOption {
   id: string;
-  quote_number: string;
+  proposal_number: string;
   title: string;
   status: string;
   subtotal: number;
 }
 
-export interface ContractQuoteLinkProps {
-  selectedQuoteId: string | null;
-  options: ContractQuoteLinkOption[];
+export interface ContractProposalLinkProps {
+  selectedProposalId: string | null;
+  options: ContractProposalLinkOption[];
   canEdit: boolean;
   onSelect: (id: string | null) => void;
 }
@@ -43,21 +43,21 @@ function formatCurrency(n: number): string {
   }).format(n);
 }
 
-export function ContractQuoteLink({
-  selectedQuoteId,
+export function ContractProposalLink({
+  selectedProposalId,
   options,
   canEdit,
   onSelect,
-}: ContractQuoteLinkProps) {
+}: ContractProposalLinkProps) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState('');
-  const selected = options.find((q) => q.id === selectedQuoteId) ?? null;
+  const selected = options.find((p) => p.id === selectedProposalId) ?? null;
 
   const filtered = filter
     ? options.filter(
-        (q) =>
-          q.quote_number.toLowerCase().includes(filter.toLowerCase()) ||
-          (q.title ?? '').toLowerCase().includes(filter.toLowerCase()),
+        (p) =>
+          p.proposal_number.toLowerCase().includes(filter.toLowerCase()) ||
+          (p.title ?? '').toLowerCase().includes(filter.toLowerCase()),
       )
     : options;
 
@@ -69,7 +69,7 @@ export function ContractQuoteLink({
           disabled={!canEdit}
           className="inline-flex w-64 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1.5 text-body text-text hover:bg-surface-muted transition-colors disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
         >
-          <FileText
+          <PackageOpen
             size={14}
             strokeWidth={1.5}
             className="text-text-subtle shrink-0"
@@ -77,11 +77,11 @@ export function ContractQuoteLink({
           <span className="flex-1 truncate text-left">
             {selected ? (
               <>
-                {selected.quote_number}
+                {selected.proposal_number}
                 <span className="text-text-subtle"> · {selected.title}</span>
               </>
             ) : (
-              <span className="text-text-subtle">Link to quote</span>
+              <span className="text-text-subtle">Link to proposal</span>
             )}
           </span>
           <ChevronDown
@@ -108,7 +108,7 @@ export function ContractQuoteLink({
               autoFocus
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              placeholder="Search quotes…"
+              placeholder="Search proposals…"
               className="w-full rounded-control border border-border bg-surface pl-6 pr-2 py-1.5 text-caption text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong"
             />
           </div>
@@ -124,7 +124,7 @@ export function ContractQuoteLink({
                 setFilter('');
               }}
               className={`block w-full rounded-control px-2 py-1.5 text-left text-body transition-colors hover:bg-surface-muted cursor-pointer ${
-                selectedQuoteId === null
+                selectedProposalId === null
                   ? 'bg-surface-muted text-text'
                   : 'text-text-muted'
               }`}
@@ -133,30 +133,30 @@ export function ContractQuoteLink({
             </button>
             {filtered.length === 0 ? (
               <p className="px-2 py-3 text-center text-caption text-text-subtle">
-                No quotes match.
+                No proposals match.
               </p>
             ) : (
-              filtered.map((q) => (
+              filtered.map((p) => (
                 <button
-                  key={q.id}
+                  key={p.id}
                   type="button"
                   onClick={() => {
-                    onSelect(q.id);
+                    onSelect(p.id);
                     setOpen(false);
                     setFilter('');
                   }}
                   className={`block w-full rounded-control px-2 py-1.5 text-left transition-colors hover:bg-surface-muted cursor-pointer ${
-                    q.id === selectedQuoteId
+                    p.id === selectedProposalId
                       ? 'bg-surface-muted text-text'
                       : 'text-text'
                   }`}
                 >
                   <p className="text-body">
-                    {q.quote_number}
-                    <span className="text-text-subtle"> · {q.title || 'Untitled'}</span>
+                    {p.proposal_number}
+                    <span className="text-text-subtle"> · {p.title || 'Untitled'}</span>
                   </p>
                   <p className="text-caption text-text-muted">
-                    {q.status} · {formatCurrency(q.subtotal)}
+                    {p.status} · {formatCurrency(p.subtotal)}
                   </p>
                 </button>
               ))

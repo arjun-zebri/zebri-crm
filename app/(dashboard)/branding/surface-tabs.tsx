@@ -11,7 +11,7 @@ interface SurfaceTabsProps {
 }
 
 const TABS: { id: SurfaceTab; label: string; icon: typeof FileText; subtitle: string }[] = [
-  { id: 'quote',    label: 'Quote',    subtitle: 'For new enquiries', icon: FileText },
+  { id: 'proposal', label: 'Proposal', subtitle: 'For new enquiries', icon: FileText },
   { id: 'invoice',  label: 'Invoice',  subtitle: 'Once booked',       icon: Receipt },
   { id: 'contract', label: 'Contract', subtitle: 'E-sign agreement',  icon: FileSignature },
   { id: 'portal',   label: 'Portal',   subtitle: 'Couple dashboard',  icon: Users2 },

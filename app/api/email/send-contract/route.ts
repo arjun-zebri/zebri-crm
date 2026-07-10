@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   const { data: contract, error: contractError } = await supabase
     .from('contracts')
     .select(
-      'id, title, contract_number, content, status, share_token, expires_at, quote_id, couple_id, couples(name, email, primary_email)',
+      'id, title, contract_number, content, status, share_token, expires_at, couple_id, couples(name, email, primary_email)',
     )
     .eq('id', contractId)
     .eq('user_id', user.id)
@@ -100,22 +100,13 @@ export async function POST(request: NextRequest) {
   }
 
   // Gather linked data for variable substitution.
-  const [{ data: firstEvent }, quoteRes] = await Promise.all([
-    supabase
-      .from('events')
-      .select('date, venue')
-      .eq('couple_id', contract.couple_id)
-      .order('date', { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-    contract.quote_id
-      ? supabase
-          .from('quotes')
-          .select('subtotal, tax_rate, discount_type, discount_value')
-          .eq('id', contract.quote_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const { data: firstEvent } = await supabase
+    .from('events')
+    .select('date, venue')
+    .eq('couple_id', contract.couple_id)
+    .order('date', { ascending: true })
+    .limit(1)
+    .maybeSingle();
 
   const depositPercent = Number(
     (user.user_metadata?.default_deposit_percent as number | undefined) ?? 25,
@@ -124,11 +115,6 @@ export async function POST(request: NextRequest) {
   const vars = buildContractVariables({
     couple: { name: couple.name, email: couple.email },
     firstEvent: firstEvent ?? null,
-    // DB row's `discount_type` is `text|null`; the helper narrows
-    // to a literal union — bridge the generated-type width.
-    quote: (quoteRes.data ?? null) as Parameters<
-      typeof buildContractVariables
-    >[0]['quote'],
     userMeta: user.user_metadata ?? {},
     depositPercent,
   });

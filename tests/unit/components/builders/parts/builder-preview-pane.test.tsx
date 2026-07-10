@@ -39,9 +39,9 @@ vi.mock('@/components/builders/parts/preview-payment-page', () => ({
 
 function baseDoc(): PreviewDoc {
   return {
-    kind: 'quote',
-    documentNumber: 'Q-001',
-    title: 'Wedding Quote',
+    kind: 'invoice',
+    documentNumber: 'INV-001',
+    title: 'Wedding Invoice',
     status: 'draft',
     coupleName: 'Anna & Jake',
     businessName: null,
@@ -49,37 +49,37 @@ function baseDoc(): PreviewDoc {
     taxRate: 10,
     discount: null,
     notes: null,
-    expiresAt: null,
-    shareUrl: 'https://example.com/quote/abc',
+    dueDate: null,
+    shareUrl: 'https://example.com/invoice/abc',
   };
 }
 
 describe('BuilderPreviewPane', () => {
   it('defaults to the Payment page tab', () => {
-    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
+    render(<BuilderPreviewPane doc={baseDoc()} surface="invoice" />);
     expect(screen.getByTestId('preview-payment-page')).toBeInTheDocument();
   });
 
   it('switches to PDF tab when clicked', async () => {
-    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
+    render(<BuilderPreviewPane doc={baseDoc()} surface="invoice" />);
     await userEvent.click(screen.getByRole('button', { name: /PDF/i }));
     expect(screen.getByTestId('preview-pdf')).toBeInTheDocument();
     expect(screen.queryByTestId('preview-payment-page')).toBeNull();
   });
 
   it('switches to Email tab when clicked', async () => {
-    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
+    render(<BuilderPreviewPane doc={baseDoc()} surface="invoice" />);
     await userEvent.click(screen.getByRole('button', { name: /Email/i }));
     expect(screen.getByTestId('preview-email')).toBeInTheDocument();
   });
 
   it('falls back to the business name when no brand-kit is named', async () => {
-    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
+    render(<BuilderPreviewPane doc={baseDoc()} surface="invoice" />);
     await waitFor(() => expect(screen.getByText('Acme Weddings')).toBeInTheDocument());
   });
 
   it('renders the "Update branding" link pointing at /branding', () => {
-    render(<BuilderPreviewPane doc={baseDoc()} surface="quote" />);
+    render(<BuilderPreviewPane doc={baseDoc()} surface="invoice" />);
     const link = screen.getByRole('link', { name: /Update branding/i });
     expect(link).toHaveAttribute('href', '/branding');
     expect(link).toHaveAttribute('target', '_blank');

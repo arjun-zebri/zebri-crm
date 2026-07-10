@@ -140,7 +140,7 @@ test.describe('Couple Profile', () => {
 
   // ── PAYMENTS tab ──────────────────────────────────────────────────────────
 
-  // A couple with no quotes or invoices shows a single centred empty state
+  // A couple with no proposals or invoices shows a single centred empty state
   // (the per-section Quotes/Invoices columns only appear once there is data).
   test('Payments: empty state shows "No payments yet" and a top-right "New" button', async ({ page }) => {
     await navigateToProfileTab(page, 'Payments')
@@ -149,11 +149,11 @@ test.describe('Couple Profile', () => {
     await expect(panel.getByRole('button', { name: 'New', exact: true })).toBeVisible()
   })
 
-  test('Payments: "New" popover offers New quote and New invoice', async ({ page }) => {
+  test('Payments: "New" popover offers New proposal and New invoice', async ({ page }) => {
     await navigateToProfileTab(page, 'Payments')
     const panel = page.locator('[data-testid="couple-profile-panel"]')
     await panel.getByRole('button', { name: 'New', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'New quote' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'New proposal' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'New invoice' })).toBeVisible()
   })
 

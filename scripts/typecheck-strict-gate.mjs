@@ -41,7 +41,10 @@ import { execSync } from 'node:child_process';
 // replaced both legacy managers; widened optional prop types on the
 // templates/payments surfaces for exactOptionalPropertyTypes; all new
 // template code is strict-clean). Locking in.
-const STRICT_BUDGET = 305;
+// Proposals rollout / quotes removal: 305 → 302 (deleted quote builder,
+// public quote page and quote automations carried strict errors; all
+// proposal code is strict-clean). Locking in.
+const STRICT_BUDGET = 302;
 
 function runTscStrict() {
   try {

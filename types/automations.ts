@@ -51,13 +51,6 @@ export type TriggerType =
   | 'couple_stage_changed'
   | 'booking_cancelled'
   // Quotes
-  | 'quote_created'
-  | 'quote_sent'
-  | 'quote_accepted'
-  | 'quote_declined'
-  | 'quote_due' // emitted by the tick
-  | 'quote_overdue' // emitted by the tick
-  | 'quote_viewed_but_not_responded' // emitted by the tick
   // Proposals
   | 'proposal_sent'
   | 'proposal_accepted'
@@ -198,7 +191,6 @@ export type ActionType =
   | 'create_calendar_event'
   | 'create_reminder'
   // Payments
-  | 'send_quote'
   | 'send_proposal'
   | 'send_contract'
   | 'send_invoice'
@@ -234,11 +226,8 @@ export type ActionType =
   | 'remove_from_segment'
   | 'enqueue_for_newsletter'
   // Payments
-  | 'create_invoice_from_quote'
   | 'create_invoice_from_proposal'
-  | 'create_quote_from_template'
   | 'create_contract_from_template'
-  | 'void_quote'
   | 'void_invoice'
   | 'revoke_contract'
   | 'apply_discount'

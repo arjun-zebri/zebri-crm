@@ -124,12 +124,6 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
       "description": "A reminder to yourself on a future date",
       "icon": "BellRing"
     },
-    "send_quote": {
-      "category": "payments",
-      "label": "Send quote",
-      "description": "Email the couple a quote",
-      "icon": "FileText"
-    },
     "send_proposal": {
       "category": "payments",
       "label": "Send proposal",
@@ -345,37 +339,17 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
       "icon": "Mailbox",
       "comingSoon": true
     },
-    "create_invoice_from_quote": {
-      "category": "payments",
-      "label": "Create invoice from quote",
-      "description": "Auto-draft an invoice from the accepted quote",
-      "icon": "Receipt"
-    },
     "create_invoice_from_proposal": {
       "category": "payments",
       "label": "Create invoice from proposal",
       "description": "Auto-draft an invoice from the accepted proposal",
       "icon": "Receipt"
     },
-    "create_quote_from_template": {
-      "category": "payments",
-      "label": "Create quote from template",
-      "description": "Build a draft quote from a saved template",
-      "icon": "FilePlus2",
-      "comingSoon": true
-    },
     "create_contract_from_template": {
       "category": "payments",
       "label": "Create contract from template",
       "description": "Build a draft contract from a saved template",
       "icon": "FileSignature",
-      "comingSoon": true
-    },
-    "void_quote": {
-      "category": "payments",
-      "label": "Void quote",
-      "description": "Cancel an outstanding quote",
-      "icon": "Ban",
       "comingSoon": true
     },
     "void_invoice": {
@@ -395,14 +369,14 @@ export const actionUi: Partial<Record<ActionType, ActionUi>> = {
     "apply_discount": {
       "category": "payments",
       "label": "Apply discount",
-      "description": "Discount a quote or invoice",
+      "description": "Discount a proposal or invoice",
       "icon": "BadgePercent",
       "comingSoon": true
     },
     "add_line_item": {
       "category": "payments",
       "label": "Add line item",
-      "description": "Add an item to a quote or invoice (upsell)",
+      "description": "Add an item to a proposal or invoice (upsell)",
       "icon": "ListPlus",
       "comingSoon": true
     },

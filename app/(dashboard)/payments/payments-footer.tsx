@@ -1,7 +1,7 @@
 /**
  * Fixed-bottom summary bar for the /payments page.
  *
- * Shows the current tab's row count + (for quotes/invoices) the
+ * Shows the current tab's row count + (for proposals/invoices) the
  * subtotal of the filtered slice. Contracts don't have a money
  * value so the right cell is omitted there.
  *
@@ -26,11 +26,9 @@ export function PaymentsFooter({ tab, count, total }: PaymentsFooterProps) {
   const singular =
     tab === 'proposals'
       ? 'proposal'
-      : tab === 'quotes'
-        ? 'quote'
-        : tab === 'invoices'
-          ? 'invoice'
-          : 'contract';
+      : tab === 'invoices'
+        ? 'invoice'
+        : 'contract';
   const noun = count === 1 ? singular : `${singular}s`;
 
   return (

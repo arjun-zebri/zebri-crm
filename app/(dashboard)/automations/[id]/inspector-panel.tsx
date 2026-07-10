@@ -75,7 +75,7 @@ import {
   SendEmailExtraFields,
   SendInvoiceExtraFields,
   SendPortalLinkExtraFields,
-  SendQuoteExtraFields,
+  SendProposalExtraFields,
   SendTimelineExtraFields,
   StopExtraFields,
   SubFlowExtraFields,
@@ -259,10 +259,6 @@ function TriggerConfigForm({
   })
 
   const amountQuoteInvoice =
-    triggerType === 'quote_created' ||
-    triggerType === 'quote_sent' ||
-    triggerType === 'quote_accepted' ||
-    triggerType === 'quote_declined' ||
     triggerType === 'proposal_sent' ||
     triggerType === 'proposal_accepted' ||
     triggerType === 'proposal_declined' ||
@@ -350,14 +346,6 @@ function TriggerConfigForm({
         />
       )}
 
-      {triggerType === 'quote_due' && (
-        <NumberInput
-          label="Days before due date (0 = on the day)"
-          value={Number(config['days'] ?? 0)}
-          onChange={(v) => setConfig({ ...config, days: v })}
-        />
-      )}
-
       {triggerType === 'proposal_due' && (
         <NumberInput
           label="Days before expiry (0 = on the day)"
@@ -374,27 +362,11 @@ function TriggerConfigForm({
         />
       )}
 
-      {triggerType === 'quote_overdue' && (
-        <NumberInput
-          label="Minimum days overdue (optional)"
-          value={Number(config['daysOverdueMin'] ?? 0)}
-          onChange={(v) => setConfig({ ...config, daysOverdueMin: v || undefined })}
-        />
-      )}
-
       {triggerType === 'invoice_overdue' && (
         <NumberInput
           label="Minimum days overdue (optional)"
           value={Number(config['daysOverdueMin'] ?? 0)}
           onChange={(v) => setConfig({ ...config, daysOverdueMin: v || undefined })}
-        />
-      )}
-
-      {triggerType === 'quote_viewed_but_not_responded' && (
-        <NumberInput
-          label="Days since view"
-          value={Number(config['days'] ?? 7)}
-          onChange={(v) => setConfig({ ...config, days: v })}
         />
       )}
 
@@ -1171,14 +1143,14 @@ function ActionFields({ actionType, config, setConfig }: FieldProps & { actionTy
     case 'create_calendar_event':
     case 'create_reminder':
       return <CalendarEntryForm config={config} updateConfig={updateInner} />
-    case 'send_quote':
+    case 'send_proposal':
       return (
         <>
           <Hint>
-            This action sends the most recent quote for the triggering couple. The picker
+            This action sends the most recent proposal for the triggering couple. The picker
             auto-selects based on the trigger payload, or the latest draft if there isn't one.
           </Hint>
-          <SendQuoteExtraFields config={config} updateConfig={updateInner} />
+          <SendProposalExtraFields config={config} updateConfig={updateInner} />
         </>
       )
     case 'send_contract':

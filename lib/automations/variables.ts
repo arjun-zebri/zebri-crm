@@ -23,7 +23,6 @@
  *   - `venue.*`     name
  *   - `mc.*`        business_name, contact_name, email, phone
  *   - `portal.*`    link
- *   - `quote.*`     link, number, total (when the trigger / action config provides one)
  *   - `invoice.*`   link, number, total
  *   - `contract.*`  link, number
  *   - `task.*`      title, due_date
@@ -145,7 +144,6 @@ function readPath(path: string, ctx: RunContext): string {
       return readPortal(ctx, key)
     case 'questionnaire':
       return readQuestionnaire(ctx, key)
-    case 'quote':
     case 'invoice':
     case 'proposal':
     case 'contract':
@@ -296,7 +294,7 @@ function readEventField(ctx: RunContext, namespace: string, key: string): string
     if (v != null) return String(v)
   }
   // Look in prior action results too - actions like "Send quote"
-  // write the resulting quote_id / quote_link into actionResults.
+  // write the resulting proposal_id / proposal_link into actionResults.
   for (const actionId of Object.keys(ctx.actionResults)) {
     const r = ctx.actionResults[actionId] as Record<string, unknown> | null
     if (!r) continue
@@ -381,19 +379,16 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
   {
     group: 'Links',
     variables: [
-      { token: '{{portal.link}}', label: 'Couple portal link', example: 'https://zebri.app/p/…' },
-      { token: '{{quote.link}}', label: 'Quote share link', example: 'https://zebri.app/q/…' },
+      { token: '{{portal.link}}', label: 'Couple portal link', example: 'https://zebri.app/portal/…' },
       { token: '{{proposal.link}}', label: 'Proposal share link', example: 'https://zebri.app/proposal/…' },
-      { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/i/…' },
-      { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/c/…' },
+      { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/invoice/…' },
+      { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/contract/…' },
       { token: '{{questionnaire.link}}', label: 'Questionnaire link', example: 'https://zebri.app/questionnaire/…' },
     ],
   },
   {
     group: 'Document Numbers & Totals',
     variables: [
-      { token: '{{quote.number}}', label: 'Quote number', example: 'QUO-001' },
-      { token: '{{quote.total}}', label: 'Quote total', example: '$2,500' },
       { token: '{{proposal.number}}', label: 'Proposal number', example: 'PR-001' },
       { token: '{{proposal.total}}', label: 'Proposal total', example: '$2,500' },
       { token: '{{invoice.number}}', label: 'Invoice number', example: 'INV-001' },

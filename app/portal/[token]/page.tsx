@@ -89,15 +89,6 @@ export interface PortalProposal {
   share_token_enabled: boolean
 }
 
-export interface PortalQuote {
-  id: string
-  title: string
-  quote_number: string
-  status: string
-  subtotal: number
-  share_token: string | null
-  share_token_enabled: boolean
-}
 
 export interface PortalInvoice {
   id: string
@@ -177,7 +168,7 @@ export interface PortalData {
   timeline_items: PortalTimelineItem[]
   payments: {
     proposals?: PortalProposal[]
-    quotes: PortalQuote[]
+    quotes?: unknown[]
     invoices: PortalInvoice[]
   }
   contracts: PortalContract[]

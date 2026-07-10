@@ -342,34 +342,6 @@ function amountSpec<T extends string>(
   }
 }
 
-const quoteCreated = amountSpec('quote_created', {
-  category: 'payment',
-  label: 'Quote created',
-  description: 'When a quote is created as a draft',
-  icon: 'FilePlus2',
-})
-
-const quoteSent = amountSpec('quote_sent', {
-  category: 'payment',
-  label: 'Quote sent',
-  description: 'When a quote share link goes live',
-  icon: 'Send',
-})
-
-const quoteAccepted = amountSpec('quote_accepted', {
-  category: 'payment',
-  label: 'Quote accepted',
-  description: 'When a couple accepts a quote',
-  icon: 'CheckCircle2',
-})
-
-const quoteDeclined = amountSpec('quote_declined', {
-  category: 'payment',
-  label: 'Quote declined',
-  description: 'When a couple declines a quote',
-  icon: 'XCircle',
-})
-
 const proposalSent = amountSpec('proposal_sent', {
   category: 'payment',
   label: 'Proposal sent',
@@ -390,78 +362,6 @@ const proposalDeclined = amountSpec('proposal_declined', {
   description: 'When a couple declines a proposal',
   icon: 'XCircle',
 })
-
-const quoteDue: TriggerSpec<{
-  days: number
-  notificationCount?: number
-  respectQuietHours?: boolean
-}> = {
-  type: 'quote_due',
-  configSchema: z.object({
-    days: z.number().int().min(0).max(180).default(0),
-    notificationCount: z.number().int().min(1).max(5).optional(),
-    respectQuietHours: z.boolean().optional(),
-  }).passthrough(),
-  // The `quote_due` event is emitted by the time-emitter once per
-  // (quote, lead-time, day) — see `lib/automations/time-emitters/
-  // quote-due.ts`. The emitter stamps the matching lead-time in
-  // `payload.days_until_due`. Narrowing here means an automation
-  // with `days=3` only fires for events that fire 3 days before
-  // the expiry, not for `days=0` events on the same quote.
-  match: (event, config) => {
-    const payload = p(event)
-    const emitted = Number(payload.days_until_due)
-    return Number.isFinite(emitted) && emitted === config.days
-  },
-  ui: { category: 'payment', label: 'Quote due', description: 'When a quote reaches its expiry date', icon: 'Hourglass' },
-}
-
-/**
- * Effective overdue threshold (days past `expires_at`) for a
- * `quote_overdue` automation config. "Overdue" means strictly past
- * the expiry date — a configured min of 0 is clamped up to 1 so the
- * trigger never collides with `quote_due` (`days: 0`) on the expiry
- * day itself. Shared by the trigger's `match()` and the time-emitter
- * so both sides agree on which calendar day a quote fires.
- */
-export function quoteOverdueThresholdDays(config: {
-  daysOverdueMin?: number
-}): number {
-  return Math.max(1, config.daysOverdueMin ?? 1)
-}
-
-const quoteOverdue: TriggerSpec<{
-  daysOverdueMin?: number
-  daysOverdueMax?: number
-  couplePreviouslyViewed?: boolean
-}> = {
-  type: 'quote_overdue',
-  configSchema: z.object({
-    daysOverdueMin: z.number().int().min(0).max(365).optional(),
-    daysOverdueMax: z.number().int().min(0).max(365).optional(),
-    couplePreviouslyViewed: z.boolean().optional(),
-  }).passthrough(),
-  // The `quote_overdue` event is emitted by the time-emitter once per
-  // (quote, threshold, day) — see `lib/automations/time-emitters/
-  // quote-overdue.ts`. The emitter stamps the overdue depth in
-  // `payload.days_overdue`; narrowing here means an automation with
-  // min=7 only fires for the day-7 event, not the day-1 one.
-  // `couplePreviouslyViewed` is accepted but not yet enforced — quote
-  // view tracking doesn't exist in the schema (same blocker as the
-  // `quote_viewed_but_not_responded` trigger).
-  match: (event, config) => {
-    const payload = p(event)
-    const emitted = Number(payload.days_overdue)
-    if (!Number.isFinite(emitted)) return false
-    const threshold = quoteOverdueThresholdDays(config)
-    if (emitted !== threshold) return false
-    if (config.daysOverdueMax !== undefined && emitted > config.daysOverdueMax) {
-      return false
-    }
-    return true
-  },
-  ui: { category: 'payment', label: 'Quote overdue', description: 'When a quote has passed its expiry without acceptance', icon: 'AlertTriangle' },
-}
 
 // Optional props carry `| undefined` explicitly: Zod's `.optional()`
 // output type includes undefined, and exactOptionalPropertyTypes
@@ -535,23 +435,6 @@ const proposalOverdue: TriggerSpec<{
     return true
   },
   ui: { category: 'payment', label: 'Proposal overdue', description: 'When a proposal has passed its expiry without acceptance', icon: 'AlertTriangle' },
-}
-
-const quoteViewedNotResponded: TriggerSpec<{
-  days: number
-  viewCountOp?: ComparisonOp
-  viewCountValue?: number
-  lastViewedWithinDays?: number
-}> = {
-  type: 'quote_viewed_but_not_responded',
-  configSchema: z.object({
-    days: z.number().int().min(1).max(60).default(7),
-    viewCountOp: z.enum(COMPARISON_OPS).optional(),
-    viewCountValue: z.number().int().min(1).optional(),
-    lastViewedWithinDays: z.number().int().min(1).max(60).optional(),
-  }).passthrough(),
-  match: () => true,
-  ui: { category: 'payment', label: 'Quote viewed but no response', description: 'When a couple has viewed a quote and gone quiet', icon: 'EyeOff' },
 }
 
 const invoiceCreated = amountSpec('invoice_created', {
@@ -1616,13 +1499,6 @@ export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   couple_stage_changed: coupleStageChanged,
   booking_cancelled: bookingCancelled,
   // Quotes / invoices / payments
-  quote_created: quoteCreated,
-  quote_sent: quoteSent,
-  quote_accepted: quoteAccepted,
-  quote_declined: quoteDeclined,
-  quote_due: quoteDue,
-  quote_overdue: quoteOverdue,
-  quote_viewed_but_not_responded: quoteViewedNotResponded,
   // Proposals
   proposal_sent: proposalSent,
   proposal_accepted: proposalAccepted,

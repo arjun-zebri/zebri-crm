@@ -78,7 +78,7 @@ const SOFT_DIVIDER = { thickness: 1, color: '#E5E7EB' } as const
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
-export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'portal'): Block[] {
+export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 'portal'): Block[] {
   if (surface === 'portal') {
     return [
       { id: newId('hb'), type: 'headerBanner' },
@@ -86,14 +86,14 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'po
       { id: newId('cp'), type: 'couplePortal', locked: true },
     ]
   }
-  if (surface === 'quote') {
+  if (surface === 'proposal') {
     return [
       { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       {
         id: newId('tt'),
         type: 'title',
-        title: 'Quote',
+        title: 'Proposal',
         subtitle: 'ALEX & JORDAN  ·  14 SEPTEMBER 2026',
         showRef: true,
         showExpires: true,
@@ -116,7 +116,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'po
         text: 'Thanks for thinking of me for your day. The deposit secures the date - happy to jump on a call before you decide.',
         textStyle: SOFT_MESSAGE,
       },
-      { id: newId('ac'), type: 'action', primary: 'Accept quote', secondary: 'Decline' },
+      { id: newId('ac'), type: 'action', primary: 'Accept proposal', secondary: 'Decline' },
       { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.' },
     ]
   }
@@ -173,7 +173,7 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'po
  * Migrate persisted block data from older shapes (e.g. type: 'message') to the
  * current schema. Safe to run on every load.
  */
-export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | 'contract' | 'portal'): Block[] {
+export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' | 'contract' | 'portal'): Block[] {
   if (!Array.isArray(blocks)) return []
   let migrated = blocks
     .map((raw): Block | null => {

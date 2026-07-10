@@ -73,7 +73,6 @@ export interface Narration {
 const COMPLETED_PHRASE: Partial<Record<ActionType, string>> = {
   send_email: 'Sent email',
   send_sms: 'Sent SMS',
-  send_quote: 'Sent quote',
   send_proposal: 'Sent proposal',
   send_invoice: 'Sent invoice',
   send_contract: 'Sent contract',
@@ -87,7 +86,6 @@ const COMPLETED_PHRASE: Partial<Record<ActionType, string>> = {
   send_referral_request: 'Sent referral request',
   generate_run_sheet_pdf: 'Sent run-sheet link',
   trigger_payment_reminder: 'Sent payment reminder',
-  create_invoice_from_quote: 'Created invoice from quote',
   create_invoice_from_proposal: 'Created invoice from proposal',
   create_task: 'Created task',
   update_task: 'Updated task',
@@ -101,7 +99,6 @@ const COMPLETED_PHRASE: Partial<Record<ActionType, string>> = {
 const ACTION_NOUN: Partial<Record<ActionType, string>> = {
   send_email: 'Email',
   send_sms: 'SMS',
-  send_quote: 'Quote',
   send_proposal: 'Proposal',
   send_invoice: 'Invoice',
   send_contract: 'Contract',

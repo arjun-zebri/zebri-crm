@@ -6,7 +6,7 @@ export interface PdfLineItem {
 }
 
 export interface PdfDocumentData {
-  type: 'quote' | 'invoice' | 'contract'
+  type: 'invoice' | 'contract'
   documentNumber: string
   title: string
   status: string
@@ -152,7 +152,7 @@ export interface PdfBrandingOpts {
  * without opening a new window. Same output bytes — the preview
  * and the eventual print stay in lockstep.
  *
- * @param doc      The document data (quote / invoice / contract).
+ * @param doc      The document data (invoice / contract).
  * @param branding Optional branding overrides (colours + fonts +
  *                 logo). When omitted, the PDF renders in the
  *                 legacy black-and-white style.
@@ -238,9 +238,7 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
         </tr>`
       : ''
 
-  const metaLine = doc.type === 'quote' && doc.expiresAt
-    ? `<p style="margin:4px 0 0;font-size:13px;color:${mutedColor}">Expires: ${formatDate(doc.expiresAt)}</p>`
-    : doc.type === 'invoice' && doc.dueDate
+  const metaLine = doc.type === 'invoice' && doc.dueDate
     ? `<p style="margin:4px 0 0;font-size:13px;color:${mutedColor}">Due: ${formatDate(doc.dueDate)}</p>`
     : ''
 
@@ -265,7 +263,7 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${doc.type === 'quote' ? 'Quote' : 'Invoice'} ${doc.documentNumber}</title>
+  <title>${'Invoice'} ${doc.documentNumber}</title>
   ${fontsLink}
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -285,7 +283,7 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
       <p style="font-size:14px;color:${mutedColor}">${doc.coupleName}</p>
     </div>
     <div style="text-align:right">
-      <p class="heading" style="font-size:22px;font-weight:700;color:${brandColor};text-transform:capitalize">${doc.type === 'quote' ? 'Quote' : 'Invoice'}</p>
+      <p class="heading" style="font-size:22px;font-weight:700;color:${brandColor};text-transform:capitalize">${'Invoice'}</p>
       <p style="font-size:14px;color:${mutedColor};margin-top:4px">#${doc.documentNumber}</p>
       ${metaLine}
     </div>

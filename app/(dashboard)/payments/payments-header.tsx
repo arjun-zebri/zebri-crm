@@ -45,11 +45,9 @@ export function PaymentsHeader({
   const newLabel =
     activeTab === 'proposals'
       ? 'proposal'
-      : activeTab === 'quotes'
-        ? 'quote'
-        : activeTab === 'invoices'
-          ? 'invoice'
-          : 'contract';
+      : activeTab === 'invoices'
+        ? 'invoice'
+        : 'contract';
 
   const mobileNewButton = newButtonOverride ?? (
     <button
@@ -121,12 +119,6 @@ export function PaymentsHeader({
           onClick={() => onTabChange('proposals')}
           icon={<PackageOpen size={15} strokeWidth={1.5} />}
           label="Proposals"
-        />
-        <TabButton
-          active={activeTab === 'quotes'}
-          onClick={() => onTabChange('quotes')}
-          icon={<FileText size={15} strokeWidth={1.5} />}
-          label="Quotes"
         />
         <TabButton
           active={activeTab === 'invoices'}

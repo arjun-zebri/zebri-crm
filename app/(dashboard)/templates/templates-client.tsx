@@ -20,7 +20,6 @@ import { EmailsTab } from './emails-tab'
 import { InvoiceTemplatesManager } from './invoice-templates-manager'
 import { PackagesManager } from './packages-manager'
 import { QuestionnaireTemplateManager } from './questionnaire-template-manager'
-import { QuoteTemplateManager } from './quote-template-manager'
 import { TemplatesActionsProvider } from './templates-actions-slot'
 import { TemplatesTabs, type TemplateTab } from './templates-tabs'
 import { TimelineTemplateManager } from './timeline-template-manager'
@@ -62,7 +61,6 @@ export function TemplatesClient({ businessName, contactName, email, emailSignatu
             />
           )}
           {activeTab === 'packages' && <PackagesManager />}
-          {activeTab === 'quotes' && <QuoteTemplateManager />}
           {activeTab === 'invoices' && <InvoiceTemplatesManager />}
           {activeTab === 'timelines' && <TimelineTemplateManager />}
           {activeTab === 'contracts' && <ContractTemplateManager />}

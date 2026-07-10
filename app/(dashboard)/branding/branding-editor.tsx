@@ -60,7 +60,7 @@ interface BrandingEditorProps {
     cornerRadius: number
     docPadding: number
     themePreset: ThemeIdOrCustom
-    blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
+    blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
     businessName: string
     phone: string
     website: string
@@ -97,7 +97,7 @@ interface EditorState {
   cornerRadius: number
   docPadding: number
   themePreset: ThemeIdOrCustom
-  blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
+  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
   brandKits: BrandKit[]
   activeKitId: string | null
   portalSections: PortalSectionSettings
@@ -143,7 +143,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   const { state, set: setState, undo, redo, canUndo, canRedo } = useHistory<EditorState>(initial)
 
-  const [surface, setSurface] = useState<SurfaceTab>('quote')
+  const [surface, setSurface] = useState<SurfaceTab>('proposal')
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [zoom, setZoom] = useState(1)
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
@@ -427,7 +427,22 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setEditor({ headerImageUrl: '' }, false)
   }
 
-  const docSurface: 'quote' | 'invoice' | 'contract' | 'portal' = surface
+  const docSurface: 'proposal' | 'invoice' | 'contract' | 'portal' = surface
+
+  /** Kit block trees saved before the proposals rollout keyed the
+   *  first surface `quote`; normalise to the editor's `proposal` key
+   *  so applying an old kit keeps the MC's design. */
+  const normalizeKitBlocks = (
+    blocks: BrandKit['blocks'],
+  ): EditorState['blocks'] | null => {
+    if (!blocks) return null
+    return {
+      proposal: blocks.proposal ?? blocks.quote ?? defaultBlocksFor('proposal'),
+      invoice: blocks.invoice,
+      contract: blocks.contract,
+      portal: blocks.portal,
+    }
+  }
 
   const setBlocksForCurrent = (blocks: Block[]) => {
     setState((prev) => ({
@@ -514,7 +529,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       logoUrl: kit.logoUrl ?? '',
       faviconUrl: kit.faviconUrl ?? prev.faviconUrl,
       headerImageUrl: kit.headerImageUrl ?? '',
-      blocks: kit.blocks ?? prev.blocks,
+      blocks: normalizeKitBlocks(kit.blocks) ?? prev.blocks,
     }), { commit: true })
     toast(`Applied "${kit.name}"`, 'success')
   }
@@ -529,7 +544,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       name = `${baseName} ${n++}`
     }
     const defaultBlocks = {
-      quote: defaultBlocksFor('quote'),
+      proposal: defaultBlocksFor('proposal'),
       invoice: defaultBlocksFor('invoice'),
       contract: defaultBlocksFor('contract'),
       portal: defaultBlocksFor('portal'),
@@ -636,7 +651,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           logoUrl: next.logoUrl ?? '',
           faviconUrl: next.faviconUrl ?? prev.faviconUrl,
           headerImageUrl: next.headerImageUrl ?? '',
-          blocks: next.blocks ?? prev.blocks,
+          blocks: normalizeKitBlocks(next.blocks) ?? prev.blocks,
         }
       },
       { commit: true },
@@ -826,9 +841,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   )
 }
 
-export function defaultBlocks(): { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] } {
+export function defaultBlocks(): { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] } {
   return {
-    quote: defaultBlocksFor('quote'),
+    proposal: defaultBlocksFor('proposal'),
     invoice: defaultBlocksFor('invoice'),
     contract: defaultBlocksFor('contract'),
     portal: defaultBlocksFor('portal'),
@@ -914,8 +929,8 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
-  blocks: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] },
-  docSurface: 'quote' | 'invoice' | 'contract' | 'portal',
+  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] },
+  docSurface: 'proposal' | 'invoice' | 'contract' | 'portal',
   surface: SurfaceTab,
 ) {
   if (typeof document === 'undefined') return

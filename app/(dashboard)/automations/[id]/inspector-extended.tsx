@@ -264,10 +264,6 @@ export function ExtendedTriggerFields({
       return <CoupleStageChangedExtra config={config} setConfig={setConfig} />
     case 'booking_cancelled':
       return <BookingCancelledExtra config={config} setConfig={setConfig} />
-    case 'quote_created':
-    case 'quote_sent':
-    case 'quote_accepted':
-    case 'quote_declined':
     case 'proposal_sent':
     case 'proposal_accepted':
     case 'proposal_declined':
@@ -275,16 +271,12 @@ export function ExtendedTriggerFields({
     case 'invoice_sent':
     case 'payment_received':
       return <PaymentDocFiltersExtra config={config} setConfig={setConfig} forPayment={triggerType === 'payment_received'} />
-    case 'quote_due':
     case 'proposal_due':
     case 'invoice_due':
       return <DueExtra config={config} setConfig={setConfig} isInvoice={triggerType === 'invoice_due'} />
-    case 'quote_overdue':
     case 'proposal_overdue':
     case 'invoice_overdue':
       return <OverdueExtra config={config} setConfig={setConfig} isInvoice={triggerType === 'invoice_overdue'} />
-    case 'quote_viewed_but_not_responded':
-      return <QuoteViewedExtra config={config} setConfig={setConfig} />
     case 'payment_failed':
       return <PaymentFailedExtra config={config} setConfig={setConfig} />
     case 'contract_created':
@@ -434,15 +426,6 @@ const PaymentDocFiltersExtra: (p: { config: Cfg; setConfig: SetCfg; forPayment: 
 const DueExtra: (p: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) => null = () => null
 
 const OverdueExtra: (p: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) => null = () => null
-
-function QuoteViewedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
-  return (
-    <>
-      <NumericComparison label="View count" opField="viewCountOp" valueField="viewCountValue" config={config} setConfig={setConfig} />
-      <NumField label="Last viewed within (days, optional)" value={(config['lastViewedWithinDays'] as number | undefined) ?? 0} onChange={(v) => setConfig({ ...config, lastViewedWithinDays: v || undefined })} />
-    </>
-  )
-}
 
 function PaymentFailedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
@@ -783,15 +766,10 @@ export function ExtendedActionForm({
       return <TextField label="Segment key" value={(config['segmentKey'] as string) ?? ''} onChange={(v) => updateConfig({ segmentKey: v })} placeholder="e.g. peak_season_2026" />
     case 'enqueue_for_newsletter':
       return <NewsletterEnqueueForm config={config} updateConfig={updateConfig} />
-    case 'create_invoice_from_quote':
-      return <CreateInvoiceFromQuoteForm config={config} updateConfig={updateConfig} />
-    case 'create_quote_from_template':
-      return <CreateQuoteFromTemplateForm config={config} updateConfig={updateConfig} />
     case 'create_contract_from_template':
       return <CreateContractFromTemplateForm config={config} updateConfig={updateConfig} />
     case 'send_couple_questionnaire':
       return <SendQuestionnaireForm config={config} updateConfig={updateConfig} />
-    case 'void_quote':
     case 'void_invoice':
     case 'revoke_contract':
       return <VoidDocumentForm config={config} updateConfig={updateConfig} actionType={actionType} />
@@ -985,26 +963,6 @@ function NewsletterEnqueueForm({ config, updateConfig }: FormProps) {
   )
 }
 
-function CreateInvoiceFromQuoteForm({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <TextField label="Quote ID (optional)" value={(config['quoteId'] as string) ?? ''} onChange={(v) => updateConfig({ quoteId: v || undefined })} placeholder="Leave blank for latest accepted" />
-      <SelectField label="Payment schedule" value={(config['paymentSchedule'] as string) ?? 'deposit_only'} onChange={(v) => updateConfig({ paymentSchedule: v })} options={[{ value: 'deposit_only', label: 'Deposit only' }, { value: 'full', label: 'Full amount' }, { value: 'split', label: 'Split (deposit + balance)' }]} />
-      <DateField label="Due date (optional)" value={(config['dueDate'] as string) ?? ''} onChange={(v) => updateConfig({ dueDate: v || undefined })} />
-    </>
-  )
-}
-
-function CreateQuoteFromTemplateForm({ config, updateConfig }: FormProps) {
-  return (
-    <>
-      <TextField label="Template ID" value={(config['templateId'] as string) ?? ''} onChange={(v) => updateConfig({ templateId: v })} />
-      <Check label="Prefill from couple data" checked={config['prefillFromCoupleData'] === true} onChange={(v) => updateConfig({ prefillFromCoupleData: v })} />
-      <NumField label="Discount (optional)" value={(config['discount'] as number | undefined) ?? 0} onChange={(v) => updateConfig({ discount: v || undefined })} />
-    </>
-  )
-}
-
 function SendQuestionnaireForm({ config, updateConfig }: FormProps) {
   const supabase = createClient()
   const { data: templates } = useQuery({
@@ -1044,8 +1002,8 @@ function CreateContractFromTemplateForm({ config, updateConfig }: FormProps) {
 }
 
 function VoidDocumentForm({ config, updateConfig, actionType }: FormProps & { actionType: ActionType }) {
-  const idLabel = actionType === 'void_quote' ? 'Quote ID (optional)' : actionType === 'void_invoice' ? 'Invoice ID (optional)' : 'Contract ID (optional)'
-  const idKey = actionType === 'void_quote' ? 'quoteId' : actionType === 'void_invoice' ? 'invoiceId' : 'contractId'
+  const idLabel = actionType === 'void_invoice' ? 'Invoice ID (optional)' : 'Contract ID (optional)'
+  const idKey = actionType === 'void_invoice' ? 'invoiceId' : 'contractId'
   return (
     <>
       <TextField label={idLabel} value={(config[idKey] as string) ?? ''} onChange={(v) => updateConfig({ [idKey]: v || undefined })} />
@@ -1352,9 +1310,9 @@ export function CalendarEventExtraFields({ config, updateConfig }: FormProps) {
 }
 
 /** Extra fields for `send_quote`. */
-export function SendQuoteExtraFields({ config, updateConfig }: FormProps) {
+export function SendProposalExtraFields({ config, updateConfig }: FormProps) {
   return (
-    <TextAreaField label="Custom message above the quote link (optional)" value={(config['customMessage'] as string) ?? ''} onChange={(v) => updateConfig({ customMessage: v || undefined })} />
+    <TextAreaField label="Custom message above the proposal link (optional)" value={(config['customMessage'] as string) ?? ''} onChange={(v) => updateConfig({ customMessage: v || undefined })} />
   )
 }
 

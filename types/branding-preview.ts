@@ -58,7 +58,7 @@ export interface BrandPreviewActions {
   setTagline: (v: string) => void
 }
 
-export type SurfaceTab = 'quote' | 'invoice' | 'contract' | 'portal'
+export type SurfaceTab = 'proposal' | 'invoice' | 'contract' | 'portal'
 
 export const NOOP_ACTIONS: BrandPreviewActions = {
   onEditLogo: () => {},
@@ -93,6 +93,15 @@ export interface BrandKit {
   logoUrl?: string
   faviconUrl?: string
   headerImageUrl?: string
-  blocks?: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
+  /** Per-surface block trees. `quote` is the LEGACY key from before
+   *  the proposals rollout — kits saved earlier still carry it; the
+   *  editor normalises it into `proposal` on apply. */
+  blocks?: {
+    proposal?: Block[]
+    quote?: Block[]
+    invoice: Block[]
+    contract: Block[]
+    portal: Block[]
+  }
   createdAt: string
 }

@@ -33,11 +33,11 @@ import type { PreviewDoc } from './preview-shared';
 export interface PreviewPdfProps {
   doc: PreviewDoc;
   /** Used to load the right branding (same one the public page
-   *  surfaces use). Quote / Invoice / Contract. Default 'quote'. */
+   *  surfaces use). Proposal / Invoice / Contract. Default 'proposal'. */
   surface?: BuilderSurface | undefined;
 }
 
-export function PreviewPdf({ doc, surface = 'quote' }: PreviewPdfProps) {
+export function PreviewPdf({ doc, surface = 'proposal' }: PreviewPdfProps) {
   const { branding } = useCurrentBranding(surface);
 
   const brandingOpts = useMemo<PdfBrandingOpts | undefined>(() => {
@@ -97,7 +97,6 @@ function toPdfDoc(doc: PreviewDoc): PdfDocumentData {
     taxRate: doc.taxRate,
     total,
     notes: doc.notes,
-    ...(doc.kind === 'quote' ? { expiresAt: doc.expiresAt ?? null } : {}),
     ...(doc.kind === 'invoice' ? { dueDate: doc.dueDate ?? null } : {}),
     ...(doc.kind === 'invoice' && doc.bankAccountName
       ? { bankAccountName: doc.bankAccountName }

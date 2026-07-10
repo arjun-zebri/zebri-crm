@@ -178,6 +178,19 @@ export function ShareAndSend({
               </>
             ) : null}
           </>
+        ) : canMarkSent && onMarkSent && shareUrl ? (
+          // Draft whose link isn't live yet (proposals ship with the
+          // token disabled until a send): the out-of-band path still
+          // needs to be reachable — marking as sent enables the link.
+          <button
+            type="button"
+            onClick={onMarkSent}
+            disabled={markingSent || locked}
+            className="inline-flex items-center gap-1 text-text-muted hover:text-text transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CheckCheck size={12} strokeWidth={1.5} />
+            {markingSent ? 'Marking…' : 'Mark as sent'}
+          </button>
         ) : null}
       </div>
 

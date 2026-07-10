@@ -51,7 +51,10 @@ import { execSync } from 'node:child_process';
 // (main's 80 + the dead-file deletion). Re-measured post-merge → 79.
 // Email-template editor overhaul (categories + branded shell): new
 // surfaces landed clean and the sweep cleared one existing error → 78.
-const ERROR_BUDGET = 78;
+// Phase G quotes removal: deleted quote builder, list pages, API routes,
+// time emitters, and automation triggers; removed quote references from
+// contract builder, templates, payments, and test code → 78 → 75.
+const ERROR_BUDGET = 75;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -124,7 +127,9 @@ const ERROR_BUDGET = 78;
 // two warnings → 397 → 395.
 // Quote/invoice templates hardening: the shared manager replaced both
 // legacy managers and their stray hook-deps suppressions → 395 → 394.
-const WARNING_BUDGET = 394;
+// Phase G quotes removal: cleaned up imports/exports from files that
+// previously exported quote types or references → 394 → 392.
+const WARNING_BUDGET = 392;
 
 function runEslintJson() {
   try {

@@ -29,7 +29,7 @@ interface Props {
 type Tab = 'questionnaire' | 'email'
 
 export function QuestionnaireSendPreview({ name, questions, displayMode, coupleName }: Props) {
-  const { branding } = useCurrentBranding('quote')
+  const { branding } = useCurrentBranding('proposal')
   const [tab, setTab] = useState<Tab>('questionnaire')
   const [frame, setFrame] = useState<'desktop' | 'mobile'>('desktop')
 

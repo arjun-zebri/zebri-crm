@@ -42,6 +42,8 @@ export function InvoiceTemplatesManager() {
         namePlaceholder: 'e.g., Final balance invoice',
         newTemplateTitle: 'New Invoice Template',
         editTemplateTitle: 'Edit Invoice Template',
+        modalSubtitle: 'Build a reusable template you can drop into any invoice.',
+        eyebrow: 'Invoice template',
         starterTitle: 'Browse starter invoice templates',
         starterBlurb: 'Add the templates you want. Nothing is added unless you choose it.',
         emptyTitle: 'No invoice templates yet',

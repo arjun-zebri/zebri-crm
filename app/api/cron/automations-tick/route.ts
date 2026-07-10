@@ -12,7 +12,7 @@
  * Each tick:
  *
  *   1. Runs the time-based emitters — computes "what should fire
- *      now" for triggers like `quote_due` / `task_overdue` that
+ *      now" for triggers like `proposal_due` / `task_overdue` that
  *      have no source-row state change to hook a DB trigger off.
  *      New events land in the bus and are dispatched on this same
  *      tick.

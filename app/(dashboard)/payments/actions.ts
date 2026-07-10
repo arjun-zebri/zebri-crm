@@ -1,7 +1,7 @@
 /**
- * Server actions for the Quote + Invoice builder modals.
+ * Server actions for the Invoice, Contract, and Proposal builder modals.
  *
- * Lifts the previously-inline `supabase.from('quotes').update(...)` /
+ * Lifts the previously-inline `supabase.from('invoices').update(...)` /
  * `.insert(...)` / `.delete(...)` calls out of the modal components
  * so the modals are pure composition + presentation. Every action:
  *
@@ -20,8 +20,7 @@
  *
  * No rate-limit on these actions — they're authenticated, single-
  * user, and the modal isn't a public abuse vector. The send-email
- * routes (`/api/email/send-{quote,invoice}`) already carry the
- * 5/min/user limit from Phase 2C.
+ * routes already carry the 5/min/user limit from Phase 2C.
  *
  * @module app/(dashboard)/payments/actions
  */
@@ -60,122 +59,6 @@ const discountSchema = z.object({
   type: z.enum(['percentage', 'fixed']),
   value: z.number().min(0),
 });
-
-/* ─── saveQuoteAction ──────────────────────────────────────────── */
-
-const saveQuoteSchema = z.object({
-  /** Null on first save of a new draft; uuid afterwards. */
-  quoteId: z.uuid().nullable(),
-  coupleId: z.uuid(),
-  title: z.string().max(200),
-  notes: z.string().max(5000).nullable(),
-  expiresAt: z.string().nullable(),
-  /** 0 (no GST) or 10 (GST applied). */
-  taxRate: z.number(),
-  discount: discountSchema.nullable(),
-  /** Provenance: the package applied to start this quote (conversion
-   *  stats). Items are still snapshotted; this never feeds rendering.
-   *  Nullish so an older client bundle omitting it still validates. */
-  sourcePackageId: z.uuid().nullish(),
-  items: z.array(lineItemSchema),
-});
-
-export type SaveQuoteInput = z.infer<typeof saveQuoteSchema>;
-
-export async function saveQuoteAction(
-  input: SaveQuoteInput,
-): Promise<ActionResult<{ id: string }>> {
-  const parsed = saveQuoteSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: 'Invalid quote data.' };
-  }
-  const { quoteId, coupleId, title, notes, expiresAt, taxRate, discount, sourcePackageId, items } =
-    parsed.data;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Not signed in.' };
-
-  const subtotal = items.reduce((sum, item) => sum + item.amount, 0);
-
-  try {
-    let effectiveId = quoteId;
-
-    if (effectiveId) {
-      // Existing quote: UPDATE.
-      const { error } = await supabase
-        .from('quotes')
-        .update({
-          couple_id: coupleId,
-          title,
-          notes,
-          expires_at: expiresAt,
-          subtotal,
-          tax_rate: taxRate,
-          discount_type: discount?.type ?? null,
-          discount_value: discount?.value ?? null,
-          // Written only when the client sent the field, so an older
-          // bundle mid-deploy can't blank existing provenance.
-          ...(sourcePackageId !== undefined ? { source_package_id: sourcePackageId } : {}),
-        })
-        .eq('id', effectiveId);
-      if (error) throw error;
-    } else {
-      // New quote: generate a quote_number then INSERT.
-      const { data: numData, error: numErr } = await supabase.rpc('generate_quote_number', {
-        p_user_id: user.id,
-      });
-      if (numErr) throw numErr;
-      const quoteNumber = numData as string;
-      const { data: inserted, error: qErr } = await supabase
-        .from('quotes')
-        .insert({
-          user_id: user.id,
-          couple_id: coupleId,
-          title,
-          quote_number: quoteNumber,
-          status: 'draft',
-          notes,
-          expires_at: expiresAt,
-          subtotal,
-          tax_rate: taxRate,
-          discount_type: discount?.type ?? null,
-          discount_value: discount?.value ?? null,
-          source_package_id: sourcePackageId ?? null,
-        })
-        .select('id')
-        .single();
-      if (qErr || !inserted) throw qErr ?? new Error('quote insert returned no row');
-      effectiveId = inserted.id;
-    }
-
-    // Replace line items. Wipe then re-insert keeps the parent's
-    // dnd ordering as the source of truth without resolving deltas.
-    await supabase.from('quote_items').delete().eq('quote_id', effectiveId);
-    if (items.length > 0) {
-      const inserts = items.map((item, idx) => ({
-        ...(item.id.startsWith('new-') ? {} : { id: item.id }),
-        quote_id: effectiveId,
-        user_id: user.id,
-        description: item.description,
-        amount: item.amount,
-        position: (idx + 1) * 1000,
-      }));
-      const { error: iErr } = await supabase.from('quote_items').insert(inserts);
-      if (iErr) throw iErr;
-    }
-
-    return { ok: true, data: { id: effectiveId } };
-  } catch (err) {
-    logger.error('[payments/actions] saveQuoteAction failed', {
-      userId: user.id,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return { ok: false, error: 'Could not save the quote. Please try again.' };
-  }
-}
 
 /* ─── saveInvoiceAction ────────────────────────────────────────── */
 
@@ -311,34 +194,6 @@ export async function saveInvoiceAction(
   }
 }
 
-/* ─── deleteQuoteAction ────────────────────────────────────────── */
-
-export async function deleteQuoteAction(quoteId: string): Promise<ActionResult<void>> {
-  const parsed = z.uuid().safeParse(quoteId);
-  if (!parsed.success) return { ok: false, error: 'Invalid quote ID.' };
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Not signed in.' };
-
-  try {
-    // RLS filters this to the authenticated user's rows; cascade
-    // handles quote_items.
-    const { error } = await supabase.from('quotes').delete().eq('id', parsed.data);
-    if (error) throw error;
-    return { ok: true, data: undefined };
-  } catch (err) {
-    logger.error('[payments/actions] deleteQuoteAction failed', {
-      userId: user.id,
-      quoteId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return { ok: false, error: 'Could not delete the quote.' };
-  }
-}
-
 /* ─── deleteInvoiceAction ──────────────────────────────────────── */
 
 export async function deleteInvoiceAction(invoiceId: string): Promise<ActionResult<void>> {
@@ -378,7 +233,6 @@ const saveContractSchema = z.object({
   title: z.string().max(200),
   content: z.record(z.string(), z.unknown()),
   expiresAt: z.string().nullable(),
-  quoteId: z.uuid().nullable(),
   /** Linked accepted proposal: drives {{total_amount}} /
    *  {{deposit_amount}} and the signed→deposit-invoice path.
    *  Nullish so an older client bundle omitting it still validates. */
@@ -394,7 +248,7 @@ export async function saveContractAction(
   if (!parsed.success) {
     return { ok: false, error: 'Invalid contract data.' };
   }
-  const { contractId, title, content, expiresAt, quoteId, proposalId } = parsed.data;
+  const { contractId, title, content, expiresAt, proposalId } = parsed.data;
 
   const supabase = await createClient();
   const {
@@ -413,7 +267,6 @@ export async function saveContractAction(
         // proved this is a record shape.
         content: content as unknown as Json,
         expires_at: expiresAt,
-        quote_id: quoteId,
         ...(proposalId !== undefined ? { proposal_id: proposalId } : {}),
       })
       .eq('id', contractId);

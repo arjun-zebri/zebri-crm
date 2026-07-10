@@ -7,7 +7,6 @@ import { useState } from 'react'
 
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal'
 import { ProposalBuilderModal } from '@/components/builders/proposal-builder-modal'
-import { QuoteBuilderModal } from '@/components/builders/quote-builder-modal'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
@@ -23,15 +22,6 @@ interface CouplePaymentsProps {
 interface Proposal {
   id: string
   proposal_number: string
-  title: string
-  status: string
-  subtotal: number
-  created_at: string
-}
-
-interface Quote {
-  id: string
-  quote_number: string
   title: string
   status: string
   subtotal: number
@@ -68,7 +58,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
   const { toast } = useToast()
 
   const [activeProposalId, setActiveProposalId] = useState<string | null>(null)
-  const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null)
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null)
 
   const { data: proposals, isLoading: isProposalsLoading } = useQuery({
@@ -89,24 +78,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
     },
   })
 
-  const { data: quotes, isLoading: isQuotesLoading } = useQuery({
-    queryKey: ['couple-quotes', coupleId],
-    queryFn: async () => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('id, quote_number, title, status, subtotal, created_at')
-        .eq('couple_id', coupleId)
-        .eq('user_id', user.user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return (data as Quote[]) || []
-    },
-  })
-
   const { data: invoices, isLoading: isInvoicesLoading } = useQuery({
     queryKey: ['couple-invoices', coupleId],
     queryFn: async () => {
@@ -123,39 +94,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
       if (error) throw error
       return (data as Invoice[]) || []
     },
-  })
-
-  const createQuote = useMutation({
-    mutationFn: async () => {
-      const { data: user, error: userError } = await supabase.auth.getUser()
-      if (userError || !user.user) throw new Error('Not authenticated')
-
-      const { data: numData, error: numError } = await supabase.rpc('generate_quote_number', {
-        p_user_id: user.user.id,
-      })
-      if (numError) throw numError
-
-      const { data, error } = await supabase
-        .from('quotes')
-        .insert({
-          user_id: user.user.id,
-          couple_id: coupleId,
-          title: `Quote for ${coupleName}`,
-          quote_number: numData as string,
-          status: 'draft',
-          subtotal: 0,
-        })
-        .select('id')
-        .single()
-
-      if (error) throw error
-      return data.id as string
-    },
-    onSuccess: (id) => {
-      queryClient.invalidateQueries({ queryKey: ['couple-quotes', coupleId] })
-      setActiveQuoteId(id)
-    },
-    onError: () => toast('Failed to create quote'),
   })
 
   const createInvoice = useMutation({
@@ -197,26 +135,21 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
   })
 
   const allProposals = proposals || []
-  const allQuotes = quotes || []
   const allInvoices = invoices || []
 
-  const quotesTotal = allQuotes.reduce((sum, q) => sum + q.subtotal, 0)
   const invoicesTotal = allInvoices.reduce((sum, i) => sum + i.subtotal, 0)
 
   // Single centred empty only when the whole tab is empty; once any
   // section has data we fall back to the stacked two-column layout.
-  const isLoading = isProposalsLoading || isQuotesLoading || isInvoicesLoading
+  const isLoading = isProposalsLoading || isInvoicesLoading
   const isEmpty =
-    !isLoading && allProposals.length === 0 && allQuotes.length === 0 && allInvoices.length === 0
+    !isLoading && allProposals.length === 0 && allInvoices.length === 0
 
   // Counts + key statuses on the left; the dollar totals sit in the bottom row.
-  const acceptedCount =
-    allProposals.filter((p) => p.status === 'accepted').length +
-    allQuotes.filter((q) => q.status === 'accepted').length
+  const acceptedCount = allProposals.filter((p) => p.status === 'accepted').length
   const paidCount = allInvoices.filter((i) => i.status === 'paid').length
   const stats: TabStat[] = []
   if (allProposals.length > 0) stats.push({ label: tabStat(allProposals.length, 'proposal') })
-  if (allQuotes.length > 0) stats.push({ label: tabStat(allQuotes.length, 'quote') })
   if (allInvoices.length > 0) stats.push({ label: tabStat(allInvoices.length, 'invoice') })
   if (acceptedCount > 0) stats.push({ label: `${acceptedCount} accepted`, tone: 'success' })
   if (paidCount > 0) stats.push({ label: `${paidCount} paid`, tone: 'success' })
@@ -247,16 +180,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           </Popover.Close>
           <Popover.Close asChild>
             <button
-              onClick={() => createQuote.mutate()}
-              disabled={createQuote.isPending}
-              className="w-full flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
-            >
-              <FileText size={14} strokeWidth={1.5} className="text-gray-400" />
-              New quote
-            </button>
-          </Popover.Close>
-          <Popover.Close asChild>
-            <button
               onClick={() => createInvoice.mutate()}
               disabled={createInvoice.isPending}
               className="w-full flex items-center gap-2 px-3 py-2 text-gray-700 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
@@ -276,7 +199,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
         <CoupleTabEmpty
           icon={Receipt}
           title="No payments yet"
-          description="Create a quote or invoice with the button above."
+          description="Create a proposal or invoice with the button above."
         />
       ) : (
       <div className="flex flex-col flex-1">
@@ -322,46 +245,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                   </div>
                 )}
               </div>
-            )}
-
-            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-900">
-              Quotes
-            </h3>
-
-            {isQuotesLoading ? (
-              <div className="space-y-2">
-                {[1, 2].map((i) => (
-                  <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
-                ))}
-              </div>
-            ) : allQuotes.length > 0 ? (
-              <div className="space-y-1">
-                {allQuotes.map((quote) => (
-                  <button
-                    key={quote.id}
-                    onClick={() => setActiveQuoteId(quote.id)}
-                    className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
-                  >
-                    <FileText size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 truncate">{quote.title}</p>
-                      <p className="text-xs text-gray-400">{quote.quote_number}</p>
-                    </div>
-                    <span
-                      className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full capitalize ${
-                        STATUS_STYLES[quote.status] || STATUS_STYLES.draft
-                      }`}
-                    >
-                      {quote.status}
-                    </span>
-                    <span className="shrink-0 text-sm text-gray-700 font-medium tabular-nums">
-                      {formatCurrency(quote.subtotal)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400 py-1">No quotes yet.</p>
             )}
           </div>
 
@@ -422,23 +305,13 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
         </div>
 
         {/* Totals row */}
-        <div className="mt-auto grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-16">
-          <div className="flex items-center justify-between px-2 pt-6 border-t border-gray-100">
-            <span className="text-xs text-gray-400">Quoted</span>
-            {isQuotesLoading ? (
-              <div className="h-4 w-16 bg-gray-100 rounded animate-pulse" />
-            ) : (
-              <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(quotesTotal)}</span>
-            )}
-          </div>
-          <div className="flex items-center justify-between px-2 pt-6 border-t border-gray-100">
-            <span className="text-xs text-gray-400">Invoiced</span>
-            {isInvoicesLoading ? (
-              <div className="h-4 w-16 bg-gray-100 rounded animate-pulse" />
-            ) : (
-              <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(invoicesTotal)}</span>
-            )}
-          </div>
+        <div className="mt-auto px-2 pt-6 border-t border-gray-100 flex items-center justify-between">
+          <span className="text-xs text-gray-400">Invoiced</span>
+          {isInvoicesLoading ? (
+            <div className="h-4 w-16 bg-gray-100 rounded animate-pulse" />
+          ) : (
+            <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(invoicesTotal)}</span>
+          )}
         </div>
       </div>
       )}
@@ -452,19 +325,6 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
           onDuplicated={(newId) => setActiveProposalId(newId)}
           onCreateInvoice={(invId) => {
             setActiveProposalId(null)
-            setActiveInvoiceId(invId)
-          }}
-        />
-      )}
-
-      {!!activeQuoteId && (
-        <QuoteBuilderModal
-          quoteId={activeQuoteId}
-          initialCoupleId={coupleId}
-          isOpen
-          onClose={() => setActiveQuoteId(null)}
-          onCreateInvoice={(invId) => {
-            setActiveQuoteId(null)
             setActiveInvoiceId(invId)
           }}
         />

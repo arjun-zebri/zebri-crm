@@ -196,7 +196,7 @@ export type Block =
   | PaymentScheduleBlock
   | ContractBodyBlock
 
-export type BlocksByDoc = Record<'quote' | 'invoice' | 'contract' | 'portal', Block[]>
+export type BlocksByDoc = Record<'proposal' | 'invoice' | 'contract' | 'portal', Block[]>
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   headerBanner: 'Header banner',

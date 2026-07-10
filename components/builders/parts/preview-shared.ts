@@ -21,7 +21,7 @@ export interface PreviewDiscount {
 }
 
 export interface PreviewDoc {
-  kind: 'quote' | 'invoice' | 'contract';
+  kind: 'invoice' | 'contract';
   documentNumber: string;
   title: string;
   status: string;
@@ -31,7 +31,7 @@ export interface PreviewDoc {
   taxRate: number;
   discount: PreviewDiscount | null;
   notes: string | null;
-  /** Quote-only: when the quote expires. */
+  /** Contract-only: when the document expires. */
   expiresAt?: string | null;
   /** Invoice-only: when the invoice is due. */
   dueDate?: string | null;

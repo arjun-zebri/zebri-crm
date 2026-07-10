@@ -40,7 +40,7 @@ import { buildPublicBranding, type PublicBranding, type UserMetadata } from './p
 export { buildPublicBranding } from './public-branding';
 export type { UserMetadata } from './public-branding';
 
-export type BuilderSurface = 'quote' | 'invoice' | 'contract';
+export type BuilderSurface = 'proposal' | 'invoice' | 'contract';
 
 export interface UseCurrentBrandingResult {
   branding: PublicBranding | null;
@@ -50,6 +50,9 @@ export interface UseCurrentBrandingResult {
 
 interface UserBrandingRow {
   branding_blocks: {
+    proposal?: Block[];
+    /** Legacy key from before the proposals rollout — old rows keep
+     *  their saved design until the MC re-saves under `proposal`. */
     quote?: Block[];
     invoice?: Block[];
     contract?: Block[];
@@ -73,7 +76,12 @@ export function useCurrentBranding(surface: BuilderSurface): UseCurrentBrandingR
       if (cancelled) return;
       const metadata = (userResult.user?.user_metadata ?? {}) as UserMetadata;
       const row = (brandingRow as UserBrandingRow | null) ?? null;
-      const surfaceBlocks = row?.branding_blocks?.[surface];
+      // The proposal surface falls back to the legacy `quote` key so
+      // pre-rollout saved designs keep rendering.
+      const surfaceBlocks =
+        surface === 'proposal'
+          ? row?.branding_blocks?.proposal ?? row?.branding_blocks?.quote
+          : row?.branding_blocks?.[surface];
       setBranding(buildPublicBranding(metadata));
       setBlocks(surfaceBlocks ?? defaultBlocksFor(surface));
       setLoading(false);

@@ -24,28 +24,38 @@ import {
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, GripVertical, Library, type LucideIcon } from 'lucide-react'
+import { Plus, GripVertical, Library, Copy, Pencil, Trash2, type LucideIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Empty } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
+import { RowActionsMenu } from '@/components/ui/row-actions-menu'
 import { useToast } from '@/components/ui/toast'
 import { formatAUD } from '@/lib/payments/format'
 import type { StarterLineItemSet } from '@/lib/payments/starter-line-item-templates'
 import { createClient } from '@/lib/supabase/client'
+import { formatRelativeTime } from '@/lib/utils'
 
 import { LineItemPreview } from './line-item-preview'
 import { StarterCatalogModal } from './starter-catalog-modal'
 import { TemplateEditForm, type TemplateFormValue, type TemplateSource } from './template-edit-form'
-import { TemplatePreviewHeader } from './template-preview-header'
 import { createTemplateStore, type TemplateKind, type TemplateRecord, type StoredItem } from './template-store'
 import { TemplatesActions } from './templates-actions-slot'
 import { TemplatesTwoPane } from './templates-two-pane'
 
 /** A template row plus the counts the list displays. */
 type TemplateListRow = TemplateRecord & { item_count: number; total: number }
+
+/** "Edited X ago" meta line for the detail card. */
+function EditedLine({ updatedAt }: { updatedAt?: string | null }) {
+  // Capture "now" once at mount via a lazy initializer (Date.now() during
+  // render is impure); the relative time recomputes from props.
+  const [nowMs] = useState(() => Date.now())
+  if (!updatedAt) return null
+  return <p className="text-xs text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
+}
 
 /** Per-tab wording so both tabs read naturally from one component. */
 export interface LineItemTemplateManagerCopy {
@@ -55,6 +65,10 @@ export interface LineItemTemplateManagerCopy {
   namePlaceholder: string
   newTemplateTitle: string
   editTemplateTitle: string
+  /** Subtitle under the edit modal's title. */
+  modalSubtitle: string
+  /** Eyebrow label on the detail card — "Quote template" / "Invoice template". */
+  eyebrow: string
   starterTitle: string
   starterBlurb: string
   emptyTitle: string
@@ -181,33 +195,22 @@ export function LineItemTemplateManager({
     enabled: !!userId,
   })
 
-  // Seeding sources for the edit form's "Add from…" picker: packages for
-  // both tabs, plus quote templates when building an invoice template.
+  // Seeding sources for the edit form's "Add from…" picker: packages.
   const { data: sources = [] } = useQuery({
     queryKey: ['template-sources', kind],
     queryFn: async (): Promise<TemplateSource[]> => {
       if (!userId) return []
-      const wantQuotes = kind === 'invoice'
-      const [pkgs, pkgItems, quotes, quoteItems] = await Promise.all([
+      const [pkgs, pkgItems] = await Promise.all([
         supabase.from('packages').select('id, name, archived_at').eq('user_id', userId).order('position'),
         supabase.from('package_items').select('package_id, description, amount, position').eq('user_id', userId).order('position'),
-        wantQuotes
-          ? supabase.from('quote_templates').select('id, name').eq('user_id', userId).order('position')
-          : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-        wantQuotes
-          ? supabase.from('quote_template_items').select('template_id, description, amount, position').eq('user_id', userId).order('position')
-          : Promise.resolve({ data: [] as { template_id: string; description: string; amount: number }[] }),
       ])
       const byPkg: Record<string, { description: string; amount: number }[]> = {}
       for (const it of pkgItems.data ?? []) (byPkg[it.package_id] ??= []).push({ description: it.description, amount: it.amount })
-      const byQuote: Record<string, { description: string; amount: number }[]> = {}
-      for (const it of quoteItems.data ?? []) (byQuote[it.template_id] ??= []).push({ description: it.description, amount: it.amount })
       return [
         // Archived packages leave every picker, matching the builders.
         ...(pkgs.data ?? [])
           .filter((p) => !p.archived_at)
           .map((p) => ({ id: p.id, kind: 'package' as const, name: p.name, items: byPkg[p.id] ?? [] })),
-        ...(quotes.data ?? []).map((q) => ({ id: q.id, kind: 'quote' as const, name: q.name, items: byQuote[q.id] ?? [] })),
       ]
     },
     enabled: !!userId,
@@ -393,6 +396,7 @@ export function LineItemTemplateManager({
       {isCreating && (
         <TemplateEditForm
           title={copy.newTemplateTitle}
+          subtitle={copy.modalSubtitle}
           namePlaceholder={copy.namePlaceholder}
           value={{ name: '', notes: null, description: null, items: [] }}
           sources={sources}
@@ -407,6 +411,7 @@ export function LineItemTemplateManager({
         <TemplateEditForm
           key={editingId}
           title={copy.editTemplateTitle}
+          subtitle={copy.modalSubtitle}
           namePlaceholder={copy.namePlaceholder}
           value={{
             name: editing.name,
@@ -449,18 +454,6 @@ export function LineItemTemplateManager({
             icon={emptyIcon}
             title={copy.emptyTitle}
             description={copy.emptyDescription}
-            action={
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
-                  <Library size={14} strokeWidth={1.5} />
-                  Browse starters
-                </Button>
-                <Button size="sm" onClick={openCreate} className="gap-1.5">
-                  <Plus size={14} strokeWidth={1.5} />
-                  New Template
-                </Button>
-              </div>
-            }
           />
         </div>
       ) : (
@@ -490,26 +483,46 @@ export function LineItemTemplateManager({
           }
           detail={
             selectedTpl ? (
-              <div className="space-y-4">
-                <TemplatePreviewHeader
-                  title={selectedTpl.name}
-                  {...(selectedTpl.notes ? { subtitle: selectedTpl.notes } : {})}
-                  updatedAt={selectedTpl.updated_at}
-                  editLabel="Edit template"
-                  onEdit={() => {
-                    setIsCreating(false)
-                    setEditingId(selectedTpl.id)
-                  }}
-                  onDuplicate={() => duplicateMutation.mutate(selectedTpl)}
-                  onDelete={() => setConfirmDeleteId(selectedTpl.id)}
-                />
-                <LineItemPreview
-                  name={selectedTpl.name}
-                  subtitle={selectedTpl.notes ?? ''}
-                  items={allItems?.[selectedTpl.id] ?? []}
-                  notes={selectedTpl.description}
-                />
-              </div>
+              <LineItemPreview
+                eyebrow={copy.eyebrow}
+                name={selectedTpl.name}
+                subtitle={selectedTpl.notes}
+                meta={<EditedLine updatedAt={selectedTpl.updated_at} />}
+                actions={
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => {
+                        setIsCreating(false)
+                        setEditingId(selectedTpl.id)
+                      }}
+                    >
+                      <Pencil size={14} strokeWidth={1.5} />
+                      Edit
+                    </Button>
+                    <RowActionsMenu
+                      alwaysVisible
+                      actions={[
+                        {
+                          label: 'Duplicate',
+                          icon: <Copy size={15} strokeWidth={1.5} />,
+                          onSelect: () => duplicateMutation.mutate(selectedTpl),
+                        },
+                        {
+                          label: 'Delete',
+                          destructive: true,
+                          icon: <Trash2 size={15} strokeWidth={1.5} />,
+                          onSelect: () => setConfirmDeleteId(selectedTpl.id),
+                        },
+                      ]}
+                    />
+                  </>
+                }
+                items={allItems?.[selectedTpl.id] ?? []}
+                notes={selectedTpl.description}
+              />
             ) : (
               <div className="flex h-full items-center justify-center pb-[10vh]">
                 <p className="text-sm text-text-subtle">Select a template to preview.</p>

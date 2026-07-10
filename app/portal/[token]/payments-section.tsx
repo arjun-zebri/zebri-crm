@@ -4,12 +4,14 @@ import { ExternalLink } from 'lucide-react'
 
 import { isPastDue } from '@/lib/utils'
 
-import { PortalProposal, PortalQuote, PortalInvoice } from './page'
+import { PortalProposal, PortalInvoice } from './page'
 
 interface PaymentsSectionProps {
   payments: {
     proposals?: PortalProposal[]
-    quotes: PortalQuote[]
+    /** Legacy key the RPC keeps returning until the quotes drop
+     *  migration deploys — ignored by this component. */
+    quotes?: unknown[]
     invoices: PortalInvoice[]
   }
 }
@@ -47,10 +49,9 @@ const isOverdue = isPastDue
 export function PaymentsSection({ payments }: PaymentsSectionProps) {
   const proposals = payments.proposals ?? []
   const hasProposals = proposals.length > 0
-  const hasQuotes = payments.quotes.length > 0
   const hasInvoices = payments.invoices.length > 0
 
-  if (!hasProposals && !hasQuotes && !hasInvoices) {
+  if (!hasProposals && !hasInvoices) {
     return (
       <div className="border border-border rounded-card p-6 text-center">
         <p className="text-body text-text-muted">Nothing here yet. Your MC will send proposals and invoices here.</p>
@@ -59,7 +60,7 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
   }
 
   // Calculate summary
-  const totalQuotes = payments.quotes.reduce((sum, q) => sum + q.subtotal, 0)
+  const totalProposals = proposals.reduce((sum, p) => sum + p.subtotal, 0)
   const totalInvoices = payments.invoices.reduce((sum, i) => sum + i.subtotal, 0)
   const overdueInvoices = payments.invoices.filter(
     (i) => i.status !== 'paid' && i.status !== 'cancelled' && isOverdue(i.due_date)
@@ -68,12 +69,12 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
   return (
     <div className="space-y-6">
       {/* Summary strip */}
-      {(totalQuotes > 0 || totalInvoices > 0) && (
+      {(totalProposals > 0 || totalInvoices > 0) && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {totalQuotes > 0 && (
+          {totalProposals > 0 && (
             <div className="bg-surface border border-border rounded-card p-3">
-              <p className="text-caption text-text-subtle">Total quotes</p>
-              <p className="text-section font-semibold text-text mt-1">{formatAUD(totalQuotes)}</p>
+              <p className="text-caption text-text-subtle">Total proposals</p>
+              <p className="text-section font-semibold text-text mt-1">{formatAUD(totalProposals)}</p>
             </div>
           )}
           {totalInvoices > 0 && (
@@ -112,41 +113,6 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
                   {proposal.share_token_enabled && proposal.share_token ? (
                     <a
                       href={`/proposal/${proposal.share_token}`}
-                      className="inline-flex items-center gap-1.5 text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
-                    >
-                      View <ExternalLink size={13} strokeWidth={1.5} />
-                    </a>
-                  ) : (
-                    <span className="text-caption text-text-subtle">Not yet shared</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Quotes */}
-      {hasQuotes && (
-        <div>
-          <h3 className="text-body font-medium text-text-muted mb-3">Quotes</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {payments.quotes.map((quote) => (
-              <div key={quote.id} className="bg-surface border border-border rounded-card p-4 flex flex-col">
-                <div className="flex items-start justify-between gap-3 mb-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-body font-medium text-text">{quote.title}</p>
-                    <p className="text-caption text-text-subtle mt-0.5">Quote #{quote.quote_number}</p>
-                  </div>
-                  <span className={`shrink-0 text-caption font-medium px-2 py-1 rounded-pill capitalize ${getStatusColor(quote.status)}`}>
-                    {quote.status}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mt-auto pt-3">
-                  <p className="text-body font-semibold text-text">{formatAUD(quote.subtotal)}</p>
-                  {quote.share_token_enabled && quote.share_token ? (
-                    <a
-                      href={`/quote/${quote.share_token}`}
                       className="inline-flex items-center gap-1.5 text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
                     >
                       View <ExternalLink size={13} strokeWidth={1.5} />

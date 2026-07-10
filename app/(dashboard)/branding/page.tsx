@@ -42,7 +42,8 @@ interface UserMetadata {
   active_kit_id?: string | null
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
-  branding_blocks?: { quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] }
+  // `quote` is the legacy pre-proposals key; read-only fallback.
+  branding_blocks?: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] }
   brand_kits?: BrandKit[]
   portal_sections?: {
     timeline?: boolean
@@ -56,7 +57,7 @@ interface UserMetadata {
 }
 
 interface UserBrandingRow {
-  branding_blocks: { quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] } | null
+  branding_blocks: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] } | null
   brand_kits: BrandKit[] | null
   portal_sections: {
     timeline?: boolean
@@ -150,7 +151,9 @@ export default function BrandingPage() {
   // Distinguish "never saved" (undefined → use defaults) from "saved empty"
   // (deliberately deleted by the user → preserve the empty array).
   const blocksSrc = branding?.branding_blocks ?? metadata?.branding_blocks ?? {}
-  const migratedQuote    = blocksSrc.quote    !== undefined ? migrateBlocks(blocksSrc.quote, 'quote')    : null
+  // Legacy fallback: pre-rollout saves keyed the surface `quote`.
+  const proposalSrc = blocksSrc.proposal ?? blocksSrc.quote
+  const migratedProposal = proposalSrc !== undefined ? migrateBlocks(proposalSrc, 'proposal') : null
   const migratedInvoice  = blocksSrc.invoice  !== undefined ? migrateBlocks(blocksSrc.invoice, 'invoice')  : null
   const migratedContract = blocksSrc.contract !== undefined ? migrateBlocks(blocksSrc.contract, 'contract') : null
   const migratedPortal   = blocksSrc.portal   !== undefined ? migrateBlocks(blocksSrc.portal, 'portal')   : null
@@ -187,7 +190,7 @@ export default function BrandingPage() {
           // Only fall back to defaults when the user has never saved this
           // surface. An empty array means they intentionally deleted everything
           // and should see the empty state, not the defaults.
-          quote:    migratedQuote    !== null ? migratedQuote    : defaultBlocksFor('quote'),
+          proposal: migratedProposal !== null ? migratedProposal : defaultBlocksFor('proposal'),
           invoice:  migratedInvoice  !== null ? migratedInvoice  : defaultBlocksFor('invoice'),
           contract: migratedContract !== null ? migratedContract : defaultBlocksFor('contract'),
           portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),

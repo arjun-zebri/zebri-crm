@@ -3,9 +3,10 @@
  *
  * Both tabs edit the same shape — name, subtitle, applied notes, and a
  * list of priced line items — so they share this one form. It matches
- * the Packages modal: calm underline inputs, black section headers, the
- * shared {@link LineItemsEditor} grid, and a sticky Cancel / Save
- * footer. It owns its `Modal` (the manager mounts it only while open).
+ * the Packages modal: boxed sm inputs, section labels with muted
+ * hints, the shared {@link LineItemsEditor} in a bordered card, and a
+ * sticky footer carrying the live total beside Cancel / Save. It owns
+ * its `Modal` (the manager mounts it only while open).
  *
  * Column semantics match packages: the "Subtitle" field binds to
  * `notes` (internal, shown in the template list) and the "Notes" field
@@ -20,10 +21,11 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { ChevronDown, Loader2, Package as PackageIcon } from 'lucide-react'
+import { ChevronDown, Package as PackageIcon } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { formatAUD } from '@/lib/payments/format'
 import { cleanLineItems } from '@/lib/payments/line-item-draft'
@@ -58,6 +60,8 @@ export interface TemplateSource {
 interface TemplateEditFormProps {
   /** Modal heading — e.g. "New Quote Template". */
   title: string
+  /** Muted line under the heading. */
+  subtitle?: string
   value: TemplateFormValue
   onSave: (data: TemplateFormValue) => void
   onClose: () => void
@@ -70,12 +74,9 @@ interface TemplateEditFormProps {
   takenNames?: Set<string>
 }
 
-const labelClass = 'mb-1 block text-sm font-medium text-text'
-const inputClass =
-  'w-full border-0 border-b border-border bg-transparent px-0 py-2 text-sm text-text placeholder:text-text-subtle focus:outline-none focus:border-border-strong transition'
-
 export function TemplateEditForm({
   title,
+  subtitle,
   value,
   onSave,
   onClose,
@@ -122,80 +123,89 @@ export function TemplateEditForm({
     <Modal
       isOpen
       onClose={onClose}
-      title={title}
+      size="lg"
+      title={
+        <div className="min-w-0">
+          <p className="text-xl font-semibold text-text">{title}</p>
+          {subtitle ? <p className="mt-0.5 text-sm font-normal text-text-muted">{subtitle}</p> : null}
+        </div>
+      }
       footer={
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-xs text-danger">{hint ?? ''}</p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+              Template total
+            </p>
+            <p className="truncate text-xl font-semibold tabular-nums text-text">
+              {formatAUD(total)}
+            </p>
+            {hint ? <p className="text-xs text-danger">{hint}</p> : null}
+          </div>
           <div className="flex shrink-0 items-center gap-2">
             <Button onClick={onClose} disabled={isSaving} variant="outline" size="sm">
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isSaving || !name.trim() || blocked} size="sm">
-              {isSaving ? <Loader2 size={13} className="mr-1.5 animate-spin" /> : null}
-              Save
+            <Button onClick={handleSave} disabled={isSaving || !name.trim() || blocked} loading={isSaving} size="sm">
+              Save template
             </Button>
           </div>
         </div>
       }
     >
       <div className="space-y-5">
-        <div>
-          <label className={labelClass}>
-            Template name <span className="text-danger">*</span>
+        <Input
+          label="Template name"
+          size="sm"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={namePlaceholder}
+          disabled={isSaving}
+          autoFocus
+          required
+        />
+
+        <Input
+          label="Subtitle"
+          size="sm"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Shown in your template list, not to couples"
+          disabled={isSaving}
+        />
+
+        <div className="space-y-1">
+          <label htmlFor="template-notes" className="block text-caption font-medium text-text">
+            Notes
           </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={namePlaceholder}
-            disabled={isSaving}
-            autoFocus
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Subtitle</label>
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Shown in your template list, not to couples"
-            disabled={isSaving}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Notes</label>
           <textarea
+            id="template-notes"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Added to the quote or invoice notes when this template is applied."
             disabled={isSaving}
             rows={3}
-            className="w-full resize-none border-0 border-b border-border bg-transparent px-0 py-1 text-sm text-text placeholder:text-text-subtle focus:border-border-strong focus:outline-none transition"
+            className="block w-full resize-none rounded-control border border-border bg-surface px-2.5 py-2 text-caption text-text placeholder:text-text-subtle transition-colors focus:border-brand-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
         <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label className={labelClass}>Line items</label>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p>
+              <span className="text-sm font-medium text-text">Line items</span>
+              <span className="ml-2 text-xs text-text-muted">Applied to the document as-is</span>
+            </p>
             {sources && sources.length > 0 ? <SourcePicker sources={sources} onPick={addFromSource} /> : null}
           </div>
-          <LineItemsEditor
-            items={items}
-            onChange={setItems}
-            disabled={isSaving}
-            descriptionPlaceholder="e.g., Reception MC"
-            addLabel="Add line item"
-          />
-          {items.length > 0 && (
-            <div className="mt-3 flex items-baseline justify-between border-t border-border pt-3">
-              <span className="text-sm text-text-muted">Total</span>
-              <span className="text-sm font-semibold tabular-nums text-text">{formatAUD(total)}</span>
-            </div>
-          )}
+          <div className="rounded-xl border border-border px-4 pt-2 pb-1.5">
+            <LineItemsEditor
+              items={items}
+              onChange={setItems}
+              disabled={isSaving}
+              descriptionPlaceholder="e.g., Reception MC"
+              addLabel="Add line item"
+              compact
+            />
+          </div>
         </div>
       </div>
     </Modal>
@@ -250,7 +260,7 @@ function SourcePicker({ sources, onPick }: { sources: TemplateSource[]; onPick: 
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1.5 py-1 text-sm text-text-muted transition hover:text-text cursor-pointer"
+          className="flex items-center gap-1.5 py-1 text-caption text-text-muted transition hover:text-text cursor-pointer"
         >
           <PackageIcon size={14} strokeWidth={1.5} />
           {triggerLabel}

@@ -2,8 +2,8 @@
  * Tab navigation for the Templates page.
  *
  * Underline tabs matching the Settings page chrome, switching between
- * the template kinds the page hosts (Emails, Quotes, Timelines,
- * Contracts). The active tab's primary actions live on the right of
+ * the template kinds the page hosts (Emails, Packages, Invoices,
+ * Timelines, Contracts). The active tab's primary actions live on the right of
  * this same row via {@link actionsRef} — a callback ref the orchestrator
  * uses to expose the action slot to the tab managers. Stateless — the
  * orchestrator owns the active tab.
@@ -15,15 +15,14 @@
 import type { Ref } from 'react'
 
 /** The template kinds surfaced as tabs. */
-export type TemplateTab = 'emails' | 'packages' | 'quotes' | 'invoices' | 'timelines' | 'contracts' | 'questionnaires'
+export type TemplateTab = 'emails' | 'packages' | 'invoices' | 'timelines' | 'contracts' | 'questionnaires'
 
 /** Ordered tab definitions — id drives state, label is the visible text.
- *  Ordered by the money flow: packages → quotes → invoices are built on
+ *  Ordered by the money flow: packages → invoices are built on
  *  each other, so they sit together in that order. */
 export const TEMPLATE_TABS: { id: TemplateTab; label: string }[] = [
   { id: 'emails', label: 'Emails' },
   { id: 'packages', label: 'Packages' },
-  { id: 'quotes', label: 'Quotes' },
   { id: 'invoices', label: 'Invoices' },
   { id: 'timelines', label: 'Timelines' },
   { id: 'contracts', label: 'Contracts' },
