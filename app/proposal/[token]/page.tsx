@@ -2,16 +2,17 @@
  * Public proposal page — orchestrator.
  *
  * Reached via the share-token capability URL (`/proposal/<token>`).
- * Loads `get_public_proposal(token)`, and while the proposal is
- * active lets the couple pick a package option (multi-option
- * proposals show the chooser; single-option skips it), adjust the
- * add-on ticks seeded from the MC's pre-ticks, and accept with a
- * two-step confirm — the acceptance carries the chosen option +
- * final selection to `accept_proposal`.
+ * Loads `get_public_proposal(token)` through React Query, and while
+ * the proposal is active lets the couple pick a package option
+ * (multi-option proposals show the chooser; single-option skips it),
+ * adjust the add-on ticks seeded from the MC's pre-ticks, and accept
+ * with a two-step confirm — the acceptance carries the chosen option
+ * + final selection to `accept_proposal`.
  *
- * Accepted proposals re-render read-only with the RECORDED choice
- * (`accepted_option_id` + `accepted_addon_selection`) so the page is
- * always the receipt of what was agreed.
+ * All view state derives from the query payload + the couple's picks
+ * (no fetch-then-setState effects): the accepted view pins to the
+ * RECORDED choice (`accepted_option_id` + `accepted_addon_selection`)
+ * so the page is always the receipt of what was agreed.
  *
  * States: loading / not_found / active / expired / accepted /
  * declined. Scalar branding (colors, fonts, logo, density, radius)
@@ -22,16 +23,17 @@
  */
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 
+import { Html } from '@/lib/branding/public-blocks/html';
 import {
   bodyFontFamily,
   DENSITY_PAD,
   headingFontFamily,
   useBrandingHead,
 } from '@/lib/branding/public-surface';
-import { Html } from '@/lib/branding/public-blocks/html';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
 import { createClient } from '@/lib/supabase/client';
 
@@ -57,50 +59,52 @@ export default function PublicProposalPage() {
   const params = useParams<{ token: string }>();
   const supabase = createClient();
 
-  const [proposal, setProposal] = useState<PublicProposal | null>(null);
-  const [pageState, setPageState] = useState<PageState>('loading');
-  const [chosenId, setChosenId] = useState<string | null>(null);
-  const [selection, setSelection] = useState<Record<string, boolean>>({});
+  // The couple's live picks; null until they interact so the derived
+  // defaults (MC pre-ticks / recorded acceptance) stay authoritative.
+  const [pickedOptionId, setPickedOptionId] = useState<string | null>(null);
+  const [picks, setPicks] = useState<Record<string, boolean> | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    const { data, error } = await supabase.rpc('get_public_proposal', {
-      token: params.token,
-    });
-    if (error || !data) {
-      setPageState('not_found');
-      return;
-    }
-    const p = data as unknown as PublicProposal;
-    const state = deriveState(p);
-    setProposal(p);
-    setPageState(state);
+  const {
+    data: proposal,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ['public-proposal', params.token],
+    queryFn: async (): Promise<PublicProposal | null> => {
+      const { data, error } = await supabase.rpc('get_public_proposal', {
+        token: params.token,
+      });
+      if (error) throw error;
+      return (data as unknown as PublicProposal) ?? null;
+    },
+    retry: false,
+  });
 
-    if (state === 'accepted' && p.accepted_option_id) {
-      // The receipt view: the recorded choice, never the live picks.
-      setChosenId(p.accepted_option_id);
-      setSelection(p.accepted_addon_selection ?? {});
-    } else {
-      // Single option: chosen implicitly. Multi: couple must pick.
-      const only = p.options.length === 1 ? p.options[0] : null;
-      setChosenId(only ? only.id : null);
-      setSelection(only ? defaultSelection(only) : {});
-    }
-  }, [params.token, supabase]);
+  useBrandingHead(proposal ?? null);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-  useBrandingHead(proposal);
+  const pageState: PageState = isLoading
+    ? 'loading'
+    : !proposal
+      ? 'not_found'
+      : deriveState(proposal);
 
-  const chosen = proposal?.options.find((o) => o.id === chosenId) ?? null;
+  /* ─── Derived choice + selection ─── */
+  const accepted = pageState === 'accepted';
+  const effectiveChosenId = accepted
+    ? proposal?.accepted_option_id ?? null
+    : pickedOptionId ?? (proposal?.options.length === 1 ? proposal.options[0]!.id : null);
+  const chosen = proposal?.options.find((o) => o.id === effectiveChosenId) ?? null;
+  const selection: Record<string, boolean> = accepted
+    ? proposal?.accepted_addon_selection ?? {}
+    : picks ?? (chosen ? defaultSelection(chosen) : {});
 
   const handleChoose = (optionId: string) => {
     const option = proposal?.options.find((o) => o.id === optionId);
     if (!option) return;
-    setChosenId(optionId);
-    setSelection(defaultSelection(option));
+    setPickedOptionId(optionId);
+    setPicks(defaultSelection(option));
   };
 
   const handleAccept = async () => {
@@ -114,13 +118,14 @@ export default function PublicProposalPage() {
     });
     setActionLoading(false);
     const res = data as { error?: string } | null;
-    if (res?.error) {
-      if (res.error === 'expired') setPageState('expired');
-      else if (res.error === 'already_actioned') await load();
-      else setActionError('Something went wrong. Please try again.');
+    // expired / already_actioned both surface correctly from a
+    // refetch (state derives from the payload); anything else is a
+    // retryable failure.
+    if (res?.error && res.error !== 'expired' && res.error !== 'already_actioned') {
+      setActionError('Something went wrong. Please try again.');
       return;
     }
-    await load();
+    await refetch();
   };
 
   const handleDecline = async () => {
@@ -129,12 +134,11 @@ export default function PublicProposalPage() {
     const { data } = await supabase.rpc('decline_proposal', { token: params.token });
     setActionLoading(false);
     const res = data as { error?: string } | null;
-    if (res?.error) {
-      if (res.error === 'already_actioned') await load();
-      else setActionError('Something went wrong. Please try again.');
+    if (res?.error && res.error !== 'already_actioned') {
+      setActionError('Something went wrong. Please try again.');
       return;
     }
-    await load();
+    await refetch();
   };
 
   /* ─── Branding-derived values ─── */
@@ -245,7 +249,7 @@ export default function PublicProposalPage() {
                 <div className="mb-6">
                   <ProposalOptionChooser
                     options={proposal.options}
-                    chosenId={chosenId}
+                    chosenId={effectiveChosenId}
                     onChoose={handleChoose}
                     disabled={actionLoading}
                     brand={brand}
@@ -270,7 +274,7 @@ export default function PublicProposalPage() {
                     option={chosen}
                     selection={selection}
                     onToggle={(itemId, next) =>
-                      setSelection((prev) => ({ ...prev, [itemId]: next }))
+                      setPicks({ ...selection, [itemId]: next })
                     }
                     locked={pageState !== 'active' || actionLoading}
                     brand={brand}
