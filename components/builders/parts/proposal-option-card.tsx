@@ -12,7 +12,7 @@
  */
 'use client';
 
-import { Trash2 } from 'lucide-react';
+import { Sparkles, Trash2 } from 'lucide-react';
 
 import { formatAUD } from '@/lib/payments/format';
 
@@ -30,6 +30,10 @@ export interface ProposalOptionDraft {
   depositPercent: number | null;
   gstInclusive: boolean;
   weekendLoadingPercent: number | null;
+  /** "Most popular" highlight — snapshotted from the package, editable
+   *  per proposal. Rendered as a badge only when the proposal offers
+   *  more than one option. */
+  isPopular: boolean;
   items: LineItem[];
   addOns: ProposalAddOnDraft[];
 }
@@ -44,6 +48,10 @@ export interface ProposalOptionCardProps {
   index: number;
   /** Hide the "Option N" label when the proposal has a single option. */
   showIndex: boolean;
+  /** Whether the "Most popular" toggle applies — only meaningful when
+   *  the proposal offers more than one option (a lone package can't be
+   *  "most popular" relative to nothing). */
+  canFeature: boolean;
   canEdit: boolean;
   canRemove: boolean;
   onChange: (next: ProposalOptionDraft) => void;
@@ -54,6 +62,7 @@ export function ProposalOptionCard({
   option,
   index,
   showIndex,
+  canFeature,
   canEdit,
   canRemove,
   onChange,
@@ -68,7 +77,11 @@ export function ProposalOptionCard({
     onChange({ ...option, items: mutate(option.items) });
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div
+      className={`rounded-xl border bg-card p-4 ${
+        option.isPopular && canFeature ? 'border-brand-fg' : 'border-border'
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {showIndex && (
@@ -135,7 +148,7 @@ export function ProposalOptionCard({
         />
       </div>
 
-      <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-border pt-2.5">
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-2.5">
         {/* Terms are a snapshot from the package — display-only here;
             they pre-fill the invoice when the accepted option converts. */}
         <span className="min-w-0 truncate text-xs text-text-muted">{terms.join(' · ')}</span>
@@ -143,6 +156,25 @@ export function ProposalOptionCard({
           {formatAUD(optionBaseTotal(option))}
         </span>
       </div>
+
+      {/* Most-popular toggle — only offered when there's something to
+          be popular relative to (>1 option). Snapshots default from
+          the package but the MC can flip it per proposal. */}
+      {canFeature && canEdit && (
+        <button
+          type="button"
+          onClick={() => onChange({ ...option, isPopular: !option.isPopular })}
+          className={`mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border py-1.5 text-caption font-medium transition cursor-pointer ${
+            option.isPopular
+              ? 'border-brand-fg bg-brand-fg text-text-inverse'
+              : 'border-border text-text-muted hover:text-text'
+          }`}
+          aria-pressed={option.isPopular}
+        >
+          <Sparkles size={13} strokeWidth={1.5} />
+          {option.isPopular ? 'Most popular' : 'Mark as most popular'}
+        </button>
+      )}
     </div>
   );
 }

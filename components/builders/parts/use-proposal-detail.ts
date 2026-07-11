@@ -43,6 +43,7 @@ interface OptionRow {
   deposit_percent: number | null;
   gst_inclusive: boolean;
   weekend_loading_percent: number | null;
+  is_popular: boolean;
   proposal_option_items: {
     id: string;
     description: string;
@@ -81,7 +82,7 @@ export function useProposalDetail(proposalId: string | null) {
       const { data, error } = await supabase
         .from('proposal_options')
         .select(
-          'id, position, title, description, source_package_id, deposit_percent, gst_inclusive, weekend_loading_percent, proposal_option_items(id, description, amount, is_addon, default_included, position)',
+          'id, position, title, description, source_package_id, deposit_percent, gst_inclusive, weekend_loading_percent, is_popular, proposal_option_items(id, description, amount, is_addon, default_included, position)',
         )
         .eq('proposal_id', proposalId!)
         .order('position', { ascending: true });
@@ -97,6 +98,7 @@ export function useProposalDetail(proposalId: string | null) {
           gstInclusive: row.gst_inclusive,
           weekendLoadingPercent:
             row.weekend_loading_percent != null ? Number(row.weekend_loading_percent) : null,
+          isPopular: row.is_popular,
           items: items
             .filter((item) => !item.is_addon)
             .map((item, idx) => ({

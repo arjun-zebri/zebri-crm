@@ -162,20 +162,14 @@ function PagePreview({
         </div>
       ) : null}
 
-      {options.length > 1 ? (
-        <p className="text-[10px] text-text-subtle">
-          The couple picks one of these {options.length} packages:
-        </p>
-      ) : null}
-
       {options.length === 0 ? (
         <p className="py-6 text-center text-xs text-text-subtle">
           Add a package option to see it here.
         </p>
+      ) : single ? (
+        <OptionPreview option={options[0]!} index={0} single />
       ) : (
-        options.map((option, i) => (
-          <OptionPreview key={option.key} option={option} index={i} single={single} />
-        ))
+        <MultiOptionPreview options={options} />
       )}
 
       {options.length > 0 ? (
@@ -202,6 +196,82 @@ function PagePreview({
     return <div className="mx-auto w-[375px] max-w-full">{page}</div>;
   }
   return <div className="mx-auto max-w-md">{page}</div>;
+}
+
+/**
+ * Multi-option preview: the chooser cards (matching the public page)
+ * with the popular/first option pre-selected, then that option's
+ * detail below — the shape the couple actually scrolls through.
+ */
+function MultiOptionPreview({ options }: { options: ProposalOptionDraft[] }) {
+  const selectedIdx = Math.max(
+    0,
+    options.findIndex((o) => o.isPopular),
+  );
+  return (
+    <div className="space-y-5">
+      <div>
+        <Eyebrow>Choose your package</Eyebrow>
+        <p className="mt-0.5 text-[10px] text-text-subtle">
+          Select the one that fits your day — everything updates below.
+        </p>
+        <div className="mt-3 space-y-2.5">
+          {options.map((option, i) => {
+            const selected = i === selectedIdx;
+            const summary = option.items
+              .map((it) => it.description || 'Item')
+              .filter(Boolean)
+              .join(' · ');
+            return (
+              <div key={option.key} className="relative">
+                {option.isPopular ? (
+                  <span className="absolute -top-1.5 left-3 z-10 rounded-full bg-brand-fg px-2 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-text-inverse">
+                    Most popular
+                  </span>
+                ) : null}
+                <div
+                  className={`rounded-xl border p-3 ${
+                    selected || option.isPopular ? 'border-brand-fg' : 'border-border'
+                  } ${option.isPopular ? 'bg-brand-fg/5' : ''}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <span
+                      className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-2 ${
+                        selected ? 'border-brand-fg' : 'border-border'
+                      }`}
+                    >
+                      {selected ? <span className="h-1.5 w-1.5 rounded-full bg-brand-fg" /> : null}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="min-w-0 truncate text-sm font-semibold text-text">
+                          {option.title || `Option ${String(i + 1)}`}
+                        </span>
+                        <span className="shrink-0 text-right">
+                          <span className="block text-sm font-semibold tabular-nums text-text">
+                            {formatAUD(optionBaseTotal(option))}
+                          </span>
+                          <span className="block text-[9px] text-text-subtle">base price</span>
+                        </span>
+                      </div>
+                      {summary ? (
+                        <p className="mt-1 truncate text-[10px] text-text-muted">{summary}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* The selected option's detail, as it appears once chosen. */}
+      <div className="border-t border-border pt-4">
+        <OptionPreview option={options[selectedIdx]!} index={selectedIdx} single />
+      </div>
+    </div>
+  );
 }
 
 /** One option: priced inclusions, add-on cards, summary panel. */

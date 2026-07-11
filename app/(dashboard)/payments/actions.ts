@@ -370,6 +370,8 @@ const proposalOptionSchema = z.object({
   depositPercent: z.number().min(0).max(100).nullable(),
   gstInclusive: z.boolean(),
   weekendLoadingPercent: z.number().min(0).max(100).nullable(),
+  /** "Most popular" highlight for the public chooser. */
+  isPopular: z.boolean(),
   items: z.array(proposalItemSchema).max(100),
 });
 
@@ -492,6 +494,7 @@ export async function saveProposalAction(
           deposit_percent: option.depositPercent,
           gst_inclusive: option.gstInclusive,
           weekend_loading_percent: option.weekendLoadingPercent,
+          is_popular: option.isPopular,
           subtotal: optionBaseTotal(option),
         })
         .select('id')
@@ -581,7 +584,7 @@ export async function duplicateProposalAction(
 
     const { data: options, error: oErr } = await supabase
       .from('proposal_options')
-      .select('id, position, title, description, source_package_id, deposit_percent, gst_inclusive, weekend_loading_percent, subtotal')
+      .select('id, position, title, description, source_package_id, deposit_percent, gst_inclusive, weekend_loading_percent, is_popular, subtotal')
       .eq('proposal_id', parsed.data)
       .order('position', { ascending: true });
     if (oErr) throw oErr;
@@ -628,6 +631,7 @@ export async function duplicateProposalAction(
           deposit_percent: option.deposit_percent,
           gst_inclusive: option.gst_inclusive,
           weekend_loading_percent: option.weekend_loading_percent,
+          is_popular: option.is_popular,
           subtotal: option.subtotal,
         })
         .select('id')

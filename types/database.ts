@@ -1531,6 +1531,7 @@ export type Database = {
           description: string | null
           gst_inclusive: boolean
           id: string
+          is_popular: boolean
           is_starter: boolean
           name: string
           notes: string | null
@@ -1547,6 +1548,7 @@ export type Database = {
           description?: string | null
           gst_inclusive?: boolean
           id?: string
+          is_popular?: boolean
           is_starter?: boolean
           name: string
           notes?: string | null
@@ -1563,6 +1565,7 @@ export type Database = {
           description?: string | null
           gst_inclusive?: boolean
           id?: string
+          is_popular?: boolean
           is_starter?: boolean
           name?: string
           notes?: string | null
@@ -1811,6 +1814,7 @@ export type Database = {
           description: string | null
           gst_inclusive: boolean
           id: string
+          is_popular: boolean
           position: number
           proposal_id: string
           source_package_id: string | null
@@ -1825,6 +1829,7 @@ export type Database = {
           description?: string | null
           gst_inclusive?: boolean
           id?: string
+          is_popular?: boolean
           position: number
           proposal_id: string
           source_package_id?: string | null
@@ -1839,6 +1844,7 @@ export type Database = {
           description?: string | null
           gst_inclusive?: boolean
           id?: string
+          is_popular?: boolean
           position?: number
           proposal_id?: string
           source_package_id?: string | null

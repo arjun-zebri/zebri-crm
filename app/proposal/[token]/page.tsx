@@ -267,6 +267,8 @@ export default function PublicProposalPage() {
                 textColor={textColor}
                 mutedColor={mutedColor}
                 radius={Math.min(radius, 12)}
+                headingFontFamily={headingStack}
+                headingWeight={headingWeight}
               />
             ) : null}
 

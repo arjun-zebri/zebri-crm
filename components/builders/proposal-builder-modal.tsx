@@ -81,6 +81,7 @@ function blankOption(): ProposalOptionDraft {
     depositPercent: null,
     gstInclusive: true,
     weekendLoadingPercent: null,
+    isPopular: false,
     items: [],
     addOns: [],
   };
@@ -206,6 +207,7 @@ export function ProposalBuilderModal({
           depositPercent: option.depositPercent,
           gstInclusive: option.gstInclusive,
           weekendLoadingPercent: option.weekendLoadingPercent,
+          isPopular: option.isPopular,
           items: [
             ...option.items.map((item) => ({
               id: item.id,
@@ -400,6 +402,7 @@ export function ProposalBuilderModal({
         depositPercent: source.package?.depositPercent ?? null,
         gstInclusive: source.package?.gstInclusive ?? true,
         weekendLoadingPercent: source.package?.weekendLoadingPercent ?? null,
+        isPopular: source.package?.isPopular ?? false,
         items: source.items.map((item, idx) => ({
           id: `new-${crypto.randomUUID()}`,
           description: item.description,
@@ -535,6 +538,7 @@ export function ProposalBuilderModal({
               option={option}
               index={index}
               showIndex={options.length > 1}
+              canFeature={options.length > 1}
               canEdit={canEdit}
               canRemove={options.length > 1}
               onChange={(next) => {

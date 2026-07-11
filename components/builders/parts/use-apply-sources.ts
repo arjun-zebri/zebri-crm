@@ -44,6 +44,8 @@ export interface ApplyPackageMeta {
   depositPercent: number | null
   gstInclusive: boolean
   weekendLoadingPercent: number | null
+  /** "Most popular" marketing flag, snapshotted into the option. */
+  isPopular: boolean
 }
 
 /** Accepted-proposal terms that pre-fill the invoice on apply. */
@@ -208,6 +210,7 @@ export function useApplySources({
             depositPercent: p.deposit_percent ?? null,
             gstInclusive: p.gst_inclusive ?? true,
             weekendLoadingPercent: p.weekend_loading_percent ?? null,
+            isPopular: p.is_popular ?? false,
           },
         }
       }

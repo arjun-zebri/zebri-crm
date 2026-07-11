@@ -64,6 +64,7 @@ function draftInput(coupleId: string): SaveProposalInput {
         depositPercent: 25,
         gstInclusive: true,
         weekendLoadingPercent: 15,
+        isPopular: true,
         items: [
           { id: 'new-1', description: 'Full-day MC (10 hrs)', amount: 3000, isAddon: false, defaultIncluded: false },
           { id: 'new-2', description: 'Run sheet & timeline', amount: 500, isAddon: false, defaultIncluded: false },
@@ -77,6 +78,7 @@ function draftInput(coupleId: string): SaveProposalInput {
         depositPercent: null,
         gstInclusive: true,
         weekendLoadingPercent: null,
+        isPopular: false,
         items: [
           { id: 'new-4', description: 'Ceremony hosting', amount: 5000, isAddon: false, defaultIncluded: false },
         ],
@@ -113,12 +115,15 @@ describe('saveProposalAction — integration', () => {
 
       const { data: options } = await admin
         .from('proposal_options')
-        .select('id, title, position, subtotal, deposit_percent')
+        .select('id, title, position, subtotal, deposit_percent, is_popular')
         .eq('proposal_id', result.data.id)
         .order('position');
       expect(options).toHaveLength(2);
       expect(options?.[0]?.title).toBe('Full Day MC');
       expect(Number(options?.[0]?.deposit_percent)).toBe(25);
+      // The MC's "most popular" pick round-trips onto the option.
+      expect(options?.[0]?.is_popular).toBe(true);
+      expect(options?.[1]?.is_popular).toBe(false);
       expect(Number(options?.[1]?.subtotal)).toBe(5000);
 
       const { data: items } = await admin
@@ -153,6 +158,7 @@ describe('saveProposalAction — integration', () => {
             depositPercent: 50,
             gstInclusive: false,
             weekendLoadingPercent: null,
+            isPopular: false,
             items: [
               { id: 'new-9', description: 'Everything', amount: 7000, isAddon: false, defaultIncluded: false },
             ],

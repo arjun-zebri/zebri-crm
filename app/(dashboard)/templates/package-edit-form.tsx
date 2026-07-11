@@ -37,6 +37,9 @@ export interface PackageDraft {
   deposit_percent: number | null
   gst_inclusive: boolean
   weekend_loading_percent: number | null
+  /** Marketing flag: highlighted as "Most popular" when a proposal
+   *  offers this package alongside others. */
+  is_popular: boolean
   /** Base items first, then add-ons: index is the save order. */
   items: (EditableItem & { optional: boolean })[]
 }
@@ -50,6 +53,7 @@ export interface PackageFormValue {
   deposit_percent: number | null
   gst_inclusive: boolean
   weekend_loading_percent: number | null
+  is_popular: boolean
   items: (EditableItem & { optional: boolean })[]
 }
 
@@ -90,6 +94,7 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
   const [depositPercent, setDepositPercent] = useState(value.deposit_percent?.toString() ?? '')
   const [weekendLoading, setWeekendLoading] = useState(value.weekend_loading_percent?.toString() ?? '')
   const [gstInclusive, setGstInclusive] = useState(value.gst_inclusive)
+  const [isPopular, setIsPopular] = useState(value.is_popular)
 
   const totals = packageTotals([
     ...baseItems.map((i) => ({ ...i, optional: false })),
@@ -106,6 +111,7 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
       deposit_percent: parsePercent(depositPercent),
       gst_inclusive: gstInclusive,
       weekend_loading_percent: parsePercent(weekendLoading),
+      is_popular: isPopular,
       items: [
         ...baseItems.map((i) => ({ ...i, optional: false })),
         ...addOns.map((i) => ({ ...i, optional: true })),
@@ -245,6 +251,19 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
             onChange={setGstInclusive}
             disabled={isSaving}
             label="Prices include GST"
+          />
+        </div>
+
+        <div>
+          <SectionLabel
+            label="Highlight"
+            hint="Only shows when a proposal offers more than one package"
+          />
+          <Checkbox
+            checked={isPopular}
+            onChange={setIsPopular}
+            disabled={isSaving}
+            label="Mark as most popular"
           />
         </div>
       </div>

@@ -633,6 +633,7 @@ deposit_percent (numeric(5,2), nullable)  -  booking-fee rule (e.g. 30 for "30% 
 gst_inclusive (boolean, not null, default true)  -  whether prices already include GST. Applying an inclusive package turns the builder's GST line off; an exclusive one keeps GST 10% on top
 archived_at (timestamptz, nullable)  -  soft retirement; archived packages keep history but leave the default list and the builders' apply pickers
 weekend_loading_percent (numeric(5,2), nullable)  -  peak-rate loading (e.g. 15 for "Saturday +15%"); applying appends a transparent loading line item the MC deletes off-peak
+is_popular (boolean, not null, default false)  -  marketing flag; snapshots into a proposal option on apply and badges it "Most popular" in the public chooser, but only when the proposal offers >1 option. Added `20260712000000_proposal_popular_flag.sql`
 created_at / updated_at (timestamptz)
 
 `package_items` columns:
@@ -717,6 +718,7 @@ title (text, not null)  -  pre-filled from the package name, editable
 description (text, nullable)
 source_package_id (uuid, nullable, FK packages.id, on delete set null)  -  provenance only
 deposit_percent (numeric(5,2), nullable) / gst_inclusive (boolean, not null, default true) / weekend_loading_percent (numeric(5,2), nullable)  -  snapshot of the package's commercial terms; feeds invoice generation
+is_popular (boolean, not null, default false)  -  snapshot of the package's "most popular" flag (editable per proposal); badged in the public chooser only when the proposal has >1 option. Returned by get_public_proposal. Added `20260712000000_proposal_popular_flag.sql`
 subtotal (numeric(10,2), not null, default 0)  -  base (non-add-on) items total
 
 `proposal_option_items` columns:

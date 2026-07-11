@@ -28,6 +28,9 @@ export interface PublicProposalOption {
   description: string | null;
   deposit_percent: number | null;
   gst_inclusive: boolean;
+  /** "Most popular" highlight — badged in the chooser, but only when
+   *  the proposal offers more than one option. */
+  is_popular: boolean;
   /** Base (non-add-on) items total. */
   subtotal: number;
   position: number;

@@ -62,6 +62,7 @@ interface Package {
   gst_inclusive: boolean | null
   archived_at: string | null
   weekend_loading_percent: number | null
+  is_popular: boolean | null
   item_count?: number
   total?: number
 }
@@ -276,6 +277,7 @@ export function PackagesManager() {
           deposit_percent: draft.deposit_percent,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
+          is_popular: draft.is_popular,
           position: (packages?.length ?? 0) * 1000,
         })
         .select('id')
@@ -310,6 +312,7 @@ export function PackagesManager() {
           deposit_percent: draft.deposit_percent,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
+          is_popular: draft.is_popular,
           // No touch trigger on packages; set explicitly so the
           // preview's "Edited X ago" reflects edits, not creation.
           updated_at: new Date().toISOString(),
@@ -441,6 +444,7 @@ export function PackagesManager() {
     deposit_percent: pkg.deposit_percent,
     gst_inclusive: pkg.gst_inclusive ?? true,
     weekend_loading_percent: pkg.weekend_loading_percent,
+    is_popular: pkg.is_popular ?? false,
     items: (allItems?.[pkg.id] ?? []).map((item) => ({
       id: item.id,
       description: item.description,
@@ -481,6 +485,7 @@ export function PackagesManager() {
     deposit_percent: null,
     gst_inclusive: true,
     weekend_loading_percent: null,
+    is_popular: false,
     items: [],
   }
 
