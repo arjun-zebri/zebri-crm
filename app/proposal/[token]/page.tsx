@@ -14,6 +14,11 @@
  * RECORDED choice (`accepted_option_id` + `accepted_addon_selection`)
  * so the page is always the receipt of what was agreed.
  *
+ * The layout itself lives in the shared {@link ProposalPageView} —
+ * the same component the composer preview and the branding editor
+ * render — so what the couple sees here is pixel-identical to what
+ * the MC previewed. This page only owns data + the live handlers.
+ *
  * States: loading / not_found / active / expired / accepted /
  * declined. Scalar branding (colors, fonts, logo, density, radius)
  * applies; block-tree layouts are deferred for proposals — a block
@@ -27,33 +32,24 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
-import { Html } from '@/lib/branding/public-blocks/html';
+import { ProposalPageView, viewBranding } from '@/components/proposal/proposal-page-view';
+import { DENSITY_PAD, useBrandingHead } from '@/lib/branding/public-surface';
 import {
-  bodyFontFamily,
-  DENSITY_PAD,
-  headingFontFamily,
-  useBrandingHead,
-} from '@/lib/branding/public-surface';
-import { htmlToPlainText } from '@/lib/branding/sanitize';
+  defaultSelection,
+  deriveState,
+  formatCurrency,
+  selectionTotal,
+  type PageState,
+  type PublicProposal,
+} from '@/lib/payments/proposal-view';
 import { createClient } from '@/lib/supabase/client';
 
 import { ProposalAcceptActions } from './_components/proposal-accept-actions';
-import { ProposalOptionChooser } from './_components/proposal-option-chooser';
-import { ProposalSelection } from './_components/proposal-selection';
 import {
   ProposalLoading,
   ProposalStatusBanner,
   ProposalUnavailable,
 } from './_components/proposal-state-cards';
-import {
-  defaultSelection,
-  deriveState,
-  formatCurrency,
-  formatDate,
-  selectionTotal,
-  type PageState,
-  type PublicProposal,
-} from './_components/public-proposal';
 
 export default function PublicProposalPage() {
   const params = useParams<{ token: string }>();
@@ -142,22 +138,18 @@ export default function PublicProposalPage() {
   };
 
   /* ─── Branding-derived values ─── */
-  const pageBg = proposal?.surface_color || '#fafafa';
-  const textColor = proposal?.text_color || '#111827';
-  const mutedColor = proposal?.muted_color || '#6B7280';
-  const brand = proposal?.brand_color || '#111827';
-  const radius = proposal?.corner_radius ?? 16;
-  const headingStack = proposal ? headingFontFamily(proposal) : undefined;
-  const bodyStack = proposal ? bodyFontFamily(proposal) : undefined;
-  const headingWeight = proposal?.font_weight ?? 600;
+  const branding = proposal ? viewBranding(proposal) : null;
   const pad = DENSITY_PAD[proposal?.density ?? 'cozy'];
-
   const totalLabel = chosen ? formatCurrency(selectionTotal(chosen, selection)) : '';
 
   return (
     <div
       className={`min-h-screen ${pad.page} px-4`}
-      style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
+      style={{
+        background: branding?.pageBg ?? '#fafafa',
+        color: branding?.textColor ?? '#111827',
+        fontFamily: branding?.bodyFontFamily,
+      }}
     >
       <div className="max-w-xl mx-auto">
         {proposal && pageState === 'accepted' ? (
@@ -168,7 +160,7 @@ export default function PublicProposalPage() {
           />
         ) : null}
         {proposal && pageState === 'declined' ? (
-          <ProposalStatusBanner kind="declined" mutedColor={mutedColor} />
+          <ProposalStatusBanner kind="declined" mutedColor={branding!.mutedColor} />
         ) : null}
         {proposal && pageState === 'expired' ? (
           <ProposalStatusBanner
@@ -178,140 +170,47 @@ export default function PublicProposalPage() {
           />
         ) : null}
 
-        {pageState === 'loading' ? <ProposalLoading radius={radius} /> : null}
+        {pageState === 'loading' ? <ProposalLoading radius={16} /> : null}
 
         {pageState === 'not_found' ? (
-          <ProposalUnavailable radius={radius} textColor={textColor} mutedColor={mutedColor} />
+          <ProposalUnavailable radius={16} textColor="#111827" mutedColor="#6B7280" />
         ) : null}
 
-        {proposal && pageState !== 'not_found' && pageState !== 'loading' ? (
-          // Open editorial layout — sections directly on the branded
-          // page background (no card chrome), per the proposal mock.
-          <div className="space-y-8">
-            {/* ─── Header ─── */}
-            <header>
-              {proposal.logo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={proposal.logo_url}
-                  alt={htmlToPlainText(proposal.business_name) || 'Logo'}
-                  className="mb-6 max-h-10 object-contain"
+        {proposal && branding && pageState !== 'not_found' && pageState !== 'loading' ? (
+          <ProposalPageView
+            coupleName={proposal.couple_name}
+            proposalNumber={proposal.proposal_number}
+            notes={proposal.notes}
+            expiresAt={proposal.expires_at}
+            options={proposal.options}
+            state={pageState}
+            branding={branding}
+            chosenId={effectiveChosenId}
+            selection={selection}
+            onChoose={pageState === 'active' && !actionLoading ? handleChoose : undefined}
+            onToggle={
+              pageState === 'active' && !actionLoading
+                ? (itemId, next) => setPicks({ ...selection, [itemId]: next })
+                : undefined
+            }
+            actions={
+              pageState === 'active' ? (
+                <ProposalAcceptActions
+                  chosenOptionTitle={chosen?.title ?? null}
+                  totalLabel={totalLabel}
+                  expiresAt={proposal.expires_at}
+                  onAccept={handleAccept}
+                  onDecline={handleDecline}
+                  actionLoading={actionLoading}
+                  actionError={actionError}
+                  brand={branding.brand}
+                  radius={branding.radius}
+                  textColor={branding.textColor}
+                  mutedColor={branding.mutedColor}
                 />
-              ) : null}
-              <div className="flex items-baseline justify-between gap-4">
-                <p
-                  className="text-[11px] font-semibold uppercase tracking-[0.18em]"
-                  style={{ color: brand }}
-                >
-                  Wedding proposal
-                </p>
-                {proposal.expires_at && pageState === 'active' ? (
-                  <p className="shrink-0 text-xs" style={{ color: mutedColor }}>
-                    Expires {formatDate(proposal.expires_at)}
-                  </p>
-                ) : null}
-              </div>
-              <h1
-                className="mt-3 text-4xl leading-tight"
-                style={{ color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
-              >
-                {proposal.couple_name}
-              </h1>
-              {proposal.business_name ? (
-                <p className="mt-2 text-sm" style={{ color: mutedColor }}>
-                  A proposal from <Html value={proposal.business_name} allowLists={false} />
-                </p>
-              ) : null}
-            </header>
-
-            {proposal.header_image_url ? (
-              <div className="overflow-hidden" style={{ borderRadius: radius }}>
-                {/* User-uploaded brand asset — no next/image. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={proposal.header_image_url}
-                  alt=""
-                  className="block h-56 w-full object-cover"
-                />
-              </div>
-            ) : null}
-
-            {/* The MC's note leads the page — the personal message,
-                read before any packages or pricing. */}
-            {proposal.notes ? (
-              <section>
-                <p
-                  className="text-[11px] font-semibold uppercase tracking-[0.18em]"
-                  style={{ color: brand }}
-                >
-                  A note from us
-                </p>
-                <p
-                  className="mt-2 text-lg italic leading-relaxed whitespace-pre-wrap"
-                  style={{ color: textColor, fontFamily: headingStack }}
-                >
-                  {proposal.notes}
-                </p>
-              </section>
-            ) : null}
-
-            {/* Multi-option chooser while active; the accepted view
-                pins to the recorded choice. */}
-            {pageState === 'active' && proposal.options.length > 1 ? (
-              <ProposalOptionChooser
-                options={proposal.options}
-                chosenId={effectiveChosenId}
-                onChoose={handleChoose}
-                disabled={actionLoading}
-                brand={brand}
-                textColor={textColor}
-                mutedColor={mutedColor}
-                radius={Math.min(radius, 12)}
-                headingFontFamily={headingStack}
-                headingWeight={headingWeight}
-              />
-            ) : null}
-
-            {chosen ? (
-              <ProposalSelection
-                option={chosen}
-                selection={selection}
-                onToggle={(itemId, next) => setPicks({ ...selection, [itemId]: next })}
-                locked={pageState !== 'active' || actionLoading}
-                heading={pageState === 'accepted' ? 'Chosen package' : 'Your package'}
-                brand={brand}
-                textColor={textColor}
-                mutedColor={mutedColor}
-                radius={radius}
-                headingFontFamily={headingStack}
-                headingWeight={headingWeight}
-              />
-            ) : proposal.options.length > 1 ? (
-              <p className="text-sm" style={{ color: mutedColor }}>
-                Select a package above to see what&apos;s included.
-              </p>
-            ) : null}
-
-            {pageState === 'active' ? (
-              <ProposalAcceptActions
-                chosenOptionTitle={chosen?.title ?? null}
-                totalLabel={totalLabel}
-                expiresAt={proposal.expires_at}
-                onAccept={handleAccept}
-                onDecline={handleDecline}
-                actionLoading={actionLoading}
-                actionError={actionError}
-                brand={brand}
-                radius={radius}
-                textColor={textColor}
-                mutedColor={mutedColor}
-              />
-            ) : null}
-
-            <p className="text-center text-[10px]" style={{ color: mutedColor }}>
-              {proposal.proposal_number}
-            </p>
-          </div>
+              ) : undefined
+            }
+          />
         ) : null}
       </div>
     </div>

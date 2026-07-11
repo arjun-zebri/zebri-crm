@@ -1,14 +1,19 @@
 /**
- * Selection detail for the chosen option, in three sections that
- * mirror the proposal-editor mock: the priced inclusions ("Your
- * package"), the tappable add-on cards ("Add to your day"), and the
- * brand-tinted summary panel with the live total + deposit line.
+ * Selection detail for the chosen option, in three sections: the
+ * priced inclusions ("Your package"), the tappable add-on cards
+ * ("Add to your day"), and the brand-tinted summary panel with the
+ * live total + deposit line.
+ *
+ * Add-on cards keep a NEUTRAL border whether ticked or not — the
+ * checkbox alone carries the brand colour — so a fully pre-ticked
+ * list doesn't wash the page in brand borders.
  *
  * In the accepted state the same component renders read-only with the
  * recorded `accepted_addon_selection`, so the couple always sees
- * exactly what they agreed to.
+ * exactly what they agreed to. Shared by the public page, the
+ * composer preview, and the branding editor.
  *
- * @module app/proposal/[token]/_components/proposal-selection
+ * @module components/proposal/option-selection
  */
 'use client';
 
@@ -19,33 +24,20 @@ import {
   baseItems,
   formatCurrency,
   selectionTotal,
+  type ProposalViewBranding,
   type PublicProposalOption,
-} from './public-proposal';
+} from '@/lib/payments/proposal-view';
 
 export interface ProposalSelectionProps {
   option: PublicProposalOption;
   selection: Record<string, boolean>;
-  onToggle: (itemId: string, next: boolean) => void;
-  /** Read-only rendering (accepted/declined/expired states). */
+  onToggle?: ((itemId: string, next: boolean) => void) | undefined;
+  /** Read-only rendering (accepted/declined/expired states, previews). */
   locked: boolean;
   /** Section label — "Your package" while active, "Chosen package"
    *  on the accepted receipt. */
   heading: string;
-  brand: string;
-  textColor: string;
-  mutedColor: string;
-  radius: number;
-  headingFontFamily: string | undefined;
-  headingWeight: number;
-}
-
-/** Shared eyebrow label treatment (brand-coloured, letterspaced). */
-export function SectionEyebrow({ children, color }: { children: React.ReactNode; color: string }) {
-  return (
-    <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color }}>
-      {children}
-    </p>
-  );
+  branding: ProposalViewBranding;
 }
 
 export function ProposalSelection({
@@ -54,13 +46,9 @@ export function ProposalSelection({
   onToggle,
   locked,
   heading,
-  brand,
-  textColor,
-  mutedColor,
-  radius,
-  headingFontFamily,
-  headingWeight,
+  branding,
 }: ProposalSelectionProps) {
+  const { brand, textColor, mutedColor, radius, headingFontFamily, headingWeight } = branding;
   const base = baseItems(option);
   const addOns = addOnItems(option);
   const ticked = addOns.filter((item) => !!selection[item.id]);
@@ -72,7 +60,12 @@ export function ProposalSelection({
     <div className="space-y-8">
       {/* ─── The package ─── */}
       <section>
-        <SectionEyebrow color={brand}>{heading}</SectionEyebrow>
+        <p
+          className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+          style={{ color: brand }}
+        >
+          {heading}
+        </p>
         <h2
           className="mt-2 text-2xl"
           style={{ color: textColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
@@ -105,7 +98,12 @@ export function ProposalSelection({
       {/* ─── Add-ons as tappable cards ─── */}
       {addOns.length > 0 ? (
         <section>
-          <SectionEyebrow color={brand}>Add to your day</SectionEyebrow>
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+            style={{ color: brand }}
+          >
+            Add to your day
+          </p>
           {!locked ? (
             <p className="mt-1 text-xs" style={{ color: mutedColor }}>
               Tap to include. Your total updates instantly.
@@ -117,20 +115,16 @@ export function ProposalSelection({
               return (
                 <label
                   key={item.id}
-                  className={`flex items-center gap-3 border px-4 py-3.5 transition ${
+                  className={`flex items-center gap-3 border border-border px-4 py-3.5 transition ${
                     locked ? '' : 'cursor-pointer'
                   }`}
-                  style={{
-                    borderRadius: cardRadius,
-                    borderColor: on ? brand : 'var(--color-border, #e5e7eb)',
-                    boxShadow: on ? `0 0 0 1px ${brand}` : undefined,
-                  }}
+                  style={{ borderRadius: cardRadius }}
                 >
                   <input
                     type="checkbox"
                     checked={on}
                     disabled={locked}
-                    onChange={(e) => onToggle(item.id, e.target.checked)}
+                    onChange={(e) => onToggle?.(item.id, e.target.checked)}
                     aria-label={`Include ${item.description}`}
                     className="h-4 w-4 shrink-0 cursor-pointer rounded border-border disabled:cursor-not-allowed"
                     style={{ accentColor: brand }}

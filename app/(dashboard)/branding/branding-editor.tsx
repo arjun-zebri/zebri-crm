@@ -13,7 +13,8 @@ import {
   type ThemeIdOrCustom,
   type Density,
 } from '@/lib/branding/themes'
-import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
+import { FONT_STACKS, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
+import { htmlToPlainText } from '@/lib/branding/sanitize'
 import { EditorTopbar } from './editor-topbar'
 import { BrandPanel } from './brand-panel'
 import { SurfaceTabs } from './surface-tabs'
@@ -24,6 +25,7 @@ import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from '@/types/branding-preview'
 import { PortalSectionsBar } from './portal-preview'
+import { ProposalSurfacePreview } from './proposal-preview'
 
 export interface PortalSectionSettings {
   timeline: boolean
@@ -724,6 +726,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         onApplyKit={onApplyKit}
         onDeleteKit={onDeleteKit}
         addBlockSlot={
+          surface === 'proposal' ? undefined : (
           <AddBlockPalette
             open={paletteOpen}
             onOpenChange={setPaletteOpen}
@@ -740,6 +743,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               </button>
             }
           />
+          )
         }
       />
 
@@ -792,6 +796,28 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         />
 
         <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
+          {surface === 'proposal' ? (
+            // Proposals have no block tree (the chooser can't be
+            // expressed as blocks) — render the REAL page component
+            // with sample data + the kit values being edited, so this
+            // canvas is exactly what couples receive.
+            <ProposalSurfacePreview
+              branding={{
+                pageBg: state.surfaceColor,
+                textColor: state.textColor,
+                mutedColor: state.mutedColor,
+                brand: state.brandColor,
+                radius: state.cornerRadius,
+                headingFontFamily: FONT_STACKS[state.fontHeading],
+                bodyFontFamily: FONT_STACKS[state.fontBody],
+                headingWeight: state.fontWeight,
+                logoUrl: state.logoUrl || null,
+                headerImageUrl: state.headerImageUrl || null,
+                businessName: state.businessName ? htmlToPlainText(state.businessName) : null,
+              }}
+            />
+          ) : (
+          <>
           {visibleBlocks.length > 0 && (
             <div className="flex justify-end mb-2">
               <button
@@ -835,6 +861,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             uploadHeader={uploadHeader}
             removeHeader={removeHeader}
           />
+          </>
+          )}
         </CanvasFrame>
       </div>
     </div>

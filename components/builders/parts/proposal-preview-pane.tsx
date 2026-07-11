@@ -3,11 +3,11 @@
  *
  * Two tabs plus a device toggle (same segmented control as the email
  * template editor):
- * - **Page**: a faithful miniature of `/proposal/[token]` — the same
- *   card structure the couple sees: header (business, title, couple,
- *   number + expiry), the MC's notes as an intro, then each option
- *   with priced inclusions, add-on ticks seeded from the pre-ticks,
- *   and a live total. Mobile renders inside a phone frame.
+ * - **Page**: the real thing — the shared {@link ProposalPageView}
+ *   (the exact component `/proposal/[token]` renders) fed with the
+ *   draft options and the MC's CURRENT branding via
+ *   `useCurrentBranding`, so the preview is pixel-identical to what
+ *   the couple receives: same colors, fonts, logo and hero image.
  * - **Email**: the cover email the couple receives, rendered from
  *   the real `proposalHtml` template.
  *
@@ -15,11 +15,18 @@
  */
 'use client';
 
-import { Check, Globe, Mail, Monitor, Smartphone } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Globe, Mail, Monitor, Smartphone } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
+import {
+  ProposalPageView,
+  StaticAcceptCta,
+  viewBranding,
+} from '@/components/proposal/proposal-page-view';
+import { googleFontsHref } from '@/lib/branding/fonts';
+import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 import { proposalHtml } from '@/lib/email/html';
-import { formatAUD } from '@/lib/payments/format';
+import type { PublicProposalOption } from '@/lib/payments/proposal-view';
 
 import { optionBaseTotal, type ProposalOptionDraft } from './proposal-option-card';
 
@@ -36,11 +43,6 @@ export interface ProposalPreviewPaneProps {
 }
 
 type Device = 'desktop' | 'mobile';
-
-function formatExpiry(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 export function ProposalPreviewPane(props: ProposalPreviewPaneProps) {
   const [tab, setTab] = useState<'page' | 'email'>('page');
@@ -109,19 +111,43 @@ export function ProposalPreviewPane(props: ProposalPreviewPaneProps) {
 
 /* ─── Page preview ─────────────────────────────────────────────── */
 
-/** Eyebrow label, matching the public page's section treatment. */
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-brand">{children}</p>
-  );
+/** Map a composer draft option onto the public payload shape the
+ *  shared view consumes. Draft keys stand in for row ids. */
+function toViewOption(option: ProposalOptionDraft, index: number): PublicProposalOption {
+  return {
+    id: option.key,
+    title: option.title || `Option ${String(index + 1)}`,
+    description: option.description,
+    deposit_percent: option.depositPercent,
+    gst_inclusive: option.gstInclusive,
+    is_popular: option.isPopular,
+    subtotal: optionBaseTotal(option),
+    position: index,
+    items: [
+      ...option.items.map((item, i) => ({
+        id: item.id,
+        description: item.description || 'Untitled item',
+        amount: Number(item.amount || 0),
+        is_addon: false,
+        default_included: false,
+        position: i,
+      })),
+      ...option.addOns.map((addOn, i) => ({
+        id: addOn.id,
+        description: addOn.description || 'Untitled add-on',
+        amount: Number(addOn.amount || 0),
+        is_addon: true,
+        default_included: addOn.defaultIncluded,
+        position: option.items.length + i,
+      })),
+    ],
+  };
 }
 
 /**
- * A miniature of the public page: the same open editorial layout the
- * couple scrolls through — eyebrow + names header, the MC's note,
- * the package with priced inclusions, add-on cards, the summary
- * panel and the accept CTA. Mobile wraps it in a phone frame so the
- * narrow reflow reads as intentional.
+ * The couple's page, for real: shared view + the MC's live branding.
+ * The popular (else first) option renders chosen with its pre-ticks,
+ * mirroring the page's own single/multi behaviour.
  */
 function PagePreview({
   proposalNumber,
@@ -131,257 +157,70 @@ function PagePreview({
   options,
   device,
 }: ProposalPreviewPaneProps & { device: Device }) {
-  const single = options.length === 1;
-  const page = (
-    <div
-      key={device}
-      className="space-y-5 overflow-hidden rounded-xl border border-border bg-card px-5 py-5 shadow-sm animate-fade-in"
-    >
-      {/* Header — eyebrow + the couple's names. (No business line
-          here: the composer context already makes the sender obvious.) */}
-      <div>
-        <div className="flex items-baseline justify-between gap-3">
-          <Eyebrow>Wedding proposal</Eyebrow>
-          {expiresAt ? (
-            <p className="shrink-0 text-[10px] text-text-subtle">
-              Expires {formatExpiry(expiresAt)}
-            </p>
-          ) : null}
-        </div>
-        <p className="mt-2 text-xl font-semibold leading-snug text-text">
-          {coupleName || 'Your couple'}
-        </p>
-      </div>
+  const { branding: publicBranding } = useCurrentBranding('proposal');
 
-      {notes ? (
-        <div>
-          <Eyebrow>A note from us</Eyebrow>
-          <p className="mt-1.5 whitespace-pre-wrap text-sm italic leading-relaxed text-text">
-            {notes}
-          </p>
-        </div>
-      ) : null}
+  // The branded fonts must exist in the dashboard document too —
+  // same stylesheet the public page injects, deduped by id.
+  useEffect(() => {
+    if (!publicBranding) return;
+    const id = 'zebri-proposal-preview-fonts';
+    const href = googleFontsHref([publicBranding.font_heading, publicBranding.font_body]);
+    const existing = document.getElementById(id) as HTMLLinkElement | null;
+    if (existing && existing.href !== href) existing.remove();
+    if (!document.getElementById(id)) {
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = href;
+      document.head.appendChild(link);
+    }
+  }, [publicBranding]);
 
-      {options.length === 0 ? (
-        <p className="py-6 text-center text-xs text-text-subtle">
-          Add a package option to see it here.
-        </p>
-      ) : single ? (
-        <OptionPreview option={options[0]!} index={0} single />
-      ) : (
-        <MultiOptionPreview options={options} />
-      )}
+  const viewOptions = useMemo(() => options.map(toViewOption), [options]);
+  const chosen =
+    viewOptions.length === 0
+      ? null
+      : viewOptions.find((o) => o.is_popular) ?? viewOptions[0]!;
+  const selection = useMemo(() => {
+    const picks: Record<string, boolean> = {};
+    for (const item of chosen?.items ?? []) {
+      if (item.is_addon) picks[item.id] = item.default_included;
+    }
+    return picks;
+  }, [chosen]);
 
-      {options.length > 0 ? (
-        <div>
-          {/* CTA — visual only; the couple taps this on the real page. */}
-          <div className="rounded-xl bg-brand-fg py-2.5 text-center text-xs font-medium text-text-inverse">
-            Accept &amp; reserve our date
-          </div>
-          {expiresAt ? (
-            <p className="mt-1.5 text-center text-[10px] text-text-subtle">
-              This proposal is held for you until {formatExpiry(expiresAt)}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      <p className="text-center text-[9px] text-text-subtle">{proposalNumber}</p>
-    </div>
-  );
-
-  // Mobile renders at true phone width (375px, like the email
-  // template preview) — full size, no miniature bezel.
-  if (device === 'mobile') {
-    return <div className="mx-auto w-[375px] max-w-full">{page}</div>;
-  }
-  return <div className="mx-auto max-w-md">{page}</div>;
-}
-
-/**
- * Multi-option preview: the chooser cards (matching the public page)
- * with the popular/first option pre-selected, then that option's
- * detail below — the shape the couple actually scrolls through.
- */
-function MultiOptionPreview({ options }: { options: ProposalOptionDraft[] }) {
-  const selectedIdx = Math.max(
-    0,
-    options.findIndex((o) => o.isPopular),
-  );
-  return (
-    <div className="space-y-5">
-      <div>
-        <Eyebrow>Choose your package</Eyebrow>
-        <p className="mt-0.5 text-[10px] text-text-subtle">
-          Select the one that fits your day — everything updates below.
-        </p>
-        <div className="mt-3 space-y-2.5">
-          {options.map((option, i) => {
-            const selected = i === selectedIdx;
-            const summary = option.items
-              .map((it) => it.description || 'Item')
-              .filter(Boolean)
-              .join(' · ');
-            return (
-              <div key={option.key} className="relative">
-                {option.isPopular ? (
-                  <span className="absolute -top-1.5 left-3 z-10 rounded-full bg-brand-fg px-2 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-text-inverse">
-                    Most popular
-                  </span>
-                ) : null}
-                <div
-                  className={`rounded-xl border p-3 ${
-                    selected || option.isPopular ? 'border-brand-fg' : 'border-border'
-                  } ${option.isPopular ? 'bg-brand-fg/5' : ''}`}
-                >
-                  <div className="flex items-start gap-2">
-                    <span
-                      className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-2 ${
-                        selected ? 'border-brand-fg' : 'border-border'
-                      }`}
-                    >
-                      {selected ? <span className="h-1.5 w-1.5 rounded-full bg-brand-fg" /> : null}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="min-w-0 truncate text-sm font-semibold text-text">
-                          {option.title || `Option ${String(i + 1)}`}
-                        </span>
-                        <span className="shrink-0 text-right">
-                          <span className="block text-sm font-semibold tabular-nums text-text">
-                            {formatAUD(optionBaseTotal(option))}
-                          </span>
-                          <span className="block text-[9px] text-text-subtle">base price</span>
-                        </span>
-                      </div>
-                      {summary ? (
-                        <p className="mt-1 truncate text-[10px] text-text-muted">{summary}</p>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* The selected option's detail, as it appears once chosen. */}
-      <div className="border-t border-border pt-4">
-        <OptionPreview option={options[selectedIdx]!} index={selectedIdx} single />
-      </div>
-    </div>
-  );
-}
-
-/** One option: priced inclusions, add-on cards, summary panel. */
-function OptionPreview({
-  option,
-  index,
-  single,
-}: {
-  option: ProposalOptionDraft;
-  index: number;
-  single: boolean;
-}) {
-  const preTicked = option.addOns.filter((a) => a.defaultIncluded);
-  const baseTotal = optionBaseTotal(option);
-  const total = baseTotal + preTicked.reduce((sum, a) => sum + Number(a.amount || 0), 0);
+  if (!publicBranding) return null;
+  const branding = viewBranding(publicBranding);
 
   return (
-    <div className={!single && index > 0 ? 'border-t border-border pt-4' : ''}>
-      {/* The package title alone carries a single-option preview; an
-          eyebrow is only needed to number multi-option stacks. */}
-      {!single && <Eyebrow>Option {index + 1}</Eyebrow>}
-      <p className="mt-1 min-w-0 truncate text-base font-semibold text-text">
-        {option.title || `Option ${String(index + 1)}`}
-      </p>
-      {option.description && (
-        <p className="mt-0.5 text-xs text-text-muted">{option.description}</p>
-      )}
-
-      {/* Priced inclusions — same row shape as the public page. */}
-      <ul className="mt-2">
-        {option.items.map((item) => (
-          <li
-            key={item.id}
-            className="flex items-baseline justify-between gap-3 border-b border-border/50 py-2 text-xs"
-          >
-            <span className="flex min-w-0 items-start gap-1.5 text-text">
-              <Check size={12} strokeWidth={2} className="mt-[2px] shrink-0 text-brand" />
-              <span className="min-w-0 truncate">{item.description || 'Untitled item'}</span>
-            </span>
-            <span className="shrink-0 tabular-nums text-text-muted">
-              {formatAUD(Number(item.amount || 0))}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      {option.addOns.length > 0 && (
-        <div className="mt-3.5">
-          <Eyebrow>Add to your day</Eyebrow>
-          <p className="mt-0.5 text-[10px] text-text-subtle">
-            Tap to include. The total updates instantly.
+    <div className={device === 'mobile' ? 'mx-auto w-[375px] max-w-full' : 'mx-auto max-w-xl'}>
+      <div
+        key={device}
+        className="overflow-hidden rounded-xl border border-border px-5 py-6 shadow-sm animate-fade-in sm:px-7 sm:py-8"
+        style={{
+          background: branding.pageBg,
+          color: branding.textColor,
+          fontFamily: branding.bodyFontFamily,
+        }}
+      >
+        {viewOptions.length === 0 ? (
+          <p className="py-8 text-center text-xs" style={{ color: branding.mutedColor }}>
+            Add a package option to see the couple&apos;s page here.
           </p>
-          <ul className="mt-2 space-y-1.5">
-            {option.addOns.map((addOn) => (
-              <li
-                key={addOn.id}
-                className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-xs ${
-                  addOn.defaultIncluded ? 'border-border-strong' : 'border-border'
-                }`}
-              >
-                <span
-                  className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border ${
-                    addOn.defaultIncluded
-                      ? 'border-text bg-text text-card'
-                      : 'border-border bg-card'
-                  }`}
-                >
-                  {addOn.defaultIncluded && <Check size={10} strokeWidth={2} />}
-                </span>
-                <span className="min-w-0 flex-1 truncate text-text">
-                  {addOn.description || 'Untitled add-on'}
-                </span>
-                <span className="shrink-0 tabular-nums text-text-muted">
-                  +{formatAUD(Number(addOn.amount || 0))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Summary panel — base + pre-ticked add-ons, live total. */}
-      <div className="mt-3.5 rounded-xl bg-surface-muted p-3.5">
-        <div className="flex items-baseline justify-between gap-3 text-xs text-text">
-          <span className="min-w-0 truncate">{option.title || `Option ${String(index + 1)}`}</span>
-          <span className="shrink-0 tabular-nums">{formatAUD(baseTotal)}</span>
-        </div>
-        {preTicked.map((addOn) => (
-          <div
-            key={addOn.id}
-            className="mt-1 flex items-baseline justify-between gap-3 text-xs text-text-muted"
-          >
-            <span className="min-w-0 truncate">{addOn.description || 'Untitled add-on'}</span>
-            <span className="shrink-0 tabular-nums">+{formatAUD(Number(addOn.amount || 0))}</span>
-          </div>
-        ))}
-        <div className="mt-2.5 flex items-baseline justify-between gap-3 border-t border-border pt-2">
-          <span className="text-xs font-semibold text-text">
-            Total{' '}
-            <span className="font-normal text-text-muted">
-              {option.gstInclusive ? 'GST incl.' : '+ GST'}
-            </span>
-          </span>
-          <span className="text-lg font-semibold tabular-nums text-text">{formatAUD(total)}</span>
-        </div>
-        {option.depositPercent ? (
-          <p className="mt-1 text-[10px] text-text-subtle">
-            {formatAUD((total * Number(option.depositPercent)) / 100)} deposit reserves the date
-          </p>
-        ) : null}
+        ) : (
+          <ProposalPageView
+            coupleName={coupleName || 'Your couple'}
+            proposalNumber={proposalNumber}
+            notes={notes}
+            expiresAt={expiresAt ?? null}
+            options={viewOptions}
+            state="active"
+            branding={branding}
+            chosenId={chosen?.id ?? null}
+            selection={selection}
+            actions={<StaticAcceptCta expiresAt={expiresAt ?? null} branding={branding} />}
+          />
+        )}
       </div>
     </div>
   );

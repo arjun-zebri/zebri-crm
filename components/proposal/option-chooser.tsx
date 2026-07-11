@@ -1,34 +1,35 @@
 /**
  * Option chooser — the couple picks between the MC's package options.
  *
- * One radio-card per option, styled like the proposal mock: a ring
- * radio, the package title in the branding heading font, a "base
- * price" figure on the right, the pitch, and an inclusions summary.
- * The MC's "most popular" pick gets a brand-tinted card + an overlaid
- * "MOST POPULAR" badge — rendered here only, where more than one
- * option exists to compare against.
+ * One radio-card per option: a ring radio, the package title in the
+ * branding heading font, a "base price" figure on the right, the
+ * pitch, and an inclusions summary. The MC's "most popular" pick gets
+ * a brand-tinted card + an overlaid "MOST POPULAR" badge — rendered
+ * here only, where more than one option exists to compare against.
  *
  * Rendered only for multi-option proposals; a single-option proposal
  * skips straight to the selection detail. Radio semantics for screen
- * readers.
+ * readers. Shared by the public page, the composer preview, and the
+ * branding editor (one layout, three surfaces).
  *
- * @module app/proposal/[token]/_components/proposal-option-chooser
+ * @module components/proposal/option-chooser
  */
 'use client';
 
-import { formatCurrency, type PublicProposalOption, baseItems } from './public-proposal';
+import { getTextColor } from '@/lib/branding/contrast';
+import {
+  baseItems,
+  formatCurrency,
+  type ProposalViewBranding,
+  type PublicProposalOption,
+} from '@/lib/payments/proposal-view';
 
 export interface ProposalOptionChooserProps {
   options: PublicProposalOption[];
   chosenId: string | null;
-  onChoose: (optionId: string) => void;
+  onChoose?: ((optionId: string) => void) | undefined;
   disabled: boolean;
-  brand: string;
-  textColor: string;
-  mutedColor: string;
-  radius: number;
-  headingFontFamily: string | undefined;
-  headingWeight: number;
+  branding: ProposalViewBranding;
 }
 
 export function ProposalOptionChooser({
@@ -36,20 +37,17 @@ export function ProposalOptionChooser({
   chosenId,
   onChoose,
   disabled,
-  brand,
-  textColor,
-  mutedColor,
-  radius,
-  headingFontFamily,
-  headingWeight,
+  branding,
 }: ProposalOptionChooserProps) {
+  const { brand, textColor, mutedColor, headingFontFamily, headingWeight } = branding;
+  const radius = Math.min(branding.radius, 12);
   return (
     <div role="radiogroup" aria-label="Choose your package">
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: brand }}>
         Choose your package
       </p>
       <p className="mt-1 mb-4 text-sm" style={{ color: mutedColor }}>
-        Select the one that fits your day — everything updates below.
+        Select the one that fits your day. Everything updates below.
       </p>
       <div className="space-y-4">
         {options.map((option) => {
@@ -63,7 +61,7 @@ export function ProposalOptionChooser({
               {popular ? (
                 <span
                   className="absolute -top-2.5 left-5 z-10 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
-                  style={{ backgroundColor: brand, color: '#fff' }}
+                  style={{ backgroundColor: brand, color: getTextColor(brand) }}
                 >
                   Most popular
                 </span>
@@ -73,7 +71,7 @@ export function ProposalOptionChooser({
                 role="radio"
                 aria-checked={chosen}
                 disabled={disabled}
-                onClick={() => onChoose(option.id)}
+                onClick={() => onChoose?.(option.id)}
                 className="w-full border p-5 text-left transition cursor-pointer disabled:cursor-not-allowed"
                 style={{
                   borderRadius: radius,

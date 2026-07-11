@@ -481,8 +481,8 @@ export function RenderTitle({ block, state, updateBlock }: RenderProps<TitleBloc
           className={`${pad.docX} mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2`}
           style={{ justifyContent: metaAlign === 'center' ? 'center' : metaAlign === 'right' ? 'flex-end' : 'flex-start' }}
         >
-          {block.showRef && <Meta label="Ref" value="QU-001" />}
-          {block.showExpires && <Meta label="Expires" value="Expires 30 April 2026" />}
+          {block.showRef && <Meta label="Ref" value="PR-001" />}
+          {block.showExpires && <Meta label="Expires" value="30 April 2026" />}
           {block.showAbn && state.abn && <Meta label="Abn" value={state.abn} />}
         </div>
       )}
