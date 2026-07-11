@@ -108,8 +108,10 @@ export function ProposalOptionCard({
       </div>
 
       <div className="mt-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-subtle">Included</p>
         <LineItemsTable
           items={option.items}
+          compact
           canEdit={canEdit}
           onUpdate={(id, field, value) =>
             patchItems((prev) => prev.map((i) => (i.id === id ? { ...i, [field]: value } : i)))

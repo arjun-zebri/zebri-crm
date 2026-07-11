@@ -198,6 +198,7 @@ export function ShareAndSend({
       <div className="flex shrink-0 items-center gap-2">
         <Button
           variant="secondary"
+          size="sm"
           onClick={onSave}
           disabled={!dirty || saving || sending || locked}
           loading={saving}
@@ -206,6 +207,7 @@ export function ShareAndSend({
         </Button>
         <Button
           variant="primary"
+          size="sm"
           onClick={onSend}
           disabled={!hasCouple || sending || saving || locked}
           loading={sending}

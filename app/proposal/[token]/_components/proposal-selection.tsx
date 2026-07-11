@@ -1,7 +1,8 @@
 /**
- * Selection detail for the chosen option: the inclusions list, the
- * add-on toggles (seeded from the MC's pre-ticks, editable while the
- * proposal is active), and the live total.
+ * Selection detail for the chosen option, in three sections that
+ * mirror the proposal-editor mock: the priced inclusions ("Your
+ * package"), the tappable add-on cards ("Add to your day"), and the
+ * brand-tinted summary panel with the live total + deposit line.
  *
  * In the accepted state the same component renders read-only with the
  * recorded `accepted_addon_selection`, so the couple always sees
@@ -27,9 +28,24 @@ export interface ProposalSelectionProps {
   onToggle: (itemId: string, next: boolean) => void;
   /** Read-only rendering (accepted/declined/expired states). */
   locked: boolean;
+  /** Section label — "Your package" while active, "Chosen package"
+   *  on the accepted receipt. */
+  heading: string;
   brand: string;
   textColor: string;
   mutedColor: string;
+  radius: number;
+  headingFontFamily: string | undefined;
+  headingWeight: number;
+}
+
+/** Shared eyebrow label treatment (brand-coloured, letterspaced). */
+export function SectionEyebrow({ children, color }: { children: React.ReactNode; color: string }) {
+  return (
+    <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color }}>
+      {children}
+    </p>
+  );
 }
 
 export function ProposalSelection({
@@ -37,98 +53,150 @@ export function ProposalSelection({
   selection,
   onToggle,
   locked,
+  heading,
   brand,
   textColor,
   mutedColor,
+  radius,
+  headingFontFamily,
+  headingWeight,
 }: ProposalSelectionProps) {
   const base = baseItems(option);
   const addOns = addOnItems(option);
+  const ticked = addOns.filter((item) => !!selection[item.id]);
+  const baseTotal = base.reduce((sum, item) => sum + Number(item.amount), 0);
   const total = selectionTotal(option, selection);
+  const cardRadius = Math.min(radius, 14);
 
   return (
-    <div>
-      <p
-        className="pb-2 text-xs font-medium uppercase tracking-wider border-b border-border"
-        style={{ color: mutedColor }}
-      >
-        What&apos;s included
-      </p>
-      <ul>
-        {base.map((item) => (
-          <li
-            key={item.id}
-            className="flex items-baseline justify-between gap-4 border-b border-border/50 py-3"
-          >
-            <span className="flex min-w-0 items-start gap-2 text-sm" style={{ color: textColor }}>
-              <Check size={14} strokeWidth={1.5} className="mt-[3px] shrink-0" style={{ color: brand }} />
-              <span className="min-w-0">{item.description}</span>
-            </span>
-            <span className="shrink-0 text-sm tabular-nums" style={{ color: mutedColor }}>
-              {formatCurrency(Number(item.amount))}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      {addOns.length > 0 ? (
-        <div className="mt-5">
-          <p
-            className="pb-2 text-xs font-medium uppercase tracking-wider border-b border-border"
-            style={{ color: mutedColor }}
-          >
-            Optional extras
+    <div className="space-y-8">
+      {/* ─── The package ─── */}
+      <section>
+        <SectionEyebrow color={brand}>{heading}</SectionEyebrow>
+        <h2
+          className="mt-2 text-2xl"
+          style={{ color: textColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
+        >
+          {option.title}
+        </h2>
+        {option.description ? (
+          <p className="mt-1 text-sm" style={{ color: mutedColor }}>
+            {option.description}
           </p>
-          <ul>
+        ) : null}
+        <ul className="mt-4">
+          {base.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-baseline justify-between gap-4 border-b border-border/60 py-3"
+            >
+              <span className="flex min-w-0 items-start gap-2.5 text-sm" style={{ color: textColor }}>
+                <Check size={14} strokeWidth={2} className="mt-[3px] shrink-0" style={{ color: brand }} />
+                <span className="min-w-0">{item.description}</span>
+              </span>
+              <span className="shrink-0 text-sm tabular-nums" style={{ color: mutedColor }}>
+                {formatCurrency(Number(item.amount))}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ─── Add-ons as tappable cards ─── */}
+      {addOns.length > 0 ? (
+        <section>
+          <SectionEyebrow color={brand}>Add to your day</SectionEyebrow>
+          {!locked ? (
+            <p className="mt-1 text-xs" style={{ color: mutedColor }}>
+              Tap to include. Your total updates instantly.
+            </p>
+          ) : null}
+          <div className="mt-3 space-y-2.5">
             {addOns.map((item) => {
-              const ticked = !!selection[item.id];
+              const on = !!selection[item.id];
               return (
-                <li key={item.id} className="border-b border-border/50">
-                  <label
-                    className={`flex items-center justify-between gap-4 py-3 ${
-                      locked ? '' : 'cursor-pointer'
-                    }`}
-                  >
-                    <span className="flex min-w-0 items-center gap-2.5 text-sm" style={{ color: textColor }}>
-                      <input
-                        type="checkbox"
-                        checked={ticked}
-                        disabled={locked}
-                        onChange={(e) => onToggle(item.id, e.target.checked)}
-                        aria-label={`Include ${item.description}`}
-                        className="h-4 w-4 shrink-0 cursor-pointer rounded border-border disabled:cursor-not-allowed"
-                        style={{ accentColor: brand }}
-                      />
-                      <span className="min-w-0">{item.description}</span>
-                    </span>
-                    <span className="shrink-0 text-sm tabular-nums" style={{ color: mutedColor }}>
-                      +{formatCurrency(Number(item.amount))}
-                    </span>
-                  </label>
-                </li>
+                <label
+                  key={item.id}
+                  className={`flex items-center gap-3 border px-4 py-3.5 transition ${
+                    locked ? '' : 'cursor-pointer'
+                  }`}
+                  style={{
+                    borderRadius: cardRadius,
+                    borderColor: on ? brand : 'var(--color-border, #e5e7eb)',
+                    boxShadow: on ? `0 0 0 1px ${brand}` : undefined,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    disabled={locked}
+                    onChange={(e) => onToggle(item.id, e.target.checked)}
+                    aria-label={`Include ${item.description}`}
+                    className="h-4 w-4 shrink-0 cursor-pointer rounded border-border disabled:cursor-not-allowed"
+                    style={{ accentColor: brand }}
+                  />
+                  <span className="min-w-0 flex-1 text-sm" style={{ color: textColor }}>
+                    {item.description}
+                  </span>
+                  <span className="shrink-0 text-sm tabular-nums" style={{ color: mutedColor }}>
+                    +{formatCurrency(Number(item.amount))}
+                  </span>
+                </label>
               );
             })}
-          </ul>
-        </div>
+          </div>
+        </section>
       ) : null}
 
-      <div className="mt-4 flex items-baseline justify-between border-t border-border pt-3">
-        <span className="text-sm font-semibold" style={{ color: textColor }}>
-          Total{option.gst_inclusive ? ' (GST incl.)' : ''}
-        </span>
-        <span className="text-lg font-semibold tabular-nums" style={{ color: textColor }}>
-          {formatCurrency(total)}
-        </span>
+      {/* ─── Summary panel ─── */}
+      <div
+        className="p-5"
+        style={{
+          borderRadius: radius,
+          backgroundColor: `color-mix(in srgb, ${brand} 6%, transparent)`,
+        }}
+      >
+        <div className="flex items-baseline justify-between gap-4 text-sm" style={{ color: textColor }}>
+          <span className="min-w-0 truncate">{option.title}</span>
+          <span className="shrink-0 tabular-nums">{formatCurrency(baseTotal)}</span>
+        </div>
+        {ticked.map((item) => (
+          <div
+            key={item.id}
+            className="mt-1.5 flex items-baseline justify-between gap-4 text-sm"
+            style={{ color: mutedColor }}
+          >
+            <span className="min-w-0 truncate">{item.description}</span>
+            <span className="shrink-0 tabular-nums">+{formatCurrency(Number(item.amount))}</span>
+          </div>
+        ))}
+        <div
+          className="mt-4 flex items-baseline justify-between gap-4 pt-3"
+          style={{ borderTop: `1px solid color-mix(in srgb, ${brand} 18%, transparent)` }}
+        >
+          <span className="text-sm font-semibold" style={{ color: textColor }}>
+            Total{' '}
+            <span className="font-normal" style={{ color: mutedColor }}>
+              {option.gst_inclusive ? 'GST incl.' : '+ GST'}
+            </span>
+          </span>
+          <span
+            className="text-3xl tabular-nums"
+            style={{ color: textColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
+          >
+            {formatCurrency(total)}
+          </span>
+        </div>
+        {option.deposit_percent || !option.gst_inclusive ? (
+          <p className="mt-2 text-xs" style={{ color: mutedColor }}>
+            {option.deposit_percent
+              ? `${formatCurrency((total * Number(option.deposit_percent)) / 100)} deposit reserves your date`
+              : ''}
+            {option.deposit_percent && !option.gst_inclusive ? ' · ' : ''}
+            {!option.gst_inclusive ? 'GST is added on the invoice' : ''}
+          </p>
+        ) : null}
       </div>
-      {!option.gst_inclusive ? (
-        <p className="mt-1 text-right text-xs" style={{ color: mutedColor }}>
-          GST will be added on the invoice.
-        </p>
-      ) : null}
-      {option.deposit_percent ? (
-        <p className="mt-1 text-right text-xs" style={{ color: mutedColor }}>
-          {option.deposit_percent}% deposit secures your date.
-        </p>
-      ) : null}
     </div>
   );
 }

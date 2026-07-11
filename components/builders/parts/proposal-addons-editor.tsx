@@ -39,11 +39,13 @@ export function ProposalAddOnsEditor({ addOns, canEdit, onChange }: ProposalAddO
 
   return (
     <div>
-      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-text-subtle">
+      <p className="text-xs font-medium uppercase tracking-wide text-text-subtle">
         Optional add-ons
-        <span className="ml-2 normal-case font-normal text-text-subtle">
-          Ticked ones are pre-selected for the couple
-        </span>
+      </p>
+      {/* The pre-tick concept needs spelling out: the couple chooses
+          these on their page, and a tick here only sets the default. */}
+      <p className="mb-1.5 mt-0.5 text-xs text-text-subtle">
+        The couple adds or removes these on their page. Tick one to start it selected.
       </p>
       {addOns.map((addOn) => (
         <div

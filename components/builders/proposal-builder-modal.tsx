@@ -135,6 +135,16 @@ export function ProposalBuilderModal({
   const { data: applySources } = useApplySources();
   const packageOptions = (applySources?.options ?? []).filter((o) => o.id.startsWith('pkg:'));
 
+  // Business name for the preview panes — the page + email previews
+  // should read as the MC's, not a generic placeholder.
+  const { data: businessName } = useQuery({
+    queryKey: ['current-user-business-name'],
+    queryFn: async () => {
+      const { data } = await supabase.auth.getUser();
+      return (data.user?.user_metadata?.['business_name'] as string | undefined) ?? null;
+    },
+  });
+
   /* ─── hydrate from DB ───────────────────────────────────────── */
   useEffect(() => {
     if (isNew) {
@@ -444,8 +454,9 @@ export function ProposalBuilderModal({
             proposalNumber={proposal?.proposal_number ?? 'DRAFT'}
             title={title || 'Wedding Proposal'}
             coupleName={coupleName}
-            businessName={null}
+            businessName={businessName ?? null}
             notes={notes || null}
+            expiresAt={expiresAt}
             options={options}
             shareUrl={shareUrl ?? 'https://example.com/proposal/preview'}
           />
@@ -488,8 +499,36 @@ export function ProposalBuilderModal({
           canEdit={canEdit}
         />
 
-        {/* Options — the heart of a proposal. */}
-        <div className="mt-6 space-y-4">
+        {/* Options — the heart of a proposal. The add controls sit
+            ABOVE the stack so they're reachable without scrolling
+            past composed options. */}
+        <div className="mt-5 space-y-4">
+          {/* Always reachable while editable — a package-less account
+              must still be able to compose its first option. */}
+          {canEdit && (
+            <div className="flex items-center gap-4">
+              {packageOptions.length > 0 && options.length > 0 && (
+                <TemplatePicker
+                  variant="inline"
+                  templates={packageOptions}
+                  canApply={canEdit}
+                  onApply={addPackageOption}
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setOptions((prev) => [...prev, blankOption()]);
+                  setDirty(true);
+                }}
+                className="flex cursor-pointer items-center gap-1 py-1 text-caption text-text-muted transition hover:text-text"
+              >
+                <Plus size={13} strokeWidth={1.5} />
+                Add blank option
+              </button>
+            </div>
+          )}
+
           {options.map((option, index) => (
             <ProposalOptionCard
               key={option.key}
@@ -517,31 +556,6 @@ export function ProposalBuilderModal({
               onApply={addPackageOption}
             />
           )}
-          {/* Always reachable while editable — a package-less account
-              must still be able to compose its first option. */}
-          {canEdit && (
-            <div className="flex items-center gap-4">
-              {options.length > 0 && packageOptions.length > 0 && (
-                <TemplatePicker
-                  variant="inline"
-                  templates={packageOptions}
-                  canApply={canEdit}
-                  onApply={addPackageOption}
-                />
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setOptions((prev) => [...prev, blankOption()]);
-                  setDirty(true);
-                }}
-                className="flex cursor-pointer items-center gap-1 py-1 text-caption text-text-muted transition hover:text-text"
-              >
-                <Plus size={13} strokeWidth={1.5} />
-                Add blank option
-              </button>
-            </div>
-          )}
         </div>
 
         <div className="mt-6">
@@ -552,8 +566,8 @@ export function ProposalBuilderModal({
               setDirty(true);
             }}
             canEdit={canEdit}
-            label="Notes"
-            placeholder="Anything you want the couple to see alongside the options."
+            label="A note from you"
+            placeholder="A personal message the couple reads first, before the packages."
           />
         </div>
       </BuilderModalShell>

@@ -34,13 +34,17 @@ export function ProposalOptionChooser({
   radius,
 }: ProposalOptionChooserProps) {
   return (
-    <div role="radiogroup" aria-label="Choose your package" className="space-y-2.5">
+    <div role="radiogroup" aria-label="Choose your package">
       <p
-        className="text-xs font-medium uppercase tracking-wider"
-        style={{ color: mutedColor }}
+        className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+        style={{ color: brand }}
       >
         Choose your package
       </p>
+      <p className="mt-1 mb-3 text-xs" style={{ color: mutedColor }}>
+        Tap the one that fits your day best.
+      </p>
+      <div className="space-y-2.5">
       {options.map((option) => {
         const chosen = option.id === chosenId;
         const inclusions = baseItems(option).length;
@@ -79,6 +83,7 @@ export function ProposalOptionChooser({
           </button>
         );
       })}
+      </div>
     </div>
   );
 }

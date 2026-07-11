@@ -143,7 +143,7 @@ test.describe('proposals composer', () => {
     await couplePage.goto(shareUrl!, { waitUntil: 'networkidle' })
     await expect(couplePage.getByText('Full-day hosting')).toBeVisible({ timeout: 15000 })
     await expect(couplePage.getByLabel(/Include Rehearsal attendance/i)).toBeChecked()
-    await couplePage.getByRole('button', { name: /Accept Proposal/i }).click()
+    await couplePage.getByRole('button', { name: /Accept & reserve/i }).click()
     await couplePage.getByRole('button', { name: /Yes, accept/i }).click()
     await expect(couplePage.getByText('Proposal accepted')).toBeVisible({ timeout: 15000 })
     await couplePage.context().close()
@@ -160,9 +160,10 @@ test.describe('proposals composer', () => {
     await page.getByText('Generate invoice', { exact: true }).click()
 
     // Invoice builder opens on the generated draft: recorded items +
-    // the agreed $1,600 total.
-    await expect(page.getByText('Full-day hosting')).toBeVisible({ timeout: 20000 })
-    await expect(page.getByText('Rehearsal attendance')).toBeVisible()
+    // the agreed $1,600 total. `.first()` because the proposal
+    // preview (still mounted behind) also renders these labels.
+    await expect(page.getByText('Full-day hosting').first()).toBeVisible({ timeout: 20000 })
+    await expect(page.getByText('Rehearsal attendance').first()).toBeVisible()
     await expect(page.locator('text=/1,600/ >> visible=true').first()).toBeVisible()
   })
 })
