@@ -69,6 +69,18 @@ interface BrandPanelProps {
   setFontBodyWeight: (v: FontWeight) => void
   fontScale: number
   setFontScale: (v: number) => void
+  headingSize: number
+  setHeadingSize: (v: number) => void
+  bodySize: number
+  setBodySize: (v: number) => void
+  headingCase: 'none' | 'uppercase' | 'capitalize'
+  setHeadingCase: (v: 'none' | 'uppercase' | 'capitalize') => void
+  bodyCase: 'none' | 'uppercase' | 'capitalize'
+  setBodyCase: (v: 'none' | 'uppercase' | 'capitalize') => void
+  headingLetterSpacing: number
+  setHeadingLetterSpacing: (v: number) => void
+  bodyLineHeight: number
+  setBodyLineHeight: (v: number) => void
 
   density: Density
   setDensity: (v: Density) => void
@@ -464,39 +476,87 @@ function FontSection({
   fontWeight, setFontWeight,
   fontBodyWeight, setFontBodyWeight,
   fontScale, setFontScale,
+  headingSize, setHeadingSize,
+  bodySize, setBodySize,
+  headingCase, setHeadingCase,
+  bodyCase, setBodyCase,
+  headingLetterSpacing, setHeadingLetterSpacing,
+  bodyLineHeight, setBodyLineHeight,
 }: BrandPanelProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1">Heading</p>
-        <p className="text-[10px] text-gray-400 -mt-0.5 mb-1.5">Used by Business name, Title and Totals</p>
-        <FontPicker role="Heading" value={fontHeading} options={HEADING_FONTS as readonly HeadingFont[]} onChange={setFontHeading} />
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Heading</p>
+        <div className="space-y-2.5">
+          <div>
+            <p className="text-[10px] text-gray-500 mb-1.5">Font</p>
+            <FontPicker role="Heading" value={fontHeading} options={HEADING_FONTS as readonly HeadingFont[]} onChange={setFontHeading} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-gray-500">Size</span>
+                <span className="text-[9px] font-mono text-gray-700">{headingSize}px</span>
+              </div>
+              <Slider value={headingSize} min={16} max={64} step={1} onChange={setHeadingSize} ariaLabel="Heading size" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-gray-500">Letter sp.</span>
+                <span className="text-[9px] font-mono text-gray-700">{headingLetterSpacing.toFixed(2)}</span>
+              </div>
+              <Slider value={headingLetterSpacing} min={-0.05} max={0.1} step={0.01} onChange={setHeadingLetterSpacing} ariaLabel="Heading letter spacing" />
+            </div>
+          </div>
+          <WeightPills label="Weight" value={fontWeight} onChange={setFontWeight} compact />
+          <CasePills label="Case" value={headingCase} onChange={setHeadingCase} />
+        </div>
       </div>
-      <WeightPills label="Heading weight" value={fontWeight} onChange={setFontWeight} />
 
       <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1">Body</p>
-        <p className="text-[10px] text-gray-400 -mt-0.5 mb-1.5">Used by Subtitle, Text, Tagline and Line items</p>
-        <FontPicker role="Body" value={fontBody} options={BODY_FONTS as readonly BodyFont[]} onChange={setFontBody} />
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Body</p>
+        <div className="space-y-2.5">
+          <div>
+            <p className="text-[10px] text-gray-500 mb-1.5">Font</p>
+            <FontPicker role="Body" value={fontBody} options={BODY_FONTS as readonly BodyFont[]} onChange={setFontBody} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-gray-500">Size</span>
+                <span className="text-[9px] font-mono text-gray-700">{bodySize}px</span>
+              </div>
+              <Slider value={bodySize} min={12} max={24} step={1} onChange={setBodySize} ariaLabel="Body size" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-gray-500">Line ht.</span>
+                <span className="text-[9px] font-mono text-gray-700">{bodyLineHeight.toFixed(2)}</span>
+              </div>
+              <Slider value={bodyLineHeight} min={1.2} max={2} step={0.05} onChange={setBodyLineHeight} ariaLabel="Body line height" />
+            </div>
+          </div>
+          <WeightPills label="Weight" value={fontBodyWeight} onChange={setFontBodyWeight} compact />
+          <CasePills label="Case" value={bodyCase} onChange={setBodyCase} />
+        </div>
       </div>
-      <WeightPills label="Body weight" value={fontBodyWeight} onChange={setFontBodyWeight} />
 
-      <div className="pt-1">
+      <div className="pt-1 border-t border-gray-100">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Scale</span>
+          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Overall scale</span>
           <span className="text-xs font-mono text-gray-700 tabular-nums">{Math.round(fontScale * 100)}%</span>
         </div>
         <Slider value={fontScale} min={0.85} max={1.2} step={0.01} onChange={setFontScale} ariaLabel="Font scale" />
-        <p className="text-[10px] text-gray-400 mt-1">Scales every text block on the document.</p>
+        <p className="text-[10px] text-gray-400 mt-1">Multiplies all text sizes on every document.</p>
       </div>
     </div>
   )
 }
 
-function WeightPills({ label, value, onChange }: { label: string; value: FontWeight; onChange: (v: FontWeight) => void }) {
+function WeightPills({ label, value, onChange, compact }: { label: string; value: FontWeight; onChange: (v: FontWeight) => void; compact?: boolean }) {
   return (
     <div>
-      <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1">{label}</p>
+      <p className={`mb-1 uppercase tracking-[0.08em] ${compact ? 'text-[10px] text-gray-500' : 'text-[11px] text-gray-400'}`}>{label}</p>
       <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
         {FONT_WEIGHTS.map((w) => (
           <button
@@ -509,6 +569,34 @@ function WeightPills({ label, value, onChange }: { label: string; value: FontWei
             style={{ fontWeight: w }}
           >
             {FONT_WEIGHT_LABELS[w]}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CasePills({ label, value, onChange }: { label: string; value: 'none' | 'uppercase' | 'capitalize'; onChange: (v: 'none' | 'uppercase' | 'capitalize') => void }) {
+  const cases: Array<{ id: 'none' | 'uppercase' | 'capitalize'; label: string; preview: string }> = [
+    { id: 'none', label: 'None', preview: 'Aa' },
+    { id: 'uppercase', label: 'Uppercase', preview: 'AA' },
+    { id: 'capitalize', label: 'Capitalize', preview: 'Aa' },
+  ]
+  return (
+    <div>
+      <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-[0.08em]">{label}</p>
+      <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+        {cases.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onChange(c.id)}
+            className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+              value === c.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+            }`}
+            title={c.label}
+          >
+            {c.preview}
           </button>
         ))}
       </div>

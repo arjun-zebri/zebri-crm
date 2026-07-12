@@ -877,6 +877,18 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setFontBodyWeight={(v) => setEditor({ fontBodyWeight: v })}
           fontScale={state.fontScale}
           setFontScale={(v) => setEditor({ fontScale: v })}
+          headingSize={state.headingSize}
+          setHeadingSize={(v) => setEditor({ headingSize: v })}
+          bodySize={state.bodySize}
+          setBodySize={(v) => setEditor({ bodySize: v })}
+          headingCase={state.headingCase}
+          setHeadingCase={(v) => setEditor({ headingCase: v })}
+          bodyCase={state.bodyCase}
+          setBodyCase={(v) => setEditor({ bodyCase: v })}
+          headingLetterSpacing={state.headingLetterSpacing}
+          setHeadingLetterSpacing={(v) => setEditor({ headingLetterSpacing: v })}
+          bodyLineHeight={state.bodyLineHeight}
+          setBodyLineHeight={(v) => setEditor({ bodyLineHeight: v })}
           density={state.density}
           setDensity={(v) => setEditor({ density: v })}
           cornerRadius={state.cornerRadius}
