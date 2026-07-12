@@ -44,6 +44,18 @@ interface UserMetadata {
   theme_preset?: ThemeIdOrCustom
   brand_kit_name?: string
   active_kit_id?: string | null
+  heading_size?: number
+  body_size?: number
+  heading_case?: 'none' | 'uppercase' | 'capitalize'
+  body_case?: 'none' | 'uppercase' | 'capitalize'
+  heading_letter_spacing?: number
+  body_line_height?: number
+  link_color?: string
+  button_variant?: 'fill' | 'outline'
+  button_size?: 'sm' | 'md' | 'lg'
+  button_radius?: number
+  section_spacing?: number
+  page_background?: string
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
   // `quote` is the legacy pre-proposals key; read-only fallback.
@@ -141,6 +153,9 @@ export default function BrandingPage() {
   const themePreset = metadata?.theme_preset ?? 'minimal'
   const fallback = themePreset === 'custom' ? THEME_PRESETS.minimal : (THEME_PRESETS[themePreset] ?? THEME_PRESETS.minimal)
 
+  const brandColor = metadata?.brand_color || fallback.color
+  const surfaceColor = metadata?.surface_color || fallback.surface
+
   const sanitizeHeading = (v: string | undefined): HeadingFont =>
     HEADING_FONTS.includes(v as HeadingFont) ? (v as HeadingFont) : fallback.headingFont
   const sanitizeBody = (v: string | undefined): BodyFont =>
@@ -171,9 +186,9 @@ export default function BrandingPage() {
         logoUrl: metadata?.logo_url || '',
         faviconUrl: metadata?.favicon_url || '',
         headerImageUrl: metadata?.header_image_url || '',
-        brandColor: metadata?.brand_color || fallback.color,
+        brandColor,
         accentColor: metadata?.accent_color || fallback.accent,
-        surfaceColor: metadata?.surface_color || fallback.surface,
+        surfaceColor,
         textColor: metadata?.text_color || fallback.text,
         mutedColor: metadata?.muted_color || fallback.muted,
         secondaryColor: metadata?.secondary_color || '#FFFFFF',
@@ -216,6 +231,18 @@ export default function BrandingPage() {
           vows: portalSrc.vows ?? true,
         },
         proposalLabels: resolveProposalLabels(metadata?.proposal_labels),
+        headingSize: typeof metadata?.heading_size === 'number' ? metadata.heading_size : 32,
+        bodySize: typeof metadata?.body_size === 'number' ? metadata.body_size : 15,
+        headingCase: metadata?.heading_case ?? 'none',
+        bodyCase: metadata?.body_case ?? 'none',
+        headingLetterSpacing: typeof metadata?.heading_letter_spacing === 'number' ? metadata.heading_letter_spacing : 0,
+        bodyLineHeight: typeof metadata?.body_line_height === 'number' ? metadata.body_line_height : 1.5,
+        linkColor: metadata?.link_color ?? brandColor,
+        buttonVariant: metadata?.button_variant ?? 'fill',
+        buttonSize: metadata?.button_size ?? 'md',
+        buttonRadius: typeof metadata?.button_radius === 'number' ? metadata.button_radius : 8,
+        sectionSpacing: typeof metadata?.section_spacing === 'number' ? metadata.section_spacing : 32,
+        pageBackground: metadata?.page_background ?? surfaceColor,
       }}
     />
   )

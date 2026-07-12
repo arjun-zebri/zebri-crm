@@ -77,6 +77,18 @@ interface BrandingEditorProps {
     activeKitId: string | null
     portalSections: PortalSectionSettings
     proposalLabels: ProposalLabels
+    headingSize: number
+    bodySize: number
+    headingCase: 'none' | 'uppercase' | 'capitalize'
+    bodyCase: 'none' | 'uppercase' | 'capitalize'
+    headingLetterSpacing: number
+    bodyLineHeight: number
+    linkColor: string
+    buttonVariant: 'fill' | 'outline'
+    buttonSize: 'sm' | 'md' | 'lg'
+    buttonRadius: number
+    sectionSpacing: number
+    pageBackground: string
   }
 }
 
@@ -110,6 +122,18 @@ interface EditorState {
   activeKitId: string | null
   portalSections: PortalSectionSettings
   proposalLabels: ProposalLabels
+  headingSize: number
+  bodySize: number
+  headingCase: 'none' | 'uppercase' | 'capitalize'
+  bodyCase: 'none' | 'uppercase' | 'capitalize'
+  headingLetterSpacing: number
+  bodyLineHeight: number
+  linkColor: string
+  buttonVariant: 'fill' | 'outline'
+  buttonSize: 'sm' | 'md' | 'lg'
+  buttonRadius: number
+  sectionSpacing: number
+  pageBackground: string
 }
 
 export function BrandingEditor({ initialData }: BrandingEditorProps) {
@@ -146,6 +170,18 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       activeKitId: initialData.activeKitId,
       portalSections: initialData.portalSections,
       proposalLabels: initialData.proposalLabels,
+      headingSize: initialData.headingSize,
+      bodySize: initialData.bodySize,
+      headingCase: initialData.headingCase,
+      bodyCase: initialData.bodyCase,
+      headingLetterSpacing: initialData.headingLetterSpacing,
+      bodyLineHeight: initialData.bodyLineHeight,
+      linkColor: initialData.linkColor,
+      buttonVariant: initialData.buttonVariant,
+      buttonSize: initialData.buttonSize,
+      buttonRadius: initialData.buttonRadius,
+      sectionSpacing: initialData.sectionSpacing,
+      pageBackground: initialData.pageBackground,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -223,6 +259,18 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         theme_preset: value.themePreset,
         active_kit_id: value.activeKitId,
         proposal_labels: value.proposalLabels,
+        heading_size: value.headingSize,
+        body_size: value.bodySize,
+        heading_case: value.headingCase,
+        body_case: value.bodyCase,
+        heading_letter_spacing: value.headingLetterSpacing,
+        body_line_height: value.bodyLineHeight,
+        link_color: value.linkColor,
+        button_variant: value.buttonVariant,
+        button_size: value.buttonSize,
+        button_radius: value.buttonRadius,
+        section_spacing: value.sectionSpacing,
+        page_background: value.pageBackground,
       },
     })
     if (error) throw error
