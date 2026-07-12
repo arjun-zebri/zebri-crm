@@ -31,6 +31,7 @@ import type {
   CouplePortalBlock,
   PaymentScheduleBlock,
   ImageBlock,
+  SpacerBlock,
 } from './types'
 
 function fmt(n: number) {
@@ -435,6 +436,46 @@ export function RenderImage({
           {Math.round(imageScale * 100)}%
         </div>
       )}
+      <ResizeHandle onMouseDown={startResize} active={resizing} />
+    </div>
+  )
+}
+
+// ── Spacer ────────────────────────────────────────────────────────────────────
+
+export function RenderSpacer({
+  block,
+  updateBlock,
+}: RenderProps<SpacerBlock>) {
+  const heightPx = block.heightPx ?? 32
+  const [resizing, setResizing] = useState(false)
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = heightPx
+    setResizing(true)
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(8, Math.min(160, startHeight + dy))
+      updateBlock<SpacerBlock>(block.id, { heightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      setResizing(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  return (
+    <div
+      className="group relative w-full bg-gradient-to-b from-gray-100 to-gray-50 flex items-center justify-center"
+      style={{ height: heightPx, borderRadius: 4 }}
+    >
+      <span className="text-[10px] text-gray-400 font-medium">{heightPx}px</span>
       <ResizeHandle onMouseDown={startResize} active={resizing} />
     </div>
   )

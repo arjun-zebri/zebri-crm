@@ -33,6 +33,7 @@ export type BlockType =
   | 'contractBody'
   | 'proposalBody'
   | 'image'
+  | 'spacer'
 
 export interface BaseBlock {
   id: string
@@ -184,6 +185,16 @@ export interface ImageBlock extends BaseBlock {
   heightPx?: number
 }
 
+/**
+ * Spacer block — renders an adjustable vertical gap between content blocks.
+ * Useful for controlling document flow and whitespace.
+ */
+export interface SpacerBlock extends BaseBlock {
+  type: 'spacer'
+  /** Height of the spacer in pixels. Defaults to 32. */
+  heightPx?: number
+}
+
 export interface CouplePortalBlock extends BaseBlock {
   type: 'couplePortal'
 }
@@ -233,6 +244,7 @@ export type Block =
   | ContractBodyBlock
   | ProposalBodyBlock
   | ImageBlock
+  | SpacerBlock
 
 export type BlocksByDoc = Record<'proposal' | 'invoice' | 'contract' | 'portal', Block[]>
 
@@ -253,6 +265,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   contractBody: 'Contract body',
   proposalBody: 'Proposal',
   image: 'Image',
+  spacer: 'Spacer',
 }
 
 export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
@@ -272,4 +285,5 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   contractBody: 'The contract body (fixed — edited per couple)',
   proposalBody: 'Packages, chooser and accept (fixed)',
   image: 'An uploaded image',
+  spacer: 'Adjustable vertical gap',
 }

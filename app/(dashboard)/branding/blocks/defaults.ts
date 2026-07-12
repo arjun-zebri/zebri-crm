@@ -45,6 +45,8 @@ export function blockTemplate(type: BlockType): Block {
       return { id: newId('pb'), type: 'proposalBody', locked: true }
     case 'image':
       return { id: newId('im'), type: 'image', fit: 'cover' }
+    case 'spacer':
+      return { id: newId('sp'), type: 'spacer', heightPx: 32 }
   }
 }
 

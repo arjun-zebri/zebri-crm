@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom } from 'lucide-react'
+import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
 
 import type { SurfaceTab } from '@/types/branding-preview'
@@ -21,6 +21,7 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   action: Activity,
   divider: Minus,
   image: Image,
+  spacer: MoveVertical,
   footer: PanelBottom,
 }
 
@@ -29,7 +30,7 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
 // of one long list. The flat BLOCK_ORDER + GROUP_OF derive from this so
 // search + keyboard nav stay index-based against a single ordered list.
 const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
-  { label: 'Structure', types: ['headerBanner', 'businessName', 'tagline', 'divider', 'image', 'footer'] },
+  { label: 'Structure', types: ['headerBanner', 'businessName', 'tagline', 'divider', 'spacer', 'image', 'footer'] },
   { label: 'Content', types: ['title', 'text', 'lineItems', 'totals', 'paymentDetails'] },
   { label: 'Action', types: ['action'] },
 ]

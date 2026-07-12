@@ -42,6 +42,7 @@ import {
   RenderPaymentSchedule,
   RenderProposalBody,
   RenderImage,
+  RenderSpacer,
 } from './render'
 import type { Block } from './types'
 
@@ -365,6 +366,8 @@ function renderBlock(
           removeImage={extras.removeImage}
         />
       )
+    case 'spacer':
+      return <RenderSpacer block={block} state={state} updateBlock={updateBlock} />
   }
 }
 

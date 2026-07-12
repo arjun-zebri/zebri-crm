@@ -30,6 +30,7 @@ import type {
   HeaderBannerBlock,
   FooterBlock,
   ImageBlock,
+  SpacerBlock,
 } from './types'
 
 interface BlockToolbarProps {
@@ -133,6 +134,8 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
       return <FooterControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
     case 'image':
       return <ImageControls block={block} updateBlock={updateBlock} />
+    case 'spacer':
+      return <SpacerControls block={block} updateBlock={updateBlock} />
     case 'couplePortal':
       return null
     case 'paymentSchedule':
@@ -1372,6 +1375,56 @@ function VAlignIcon({ position }: { position: 'top' | 'middle' | 'bottom' }) {
       <rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.25" />
       <rect x="3.5" y={lineY} width="7" height="2" rx="0.75" fill="currentColor" />
     </svg>
+  )
+}
+
+// ── Spacer ────────────────────────────────────────────────────────────────────
+
+function SpacerControls({
+  block,
+  updateBlock,
+}: {
+  block: SpacerBlock
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Popover.Root>
+        <Tooltip label="Height">
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+            >
+              <Equal size={12} strokeWidth={1.75} />
+              {(block.heightPx ?? 32) !== 32 && (
+                <span className="font-mono text-[10px]">{block.heightPx}px</span>
+              )}
+            </button>
+          </Popover.Trigger>
+        </Tooltip>
+        <Popover.Portal>
+          <Popover.Content
+            align="center"
+            sideOffset={6}
+            className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Height</span>
+              <span className="text-xs font-mono text-gray-700 tabular-nums">{block.heightPx ?? 32}px</span>
+            </div>
+            <Slider
+              value={block.heightPx ?? 32}
+              min={8}
+              max={160}
+              step={1}
+              onChange={(v) => updateBlock<SpacerBlock>(block.id, { heightPx: Math.round(v) })}
+              ariaLabel="Spacer height"
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
   )
 }
 

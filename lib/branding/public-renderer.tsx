@@ -16,6 +16,7 @@ import {
   type PublicDocData,
   type ActionSlotProps,
 } from './public-blocks/shared'
+import { RenderSpacer } from './public-blocks/spacer'
 import { RenderTagline } from './public-blocks/tagline'
 import { RenderText } from './public-blocks/text'
 import { RenderTitle } from './public-blocks/title'
@@ -98,6 +99,7 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     )
     case 'divider':      return <RenderDivider block={block} branding={branding} />
     case 'footer':       return <RenderFooter block={block} branding={branding} />
+    case 'spacer':       return <RenderSpacer block={block} branding={branding} />
     case 'couplePortal': return null
     case 'paymentSchedule': return null
     case 'contractBody': return null

@@ -17,6 +17,7 @@ Task P3.1: complete (commit 7a26ea0, review clean, gate ratcheted 341->340)
 Task P3.2: complete (commit 7f6380e, review clean, colour picking preserved via ColorPopover)
 Task P3.3: complete (commit 23b4edb, review clean, density persisted, Themes removed) -- P3 phase done
 Task P4.1: complete (commit fbfb3a6, review clean, 11 tests, exact per-surface matrix)
+Task P4.2: complete (commit b964c8f + lint fix 84d9ec7, review clean, per-block storage key verified)
 
 ## Minor findings (for final review)
 - P0.1: build-public-branding.test covers 7/12 new fields; add assertions for body_case/button_size/button_radius/heading_letter_spacing/body_line_height.
