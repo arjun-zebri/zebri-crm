@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 import { resolveTypeDefaults } from '@/lib/branding/type-defaults'
 
