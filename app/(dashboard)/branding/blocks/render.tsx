@@ -3,7 +3,7 @@
 import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-import { ProposalPageView, StaticAcceptCta } from '@/components/proposal/proposal-page-view'
+import { ProposalPageView } from '@/components/proposal/proposal-page-view'
 import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import { resolveProposalLabels, type ProposalLabelEdit } from '@/lib/branding/proposal-labels'
@@ -1291,11 +1291,13 @@ export function RenderProposalBody({
         </div>
 
         <p className="mb-4 text-[11px] leading-relaxed" style={{ color: muted }}>
-          The couple picks a package and add-ons here, then accepts. You can&apos;t reorder these
-          sections, but click any heading or button to reword it — and add blocks above or below.
+          The couple picks a package and add-ons here. You can&apos;t reorder these sections, but
+          click any heading to reword it. The Accept button and footer are their own blocks below —
+          restyle or move them like any block.
         </p>
 
         <ProposalPageView
+          variant="blockCore"
           coupleName="Alex & Jordan"
           proposalNumber="PR-001"
           notes="We loved hearing about your day and would be honoured to be part of it. Everything here is tailored to what you shared with us."
@@ -1306,9 +1308,6 @@ export function RenderProposalBody({
           chosenId={chosen.id}
           selection={selection}
           onEditLabel={onEditLabel}
-          actions={
-            <StaticAcceptCta expiresAt={SAMPLE_EXPIRES} branding={branding} onEditLabel={onEditLabel} />
-          }
         />
       </div>
     </div>

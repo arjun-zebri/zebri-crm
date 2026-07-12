@@ -9,20 +9,19 @@
  * with a two-step confirm — the acceptance carries the chosen option
  * + final selection to `accept_proposal`.
  *
+ * The MC's branding block tree drives the chrome: the header banner,
+ * business name, any custom text, the Accept **action block** (its
+ * label + button colour/radius) and the footer (contact + ABN) render
+ * around the fixed proposal core ({@link ProposalPageView} variant
+ * `blockCore` — the chooser + priced selection, which can't be a block
+ * tree). Same split-at-marker model the public invoice/contract pages
+ * use. When the MC has no saved blocks (or the migration hasn't
+ * reached the DB yet), the page renders the self-contained standalone
+ * layout as a fallback.
+ *
  * All view state derives from the query payload + the couple's picks
  * (no fetch-then-setState effects): the accepted view pins to the
- * RECORDED choice (`accepted_option_id` + `accepted_addon_selection`)
- * so the page is always the receipt of what was agreed.
- *
- * The layout itself lives in the shared {@link ProposalPageView} —
- * the same component the composer preview and the branding editor
- * render — so what the couple sees here is pixel-identical to what
- * the MC previewed. This page only owns data + the live handlers.
- *
- * States: loading / not_found / active / expired / accepted /
- * declined. Scalar branding (colors, fonts, logo, density, radius)
- * applies; block-tree layouts are deferred for proposals — a block
- * tree can't express the option chooser.
+ * RECORDED choice (`accepted_option_id` + `accepted_addon_selection`).
  *
  * @module app/proposal/[token]/page
  */
@@ -33,6 +32,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { ProposalPageView, viewBranding } from '@/components/proposal/proposal-page-view';
+import { findActionStyle, PublicBlockRenderer } from '@/lib/branding/public-renderer';
 import { DENSITY_PAD, useBrandingHead } from '@/lib/branding/public-surface';
 import {
   defaultSelection,
@@ -55,8 +55,6 @@ export default function PublicProposalPage() {
   const params = useParams<{ token: string }>();
   const supabase = createClient();
 
-  // The couple's live picks; null until they interact so the derived
-  // defaults (MC pre-ticks / recorded acceptance) stay authoritative.
   const [pickedOptionId, setPickedOptionId] = useState<string | null>(null);
   const [picks, setPicks] = useState<Record<string, boolean> | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -114,9 +112,6 @@ export default function PublicProposalPage() {
     });
     setActionLoading(false);
     const res = data as { error?: string } | null;
-    // expired / already_actioned both surface correctly from a
-    // refetch (state derives from the payload); anything else is a
-    // retryable failure.
     if (res?.error && res.error !== 'expired' && res.error !== 'already_actioned') {
       setActionError('Something went wrong. Please try again.');
       return;
@@ -141,6 +136,77 @@ export default function PublicProposalPage() {
   const branding = proposal ? viewBranding(proposal) : null;
   const pad = DENSITY_PAD[proposal?.density ?? 'cozy'];
   const totalLabel = chosen ? formatCurrency(selectionTotal(chosen, selection)) : '';
+
+  /* ─── Block layout (chrome around the fixed core) ─── */
+  const blocks = proposal?.branding_blocks ?? null;
+  const pbIdx = blocks?.findIndex((b) => b.type === 'proposalBody') ?? -1;
+  const useBlocks = !!blocks && blocks.length > 0 && pbIdx >= 0;
+  const preBlocks = useBlocks ? blocks!.slice(0, pbIdx) : [];
+  const restBlocks = useBlocks ? blocks!.slice(pbIdx + 1) : [];
+  const actIdx = restBlocks.findIndex((b) => b.type === 'action');
+  const betweenBlocks = actIdx >= 0 ? restBlocks.slice(0, actIdx) : restBlocks;
+  const postBlocks = actIdx >= 0 ? restBlocks.slice(actIdx + 1) : [];
+  const actionStyle = branding
+    ? findActionStyle(blocks, { brandColor: branding.brand, cornerRadius: branding.radius })
+    : null;
+  const doc = proposal
+    ? {
+        title: proposal.title,
+        refNumber: proposal.proposal_number,
+        expiresAt: proposal.expires_at,
+        items: [],
+        subtotal: 0,
+        taxRate: 0,
+      }
+    : null;
+
+  const acceptBlock =
+    branding && actionStyle && pageState === 'active' ? (
+      <div className={pad.cardSection}>
+        <ProposalAcceptActions
+          chosenOptionTitle={chosen?.title ?? null}
+          totalLabel={totalLabel}
+          expiresAt={proposal!.expires_at}
+          onAccept={handleAccept}
+          onDecline={handleDecline}
+          actionLoading={actionLoading}
+          actionError={actionError}
+          brand={actionStyle.color}
+          radius={actionStyle.radius}
+          textColor={branding.textColor}
+          mutedColor={branding.mutedColor}
+          labels={{
+            ...branding.labels,
+            accept: actionStyle.primaryLabel || branding.labels.accept,
+            decline: actionStyle.secondaryLabel || branding.labels.decline,
+          }}
+        />
+      </div>
+    ) : null;
+
+  const core =
+    proposal && branding ? (
+      <div className={pad.cardSection}>
+        <ProposalPageView
+          variant="blockCore"
+          coupleName={proposal.couple_name}
+          proposalNumber={proposal.proposal_number}
+          notes={proposal.notes}
+          expiresAt={proposal.expires_at}
+          options={proposal.options}
+          state={pageState === 'accepted' ? 'accepted' : pageState === 'active' ? 'active' : 'expired'}
+          branding={branding}
+          chosenId={effectiveChosenId}
+          selection={selection}
+          onChoose={pageState === 'active' && !actionLoading ? handleChoose : undefined}
+          onToggle={
+            pageState === 'active' && !actionLoading
+              ? (itemId, next) => setPicks({ ...selection, [itemId]: next })
+              : undefined
+          }
+        />
+      </div>
+    ) : null;
 
   return (
     <div
@@ -177,41 +243,60 @@ export default function PublicProposalPage() {
         ) : null}
 
         {proposal && branding && pageState !== 'not_found' && pageState !== 'loading' ? (
-          <ProposalPageView
-            coupleName={proposal.couple_name}
-            proposalNumber={proposal.proposal_number}
-            notes={proposal.notes}
-            expiresAt={proposal.expires_at}
-            options={proposal.options}
-            state={pageState}
-            branding={branding}
-            chosenId={effectiveChosenId}
-            selection={selection}
-            onChoose={pageState === 'active' && !actionLoading ? handleChoose : undefined}
-            onToggle={
-              pageState === 'active' && !actionLoading
-                ? (itemId, next) => setPicks({ ...selection, [itemId]: next })
-                : undefined
-            }
-            actions={
-              pageState === 'active' ? (
-                <ProposalAcceptActions
-                  chosenOptionTitle={chosen?.title ?? null}
-                  totalLabel={totalLabel}
-                  expiresAt={proposal.expires_at}
-                  onAccept={handleAccept}
-                  onDecline={handleDecline}
-                  actionLoading={actionLoading}
-                  actionError={actionError}
-                  brand={branding.brand}
-                  radius={branding.radius}
-                  textColor={branding.textColor}
-                  mutedColor={branding.mutedColor}
-                  labels={branding.labels}
-                />
-              ) : undefined
-            }
-          />
+          useBlocks && doc ? (
+            // Branded: the MC's block chrome around the fixed core.
+            <div
+              className="overflow-hidden"
+              style={{ borderRadius: branding.radius }}
+            >
+              <PublicBlockRenderer blocks={preBlocks} branding={proposal} doc={doc} hideAction />
+              {core}
+              {betweenBlocks.length > 0 ? (
+                <PublicBlockRenderer blocks={betweenBlocks} branding={proposal} doc={doc} hideAction />
+              ) : null}
+              {acceptBlock}
+              {postBlocks.length > 0 ? (
+                <PublicBlockRenderer blocks={postBlocks} branding={proposal} doc={doc} hideAction />
+              ) : null}
+            </div>
+          ) : (
+            // Fallback: the self-contained standalone layout.
+            <ProposalPageView
+              coupleName={proposal.couple_name}
+              proposalNumber={proposal.proposal_number}
+              notes={proposal.notes}
+              expiresAt={proposal.expires_at}
+              options={proposal.options}
+              state={pageState}
+              branding={branding}
+              chosenId={effectiveChosenId}
+              selection={selection}
+              onChoose={pageState === 'active' && !actionLoading ? handleChoose : undefined}
+              onToggle={
+                pageState === 'active' && !actionLoading
+                  ? (itemId, next) => setPicks({ ...selection, [itemId]: next })
+                  : undefined
+              }
+              actions={
+                pageState === 'active' ? (
+                  <ProposalAcceptActions
+                    chosenOptionTitle={chosen?.title ?? null}
+                    totalLabel={totalLabel}
+                    expiresAt={proposal.expires_at}
+                    onAccept={handleAccept}
+                    onDecline={handleDecline}
+                    actionLoading={actionLoading}
+                    actionError={actionError}
+                    brand={branding.brand}
+                    radius={branding.radius}
+                    textColor={branding.textColor}
+                    mutedColor={branding.mutedColor}
+                    labels={branding.labels}
+                  />
+                ) : undefined
+              }
+            />
+          )
         ) : null}
       </div>
     </div>

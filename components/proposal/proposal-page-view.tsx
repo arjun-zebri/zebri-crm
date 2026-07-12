@@ -89,6 +89,15 @@ export interface ProposalPageViewProps {
   actions?: ReactNode;
   /** Branding canvas only: makes every section label edit in place. */
   onEditLabel?: ProposalLabelEdit | undefined;
+  /**
+   * `standalone` (default) renders the whole page — logo, header
+   * image, business line, actions slot, footer — used by the composer
+   * preview and the public fallback. `blockCore` renders ONLY the
+   * proposal-specific core (eyebrow + names + expiry, notes, chooser,
+   * priced selection) because the logo, header, accept and footer are
+   * separate editable blocks around it.
+   */
+  variant?: 'standalone' | 'blockCore';
 }
 
 export function ProposalPageView({
@@ -105,11 +114,15 @@ export function ProposalPageView({
   onToggle,
   actions,
   onEditLabel,
+  variant = 'standalone',
 }: ProposalPageViewProps) {
   const { brand, textColor, mutedColor, radius, headingFontFamily, headingWeight, labels } =
     branding;
   const interactive = state === 'active' && !!onToggle;
   const chosen = options.find((o) => o.id === chosenId) ?? null;
+  // In block-core mode the logo, header image, business line, actions
+  // and footer are separate editable blocks around this core.
+  const core = variant === 'blockCore';
 
   // Font-scale: root font-size drives every `em` text size below.
   // docPadding: extra horizontal inset on top of the surface's base.
@@ -123,7 +136,7 @@ export function ProposalPageView({
     <div className="space-y-8" style={rootStyle}>
       {/* ─── Header ─── */}
       <header>
-        {branding.logoUrl ? (
+        {branding.logoUrl && !core ? (
           // User-uploaded brand asset — no next/image.
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -153,7 +166,7 @@ export function ProposalPageView({
         >
           {coupleName}
         </h1>
-        {branding.businessName ? (
+        {branding.businessName && !core ? (
           <p className="mt-2 text-[0.875em]" style={{ color: mutedColor }}>
             A proposal from {branding.businessName}
             {branding.tagline ? ` · ${branding.tagline}` : ''}
@@ -161,7 +174,7 @@ export function ProposalPageView({
         ) : null}
       </header>
 
-      {branding.headerImageUrl ? (
+      {branding.headerImageUrl && !core ? (
         <div className="overflow-hidden" style={{ borderRadius: radius }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={branding.headerImageUrl} alt="" className="block h-56 w-full object-cover" />
@@ -219,13 +232,16 @@ export function ProposalPageView({
         </p>
       ) : null}
 
-      {actions}
+      {/* Accept + footer are separate editable blocks in block-core
+          mode; only the standalone layout renders them here. */}
+      {!core ? actions : null}
 
-      {/* Footer: proposal number + optional ABN (legal detail). */}
-      <div className="space-y-0.5 text-center text-[0.625em]" style={{ color: mutedColor }}>
-        <p>{proposalNumber}</p>
-        {branding.abn ? <p>ABN {branding.abn}</p> : null}
-      </div>
+      {!core ? (
+        <div className="space-y-0.5 text-center text-[0.625em]" style={{ color: mutedColor }}>
+          <p>{proposalNumber}</p>
+          {branding.abn ? <p>ABN {branding.abn}</p> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

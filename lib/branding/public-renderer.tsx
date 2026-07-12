@@ -1,23 +1,25 @@
 'use client'
 
 import { type ReactNode } from 'react'
+
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import type { PublicBranding } from './public-surface'
+
+import { RenderAction } from './public-blocks/action'
+import { RenderBusinessName } from './public-blocks/business-name'
+import { RenderDivider } from './public-blocks/divider'
+import { RenderFooter } from './public-blocks/footer'
+import { RenderHeaderBanner } from './public-blocks/header-banner'
+import { RenderLineItems } from './public-blocks/line-items'
+import { RenderPaymentDetails } from './public-blocks/payment-details'
 import {
   type PublicDocData,
   type ActionSlotProps,
 } from './public-blocks/shared'
-import { RenderHeaderBanner } from './public-blocks/header-banner'
-import { RenderBusinessName } from './public-blocks/business-name'
 import { RenderTagline } from './public-blocks/tagline'
-import { RenderTitle } from './public-blocks/title'
-import { RenderLineItems } from './public-blocks/line-items'
-import { RenderTotals } from './public-blocks/totals'
-import { RenderPaymentDetails } from './public-blocks/payment-details'
 import { RenderText } from './public-blocks/text'
-import { RenderAction } from './public-blocks/action'
-import { RenderDivider } from './public-blocks/divider'
-import { RenderFooter } from './public-blocks/footer'
+import { RenderTitle } from './public-blocks/title'
+import { RenderTotals } from './public-blocks/totals'
+import type { PublicBranding } from './public-surface'
 
 export type { PublicDocItem, PublicDocData } from './public-blocks/shared'
 
@@ -98,6 +100,7 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'couplePortal': return null
     case 'paymentSchedule': return null
     case 'contractBody': return null
+    case 'proposalBody': return null
   }
 }
 

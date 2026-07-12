@@ -14,6 +14,7 @@
  *
  * @module lib/payments/proposal-view
  */
+import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 import type { ProposalLabels } from '@/lib/branding/proposal-labels';
 import type { PublicBranding } from '@/lib/branding/public-surface';
 import { isPastDue } from '@/lib/utils';
@@ -53,6 +54,10 @@ export interface PublicProposal extends PublicBranding {
   accepted_option_id: string | null;
   accepted_addon_selection: Record<string, boolean> | null;
   couple_name: string;
+  /** The MC's saved proposal branding block tree (chrome around the
+   *  fixed core + the Accept action + Footer). Null/empty → the page
+   *  renders the standalone fallback layout. */
+  branding_blocks: Block[] | null;
   options: PublicProposalOption[];
 }
 

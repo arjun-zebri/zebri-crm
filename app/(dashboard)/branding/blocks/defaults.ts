@@ -98,6 +98,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
       { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       { id: newId('pb'), type: 'proposalBody', locked: true },
+      { id: newId('ac'), type: 'action', primary: 'Accept & reserve our date', secondary: 'Decline' },
       { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.' },
     ]
   }
@@ -260,8 +261,12 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
   if (surface === 'proposal') {
     const hasMarker = migrated.some((b) => b.type === 'proposalBody')
     if (!hasMarker) {
+      // Drop the obsolete quote-style body blocks; KEEP the action
+      // block (accept/decline) — it's now the editable CTA that sits
+      // below the core — plus real chrome (banner, business, text,
+      // footer).
       const chrome = migrated.filter(
-        (b) => !['lineItems', 'totals', 'action', 'title', 'paymentDetails'].includes(b.type),
+        (b) => !['lineItems', 'totals', 'title', 'paymentDetails'].includes(b.type),
       )
       const businessIdx = chrome.findIndex((b) => b.type === 'businessName')
       const insertAt = businessIdx >= 0 ? businessIdx + 1 : 0
@@ -271,6 +276,20 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
         locked: true,
       }
       migrated = [...chrome.slice(0, insertAt), marker, ...chrome.slice(insertAt)]
+    }
+    // Ensure an Accept action block exists (older proposal defaults
+    // seeded [banner, business, proposalBody, footer] with no action).
+    // Insert it right after the marker so the CTA sits under the core.
+    if (!migrated.some((b) => b.type === 'action')) {
+      const markerIdx = migrated.findIndex((b) => b.type === 'proposalBody')
+      const action: Block = {
+        id: `ac_${Math.random().toString(36).slice(2, 9)}`,
+        type: 'action',
+        primary: 'Accept & reserve our date',
+        secondary: 'Decline',
+      }
+      const at = markerIdx >= 0 ? markerIdx + 1 : migrated.length
+      migrated = [...migrated.slice(0, at), action, ...migrated.slice(at)]
     }
   }
 

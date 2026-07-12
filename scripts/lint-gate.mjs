@@ -129,7 +129,7 @@ const ERROR_BUDGET = 75;
 // legacy managers and their stray hook-deps suppressions → 395 → 394.
 // Phase G quotes removal: cleaned up imports/exports from files that
 // previously exported quote types or references → 394 → 392.
-const WARNING_BUDGET = 353;
+const WARNING_BUDGET = 342;
 
 function runEslintJson() {
   try {
