@@ -66,6 +66,30 @@ export interface PublicBranding {
   email_logo_align: 'left' | 'center'
   /** Email shell: render the brand-colour accent bar. */
   email_show_accent: boolean
+  /** Global heading font size in pixels. */
+  heading_size: number
+  /** Global body text font size in pixels. */
+  body_size: number
+  /** Global heading text transform (none, uppercase, capitalize). */
+  heading_case: 'none' | 'uppercase' | 'capitalize'
+  /** Global body text transform (none, uppercase, capitalize). */
+  body_case: 'none' | 'uppercase' | 'capitalize'
+  /** Global heading letter spacing in pixels. */
+  heading_letter_spacing: number
+  /** Global body line height (unitless multiplier). */
+  body_line_height: number
+  /** Global color for text links. Defaults to brand_color. */
+  link_color: string
+  /** Global button style variant (fill or outline). */
+  button_variant: 'fill' | 'outline'
+  /** Global button size (sm, md, or lg). */
+  button_size: 'sm' | 'md' | 'lg'
+  /** Global button corner radius in pixels. */
+  button_radius: number
+  /** Global spacing between sections in pixels. */
+  section_spacing: number
+  /** Global page background color. Defaults to surface_color. */
+  page_background: string
 }
 
 /** The `user_metadata` fields branding is assembled from. */
@@ -104,6 +128,18 @@ export interface UserMetadata {
   email_shell_show_logo?: boolean
   email_shell_logo_align?: string
   email_shell_show_accent?: boolean
+  heading_size?: number
+  body_size?: number
+  heading_case?: 'none' | 'uppercase' | 'capitalize'
+  body_case?: 'none' | 'uppercase' | 'capitalize'
+  heading_letter_spacing?: number
+  body_line_height?: number
+  link_color?: string
+  button_variant?: 'fill' | 'outline'
+  button_size?: 'sm' | 'md' | 'lg'
+  button_radius?: number
+  section_spacing?: number
+  page_background?: string
 }
 
 function sanitizeHeadingFont(v: string | undefined, fallback: HeadingFont): HeadingFont {
@@ -129,13 +165,16 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
   const fallback =
     themeId === 'custom' ? THEME_PRESETS.minimal! : (THEME_PRESETS[themeId] ?? THEME_PRESETS.minimal!)
 
+  const brandColor = metadata.brand_color ?? fallback.color
+  const surfaceColor = metadata.surface_color ?? fallback.surface
+
   return {
     logo_url: metadata.logo_url ?? null,
     favicon_url: metadata.favicon_url ?? null,
     header_image_url: metadata.header_image_url ?? null,
-    brand_color: metadata.brand_color ?? fallback.color,
+    brand_color: brandColor,
     accent_color: metadata.accent_color ?? fallback.accent,
-    surface_color: metadata.surface_color ?? fallback.surface,
+    surface_color: surfaceColor,
     text_color: metadata.text_color ?? fallback.text,
     muted_color: metadata.muted_color ?? fallback.muted,
     secondary_color: metadata.secondary_color ?? '#FFFFFF',
@@ -167,5 +206,17 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
     email_show_logo: metadata.email_shell_show_logo ?? true,
     email_logo_align: metadata.email_shell_logo_align === 'center' ? 'center' : 'left',
     email_show_accent: metadata.email_shell_show_accent ?? true,
+    heading_size: typeof metadata.heading_size === 'number' ? metadata.heading_size : 32,
+    body_size: typeof metadata.body_size === 'number' ? metadata.body_size : 15,
+    heading_case: metadata.heading_case ?? 'none',
+    body_case: metadata.body_case ?? 'none',
+    heading_letter_spacing: typeof metadata.heading_letter_spacing === 'number' ? metadata.heading_letter_spacing : 0,
+    body_line_height: typeof metadata.body_line_height === 'number' ? metadata.body_line_height : 1.5,
+    link_color: metadata.link_color ?? brandColor,
+    button_variant: metadata.button_variant ?? 'fill',
+    button_size: metadata.button_size ?? 'md',
+    button_radius: typeof metadata.button_radius === 'number' ? metadata.button_radius : 8,
+    section_spacing: typeof metadata.section_spacing === 'number' ? metadata.section_spacing : 32,
+    page_background: metadata.page_background ?? surfaceColor,
   }
 }
