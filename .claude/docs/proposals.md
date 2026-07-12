@@ -168,6 +168,26 @@ edited). Pure types/helpers moved to `lib/payments/proposal-view.ts`.
 The Proposal branding surface is intentionally NOT block-editable —
 scalar kit values are what ship, so the canvas shows exactly that.
 
+## Editable Accept + Footer blocks; public page renders the tree
+
+The Accept/Decline CTA and the ABN are no longer inside the fixed
+core; they are standard editable blocks below it: an `action` block
+(label + button colour/radius/width/alignment) and the `footer` block
+(contact + ABN). `defaultBlocksFor('proposal')` seeds
+[headerBanner, businessName, proposalBody, action, footer]; the fixed
+`proposalBody` core renders `ProposalPageView` variant `blockCore`
+(eyebrow + names + expiry, notes, chooser, priced selection only).
+
+Migration `20260714000000_proposal_public_blocks.sql` makes
+`get_public_proposal` return `branding_blocks` (via
+`_user_branding_blocks`, like invoice/contract). The public page
+(`app/proposal/[token]/page.tsx`) splits the tree at the `proposalBody`
+marker (invoice branded-card model): pre-blocks (banner, business) then
+the fixed core then the interactive Accept (`ProposalAcceptActions`,
+styled + labelled from the `action` block via `findActionStyle`) then
+post-blocks (footer + ABN). No saved blocks (or pre-migration DB) falls
+back to the standalone `ProposalPageView`. Composer preview unchanged.
+
 ## Block-based branding surface (2026-07-12)
 
 The proposal branding surface is now a BLOCK tree like invoice /
