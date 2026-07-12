@@ -2,10 +2,10 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import {
-  ChevronDown, Check, Upload, RotateCcw, Paintbrush, Type as TypeIcon,
-  Layout, Sparkles, Trash2, ImageIcon, Globe, LayoutTemplate,
+  ChevronDown, Check, RotateCcw, Paintbrush, Type as TypeIcon,
+  Layout, Sparkles, Globe, LayoutTemplate,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
 import { ColorPopover } from '@/components/ui/color-popover'
 import { getContrastRatio, getWcagLevel } from '@/lib/branding/contrast'
@@ -34,6 +34,7 @@ import {
   type Density,
 } from '@/lib/branding/themes'
 
+import { BusinessSection } from './business-section'
 import { Slider } from './components/slider'
 import { STARTER_DESIGNS } from './starter-designs'
 
@@ -93,26 +94,34 @@ interface BrandPanelProps {
   uploadFavicon: (file: File) => Promise<void>
   removeFavicon: () => void
 
-  // Brand info - promoted into the rail
+  // Business info - promoted to the top of the rail
   businessName: string
   setBusinessName: (v: string) => void
   tagline: string
   setTagline: (v: string) => void
   abn: string
   setAbn: (v: string) => void
+  phone: string
+  setPhone: (v: string) => void
+  website: string
+  setWebsite: (v: string) => void
+  instagramUrl: string
+  setInstagramUrl: (v: string) => void
+  facebookUrl: string
+  setFacebookUrl: (v: string) => void
 
 }
 
-type SectionId = 'starters' | 'themes' | 'colors' | 'fonts' | 'layout' | 'info'
+type SectionId = 'business' | 'starters' | 'themes' | 'colors' | 'fonts' | 'layout'
 
 export function BrandPanel(props: BrandPanelProps) {
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
+    business: true,
     starters: false,
     themes: false,
     colors: false,
     fonts: false,
     layout: false,
-    info: false,
   })
 
   const toggle = (id: SectionId) => setOpen((p) => ({ ...p, [id]: !p[id] }))
@@ -141,6 +150,34 @@ export function BrandPanel(props: BrandPanelProps) {
       </div>
 
       <div className="pb-12">
+        <Accordion
+          icon={<Globe size={13} strokeWidth={1.75} className="text-gray-500" />}
+          title="Your business"
+          subtitle="Name, phone, social links, favicon"
+          open={open.business}
+          onToggle={() => toggle('business')}
+        >
+          <BusinessSection
+            businessName={props.businessName}
+            setBusinessName={props.setBusinessName}
+            tagline={props.tagline}
+            setTagline={props.setTagline}
+            abn={props.abn}
+            setAbn={props.setAbn}
+            phone={props.phone}
+            setPhone={props.setPhone}
+            website={props.website}
+            setWebsite={props.setWebsite}
+            instagramUrl={props.instagramUrl}
+            setInstagramUrl={props.setInstagramUrl}
+            facebookUrl={props.facebookUrl}
+            setFacebookUrl={props.setFacebookUrl}
+            faviconUrl={props.faviconUrl}
+            uploadFavicon={props.uploadFavicon}
+            removeFavicon={props.removeFavicon}
+          />
+        </Accordion>
+
         <Accordion
           icon={<LayoutTemplate size={13} strokeWidth={1.75} className="text-gray-500" />}
           title="Starter designs"
@@ -189,16 +226,6 @@ export function BrandPanel(props: BrandPanelProps) {
           onToggle={() => toggle('layout')}
         >
           <LayoutSection {...props} />
-        </Accordion>
-
-        <Accordion
-          icon={<TypeIcon size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Business info"
-          subtitle="Name, tagline, favicon, ABN"
-          open={open.info}
-          onToggle={() => toggle('info')}
-        >
-          <InfoSection {...props} />
         </Accordion>
       </div>
     </aside>
@@ -719,167 +746,5 @@ function LayoutSection({
   )
 }
 
-// ── Identity ──────────────────────────────────────────────────────────────────
-
-function IdentityTile({
-  label,
-  hint,
-  url,
-  onUpload,
-  onRemove,
-  accept,
-  wide,
-  tall,
-  square,
-  surface = 'light',
-}: {
-  label: string
-  hint?: string
-  url: string
-  onUpload: (file: File) => Promise<void>
-  onRemove: () => void
-  accept: string
-  wide?: boolean
-  tall?: boolean
-  square?: boolean
-  surface?: 'light' | 'dark'
-}) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [hovering, setHovering] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [dragging, setDragging] = useState(false)
-  const filled = !!url
-
-  const onFile = async (f: File) => {
-    setUploading(true)
-    try { await onUpload(f) } catch { /* toast upstream */ } finally { setUploading(false) }
-  }
-
-  const sizeClass = square ? 'w-16 h-16' : `w-full ${wide ? 'h-24' : tall ? 'h-24' : 'h-16'}`
-  const bg = surface === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
-  const placeholderText = surface === 'dark' ? 'text-gray-500' : 'text-gray-400'
-
-  const openPicker = () => inputRef.current?.click()
-
-  return (
-    <div
-      className="space-y-1"
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
-    >
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={openPicker}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            openPicker()
-          }
-        }}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragging(false)
-          const f = e.dataTransfer.files?.[0]
-          if (f) onFile(f)
-        }}
-        aria-label={filled ? `Replace ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
-        className={`relative ${sizeClass} rounded-xl ${bg} border border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-gray-900/10 transition ${
-          dragging ? 'border-gray-900 bg-gray-100' : filled ? 'border-gray-200 hover:border-gray-300' : 'border-gray-300 hover:border-gray-400'
-        }`}
-      >
-        {filled ? (
-          <img src={url} alt="" className="max-w-[80%] max-h-[80%] object-contain pointer-events-none" />
-        ) : uploading ? (
-          <span className={`text-[10px] ${placeholderText} pointer-events-none`}>Uploading…</span>
-        ) : (
-          <ImageIcon size={20} strokeWidth={1.25} className={`${placeholderText} pointer-events-none opacity-50`} />
-        )}
-        {filled && hovering && (
-          <span className="absolute inset-0 bg-gray-900/40 flex items-center justify-center gap-2 pointer-events-none">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 text-gray-800 text-[11px] font-medium shadow-sm">
-              <Upload size={11} strokeWidth={2} />
-              Replace
-            </span>
-          </span>
-        )}
-        {filled && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onRemove()
-            }}
-            aria-label={`Delete ${label.toLowerCase()}`}
-            title={`Delete ${label.toLowerCase()}`}
-            className={`absolute top-1.5 right-1.5 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white/95 backdrop-blur-sm border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 shadow-sm cursor-pointer transition ${
-              hovering ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <Trash2 size={12} strokeWidth={1.75} />
-          </button>
-        )}
-      </div>
-      <div className="flex items-center justify-between gap-1">
-        <p className="text-[10px] font-medium text-gray-600 uppercase tracking-[0.06em]">{label}</p>
-        {hint && <p className="text-[10px] text-gray-400 truncate">{hint}</p>}
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) onFile(f)
-          if (inputRef.current) inputRef.current.value = ''
-        }}
-      />
-    </div>
-  )
-}
-
-// ── Business info ─────────────────────────────────────────────────────────────
-
-function InfoSection({
-  businessName, setBusinessName,
-  tagline, setTagline,
-  abn, setAbn,
-  faviconUrl, uploadFavicon, removeFavicon,
-}: BrandPanelProps) {
-  return (
-    <div className="space-y-3">
-      <TextField label="Business name" value={businessName} onChange={setBusinessName} placeholder="Your business name" />
-      <TextField label="Tagline" value={tagline} onChange={setTagline} placeholder="A short line about you" />
-      <TextField label="ABN" value={abn} onChange={setAbn} placeholder="00 000 000 000" />
-      <IdentityTile
-        label="Favicon"
-        hint="Browser tab · 256KB"
-        url={faviconUrl}
-        onUpload={uploadFavicon}
-        onRemove={removeFavicon}
-        accept="image/png,image/x-icon,image/svg+xml,image/vnd.microsoft.icon"
-        square
-      />
-    </div>
-  )
-}
-
-function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return (
-    <label className="block">
-      <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1 block">{label}</span>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 transition"
-      />
-    </label>
-  )
-}
 
 

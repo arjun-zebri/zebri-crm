@@ -131,7 +131,10 @@ const ERROR_BUDGET = 75;
 // previously exported quote types or references → 394 → 392.
 // Proposal branding audit follow-ups: starter-designs work removed a
 // stale unused import in brand-panel → 342 → 341.
-const WARNING_BUDGET = 341;
+// P3.1 business-section extraction: fixed @next/next/no-img-element and
+// @typescript-eslint/no-unused-expressions violations by using Image from
+// next/image and extracting event handlers → 341 → 340.
+const WARNING_BUDGET = 340;
 
 function runEslintJson() {
   try {

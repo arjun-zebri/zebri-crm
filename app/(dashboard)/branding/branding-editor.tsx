@@ -108,6 +108,10 @@ interface EditorState {
   abn: string
   showContactOnDocuments: boolean
   businessName: string
+  phone: string
+  website: string
+  instagramUrl: string
+  facebookUrl: string
   fontHeading: HeadingFont
   fontBody: BodyFont
   fontWeight: FontWeight
@@ -156,6 +160,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       abn: initialData.abn,
       showContactOnDocuments: initialData.showContactOnDocuments,
       businessName: initialData.businessName,
+      phone: initialData.phone,
+      website: initialData.website,
+      instagramUrl: initialData.instagramUrl,
+      facebookUrl: initialData.facebookUrl,
       fontHeading: initialData.fontHeading,
       fontBody: initialData.fontBody,
       fontWeight: initialData.fontWeight,
@@ -248,6 +256,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         abn: value.abn,
         show_contact_on_documents: value.showContactOnDocuments,
         business_name: value.businessName,
+        phone: value.phone,
+        website: value.website,
+        instagram_url: value.instagramUrl,
+        facebook_url: value.facebookUrl,
         font_heading: value.fontHeading,
         font_body: value.fontBody,
         font_weight: value.fontWeight,
@@ -797,14 +809,14 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     cornerRadius: state.cornerRadius,
     docPadding: state.docPadding,
     businessName: state.businessName,
-    phone: initialData.phone,
-    website: initialData.website,
-    instagramUrl: initialData.instagramUrl,
-    facebookUrl: initialData.facebookUrl,
+    phone: state.phone,
+    website: state.website,
+    instagramUrl: state.instagramUrl,
+    facebookUrl: state.facebookUrl,
     portalSections: state.portalSections,
     proposalLabels: state.proposalLabels,
     proposalPreviewMode,
-  }), [state, proposalPreviewMode, initialData.phone, initialData.website, initialData.instagramUrl, initialData.facebookUrl])
+  }), [state, proposalPreviewMode])
 
   const visibleBlocks = state.blocks[docSurface]
 
@@ -904,6 +916,14 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setTagline={(v) => setEditor({ tagline: v }, false)}
           abn={state.abn}
           setAbn={(v) => setEditor({ abn: v }, false)}
+          phone={state.phone}
+          setPhone={(v) => setEditor({ phone: v }, false)}
+          website={state.website}
+          setWebsite={(v) => setEditor({ website: v }, false)}
+          instagramUrl={state.instagramUrl}
+          setInstagramUrl={(v) => setEditor({ instagramUrl: v }, false)}
+          facebookUrl={state.facebookUrl}
+          setFacebookUrl={(v) => setEditor({ facebookUrl: v }, false)}
         />
 
         <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
