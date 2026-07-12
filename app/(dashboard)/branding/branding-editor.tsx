@@ -4,9 +4,8 @@ import { Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { useToast } from '@/components/ui/toast'
-import { FONT_STACKS, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
-import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabels } from '@/lib/branding/proposal-labels'
-import { htmlToPlainText } from '@/lib/branding/sanitize'
+import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
+import type { ProposalLabels } from '@/lib/branding/proposal-labels'
 import {
   THEME_PRESETS,
   type ThemeId,
@@ -27,7 +26,6 @@ import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
 import { EditorTopbar } from './editor-topbar'
 import { PortalSectionsBar } from './portal-preview'
-import { ProposalSurfacePreview, ProposalBrandingBar } from './proposal-preview'
 import { SurfaceTabs } from './surface-tabs'
 
 
@@ -155,6 +153,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const [surface, setSurface] = useState<SurfaceTab>('proposal')
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [zoom, setZoom] = useState(1)
+  // Preview-only: whether the proposal core previews one package or the
+  // multi-package chooser. Not persisted.
+  const [proposalPreviewMode, setProposalPreviewMode] = useState<'single' | 'multi'>('multi')
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
@@ -712,7 +713,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     instagramUrl: initialData.instagramUrl,
     facebookUrl: initialData.facebookUrl,
     portalSections: state.portalSections,
-  }), [state, initialData.phone, initialData.website, initialData.instagramUrl, initialData.facebookUrl])
+    proposalLabels: state.proposalLabels,
+    proposalPreviewMode,
+  }), [state, proposalPreviewMode, initialData.phone, initialData.website, initialData.instagramUrl, initialData.facebookUrl])
 
   const visibleBlocks = state.blocks[docSurface]
 
@@ -734,7 +737,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         onApplyKit={onApplyKit}
         onDeleteKit={onDeleteKit}
         addBlockSlot={
-          surface === 'proposal' ? undefined : (
           <AddBlockPalette
             open={paletteOpen}
             onOpenChange={setPaletteOpen}
@@ -751,7 +753,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               </button>
             }
           />
-          )
         }
       />
 
@@ -804,62 +805,21 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         />
 
         <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
-          {surface === 'proposal' ? (
-            // Proposals have no block tree (the chooser can't be
-            // expressed as blocks) — render the REAL page component
-            // with sample data + the kit values being edited, so this
-            // canvas is exactly what couples receive. The bar above it
-            // carries the locked-structure note, the logo/header
-            // uploads (unreachable otherwise on this surface), and the
-            // editable section wording.
-            <>
-              <ProposalBrandingBar
-                customised={(Object.keys(PROPOSAL_LABEL_DEFAULTS) as (keyof ProposalLabels)[]).some(
-                  (k) => state.proposalLabels[k] !== PROPOSAL_LABEL_DEFAULTS[k],
-                )}
-                resetLabels={() => setEditor({ proposalLabels: PROPOSAL_LABEL_DEFAULTS })}
-                logoUrl={state.logoUrl}
-                headerImageUrl={state.headerImageUrl}
-                uploadLogo={uploadLogo}
-                removeLogo={removeLogo}
-                uploadHeader={uploadHeader}
-                removeHeader={removeHeader}
-              />
-              <ProposalSurfacePreview
-                onEditLabel={(key, val) =>
-                  setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
-                }
-                branding={{
-                  pageBg: state.surfaceColor,
-                  textColor: state.textColor,
-                  mutedColor: state.mutedColor,
-                  brand: state.brandColor,
-                  accent: state.accentColor,
-                  secondaryColor: state.secondaryColor,
-                  secondaryTextColor: state.secondaryTextColor,
-                  radius: state.cornerRadius,
-                  headingFontFamily: FONT_STACKS[state.fontHeading],
-                  bodyFontFamily: FONT_STACKS[state.fontBody],
-                  headingWeight: state.fontWeight,
-                  fontScale: state.fontScale,
-                  docPadding: state.docPadding,
-                  logoUrl: state.logoUrl || null,
-                  headerImageUrl: state.headerImageUrl || null,
-                  businessName: state.businessName ? htmlToPlainText(state.businessName) : null,
-                  tagline: state.tagline ? htmlToPlainText(state.tagline) : null,
-                  abn: state.abn || null,
-                  labels: state.proposalLabels,
-                }}
-              />
-            </>
-          ) : (
-          <>
           {visibleBlocks.length > 0 && (
             <div className="flex justify-end mb-2">
               <button
                 type="button"
                 onClick={() => {
-                  setBlocksForCurrent(state.blocks[docSurface].filter(b => b.type === 'couplePortal' || b.type === 'paymentSchedule'))
+                  // Keep the fixed marker blocks (they can't be removed).
+                  setBlocksForCurrent(
+                    state.blocks[docSurface].filter(
+                      (b) =>
+                        b.type === 'couplePortal' ||
+                        b.type === 'paymentSchedule' ||
+                        b.type === 'contractBody' ||
+                        b.type === 'proposalBody',
+                    ),
+                  )
                   setSelectedBlockIds([])
                 }}
                 className="text-[11px] text-gray-400 hover:text-red-500 cursor-pointer transition"
@@ -896,9 +856,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             removeLogo={removeLogo}
             uploadHeader={uploadHeader}
             removeHeader={removeHeader}
+            onEditProposalLabel={(key, val) =>
+              setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
+            }
+            setProposalPreviewMode={setProposalPreviewMode}
           />
-          </>
-          )}
         </CanvasFrame>
       </div>
     </div>

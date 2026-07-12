@@ -168,6 +168,25 @@ edited). Pure types/helpers moved to `lib/payments/proposal-view.ts`.
 The Proposal branding surface is intentionally NOT block-editable —
 scalar kit values are what ship, so the canvas shows exactly that.
 
+## Block-based branding surface (2026-07-12)
+
+The proposal branding surface is now a BLOCK tree like invoice /
+contract / portal — not a bespoke canvas. The interactive core (the
+package chooser, the chosen option's priced detail, the accept block)
+is a fixed `proposalBody` marker block (same pattern as `couplePortal`
+/ `contractBody`): its structure/order can't be reordered, but the MC
+drags chrome blocks (header banner, business name, text, divider,
+footer, …) above and below it and retypes its section labels inline
+directly on the canvas. The marker renders inside a dashed
+"Fixed layout" frame with a single/multi package preview toggle
+(`state.proposalPreviewMode`, preview-only) so the MC can see both the
+one-package layout (no chooser) and the multi-package chooser.
+`RenderProposalBody` (in `blocks/render.tsx`) renders the shared
+`ProposalPageView` with sample data, so the canvas stays pixel-matched
+to the sent page. `defaultBlocksFor('proposal')` seeds
+[headerBanner, businessName, proposalBody, footer]; `migrateBlocks`
+injects the marker into any pre-block-model proposal design.
+
 ## Full brand-kit control + editable wording (2026-07-12)
 
 Migration `20260713000000_proposal_branding_tokens.sql` adds

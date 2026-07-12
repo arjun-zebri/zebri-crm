@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -19,9 +18,12 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
+
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import type { Block } from './types'
+import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import type { BrandPreviewState } from '@/types/branding-preview'
+
 import { BlockFrame } from './block-frame'
 import {
   RenderHeaderBanner,
@@ -38,7 +40,9 @@ import {
   RenderDivider,
   RenderFooter,
   RenderPaymentSchedule,
+  RenderProposalBody,
 } from './render'
+import type { Block } from './types'
 
 interface BlockRendererProps {
   blocks: Block[]
@@ -57,6 +61,10 @@ interface BlockRendererProps {
   removeLogo?: () => void | Promise<void>
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
+  /** Proposal surface only: edit the fixed core's section labels. */
+  onEditProposalLabel?: ProposalLabelEdit
+  /** Proposal surface only: toggle the single/multi package preview. */
+  setProposalPreviewMode?: (mode: 'single' | 'multi') => void
 }
 
 export function BlockRenderer({
@@ -76,6 +84,8 @@ export function BlockRenderer({
   removeLogo,
   uploadHeader,
   removeHeader,
+  onEditProposalLabel,
+  setProposalPreviewMode,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -172,16 +182,26 @@ export function BlockRenderer({
         >
           <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
             {blocks.map((block) => {
-              if (block.type === 'couplePortal' || block.type === 'paymentSchedule' || block.type === 'contractBody') {
+              if (
+                block.type === 'couplePortal' ||
+                block.type === 'paymentSchedule' ||
+                block.type === 'contractBody' ||
+                block.type === 'proposalBody'
+              ) {
                 const fixedLabel =
                   block.type === 'couplePortal'
                     ? 'Couple portal (fixed)'
                     : block.type === 'paymentSchedule'
                       ? 'Payment schedule (fixed)'
-                      : 'Contract body (fixed)';
+                      : block.type === 'contractBody'
+                        ? 'Contract body (fixed)'
+                        : 'Proposal (fixed)';
                 return (
                   <div key={block.id} aria-label={fixedLabel} className="group relative">
-                    {renderBlock(block, state, updateBlock, {})}
+                    {renderBlock(block, state, updateBlock, {
+                      onEditProposalLabel,
+                      setProposalPreviewMode,
+                    })}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -262,6 +282,8 @@ interface RenderExtras {
   removeLogo?: () => void | Promise<void>
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
+  onEditProposalLabel?: ProposalLabelEdit | undefined
+  setProposalPreviewMode?: ((mode: 'single' | 'multi') => void) | undefined
 }
 
 function renderBlock(
@@ -316,6 +338,14 @@ function renderBlock(
       return <RenderPaymentSchedule state={state} />
     case 'contractBody':
       return <RenderContractBody state={state} />
+    case 'proposalBody':
+      return (
+        <RenderProposalBody
+          state={state}
+          onEditLabel={extras.onEditProposalLabel}
+          setPreviewMode={extras.setProposalPreviewMode}
+        />
+      )
   }
 }
 

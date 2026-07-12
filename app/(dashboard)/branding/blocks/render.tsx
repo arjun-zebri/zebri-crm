@@ -1,14 +1,20 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
 import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+
+import { ProposalPageView, StaticAcceptCta } from '@/components/proposal/proposal-page-view'
 import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
+import { resolveProposalLabels, type ProposalLabelEdit } from '@/lib/branding/proposal-labels'
+import { htmlToPlainText } from '@/lib/branding/sanitize'
+import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
 import type { BrandPreviewState } from '@/types/branding-preview'
 import { DENSITY_PADDING } from '@/types/branding-preview'
-import { resolveTextStyle, type TextStyleDefaults } from './text-style'
-import { InlineText } from './inline-text'
+
 import { InlineAsset } from './inline-asset'
+import { InlineText } from './inline-text'
+import { resolveTextStyle, type TextStyleDefaults } from './text-style'
 import type {
   Block,
   HeaderBannerBlock,
@@ -1139,6 +1145,171 @@ export function RenderContractBody({ state }: { state: BrandPreviewState }) {
             </p>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Proposal body (fixed core) ────────────────────────────────────────────────
+
+/** Map the editor's preview state onto the proposal view's branding. */
+function proposalBranding(state: BrandPreviewState): ProposalViewBranding {
+  return {
+    pageBg: state.surfaceColor || '#FFFFFF',
+    textColor: state.textColor || '#111827',
+    mutedColor: state.mutedColor || '#6B7280',
+    brand: state.brandColor || '#111827',
+    accent: state.accentColor || state.brandColor || '#111827',
+    secondaryColor: state.secondaryColor || '#FFFFFF',
+    secondaryTextColor: state.secondaryTextColor || '#374151',
+    radius: state.cornerRadius ?? 16,
+    headingFontFamily: FONT_STACKS[state.fontHeading],
+    bodyFontFamily: FONT_STACKS[state.fontBody],
+    headingWeight: state.fontWeight,
+    fontScale: state.fontScale ?? 1,
+    docPadding: 0, // the block-renderer already applies doc padding
+    logoUrl: null, // logo lives in its own block on this surface
+    headerImageUrl: null, // header banner is its own block
+    businessName: state.businessName ? htmlToPlainText(state.businessName) : null,
+    tagline: state.tagline ? htmlToPlainText(state.tagline) : null,
+    abn: state.abn || null,
+    labels: resolveProposalLabels(state.proposalLabels),
+  }
+}
+
+const PROPOSAL_SAMPLE_MULTI: PublicProposalOption[] = [
+  {
+    id: 'sample-essentials',
+    title: 'The Essentials',
+    description: 'A beautiful record of the day itself.',
+    deposit_percent: 25,
+    gst_inclusive: true,
+    is_popular: false,
+    subtotal: 1100,
+    position: 0,
+    items: [
+      { id: 'e1', description: 'Ceremony hosting', amount: 550, is_addon: false, default_included: false, position: 0 },
+      { id: 'e2', description: 'Reception MC & run sheet', amount: 550, is_addon: false, default_included: false, position: 1 },
+    ],
+  },
+  {
+    id: 'sample-fullday',
+    title: 'The Full Day',
+    description: 'Ceremony and reception, start to finish.',
+    deposit_percent: 25,
+    gst_inclusive: true,
+    is_popular: true,
+    subtotal: 1450,
+    position: 1,
+    items: [
+      { id: 'f1', description: 'Pre-wedding consultation', amount: 0, is_addon: false, default_included: false, position: 0 },
+      { id: 'f2', description: 'Ceremony hosting', amount: 550, is_addon: false, default_included: false, position: 1 },
+      { id: 'f3', description: 'Reception MC & run sheet', amount: 900, is_addon: false, default_included: false, position: 2 },
+      { id: 'f4', description: 'Rehearsal attendance', amount: 150, is_addon: true, default_included: true, position: 3 },
+      { id: 'f5', description: 'After-party hosting', amount: 250, is_addon: true, default_included: false, position: 4 },
+    ],
+  },
+  {
+    id: 'sample-legacy',
+    title: 'The Legacy',
+    description: 'Everything, plus extended coverage.',
+    deposit_percent: 25,
+    gst_inclusive: true,
+    is_popular: false,
+    subtotal: 2400,
+    position: 2,
+    items: [
+      { id: 'l1', description: 'Full-day hosting (12 hrs)', amount: 1800, is_addon: false, default_included: false, position: 0 },
+      { id: 'l2', description: 'Rehearsal-dinner hosting', amount: 600, is_addon: false, default_included: false, position: 1 },
+    ],
+  },
+]
+
+const SAMPLE_EXPIRES = '2026-08-30'
+
+/**
+ * The fixed proposal core, framed as a locked slot (dashed border +
+ * "Fixed layout" pill) so MCs see the structure can't be reordered —
+ * but full-opacity + interactive, unlike the couplePortal/contractBody
+ * previews, because the section labels edit in place. A single/multi
+ * toggle previews both the one-package and the chooser layouts. MCs
+ * add chrome blocks above and below this in the editor.
+ */
+export function RenderProposalBody({
+  state,
+  onEditLabel,
+  setPreviewMode,
+}: {
+  state: BrandPreviewState
+  onEditLabel?: ProposalLabelEdit | undefined
+  setPreviewMode?: ((mode: 'single' | 'multi') => void) | undefined
+}) {
+  const branding = proposalBranding(state)
+  const muted = branding.mutedColor
+  const mode = state.proposalPreviewMode ?? 'multi'
+  const options = mode === 'single' ? [PROPOSAL_SAMPLE_MULTI[1]!] : PROPOSAL_SAMPLE_MULTI
+  const chosen = options.find((o) => o.is_popular) ?? options[0]!
+  const selection: Record<string, boolean> = {}
+  for (const item of chosen.items) if (item.is_addon) selection[item.id] = item.default_included
+
+  return (
+    <div className="px-2 py-4">
+      <div
+        className="rounded-xl border-2 border-dashed p-5"
+        style={{ borderColor: muted + '55' }}
+      >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-medium uppercase tracking-wider" style={{ color: muted }}>
+              Proposal
+            </p>
+            <span
+              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: muted + '20', color: muted }}
+            >
+              Fixed layout
+            </span>
+          </div>
+          {/* Single / multi package preview toggle. */}
+          <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
+            {(['single', 'multi'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setPreviewMode?.(m)
+                }}
+                className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition cursor-pointer ${
+                  mode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                {m === 'single' ? '1 package' : 'Multiple'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <p className="mb-4 text-[11px] leading-relaxed" style={{ color: muted }}>
+          The couple picks a package and add-ons here, then accepts. You can&apos;t reorder these
+          sections, but click any heading or button to reword it — and add blocks above or below.
+        </p>
+
+        <ProposalPageView
+          coupleName="Alex & Jordan"
+          proposalNumber="PR-001"
+          notes="We loved hearing about your day and would be honoured to be part of it. Everything here is tailored to what you shared with us."
+          expiresAt={SAMPLE_EXPIRES}
+          options={options}
+          state="active"
+          branding={branding}
+          chosenId={chosen.id}
+          selection={selection}
+          onEditLabel={onEditLabel}
+          actions={
+            <StaticAcceptCta expiresAt={SAMPLE_EXPIRES} branding={branding} onEditLabel={onEditLabel} />
+          }
+        />
       </div>
     </div>
   )

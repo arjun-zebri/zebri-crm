@@ -62,10 +62,15 @@ export function EditableLabel({
     );
   }
 
+  // Persistent affordance so it's obvious the label is editable: a
+  // faint dashed underline at rest that fills in on hover, plus a ring
+  // + tint on focus. `decoration-*` keeps the underline subtle and
+  // offset from the text.
   const editableClass =
     `${className} -mx-0.5 rounded-[4px] px-0.5 outline-none cursor-text ` +
-    'transition-colors hover:bg-current/[0.06] focus:bg-current/[0.06] ' +
-    'focus:ring-2 focus:ring-current/20 ' +
+    'underline decoration-dashed decoration-current/25 underline-offset-[3px] ' +
+    'transition-colors hover:decoration-current/60 hover:bg-current/[0.06] ' +
+    'focus:no-underline focus:bg-current/[0.06] focus:ring-2 focus:ring-current/25 ' +
     'empty:before:content-[attr(data-placeholder)] empty:before:opacity-40';
 
   const shared = {

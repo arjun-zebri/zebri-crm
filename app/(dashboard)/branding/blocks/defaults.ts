@@ -41,6 +41,8 @@ export function blockTemplate(type: BlockType): Block {
       return { id: newId('ps'), type: 'paymentSchedule', locked: true }
     case 'contractBody':
       return { id: newId('cb'), type: 'contractBody', locked: true }
+    case 'proposalBody':
+      return { id: newId('pb'), type: 'proposalBody', locked: true }
   }
 }
 
@@ -87,36 +89,15 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
     ]
   }
   if (surface === 'proposal') {
+    // The proposal core (chooser + priced detail + accept) is a fixed
+    // `proposalBody` marker — its structure can't be a block tree. The
+    // MC adds chrome (banner, logo, footer, custom text) around it and
+    // retypes its section labels inline. Lean scaffold so nobody
+    // fights pre-canned structure, matching the contract surface.
     return [
       { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
-      {
-        id: newId('tt'),
-        type: 'title',
-        title: 'Proposal',
-        subtitle: 'ALEX & JORDAN  ·  14 SEPTEMBER 2026',
-        showRef: true,
-        showExpires: true,
-        showAbn: false,
-        titleStyle: FORMAL_TITLE,
-        subtitleStyle: HERO_SUBTITLE,
-      },
-      { id: newId('li'), type: 'lineItems', colSpread: true },
-      {
-        id: newId('to'),
-        type: 'totals',
-        taxRate: 10,
-        showSubtotal: true,
-        totalStyle: EMPHASIZED_TOTAL,
-      },
-      { id: newId('dv'), type: 'divider', ...SOFT_DIVIDER },
-      {
-        id: newId('tx'),
-        type: 'text',
-        text: 'Thanks for thinking of me for your day. The deposit secures the date - happy to jump on a call before you decide.',
-        textStyle: SOFT_MESSAGE,
-      },
-      { id: newId('ac'), type: 'action', primary: 'Accept proposal', secondary: 'Decline' },
+      { id: newId('pb'), type: 'proposalBody', locked: true },
       { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.' },
     ]
   }
@@ -267,6 +248,29 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
         marker,
         ...cleaned.slice(insertAt),
       ]
+    }
+  }
+
+  // Proposal surface migration: the proposal core moved to the fixed
+  // `proposalBody` marker (chooser + priced detail + accept). The old
+  // proposal default was a quote-style doc (title / lineItems / totals
+  // / action) that no longer applies. If there's no marker, drop those
+  // obsolete body blocks and inject one, keeping real chrome (banner,
+  // business name, custom text, footer). Idempotent.
+  if (surface === 'proposal') {
+    const hasMarker = migrated.some((b) => b.type === 'proposalBody')
+    if (!hasMarker) {
+      const chrome = migrated.filter(
+        (b) => !['lineItems', 'totals', 'action', 'title', 'paymentDetails'].includes(b.type),
+      )
+      const businessIdx = chrome.findIndex((b) => b.type === 'businessName')
+      const insertAt = businessIdx >= 0 ? businessIdx + 1 : 0
+      const marker: Block = {
+        id: `pb_${Math.random().toString(36).slice(2, 9)}`,
+        type: 'proposalBody',
+        locked: true,
+      }
+      migrated = [...chrome.slice(0, insertAt), marker, ...chrome.slice(insertAt)]
     }
   }
 

@@ -29,6 +29,7 @@ export type BlockType =
   | 'couplePortal'
   | 'paymentSchedule'
   | 'contractBody'
+  | 'proposalBody'
 
 export interface BaseBlock {
   id: string
@@ -180,6 +181,18 @@ export interface ContractBodyBlock extends BaseBlock {
   type: 'contractBody'
 }
 
+/**
+ * Marker block — the fixed proposal core (the package chooser, the
+ * chosen option's priced detail, the accept block). Its STRUCTURE +
+ * order are fixed (a chooser can't be expressed as blocks), but the
+ * MC drags chrome blocks above and below it and can retype its
+ * section labels inline. Same model as `couplePortal` /
+ * `contractBody`.
+ */
+export interface ProposalBodyBlock extends BaseBlock {
+  type: 'proposalBody'
+}
+
 export type Block =
   | HeaderBannerBlock
   | BusinessNameBlock
@@ -195,6 +208,7 @@ export type Block =
   | CouplePortalBlock
   | PaymentScheduleBlock
   | ContractBodyBlock
+  | ProposalBodyBlock
 
 export type BlocksByDoc = Record<'proposal' | 'invoice' | 'contract' | 'portal', Block[]>
 
@@ -213,6 +227,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   couplePortal: 'Couple portal',
   paymentSchedule: 'Payment schedule',
   contractBody: 'Contract body',
+  proposalBody: 'Proposal',
 }
 
 export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
@@ -230,4 +245,5 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   couplePortal: 'The couple-facing portal (fixed)',
   paymentSchedule: 'Deposit & final balance (live invoice data)',
   contractBody: 'The contract body (fixed — edited per couple)',
+  proposalBody: 'Packages, chooser and accept (fixed)',
 }

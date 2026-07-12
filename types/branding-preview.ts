@@ -8,9 +8,10 @@
  * @module types/branding-preview
  */
 
-import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
-import type { Density } from '@/lib/branding/themes'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
+import type { ProposalLabels } from '@/lib/branding/proposal-labels'
+import type { Density } from '@/lib/branding/themes'
 
 export interface BrandPreviewState {
   logoUrl: string
@@ -49,6 +50,11 @@ export interface BrandPreviewState {
     songs: boolean
     files: boolean
   }
+  /** Editable proposal section wording — drives the proposalBody block. */
+  proposalLabels?: ProposalLabels
+  /** Preview-only: show the proposalBody core with one package (no
+   *  chooser) or several (with chooser). Not persisted. */
+  proposalPreviewMode?: 'single' | 'multi'
 }
 
 export interface BrandPreviewActions {
