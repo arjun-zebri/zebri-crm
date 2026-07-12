@@ -49,6 +49,7 @@ export function TextStyleControls({
     letterSpacing: style?.letterSpacing ?? defaults.letterSpacing,
     italic: style?.italic ?? false,
     underline: style?.underline ?? false,
+    textTransform: style?.textTransform ?? defaults.textTransform ?? 'none',
   }
 
   const fontOptions: SelectOption<HeadingFont | BodyFont>[] = Array.from(
@@ -203,6 +204,27 @@ export function TextStyleControls({
             format={(v) => `${(v * 1000).toFixed(0)}`}
             onChange={(v) => onChange({ letterSpacing: v })}
           />
+          <Divider />
+          <div className="inline-flex items-center bg-gray-50 rounded-md border border-gray-200">
+            {(['none', 'uppercase', 'capitalize'] as const).map((t) => (
+              <Tooltip key={t} label={`Text ${t}`}>
+                <button
+                  type="button"
+                  onClick={() => onChange({ textTransform: t })}
+                  aria-label={`Text ${t}`}
+                  className={`px-2 py-1 text-xs transition cursor-pointer ${
+                    eff.textTransform === t
+                      ? 'bg-white text-gray-900 shadow-sm rounded-md m-0.5 font-medium'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {t === 'none' && 'None'}
+                  {t === 'uppercase' && 'UPPER'}
+                  {t === 'capitalize' && 'Title'}
+                </button>
+              </Tooltip>
+            ))}
+          </div>
         </>
       )}
     </div>
