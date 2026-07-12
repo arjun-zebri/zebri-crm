@@ -8,6 +8,7 @@ import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding
 import type { ProposalLabels } from '@/lib/branding/proposal-labels'
 import {
   THEME_PRESETS,
+  DEFAULT_THEME,
   type ThemeId,
   type ThemeIdOrCustom,
   type Density,
@@ -27,6 +28,7 @@ import { CanvasFrame } from './canvas-frame'
 import { CanvasScopeBar } from './canvas-scope-bar'
 import { EditorTopbar } from './editor-topbar'
 import { PortalSectionsBar } from './portal-preview'
+import { STARTER_DESIGNS, starterLayout } from './starter-designs'
 import { SurfaceTabs } from './surface-tabs'
 
 
@@ -350,6 +352,44 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   const resetToTheme = () => {
     if (state.themePreset !== 'custom') applyTheme(state.themePreset)
+  }
+
+  /** Apply a curated starter design: the theme's tokens PLUS a ready
+   *  block layout for every surface. Committed as one undoable step
+   *  (like applying a theme or a saved kit); themePreset becomes
+   *  'custom' because it's a bespoke tokens + layout combination. */
+  const applyStarterDesign = (id: string) => {
+    const design = STARTER_DESIGNS.find((d) => d.id === id)
+    if (!design) return
+    const p = THEME_PRESETS[design.theme] ?? DEFAULT_THEME
+    setState(
+      (prev) => ({
+        ...prev,
+        themePreset: 'custom',
+        brandColor: p.color,
+        accentColor: p.accent,
+        surfaceColor: p.surface,
+        textColor: p.text,
+        mutedColor: p.muted,
+        secondaryColor: '#FFFFFF',
+        secondaryTextColor: '#374151',
+        fontHeading: p.headingFont,
+        fontBody: p.bodyFont,
+        fontWeight: p.headingWeight,
+        fontBodyWeight: p.bodyWeight,
+        density: p.density,
+        cornerRadius: p.radius,
+        fontScale: p.scale,
+        blocks: {
+          proposal: starterLayout(design.mood, 'proposal'),
+          invoice: starterLayout(design.mood, 'invoice'),
+          contract: starterLayout(design.mood, 'contract'),
+          portal: starterLayout(design.mood, 'portal'),
+        },
+      }),
+      { commit: true },
+    )
+    toast(`Applied the "${design.name}" design`, 'success')
   }
 
   const uploadAsset = async (file: File, kind: 'logo' | 'favicon' | 'header'): Promise<string> => {
@@ -763,6 +803,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         <BrandPanel
           themePreset={state.themePreset}
           applyTheme={applyTheme}
+          applyStarterDesign={applyStarterDesign}
           resetToTheme={resetToTheme}
           brandColor={state.brandColor}
           setBrandColor={(v) => setEditor({ brandColor: v })}

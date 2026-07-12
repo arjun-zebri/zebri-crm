@@ -129,7 +129,9 @@ const ERROR_BUDGET = 75;
 // legacy managers and their stray hook-deps suppressions → 395 → 394.
 // Phase G quotes removal: cleaned up imports/exports from files that
 // previously exported quote types or references → 394 → 392.
-const WARNING_BUDGET = 342;
+// Proposal branding audit follow-ups: starter-designs work removed a
+// stale unused import in brand-panel → 342 → 341.
+const WARNING_BUDGET = 341;
 
 function runEslintJson() {
   try {

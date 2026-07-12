@@ -263,3 +263,16 @@ global-vs-per-surface split is explicit. The fixed-core helper text now
 names the sample couple / note / pricing as sample-only (the real ones
 are set in the composer), and the single/multi control is prefixed
 "Preview" so it reads as a preview toggle, not a saved setting.
+
+Two Canva-feel additions: the "Add block" palette
+(`blocks/add-block-palette.tsx`) is grouped into **Structure / Content /
+Action** categories (search + keyboard nav unchanged), and a new
+**Starter designs** section tops the brand rail
+(`app/(dashboard)/branding/starter-designs.ts` + `StarterSection` in
+`brand-panel.tsx`). A starter design applies a theme's tokens AND a
+ready block layout for every surface in one undoable step (`applyStarterDesign`
+in `branding-editor.tsx`, committed like a theme/kit). Layouts derive
+from `defaultBlocksFor(surface)` via a small typed "mood" transform
+(clean / statement / framed / editorial), so themes still flow through
+and every surface stays valid. Distinct from **Themes** (colours + fonts
+only) and saved **brand kits** (the MC's own snapshots).
