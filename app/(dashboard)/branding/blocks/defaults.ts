@@ -43,6 +43,8 @@ export function blockTemplate(type: BlockType): Block {
       return { id: newId('cb'), type: 'contractBody', locked: true }
     case 'proposalBody':
       return { id: newId('pb'), type: 'proposalBody', locked: true }
+    case 'image':
+      return { id: newId('im'), type: 'image', fit: 'cover' }
   }
 }
 

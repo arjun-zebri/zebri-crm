@@ -9,6 +9,7 @@ import { RenderBusinessName } from './public-blocks/business-name'
 import { RenderDivider } from './public-blocks/divider'
 import { RenderFooter } from './public-blocks/footer'
 import { RenderHeaderBanner } from './public-blocks/header-banner'
+import { RenderImage } from './public-blocks/image'
 import { RenderLineItems } from './public-blocks/line-items'
 import { RenderPaymentDetails } from './public-blocks/payment-details'
 import {
@@ -101,6 +102,7 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'paymentSchedule': return null
     case 'contractBody': return null
     case 'proposalBody': return null
+    case 'image': return <RenderImage block={block} branding={branding} />
   }
 }
 

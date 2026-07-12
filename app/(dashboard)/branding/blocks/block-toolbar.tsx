@@ -29,6 +29,7 @@ import type {
   DividerBlock,
   HeaderBannerBlock,
   FooterBlock,
+  ImageBlock,
 } from './types'
 
 interface BlockToolbarProps {
@@ -130,11 +131,15 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
       return <DividerControls block={block} updateBlock={updateBlock} />
     case 'footer':
       return <FooterControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+    case 'image':
+      return <ImageControls block={block} updateBlock={updateBlock} />
     case 'couplePortal':
       return null
     case 'paymentSchedule':
       return null
     case 'contractBody':
+      return null
+    case 'proposalBody':
       return null
   }
 }
@@ -939,6 +944,67 @@ function HeaderBannerControls({
       <span className="hidden lg:inline text-[11px] text-gray-400 pl-1">
         Drag to pan · ⌘+scroll to zoom · Drag edge to resize
       </span>
+    </div>
+  )
+}
+
+// ── Image ────────────────────────────────────────────────────────────────────
+
+function ImageControls({
+  block,
+  updateBlock,
+}: {
+  block: ImageBlock
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <PillToggle
+        options={[
+          { value: 'cover', label: 'Cover' },
+          { value: 'contain', label: 'Contain' },
+        ]}
+        value={block.fit ?? 'cover'}
+        onChange={(v) =>
+          updateBlock<ImageBlock>(block.id, { fit: v as 'cover' | 'contain' })
+        }
+      />
+      <Divider />
+      <Popover.Root>
+        <Tooltip label="Height">
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+            >
+              <Equal size={12} strokeWidth={1.75} />
+              {(block.heightPx ?? 240) !== 240 && (
+                <span className="font-mono text-[10px]">{block.heightPx}px</span>
+              )}
+            </button>
+          </Popover.Trigger>
+        </Tooltip>
+        <Popover.Portal>
+          <Popover.Content
+            align="center"
+            sideOffset={6}
+            className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Height</span>
+              <span className="text-xs font-mono text-gray-700 tabular-nums">{block.heightPx ?? 240}px</span>
+            </div>
+            <Slider
+              value={block.heightPx ?? 240}
+              min={60}
+              max={480}
+              step={10}
+              onChange={(v) => updateBlock<ImageBlock>(block.id, { heightPx: v })}
+              ariaLabel="Image height"
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
     </div>
   )
 }

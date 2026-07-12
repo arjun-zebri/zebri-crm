@@ -30,6 +30,7 @@ import type {
   FooterBlock,
   CouplePortalBlock,
   PaymentScheduleBlock,
+  ImageBlock,
 } from './types'
 
 function fmt(n: number) {
@@ -251,6 +252,188 @@ function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.MouseEve
       title="Drag to resize"
     >
       <div className="h-1 w-10 rounded-full bg-gray-900/60 ring-1 ring-white/80 shadow-sm" />
+    </div>
+  )
+}
+
+// ── Image ─────────────────────────────────────────────────────────────────────
+
+export function RenderImage({
+  block,
+  state,
+  updateBlock,
+  uploadImage,
+  removeImage,
+}: RenderProps<ImageBlock> & {
+  uploadImage?: (file: File, blockId: string) => Promise<void>
+  removeImage?: (blockId: string) => void | Promise<void>
+}) {
+  const heightPx = block.heightPx ?? 240
+  const fit = block.fit ?? 'cover'
+  const imageX = block.imageX ?? 50
+  const imageY = block.imageY ?? 50
+  const imageScale = block.imageScale ?? 1
+
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [panning, setPanning] = useState(false)
+  const [resizing, setResizing] = useState(false)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || !block.url) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      e.stopPropagation()
+      const delta = -e.deltaY * 0.003
+      const next = Math.max(1, Math.min(4, imageScale + delta))
+      updateBlock<ImageBlock>(block.id, { imageScale: parseFloat(next.toFixed(2)) })
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [block.url, imageScale, block.id, updateBlock])
+
+  const startPan = (e: React.MouseEvent) => {
+    if (!block.url) return
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const startX = e.clientX
+    const startY = e.clientY
+    const startImageX = imageX
+    const startImageY = imageY
+    let dragged = false
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX
+      const dy = ev.clientY - startY
+      if (!dragged && Math.abs(dx) + Math.abs(dy) < 3) return
+      dragged = true
+      setPanning(true)
+      const nextX = Math.max(0, Math.min(100, startImageX - (dx / rect.width) * 100))
+      const nextY = Math.max(0, Math.min(100, startImageY - (dy / rect.height) * 100))
+      updateBlock<ImageBlock>(block.id, {
+        imageX: Math.round(nextX),
+        imageY: Math.round(nextY),
+      })
+    }
+    const onUp = () => {
+      setPanning(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = heightPx
+    setResizing(true)
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(60, Math.min(480, startHeight + dy))
+      updateBlock<ImageBlock>(block.id, { heightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      setResizing(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  if (!block.url) {
+    return (
+      <div
+        ref={containerRef}
+        className="group relative w-full"
+        style={{ height: heightPx, borderRadius: state.cornerRadius }}
+      >
+        {uploadImage ? (
+          <InlineAsset
+            value={null}
+            onUpload={(file) => uploadImage(file, block.id)}
+            label="Upload image"
+            overlayPosition="center"
+            className="w-full h-full"
+            emptyState={
+              <div
+                className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+                style={{ borderRadius: state.cornerRadius }}
+              >
+                <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
+              </div>
+            }
+          >
+            {null}
+          </InlineAsset>
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+            style={{ borderRadius: state.cornerRadius }}
+          >
+            <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
+          </div>
+        )}
+        <ResizeHandle onMouseDown={startResize} active={resizing} />
+      </div>
+    )
+  }
+
+  const imageNode = (
+    <div
+      className="w-full h-full overflow-hidden"
+      style={{
+        borderTopLeftRadius: state.cornerRadius,
+        borderTopRightRadius: state.cornerRadius,
+      }}
+    >
+      <img
+        src={block.url}
+        alt=""
+        draggable={false}
+        onMouseDown={startPan}
+        className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
+        style={{
+          objectFit: fit,
+          objectPosition: `${imageX}% ${imageY}%`,
+          transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
+          transformOrigin: `${imageX}% ${imageY}%`,
+        }}
+      />
+    </div>
+  )
+
+  return (
+    <div
+      ref={containerRef}
+      className="group relative w-full"
+      style={{ height: heightPx }}
+    >
+      {uploadImage ? (
+        <InlineAsset
+          value={block.url}
+          onUpload={(file) => uploadImage(file, block.id)}
+          onClear={removeImage ? () => removeImage(block.id) : undefined}
+          label="Replace image"
+          className="w-full h-full"
+          emptyState={null}
+        >
+          {imageNode}
+        </InlineAsset>
+      ) : (
+        imageNode
+      )}
+      {imageScale > 1 && (
+        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
+          {Math.round(imageScale * 100)}%
+        </div>
+      )}
+      <ResizeHandle onMouseDown={startResize} active={resizing} />
     </div>
   )
 }

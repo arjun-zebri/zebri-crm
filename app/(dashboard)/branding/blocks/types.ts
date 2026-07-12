@@ -32,6 +32,7 @@ export type BlockType =
   | 'paymentSchedule'
   | 'contractBody'
   | 'proposalBody'
+  | 'image'
 
 export interface BaseBlock {
   id: string
@@ -163,6 +164,26 @@ export interface FooterBlock extends BaseBlock {
   contactStyle?: TextStyle
 }
 
+/**
+ * Image block — allows uploading and positioning an image with pan/zoom/fit controls.
+ * Each image block has a unique storage key derived from its block ID to prevent overwrites.
+ */
+export interface ImageBlock extends BaseBlock {
+  type: 'image'
+  /** Public URL of the uploaded image. */
+  url?: string
+  /** Object fit: 'cover' fills the space, 'contain' fits the whole image. Defaults to 'cover'. */
+  fit?: 'cover' | 'contain'
+  /** Horizontal position of the image within its container (0-100%). Defaults to 50. */
+  imageX?: number
+  /** Vertical position of the image within its container (0-100%). Defaults to 50. */
+  imageY?: number
+  /** Image zoom factor (1-4). Defaults to 1. Anchored at imageX/imageY. */
+  imageScale?: number
+  /** Explicit height of the image block in pixels. */
+  heightPx?: number
+}
+
 export interface CouplePortalBlock extends BaseBlock {
   type: 'couplePortal'
 }
@@ -211,6 +232,7 @@ export type Block =
   | PaymentScheduleBlock
   | ContractBodyBlock
   | ProposalBodyBlock
+  | ImageBlock
 
 export type BlocksByDoc = Record<'proposal' | 'invoice' | 'contract' | 'portal', Block[]>
 
@@ -230,6 +252,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   paymentSchedule: 'Payment schedule',
   contractBody: 'Contract body',
   proposalBody: 'Proposal',
+  image: 'Image',
 }
 
 export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
@@ -248,4 +271,5 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   paymentSchedule: 'Deposit & final balance (live invoice data)',
   contractBody: 'The contract body (fixed — edited per couple)',
   proposalBody: 'Packages, chooser and accept (fixed)',
+  image: 'An uploaded image',
 }

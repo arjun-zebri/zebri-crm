@@ -22,7 +22,7 @@ import type { Json } from '@/types/database'
 import { AddBlockPalette } from './blocks/add-block-palette'
 import { BlockRenderer } from './blocks/block-renderer'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
-import type { Block } from './blocks/types'
+import type { Block, ImageBlock } from './blocks/types'
 import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
 import { CanvasScopeBar } from './canvas-scope-bar'
@@ -539,6 +539,58 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setEditor({ headerImageUrl: '' }, false)
   }
 
+  const uploadImage = async (file: File, blockId: string) => {
+    if (file.size > 4 * 1024 * 1024) {
+      toast('Image must be under 4MB', 'error')
+      throw new Error('size')
+    }
+    const supabase = createClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not signed in')
+    const userId = session.user.id
+    const path = `${userId}/img-${blockId}`
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/branding/${path}`
+    const apikey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+    const body = await file.arrayBuffer()
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey,
+        'x-upsert': 'true',
+        'Content-Type': file.type || 'application/octet-stream',
+        'Cache-Control': 'max-age=3600',
+      },
+      body,
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      console.error('[branding image upload failed]', {
+        blockId,
+        size: file.size,
+        type: file.type,
+        fileName: file.name,
+        status: res.status,
+        respContentType: res.headers.get('content-type'),
+        respBodyPreview: text.slice(0, 800),
+      })
+      toast(`Upload failed (${res.status}): ${text.slice(0, 100) || res.statusText}`, 'error')
+      throw new Error(`Upload failed: ${res.status}`)
+    }
+    const { data } = supabase.storage.from('branding').getPublicUrl(path)
+    const imageUrl = `${data.publicUrl}?t=${Date.now()}`
+    updateBlock<ImageBlock>(blockId, { url: imageUrl })
+  }
+
+  const removeImage = async (blockId: string) => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const path = `${user.id}/img-${blockId}`
+    await supabase.storage.from('branding').remove([path])
+    updateBlock<ImageBlock>(blockId, { url: undefined })
+  }
+
   const docSurface: 'proposal' | 'invoice' | 'contract' | 'portal' = surface
 
   /** Kit block trees saved before the proposals rollout keyed the
@@ -988,6 +1040,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             removeLogo={removeLogo}
             uploadHeader={uploadHeader}
             removeHeader={removeHeader}
+            uploadImage={uploadImage}
+            removeImage={removeImage}
             onEditProposalLabel={(key, val) =>
               setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
             }

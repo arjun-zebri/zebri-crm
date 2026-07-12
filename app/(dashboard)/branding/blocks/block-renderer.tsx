@@ -41,6 +41,7 @@ import {
   RenderFooter,
   RenderPaymentSchedule,
   RenderProposalBody,
+  RenderImage,
 } from './render'
 import type { Block } from './types'
 
@@ -61,6 +62,8 @@ interface BlockRendererProps {
   removeLogo?: () => void | Promise<void>
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
+  uploadImage?: (file: File, blockId: string) => Promise<void>
+  removeImage?: (blockId: string) => void | Promise<void>
   /** Proposal surface only: edit the fixed core's section labels. */
   onEditProposalLabel?: ProposalLabelEdit
   /** Proposal surface only: toggle the single/multi package preview. */
@@ -84,6 +87,8 @@ export function BlockRenderer({
   removeLogo,
   uploadHeader,
   removeHeader,
+  uploadImage,
+  removeImage,
   onEditProposalLabel,
   setProposalPreviewMode,
 }: BlockRendererProps) {
@@ -253,6 +258,8 @@ export function BlockRenderer({
                     removeLogo,
                     uploadHeader,
                     removeHeader,
+                    uploadImage,
+                    removeImage,
                   })}
                 </BlockFrame>
               )
@@ -282,6 +289,8 @@ interface RenderExtras {
   removeLogo?: () => void | Promise<void>
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
+  uploadImage?: (file: File, blockId: string) => Promise<void>
+  removeImage?: (blockId: string) => void | Promise<void>
   onEditProposalLabel?: ProposalLabelEdit | undefined
   setProposalPreviewMode?: ((mode: 'single' | 'multi') => void) | undefined
 }
@@ -344,6 +353,16 @@ function renderBlock(
           state={state}
           onEditLabel={extras.onEditProposalLabel}
           setPreviewMode={extras.setProposalPreviewMode}
+        />
+      )
+    case 'image':
+      return (
+        <RenderImage
+          block={block}
+          state={state}
+          updateBlock={updateBlock}
+          uploadImage={extras.uploadImage}
+          removeImage={extras.removeImage}
         />
       )
   }

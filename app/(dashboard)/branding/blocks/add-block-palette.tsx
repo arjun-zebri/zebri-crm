@@ -20,6 +20,7 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   text: Pilcrow,
   action: Activity,
   divider: Minus,
+  image: Image,
   footer: PanelBottom,
 }
 
@@ -28,7 +29,7 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
 // of one long list. The flat BLOCK_ORDER + GROUP_OF derive from this so
 // search + keyboard nav stay index-based against a single ordered list.
 const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
-  { label: 'Structure', types: ['headerBanner', 'businessName', 'tagline', 'divider', 'footer'] },
+  { label: 'Structure', types: ['headerBanner', 'businessName', 'tagline', 'divider', 'image', 'footer'] },
   { label: 'Content', types: ['title', 'text', 'lineItems', 'totals', 'paymentDetails'] },
   { label: 'Action', types: ['action'] },
 ]
