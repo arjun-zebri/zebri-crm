@@ -19,19 +19,21 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   footer: PanelBottom,
 }
 
-const BLOCK_ORDER: BlockType[] = [
-  'headerBanner',
-  'businessName',
-  'tagline',
-  'title',
-  'lineItems',
-  'totals',
-  'paymentDetails',
-  'text',
-  'action',
-  'divider',
-  'footer',
+// Blocks are grouped by intent (Structure / Content / Action) so the
+// palette reads like Canva's insert menu: scannable categories instead
+// of one long list. The flat BLOCK_ORDER + GROUP_OF derive from this so
+// search + keyboard nav stay index-based against a single ordered list.
+const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
+  { label: 'Structure', types: ['headerBanner', 'businessName', 'tagline', 'divider', 'footer'] },
+  { label: 'Content', types: ['title', 'text', 'lineItems', 'totals', 'paymentDetails'] },
+  { label: 'Action', types: ['action'] },
 ]
+
+const BLOCK_ORDER: BlockType[] = BLOCK_GROUPS.flatMap((g) => g.types)
+
+const GROUP_OF: Partial<Record<BlockType, string>> = Object.fromEntries(
+  BLOCK_GROUPS.flatMap((g) => g.types.map((t) => [t, g.label] as const)),
+)
 
 interface AddBlockPaletteProps {
   open: boolean
@@ -118,27 +120,36 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger }: AddBlock
               filtered.map((type, idx) => {
                 const Icon = BLOCK_ICONS[type] ?? Type
                 const active = idx === activeIndex
+                const group = GROUP_OF[type]
+                // Header before the first item of each group present.
+                const showHeader = idx === 0 || GROUP_OF[filtered[idx - 1]!] !== group
                 return (
-                  <button
-                    key={type}
-                    type="button"
-                    onMouseEnter={() => setActiveIndex(idx)}
-                    onClick={() => {
-                      onAdd(type)
-                      onOpenChange(false)
-                    }}
-                    className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
-                      active ? 'bg-gray-100' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="w-9 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                      <Icon size={15} strokeWidth={1.75} className="text-gray-500" />
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-medium text-gray-900">{BLOCK_LABELS[type]}</span>
-                      <span className="block text-xs text-gray-500 truncate">{BLOCK_DESCRIPTIONS[type]}</span>
-                    </span>
-                  </button>
+                  <div key={type}>
+                    {showHeader && group ? (
+                      <p className="px-2.5 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                        {group}
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      onClick={() => {
+                        onAdd(type)
+                        onOpenChange(false)
+                      }}
+                      className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
+                        active ? 'bg-gray-100' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="w-9 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                        <Icon size={15} strokeWidth={1.75} className="text-gray-500" />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-medium text-gray-900">{BLOCK_LABELS[type]}</span>
+                        <span className="block text-xs text-gray-500 truncate">{BLOCK_DESCRIPTIONS[type]}</span>
+                      </span>
+                    </button>
+                  </div>
                 )
               })
             )}
