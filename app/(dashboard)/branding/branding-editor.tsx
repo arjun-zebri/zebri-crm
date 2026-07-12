@@ -842,6 +842,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             open={paletteOpen}
             onOpenChange={setPaletteOpen}
             onAdd={addBlock}
+            surface={surface}
             trigger={
               <button
                 type="button"

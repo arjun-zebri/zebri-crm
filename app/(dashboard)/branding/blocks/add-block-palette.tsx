@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+
+import type { SurfaceTab } from '@/types/branding-preview'
+
+import { blocksForSurface } from './blocks-by-surface'
 import { BLOCK_LABELS, BLOCK_DESCRIPTIONS, type BlockType } from './types'
 
 const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
@@ -40,14 +44,21 @@ interface AddBlockPaletteProps {
   onOpenChange: (open: boolean) => void
   onAdd: (type: BlockType) => void
   trigger: React.ReactNode
+  /** The surface for which blocks are being added. Controls which blocks are available. */
+  surface: SurfaceTab
 }
 
-export function AddBlockPalette({ open, onOpenChange, onAdd, trigger }: AddBlockPaletteProps) {
+export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }: AddBlockPaletteProps) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const allowedBlocks = blocksForSurface(surface)
+
   const filtered = BLOCK_ORDER.filter((type) => {
+    // First check if this block type is available for the current surface
+    if (!allowedBlocks.includes(type)) return false
+
     const q = query.toLowerCase().trim()
     if (!q) return true
     return (
