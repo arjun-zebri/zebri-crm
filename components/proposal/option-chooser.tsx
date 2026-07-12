@@ -39,15 +39,19 @@ export function ProposalOptionChooser({
   disabled,
   branding,
 }: ProposalOptionChooserProps) {
-  const { brand, textColor, mutedColor, headingFontFamily, headingWeight } = branding;
+  const { brand, accent, textColor, mutedColor, headingFontFamily, headingWeight, labels } =
+    branding;
   const radius = Math.min(branding.radius, 12);
   return (
     <div role="radiogroup" aria-label="Choose your package">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: brand }}>
-        Choose your package
+      <p
+        className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
+        style={{ color: brand }}
+      >
+        {labels.choose}
       </p>
-      <p className="mt-1 mb-4 text-sm" style={{ color: mutedColor }}>
-        Select the one that fits your day. Everything updates below.
+      <p className="mt-1 mb-4 text-[0.875em]" style={{ color: mutedColor }}>
+        {labels.chooseHint}
       </p>
       <div className="space-y-4">
         {options.map((option) => {
@@ -55,13 +59,16 @@ export function ProposalOptionChooser({
           const summary = baseItems(option)
             .map((i) => i.description)
             .join(' · ');
+          // The "most popular" highlight uses the ACCENT colour so it
+          // reads as a distinct flag, separate from the primary
+          // selection state (ring + border).
           const popular = option.is_popular;
           return (
             <div key={option.id} className="relative">
               {popular ? (
                 <span
-                  className="absolute -top-2.5 left-5 z-10 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
-                  style={{ backgroundColor: brand, color: getTextColor(brand) }}
+                  className="absolute -top-2.5 left-5 z-10 rounded-full px-3 py-1 text-[0.625em] font-semibold uppercase tracking-[0.12em]"
+                  style={{ backgroundColor: accent, color: getTextColor(accent) }}
                 >
                   Most popular
                 </span>
@@ -75,10 +82,10 @@ export function ProposalOptionChooser({
                 className="w-full border p-5 text-left transition cursor-pointer disabled:cursor-not-allowed"
                 style={{
                   borderRadius: radius,
-                  borderColor: chosen || popular ? brand : 'var(--color-border, #e5e7eb)',
+                  borderColor: chosen ? brand : popular ? accent : 'var(--color-border, #e5e7eb)',
                   boxShadow: chosen ? `0 0 0 1px ${brand}` : undefined,
                   backgroundColor: popular
-                    ? `color-mix(in srgb, ${brand} 6%, transparent)`
+                    ? `color-mix(in srgb, ${accent} 6%, transparent)`
                     : undefined,
                 }}
               >
@@ -99,7 +106,7 @@ export function ProposalOptionChooser({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-4">
                       <span
-                        className="min-w-0 text-xl"
+                        className="min-w-0 text-[1.25em]"
                         style={{
                           color: textColor,
                           fontFamily: headingFontFamily,
@@ -110,7 +117,7 @@ export function ProposalOptionChooser({
                       </span>
                       <span className="shrink-0 text-right">
                         <span
-                          className="block text-2xl tabular-nums"
+                          className="block text-[1.5em] tabular-nums"
                           style={{
                             color: textColor,
                             fontFamily: headingFontFamily,
@@ -119,18 +126,18 @@ export function ProposalOptionChooser({
                         >
                           {formatCurrency(Number(option.subtotal))}
                         </span>
-                        <span className="block text-xs" style={{ color: mutedColor }}>
+                        <span className="block text-[0.75em]" style={{ color: mutedColor }}>
                           base price
                         </span>
                       </span>
                     </div>
                     {option.description ? (
-                      <p className="mt-1 text-sm" style={{ color: mutedColor }}>
+                      <p className="mt-1 text-[0.875em]" style={{ color: mutedColor }}>
                         {option.description}
                       </p>
                     ) : null}
                     {summary ? (
-                      <p className="mt-3 text-sm" style={{ color: mutedColor }}>
+                      <p className="mt-3 text-[0.875em]" style={{ color: mutedColor }}>
                         {summary}
                       </p>
                     ) : null}

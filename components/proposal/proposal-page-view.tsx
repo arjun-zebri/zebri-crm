@@ -10,22 +10,27 @@
  * Keeping the layout in one place is what guarantees the preview, the
  * branding canvas, and the sent page can never drift apart again.
  *
- * Layout: eyebrow + expiry, the couple's names as the display
- * heading, "A proposal from {business}", hero image, the MC's note as
- * an italic lead, the option chooser (multi-option only), the chosen
- * option's priced detail, then the `actions` slot (real accept block
- * on the public page; {@link StaticAcceptCta} in previews).
+ * The full brand kit flows in: colours (primary / accent / secondary /
+ * surface / text / muted), fonts + weight, corner radius, logo,
+ * header image, business name, tagline, ABN, and the MC's editable
+ * section wording ({@link ProposalViewBranding.labels}). Text sizes
+ * are `em`-based and the root sets `font-size: {fontScale}rem`, so the
+ * Font-scale control scales every label; `docPadding` adds horizontal
+ * inset. The section ORDER and structure are fixed by design (a block
+ * tree can't express the option chooser) — only the wording + tokens
+ * are editable.
  *
  * @module components/proposal/proposal-page-view
  */
 'use client';
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { ProposalOptionChooser } from '@/components/proposal/option-chooser';
 import { ProposalSelection } from '@/components/proposal/option-selection';
 import { getTextColor } from '@/lib/branding/contrast';
 import { FONT_STACKS } from '@/lib/branding/fonts';
+import { resolveProposalLabels } from '@/lib/branding/proposal-labels';
 import type { PublicBranding } from '@/lib/branding/public-surface';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
 import {
@@ -42,13 +47,21 @@ export function viewBranding(b: PublicBranding): ProposalViewBranding {
     textColor: b.text_color || '#111827',
     mutedColor: b.muted_color || '#6B7280',
     brand: b.brand_color || '#111827',
+    accent: b.accent_color || b.brand_color || '#111827',
+    secondaryColor: b.secondary_color || '#FFFFFF',
+    secondaryTextColor: b.secondary_text_color || '#374151',
     radius: b.corner_radius ?? 16,
     headingFontFamily: FONT_STACKS[b.font_heading],
     bodyFontFamily: FONT_STACKS[b.font_body],
     headingWeight: b.font_weight ?? 600,
+    fontScale: typeof b.font_scale === 'number' ? b.font_scale : 1,
+    docPadding: typeof b.doc_padding === 'number' ? b.doc_padding : 0,
     logoUrl: b.logo_url,
     headerImageUrl: b.header_image_url,
     businessName: b.business_name ? htmlToPlainText(b.business_name) : null,
+    tagline: b.tagline ? htmlToPlainText(b.tagline) : null,
+    abn: b.abn || null,
+    labels: resolveProposalLabels(b.proposal_labels),
   };
 }
 
@@ -85,12 +98,21 @@ export function ProposalPageView({
   onToggle,
   actions,
 }: ProposalPageViewProps) {
-  const { brand, textColor, mutedColor, radius, headingFontFamily, headingWeight } = branding;
+  const { brand, textColor, mutedColor, radius, headingFontFamily, headingWeight, labels } =
+    branding;
   const interactive = state === 'active' && !!onToggle;
   const chosen = options.find((o) => o.id === chosenId) ?? null;
 
+  // Font-scale: root font-size drives every `em` text size below.
+  // docPadding: extra horizontal inset on top of the surface's base.
+  const rootStyle: CSSProperties = {
+    fontSize: `${branding.fontScale}rem`,
+    paddingLeft: branding.docPadding || undefined,
+    paddingRight: branding.docPadding || undefined,
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" style={rootStyle}>
       {/* ─── Header ─── */}
       <header>
         {branding.logoUrl ? (
@@ -104,26 +126,27 @@ export function ProposalPageView({
         ) : null}
         <div className="flex items-baseline justify-between gap-4">
           <p
-            className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+            className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
             style={{ color: brand }}
           >
-            Wedding proposal
+            {labels.eyebrow}
           </p>
           {expiresAt && state === 'active' ? (
-            <p className="shrink-0 text-xs" style={{ color: mutedColor }}>
+            <p className="shrink-0 text-[0.75em]" style={{ color: mutedColor }}>
               Expires {formatDate(expiresAt)}
             </p>
           ) : null}
         </div>
         <h1
-          className="mt-3 text-4xl leading-tight"
+          className="mt-3 text-[2.25em] leading-tight"
           style={{ color: textColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
         >
           {coupleName}
         </h1>
         {branding.businessName ? (
-          <p className="mt-2 text-sm" style={{ color: mutedColor }}>
+          <p className="mt-2 text-[0.875em]" style={{ color: mutedColor }}>
             A proposal from {branding.businessName}
+            {branding.tagline ? ` · ${branding.tagline}` : ''}
           </p>
         ) : null}
       </header>
@@ -140,13 +163,13 @@ export function ProposalPageView({
       {notes ? (
         <section>
           <p
-            className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+            className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
             style={{ color: brand }}
           >
-            A note from us
+            {labels.note}
           </p>
           <p
-            className="mt-2 text-lg italic leading-relaxed whitespace-pre-wrap"
+            className="mt-2 text-[1.125em] italic leading-relaxed whitespace-pre-wrap"
             style={{ color: textColor, fontFamily: headingFontFamily }}
           >
             {notes}
@@ -172,20 +195,22 @@ export function ProposalPageView({
           selection={selection}
           onToggle={onToggle}
           locked={!interactive}
-          heading={state === 'accepted' ? 'Chosen package' : 'Your package'}
+          heading={state === 'accepted' ? 'Chosen package' : labels.selected}
           branding={branding}
         />
       ) : options.length > 1 ? (
-        <p className="text-sm" style={{ color: mutedColor }}>
+        <p className="text-[0.875em]" style={{ color: mutedColor }}>
           Select a package above to see what&apos;s included.
         </p>
       ) : null}
 
       {actions}
 
-      <p className="text-center text-[10px]" style={{ color: mutedColor }}>
-        {proposalNumber}
-      </p>
+      {/* Footer: proposal number + optional ABN (legal detail). */}
+      <div className="space-y-0.5 text-center text-[0.625em]" style={{ color: mutedColor }}>
+        <p>{proposalNumber}</p>
+        {branding.abn ? <p>ABN {branding.abn}</p> : null}
+      </div>
     </div>
   );
 }
@@ -199,28 +224,29 @@ export function StaticAcceptCta({
   expiresAt: string | null;
   branding: ProposalViewBranding;
 }) {
+  const labels = resolveProposalLabels(branding.labels);
   return (
     <div aria-hidden>
       <div
-        className="w-full py-3.5 text-center text-[15px] font-medium"
+        className="w-full py-3.5 text-center text-[0.9375em] font-medium"
         style={{
           backgroundColor: branding.brand,
           color: getTextColor(branding.brand),
           borderRadius: Math.min(branding.radius, 14),
         }}
       >
-        Accept &amp; reserve our date
+        {labels.accept}
       </div>
       {expiresAt ? (
-        <p className="mt-2.5 text-center text-xs" style={{ color: branding.mutedColor }}>
+        <p className="mt-2.5 text-center text-[0.75em]" style={{ color: branding.mutedColor }}>
           This proposal is held for you until {formatDate(expiresAt)}
         </p>
       ) : null}
       <p
-        className="mt-4 text-center text-xs underline underline-offset-2"
+        className="mt-4 text-center text-[0.75em] underline underline-offset-2"
         style={{ color: branding.mutedColor }}
       >
-        Decline this proposal
+        {labels.decline}
       </p>
     </div>
   );

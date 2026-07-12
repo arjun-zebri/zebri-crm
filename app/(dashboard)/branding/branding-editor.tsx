@@ -1,31 +1,35 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import type { Json } from '@/types/database'
+import { useEffect, useMemo, useState } from 'react'
+
 import { useToast } from '@/components/ui/toast'
-import { useAutosave } from '@/lib/branding/use-autosave'
-import { useHistory } from '@/lib/branding/use-history'
+import { FONT_STACKS, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
+import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabels } from '@/lib/branding/proposal-labels'
+import { htmlToPlainText } from '@/lib/branding/sanitize'
 import {
   THEME_PRESETS,
   type ThemeId,
   type ThemeIdOrCustom,
   type Density,
 } from '@/lib/branding/themes'
-import { FONT_STACKS, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
-import { htmlToPlainText } from '@/lib/branding/sanitize'
-import { EditorTopbar } from './editor-topbar'
-import { BrandPanel } from './brand-panel'
-import { SurfaceTabs } from './surface-tabs'
-import { CanvasFrame } from './canvas-frame'
-import { BlockRenderer } from './blocks/block-renderer'
+import { useAutosave } from '@/lib/branding/use-autosave'
+import { useHistory } from '@/lib/branding/use-history'
+import { createClient } from '@/lib/supabase/client'
+import type { BrandPreviewState, SurfaceTab, BrandKit } from '@/types/branding-preview'
+import type { Json } from '@/types/database'
+
 import { AddBlockPalette } from './blocks/add-block-palette'
+import { BlockRenderer } from './blocks/block-renderer'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import type { Block } from './blocks/types'
-import type { BrandPreviewState, SurfaceTab, BrandKit } from '@/types/branding-preview'
+import { BrandPanel } from './brand-panel'
+import { CanvasFrame } from './canvas-frame'
+import { EditorTopbar } from './editor-topbar'
 import { PortalSectionsBar } from './portal-preview'
-import { ProposalSurfacePreview } from './proposal-preview'
+import { ProposalSurfacePreview, ProposalBrandingBar } from './proposal-preview'
+import { SurfaceTabs } from './surface-tabs'
+
 
 export interface PortalSectionSettings {
   timeline: boolean
@@ -71,6 +75,7 @@ interface BrandingEditorProps {
     brandKits: BrandKit[]
     activeKitId: string | null
     portalSections: PortalSectionSettings
+    proposalLabels: ProposalLabels
   }
 }
 
@@ -103,6 +108,7 @@ interface EditorState {
   brandKits: BrandKit[]
   activeKitId: string | null
   portalSections: PortalSectionSettings
+  proposalLabels: ProposalLabels
 }
 
 export function BrandingEditor({ initialData }: BrandingEditorProps) {
@@ -138,6 +144,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       brandKits: initialData.brandKits,
       activeKitId: initialData.activeKitId,
       portalSections: initialData.portalSections,
+      proposalLabels: initialData.proposalLabels,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -211,6 +218,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         doc_padding: value.docPadding,
         theme_preset: value.themePreset,
         active_kit_id: value.activeKitId,
+        proposal_labels: value.proposalLabels,
       },
     })
     if (error) throw error
@@ -800,22 +808,48 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             // Proposals have no block tree (the chooser can't be
             // expressed as blocks) — render the REAL page component
             // with sample data + the kit values being edited, so this
-            // canvas is exactly what couples receive.
-            <ProposalSurfacePreview
-              branding={{
-                pageBg: state.surfaceColor,
-                textColor: state.textColor,
-                mutedColor: state.mutedColor,
-                brand: state.brandColor,
-                radius: state.cornerRadius,
-                headingFontFamily: FONT_STACKS[state.fontHeading],
-                bodyFontFamily: FONT_STACKS[state.fontBody],
-                headingWeight: state.fontWeight,
-                logoUrl: state.logoUrl || null,
-                headerImageUrl: state.headerImageUrl || null,
-                businessName: state.businessName ? htmlToPlainText(state.businessName) : null,
-              }}
-            />
+            // canvas is exactly what couples receive. The bar above it
+            // carries the locked-structure note, the logo/header
+            // uploads (unreachable otherwise on this surface), and the
+            // editable section wording.
+            <>
+              <ProposalBrandingBar
+                labels={state.proposalLabels}
+                setLabel={(key, val) =>
+                  setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
+                }
+                resetLabels={() => setEditor({ proposalLabels: PROPOSAL_LABEL_DEFAULTS })}
+                logoUrl={state.logoUrl}
+                headerImageUrl={state.headerImageUrl}
+                uploadLogo={uploadLogo}
+                removeLogo={removeLogo}
+                uploadHeader={uploadHeader}
+                removeHeader={removeHeader}
+              />
+              <ProposalSurfacePreview
+                branding={{
+                  pageBg: state.surfaceColor,
+                  textColor: state.textColor,
+                  mutedColor: state.mutedColor,
+                  brand: state.brandColor,
+                  accent: state.accentColor,
+                  secondaryColor: state.secondaryColor,
+                  secondaryTextColor: state.secondaryTextColor,
+                  radius: state.cornerRadius,
+                  headingFontFamily: FONT_STACKS[state.fontHeading],
+                  bodyFontFamily: FONT_STACKS[state.fontBody],
+                  headingWeight: state.fontWeight,
+                  fontScale: state.fontScale,
+                  docPadding: state.docPadding,
+                  logoUrl: state.logoUrl || null,
+                  headerImageUrl: state.headerImageUrl || null,
+                  businessName: state.businessName ? htmlToPlainText(state.businessName) : null,
+                  tagline: state.tagline ? htmlToPlainText(state.tagline) : null,
+                  abn: state.abn || null,
+                  labels: state.proposalLabels,
+                }}
+              />
+            </>
           ) : (
           <>
           {visibleBlocks.length > 0 && (

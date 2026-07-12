@@ -207,6 +207,7 @@ export default function PublicProposalPage() {
                   radius={branding.radius}
                   textColor={branding.textColor}
                   mutedColor={branding.mutedColor}
+                  labels={branding.labels}
                 />
               ) : undefined
             }

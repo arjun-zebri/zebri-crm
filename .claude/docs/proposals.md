@@ -156,3 +156,36 @@ that runs, the running app on the remote DB has neither surface.
 Owner direction 2026-07-10: phases were built in one continuous push
 (no per-phase pause). Full plan of record:
 `~/.claude/plans/theres-too-much-white-parsed-mango.md` (2026-07-10).
+
+## One shared page component (2026-07-11)
+
+The couple-facing layout lives in `components/proposal/` —
+`proposal-page-view.tsx` (+ `option-chooser`, `option-selection`) — and
+is rendered by ALL THREE surfaces: the public page, the composer's
+Page preview (fed the MC's live branding via `useCurrentBranding`), and
+the branding editor's Proposal surface (sample data + the kit being
+edited). Pure types/helpers moved to `lib/payments/proposal-view.ts`.
+The Proposal branding surface is intentionally NOT block-editable —
+scalar kit values are what ship, so the canvas shows exactly that.
+
+## Full brand-kit control + editable wording (2026-07-12)
+
+Migration `20260713000000_proposal_branding_tokens.sql` adds
+`doc_padding` + `proposal_labels` to the `_user_branding` payload (so
+they reach the public page, not just the in-app preview). The proposal
+view now consumes the WHOLE kit: primary (eyebrows/checks/CTA/selected
+state), **accent** (the "most popular" badge + that card's tint —
+distinct from primary), **secondary + secondary-text** (the price
+summary panel surface), surface/text/muted, fonts + heading weight,
+corner radius, density, **font scale** (root `font-size: {scale}rem`;
+all proposal text is `em`-based), **doc padding** (extra horizontal
+inset), logo, header image, business name, **tagline** (appended to the
+"A proposal from …" line) and **ABN** (footer). Every visible string is
+editable via `lib/branding/proposal-labels.ts` (brand-level, stored in
+`user_metadata.proposal_labels`, resolved with defaults) — the eyebrow,
+note heading, chooser heading + hint, package heading, add-ons heading
++ hint, and the accept + decline wording. The branding editor's
+Proposal surface gets a portal-style bar (`ProposalBrandingBar`): the
+locked-structure note, logo/header uploads (unreachable elsewhere on
+that surface), and the wording editor. The section ORDER + structure
+stay fixed by design (the chooser can't be a block tree).

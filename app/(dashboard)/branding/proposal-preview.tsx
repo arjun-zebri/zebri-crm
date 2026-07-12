@@ -15,10 +15,14 @@
  */
 'use client'
 
+import { ChevronDown, ImageIcon, Info, Trash2, Upload } from 'lucide-react'
+import { useRef, useState } from 'react'
+
 import {
   ProposalPageView,
   StaticAcceptCta,
 } from '@/components/proposal/proposal-page-view'
+import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabels } from '@/lib/branding/proposal-labels'
 import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
 
 /** Fixed sample content so the canvas reads like a real send. */
@@ -88,6 +92,216 @@ export function ProposalSurfacePreview({ branding }: ProposalSurfacePreviewProps
         chosenId="sample-timeless"
         selection={SAMPLE_SELECTION}
         actions={<StaticAcceptCta expiresAt={SAMPLE_EXPIRES} branding={branding} />}
+      />
+    </div>
+  )
+}
+
+/* ─── Proposal branding bar ─────────────────────────────────────── */
+
+/** The fields the wording editor exposes, in page order. */
+const LABEL_FIELDS: { key: keyof ProposalLabels; label: string }[] = [
+  { key: 'eyebrow', label: 'Header eyebrow' },
+  { key: 'note', label: 'Note heading' },
+  { key: 'choose', label: 'Chooser heading' },
+  { key: 'chooseHint', label: 'Chooser hint' },
+  { key: 'selected', label: 'Package heading' },
+  { key: 'addOns', label: 'Add-ons heading' },
+  { key: 'addOnsHint', label: 'Add-ons hint' },
+  { key: 'accept', label: 'Accept button' },
+  { key: 'decline', label: 'Decline link' },
+]
+
+export interface ProposalBrandingBarProps {
+  labels: ProposalLabels
+  setLabel: (key: keyof ProposalLabels, value: string) => void
+  resetLabels: () => void
+  logoUrl: string
+  headerImageUrl: string
+  uploadLogo: (file: File) => Promise<void>
+  removeLogo: () => void
+  uploadHeader: (file: File) => Promise<void>
+  removeHeader: () => void
+}
+
+/**
+ * Controls that sit above the proposal canvas (mirrors the portal's
+ * `PortalSectionsBar`): the locked-structure note, the logo + header
+ * uploads (unreachable elsewhere on this surface), and the editable
+ * section wording.
+ */
+export function ProposalBrandingBar({
+  labels,
+  setLabel,
+  resetLabels,
+  logoUrl,
+  headerImageUrl,
+  uploadLogo,
+  removeLogo,
+  uploadHeader,
+  removeHeader,
+}: ProposalBrandingBarProps) {
+  const [wordingOpen, setWordingOpen] = useState(false)
+  const customised = LABEL_FIELDS.some(
+    (f) => labels[f.key].trim() && labels[f.key] !== PROPOSAL_LABEL_DEFAULTS[f.key],
+  )
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-3 mb-3">
+      <div className="flex items-start gap-2.5">
+        <span className="w-6 h-6 rounded-md bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+          <Info size={12} strokeWidth={1.75} className="text-amber-600" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] font-medium text-gray-900">Proposal layout</p>
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            The structure and section order are fixed so couples always know how to accept. Your
+            colours, fonts, logo, banner and the wording below flow into it.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-end gap-3">
+        <UploadTile label="Logo" hint="PNG · 1MB" url={logoUrl} onUpload={uploadLogo} onRemove={removeLogo} accept="image/png,image/jpeg,image/svg+xml,image/webp" />
+        <UploadTile label="Banner" hint="Wide image" url={headerImageUrl} onUpload={uploadHeader} onRemove={removeHeader} accept="image/png,image/jpeg,image/webp" wide />
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={() => setWordingOpen((o) => !o)}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 text-gray-700 text-xs font-medium cursor-pointer transition"
+        >
+          Wording
+          <ChevronDown size={12} strokeWidth={2} className={`text-gray-400 transition-transform ${wordingOpen ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
+      {wordingOpen && (
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-[0.06em]">Section wording</p>
+            {customised && (
+              <button
+                type="button"
+                onClick={resetLabels}
+                className="text-[11px] text-gray-400 hover:text-gray-700 cursor-pointer transition"
+              >
+                Reset to defaults
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {LABEL_FIELDS.map((f) => (
+              <label key={f.key} className="block">
+                <span className="text-[10px] text-gray-400 uppercase tracking-[0.06em] mb-1 block">{f.label}</span>
+                <input
+                  type="text"
+                  value={labels[f.key]}
+                  onChange={(e) => setLabel(f.key, e.target.value)}
+                  placeholder={PROPOSAL_LABEL_DEFAULTS[f.key]}
+                  className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-[13px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 transition"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Compact upload tile for the bar (logo / banner). */
+function UploadTile({
+  label,
+  hint,
+  url,
+  onUpload,
+  onRemove,
+  accept,
+  wide,
+}: {
+  label: string
+  hint: string
+  url: string
+  onUpload: (file: File) => Promise<void>
+  onRemove: () => void
+  accept: string
+  wide?: boolean
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [hovering, setHovering] = useState(false)
+  const filled = !!url
+
+  const onFile = async (f: File) => {
+    setUploading(true)
+    try {
+      await onUpload(f)
+    } catch {
+      /* toast upstream */
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-1" onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            inputRef.current?.click()
+          }
+        }}
+        aria-label={filled ? `Replace ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
+        className={`relative ${wide ? 'w-28' : 'w-16'} h-12 rounded-lg bg-gray-50 border border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:border-gray-900 transition ${
+          filled ? 'border-gray-200 hover:border-gray-300' : 'border-gray-300 hover:border-gray-400'
+        }`}
+      >
+        {filled ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="" className="max-w-[80%] max-h-[80%] object-contain pointer-events-none" />
+        ) : uploading ? (
+          <span className="text-[9px] text-gray-400 pointer-events-none">Uploading…</span>
+        ) : (
+          <ImageIcon size={16} strokeWidth={1.25} className="text-gray-400 pointer-events-none opacity-50" />
+        )}
+        {filled && hovering && (
+          <span className="absolute inset-0 bg-gray-900/40 flex items-center justify-center pointer-events-none">
+            <Upload size={12} strokeWidth={2} className="text-white" />
+          </span>
+        )}
+        {filled && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
+            aria-label={`Delete ${label.toLowerCase()}`}
+            className={`absolute top-0.5 right-0.5 inline-flex items-center justify-center w-5 h-5 rounded bg-white/95 border border-gray-200 text-gray-500 hover:text-gray-900 shadow-sm cursor-pointer transition ${
+              hovering ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <Trash2 size={10} strokeWidth={1.75} />
+          </button>
+        )}
+      </div>
+      <p className="text-[9px] font-medium text-gray-500 uppercase tracking-[0.06em]">
+        {label} <span className="font-normal text-gray-400 normal-case">{hint}</span>
+      </p>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) onFile(f)
+          if (inputRef.current) inputRef.current.value = ''
+        }}
       />
     </div>
   )

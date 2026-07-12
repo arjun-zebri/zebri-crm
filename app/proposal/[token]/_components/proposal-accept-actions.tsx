@@ -16,6 +16,7 @@
 import { useState } from 'react';
 
 import { getTextColor } from '@/lib/branding/contrast';
+import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabels } from '@/lib/branding/proposal-labels';
 
 import { formatDate } from './public-proposal';
 
@@ -32,6 +33,8 @@ export interface ProposalAcceptActionsProps {
   radius: number;
   textColor: string;
   mutedColor: string;
+  /** The MC's editable accept/decline wording. */
+  labels?: ProposalLabels;
 }
 
 export function ProposalAcceptActions({
@@ -46,6 +49,7 @@ export function ProposalAcceptActions({
   radius,
   textColor,
   mutedColor,
+  labels = PROPOSAL_LABEL_DEFAULTS,
 }: ProposalAcceptActionsProps) {
   const [confirming, setConfirming] = useState(false);
   const canAccept = !!chosenOptionTitle;
@@ -102,7 +106,7 @@ export function ProposalAcceptActions({
             style={{ backgroundColor: brand, color: getTextColor(brand), borderRadius: buttonRadius }}
             className="w-full py-3.5 text-[15px] font-medium hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Accept &amp; reserve our date
+            {labels.accept}
           </button>
           {expiresAt ? (
             <p className="mt-2.5 text-center text-xs" style={{ color: mutedColor }}>
@@ -117,7 +121,7 @@ export function ProposalAcceptActions({
               style={{ color: mutedColor }}
               className="text-xs underline underline-offset-2 hover:opacity-80 transition cursor-pointer disabled:opacity-50"
             >
-              Decline this proposal
+              {labels.decline}
             </button>
           </div>
         </div>

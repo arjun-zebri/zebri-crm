@@ -18,6 +18,7 @@ import {
   type FontWeight,
   type HeadingFont,
 } from './fonts'
+import { resolveProposalLabels, type ProposalLabels } from './proposal-labels'
 import type { Density } from './themes'
 import { THEME_PRESETS } from './themes'
 
@@ -53,6 +54,11 @@ export interface PublicBranding {
   font_scale: number
   density: Density
   corner_radius: number
+  /** Extra horizontal inset (px) the MC adds on top of the surface's
+   *  base padding — 0 leaves the standard inset. */
+  doc_padding: number
+  /** Editable proposal section wording (resolved with defaults). */
+  proposal_labels: ProposalLabels
   theme_preset: string
   /** Email shell: render the logo/wordmark header. */
   email_show_logo: boolean
@@ -89,6 +95,8 @@ export interface UserMetadata {
   font_scale?: number
   density?: Density
   corner_radius?: number
+  doc_padding?: number
+  proposal_labels?: Partial<ProposalLabels>
   theme_preset?: string
   bank_account_name?: string
   bank_bsb?: string
@@ -151,6 +159,8 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
     density: metadata.density ?? fallback.density,
     corner_radius:
       typeof metadata.corner_radius === 'number' ? metadata.corner_radius : fallback.radius,
+    doc_padding: typeof metadata.doc_padding === 'number' ? metadata.doc_padding : 0,
+    proposal_labels: resolveProposalLabels(metadata.proposal_labels),
     theme_preset: themeId,
     // Email-shell appearance (editable from the template editor's
     // preview). Defaults keep the branded look on.

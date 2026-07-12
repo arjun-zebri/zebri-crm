@@ -736,7 +736,7 @@ Cross-references: `invoices.proposal_id` and `contracts.proposal_id`
 provenance for documents generated from an accepted proposal.
 
 Public RPCs (SECURITY DEFINER, anon): `get_public_proposal(token)`
-(payload + `_user_branding` merge; no user_id/share_token leakage),
+(payload + `_user_branding` merge; no user_id/share_token leakage), `_user_branding` also returns `doc_padding` + `proposal_labels` (editable proposal wording) as of `20260713000000_proposal_branding_tokens.sql`,
 `accept_proposal(token, chosen_option_id, addon_selection)` (validates
 the choice against this proposal's own options/add-ons, records the
 selection, recomputes subtotal, advances couple to 'confirmed', creates

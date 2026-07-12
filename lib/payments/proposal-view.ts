@@ -14,6 +14,7 @@
  *
  * @module lib/payments/proposal-view
  */
+import type { ProposalLabels } from '@/lib/branding/proposal-labels';
 import type { PublicBranding } from '@/lib/branding/public-surface';
 import { isPastDue } from '@/lib/utils';
 
@@ -122,12 +123,25 @@ export interface ProposalViewBranding {
   textColor: string;
   mutedColor: string;
   brand: string;
+  /** Secondary highlight — the "most popular" badge + that card's tint. */
+  accent: string;
+  /** Surface + text for the price summary panel. */
+  secondaryColor: string;
+  secondaryTextColor: string;
   radius: number;
   headingFontFamily: string | undefined;
   bodyFontFamily: string | undefined;
   headingWeight: number;
+  /** Multiplies every text size on the page (0.85–1.2). */
+  fontScale: number;
+  /** Extra horizontal inset (px) on top of the surface's base padding. */
+  docPadding: number;
   logoUrl: string | null;
   headerImageUrl: string | null;
   /** Plain text (public payloads may carry HTML — strip before passing). */
   businessName: string | null;
+  tagline: string | null;
+  abn: string | null;
+  /** Editable section wording (resolved with defaults). */
+  labels: ProposalLabels;
 }

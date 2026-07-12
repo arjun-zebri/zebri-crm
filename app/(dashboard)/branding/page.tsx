@@ -1,13 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { BrandingEditor } from './branding-editor'
-import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
-import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
+
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
-import type { Block } from './blocks/types'
+import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
+import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
+import { createClient } from '@/lib/supabase/client'
 import type { BrandKit } from '@/types/branding-preview'
+
+import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
+import type { Block } from './blocks/types'
+import { BrandingEditor } from './branding-editor'
 
 interface UserMetadata {
   display_name?: string
@@ -37,6 +40,7 @@ interface UserMetadata {
   density?: Density
   corner_radius?: number
   doc_padding?: number
+  proposal_labels?: Record<string, string>
   theme_preset?: ThemeIdOrCustom
   brand_kit_name?: string
   active_kit_id?: string | null
@@ -211,6 +215,7 @@ export default function BrandingPage() {
           files: portalSrc.files ?? true,
           vows: portalSrc.vows ?? true,
         },
+        proposalLabels: resolveProposalLabels(metadata?.proposal_labels),
       }}
     />
   )
