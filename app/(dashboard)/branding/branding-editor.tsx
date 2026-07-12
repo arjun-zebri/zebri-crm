@@ -907,6 +907,18 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setCornerRadius={(v) => setEditor({ cornerRadius: v })}
           docPadding={state.docPadding}
           setDocPadding={(v) => setEditor({ docPadding: v })}
+          linkColor={state.linkColor}
+          setLinkColor={(v) => setEditor({ linkColor: v })}
+          buttonVariant={state.buttonVariant}
+          setButtonVariant={(v) => setEditor({ buttonVariant: v })}
+          buttonSize={state.buttonSize}
+          setButtonSize={(v) => setEditor({ buttonSize: v })}
+          buttonRadius={state.buttonRadius}
+          setButtonRadius={(v) => setEditor({ buttonRadius: v })}
+          sectionSpacing={state.sectionSpacing}
+          setSectionSpacing={(v) => setEditor({ sectionSpacing: v })}
+          pageBackground={state.pageBackground}
+          setPageBackground={(v) => setEditor({ pageBackground: v })}
           faviconUrl={state.faviconUrl}
           uploadFavicon={uploadFavicon}
           removeFavicon={removeFavicon}

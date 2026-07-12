@@ -3,7 +3,7 @@
 import * as Popover from '@radix-ui/react-popover'
 import {
   ChevronDown, Check, RotateCcw, Paintbrush, Type as TypeIcon,
-  Layout, Sparkles, Globe, LayoutTemplate,
+  Layout, Globe, LayoutTemplate,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -23,7 +23,6 @@ import {
 import {
   THEME_PRESETS,
   DEFAULT_THEME,
-  THEME_IDS,
   COLOR_PALETTE,
   ACCENT_PALETTE,
   SURFACE_PALETTE,
@@ -90,6 +89,19 @@ interface BrandPanelProps {
   docPadding: number
   setDocPadding: (v: number) => void
 
+  linkColor: string
+  setLinkColor: (v: string) => void
+  buttonVariant: 'fill' | 'outline'
+  setButtonVariant: (v: 'fill' | 'outline') => void
+  buttonSize: 'sm' | 'md' | 'lg'
+  setButtonSize: (v: 'sm' | 'md' | 'lg') => void
+  buttonRadius: number
+  setButtonRadius: (v: number) => void
+  sectionSpacing: number
+  setSectionSpacing: (v: number) => void
+  pageBackground: string
+  setPageBackground: (v: string) => void
+
   faviconUrl: string
   uploadFavicon: (file: File) => Promise<void>
   removeFavicon: () => void
@@ -112,16 +124,15 @@ interface BrandPanelProps {
 
 }
 
-type SectionId = 'business' | 'starters' | 'themes' | 'colors' | 'fonts' | 'layout'
+type SectionId = 'business' | 'starters' | 'colors' | 'fonts' | 'globalStyles'
 
 export function BrandPanel(props: BrandPanelProps) {
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
     business: true,
     starters: false,
-    themes: false,
     colors: false,
     fonts: false,
-    layout: false,
+    globalStyles: false,
   })
 
   const toggle = (id: SectionId) => setOpen((p) => ({ ...p, [id]: !p[id] }))
@@ -189,16 +200,6 @@ export function BrandPanel(props: BrandPanelProps) {
         </Accordion>
 
         <Accordion
-          icon={<Sparkles size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Themes"
-          subtitle="Colours & fonts only"
-          open={open.themes}
-          onToggle={() => toggle('themes')}
-        >
-          <ThemeSection {...props} />
-        </Accordion>
-
-        <Accordion
           icon={<Paintbrush size={13} strokeWidth={1.75} className="text-gray-500" />}
           title="Brand colours"
           subtitle="Primary, accent, surface…"
@@ -220,12 +221,12 @@ export function BrandPanel(props: BrandPanelProps) {
 
         <Accordion
           icon={<Layout size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Layout"
-          subtitle="Density and corners"
-          open={open.layout}
-          onToggle={() => toggle('layout')}
+          title="Global styles"
+          subtitle="Radius, links, buttons, spacing"
+          open={open.globalStyles}
+          onToggle={() => toggle('globalStyles')}
         >
-          <LayoutSection {...props} />
+          <GlobalStylesSection {...props} />
         </Accordion>
       </div>
     </aside>
@@ -304,65 +305,6 @@ function StarterSection({ applyStarterDesign }: BrandPanelProps) {
                 <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: p.surface }} />
               </div>
             </div>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── Themes ────────────────────────────────────────────────────────────────────
-
-function ThemeSection({ themePreset, applyTheme }: BrandPanelProps) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {THEME_IDS.map((id) => {
-        const preset = THEME_PRESETS[id]
-        const active = themePreset === id
-        return (
-          <button
-            key={id}
-            type="button"
-            onClick={() => applyTheme(id)}
-            className={`relative rounded-xl border overflow-hidden text-left transition cursor-pointer ${
-              active ? 'border-gray-900' : 'border-gray-200 hover:border-gray-300'
-            }`}
-            style={{ background: preset.surface }}
-            title={preset.name}
-          >
-            <div className="p-3 pb-2 min-h-[96px] flex flex-col gap-1.5">
-              <div
-                className="h-1 w-8 rounded-full"
-                style={{ background: preset.color }}
-              />
-              <p
-                className="text-[14px] leading-tight"
-                style={{
-                  fontFamily: FONT_STACKS[preset.headingFont],
-                  fontWeight: preset.headingWeight,
-                  color: preset.text,
-                  letterSpacing: -0.005,
-                }}
-              >
-                Aa
-              </p>
-              <p
-                className="text-[10px] leading-tight"
-                style={{ fontFamily: FONT_STACKS[preset.bodyFont], color: preset.muted }}
-              >
-                {preset.name}
-              </p>
-              <div className="flex items-center gap-0.5 mt-auto">
-                <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: preset.color }} />
-                <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: preset.accent }} />
-                <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: preset.surface }} />
-              </div>
-            </div>
-            {active && (
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-gray-900 text-white flex items-center justify-center">
-                <Check size={10} strokeWidth={2.5} />
-              </span>
-            )}
           </button>
         )
       })}
@@ -680,53 +622,137 @@ function FontPicker<V extends HeadingFont | BodyFont>({
   )
 }
 
-// ── Layout ────────────────────────────────────────────────────────────────────
+// ── Global Styles ────────────────────────────────────────────────────────────
 
-function LayoutSection({
-  density,
-  setDensity,
+function GlobalStylesSection({
   cornerRadius,
   setCornerRadius,
   docPadding,
   setDocPadding,
+  linkColor,
+  setLinkColor,
+  buttonVariant,
+  setButtonVariant,
+  buttonSize,
+  setButtonSize,
+  buttonRadius,
+  setButtonRadius,
+  sectionSpacing,
+  setSectionSpacing,
+  pageBackground,
+  setPageBackground,
 }: BrandPanelProps) {
-  const densities: { id: Density; label: string }[] = [
-    { id: 'compact', label: 'Compact' },
-    { id: 'cozy',    label: 'Cozy' },
-    { id: 'roomy',   label: 'Roomy' },
-  ]
   return (
     <div className="space-y-4">
-      <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1.5">Density</p>
-        <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
-          {densities.map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => setDensity(d.id)}
-              className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
-                density === d.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Padding</span>
-          <span className="text-xs font-mono text-gray-700 tabular-nums">{docPadding}px</span>
-        </div>
-        <Slider value={docPadding} min={0} max={48} step={1} onChange={setDocPadding} ariaLabel="Document padding" />
-      </div>
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Corner radius</span>
           <span className="text-xs font-mono text-gray-700 tabular-nums">{cornerRadius}px</span>
         </div>
         <Slider value={cornerRadius} min={0} max={24} step={1} onChange={setCornerRadius} ariaLabel="Corner radius" />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Document padding</span>
+          <span className="text-xs font-mono text-gray-700 tabular-nums">{docPadding}px</span>
+        </div>
+        <Slider value={docPadding} min={0} max={48} step={1} onChange={setDocPadding} ariaLabel="Document padding" />
+      </div>
+
+      <div>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Link colour</p>
+        <div className="flex items-center gap-2">
+          <ColorPopover
+            value={linkColor}
+            onChange={setLinkColor}
+            trigger={
+              <button
+                type="button"
+                className="w-9 h-9 rounded-lg ring-1 ring-black/10 cursor-pointer shrink-0 hover:ring-black/20 transition"
+                style={{ background: linkColor }}
+                aria-label="Link colour"
+                title={linkColor}
+              />
+            }
+          />
+          <p className="text-xs font-mono text-gray-700 flex-1 truncate">{linkColor}</p>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Button style</p>
+        <div className="space-y-2">
+          <div>
+            <p className="text-[10px] text-gray-500 mb-1.5">Variant</p>
+            <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+              {(['fill', 'outline'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setButtonVariant(v)}
+                  className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+                    buttonVariant === v ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {v === 'fill' ? 'Filled' : 'Outline'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] text-gray-500 mb-1.5">Size</p>
+            <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+              {(['sm', 'md', 'lg'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setButtonSize(s)}
+                  className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+                    buttonSize === s ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {s === 'sm' ? 'Small' : s === 'md' ? 'Medium' : 'Large'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-gray-500">Radius</span>
+              <span className="text-[9px] font-mono text-gray-700">{buttonRadius}px</span>
+            </div>
+            <Slider value={buttonRadius} min={0} max={16} step={1} onChange={setButtonRadius} ariaLabel="Button radius" />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Section spacing</span>
+          <span className="text-xs font-mono text-gray-700 tabular-nums">{sectionSpacing}px</span>
+        </div>
+        <Slider value={sectionSpacing} min={8} max={64} step={2} onChange={setSectionSpacing} ariaLabel="Section spacing" />
+      </div>
+
+      <div>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Page background</p>
+        <div className="flex items-center gap-2">
+          <ColorPopover
+            value={pageBackground}
+            onChange={setPageBackground}
+            trigger={
+              <button
+                type="button"
+                className="w-9 h-9 rounded-lg ring-1 ring-black/10 cursor-pointer shrink-0 hover:ring-black/20 transition"
+                style={{ background: pageBackground }}
+                aria-label="Page background colour"
+                title={pageBackground}
+              />
+            }
+          />
+          <p className="text-xs font-mono text-gray-700 flex-1 truncate">{pageBackground}</p>
+        </div>
       </div>
     </div>
   )
