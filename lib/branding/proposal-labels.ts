@@ -1,3 +1,6 @@
+// eslint-disable-next-line no-restricted-imports
+import type { TextStyle } from '@/app/(dashboard)/branding/blocks/types'
+
 /**
  * Editable copy for the proposal surface.
  *
@@ -17,56 +20,89 @@
  * @module lib/branding/proposal-labels
  */
 
-/** The editable strings on a proposal. Keys mirror the page sections. */
-export interface ProposalLabels {
-  /** Small eyebrow above the couple's names. */
-  eyebrow: string
-  /** Heading above the MC's personal note. */
-  note: string
-  /** Heading above the package chooser (multi-option only). */
-  choose: string
-  /** Helper line under the chooser heading. */
-  chooseHint: string
-  /** Heading above the chosen option's inclusions. */
-  selected: string
-  /** Heading above the optional add-on cards. */
-  addOns: string
-  /** Helper line under the add-ons heading. */
-  addOnsHint: string
-  /** The primary accept button. */
-  accept: string
-  /** The quiet decline link. */
-  decline: string
+/**
+ * A proposal label with optional styling.
+ *
+ * The text field is always required; style is optional and merges
+ * with the role's default text style when resolved for rendering.
+ */
+export interface StyledLabel {
+  /** The displayed text. */
+  text: string
+  /** Optional style overrides. */
+  style?: TextStyle
 }
 
-/** Commit one edited label. Present only on the branding canvas;
- *  omitted everywhere the proposal renders read-only. */
-export type ProposalLabelEdit = (key: keyof ProposalLabels, value: string) => void
+/** The editable labels on a proposal. Each label includes text and optional style. Keys mirror the page sections. */
+export interface ProposalLabels {
+  /** Small eyebrow above the couple's names. */
+  eyebrow: StyledLabel
+  /** Heading above the MC's personal note. */
+  note: StyledLabel
+  /** Heading above the package chooser (multi-option only). */
+  choose: StyledLabel
+  /** Helper line under the chooser heading. */
+  chooseHint: StyledLabel
+  /** Heading above the chosen option's inclusions. */
+  selected: StyledLabel
+  /** Heading above the optional add-on cards. */
+  addOns: StyledLabel
+  /** Helper line under the add-ons heading. */
+  addOnsHint: StyledLabel
+  /** The primary accept button. */
+  accept: StyledLabel
+  /** The quiet decline link. */
+  decline: StyledLabel
+}
+
+/** Commit one edited label's text and optional style. Present only on the branding canvas; omitted everywhere the proposal renders read-only. */
+export type ProposalLabelEdit = (key: keyof ProposalLabels, text: string, style?: TextStyle) => void
 
 export const PROPOSAL_LABEL_DEFAULTS: ProposalLabels = {
-  eyebrow: 'Wedding proposal',
-  note: 'A note from us',
-  choose: 'Choose your package',
-  chooseHint: 'Select the one that fits your day. Everything updates below.',
-  selected: 'Your package',
-  addOns: 'Add to your day',
-  addOnsHint: 'Tap to include. Your total updates instantly.',
-  accept: 'Accept & reserve our date',
-  decline: 'Decline this proposal',
+  eyebrow: { text: 'Wedding proposal' },
+  note: { text: 'A note from us' },
+  choose: { text: 'Choose your package' },
+  chooseHint: { text: 'Select the one that fits your day. Everything updates below.' },
+  selected: { text: 'Your package' },
+  addOns: { text: 'Add to your day' },
+  addOnsHint: { text: 'Tap to include. Your total updates instantly.' },
+  accept: { text: 'Accept & reserve our date' },
+  decline: { text: 'Decline this proposal' },
 }
 
 /**
- * Resolve a partial/unknown labels object (e.g. from the JSONB
- * payload) into a complete {@link ProposalLabels}, filling blanks +
- * missing keys from the defaults. Whitespace-only overrides fall back
- * too, so a cleared field never renders empty.
+ * Resolve a partial/unknown labels object (e.g. from the JSONB payload)
+ * into a complete {@link ProposalLabels}, filling blanks and missing
+ * keys from the defaults. Accepts both the legacy string form
+ * (`Record<key, string>`) and the new styled form (`Record<key, {text, style?}>`).
+ * Whitespace-only text overrides fall back to the default too, so a
+ * cleared field never renders empty.
  */
 export function resolveProposalLabels(raw: unknown): ProposalLabels {
   const src = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  const pick = (key: keyof ProposalLabels): string => {
+
+  const pick = (key: keyof ProposalLabels): StyledLabel => {
     const v = src[key]
-    return typeof v === 'string' && v.trim() ? v : PROPOSAL_LABEL_DEFAULTS[key]
+
+    // Handle new styled form: {text, style?}
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      const obj = v as Record<string, unknown>
+      const text = typeof obj.text === 'string' && obj.text.trim() ? obj.text : PROPOSAL_LABEL_DEFAULTS[key].text
+      const style = obj.style && typeof obj.style === 'object' ? (obj.style as TextStyle) : undefined
+      const result: StyledLabel = { text }
+      if (style) result.style = style
+      return result
+    }
+
+    // Handle legacy string form
+    if (typeof v === 'string' && v.trim()) {
+      return { text: v }
+    }
+
+    // Fall back to default
+    return { ...PROPOSAL_LABEL_DEFAULTS[key] }
   }
+
   return {
     eyebrow: pick('eyebrow'),
     note: pick('note'),

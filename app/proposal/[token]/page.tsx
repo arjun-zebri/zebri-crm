@@ -159,8 +159,8 @@ export default function PublicProposalPage() {
         mutedColor={branding.mutedColor}
         labels={{
           ...branding.labels,
-          accept: style.primaryLabel || branding.labels.accept,
-          decline: style.secondaryLabel || branding.labels.decline,
+          accept: style.primaryLabel ? { text: style.primaryLabel } : branding.labels.accept,
+          decline: style.secondaryLabel ? { text: style.secondaryLabel } : branding.labels.decline,
         }}
       />
     ) : null;

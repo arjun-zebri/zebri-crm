@@ -106,7 +106,7 @@ export function ProposalAcceptActions({
             style={{ backgroundColor: brand, color: getTextColor(brand), borderRadius: buttonRadius }}
             className="w-full py-3.5 text-[15px] font-medium hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {labels.accept}
+            {labels.accept.text}
           </button>
           {expiresAt ? (
             <p className="mt-2.5 text-center text-xs" style={{ color: mutedColor }}>
@@ -121,7 +121,7 @@ export function ProposalAcceptActions({
               style={{ color: mutedColor }}
               className="text-xs underline underline-offset-2 hover:opacity-80 transition cursor-pointer disabled:opacity-50"
             >
-              {labels.decline}
+              {labels.decline.text}
             </button>
           </div>
         </div>

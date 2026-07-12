@@ -24,7 +24,9 @@ type LabelElement = 'span' | 'p' | 'div';
 
 export interface EditableLabelProps {
   value: string;
-  /** Omit for read-only plain text; provide to make it editable. */
+  /** Omit for read-only plain text; provide to make it editable.
+   *  Receives the edited text; style support is present but UI for
+   *  editing it is added in later tasks. */
   onCommit?: ((value: string) => void) | undefined;
   /** Shown faintly while empty (the default wording). */
   placeholder?: string;

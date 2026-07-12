@@ -26,6 +26,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
 import { EditableLabel } from '@/components/proposal/editable-label';
 import { ProposalOptionChooser } from '@/components/proposal/option-chooser';
 import { ProposalSelection } from '@/components/proposal/option-selection';
@@ -148,11 +149,22 @@ export function ProposalPageView({
         <div className="flex items-baseline justify-between gap-4">
           <EditableLabel
             as="p"
-            value={labels.eyebrow}
+            value={labels.eyebrow.text}
             onCommit={onEditLabel && ((v) => onEditLabel('eyebrow', v))}
-            placeholder={PROPOSAL_LABEL_DEFAULTS.eyebrow}
+            placeholder={PROPOSAL_LABEL_DEFAULTS.eyebrow.text}
             className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
-            style={{ color: brand }}
+            style={{
+              color: brand,
+              ...resolveTextStyle(labels.eyebrow.style, {
+                fontFamily: 'work_sans',
+                fontSize: 11,
+                fontWeight: 600,
+                color: brand,
+                align: 'left',
+                lineHeight: 1.4,
+                letterSpacing: 0.18,
+              }),
+            }}
           />
           {expiresAt && state === 'active' ? (
             <p className="shrink-0 text-[0.75em]" style={{ color: mutedColor }}>
@@ -187,11 +199,22 @@ export function ProposalPageView({
         <section>
           <EditableLabel
             as="p"
-            value={labels.note}
+            value={labels.note.text}
             onCommit={onEditLabel && ((v) => onEditLabel('note', v))}
-            placeholder={PROPOSAL_LABEL_DEFAULTS.note}
+            placeholder={PROPOSAL_LABEL_DEFAULTS.note.text}
             className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
-            style={{ color: brand }}
+            style={{
+              color: brand,
+              ...resolveTextStyle(labels.note.style, {
+                fontFamily: 'work_sans',
+                fontSize: 11,
+                fontWeight: 600,
+                color: brand,
+                align: 'left',
+                lineHeight: 1.4,
+                letterSpacing: 0.18,
+              }),
+            }}
           />
           <p
             className="mt-2 text-[1.125em] italic leading-relaxed whitespace-pre-wrap"
@@ -221,7 +244,8 @@ export function ProposalPageView({
           selection={selection}
           onToggle={onToggle}
           locked={!interactive}
-          heading={state === 'accepted' ? 'Chosen package' : labels.selected}
+          heading={state === 'accepted' ? 'Chosen package' : labels.selected.text}
+          headingLabel={state === 'accepted' ? null : labels.selected}
           headingKey={state === 'accepted' ? null : 'selected'}
           branding={branding}
           onEditLabel={onEditLabel}
@@ -268,20 +292,29 @@ export function StaticAcceptCta({
   const labels = resolveProposalLabels(branding.labels);
   const buttonColor = style?.color ?? branding.brand;
   const buttonRadius = Math.min(style?.radius ?? branding.radius, 14);
-  const acceptLabel = style?.primaryLabel || labels.accept;
-  const declineLabel = style?.secondaryLabel || labels.decline;
+  const acceptLabel = style?.primaryLabel || labels.accept.text;
+  const declineLabel = style?.secondaryLabel || labels.decline.text;
   return (
     <div>
       <EditableLabel
         as="div"
         value={acceptLabel}
         onCommit={onEditLabel && ((v) => onEditLabel('accept', v))}
-        placeholder={PROPOSAL_LABEL_DEFAULTS.accept}
+        placeholder={PROPOSAL_LABEL_DEFAULTS.accept.text}
         className="w-full py-3.5 text-center text-[0.9375em] font-medium"
         style={{
           backgroundColor: buttonColor,
           color: getTextColor(buttonColor),
           borderRadius: buttonRadius,
+          ...resolveTextStyle(labels.accept.style, {
+            fontFamily: 'work_sans',
+            fontSize: 15,
+            fontWeight: 500,
+            color: getTextColor(buttonColor),
+            align: 'center',
+            lineHeight: 1.4,
+            letterSpacing: 0,
+          }),
         }}
       />
       {expiresAt ? (
@@ -293,9 +326,20 @@ export function StaticAcceptCta({
         <EditableLabel
           value={declineLabel}
           onCommit={onEditLabel && ((v) => onEditLabel('decline', v))}
-          placeholder={PROPOSAL_LABEL_DEFAULTS.decline}
+          placeholder={PROPOSAL_LABEL_DEFAULTS.decline.text}
           className="text-[0.75em] underline underline-offset-2"
-          style={{ color: branding.mutedColor }}
+          style={{
+            color: branding.mutedColor,
+            ...resolveTextStyle(labels.decline.style, {
+              fontFamily: 'work_sans',
+              fontSize: 12,
+              fontWeight: 400,
+              color: branding.mutedColor,
+              align: 'center',
+              lineHeight: 1.4,
+              letterSpacing: 0,
+            }),
+          }}
         />
       </div>
     </div>

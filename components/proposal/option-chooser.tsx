@@ -16,6 +16,7 @@
  */
 'use client';
 
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
 import { EditableLabel } from '@/components/proposal/editable-label';
 import { getTextColor } from '@/lib/branding/contrast';
 import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabelEdit } from '@/lib/branding/proposal-labels';
@@ -50,19 +51,41 @@ export function ProposalOptionChooser({
     <div role="radiogroup" aria-label="Choose your package">
       <EditableLabel
         as="p"
-        value={labels.choose}
+        value={labels.choose.text}
         onCommit={onEditLabel && ((v) => onEditLabel('choose', v))}
-        placeholder={PROPOSAL_LABEL_DEFAULTS.choose}
+        placeholder={PROPOSAL_LABEL_DEFAULTS.choose.text}
         className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
-        style={{ color: brand }}
+        style={{
+          color: brand,
+          ...resolveTextStyle(labels.choose.style, {
+            fontFamily: 'work_sans',
+            fontSize: 11,
+            fontWeight: 600,
+            color: brand,
+            align: 'left',
+            lineHeight: 1.4,
+            letterSpacing: 0.18,
+          }),
+        }}
       />
       <EditableLabel
         as="p"
-        value={labels.chooseHint}
+        value={labels.chooseHint.text}
         onCommit={onEditLabel && ((v) => onEditLabel('chooseHint', v))}
-        placeholder={PROPOSAL_LABEL_DEFAULTS.chooseHint}
+        placeholder={PROPOSAL_LABEL_DEFAULTS.chooseHint.text}
         className="mt-1 mb-4 text-[0.875em]"
-        style={{ color: mutedColor }}
+        style={{
+          color: mutedColor,
+          ...resolveTextStyle(labels.chooseHint.style, {
+            fontFamily: 'work_sans',
+            fontSize: 14,
+            fontWeight: 400,
+            color: mutedColor,
+            align: 'left',
+            lineHeight: 1.5,
+            letterSpacing: 0,
+          }),
+        }}
       />
       <div className="space-y-4">
         {options.map((option) => {

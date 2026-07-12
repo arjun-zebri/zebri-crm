@@ -19,11 +19,13 @@
 
 import { Check } from 'lucide-react';
 
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
 import { EditableLabel } from '@/components/proposal/editable-label';
 import {
   PROPOSAL_LABEL_DEFAULTS,
   type ProposalLabelEdit,
   type ProposalLabels,
+  type StyledLabel,
 } from '@/lib/branding/proposal-labels';
 import {
   addOnItems,
@@ -43,6 +45,10 @@ export interface ProposalSelectionProps {
   /** Section label — "Your package" while active, "Chosen package"
    *  on the accepted receipt. */
   heading: string;
+  /** The styled label backing `heading`, or null when it's a fixed
+   *  status string ("Chosen package") that isn't user-editable.
+   *  Provides both the current style + the default for fallback. */
+  headingLabel?: StyledLabel | null;
   /** The label key backing `heading`, or null when it's a fixed
    *  status string ("Chosen package") that isn't user-editable. */
   headingKey?: keyof ProposalLabels | null;
@@ -56,6 +62,7 @@ export function ProposalSelection({
   onToggle,
   locked,
   heading,
+  headingLabel,
   headingKey,
   branding,
   onEditLabel,
@@ -74,6 +81,8 @@ export function ProposalSelection({
   const panelText = branding.secondaryTextColor;
   const panelMuted = `color-mix(in srgb, ${panelText} 65%, transparent)`;
 
+  const headingDefaultText = headingKey ? PROPOSAL_LABEL_DEFAULTS[headingKey].text : '';
+
   return (
     <div className="space-y-8">
       {/* ─── The package ─── */}
@@ -82,9 +91,20 @@ export function ProposalSelection({
           as="p"
           value={heading}
           onCommit={headingKey && onEditLabel ? (v) => onEditLabel(headingKey, v) : undefined}
-          placeholder={headingKey ? PROPOSAL_LABEL_DEFAULTS[headingKey] : ''}
+          placeholder={headingDefaultText}
           className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
-          style={{ color: brand }}
+          style={{
+            color: brand,
+            ...resolveTextStyle(headingLabel?.style, {
+              fontFamily: 'work_sans',
+              fontSize: 11,
+              fontWeight: 600,
+              color: brand,
+              align: 'left',
+              lineHeight: 1.4,
+              letterSpacing: 0.18,
+            }),
+          }}
         />
         <h2
           className="mt-2 text-[1.5em]"
@@ -120,20 +140,42 @@ export function ProposalSelection({
         <section>
           <EditableLabel
             as="p"
-            value={labels.addOns}
+            value={labels.addOns.text}
             onCommit={onEditLabel && ((v) => onEditLabel('addOns', v))}
-            placeholder={PROPOSAL_LABEL_DEFAULTS.addOns}
+            placeholder={PROPOSAL_LABEL_DEFAULTS.addOns.text}
             className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
-            style={{ color: brand }}
+            style={{
+              color: brand,
+              ...resolveTextStyle(labels.addOns.style, {
+                fontFamily: 'work_sans',
+                fontSize: 11,
+                fontWeight: 600,
+                color: brand,
+                align: 'left',
+                lineHeight: 1.4,
+                letterSpacing: 0.18,
+              }),
+            }}
           />
           {!locked || onEditLabel ? (
             <EditableLabel
               as="p"
-              value={labels.addOnsHint}
+              value={labels.addOnsHint.text}
               onCommit={onEditLabel && ((v) => onEditLabel('addOnsHint', v))}
-              placeholder={PROPOSAL_LABEL_DEFAULTS.addOnsHint}
+              placeholder={PROPOSAL_LABEL_DEFAULTS.addOnsHint.text}
               className="mt-1 text-[0.75em]"
-              style={{ color: mutedColor }}
+              style={{
+                color: mutedColor,
+                ...resolveTextStyle(labels.addOnsHint.style, {
+                  fontFamily: 'work_sans',
+                  fontSize: 12,
+                  fontWeight: 400,
+                  color: mutedColor,
+                  align: 'left',
+                  lineHeight: 1.4,
+                  letterSpacing: 0,
+                }),
+              }}
             />
           ) : null}
           <div className="mt-3 space-y-2.5">
