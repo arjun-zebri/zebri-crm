@@ -39,6 +39,10 @@ export interface ProposalLabels {
   decline: string
 }
 
+/** Commit one edited label. Present only on the branding canvas;
+ *  omitted everywhere the proposal renders read-only. */
+export type ProposalLabelEdit = (key: keyof ProposalLabels, value: string) => void
+
 export const PROPOSAL_LABEL_DEFAULTS: ProposalLabels = {
   eyebrow: 'Wedding proposal',
   note: 'A note from us',

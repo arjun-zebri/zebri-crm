@@ -19,6 +19,12 @@
 
 import { Check } from 'lucide-react';
 
+import { EditableLabel } from '@/components/proposal/editable-label';
+import {
+  PROPOSAL_LABEL_DEFAULTS,
+  type ProposalLabelEdit,
+  type ProposalLabels,
+} from '@/lib/branding/proposal-labels';
 import {
   addOnItems,
   baseItems,
@@ -37,7 +43,11 @@ export interface ProposalSelectionProps {
   /** Section label — "Your package" while active, "Chosen package"
    *  on the accepted receipt. */
   heading: string;
+  /** The label key backing `heading`, or null when it's a fixed
+   *  status string ("Chosen package") that isn't user-editable. */
+  headingKey?: keyof ProposalLabels | null;
   branding: ProposalViewBranding;
+  onEditLabel?: ProposalLabelEdit | undefined;
 }
 
 export function ProposalSelection({
@@ -46,7 +56,9 @@ export function ProposalSelection({
   onToggle,
   locked,
   heading,
+  headingKey,
   branding,
+  onEditLabel,
 }: ProposalSelectionProps) {
   const { brand, textColor, mutedColor, radius, headingFontFamily, headingWeight, labels } =
     branding;
@@ -66,12 +78,14 @@ export function ProposalSelection({
     <div className="space-y-8">
       {/* ─── The package ─── */}
       <section>
-        <p
+        <EditableLabel
+          as="p"
+          value={heading}
+          onCommit={headingKey && onEditLabel ? (v) => onEditLabel(headingKey, v) : undefined}
+          placeholder={headingKey ? PROPOSAL_LABEL_DEFAULTS[headingKey] : ''}
           className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
           style={{ color: brand }}
-        >
-          {heading}
-        </p>
+        />
         <h2
           className="mt-2 text-[1.5em]"
           style={{ color: textColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
@@ -104,16 +118,23 @@ export function ProposalSelection({
       {/* ─── Add-ons as tappable cards ─── */}
       {addOns.length > 0 ? (
         <section>
-          <p
+          <EditableLabel
+            as="p"
+            value={labels.addOns}
+            onCommit={onEditLabel && ((v) => onEditLabel('addOns', v))}
+            placeholder={PROPOSAL_LABEL_DEFAULTS.addOns}
             className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
             style={{ color: brand }}
-          >
-            {labels.addOns}
-          </p>
-          {!locked ? (
-            <p className="mt-1 text-[0.75em]" style={{ color: mutedColor }}>
-              {labels.addOnsHint}
-            </p>
+          />
+          {!locked || onEditLabel ? (
+            <EditableLabel
+              as="p"
+              value={labels.addOnsHint}
+              onCommit={onEditLabel && ((v) => onEditLabel('addOnsHint', v))}
+              placeholder={PROPOSAL_LABEL_DEFAULTS.addOnsHint}
+              className="mt-1 text-[0.75em]"
+              style={{ color: mutedColor }}
+            />
           ) : null}
           <div className="mt-3 space-y-2.5">
             {addOns.map((item) => {

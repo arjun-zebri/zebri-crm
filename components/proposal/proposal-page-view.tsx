@@ -26,11 +26,16 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 
+import { EditableLabel } from '@/components/proposal/editable-label';
 import { ProposalOptionChooser } from '@/components/proposal/option-chooser';
 import { ProposalSelection } from '@/components/proposal/option-selection';
 import { getTextColor } from '@/lib/branding/contrast';
 import { FONT_STACKS } from '@/lib/branding/fonts';
-import { resolveProposalLabels } from '@/lib/branding/proposal-labels';
+import {
+  PROPOSAL_LABEL_DEFAULTS,
+  resolveProposalLabels,
+  type ProposalLabelEdit,
+} from '@/lib/branding/proposal-labels';
 import type { PublicBranding } from '@/lib/branding/public-surface';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
 import {
@@ -82,6 +87,8 @@ export interface ProposalPageViewProps {
   /** The accept/decline block. The public page passes the real one;
    *  previews pass {@link StaticAcceptCta} (or nothing). */
   actions?: ReactNode;
+  /** Branding canvas only: makes every section label edit in place. */
+  onEditLabel?: ProposalLabelEdit | undefined;
 }
 
 export function ProposalPageView({
@@ -97,6 +104,7 @@ export function ProposalPageView({
   onChoose,
   onToggle,
   actions,
+  onEditLabel,
 }: ProposalPageViewProps) {
   const { brand, textColor, mutedColor, radius, headingFontFamily, headingWeight, labels } =
     branding;
@@ -125,12 +133,14 @@ export function ProposalPageView({
           />
         ) : null}
         <div className="flex items-baseline justify-between gap-4">
-          <p
+          <EditableLabel
+            as="p"
+            value={labels.eyebrow}
+            onCommit={onEditLabel && ((v) => onEditLabel('eyebrow', v))}
+            placeholder={PROPOSAL_LABEL_DEFAULTS.eyebrow}
             className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
             style={{ color: brand }}
-          >
-            {labels.eyebrow}
-          </p>
+          />
           {expiresAt && state === 'active' ? (
             <p className="shrink-0 text-[0.75em]" style={{ color: mutedColor }}>
               Expires {formatDate(expiresAt)}
@@ -162,12 +172,14 @@ export function ProposalPageView({
           before any packages or pricing. */}
       {notes ? (
         <section>
-          <p
+          <EditableLabel
+            as="p"
+            value={labels.note}
+            onCommit={onEditLabel && ((v) => onEditLabel('note', v))}
+            placeholder={PROPOSAL_LABEL_DEFAULTS.note}
             className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
             style={{ color: brand }}
-          >
-            {labels.note}
-          </p>
+          />
           <p
             className="mt-2 text-[1.125em] italic leading-relaxed whitespace-pre-wrap"
             style={{ color: textColor, fontFamily: headingFontFamily }}
@@ -186,6 +198,7 @@ export function ProposalPageView({
           onChoose={onChoose}
           disabled={!onChoose}
           branding={branding}
+          onEditLabel={onEditLabel}
         />
       ) : null}
 
@@ -196,7 +209,9 @@ export function ProposalPageView({
           onToggle={onToggle}
           locked={!interactive}
           heading={state === 'accepted' ? 'Chosen package' : labels.selected}
+          headingKey={state === 'accepted' ? null : 'selected'}
           branding={branding}
+          onEditLabel={onEditLabel}
         />
       ) : options.length > 1 ? (
         <p className="text-[0.875em]" style={{ color: mutedColor }}>
@@ -216,38 +231,47 @@ export function ProposalPageView({
 }
 
 /** Non-interactive stand-in for the accept block, used by previews so
- *  the MC sees the couple's full page including the CTA. */
+ *  the MC sees the couple's full page including the CTA. On the
+ *  branding canvas `onEditLabel` makes the accept + decline text edit
+ *  in place. */
 export function StaticAcceptCta({
   expiresAt,
   branding,
+  onEditLabel,
 }: {
   expiresAt: string | null;
   branding: ProposalViewBranding;
+  onEditLabel?: ProposalLabelEdit | undefined;
 }) {
   const labels = resolveProposalLabels(branding.labels);
   return (
-    <div aria-hidden>
-      <div
+    <div>
+      <EditableLabel
+        as="div"
+        value={labels.accept}
+        onCommit={onEditLabel && ((v) => onEditLabel('accept', v))}
+        placeholder={PROPOSAL_LABEL_DEFAULTS.accept}
         className="w-full py-3.5 text-center text-[0.9375em] font-medium"
         style={{
           backgroundColor: branding.brand,
           color: getTextColor(branding.brand),
           borderRadius: Math.min(branding.radius, 14),
         }}
-      >
-        {labels.accept}
-      </div>
+      />
       {expiresAt ? (
         <p className="mt-2.5 text-center text-[0.75em]" style={{ color: branding.mutedColor }}>
           This proposal is held for you until {formatDate(expiresAt)}
         </p>
       ) : null}
-      <p
-        className="mt-4 text-center text-[0.75em] underline underline-offset-2"
-        style={{ color: branding.mutedColor }}
-      >
-        {labels.decline}
-      </p>
+      <div className="mt-4 text-center">
+        <EditableLabel
+          value={labels.decline}
+          onCommit={onEditLabel && ((v) => onEditLabel('decline', v))}
+          placeholder={PROPOSAL_LABEL_DEFAULTS.decline}
+          className="text-[0.75em] underline underline-offset-2"
+          style={{ color: branding.mutedColor }}
+        />
+      </div>
     </div>
   );
 }

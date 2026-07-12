@@ -185,7 +185,11 @@ editable via `lib/branding/proposal-labels.ts` (brand-level, stored in
 `user_metadata.proposal_labels`, resolved with defaults) — the eyebrow,
 note heading, chooser heading + hint, package heading, add-ons heading
 + hint, and the accept + decline wording. The branding editor's
-Proposal surface gets a portal-style bar (`ProposalBrandingBar`): the
-locked-structure note, logo/header uploads (unreachable elsewhere on
-that surface), and the wording editor. The section ORDER + structure
+Proposal surface edits the wording DIRECTLY on the canvas, Canva-style
+(`components/proposal/editable-label.tsx`): click any heading/hint/
+button on the live preview to retype it (select-all on focus, Enter/
+blur commits, Escape reverts, clearing resets to default). A
+portal-style bar (`ProposalBrandingBar`) above the canvas carries only
+the locked-structure note, the logo/header uploads (unreachable
+elsewhere on that surface) and a Reset-wording shortcut. The section ORDER + structure
 stay fixed by design (the chooser can't be a block tree).

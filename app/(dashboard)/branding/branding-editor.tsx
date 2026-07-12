@@ -814,10 +814,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             // editable section wording.
             <>
               <ProposalBrandingBar
-                labels={state.proposalLabels}
-                setLabel={(key, val) =>
-                  setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
-                }
+                customised={(Object.keys(PROPOSAL_LABEL_DEFAULTS) as (keyof ProposalLabels)[]).some(
+                  (k) => state.proposalLabels[k] !== PROPOSAL_LABEL_DEFAULTS[k],
+                )}
                 resetLabels={() => setEditor({ proposalLabels: PROPOSAL_LABEL_DEFAULTS })}
                 logoUrl={state.logoUrl}
                 headerImageUrl={state.headerImageUrl}
@@ -827,6 +826,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
                 removeHeader={removeHeader}
               />
               <ProposalSurfacePreview
+                onEditLabel={(key, val) =>
+                  setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
+                }
                 branding={{
                   pageBg: state.surfaceColor,
                   textColor: state.textColor,

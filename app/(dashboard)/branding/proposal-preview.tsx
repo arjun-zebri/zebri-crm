@@ -15,14 +15,14 @@
  */
 'use client'
 
-import { ChevronDown, ImageIcon, Info, Trash2, Upload } from 'lucide-react'
+import { ImageIcon, Info, RotateCcw, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import {
   ProposalPageView,
   StaticAcceptCta,
 } from '@/components/proposal/proposal-page-view'
-import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabels } from '@/lib/branding/proposal-labels'
+import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
 
 /** Fixed sample content so the canvas reads like a real send. */
@@ -66,10 +66,13 @@ const SAMPLE_SELECTION: Record<string, boolean> = { s6: true, s7: false }
 
 export interface ProposalSurfacePreviewProps {
   branding: ProposalViewBranding
+  /** Makes every section label edit in place on the canvas. */
+  onEditLabel: ProposalLabelEdit
 }
 
-/** The document card on the branding canvas. */
-export function ProposalSurfacePreview({ branding }: ProposalSurfacePreviewProps) {
+/** The document card on the branding canvas — every label edits in
+ *  place (Canva-style) via `onEditLabel`. */
+export function ProposalSurfacePreview({ branding, onEditLabel }: ProposalSurfacePreviewProps) {
   return (
     <div
       className="overflow-hidden rounded-2xl border border-gray-200 px-6 py-8 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.28)] sm:px-8 sm:py-10"
@@ -91,7 +94,10 @@ export function ProposalSurfacePreview({ branding }: ProposalSurfacePreviewProps
         branding={branding}
         chosenId="sample-timeless"
         selection={SAMPLE_SELECTION}
-        actions={<StaticAcceptCta expiresAt={SAMPLE_EXPIRES} branding={branding} />}
+        onEditLabel={onEditLabel}
+        actions={
+          <StaticAcceptCta expiresAt={SAMPLE_EXPIRES} branding={branding} onEditLabel={onEditLabel} />
+        }
       />
     </div>
   )
@@ -99,22 +105,9 @@ export function ProposalSurfacePreview({ branding }: ProposalSurfacePreviewProps
 
 /* ─── Proposal branding bar ─────────────────────────────────────── */
 
-/** The fields the wording editor exposes, in page order. */
-const LABEL_FIELDS: { key: keyof ProposalLabels; label: string }[] = [
-  { key: 'eyebrow', label: 'Header eyebrow' },
-  { key: 'note', label: 'Note heading' },
-  { key: 'choose', label: 'Chooser heading' },
-  { key: 'chooseHint', label: 'Chooser hint' },
-  { key: 'selected', label: 'Package heading' },
-  { key: 'addOns', label: 'Add-ons heading' },
-  { key: 'addOnsHint', label: 'Add-ons hint' },
-  { key: 'accept', label: 'Accept button' },
-  { key: 'decline', label: 'Decline link' },
-]
-
 export interface ProposalBrandingBarProps {
-  labels: ProposalLabels
-  setLabel: (key: keyof ProposalLabels, value: string) => void
+  /** True when any label differs from its default (shows Reset). */
+  customised: boolean
   resetLabels: () => void
   logoUrl: string
   headerImageUrl: string
@@ -125,14 +118,14 @@ export interface ProposalBrandingBarProps {
 }
 
 /**
- * Controls that sit above the proposal canvas (mirrors the portal's
+ * The bar above the proposal canvas (mirrors the portal's
  * `PortalSectionsBar`): the locked-structure note, the logo + header
- * uploads (unreachable elsewhere on this surface), and the editable
- * section wording.
+ * uploads (unreachable elsewhere on this surface), and a Reset-wording
+ * shortcut. The wording itself is edited DIRECTLY on the preview —
+ * click any label to type — so there's no separate panel.
  */
 export function ProposalBrandingBar({
-  labels,
-  setLabel,
+  customised,
   resetLabels,
   logoUrl,
   headerImageUrl,
@@ -141,11 +134,6 @@ export function ProposalBrandingBar({
   uploadHeader,
   removeHeader,
 }: ProposalBrandingBarProps) {
-  const [wordingOpen, setWordingOpen] = useState(false)
-  const customised = LABEL_FIELDS.some(
-    (f) => labels[f.key].trim() && labels[f.key] !== PROPOSAL_LABEL_DEFAULTS[f.key],
-  )
-
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-3 mb-3">
       <div className="flex items-start gap-2.5">
@@ -156,7 +144,8 @@ export function ProposalBrandingBar({
           <p className="text-[12px] font-medium text-gray-900">Proposal layout</p>
           <p className="text-[11px] text-gray-500 leading-relaxed">
             The structure and section order are fixed so couples always know how to accept. Your
-            colours, fonts, logo, banner and the wording below flow into it.
+            colours, fonts, logo and banner flow in — and you can click any heading or button on the
+            preview to reword it.
           </p>
         </div>
       </div>
@@ -165,46 +154,18 @@ export function ProposalBrandingBar({
         <UploadTile label="Logo" hint="PNG · 1MB" url={logoUrl} onUpload={uploadLogo} onRemove={removeLogo} accept="image/png,image/jpeg,image/svg+xml,image/webp" />
         <UploadTile label="Banner" hint="Wide image" url={headerImageUrl} onUpload={uploadHeader} onRemove={removeHeader} accept="image/png,image/jpeg,image/webp" wide />
         <div className="flex-1" />
-        <button
-          type="button"
-          onClick={() => setWordingOpen((o) => !o)}
-          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 text-gray-700 text-xs font-medium cursor-pointer transition"
-        >
-          Wording
-          <ChevronDown size={12} strokeWidth={2} className={`text-gray-400 transition-transform ${wordingOpen ? 'rotate-180' : ''}`} />
-        </button>
+        {customised && (
+          <button
+            type="button"
+            onClick={resetLabels}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-white border border-gray-200 hover:border-gray-300 text-gray-500 hover:text-gray-900 text-xs font-medium cursor-pointer transition"
+            title="Reset all wording to defaults"
+          >
+            <RotateCcw size={11} strokeWidth={1.75} />
+            Reset wording
+          </button>
+        )}
       </div>
-
-      {wordingOpen && (
-        <div className="mt-3 border-t border-gray-100 pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-[0.06em]">Section wording</p>
-            {customised && (
-              <button
-                type="button"
-                onClick={resetLabels}
-                className="text-[11px] text-gray-400 hover:text-gray-700 cursor-pointer transition"
-              >
-                Reset to defaults
-              </button>
-            )}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {LABEL_FIELDS.map((f) => (
-              <label key={f.key} className="block">
-                <span className="text-[10px] text-gray-400 uppercase tracking-[0.06em] mb-1 block">{f.label}</span>
-                <input
-                  type="text"
-                  value={labels[f.key]}
-                  onChange={(e) => setLabel(f.key, e.target.value)}
-                  placeholder={PROPOSAL_LABEL_DEFAULTS[f.key]}
-                  className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-[13px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 transition"
-                />
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

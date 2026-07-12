@@ -16,7 +16,9 @@
  */
 'use client';
 
+import { EditableLabel } from '@/components/proposal/editable-label';
 import { getTextColor } from '@/lib/branding/contrast';
+import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabelEdit } from '@/lib/branding/proposal-labels';
 import {
   baseItems,
   formatCurrency,
@@ -30,6 +32,7 @@ export interface ProposalOptionChooserProps {
   onChoose?: ((optionId: string) => void) | undefined;
   disabled: boolean;
   branding: ProposalViewBranding;
+  onEditLabel?: ProposalLabelEdit | undefined;
 }
 
 export function ProposalOptionChooser({
@@ -38,21 +41,29 @@ export function ProposalOptionChooser({
   onChoose,
   disabled,
   branding,
+  onEditLabel,
 }: ProposalOptionChooserProps) {
   const { brand, accent, textColor, mutedColor, headingFontFamily, headingWeight, labels } =
     branding;
   const radius = Math.min(branding.radius, 12);
   return (
     <div role="radiogroup" aria-label="Choose your package">
-      <p
+      <EditableLabel
+        as="p"
+        value={labels.choose}
+        onCommit={onEditLabel && ((v) => onEditLabel('choose', v))}
+        placeholder={PROPOSAL_LABEL_DEFAULTS.choose}
         className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
         style={{ color: brand }}
-      >
-        {labels.choose}
-      </p>
-      <p className="mt-1 mb-4 text-[0.875em]" style={{ color: mutedColor }}>
-        {labels.chooseHint}
-      </p>
+      />
+      <EditableLabel
+        as="p"
+        value={labels.chooseHint}
+        onCommit={onEditLabel && ((v) => onEditLabel('chooseHint', v))}
+        placeholder={PROPOSAL_LABEL_DEFAULTS.chooseHint}
+        className="mt-1 mb-4 text-[0.875em]"
+        style={{ color: mutedColor }}
+      />
       <div className="space-y-4">
         {options.map((option) => {
           const chosen = option.id === chosenId;
