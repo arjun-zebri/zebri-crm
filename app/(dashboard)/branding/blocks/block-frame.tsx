@@ -1,13 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
+import { useEffect, useState } from 'react'
+
+import { blockOuterStyle } from '@/lib/branding/block-outer-style'
+import type { BrandPreviewState } from '@/types/branding-preview'
+
 import { BlockToolbar } from './block-toolbar'
 import type { Block } from './types'
-import type { BrandPreviewState } from '@/types/branding-preview'
 
 interface BlockFrameProps {
   id: string
@@ -74,6 +77,7 @@ export function BlockFrame({
   const borderWidth = block.borderWidth ?? 0
   const borderColor = block.borderColor || '#E5E7EB'
   const blockRadius = block.blockRadius
+  const outerStyle = blockOuterStyle(block, { cornerRadius: state.cornerRadius })
 
   const blockNode = (
     <div
@@ -81,14 +85,15 @@ export function BlockFrame({
       data-block-id={id}
       data-selected={selected || undefined}
       style={{
+        ...outerStyle,
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 30 : selected ? 20 : undefined,
         willChange: isDragging ? 'transform' : undefined,
-        borderWidth,
-        borderStyle: borderWidth ? 'solid' : undefined,
-        borderColor: borderWidth ? borderColor : undefined,
-        borderRadius: blockRadius ?? (borderWidth ? state.cornerRadius : undefined),
+        borderWidth: borderWidth || outerStyle.borderWidth,
+        borderStyle: (borderWidth || outerStyle.borderWidth) ? 'solid' : undefined,
+        borderColor: (borderWidth || outerStyle.borderWidth) ? borderColor : undefined,
+        borderRadius: blockRadius ?? (borderWidth ? state.cornerRadius : outerStyle.borderRadius),
         minHeight: block.type !== 'headerBanner' && block.blockHeightPx ? block.blockHeightPx : undefined,
         display: block.type !== 'headerBanner' && block.blockHeightPx ? 'flex' : undefined,
         flexDirection: block.type !== 'headerBanner' && block.blockHeightPx ? 'column' : undefined,

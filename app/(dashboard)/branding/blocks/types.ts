@@ -50,6 +50,24 @@ export interface BaseBlock {
   blockHeightPx?: number
   /** Vertical alignment of content when blockHeightPx creates extra space. Defaults to 'middle'. */
   blockVAlign?: 'top' | 'middle' | 'bottom'
+  /** Padding top in pixels. */
+  padTop?: number
+  /** Padding right in pixels. */
+  padRight?: number
+  /** Padding bottom in pixels. */
+  padBottom?: number
+  /** Padding left in pixels. */
+  padLeft?: number
+  /** Background color for this block. */
+  bgColor?: string
+  /** Maximum width in pixels. When set, content is constrained to this width. */
+  maxWidthPx?: number
+  /** Horizontal alignment. left | center | right. */
+  align?: 'left' | 'center' | 'right'
+  /** Vertical margin above the block in pixels. */
+  spaceAbove?: number
+  /** Vertical margin below the block in pixels. */
+  spaceBelow?: number
 }
 
 export interface HeaderBannerBlock extends BaseBlock {

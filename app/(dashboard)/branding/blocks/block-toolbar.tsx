@@ -62,7 +62,26 @@ export function BlockToolbar({ block, state, updateBlock, onDuplicate, onDelete,
             <Divider />
           </>
         )}
-        {block.type !== 'action' && <BorderControl block={block} updateBlock={updateBlock} />}
+        {block.type !== 'action' && block.type !== 'spacer' && (
+          <>
+            <PaddingControl block={block} updateBlock={updateBlock} />
+            <BackgroundControl block={block} updateBlock={updateBlock} />
+            <WidthAlignControl block={block} updateBlock={updateBlock} />
+            <SpacingControl block={block} updateBlock={updateBlock} />
+            <Divider />
+            <BorderControl block={block} updateBlock={updateBlock} />
+          </>
+        )}
+        {block.type === 'spacer' && (
+          <>
+            <PaddingControl block={block} updateBlock={updateBlock} />
+            <BackgroundControl block={block} updateBlock={updateBlock} />
+            <WidthAlignControl block={block} updateBlock={updateBlock} />
+            <SpacingControl block={block} updateBlock={updateBlock} />
+            <Divider />
+            <BorderControl block={block} updateBlock={updateBlock} />
+          </>
+        )}
         <div className="ml-auto flex items-center gap-0.5 shrink-0">
           <Tooltip label="Reset to theme defaults">
             <button
@@ -1425,6 +1444,291 @@ function SpacerControls({
         </Popover.Portal>
       </Popover.Root>
     </div>
+  )
+}
+
+function PaddingControl({
+  block,
+  updateBlock,
+}: {
+  block: Block
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const padTop = block.padTop ?? 0
+  const padRight = block.padRight ?? 0
+  const padBottom = block.padBottom ?? 0
+  const padLeft = block.padLeft ?? 0
+  const active = padTop > 0 || padRight > 0 || padBottom > 0 || padLeft > 0
+
+  return (
+    <Popover.Root>
+      <Tooltip label="Padding">
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 ${
+              active
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+            }`}
+          >
+            <Square size={12} strokeWidth={1.75} />
+            {active && <span className="font-mono text-[10px] opacity-80">P</span>}
+          </button>
+        </Popover.Trigger>
+      </Tooltip>
+      <Popover.Portal>
+        <Popover.Content
+          align="center"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+        >
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <NumberField
+                label="T"
+                value={padTop}
+                min={0}
+                max={100}
+                step={1}
+                onChange={(v) => updateBlock(block.id, { padTop: v } as Partial<Block>)}
+              />
+              <NumberField
+                label="R"
+                value={padRight}
+                min={0}
+                max={100}
+                step={1}
+                onChange={(v) => updateBlock(block.id, { padRight: v } as Partial<Block>)}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <NumberField
+                label="B"
+                value={padBottom}
+                min={0}
+                max={100}
+                step={1}
+                onChange={(v) => updateBlock(block.id, { padBottom: v } as Partial<Block>)}
+              />
+              <NumberField
+                label="L"
+                value={padLeft}
+                min={0}
+                max={100}
+                step={1}
+                onChange={(v) => updateBlock(block.id, { padLeft: v } as Partial<Block>)}
+              />
+            </div>
+          </div>
+          {active && (
+            <button
+              type="button"
+              onClick={() =>
+                updateBlock(block.id, {
+                  padTop: undefined,
+                  padRight: undefined,
+                  padBottom: undefined,
+                  padLeft: undefined,
+                } as Partial<Block>)
+              }
+              className="mt-3 w-full text-[11px] text-gray-500 hover:text-gray-900 cursor-pointer"
+            >
+              Clear padding
+            </button>
+          )}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
+function BackgroundControl({
+  block,
+  updateBlock,
+}: {
+  block: Block
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  return (
+    <ColorPopover
+      value={block.bgColor || '#FFFFFF'}
+      onChange={(v) => updateBlock(block.id, { bgColor: v } as Partial<Block>)}
+      swatches={COLOR_PALETTE}
+      trigger={
+        <Tooltip label="Background">
+          <button
+            type="button"
+            className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+            title="Background color"
+          >
+            <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: block.bgColor || '#FFFFFF' }} />
+          </button>
+        </Tooltip>
+      }
+    />
+  )
+}
+
+function WidthAlignControl({
+  block,
+  updateBlock,
+}: {
+  block: Block
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const maxWidth = block.maxWidthPx
+  const align = block.align ?? 'left'
+  const active = maxWidth !== undefined
+
+  return (
+    <Popover.Root>
+      <Tooltip label="Width &amp; alignment">
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 ${
+              active
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+            }`}
+          >
+            <Equal size={12} strokeWidth={1.75} />
+            {active && <span className="font-mono text-[10px] opacity-80">{maxWidth}px</span>}
+          </button>
+        </Popover.Trigger>
+      </Tooltip>
+      <Popover.Portal>
+        <Popover.Content
+          align="center"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+        >
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Max width</span>
+              <span className="text-xs font-mono text-gray-700 tabular-nums">{maxWidth ?? 'none'}px</span>
+            </div>
+            <Slider
+              value={maxWidth ?? 0}
+              min={0}
+              max={1200}
+              step={10}
+              onChange={(v) => updateBlock(block.id, { maxWidthPx: v || undefined } as Partial<Block>)}
+              ariaLabel="Block max width"
+            />
+          </div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Align</span>
+          </div>
+          <div className="inline-flex items-center bg-gray-50 rounded-md border border-gray-200 w-full justify-center gap-0">
+            {([
+              { value: 'left', Icon: AlignLeft, label: 'Align left' },
+              { value: 'center', Icon: AlignCenter, label: 'Align center' },
+              { value: 'right', Icon: AlignRight, label: 'Align right' },
+            ] as const).map(({ value, Icon, label }) => {
+              const isActive = align === value
+              return (
+                <Tooltip key={value} label={label}>
+                  <button
+                    type="button"
+                    onClick={() => updateBlock(block.id, { align: value } as Partial<Block>)}
+                    aria-label={label}
+                    className={`p-1.5 transition cursor-pointer flex-1 ${isActive ? 'bg-white text-gray-900 shadow-sm rounded-md m-0.5' : 'text-gray-500 hover:text-gray-900'}`}
+                  >
+                    <Icon size={12} strokeWidth={1.75} />
+                  </button>
+                </Tooltip>
+              )
+            })}
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
+function SpacingControl({
+  block,
+  updateBlock,
+}: {
+  block: Block
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const spaceAbove = block.spaceAbove ?? 0
+  const spaceBelow = block.spaceBelow ?? 0
+  const active = spaceAbove > 0 || spaceBelow > 0
+
+  return (
+    <Popover.Root>
+      <Tooltip label="Spacing">
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 ${
+              active
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+            }`}
+          >
+            <Equal size={12} strokeWidth={1.75} />
+            {active && <span className="font-mono text-[10px] opacity-80">S</span>}
+          </button>
+        </Popover.Trigger>
+      </Tooltip>
+      <Popover.Portal>
+        <Popover.Content
+          align="center"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+        >
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Space above</span>
+                <span className="text-xs font-mono text-gray-700 tabular-nums">{spaceAbove}px</span>
+              </div>
+              <Slider
+                value={spaceAbove}
+                min={0}
+                max={100}
+                step={1}
+                onChange={(v) => updateBlock(block.id, { spaceAbove: v || undefined } as Partial<Block>)}
+                ariaLabel="Space above"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Space below</span>
+                <span className="text-xs font-mono text-gray-700 tabular-nums">{spaceBelow}px</span>
+              </div>
+              <Slider
+                value={spaceBelow}
+                min={0}
+                max={100}
+                step={1}
+                onChange={(v) => updateBlock(block.id, { spaceBelow: v || undefined } as Partial<Block>)}
+                ariaLabel="Space below"
+              />
+            </div>
+          </div>
+          {active && (
+            <button
+              type="button"
+              onClick={() =>
+                updateBlock(block.id, {
+                  spaceAbove: undefined,
+                  spaceBelow: undefined,
+                } as Partial<Block>)
+              }
+              className="mt-3 w-full text-[11px] text-gray-500 hover:text-gray-900 cursor-pointer"
+            >
+              Clear spacing
+            </button>
+          )}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 

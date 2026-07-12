@@ -4,6 +4,7 @@ import { type ReactNode } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
+import { blockOuterStyle, hasOuterStyle } from './block-outer-style'
 import { RenderAction } from './public-blocks/action'
 import { RenderBusinessName } from './public-blocks/business-name'
 import { RenderDivider } from './public-blocks/divider'
@@ -54,19 +55,14 @@ function BlockOuter({
   branding: PublicBranding
   children: ReactNode
 }) {
-  const width = block.borderWidth ?? 0
-  if (width === 0 && block.blockRadius === undefined) return <>{children}</>
-  const color = block.borderColor || '#E5E7EB'
-  const radius = block.blockRadius ?? branding.corner_radius
+  // Fast path: if no outer style is set, render without wrapper to preserve byte-identical output
+  if (!hasOuterStyle(block)) return <>{children}</>
+
+  const style = blockOuterStyle(block, { cornerRadius: branding.corner_radius })
   return (
     <div
-      style={{
-        borderWidth: width || undefined,
-        borderColor: width ? color : undefined,
-        borderStyle: width ? 'solid' : undefined,
-        borderRadius: radius,
-        overflow: 'hidden',
-      }}
+      style={style}
+      className={style.borderRadius !== undefined || block.borderWidth ? 'overflow-hidden' : ''}
     >
       {children}
     </div>
