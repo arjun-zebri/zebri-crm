@@ -3,7 +3,7 @@
 import * as Popover from '@radix-ui/react-popover'
 import {
   ChevronDown, Check, Upload, Plus, RotateCcw, Paintbrush, Type as TypeIcon,
-  Layout, Sparkles, Trash2, ImageIcon,
+  Layout, Sparkles, Trash2, ImageIcon, Globe,
 } from 'lucide-react'
 import { useRef, useState } from 'react'
 
@@ -104,9 +104,12 @@ export function BrandPanel(props: BrandPanelProps) {
   return (
     <aside className="w-[320px] border-r border-gray-100 bg-white overflow-y-auto shrink-0 flex flex-col">
       <div className="px-4 pt-4 pb-3 flex items-center justify-between sticky top-0 bg-white z-10 border-b border-gray-50">
-        <div>
+        <div className="min-w-0">
           <p className="text-[11px] font-medium text-gray-400 uppercase tracking-[0.08em]">Brand kit</p>
-          <p className="text-sm font-medium text-gray-900">Tokens flow into every doc</p>
+          <p className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+            <Globe size={13} strokeWidth={1.75} className="text-gray-400 shrink-0" />
+            Applies to every document
+          </p>
         </div>
         {props.themePreset === 'custom' && (
           <button

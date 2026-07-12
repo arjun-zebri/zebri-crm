@@ -1270,9 +1270,14 @@ export function RenderProposalBody({
               Fixed layout
             </span>
           </div>
-          {/* Single / multi package preview toggle. */}
-          <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
-            {(['single', 'multi'] as const).map((m) => (
+          {/* Single / multi package preview toggle. Preview-only: it
+              switches how the sample renders here, it isn't saved. */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+              Preview
+            </span>
+            <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
+              {(['single', 'multi'] as const).map((m) => (
               <button
                 key={m}
                 type="button"
@@ -1286,14 +1291,16 @@ export function RenderProposalBody({
               >
                 {m === 'single' ? '1 package' : 'Multiple'}
               </button>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
         <p className="mb-4 text-[11px] leading-relaxed" style={{ color: muted }}>
-          The couple picks a package and add-ons here. You can&apos;t reorder these sections, but
-          click any heading to reword it. The Accept button and footer are their own blocks below —
-          restyle or move them like any block.
+          The couple picks a package and add-ons here. Click any heading to reword it, but you
+          can&apos;t reorder these sections. The Accept button and footer are their own blocks
+          below. The names, note and pricing shown are sample only; you set the real ones when
+          you build a proposal in Payments.
         </p>
 
         <ProposalPageView

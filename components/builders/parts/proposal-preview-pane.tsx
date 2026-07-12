@@ -3,11 +3,11 @@
  *
  * Two tabs plus a device toggle (same segmented control as the email
  * template editor):
- * - **Page**: the real thing — the shared {@link ProposalPageView}
- *   (the exact component `/proposal/[token]` renders) fed with the
- *   draft options and the MC's CURRENT branding via
- *   `useCurrentBranding`, so the preview is pixel-identical to what
- *   the couple receives: same colors, fonts, logo and hero image.
+ * - **Page**: the real thing — the shared {@link ProposalDocumentBody}
+ *   (the exact block-tree render `/proposal/[token]` uses) fed with the
+ *   draft options, the MC's saved proposal blocks, and their CURRENT
+ *   branding via `useCurrentBranding`, so the preview matches what the
+ *   couple receives: banner, custom blocks, Accept styling, footer/ABN.
  * - **Email**: the cover email the couple receives, rendered from
  *   the real `proposalHtml` template.
  *
@@ -18,11 +18,8 @@
 import { Globe, Mail, Monitor, Smartphone } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import {
-  ProposalPageView,
-  StaticAcceptCta,
-  viewBranding,
-} from '@/components/proposal/proposal-page-view';
+import { ProposalDocumentBody } from '@/components/proposal/proposal-document-body';
+import { StaticAcceptCta, viewBranding } from '@/components/proposal/proposal-page-view';
 import { googleFontsHref } from '@/lib/branding/fonts';
 import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 import { proposalHtml } from '@/lib/email/html';
@@ -151,13 +148,14 @@ function toViewOption(option: ProposalOptionDraft, index: number): PublicProposa
  */
 function PagePreview({
   proposalNumber,
+  title,
   coupleName,
   notes,
   expiresAt,
   options,
   device,
 }: ProposalPreviewPaneProps & { device: Device }) {
-  const { branding: publicBranding } = useCurrentBranding('proposal');
+  const { branding: publicBranding, blocks } = useCurrentBranding('proposal');
 
   // The branded fonts must exist in the dashboard document too —
   // same stylesheet the public page injects, deduped by id.
@@ -191,37 +189,49 @@ function PagePreview({
 
   if (!publicBranding) return null;
   const branding = viewBranding(publicBranding);
+  const cardStyle = {
+    background: branding.pageBg,
+    color: branding.textColor,
+    fontFamily: branding.bodyFontFamily,
+  };
 
   return (
     <div className={device === 'mobile' ? 'mx-auto w-[375px] max-w-full' : 'mx-auto max-w-xl'}>
-      <div
-        key={device}
-        className="overflow-hidden rounded-xl border border-border px-5 py-6 shadow-sm animate-fade-in sm:px-7 sm:py-8"
-        style={{
-          background: branding.pageBg,
-          color: branding.textColor,
-          fontFamily: branding.bodyFontFamily,
-        }}
-      >
-        {viewOptions.length === 0 ? (
+      {viewOptions.length === 0 ? (
+        <div
+          className="overflow-hidden rounded-xl border border-border px-5 py-6 shadow-sm animate-fade-in"
+          style={cardStyle}
+        >
           <p className="py-8 text-center text-xs" style={{ color: branding.mutedColor }}>
             Add a package option to see the couple&apos;s page here.
           </p>
-        ) : (
-          <ProposalPageView
+        </div>
+      ) : (
+        // Same block-tree render the couple receives, so a customised
+        // banner / footer / Accept style previews exactly.
+        <div
+          key={device}
+          className="overflow-hidden rounded-xl border border-border shadow-sm animate-fade-in"
+          style={cardStyle}
+        >
+          <ProposalDocumentBody
+            blocks={blocks}
+            branding={publicBranding}
+            title={title}
             coupleName={coupleName || 'Your couple'}
             proposalNumber={proposalNumber}
             notes={notes}
             expiresAt={expiresAt ?? null}
             options={viewOptions}
             state="active"
-            branding={branding}
             chosenId={chosen?.id ?? null}
             selection={selection}
-            actions={<StaticAcceptCta expiresAt={expiresAt ?? null} branding={branding} />}
+            renderAccept={({ style, view }) => (
+              <StaticAcceptCta expiresAt={expiresAt ?? null} branding={view} style={style} />
+            )}
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

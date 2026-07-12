@@ -247,31 +247,41 @@ export function ProposalPageView({
 }
 
 /** Non-interactive stand-in for the accept block, used by previews so
- *  the MC sees the couple's full page including the CTA. On the
- *  branding canvas `onEditLabel` makes the accept + decline text edit
+ *  the MC sees the couple's full page including the CTA. `style` carries
+ *  the MC's action-block button colour/radius/wording so the preview
+ *  matches the sent page; it falls back to the brand colour + labels. On
+ *  the branding canvas `onEditLabel` makes the accept + decline text edit
  *  in place. */
 export function StaticAcceptCta({
   expiresAt,
   branding,
   onEditLabel,
+  style,
 }: {
   expiresAt: string | null;
   branding: ProposalViewBranding;
   onEditLabel?: ProposalLabelEdit | undefined;
+  style?:
+    | { color?: string; radius?: number; primaryLabel?: string; secondaryLabel?: string | null }
+    | undefined;
 }) {
   const labels = resolveProposalLabels(branding.labels);
+  const buttonColor = style?.color ?? branding.brand;
+  const buttonRadius = Math.min(style?.radius ?? branding.radius, 14);
+  const acceptLabel = style?.primaryLabel || labels.accept;
+  const declineLabel = style?.secondaryLabel || labels.decline;
   return (
     <div>
       <EditableLabel
         as="div"
-        value={labels.accept}
+        value={acceptLabel}
         onCommit={onEditLabel && ((v) => onEditLabel('accept', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.accept}
         className="w-full py-3.5 text-center text-[0.9375em] font-medium"
         style={{
-          backgroundColor: branding.brand,
-          color: getTextColor(branding.brand),
-          borderRadius: Math.min(branding.radius, 14),
+          backgroundColor: buttonColor,
+          color: getTextColor(buttonColor),
+          borderRadius: buttonRadius,
         }}
       />
       {expiresAt ? (
@@ -281,7 +291,7 @@ export function StaticAcceptCta({
       ) : null}
       <div className="mt-4 text-center">
         <EditableLabel
-          value={labels.decline}
+          value={declineLabel}
           onCommit={onEditLabel && ((v) => onEditLabel('decline', v))}
           placeholder={PROPOSAL_LABEL_DEFAULTS.decline}
           className="text-[0.75em] underline underline-offset-2"

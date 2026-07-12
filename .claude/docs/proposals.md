@@ -232,3 +232,34 @@ portal-style bar (`ProposalBrandingBar`) above the canvas carries only
 the locked-structure note, the logo/header uploads (unreachable
 elsewhere on that surface) and a Reset-wording shortcut. The section ORDER + structure
 stay fixed by design (the chooser can't be a block tree).
+
+## Preview parity + surface-scope clarity (2026-07-12)
+
+The couple page and the composer's Page preview now render through ONE
+shared component, `components/proposal/proposal-document-body.tsx`
+(`ProposalDocumentBody`), so they can't drift. It owns the
+split-at-marker layout: pre-blocks, the fixed `proposalBody` core, the
+`action` block slot (filled by the caller's accept UI), then post-blocks
+(footer + ABN), with the standalone `ProposalPageView` kept only as the
+no-blocks fallback. Each caller passes a `renderAccept({ style, view })`
+seam: the public page returns the interactive `ProposalAcceptActions`,
+the composer preview returns `StaticAcceptCta`. `StaticAcceptCta` gained
+a `style` prop so the preview honours the `action` block's button
+colour / radius / wording. This closes the gap where a customised
+banner / footer / Accept style previewed as the plain standalone layout
+while the couple actually received the block tree. Both
+`app/proposal/[token]/page.tsx` and
+`components/builders/parts/proposal-preview-pane.tsx` consume it; the
+preview reads the saved tree from `useCurrentBranding('proposal')`
+(which already returned `blocks`). Supersedes the earlier
+"Composer preview unchanged." note.
+
+Branding editor clarity: the left rail header now reads **"Applies to
+every document"** (the brand tokens flow into proposal / invoice /
+contract / portal), and the canvas gets a matching **scope bar**
+(`app/(dashboard)/branding/canvas-scope-bar.tsx`) reading
+"<Surface> layout · blocks & wording for this document only", so the
+global-vs-per-surface split is explicit. The fixed-core helper text now
+names the sample couple / note / pricing as sample-only (the real ones
+are set in the composer), and the single/multi control is prefixed
+"Preview" so it reads as a preview toggle, not a saved setting.

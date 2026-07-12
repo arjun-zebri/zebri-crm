@@ -31,8 +31,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
-import { ProposalPageView, viewBranding } from '@/components/proposal/proposal-page-view';
-import { findActionStyle, PublicBlockRenderer } from '@/lib/branding/public-renderer';
+import {
+  ProposalDocumentBody,
+  type ProposalActionStyle,
+} from '@/components/proposal/proposal-document-body';
+import { viewBranding } from '@/components/proposal/proposal-page-view';
 import { DENSITY_PAD, useBrandingHead } from '@/lib/branding/public-surface';
 import {
   defaultSelection,
@@ -137,75 +140,29 @@ export default function PublicProposalPage() {
   const pad = DENSITY_PAD[proposal?.density ?? 'cozy'];
   const totalLabel = chosen ? formatCurrency(selectionTotal(chosen, selection)) : '';
 
-  /* ─── Block layout (chrome around the fixed core) ─── */
-  const blocks = proposal?.branding_blocks ?? null;
-  const pbIdx = blocks?.findIndex((b) => b.type === 'proposalBody') ?? -1;
-  const useBlocks = !!blocks && blocks.length > 0 && pbIdx >= 0;
-  const preBlocks = useBlocks ? blocks!.slice(0, pbIdx) : [];
-  const restBlocks = useBlocks ? blocks!.slice(pbIdx + 1) : [];
-  const actIdx = restBlocks.findIndex((b) => b.type === 'action');
-  const betweenBlocks = actIdx >= 0 ? restBlocks.slice(0, actIdx) : restBlocks;
-  const postBlocks = actIdx >= 0 ? restBlocks.slice(actIdx + 1) : [];
-  const actionStyle = branding
-    ? findActionStyle(blocks, { brandColor: branding.brand, cornerRadius: branding.radius })
-    : null;
-  const doc = proposal
-    ? {
-        title: proposal.title,
-        refNumber: proposal.proposal_number,
-        expiresAt: proposal.expires_at,
-        items: [],
-        subtotal: 0,
-        taxRate: 0,
-      }
-    : null;
-
-  const acceptBlock =
-    branding && actionStyle && pageState === 'active' ? (
-      <div className={pad.cardSection}>
-        <ProposalAcceptActions
-          chosenOptionTitle={chosen?.title ?? null}
-          totalLabel={totalLabel}
-          expiresAt={proposal!.expires_at}
-          onAccept={handleAccept}
-          onDecline={handleDecline}
-          actionLoading={actionLoading}
-          actionError={actionError}
-          brand={actionStyle.color}
-          radius={actionStyle.radius}
-          textColor={branding.textColor}
-          mutedColor={branding.mutedColor}
-          labels={{
-            ...branding.labels,
-            accept: actionStyle.primaryLabel || branding.labels.accept,
-            decline: actionStyle.secondaryLabel || branding.labels.decline,
-          }}
-        />
-      </div>
-    ) : null;
-
-  const core =
+  /* The interactive accept/decline UI, styled from the MC's action
+     block. The shared document body calls this only while the proposal
+     is active; the accepted / expired views render without a CTA. */
+  const renderAccept = ({ style }: { style: ProposalActionStyle }) =>
     proposal && branding ? (
-      <div className={pad.cardSection}>
-        <ProposalPageView
-          variant="blockCore"
-          coupleName={proposal.couple_name}
-          proposalNumber={proposal.proposal_number}
-          notes={proposal.notes}
-          expiresAt={proposal.expires_at}
-          options={proposal.options}
-          state={pageState === 'accepted' ? 'accepted' : pageState === 'active' ? 'active' : 'expired'}
-          branding={branding}
-          chosenId={effectiveChosenId}
-          selection={selection}
-          onChoose={pageState === 'active' && !actionLoading ? handleChoose : undefined}
-          onToggle={
-            pageState === 'active' && !actionLoading
-              ? (itemId, next) => setPicks({ ...selection, [itemId]: next })
-              : undefined
-          }
-        />
-      </div>
+      <ProposalAcceptActions
+        chosenOptionTitle={chosen?.title ?? null}
+        totalLabel={totalLabel}
+        expiresAt={proposal.expires_at}
+        onAccept={handleAccept}
+        onDecline={handleDecline}
+        actionLoading={actionLoading}
+        actionError={actionError}
+        brand={style.color}
+        radius={style.radius}
+        textColor={branding.textColor}
+        mutedColor={branding.mutedColor}
+        labels={{
+          ...branding.labels,
+          accept: style.primaryLabel || branding.labels.accept,
+          decline: style.secondaryLabel || branding.labels.decline,
+        }}
+      />
     ) : null;
 
   return (
@@ -243,60 +200,34 @@ export default function PublicProposalPage() {
         ) : null}
 
         {proposal && branding && pageState !== 'not_found' && pageState !== 'loading' ? (
-          useBlocks && doc ? (
-            // Branded: the MC's block chrome around the fixed core.
-            <div
-              className="overflow-hidden"
-              style={{ borderRadius: branding.radius }}
-            >
-              <PublicBlockRenderer blocks={preBlocks} branding={proposal} doc={doc} hideAction />
-              {core}
-              {betweenBlocks.length > 0 ? (
-                <PublicBlockRenderer blocks={betweenBlocks} branding={proposal} doc={doc} hideAction />
-              ) : null}
-              {acceptBlock}
-              {postBlocks.length > 0 ? (
-                <PublicBlockRenderer blocks={postBlocks} branding={proposal} doc={doc} hideAction />
-              ) : null}
-            </div>
-          ) : (
-            // Fallback: the self-contained standalone layout.
-            <ProposalPageView
-              coupleName={proposal.couple_name}
-              proposalNumber={proposal.proposal_number}
-              notes={proposal.notes}
-              expiresAt={proposal.expires_at}
-              options={proposal.options}
-              state={pageState}
-              branding={branding}
-              chosenId={effectiveChosenId}
-              selection={selection}
-              onChoose={pageState === 'active' && !actionLoading ? handleChoose : undefined}
-              onToggle={
-                pageState === 'active' && !actionLoading
-                  ? (itemId, next) => setPicks({ ...selection, [itemId]: next })
-                  : undefined
-              }
-              actions={
-                pageState === 'active' ? (
-                  <ProposalAcceptActions
-                    chosenOptionTitle={chosen?.title ?? null}
-                    totalLabel={totalLabel}
-                    expiresAt={proposal.expires_at}
-                    onAccept={handleAccept}
-                    onDecline={handleDecline}
-                    actionLoading={actionLoading}
-                    actionError={actionError}
-                    brand={branding.brand}
-                    radius={branding.radius}
-                    textColor={branding.textColor}
-                    mutedColor={branding.mutedColor}
-                    labels={branding.labels}
-                  />
-                ) : undefined
-              }
-            />
-          )
+          <ProposalDocumentBody
+            blocks={proposal.branding_blocks ?? null}
+            branding={proposal}
+            title={proposal.title}
+            coupleName={proposal.couple_name}
+            proposalNumber={proposal.proposal_number}
+            notes={proposal.notes}
+            expiresAt={proposal.expires_at}
+            options={proposal.options}
+            state={
+              pageState === 'accepted'
+                ? 'accepted'
+                : pageState === 'declined'
+                  ? 'declined'
+                  : pageState === 'expired'
+                    ? 'expired'
+                    : 'active'
+            }
+            chosenId={effectiveChosenId}
+            selection={selection}
+            onChoose={pageState === 'active' && !actionLoading ? handleChoose : undefined}
+            onToggle={
+              pageState === 'active' && !actionLoading
+                ? (itemId, next) => setPicks({ ...selection, [itemId]: next })
+                : undefined
+            }
+            renderAccept={renderAccept}
+          />
         ) : null}
       </div>
     </div>

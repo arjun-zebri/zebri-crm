@@ -24,6 +24,7 @@ import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
+import { CanvasScopeBar } from './canvas-scope-bar'
 import { EditorTopbar } from './editor-topbar'
 import { PortalSectionsBar } from './portal-preview'
 import { SurfaceTabs } from './surface-tabs'
@@ -805,29 +806,26 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         />
 
         <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
-          {visibleBlocks.length > 0 && (
-            <div className="flex justify-end mb-2">
-              <button
-                type="button"
-                onClick={() => {
-                  // Keep the fixed marker blocks (they can't be removed).
-                  setBlocksForCurrent(
-                    state.blocks[docSurface].filter(
-                      (b) =>
-                        b.type === 'couplePortal' ||
-                        b.type === 'paymentSchedule' ||
-                        b.type === 'contractBody' ||
-                        b.type === 'proposalBody',
-                    ),
-                  )
-                  setSelectedBlockIds([])
-                }}
-                className="text-[11px] text-gray-400 hover:text-red-500 cursor-pointer transition"
-              >
-                Clear all blocks
-              </button>
-            </div>
-          )}
+          <CanvasScopeBar
+            surface={surface}
+            onClearBlocks={
+              visibleBlocks.length > 0
+                ? () => {
+                    // Keep the fixed marker blocks (they can't be removed).
+                    setBlocksForCurrent(
+                      state.blocks[docSurface].filter(
+                        (b) =>
+                          b.type === 'couplePortal' ||
+                          b.type === 'paymentSchedule' ||
+                          b.type === 'contractBody' ||
+                          b.type === 'proposalBody',
+                      ),
+                    )
+                    setSelectedBlockIds([])
+                  }
+                : undefined
+            }
+          />
           {surface === 'portal' && (
             <PortalSectionsBar
               sections={state.portalSections}
