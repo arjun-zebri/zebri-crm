@@ -383,13 +383,13 @@ function ColorSection({
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
-      <ColorRow label="Primary"  value={brandColor}   onChange={setBrandColor}   swatches={COLOR_PALETTE} />
-      <ColorRow label="Accent"   value={accentColor}  onChange={setAccentColor}  swatches={ACCENT_PALETTE} />
-      <ColorRow label="Surface"  value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
-      <ColorRow label="Text"     value={textColor}    onChange={setTextColor}    swatches={TEXT_PALETTE} />
-      <ColorRow label="Muted"    value={mutedColor}   onChange={setMutedColor}   swatches={MUTED_PALETTE} />
-      <ColorRow label="Secondary"      value={secondaryColor}     onChange={setSecondaryColor}     swatches={COLOR_PALETTE} />
-      <ColorRow label="Secondary text" value={secondaryTextColor} onChange={setSecondaryTextColor} swatches={TEXT_PALETTE} />
+      <ColorRow label="Primary" description="Headings, buttons and key accents" value={brandColor} onChange={setBrandColor} swatches={COLOR_PALETTE} />
+      <ColorRow label="Accent" description="Highlights like the most popular badge" value={accentColor} onChange={setAccentColor} swatches={ACCENT_PALETTE} />
+      <ColorRow label="Surface" description="The page background" value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
+      <ColorRow label="Text" description="Body copy" value={textColor} onChange={setTextColor} swatches={TEXT_PALETTE} />
+      <ColorRow label="Muted" description="Secondary and subtle text" value={mutedColor} onChange={setMutedColor} swatches={MUTED_PALETTE} />
+      <ColorRow label="Secondary" description="The priced-summary panel background" value={secondaryColor} onChange={setSecondaryColor} swatches={COLOR_PALETTE} />
+      <ColorRow label="Secondary text" description="Text on the priced-summary panel" value={secondaryTextColor} onChange={setSecondaryTextColor} swatches={TEXT_PALETTE} />
       <ContrastWarnings
         textColor={textColor}
         mutedColor={mutedColor}
@@ -445,11 +445,13 @@ function ContrastWarnings({
 
 function ColorRow({
   label,
+  description,
   value,
   onChange,
   swatches,
 }: {
   label: string
+  description: string
   value: string
   onChange: (v: string) => void
   swatches: readonly string[]
@@ -472,24 +474,8 @@ function ColorRow({
       />
       <div className="flex-1 min-w-0">
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">{label}</p>
+        <p className="text-[10px] text-gray-500">{description}</p>
         <p className="text-xs font-mono text-gray-700 truncate">{value}</p>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {swatches.slice(0, 4).map((c) => {
-          const active = value.toLowerCase() === c.toLowerCase()
-          return (
-            <button
-              key={c}
-              type="button"
-              onClick={() => onChange(c)}
-              title={c}
-              className={`w-4 h-4 rounded-full ring-1 transition cursor-pointer hover:scale-110 ${
-                active ? 'ring-gray-900 ring-2' : 'ring-black/10'
-              }`}
-              style={{ background: c }}
-            />
-          )
-        })}
       </div>
     </div>
   )
