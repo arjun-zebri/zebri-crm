@@ -392,6 +392,8 @@ export function RenderImage({
         borderTopRightRadius: state.cornerRadius,
       }}
     >
+      {/* User-uploaded brand asset — no next/image. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={block.url}
         alt=""

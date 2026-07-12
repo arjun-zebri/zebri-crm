@@ -1,6 +1,9 @@
 'use client'
 
+// Type-only import (erased at runtime); block types live under the editor surface.
+// eslint-disable-next-line no-restricted-imports
 import type { ImageBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import type { PublicBranding } from '../public-surface'
 
 /**
@@ -30,6 +33,8 @@ export function RenderImage({
         borderRadius: branding.corner_radius,
       }}
     >
+      {/* User-uploaded brand asset — no next/image. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={block.url}
         alt=""

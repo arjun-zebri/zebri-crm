@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { blockTemplate } from '@/app/(dashboard)/branding/blocks/defaults'
 import type { ImageBlock } from '@/app/(dashboard)/branding/blocks/types'
 
