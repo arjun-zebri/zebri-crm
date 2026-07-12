@@ -9,6 +9,8 @@ export interface TextStyleDefaults {
   align: 'left' | 'center' | 'right'
   lineHeight: number
   letterSpacing: number
+  /** Text transformation default. Typically 'none'. */
+  textTransform?: 'none' | 'uppercase' | 'capitalize'
 }
 
 export function resolveTextStyle(
@@ -24,6 +26,7 @@ export function resolveTextStyle(
     textAlign: style?.align ?? defaults.align,
     lineHeight: style?.lineHeight ?? defaults.lineHeight,
     letterSpacing: `${style?.letterSpacing ?? defaults.letterSpacing}em`,
+    textTransform: style?.textTransform ?? defaults.textTransform ?? 'none',
   }
   if (style?.italic) css.fontStyle = 'italic'
   if (style?.underline) css.textDecoration = 'underline'

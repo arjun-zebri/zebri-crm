@@ -12,6 +12,8 @@ export interface TextStyle {
   letterSpacing?: number  // em
   italic?: boolean
   underline?: boolean
+  /** Text transformation: none, uppercase, or capitalize. Defaults to 'none'. */
+  textTransform?: 'none' | 'uppercase' | 'capitalize'
 }
 
 export type BlockType =
