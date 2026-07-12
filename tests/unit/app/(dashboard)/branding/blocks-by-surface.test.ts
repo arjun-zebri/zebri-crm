@@ -17,6 +17,8 @@ describe('BLOCKS_BY_SURFACE', () => {
       'tagline',
       'text',
       'divider',
+      'spacer',
+      'image',
       'footer',
       'action',
     ])
@@ -29,6 +31,8 @@ describe('BLOCKS_BY_SURFACE', () => {
       'tagline',
       'text',
       'divider',
+      'spacer',
+      'image',
       'footer',
       'title',
       'lineItems',
@@ -57,6 +61,8 @@ describe('BLOCKS_BY_SURFACE', () => {
       'tagline',
       'text',
       'divider',
+      'spacer',
+      'image',
       'footer',
       'title',
       'action',
@@ -70,6 +76,8 @@ describe('BLOCKS_BY_SURFACE', () => {
       'tagline',
       'text',
       'divider',
+      'spacer',
+      'image',
       'footer',
     ])
   })

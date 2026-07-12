@@ -19,9 +19,12 @@ Task P3.3: complete (commit 23b4edb, review clean, density persisted, Themes rem
 Task P4.1: complete (commit fbfb3a6, review clean, 11 tests, exact per-surface matrix)
 Task P4.2: complete (commit b964c8f + lint fix 84d9ec7, review clean, per-block storage key verified)
 Task P4.3: complete (commit d992b48, review clean) -- P4 phase done
-Note: P5 consolidated into P5.1 (shared blockOuterStyle + controls) + P5.B (text-family) + P5.C (chrome) + P5.D (commerce+action) to avoid 12 dispatches contending on shared files.
+Note: P5 consolidated into P5.1 + P5.B (text-family) + P5.C (chrome) + P5.D (commerce+action).
+Task P5.1: complete (commit 5823cee + lint fix 9aa0fdd, review clean, no-op fast path preserved, gate 340->334)
 
 ## Minor findings (for final review)
 - P0.1: build-public-branding.test covers 7/12 new fields; add assertions for body_case/button_size/button_radius/heading_letter_spacing/body_line_height.
 - P1.2: TextStyleDefaults.textTransform TSDoc says 'Typically none' (informal).
 - P3.1: TextField still uses raw <input> (inherited from old InfoSection); could move to <Input> primitive.
+- P5.1: toolbar duplicates outer-style control panels for spacer (could extract shared condition).
+- P4.2/P4.3 gap: adding image+spacer to blocks-by-surface arrays broke the P4.1 exact-array test; those tasks only ran their own test, not the full suite. Fixed in P5.B (test updated), caught by controller full-suite run.
