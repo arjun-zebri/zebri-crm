@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react'
 
+// Type-only import (erased at runtime); block types live under the editor surface.
+// eslint-disable-next-line no-restricted-imports
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 /**

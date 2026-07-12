@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { blockOuterStyle, hasOuterStyle } from '@/lib/branding/block-outer-style'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { blockOuterStyle, hasOuterStyle } from '@/lib/branding/block-outer-style'
 
 describe('blockOuterStyle', () => {
   it('returns empty object for block with no outer style fields', () => {

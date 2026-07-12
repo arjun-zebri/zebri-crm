@@ -136,7 +136,7 @@ const ERROR_BUDGET = 75;
 // next/image and extracting event handlers → 341 → 340.
 // P5.1 shared block controls: pure module added to lib/branding with clean
 // imports; fixed import-order across block-frame and public-renderer → 340 → 335.
-const WARNING_BUDGET = 335;
+const WARNING_BUDGET = 334;
 
 function runEslintJson() {
   try {
