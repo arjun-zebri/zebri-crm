@@ -44,7 +44,9 @@ import { execSync } from 'node:child_process';
 // Proposals rollout / quotes removal: 305 → 302 (deleted quote builder,
 // public quote page and quote automations carried strict errors; all
 // proposal code is strict-clean). Locking in.
-const STRICT_BUDGET = 302;
+// Branding editor redesign: net strict-clean new code + deletions (starter
+// designs, dead theme paths) reduced strict errors 302 -> 295.
+const STRICT_BUDGET = 295;
 
 function runTscStrict() {
   try {
