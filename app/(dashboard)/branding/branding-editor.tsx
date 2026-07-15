@@ -864,7 +864,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}
-        onPreview={() => toast('Customer preview coming soon')}
+        onPreview={() => window.open(`/branding/preview/${surface}`, '_blank', 'noopener')}
         onCreateNewKit={onCreateNewKit}
         brandKits={state.brandKits}
         onApplyKit={onApplyKit}

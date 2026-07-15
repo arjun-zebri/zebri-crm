@@ -40,7 +40,7 @@ import { buildPublicBranding, type PublicBranding, type UserMetadata } from './p
 export { buildPublicBranding } from './public-branding';
 export type { UserMetadata } from './public-branding';
 
-export type BuilderSurface = 'proposal' | 'invoice' | 'contract';
+export type BuilderSurface = 'proposal' | 'invoice' | 'contract' | 'portal';
 
 export interface UseCurrentBrandingResult {
   branding: PublicBranding | null;
