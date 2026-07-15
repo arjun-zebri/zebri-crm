@@ -4,6 +4,8 @@ import { Upload, Trash2, ImageIcon } from 'lucide-react'
 import Image from 'next/image'
 import { useRef, useState } from 'react'
 
+import { Input } from '@/components/ui/input'
+
 /**
  * BusinessSection - Edits MC branding identity fields
  * Rendered as the first accordion in the brand panel rail.
@@ -44,11 +46,19 @@ export function BusinessSection(props: BusinessSectionProps) {
 }
 
 function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  // Keep the rail's uppercase field-label style; use the shared Input
+  // primitive for the control (design-system rule: no raw <input>).
   return (
-    <label className="block">
+    <div className="block">
       <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1 block">{label}</span>
-      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 transition" />
-    </label>
+      <Input
+        size="sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={label}
+      />
+    </div>
   )
 }
 
