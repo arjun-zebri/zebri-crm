@@ -8,7 +8,6 @@ import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding
 import type { ProposalLabels } from '@/lib/branding/proposal-labels'
 import {
   THEME_PRESETS,
-  DEFAULT_THEME,
   type ThemeId,
   type ThemeIdOrCustom,
   type Density,

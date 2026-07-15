@@ -21,8 +21,6 @@ import {
   type FontWeight,
 } from '@/lib/branding/fonts'
 import {
-  THEME_PRESETS,
-  DEFAULT_THEME,
   COLOR_PALETTE,
   ACCENT_PALETTE,
   SURFACE_PALETTE,
