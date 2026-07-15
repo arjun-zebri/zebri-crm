@@ -529,6 +529,7 @@ function BusinessNameControls({
     letterSpacing: 0,
   }
   const layout = block.layout ?? 'row'
+  const logoHeight = block.logoHeightPx ?? 48
   return (
     <div className="flex items-center gap-2">
       <PillToggle
@@ -541,6 +542,42 @@ function BusinessNameControls({
         value={layout}
         onChange={(v) => updateBlock<BusinessNameBlock>(block.id, { layout: v as BusinessNameBlock['layout'] })}
       />
+      <Divider />
+      <Popover.Root>
+        <Tooltip label="Logo size">
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+            >
+              <Square size={12} strokeWidth={1.75} />
+              {logoHeight !== 48 && (
+                <span className="font-mono text-[10px]">{logoHeight}px</span>
+              )}
+            </button>
+          </Popover.Trigger>
+        </Tooltip>
+        <Popover.Portal>
+          <Popover.Content
+            align="center"
+            sideOffset={6}
+            className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Logo Height</span>
+              <span className="text-xs font-mono text-gray-700 tabular-nums">{logoHeight}px</span>
+            </div>
+            <Slider
+              value={logoHeight}
+              min={24}
+              max={160}
+              step={4}
+              onChange={(v) => updateBlock<BusinessNameBlock>(block.id, { logoHeightPx: v })}
+              ariaLabel="Logo height"
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
       {layout !== 'logo' && (
         <>
           <Divider />
@@ -944,6 +981,63 @@ function HeaderBannerControls({
         </span>
       </div>
       <Divider />
+      <ColorPopover
+        value={block.overlayColor ?? '#00000000'}
+        onChange={(v) => updateBlock<HeaderBannerBlock>(block.id, { overlayColor: v })}
+        swatches={['#000000', '#FFFFFF', '#6B7280']}
+        trigger={
+          <button
+            type="button"
+            title="Overlay colour"
+            className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+          >
+            <span
+              className="w-4 h-4 rounded ring-1 ring-black/10"
+              style={{
+                background: block.overlayColor ?? 'transparent',
+                opacity: block.overlayOpacity ?? 0.5,
+              }}
+            />
+          </button>
+        }
+      />
+      <Divider />
+      <Popover.Root>
+        <Tooltip label="Overlay opacity">
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+            >
+              <Square size={12} strokeWidth={1.75} />
+              {(block.overlayOpacity ?? 0.5) !== 0.5 && (
+                <span className="font-mono text-[10px]">{Math.round((block.overlayOpacity ?? 0.5) * 100)}%</span>
+              )}
+            </button>
+          </Popover.Trigger>
+        </Tooltip>
+        <Popover.Portal>
+          <Popover.Content
+            align="center"
+            sideOffset={6}
+            className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Opacity</span>
+              <span className="text-xs font-mono text-gray-700 tabular-nums">{Math.round((block.overlayOpacity ?? 0.5) * 100)}%</span>
+            </div>
+            <Slider
+              value={block.overlayOpacity ?? 0.5}
+              min={0}
+              max={1}
+              step={0.05}
+              onChange={(v) => updateBlock<HeaderBannerBlock>(block.id, { overlayOpacity: parseFloat(v.toFixed(2)) })}
+              ariaLabel="Overlay opacity"
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+      <Divider />
       <button
         type="button"
         onClick={() =>
@@ -952,11 +1046,13 @@ function HeaderBannerControls({
             imageY: 50,
             heightPx: undefined,
             imageScale: 1,
+            overlayColor: undefined,
+            overlayOpacity: undefined,
           })
         }
-        disabled={!customised}
+        disabled={!customised && !block.overlayColor}
         className={`inline-flex items-center px-2 h-8 rounded-md text-xs border transition ${
-          customised
+          customised || block.overlayColor
             ? 'bg-white text-gray-700 border-gray-200 hover:text-gray-900 hover:bg-gray-50 cursor-pointer'
             : 'bg-white text-gray-300 border-gray-100 cursor-not-allowed'
         }`}
@@ -964,7 +1060,7 @@ function HeaderBannerControls({
         Reset
       </button>
       <span className="hidden lg:inline text-[11px] text-gray-400 pl-1">
-        Drag to pan · ⌘+scroll to zoom · Drag edge to resize
+        Drag to pan · +scroll to zoom · Drag edge to resize
       </span>
     </div>
   )
@@ -1040,6 +1136,7 @@ function DividerControls({
   block: DividerBlock
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }) {
+  const widthPct = block.widthPct ?? 100
   return (
     <div className="flex items-center gap-2">
       <PillToggle
@@ -1107,6 +1204,42 @@ function DividerControls({
           </button>
         }
       />
+      <Divider />
+      <Popover.Root>
+        <Tooltip label="Width">
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+            >
+              <Equal size={12} strokeWidth={1.75} />
+              {widthPct !== 100 && (
+                <span className="font-mono text-[10px]">{widthPct}%</span>
+              )}
+            </button>
+          </Popover.Trigger>
+        </Tooltip>
+        <Popover.Portal>
+          <Popover.Content
+            align="center"
+            sideOffset={6}
+            className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Width</span>
+              <span className="text-xs font-mono text-gray-700 tabular-nums">{widthPct}%</span>
+            </div>
+            <Slider
+              value={widthPct}
+              min={1}
+              max={100}
+              step={1}
+              onChange={(v) => updateBlock<DividerBlock>(block.id, { widthPct: v })}
+              ariaLabel="Divider width"
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
     </div>
   )
 }

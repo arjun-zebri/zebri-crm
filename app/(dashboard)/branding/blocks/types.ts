@@ -79,6 +79,10 @@ export interface HeaderBannerBlock extends BaseBlock {
   imageY?: number
   /** Image zoom factor, 1–4. Anchored at imageX/imageY so panning sets the zoom focus. */
   imageScale?: number
+  /** Optional overlay colour applied over the banner image. */
+  overlayColor?: string
+  /** Overlay opacity, 0–1. Only used when overlayColor is set. */
+  overlayOpacity?: number
 }
 
 export type BusinessNameLayout = 'row' | 'stacked' | 'logo' | 'name'
@@ -173,6 +177,8 @@ export interface DividerBlock extends BaseBlock {
   thickness?: number
   color?: string
   lineStyle?: 'solid' | 'dashed' | 'dotted'
+  /** Width as a percentage of container, 1–100. Defaults to 100 (full width). */
+  widthPct?: number
 }
 
 export interface FooterBlock extends BaseBlock {

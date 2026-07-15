@@ -191,7 +191,7 @@ export function RenderHeaderBanner({
 
   const imageNode = (
     <div
-      className="w-full h-full overflow-hidden"
+      className="w-full h-full overflow-hidden relative"
       style={{
         borderTopLeftRadius: state.cornerRadius,
         borderTopRightRadius: state.cornerRadius,
@@ -210,6 +210,16 @@ export function RenderHeaderBanner({
           transformOrigin: `${imageX}% ${imageY}%`,
         }}
       />
+      {block.overlayColor && (
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundColor: block.overlayColor,
+            opacity: block.overlayOpacity ?? 0.5,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
     </div>
   )
 
@@ -1029,9 +1039,20 @@ export function RenderDivider({ block, state }: RenderProps<DividerBlock>) {
   const thickness = block.thickness ?? 1
   const color = block.color ?? '#E5E7EB'
   const lineStyle = block.lineStyle ?? 'solid'
+  const widthPct = block.widthPct ?? 100
   return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      <hr style={{ borderTopWidth: thickness, borderTopColor: color, borderTopStyle: lineStyle, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }} />
+    <div className={`${pad.docX} ${pad.blockY} flex justify-start`}>
+      <hr
+        style={{
+          borderTopWidth: thickness,
+          borderTopColor: color,
+          borderTopStyle: lineStyle,
+          borderBottom: 'none',
+          borderLeft: 'none',
+          borderRight: 'none',
+          width: `${widthPct}%`,
+        }}
+      />
     </div>
   )
 }

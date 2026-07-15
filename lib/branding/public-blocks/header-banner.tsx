@@ -27,6 +27,7 @@ export function RenderHeaderBanner({
         borderTopRightRadius: branding.corner_radius,
       }}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={url}
         alt=""
@@ -38,6 +39,16 @@ export function RenderHeaderBanner({
           transformOrigin: `${imageX}% ${imageY}%`,
         }}
       />
+      {block.overlayColor && (
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundColor: block.overlayColor,
+            opacity: block.overlayOpacity ?? 0.5,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
     </div>
   )
 }
