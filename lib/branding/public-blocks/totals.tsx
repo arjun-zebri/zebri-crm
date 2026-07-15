@@ -1,9 +1,31 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
 import type { TotalsBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import type { PublicBranding } from '../public-surface'
 import { fmt, pad, type PublicDocData } from './shared'
+
+interface RowProps {
+  label: string
+  value: string
+  css: CSSProperties
+  spread?: boolean
+}
+
+function Row({ label, value, css, spread }: RowProps) {
+  return (
+    <div className="flex items-center">
+      <span className="flex-1" style={css}>
+        {label}
+      </span>
+      <span className={`tabular-nums ${spread ? 'shrink-0 ml-4' : 'flex-1'}`} style={{ ...css, ...(spread ? { textAlign: 'right' } : {}) }}>
+        {value}
+      </span>
+    </div>
+  )
+}
 
 export function RenderTotals({
   block,
@@ -23,6 +45,15 @@ export function RenderTotals({
   const tax = taxableAmount * (doc.taxRate / 100)
   const total = taxableAmount + tax
 
+  const rowDefaults: TextStyleDefaults = {
+    fontFamily: branding.font_body,
+    fontSize: 13,
+    fontWeight: 400,
+    color: branding.muted_color || '#6B7280',
+    align: 'left',
+    lineHeight: 1.4,
+    letterSpacing: 0,
+  }
   const totalDefaults: TextStyleDefaults = {
     fontFamily: branding.font_heading,
     fontSize: 18,
@@ -32,36 +63,32 @@ export function RenderTotals({
     lineHeight: 1.2,
     letterSpacing: 0,
   }
+  const subtotalCss = resolveTextStyle(block.subtotalStyle, rowDefaults)
+  const taxCss = resolveTextStyle(block.taxStyle, rowDefaults)
   const totalCss = resolveTextStyle(block.totalStyle, totalDefaults)
-  const muted = branding.muted_color || '#6B7280'
-  const text = branding.text_color || '#111827'
+  const spread = block.colSpread ?? true
 
   return (
     <div className={`${p.docX} ${p.blockY}`}>
       <div className="space-y-1.5 pt-3 border-t border-gray-200">
         {block.showSubtotal && (
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-sm" style={{ color: muted }}>Subtotal</span>
-            <span className="text-sm tabular-nums" style={{ color: text }}>{fmt(subtotal)}</span>
+          <div className="pt-2">
+            <Row label="Subtotal" value={fmt(subtotal)} css={subtotalCss} spread={spread} />
           </div>
         )}
         {discountAmt > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm" style={{ color: muted }}>
-              Discount{doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}
-            </span>
-            <span className="text-sm text-red-500 tabular-nums">-{fmt(discountAmt)}</span>
-          </div>
+          <Row
+            label={`Discount${doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}`}
+            value={`-${fmt(discountAmt)}`}
+            css={rowDefaults}
+            spread={spread}
+          />
         )}
-        {doc.taxRate > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm" style={{ color: muted }}>GST ({doc.taxRate}%)</span>
-            <span className="text-sm tabular-nums" style={{ color: text }}>{fmt(tax)}</span>
-          </div>
+        {doc.taxRate > 0 && (block.showTax ?? true) && (
+          <Row label={`GST (${doc.taxRate}%)`} value={fmt(tax)} css={taxCss} spread={spread} />
         )}
-        <div className="flex items-center justify-between pt-3 mt-2 border-t border-gray-200">
-          <span style={{ ...totalCss, fontSize: undefined }}>Total</span>
-          <span className="tabular-nums" style={totalCss}>{fmt(total)}</span>
+        <div className="pt-3 mt-2 border-t border-gray-200">
+          <Row label="Total" value={fmt(total)} css={totalCss} spread={spread} />
         </div>
       </div>
     </div>

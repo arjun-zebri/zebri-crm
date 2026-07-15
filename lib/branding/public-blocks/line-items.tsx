@@ -17,6 +17,7 @@ export function RenderLineItems({
   const p = pad(branding)
   const showHeader = block.showHeader ?? true
   const rowStyle = block.rowStyle ?? 'lines'
+  const colSpread = block.colSpread ?? false
   const headerDefaults: TextStyleDefaults = {
     fontFamily: branding.font_body,
     fontSize: 11,
@@ -52,14 +53,14 @@ export function RenderLineItems({
   return (
     <div className={`${p.docX} ${p.blockY}`}>
       {showHeader && (
-        <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-          <span style={{ ...headerCss, textTransform: 'uppercase' }}>Description</span>
-          <span style={{ ...headerCss, textTransform: 'uppercase' }}>Amount</span>
+        <div className={`flex items-center pb-3 border-b border-gray-200 ${colSpread ? 'justify-between' : 'gap-4'}`}>
+          <span style={{ ...headerCss, textTransform: 'uppercase', ...(colSpread ? { flex: 1 } : {}) }}>Description</span>
+          <span style={{ ...headerCss, textTransform: 'uppercase', ...(colSpread ? { shrink: 0, marginLeft: '1rem' } : {}) }}>Amount</span>
         </div>
       )}
       {doc.items.map((item, i) => (
-        <div key={item.id} className={`flex items-start justify-between ${p.rowY} ${rowBorder} ${rowBg(i)} gap-4`}>
-          <div className="flex-1 min-w-0">
+        <div key={item.id} className={`flex items-start ${colSpread ? 'justify-between' : 'gap-4'} ${p.rowY} ${rowBorder} ${rowBg(i)}`}>
+          <div className={colSpread ? 'flex-1 min-w-0' : 'flex-1 min-w-0'}>
             <span style={itemCss}>{item.description}</span>
             {item.quantity !== undefined && item.quantity !== 1 && item.unit_price !== undefined && (
               <span className="block text-xs" style={{ color: branding.muted_color }}>
@@ -68,8 +69,8 @@ export function RenderLineItems({
             )}
           </div>
           <span
-            className="tabular-nums shrink-0"
-            style={{ ...itemCss, fontWeight: (itemCss.fontWeight as number ?? 400) + 100 }}
+            className={`tabular-nums ${colSpread ? 'shrink-0 ml-4' : 'flex-1'}`}
+            style={{ ...itemCss, fontWeight: (itemCss.fontWeight as number ?? 400) + 100, ...(colSpread ? { textAlign: 'right' } : {}) }}
           >
             {fmt(item.amount)}
           </span>

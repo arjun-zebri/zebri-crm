@@ -54,7 +54,10 @@ import { execSync } from 'node:child_process';
 // Phase G quotes removal: deleted quote builder, list pages, API routes,
 // time emitters, and automation triggers; removed quote references from
 // contract builder, templates, payments, and test code → 78 → 75.
-const ERROR_BUDGET = 75;
+// P5.D action/lineItems/totals/paymentDetails full controls: refactored
+// RenderTotals to use a pure renderRow helper (not component during render)
+// and fixed import-order across public block renderers → 75 → 72.
+const ERROR_BUDGET = 72;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C

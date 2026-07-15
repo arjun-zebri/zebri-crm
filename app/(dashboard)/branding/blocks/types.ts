@@ -170,6 +170,10 @@ export interface ActionBlock extends BaseBlock {
   buttonJustify?: 'start' | 'center' | 'end'
   /** Block-level override for the secondary button background. Falls back to brand secondaryColor. */
   secondaryColor?: string
+  /** Button style variant: 'fill' (solid background) or 'outline' (border + transparent). Defaults to global button_variant. */
+  variant?: 'fill' | 'outline'
+  /** Button size preset: 'sm', 'md', or 'lg'. Defaults to global button_size. */
+  size?: 'sm' | 'md' | 'lg'
 }
 
 export interface DividerBlock extends BaseBlock {

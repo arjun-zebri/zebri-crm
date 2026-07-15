@@ -24,22 +24,34 @@ export function RenderAction({
   if (hideAction) return null
   const p = pad(branding)
   const buttonColor = block.buttonColor ?? branding.brand_color
-  const radius = block.buttonRadius ?? Math.min(branding.corner_radius, 12)
+  const radius = block.buttonRadius ?? branding.button_radius
   const primaryText = primaryLabel ?? block.primary
   const secondaryText = secondaryLabel === undefined ? block.secondary : secondaryLabel
 
+  // Resolve variant and size from block or global defaults.
+  const variant = block.variant ?? branding.button_variant
+  const size = block.size ?? branding.button_size
+
+  // Size presets: padding and font size based on size value.
+  const sizeMap = {
+    sm: { padY: '0.5rem', fontSize: 13 },
+    md: { padY: '0.875rem', fontSize: 14 },
+    lg: { padY: '1rem', fontSize: 15 },
+  }
+  const sizeConfig = sizeMap[size]
+
   const primaryDefaults: TextStyleDefaults = {
     fontFamily: branding.font_body,
-    fontSize: 14,
+    fontSize: sizeConfig.fontSize,
     fontWeight: 500,
-    color: getTextColor(buttonColor),
+    color: variant === 'outline' ? buttonColor : getTextColor(buttonColor),
     align: 'center',
     lineHeight: 1.4,
     letterSpacing: 0,
   }
   const secondaryDefaults: TextStyleDefaults = {
     fontFamily: branding.font_body,
-    fontSize: 14,
+    fontSize: sizeConfig.fontSize,
     fontWeight: 500,
     color: branding.text_color || '#374151',
     align: 'center',
@@ -53,10 +65,14 @@ export function RenderAction({
         type="button"
         disabled={primaryDisabled || primaryLoading}
         onClick={onPrimary}
-        className="flex-1 py-3.5 cursor-pointer hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`flex-1 cursor-pointer hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed ${
+          variant === 'outline' ? 'border border-current' : ''
+        }`}
         style={{
           borderRadius: radius,
-          background: buttonColor,
+          background: variant === 'fill' ? buttonColor : 'transparent',
+          paddingTop: sizeConfig.padY,
+          paddingBottom: sizeConfig.padY,
           ...resolveTextStyle(block.primaryStyle, primaryDefaults),
         }}
       >
@@ -73,8 +89,17 @@ export function RenderAction({
           type="button"
           disabled={primaryLoading}
           onClick={onSecondary}
-          className="px-6 py-3.5 border border-gray-200 cursor-pointer hover:bg-gray-50 transition disabled:opacity-50"
-          style={{ borderRadius: radius, ...resolveTextStyle(block.secondaryStyle, secondaryDefaults) }}
+          className={`border cursor-pointer hover:bg-gray-50 transition disabled:opacity-50 ${
+            variant === 'outline' ? 'border-current' : 'border-gray-200'
+          }`}
+          style={{
+            borderRadius: radius,
+            paddingTop: sizeConfig.padY,
+            paddingBottom: sizeConfig.padY,
+            paddingLeft: '1.5rem',
+            paddingRight: '1.5rem',
+            ...resolveTextStyle(block.secondaryStyle, secondaryDefaults),
+          }}
         >
           {secondaryLabel !== undefined ? secondaryText : <Html value={secondaryText} allowLists={false} />}
         </button>

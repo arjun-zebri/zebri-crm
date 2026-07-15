@@ -21,6 +21,8 @@ Task P4.2: complete (commit b964c8f + lint fix 84d9ec7, review clean, per-block 
 Task P4.3: complete (commit d992b48, review clean) -- P4 phase done
 Note: P5 consolidated into P5.1 + P5.B (text-family) + P5.C (chrome) + P5.D (commerce+action).
 Task P5.1: complete (commit 5823cee + lint fix 9aa0fdd, review clean, no-op fast path preserved, gate 340->334)
+Task P5.B: complete (commit 10cbb50 + test fix d8e4fff, review clean, textTransform control added)
+Task P5.C: complete (retry after API-fail; commit a41d14c, review clean, overlay+divider-width+logo-size, parity verified, gate 334->333)
 
 ## Minor findings (for final review)
 - P0.1: build-public-branding.test covers 7/12 new fields; add assertions for body_case/button_size/button_radius/heading_letter_spacing/body_line_height.

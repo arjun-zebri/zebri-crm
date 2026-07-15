@@ -409,9 +409,65 @@ function ActionBlockControls({
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }) {
-  const radius = block.buttonRadius ?? Math.min(state.cornerRadius, 12)
+  const radius = block.buttonRadius ?? state.cornerRadius
+  const variant = block.variant ?? 'fill'
+  const size = block.size ?? 'md'
+
   return (
     <>
+      {/* Variant and Size */}
+      <div className="inline-flex items-center gap-0.5">
+        <div className="inline-flex items-center bg-gray-50 rounded-md border border-gray-200">
+          {([
+            { value: 'fill', label: 'Fill' },
+            { value: 'outline', label: 'Outline' },
+          ] as const).map(({ value, label }) => {
+            const active = variant === value
+            return (
+              <Tooltip key={value} label={label}>
+                <button
+                  type="button"
+                  onClick={() => updateBlock<ActionBlock>(block.id, { variant: value })}
+                  aria-label={label}
+                  className={`px-2.5 h-8 text-xs font-medium transition cursor-pointer ${
+                    active
+                      ? 'bg-white text-gray-900 shadow-sm rounded-md m-0.5'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {label}
+                </button>
+              </Tooltip>
+            )
+          })}
+        </div>
+        <div className="inline-flex items-center bg-gray-50 rounded-md border border-gray-200">
+          {([
+            { value: 'sm' as const, label: 'S' },
+            { value: 'md' as const, label: 'M' },
+            { value: 'lg' as const, label: 'L' },
+          ] as const).map(({ value, label }) => {
+            const active = size === value
+            return (
+              <Tooltip key={value} label={value === 'sm' ? 'Small' : value === 'md' ? 'Medium' : 'Large'}>
+                <button
+                  type="button"
+                  onClick={() => updateBlock<ActionBlock>(block.id, { size: value })}
+                  aria-label={label}
+                  className={`w-7 h-8 text-xs font-medium transition cursor-pointer ${
+                    active
+                      ? 'bg-white text-gray-900 shadow-sm rounded-md m-0.5'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {label}
+                </button>
+              </Tooltip>
+            )
+          })}
+        </div>
+      </div>
+      <Divider />
       {/* Justify */}
       <div className="inline-flex items-center bg-gray-50 rounded-md border border-gray-200">
         {([
@@ -447,7 +503,7 @@ function ActionBlockControls({
               className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200 text-gray-700"
             >
               <Square size={12} strokeWidth={1.75} />
-              {radius !== Math.min(state.cornerRadius, 12) && (
+              {radius !== state.cornerRadius && (
                 <span className="font-mono text-[10px]">{radius}px</span>
               )}
             </button>

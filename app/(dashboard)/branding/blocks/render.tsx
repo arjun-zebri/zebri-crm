@@ -829,7 +829,7 @@ export function RenderTotals({ block, state }: RenderProps<TotalsBlock>) {
   const taxCss = resolveTextStyle(block.taxStyle, rowDefaults)
   const totalCss = resolveTextStyle(block.totalStyle, totalDefaults)
 
-  const Row = ({ label, value, css }: { label: string; value: string; css: React.CSSProperties }) => (
+  const renderRow = (label: string, value: string, css: React.CSSProperties) => (
     <div className="flex items-center">
       <span className="flex-1" style={css}>{label}</span>
       <span className={`tabular-nums ${spread ? 'shrink-0 ml-4' : 'flex-1'}`} style={{ ...css, ...(spread ? { textAlign: 'right' } : {}) }}>{value}</span>
@@ -841,14 +841,12 @@ export function RenderTotals({ block, state }: RenderProps<TotalsBlock>) {
       <div className="space-y-1.5 pt-3 border-t border-gray-200">
         {block.showSubtotal && (
           <div className="pt-2">
-            <Row label="Subtotal" value={fmt(subtotal)} css={subtotalCss} />
+            {renderRow('Subtotal', fmt(subtotal), subtotalCss)}
           </div>
         )}
-        {(block.showTax ?? true) && (
-          <Row label={`GST (${block.taxRate}%)`} value={fmt(tax)} css={taxCss} />
-        )}
+        {(block.showTax ?? true) && renderRow(`GST (${block.taxRate}%)`, fmt(tax), taxCss)}
         <div className="pt-3 mt-2 border-t border-gray-200">
-          <Row label="Total" value={fmt(total)} css={totalCss} />
+          {renderRow('Total', fmt(total), totalCss)}
         </div>
       </div>
     </div>
@@ -895,22 +893,36 @@ export function RenderAction({
   const pad = PAD(state)
   const buttonColor = block.buttonColor ?? state.brandColor
   const secondaryBg = block.secondaryColor ?? state.secondaryColor
-  const radius = block.buttonRadius ?? Math.min(state.cornerRadius, 12)
-  const primaryPadY = block.primaryPaddingY ?? 14
-  const secondaryPadY = block.secondaryPaddingY ?? 14
+  const radius = block.buttonRadius ?? state.cornerRadius
+
+  // Resolve variant and size from block or defaults (editor defaults to 'fill'/'md').
+  const variant = block.variant ?? 'fill'
+  const size = block.size ?? 'md'
+
+  // Size presets for the editor preview.
+  const sizeMap = {
+    sm: { padY: 8, fontSize: 13 },
+    md: { padY: 14, fontSize: 14 },
+    lg: { padY: 16, fontSize: 15 },
+  }
+  const sizeConfig = sizeMap[size]
+
+  // Use explicit padding if set, otherwise use size preset.
+  const primaryPadY = block.primaryPaddingY ?? sizeConfig.padY
+  const secondaryPadY = block.secondaryPaddingY ?? sizeConfig.padY
 
   const primaryDefaults: TextStyleDefaults = {
     fontFamily: state.fontBody,
-    fontSize: 14,
+    fontSize: sizeConfig.fontSize,
     fontWeight: 500,
-    color: getTextColor(buttonColor),
+    color: variant === 'outline' ? buttonColor : getTextColor(buttonColor),
     align: 'center',
     lineHeight: 1.4,
     letterSpacing: 0,
   }
   const secondaryDefaults: TextStyleDefaults = {
     fontFamily: state.fontBody,
-    fontSize: 14,
+    fontSize: sizeConfig.fontSize,
     fontWeight: 500,
     color: state.secondaryTextColor || '#374151',
     align: 'center',
@@ -956,10 +968,13 @@ export function RenderAction({
           ref={primaryRef}
           type="button"
           tabIndex={-1}
-          className={`relative group/pbtn transition cursor-text ${hasPrimaryW ? 'shrink-0' : 'px-6'}`}
+          className={`relative group/pbtn transition cursor-text ${hasPrimaryW ? 'shrink-0' : 'px-6'} ${
+            variant === 'outline' ? 'border' : ''
+          }`}
           style={{
             borderRadius: radius,
-            background: buttonColor,
+            background: variant === 'fill' ? buttonColor : 'transparent',
+            borderColor: variant === 'outline' ? buttonColor : undefined,
             paddingTop: primaryPadY,
             paddingBottom: primaryPadY,
             ...(hasPrimaryW ? { width: block.primaryWidthPx } : {}),
@@ -984,10 +999,11 @@ export function RenderAction({
             ref={secondaryRef}
             type="button"
             tabIndex={-1}
-            className={`relative group/sbtn border border-gray-200 transition cursor-text ${hasSecondaryW ? 'shrink-0' : 'px-6'}`}
+            className={`relative group/sbtn border transition cursor-text ${hasSecondaryW ? 'shrink-0' : 'px-6'}`}
             style={{
               borderRadius: radius,
               background: secondaryBg,
+              borderColor: variant === 'outline' ? secondaryBg : '#E5E7EB',
               paddingTop: secondaryPadY,
               paddingBottom: secondaryPadY,
               ...(hasSecondaryW ? { width: block.secondaryWidthPx } : {}),
