@@ -27,15 +27,47 @@ metadata_on_insert` trigger).
 
 **Branding fields (stored in `user_metadata`, user-owned):**
 
+Scalars returned by `_user_branding(uuid)` and merged into public RPCs. Migration `20260715000000_branding_editor_redesign.sql` extended the function with typography + layout fields.
+
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `logo_url` | text | null | Supabase Storage URL for MC logo (`branding/{user_id}/logo`) |
-| `brand_color` | text | `#A7F3D0` | Hex accent color for public proposal/invoice pages |
-| `tagline` | text | null | Optional business tagline, max 80 chars |
-| `abn` | text | null | Australian Business Number, displayed on invoice header |
-| `show_contact_on_documents` | boolean | false | Show phone/website/social on public proposal and invoice pages |
+| `logo_url` | text | null | Supabase Storage URL for MC logo |
+| `favicon_url` | text | null | Favicon URL |
+| `header_image_url` | text | null | Header banner background image |
+| `brand_color` | text | `#A7F3D0` | Primary accent (headings, buttons, key accents) |
+| `accent_color` | text | `#111827` | Highlights badge colour |
+| `surface_color` | text | `#ffffff` | Page background fallback |
+| `text_color` | text | `#111827` | Body copy |
+| `muted_color` | text | `#6B7280` | Secondary/subtle text |
+| `secondary_color` | text | `#FFFFFF` | Priced-summary panel background |
+| `secondary_text_color` | text | `#374151` | Priced-summary panel text |
+| `tagline` | text | null | Business tagline, max 80 chars |
+| `abn` | text | null | Australian Business Number |
+| `show_contact_on_documents` | boolean | true | Show phone/website/socials on public pages |
+| `font_heading` | text | `inter` | Heading font ID (from FONT_IDS catalogue) |
+| `font_body` | text | `inter` | Body font ID |
+| `font_weight` | int | 600 | Heading font weight |
+| `font_body_weight` | int | 400 | Body font weight |
+| `font_scale` | numeric | 1 | Global font multiplier (deprecated in favour of explicit px sizes) |
+| `heading_size` | int | 32 | Heading base size in px |
+| `body_size` | int | 15 | Body base size in px |
+| `heading_case` | text | `none` | Heading text transform (none, uppercase, capitalize) |
+| `body_case` | text | `none` | Body text transform |
+| `heading_letter_spacing` | int | 0 | Heading letter spacing in px |
+| `body_line_height` | numeric | 1.5 | Body line height multiplier |
+| `link_color` | text | brand_color | Link colour (defaults to brand_color) |
+| `button_variant` | text | `fill` | Default button style (fill, outline) |
+| `button_size` | text | `md` | Default button size (sm, md, lg) |
+| `button_radius` | int | 8 | Button corner radius in px |
+| `corner_radius` | int | 12 | Global corner radius in px (applied to blocks) |
+| `section_spacing` | int | 32 | Space between blocks in px |
+| `page_background` | text | surface_color | Page background (colour or texture ID) |
+| `doc_padding` | int | 0 | Extra horizontal inset on documents |
+| `density` | text | `cozy` | Vertical spacing preset (cozy/compact) — read-only (frozen to baseline) |
+| `proposal_labels` | jsonb | `{}` | Stylable proposal section labels (string or {text, style}) |
+| `theme_preset` | text | `minimal` | Theme key (for legacy compatibility) |
 
-These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`. See `.claude/docs/branding.md` for full spec.
+These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`.
 
 **Email fields (stored in `user_metadata`, user-owned):**
 

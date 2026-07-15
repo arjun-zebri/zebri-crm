@@ -1,4 +1,8 @@
-# Branding Editor Redesign — Design Spec (2026-07-12)
+# Branding Editor Redesign — Design Spec
+
+**Status: SHIPPED (2026-07-15)** on feature/proposals-phase-a.
+
+Commits: All 8 phases (P0–P8) implemented in internal commits on the branch; reviewed as one change.
 
 ## Context
 

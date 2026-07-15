@@ -1047,6 +1047,94 @@ as Privacy. Read-only.
 
 ---
 
+# Branding Editor
+
+Route: `/branding`
+
+Route group: `(dashboard)`
+
+Purpose: A Canva-grade design tool for customizing the MC's brand kit and block-based document layouts across proposal, invoice, contract, and couple portal surfaces.
+
+## Layout
+
+Two-pane: left rail (brand panel with accordions) + canvas (surface preview). Header has surface tabs (Proposal | Invoice | Contract | Portal) and a Preview button opening the surface in a new tab. Canvas shows a scope bar: "<Surface> layout — blocks and wording for this document only".
+
+## Brand Rail (left sidebar, collapsible accordions)
+
+Header: "Applies to every document" — one shared global brand kit flows into all surfaces.
+
+1. **Your business** — Logo, favicon, business name, tagline, ABN, phone, website, Instagram/Facebook URLs.
+
+2. **Brand colours** — Six colour roles (Primary, Accent, Surface, Text, Muted, Secondary + Secondary text), each with a one-line role description and a palette selector (`ColorPopover`). Redundant circular swatches removed.
+
+3. **Typography** — Per role (heading / body): font dropdown (30+ Google fonts, each previewed in its own face), size (px), weight, colour (`ColorPopover`), alignment (left/centre/right), text case (none/UPPERCASE/Capitalize), letter-spacing, line-height. Small "Overall scale" slider (font_scale multiplier).
+
+4. **Global styles** — Corner radius, link colour, default button style (variant/size/radius), base line-height, section spacing, page background (colour or texture). Density control removed; stored density is honoured on render but not editable.
+
+5. **Templates** — Picker for functional templates (Wedding proposal, Deposit invoice, Standard e-sign contract, Couple portal). Applying one replaces only the current surface's block tree in one undoable step.
+
+## Canvas (right side)
+
+Renders the selected surface with live sample data, fed by the editor's saved branding. Fixed-core blocks (e.g. proposalBody, contractBody) are marked with a dashed "Fixed layout" frame; the MC can drag chrome blocks (header banner, business name, text, image, spacer, divider, footer) above and below.
+
+Per-surface blocks available via an "Add block" palette (grouped into Structure / Content / Action). New blocks: Image (with fit/focal/height/rounding/width/align/padding/background) and Spacer (adjustable height).
+
+Every block exposes a full Canva-style toolbar: padding (per side), background colour, border (width/colour/radius), width, horizontal alignment, space above/below. Text-bearing blocks add font/size/weight/colour/alignment/case/letter-spacing/line-height. Block-specific controls (header banner overlay, action variant/size/radius, divider thickness, etc.) available per block type.
+
+Mobile responsive: canvas stacks vertically on mobile (<md breakpoint), canvas above, rail as a sticky drawer below.
+
+## Customer Preview
+
+Top-right "Preview" button opens a new browser tab at `/branding/preview/[surface]`, rendering the surface exactly as the customer sees it via the shared public renderers. Read-only, fed by saved branding + realistic sample data. Closes the gap where customised layouts / footer / Accept button previewed different from the sent page.
+
+## Per-Surface Block Model
+
+Each surface has a fixed set of available block types (gated by `BLOCKS_BY_SURFACE`):
+
+- **All surfaces:** Header banner, Business name, Tagline, Text, Image, Spacer, Divider, Footer
+- **Proposal:** + Proposal core (fixed), Action block
+- **Invoice:** + Title & meta, Line items, Totals, Payment details, Action block
+- **Contract:** + Title & meta, Contract body (fixed)
+- **Portal:** + Couple portal (fixed)
+
+## No Density / Themes
+
+Density control (cozy/compact spacing) is removed from the UI. Stored density values are honoured on render (default cozy) so live documents don't shift. Themes + Starter-design controls are deleted; functional templates replace them.
+
+## File Structure
+
+```
+app/(dashboard)/branding/
+  page.tsx                           — orchestrator
+  branding-editor.tsx                — editor state + autosave
+  brand-panel.tsx                    — rail sections
+  business-section.tsx               — Your business accordion
+  blocks/
+    render.tsx                       — editor block renderers (including new Image, Spacer)
+    block-toolbar.tsx                — per-block controls
+    blocks-by-surface.ts             — availability gating
+    block-frame.tsx                  — editor wrapper (applies padding/background/etc)
+    render-image.tsx                 — image block editor
+    render-spacer.tsx                — spacer block editor
+  templates/
+    index.ts                         — template catalogue
+    templates-section.tsx            — Templates accordion picker
+  add-block-palette.tsx              — Add block grouped palette
+
+app/branding/
+  preview/[surface]/page.tsx         — customer preview route (auth, reads branding + sample data)
+
+lib/branding/
+  fonts.ts                           — 30+ Google fonts (FONT_IDS, FONT_LABELS, FONT_STACKS, GOOGLE_FONT_FAMILIES)
+  type-defaults.ts                   — TypeDefaults + resolveTypeDefaults (heading/body type resolution)
+  block-outer-style.ts               — blockOuterStyle(block, branding) pure helper (padding/background/radius)
+  public-blocks/
+    image.tsx                        — public renderer for Image block
+    spacer.tsx                       — public renderer for Spacer block
+```
+
+---
+
 # Public Invoice Page
 
 Route: `/invoice/[token]`

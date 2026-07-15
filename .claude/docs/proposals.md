@@ -264,15 +264,17 @@ names the sample couple / note / pricing as sample-only (the real ones
 are set in the composer), and the single/multi control is prefixed
 "Preview" so it reads as a preview toggle, not a saved setting.
 
-Two Canva-feel additions: the "Add block" palette
-(`blocks/add-block-palette.tsx`) is grouped into **Structure / Content /
-Action** categories (search + keyboard nav unchanged), and a new
-**Starter designs** section tops the brand rail
-(`app/(dashboard)/branding/starter-designs.ts` + `StarterSection` in
-`brand-panel.tsx`). A starter design applies a theme's tokens AND a
-ready block layout for every surface in one undoable step (`applyStarterDesign`
-in `branding-editor.tsx`, committed like a theme/kit). Layouts derive
-from `defaultBlocksFor(surface)` via a small typed "mood" transform
-(clean / statement / framed / editorial), so themes still flow through
-and every surface stays valid. Distinct from **Themes** (colours + fonts
-only) and saved **brand kits** (the MC's own snapshots).
+## Branding editor redesign (2026-07-15)
+
+The branding editor is now a Canva-grade design tool:
+
+- **40+ curated Google fonts** in a unified FONT_IDS catalogue (usable for heading or body).
+- **Full per-role type controls:** font, explicit px size, weight, colour, alignment, text case (UPPERCASE/Capitalize/none), letter-spacing, line-height.
+- **Stylable proposal section labels:** `proposal_labels` entries are now `{ text, style }` (back-compat reader accepts old strings); each label (eyebrow, note, chooser, selected, add-ons, accept, decline) can be restyled on the canvas.
+- **Per-surface block model:** each surface (proposal, invoice, contract, portal) has a gated set of available blocks. New blocks: Image (with fit/focal/height/padding/background) and Spacer (adjustable height). Every block exposes full Canva-style controls (padding per side, background, border, width, alignment, spacing).
+- **Functional document templates:** Wedding proposal, Deposit invoice, Standard e-sign contract, Couple portal. Applying a template replaces only the current surface's block tree in one undoable step (not destructive to other surfaces or brand colours). Themes + Starter-designs removed.
+- **Global styles section:** corner radius, link colour, default button style (variant/size/radius), base line-height, section spacing, page background. Density control removed (stored density is honoured on render).
+- **Customer preview page:** `/branding/preview/[surface]` opens in a new tab, rendering the surface exactly as the customer sees it via the shared renderers.
+- **Sidebar restructure:** "Your business" section moved to the top; colour roles gain role descriptions (Primary, Accent, Surface, Text, Muted, Secondary); redundant circular swatches dropped.
+
+Migration `20260715000000_branding_editor_redesign.sql` extended `_user_branding` with the new fields (heading/body size, case, letter-spacing, line-height, link_color, button_variant/size/radius, section_spacing, page_background) and `proposal_labels` styling. All new styles resolve inside public renderers so editor preview = public page.
