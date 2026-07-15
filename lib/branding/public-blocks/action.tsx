@@ -91,12 +91,12 @@ export function RenderAction({
           type="button"
           disabled={primaryLoading}
           onClick={onSecondary}
-          className={`border cursor-pointer hover:opacity-90 transition disabled:opacity-50 ${
-            variant === 'outline' ? '' : ''
-          }`}
+          className="border cursor-pointer hover:opacity-90 transition disabled:opacity-50"
           style={{
             borderRadius: radius,
-            background: variant === 'fill' ? secondaryBg : 'transparent',
+            // Mirror the editor: the secondary button keeps its secondaryBg fill
+            // regardless of variant, and uses secondaryBg as the border on outline.
+            background: secondaryBg,
             borderColor: variant === 'outline' ? secondaryBg : '#E5E7EB',
             paddingTop: sizeConfig.padY,
             paddingBottom: sizeConfig.padY,
