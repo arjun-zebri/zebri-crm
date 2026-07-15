@@ -24,6 +24,8 @@ export function RenderAction({
   if (hideAction) return null
   const p = pad(branding)
   const buttonColor = block.buttonColor ?? branding.brand_color
+  /* Mirror editor: secondary button uses block.secondaryColor with fallback to branding.secondary_color */
+  const secondaryBg = block.secondaryColor ?? branding.secondary_color
   const radius = block.buttonRadius ?? branding.button_radius
   const primaryText = primaryLabel ?? block.primary
   const secondaryText = secondaryLabel === undefined ? block.secondary : secondaryLabel
@@ -89,11 +91,13 @@ export function RenderAction({
           type="button"
           disabled={primaryLoading}
           onClick={onSecondary}
-          className={`border cursor-pointer hover:bg-gray-50 transition disabled:opacity-50 ${
-            variant === 'outline' ? 'border-current' : 'border-gray-200'
+          className={`border cursor-pointer hover:opacity-90 transition disabled:opacity-50 ${
+            variant === 'outline' ? '' : ''
           }`}
           style={{
             borderRadius: radius,
+            background: variant === 'fill' ? secondaryBg : 'transparent',
+            borderColor: variant === 'outline' ? secondaryBg : '#E5E7EB',
             paddingTop: sizeConfig.padY,
             paddingBottom: sizeConfig.padY,
             paddingLeft: '1.5rem',
