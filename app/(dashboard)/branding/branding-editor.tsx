@@ -28,8 +28,8 @@ import { CanvasFrame } from './canvas-frame'
 import { CanvasScopeBar } from './canvas-scope-bar'
 import { EditorTopbar } from './editor-topbar'
 import { PortalSectionsBar } from './portal-preview'
-import { STARTER_DESIGNS, starterLayout } from './starter-designs'
 import { SurfaceTabs } from './surface-tabs'
+import { TEMPLATES } from './templates'
 
 
 export interface PortalSectionSettings {
@@ -414,42 +414,23 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     if (state.themePreset !== 'custom') applyTheme(state.themePreset)
   }
 
-  /** Apply a curated starter design: the theme's tokens PLUS a ready
-   *  block layout for every surface. Committed as one undoable step
-   *  (like applying a theme or a saved kit); themePreset becomes
-   *  'custom' because it's a bespoke tokens + layout combination. */
-  const applyStarterDesign = (id: string) => {
-    const design = STARTER_DESIGNS.find((d) => d.id === id)
-    if (!design) return
-    const p = THEME_PRESETS[design.theme] ?? DEFAULT_THEME
+  /** Apply a template: replaces that surface's block layout only.
+   *  Does NOT touch global tokens or other surfaces. Committed as one
+   *  undoable step. */
+  const applyTemplate = (id: string) => {
+    const tpl = TEMPLATES.find((t) => t.id === id)
+    if (!tpl) return
     setState(
       (prev) => ({
         ...prev,
-        themePreset: 'custom',
-        brandColor: p.color,
-        accentColor: p.accent,
-        surfaceColor: p.surface,
-        textColor: p.text,
-        mutedColor: p.muted,
-        secondaryColor: '#FFFFFF',
-        secondaryTextColor: '#374151',
-        fontHeading: p.headingFont,
-        fontBody: p.bodyFont,
-        fontWeight: p.headingWeight,
-        fontBodyWeight: p.bodyWeight,
-        density: p.density,
-        cornerRadius: p.radius,
-        fontScale: p.scale,
         blocks: {
-          proposal: starterLayout(design.mood, 'proposal'),
-          invoice: starterLayout(design.mood, 'invoice'),
-          contract: starterLayout(design.mood, 'contract'),
-          portal: starterLayout(design.mood, 'portal'),
+          ...prev.blocks,
+          [tpl.surface]: tpl.build(),
         },
       }),
       { commit: true },
     )
-    toast(`Applied the "${design.name}" design`, 'success')
+    toast(`Applied the "${tpl.name}" template`, 'success')
   }
 
   const uploadAsset = async (file: File, kind: 'logo' | 'favicon' | 'header'): Promise<string> => {
@@ -916,8 +897,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         <BrandPanel
           themePreset={state.themePreset}
           applyTheme={applyTheme}
-          applyStarterDesign={applyStarterDesign}
+          applyTemplate={applyTemplate}
           resetToTheme={resetToTheme}
+          surface={surface}
           brandColor={state.brandColor}
           setBrandColor={(v) => setEditor({ brandColor: v })}
           accentColor={state.accentColor}

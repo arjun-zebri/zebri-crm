@@ -32,17 +32,19 @@ import {
   type ThemeIdOrCustom,
   type Density,
 } from '@/lib/branding/themes'
+import type { SurfaceTab } from '@/types/branding-preview'
 
 import { BusinessSection } from './business-section'
 import { Slider } from './components/slider'
-import { STARTER_DESIGNS } from './starter-designs'
+import { TemplatesSection } from './templates-section'
 
 
 interface BrandPanelProps {
   themePreset: ThemeIdOrCustom
   applyTheme: (id: ThemeId) => void
-  applyStarterDesign: (id: string) => void
+  applyTemplate: (id: string) => void
   resetToTheme: () => void
+  surface: SurfaceTab
 
   brandColor: string
   setBrandColor: (v: string) => void
@@ -124,12 +126,12 @@ interface BrandPanelProps {
 
 }
 
-type SectionId = 'business' | 'starters' | 'colors' | 'fonts' | 'globalStyles'
+type SectionId = 'business' | 'templates' | 'colors' | 'fonts' | 'globalStyles'
 
 export function BrandPanel(props: BrandPanelProps) {
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
     business: true,
-    starters: false,
+    templates: false,
     colors: false,
     fonts: false,
     globalStyles: false,
@@ -191,12 +193,12 @@ export function BrandPanel(props: BrandPanelProps) {
 
         <Accordion
           icon={<LayoutTemplate size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Starter designs"
-          subtitle="Colours, fonts + a ready layout"
-          open={open.starters}
-          onToggle={() => toggle('starters')}
+          title="Templates"
+          subtitle="Ready-made layouts for this surface"
+          open={open.templates}
+          onToggle={() => toggle('templates')}
         >
-          <StarterSection {...props} />
+          <TemplatesSection surface={props.surface} applyTemplate={props.applyTemplate} />
         </Accordion>
 
         <Accordion
@@ -269,45 +271,6 @@ function Accordion({
         />
       </button>
       {open && <div className="px-4 pb-5 pt-1">{children}</div>}
-    </div>
-  )
-}
-
-// ── Starter designs ─────────────────────────────────────────────────────────
-
-function StarterSection({ applyStarterDesign }: BrandPanelProps) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {STARTER_DESIGNS.map((d) => {
-        const p = THEME_PRESETS[d.theme] ?? DEFAULT_THEME
-        return (
-          <button
-            key={d.id}
-            type="button"
-            onClick={() => applyStarterDesign(d.id)}
-            className="relative rounded-xl border border-gray-200 hover:border-gray-300 overflow-hidden text-left transition cursor-pointer"
-            style={{ background: p.surface }}
-            title={`Apply ${d.name}`}
-          >
-            <div className="p-3 min-h-[92px] flex flex-col gap-1.5">
-              <p
-                className="text-[13px] leading-tight"
-                style={{ fontFamily: FONT_STACKS[p.headingFont], fontWeight: p.headingWeight, color: p.text }}
-              >
-                {d.name}
-              </p>
-              <p className="text-[10px] leading-snug" style={{ color: p.muted }}>
-                {d.description}
-              </p>
-              <div className="flex items-center gap-0.5 mt-auto">
-                <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: p.color }} />
-                <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: p.accent }} />
-                <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: p.surface }} />
-              </div>
-            </div>
-          </button>
-        )
-      })}
     </div>
   )
 }

@@ -141,7 +141,10 @@ const ERROR_BUDGET = 72;
 // imports; fixed import-order across block-frame and public-renderer → 340 → 335.
 // P5.C header banner overlay + business name logo size + divider width: clean
 // new toolbar + renderer code; fixed import-order → 335 → 334.
-const WARNING_BUDGET = 333;
+// P6.1 templates: deleted starter-designs.ts + starterLayout; added templates/index.ts
+// and templates-section.tsx with strict-clean code; lint --fix swept import-order across
+// the codebase → 334 → 97.
+const WARNING_BUDGET = 130;
 
 function runEslintJson() {
   try {
