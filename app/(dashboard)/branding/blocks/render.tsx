@@ -1314,7 +1314,7 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
 /**
  * Placeholder block shown in the branding editor where the automatic
  * payment schedule will render on the public invoice. The MC can never
- * edit the schedule here — it flows from couple data and deposit percent
+ * edit the schedule here, it flows from couple data and deposit percent
  * settings. Same model as `RenderCouplePortal` + `RenderContractBody`.
  *
  * Renders with a dashed border + muted "Live data" badge so it's
@@ -1328,7 +1328,7 @@ export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
   return (
     <div className="border-t border-gray-100">
       <div className={`${pad.docX} ${pad.blockY}`}>
-        {/* Locked-slot affordance — dashed border + muted "Live data"
+        {/* Locked-slot affordance: dashed border + muted "Live data"
             badge make it clear at a glance that this block isn't
             editable on the branding surface. */}
         <div

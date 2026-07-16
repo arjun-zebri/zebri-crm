@@ -59,13 +59,13 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
         <span className="text-xs font-medium text-gray-600 capitalize">{block.type}</span>
         <div className="flex items-center gap-1 ml-auto">
           {!canDelete && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
-              <Lock size={10} strokeWidth={2.5} />
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-text-muted bg-surface-muted px-2 py-0.5 rounded-full">
+              <Lock size={10} strokeWidth={1.5} />
               Required
             </span>
           )}
           {hasLiveData && (
-            <span className="text-[10px] font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-full">
+            <span className="text-[10px] font-medium text-text-muted bg-surface-muted px-1.5 py-0.5 rounded-full">
               Live data
             </span>
           )}
