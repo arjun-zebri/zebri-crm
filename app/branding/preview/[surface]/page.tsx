@@ -4,13 +4,15 @@
  * Authed via the dashboard session (not token-gated). Renders the current user's
  * saved branding for the chosen surface (proposal/invoice/contract/portal) with
  * sample data using the same shared renderers the public pages use, so the preview
- * matches exactly what the couple receives.
+ * matches exactly what the couple receives. Reads the surface from route params via
+ * useParams for SSR safety (window.location during render breaks hydration).
  *
  * @module app/branding/preview/[surface]/page.tsx
  */
 'use client'
 
 import { useEffect } from 'react'
+import { useParams } from 'next/navigation'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import { ProposalDocumentBody } from '@/components/proposal/proposal-document-body'
@@ -116,15 +118,13 @@ function sampleContractDoc(): PublicDocData {
 }
 
 /**
- * Main page component - extracts surface from params and renders preview.
- * Due to Next.js 16+ async params in client components, this uses window.location
- * to extract the surface from the URL path.
+ * Main page component. Reads the surface segment via useParams, which is
+ * SSR-safe in client components (window.location here previously made the
+ * server and client render different trees and broke hydration).
  */
 export default function BrandingPreviewPage() {
-  // Extract surface from window location in client component
-  // (async params don't work well with 'use client' components in all situations)
-  const pathSegments = typeof window !== 'undefined' ? window.location.pathname.split('/') : []
-  const surface = pathSegments[3]
+  const params = useParams<{ surface: string }>()
+  const surface = params?.surface
 
   if (!surface || !isValidSurface(surface)) {
     return <UnknownSurfaceState surface={surface ?? 'unknown'} />
