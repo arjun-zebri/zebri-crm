@@ -139,7 +139,7 @@ export function RenderHeaderBanner({
     setResizing(true)
     const onMove = (ev: MouseEvent) => {
       const dy = ev.clientY - startY
-      const next = Math.max(60, Math.min(480, startHeight + dy))
+      const next = Math.max(24, Math.min(480, startHeight + dy))
       updateBlock<HeaderBannerBlock>(block.id, { heightPx: Math.round(next) })
     }
     const onUp = () => {
@@ -279,7 +279,7 @@ export function RenderImage({
   uploadImage?: (file: File, blockId: string) => Promise<void>
   removeImage?: (blockId: string) => void | Promise<void>
 }) {
-  const heightPx = block.heightPx ?? 240
+  const heightPx = block.heightPx ?? 160
   const fit = block.fit ?? 'cover'
   const imageX = block.imageX ?? 50
   const imageY = block.imageY ?? 50
@@ -345,7 +345,7 @@ export function RenderImage({
     setResizing(true)
     const onMove = (ev: MouseEvent) => {
       const dy = ev.clientY - startY
-      const next = Math.max(60, Math.min(480, startHeight + dy))
+      const next = Math.max(24, Math.min(480, startHeight + dy))
       updateBlock<ImageBlock>(block.id, { heightPx: Math.round(next) })
     }
     const onUp = () => {
@@ -370,14 +370,13 @@ export function RenderImage({
             onUpload={(file) => uploadImage(file, block.id)}
             label="Upload image"
             overlayPosition="center"
+            selectableWhenEmpty
             className="w-full h-full"
             emptyState={
               <div
-                className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+                className="w-full h-full border-2 border-dashed border-gray-200 bg-gray-50/40"
                 style={{ borderRadius: state.cornerRadius }}
-              >
-                <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
-              </div>
+              />
             }
           >
             {null}

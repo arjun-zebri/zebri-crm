@@ -1152,7 +1152,7 @@ function ImageControls({
               className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
             >
               <Equal size={12} strokeWidth={1.75} />
-              {(block.heightPx ?? 240) !== 240 && (
+              {(block.heightPx ?? 160) !== 160 && (
                 <span className="font-mono text-[10px]">{block.heightPx}px</span>
               )}
             </button>
@@ -1166,11 +1166,11 @@ function ImageControls({
           >
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Height</span>
-              <span className="text-xs font-mono text-gray-700 tabular-nums">{block.heightPx ?? 240}px</span>
+              <span className="text-xs font-mono text-gray-700 tabular-nums">{block.heightPx ?? 160}px</span>
             </div>
             <Slider
-              value={block.heightPx ?? 240}
-              min={60}
+              value={block.heightPx ?? 160}
+              min={24}
               max={480}
               step={10}
               onChange={(v) => updateBlock<ImageBlock>(block.id, { heightPx: v })}

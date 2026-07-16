@@ -1,7 +1,8 @@
 'use client'
 
+import { Loader2, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
-import { Loader2, RefreshCw, Trash2 } from 'lucide-react'
+
 import { useToast } from '@/components/ui/toast'
 
 interface InlineAssetProps {
@@ -16,6 +17,15 @@ interface InlineAssetProps {
   label?: string
   /** Position of the Replace overlay button. Defaults to top-right. */
   overlayPosition?: 'top-right' | 'center'
+  /**
+   * When true, a click on the empty state does NOT open the file picker.
+   * The click bubbles instead so the surrounding block can be selected (and
+   * therefore deleted / reordered). Upload happens via the explicit "Upload"
+   * button and drag-and-drop. Used for the deletable image block so an empty
+   * image block never traps the user in the picker. Defaults to false, which
+   * keeps the whole-area click-to-upload behaviour for logo / header assets.
+   */
+  selectableWhenEmpty?: boolean
   className?: string
   style?: React.CSSProperties
 }
@@ -30,6 +40,7 @@ export function InlineAsset({
   emptyState,
   label = 'Upload image',
   overlayPosition = 'top-right',
+  selectableWhenEmpty = false,
   className = '',
   style,
 }: InlineAssetProps) {
@@ -66,6 +77,9 @@ export function InlineAsset({
     <div
       onClick={(e) => {
         if (populated) return
+        // Let the click bubble so the parent block can be selected (and thus
+        // deleted / reordered). Upload is handled by the explicit button below.
+        if (selectableWhenEmpty) return
         e.stopPropagation()
         openPicker()
       }}
@@ -86,10 +100,30 @@ export function InlineAsset({
         setDragOver(false)
         handleFile(e.dataTransfer.files?.[0])
       }}
-      className={`group/asset relative ${populated ? '' : 'cursor-pointer'} ${className}`}
+      className={`group/asset relative ${populated || selectableWhenEmpty ? '' : 'cursor-pointer'} ${className}`}
       style={style}
     >
       {populated ? children : emptyState}
+
+      {/*
+        Empty deletable image block: only the small centred square opens the
+        picker. Clicking anywhere else on the block bubbles up to select it (so
+        it can be deleted / reordered), because the overlay is pointer-events-none
+        and only the square button re-enables pointer events.
+      */}
+      {!populated && selectableWhenEmpty && !busy && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <button
+            type="button"
+            onClick={openPicker}
+            aria-label={label}
+            title="Upload image"
+            className="pointer-events-auto flex items-center justify-center w-11 h-11 rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-gray-900 hover:border-gray-400 cursor-pointer transition shadow-sm"
+          >
+            <Upload size={16} strokeWidth={1.75} />
+          </button>
+        </div>
+      )}
 
       {dragOver && (
         <div

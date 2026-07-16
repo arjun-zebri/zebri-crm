@@ -19,7 +19,7 @@ export function RenderImage({
 }) {
   if (!block.url) return null
 
-  const heightPx = block.heightPx ?? 240
+  const heightPx = block.heightPx ?? 160
   const fit = block.fit ?? 'cover'
   const imageX = block.imageX ?? 50
   const imageY = block.imageY ?? 50
