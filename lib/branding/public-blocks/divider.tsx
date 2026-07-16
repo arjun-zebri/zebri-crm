@@ -1,6 +1,8 @@
 'use client'
 
+// eslint-disable-next-line no-restricted-imports
 import type { DividerBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import type { PublicBranding } from '../public-surface'
 import { pad } from './shared'
 

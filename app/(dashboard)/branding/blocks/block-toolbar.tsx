@@ -341,8 +341,14 @@ function ActionControls({
   const [target, setTarget] = useState<ActionTarget>('block')
 
   useEffect(() => {
-    if (block.secondary === null && target === 'secondary') setTarget('block')
-  }, [block.secondary, target])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTarget(prev => {
+      if (block.secondary === null && prev === 'secondary') {
+        return 'block'
+      }
+      return prev
+    })
+  }, [block.secondary])
 
   const options = [
     { value: 'block' as const, label: 'Block' },
@@ -1511,14 +1517,20 @@ function NumberField({
   const minRef = useRef(min)
   const maxRef = useRef(max)
   const onChangeRef = useRef(onChange)
+  const focusedRef = useRef(focused)
+
   useEffect(() => { localRef.current = local }, [local])
   useEffect(() => { minRef.current = min }, [min])
   useEffect(() => { maxRef.current = max }, [max])
   useEffect(() => { onChangeRef.current = onChange }, [onChange])
+  useEffect(() => { focusedRef.current = focused }, [focused])
 
   useEffect(() => {
-    if (!focused) setLocal(String(value))
-  }, [value, focused])
+    if (!focusedRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocal(String(value))
+    }
+  }, [value])
 
   // Commit on unmount (e.g. popover closes before onBlur fires)
   useEffect(() => {

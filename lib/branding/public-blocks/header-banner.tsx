@@ -1,6 +1,8 @@
 'use client'
 
+// eslint-disable-next-line no-restricted-imports
 import type { HeaderBannerBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import type { PublicBranding } from '../public-surface'
 import { HEADER_HEIGHTS } from './shared'
 

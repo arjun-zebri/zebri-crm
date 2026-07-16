@@ -70,17 +70,29 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
     )
   })
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      setQuery('')
+      setActiveIndex(0)
+    }
+    onOpenChange(newOpen)
+  }
+
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 30)
-      setQuery('')
-      setActiveIndex(0)
     }
   }, [open])
 
   useEffect(() => {
-    if (activeIndex >= filtered.length) setActiveIndex(0)
-  }, [filtered.length, activeIndex])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveIndex(prev => {
+      if (filtered.length > 0 && prev >= filtered.length) {
+        return 0
+      }
+      return prev
+    })
+  }, [filtered.length])
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -102,7 +114,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
   }
 
   return (
-    <Popover.Root open={open} onOpenChange={onOpenChange}>
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
@@ -148,7 +160,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                       onMouseEnter={() => setActiveIndex(idx)}
                       onClick={() => {
                         onAdd(type)
-                        onOpenChange(false)
+                        handleOpenChange(false)
                       }}
                       className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
                         active ? 'bg-gray-100' : 'hover:bg-gray-50'

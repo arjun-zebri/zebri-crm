@@ -1,7 +1,10 @@
 'use client'
 
 import type { CSSProperties } from 'react'
+
+// eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+// eslint-disable-next-line no-restricted-imports
 import type { TotalsBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'

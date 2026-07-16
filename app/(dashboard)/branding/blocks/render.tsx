@@ -1,7 +1,7 @@
 'use client'
 
 import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ProposalPageView } from '@/components/proposal/proposal-page-view'
 import { getTextColor, pillForeground } from '@/lib/branding/contrast'
@@ -932,14 +932,15 @@ export function RenderAction({
   const primaryRef = useRef<HTMLButtonElement>(null)
   const secondaryRef = useRef<HTMLButtonElement>(null)
 
-  const makeResizeHandler = (
-    ref: React.RefObject<HTMLButtonElement | null>,
+  const makeResizeHandler = useCallback((
+    whichButton: 'primary' | 'secondary',
     widthKey: 'primaryWidthPx' | 'secondaryWidthPx',
     paddingKey: 'primaryPaddingY' | 'secondaryPaddingY',
     startPadY: number,
   ) => (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    const ref = whichButton === 'primary' ? primaryRef : secondaryRef
     const startX = e.clientX
     const startY = e.clientY
     const startW = (block[widthKey] ?? ref.current?.getBoundingClientRect().width) ?? 160
@@ -954,7 +955,7 @@ export function RenderAction({
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }
+  }, [block, updateBlock, primaryRef, secondaryRef])
 
   const hasPrimaryW = block.primaryWidthPx !== undefined
   const hasSecondaryW = block.secondaryWidthPx !== undefined
@@ -988,7 +989,7 @@ export function RenderAction({
             as="span"
           />
           <div
-            onMouseDown={makeResizeHandler(primaryRef, 'primaryWidthPx', 'primaryPaddingY', primaryPadY)}
+            onMouseDown={makeResizeHandler('primary', 'primaryWidthPx', 'primaryPaddingY', primaryPadY)}
             title="Drag to resize"
             className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/pbtn:opacity-100 transition z-20"
           />
@@ -1017,7 +1018,7 @@ export function RenderAction({
               as="span"
             />
             <div
-              onMouseDown={makeResizeHandler(secondaryRef, 'secondaryWidthPx', 'secondaryPaddingY', secondaryPadY)}
+              onMouseDown={makeResizeHandler('secondary', 'secondaryWidthPx', 'secondaryPaddingY', secondaryPadY)}
               title="Drag to resize"
               className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/sbtn:opacity-100 transition z-20"
             />

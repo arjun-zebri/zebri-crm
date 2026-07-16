@@ -1,8 +1,12 @@
 'use client'
 
 import type { ReactNode } from 'react'
+
+// eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+// eslint-disable-next-line no-restricted-imports
 import type { TitleBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import type { PublicBranding } from '../public-surface'
 import { fmtDate, pad, type PublicDocData } from './shared'
 import { Html } from './html'

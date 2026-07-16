@@ -82,7 +82,7 @@ export function repairBlocks(surface: SurfaceTab, blocks: Block[] | null | undef
   // For each missing required block, insert it at the correct position.
   // For invoices, process in document order (lineItems before totals) to
   // avoid misordering when both are missing.
-  let result = [...filtered]
+  const result = [...filtered]
   const requiredArray = Array.from(required)
   if (surface === 'invoice') {
     requiredArray.sort((a, b) => {

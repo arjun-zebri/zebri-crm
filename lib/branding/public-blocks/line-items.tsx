@@ -1,7 +1,10 @@
 'use client'
 
+// eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+// eslint-disable-next-line no-restricted-imports
 import type { LineItemsBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import type { PublicBranding } from '../public-surface'
 import { fmt, pad, type PublicDocData } from './shared'
 

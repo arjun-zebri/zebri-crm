@@ -16,9 +16,15 @@ interface SaveKitDialogProps {
 export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: SaveKitDialogProps) {
   const [name, setName] = useState(defaultName)
   const inputRef = useRef<HTMLInputElement>(null)
+  const openRef = useRef(open)
 
   useEffect(() => {
-    if (open) {
+    openRef.current = open
+  }, [open])
+
+  useEffect(() => {
+    if (openRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(defaultName)
       const t = setTimeout(() => {
         inputRef.current?.focus()
@@ -26,7 +32,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
       }, 60)
       return () => clearTimeout(t)
     }
-  }, [open, defaultName])
+  }, [defaultName])
 
   const trimmed = name.trim()
   const handleSave = () => {

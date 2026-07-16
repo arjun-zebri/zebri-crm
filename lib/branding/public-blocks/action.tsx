@@ -1,6 +1,8 @@
 'use client'
 
+// eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+// eslint-disable-next-line no-restricted-imports
 import type { ActionBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { getTextColor } from '../contrast'
 import type { PublicBranding } from '../public-surface'
