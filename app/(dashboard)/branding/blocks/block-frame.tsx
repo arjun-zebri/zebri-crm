@@ -7,7 +7,8 @@ import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 
 import { blockOuterStyle } from '@/lib/branding/block-outer-style'
-import type { BrandPreviewState } from '@/types/branding-preview'
+import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
+import { isDeletable } from './policy'
 
 import { BlockToolbar } from './block-toolbar'
 import type { Block } from './types'
@@ -16,6 +17,7 @@ interface BlockFrameProps {
   id: string
   block: Block
   state: BrandPreviewState
+  surface: SurfaceTab
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   selected: boolean
   multiSelected: boolean
@@ -32,6 +34,7 @@ export function BlockFrame({
   id,
   block,
   state,
+  surface,
   updateBlock,
   selected,
   multiSelected,
@@ -233,6 +236,7 @@ export function BlockFrame({
             <BlockToolbar
               block={block}
               state={state}
+              surface={surface}
               updateBlock={updateBlock}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
@@ -245,6 +249,8 @@ export function BlockFrame({
         <ContextMenu
           x={menuPos.x}
           y={menuPos.y}
+          block={block}
+          surface={surface}
           onClose={() => setMenuPos(null)}
           onDuplicate={onDuplicate}
           onDelete={onDelete}
@@ -258,6 +264,8 @@ export function BlockFrame({
 function ContextMenu({
   x,
   y,
+  block,
+  surface,
   onClose,
   onDuplicate,
   onDelete,
@@ -265,6 +273,8 @@ function ContextMenu({
 }: {
   x: number
   y: number
+  block: Block
+  surface: SurfaceTab
   onClose: () => void
   onDuplicate: () => void
   onDelete: () => void
@@ -288,11 +298,17 @@ function ContextMenu({
   const left = Math.min(x, (typeof window === 'undefined' ? 9999 : window.innerWidth) - 220)
   const top = Math.min(y, (typeof window === 'undefined' ? 9999 : window.innerHeight) - 160)
 
+  const canDelete = isDeletable(block, surface)
+
   const items: Array<{ label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean }> = [
     { label: 'Reset to theme', icon: <RotateCcw size={12} strokeWidth={1.75} />, onClick: onResetBlock },
     { label: 'Duplicate', icon: <Copy size={12} strokeWidth={1.75} />, onClick: onDuplicate },
-    { label: 'Delete', icon: <Trash2 size={12} strokeWidth={1.75} />, onClick: onDelete, danger: true },
   ]
+
+  // Only add Delete if the block is deletable
+  if (canDelete) {
+    items.push({ label: 'Delete', icon: <Trash2 size={12} strokeWidth={1.75} />, onClick: onDelete, danger: true })
+  }
 
   return (
     <div

@@ -22,7 +22,7 @@ import { useEffect, useState } from 'react'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
-import type { BrandPreviewState } from '@/types/branding-preview'
+import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
 import { BlockFrame } from './block-frame'
 import {
@@ -50,6 +50,7 @@ interface BlockRendererProps {
   blocks: Block[]
   setBlocks: (b: Block[]) => void
   state: BrandPreviewState
+  surface: SurfaceTab
   selectedBlockIds: string[]
   setSelectedBlockIds: (ids: string[]) => void
   requestAddAfter: (afterId: string | null) => void
@@ -75,6 +76,7 @@ export function BlockRenderer({
   blocks,
   setBlocks,
   state,
+  surface,
   selectedBlockIds,
   setSelectedBlockIds,
   requestAddAfter,
@@ -231,6 +233,7 @@ export function BlockRenderer({
                   id={block.id}
                   block={block}
                   state={state}
+                  surface={surface}
                   updateBlock={updateBlock}
                   selected={selected}
                   multiSelected={multi}

@@ -1,7 +1,7 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw, Minus, AlignLeft, AlignCenter, AlignRight, Equal } from 'lucide-react'
+import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw, Minus, AlignLeft, AlignCenter, AlignRight, Equal, Lock } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
 
@@ -9,7 +9,8 @@ import { ColorPopover } from '@/components/ui/color-popover'
 import { Tooltip } from '@/components/ui/tooltip'
 import { getTextColor } from '@/lib/branding/contrast'
 import { COLOR_PALETTE } from '@/lib/branding/themes'
-import type { BrandPreviewState } from '@/types/branding-preview'
+import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
+import { isDataBound, isDeletable } from './policy'
 
 import { Slider } from '../components/slider'
 
@@ -36,19 +37,41 @@ import type {
 interface BlockToolbarProps {
   block: Block
   state: BrandPreviewState
+  surface: SurfaceTab
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   onDuplicate: () => void
   onDelete: () => void
   onResetBlock: () => void
 }
 
-export function BlockToolbar({ block, state, updateBlock, onDuplicate, onDelete, onResetBlock }: BlockToolbarProps) {
+export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, onDelete, onResetBlock }: BlockToolbarProps) {
+  const canDelete = isDeletable(block, surface)
+  const hasLiveData = isDataBound(block.type)
+
   return (
     <div
       className="bg-white border border-gray-200 rounded-xl shadow-[0_8px_24px_-8px_rgba(15,23,42,0.18),0_2px_6px_-2px_rgba(15,23,42,0.06)] animate-modal-in"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
+      {/* Row 0: block-type label + lock/live-data chips */}
+      <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+        <span className="text-xs font-medium text-gray-600 capitalize">{block.type}</span>
+        <div className="flex items-center gap-1 ml-auto">
+          {!canDelete && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
+              <Lock size={10} strokeWidth={2.5} />
+              Required
+            </span>
+          )}
+          {hasLiveData && (
+            <span className="text-[10px] font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-full">
+              Live data
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Row 1: block-type-specific controls */}
       <div className="flex items-center gap-1 px-1 pt-1">
         <BlockSpecificControls block={block} state={state} updateBlock={updateBlock} />
@@ -104,12 +127,17 @@ export function BlockToolbar({ block, state, updateBlock, onDuplicate, onDelete,
             </button>
           </Tooltip>
           <Divider />
-          <Tooltip label="Delete">
+          <Tooltip label={canDelete ? 'Delete' : 'This block is required on this document'}>
             <button
               type="button"
               onClick={onDelete}
-              aria-label="Delete block"
-              className="p-1.5 rounded-md text-gray-500 hover:text-red-600 hover:bg-red-50 cursor-pointer transition"
+              disabled={!canDelete}
+              aria-label={canDelete ? 'Delete block' : 'This block cannot be deleted'}
+              className={`p-1.5 rounded-md transition ${
+                canDelete
+                  ? 'text-gray-500 hover:text-red-600 hover:bg-red-50 cursor-pointer'
+                  : 'text-gray-500 opacity-40 cursor-not-allowed'
+              }`}
             >
               <Trash2 size={13} strokeWidth={1.75} />
             </button>

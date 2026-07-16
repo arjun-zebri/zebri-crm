@@ -1311,22 +1311,66 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
   )
 }
 
+/**
+ * Placeholder block shown in the branding editor where the automatic
+ * payment schedule will render on the public invoice. The MC can never
+ * edit the schedule here — it flows from couple data and deposit percent
+ * settings. Same model as `RenderCouplePortal` + `RenderContractBody`.
+ *
+ * Renders with a dashed border + muted "Live data" badge so it's
+ * visually unambiguous this block isn't editable on the branding surface.
+ */
 export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
   const pad = PAD(state)
   const muted = state.mutedColor || '#6B7280'
   const text = state.textColor || '#111827'
+  const surface = state.surfaceColor || '#FFFFFF'
   return (
     <div className="border-t border-gray-100">
       <div className={`${pad.docX} ${pad.blockY}`}>
-        <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: muted }}>Payment schedule</p>
-        <div className="space-y-2">
-          <div className="py-2.5 border-b border-gray-50 flex items-center justify-between">
-            <span className="text-sm" style={{ color: text }}>Deposit (50%)</span>
-            <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
+        {/* Locked-slot affordance — dashed border + muted "Live data"
+            badge make it clear at a glance that this block isn't
+            editable on the branding surface. */}
+        <div
+          className="rounded-xl border-2 border-dashed p-5"
+          style={{
+            borderColor: muted + '60',
+            backgroundColor: surface,
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <p
+              className="text-xs font-medium uppercase tracking-wider"
+              style={{ color: muted }}
+            >
+              Payment schedule
+            </p>
+            <span
+              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: muted + '20',
+                color: muted,
+              }}
+            >
+              Live data - deposit and balance
+            </span>
           </div>
-          <div className="py-2.5 flex items-center justify-between">
-            <span className="text-sm" style={{ color: text }}>Final balance (50%)</span>
-            <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
+
+          <div className="space-y-2 opacity-60 select-none pointer-events-none">
+            <div className="py-2.5 border-b border-gray-50 flex items-center justify-between">
+              <span className="text-sm" style={{ color: text }}>Deposit (50%)</span>
+              <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
+            </div>
+            <div className="py-2.5 flex items-center justify-between">
+              <span className="text-sm" style={{ color: text }}>Final balance (50%)</span>
+              <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
+            <p className="text-xs" style={{ color: muted }}>
+              The payment schedule is driven by your couple data and deposit percent settings. Edit it there, not here. You can drag other blocks (headings, spacing, legal text) above or below this slot.
+            </p>
           </div>
         </div>
       </div>

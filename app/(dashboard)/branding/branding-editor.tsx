@@ -21,6 +21,7 @@ import type { Json } from '@/types/database'
 import { AddBlockPalette } from './blocks/add-block-palette'
 import { BlockRenderer } from './blocks/block-renderer'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
+import { isDeletable, isMarker, isRequired } from './blocks/policy'
 import type { Block, ImageBlock } from './blocks/types'
 import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
@@ -602,7 +603,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   function deleteBlock(id: string) {
     const block = state.blocks[docSurface].find(b => b.id === id)
-    if (block?.type === 'couplePortal' || block?.type === 'paymentSchedule') return
+    if (!block || !isDeletable(block, surface)) return
     setBlocksForCurrent(state.blocks[docSurface].filter(b => b.id !== id))
     setSelectedBlockIds((prev) => prev.filter(x => x !== id))
   }
@@ -612,7 +613,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     const idx = list.findIndex(b => b.id === id)
     if (idx < 0) return
     const original = list[idx]
-    if (original.type === 'couplePortal' || original.type === 'paymentSchedule') return
+    // Don't allow duplicating required blocks (markers or other required
+    // types): a duplicated copy isn't deletable, so it's trapped in the tree.
+    if (isMarker(original.type) || isRequired(original.type, surface)) return
     const cloned = { ...original, id: `${original.type}-${Date.now().toString(36)}` } as Block
     const next = [...list]
     next.splice(idx + 1, 0, cloned)
@@ -1008,6 +1011,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             blocks={visibleBlocks}
             setBlocks={setBlocksForCurrent}
             state={previewState}
+            surface={surface}
             selectedBlockIds={selectedBlockIds}
             setSelectedBlockIds={setSelectedBlockIds}
             requestAddAfter={requestAddAfter}
