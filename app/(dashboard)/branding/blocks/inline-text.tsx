@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { sanitizeHtml } from '@/lib/branding/sanitize'
 
 type InlineTextElement = 'span' | 'div' | 'p' | 'h1' | 'h2' | 'h3'
@@ -18,6 +18,10 @@ interface InlineTextProps {
   as?: InlineTextElement
 }
 
+/**
+ * InlineText renders a contentEditable element for inline text editing within
+ * branding blocks. Supports HTML sanitization, placeholder text, and character limits.
+ */
 export function InlineText({
   value,
   onChange,
@@ -31,7 +35,6 @@ export function InlineText({
 }: InlineTextProps) {
   const ref = useRef<HTMLElement>(null)
   const lists = allowLists ?? multiline
-  const [editable, setEditable] = useState(false)
 
   useEffect(() => {
     const el = ref.current
@@ -43,30 +46,31 @@ export function InlineText({
     }
   }, [value, lists])
 
-  // Track whether the parent block is selected. React state keeps contentEditable
-  // in sync with re-renders. First click on an unselected block: editable=false →
-  // no focus, click bubbles to BlockFrame and selects. Second click: editable=true
-  // → focus and edit. MutationObserver watches data-selected on the parent block.
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const blockEl = el.closest('[data-block-id]')
-    if (!blockEl) return
-    const sync = () => setEditable(blockEl.hasAttribute('data-selected'))
-    sync()
-    const observer = new MutationObserver(sync)
-    observer.observe(blockEl, { attributes: true, attributeFilter: ['data-selected'] })
-    return () => observer.disconnect()
-  }, [])
-
   const sharedProps = {
-    contentEditable: editable,
+    contentEditable: true,
     suppressContentEditableWarning: true,
     role: 'textbox',
     'aria-label': placeholder,
     'aria-multiline': multiline,
     'data-placeholder': placeholder,
     'data-inline-text': 'true',
+    onFocus: () => {
+      // When this element receives focus, ensure the parent block is selected.
+      // Dispatch a custom event that bubbles to BlockFrame for selection handling.
+      const el = ref.current
+      if (el) {
+        const blockEl = el.closest('[data-block-id]')
+        if (blockEl && !blockEl.hasAttribute('data-selected')) {
+          const blockId = blockEl.getAttribute('data-block-id')
+          blockEl.dispatchEvent(
+            new CustomEvent('zebri:text-focus', {
+              bubbles: true,
+              detail: { blockId },
+            })
+          )
+        }
+      }
+    },
     onPaste: (e: React.ClipboardEvent) => {
       e.preventDefault()
       const text = e.clipboardData.getData('text/plain').slice(0, maxLength)

@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import * as Popover from '@radix-ui/react-popover'
 import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 import { blockOuterStyle } from '@/lib/branding/block-outer-style'
 import type { BrandPreviewState } from '@/types/branding-preview'
@@ -50,8 +50,23 @@ export function BlockFrame({
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [resizing, setResizing] = useState(false)
+  const blockRef = useRef<HTMLDivElement>(null)
 
   const selectionColor = state.brandColor || '#111827'
+
+  // Listen for text focus event from InlineText; select this block if not already selected
+  useEffect(() => {
+    const onTextFocus = (e: Event) => {
+      if (e instanceof CustomEvent && e.type === 'zebri:text-focus' && !selected) {
+        onSelect(false)
+      }
+    }
+    const el = blockRef.current
+    if (el) {
+      el.addEventListener('zebri:text-focus', onTextFocus)
+      return () => el.removeEventListener('zebri:text-focus', onTextFocus)
+    }
+  }, [selected, onSelect])
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -81,7 +96,10 @@ export function BlockFrame({
 
   const blockNode = (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node)
+        blockRef.current = node
+      }}
       data-block-id={id}
       data-selected={selected || undefined}
       style={{
