@@ -11,14 +11,25 @@ import type { PublicBranding } from '../public-surface'
 import { fmtDate, pad, type PublicDocData } from './shared'
 import { Html } from './html'
 
+export interface TitleSlots {
+  /** Editor replaces static title with live InlineText. */
+  title?: ReactNode
+  /** Editor replaces static subtitle with live InlineText. */
+  subtitle?: ReactNode
+}
+
 export function RenderTitle({
   block,
   branding,
   doc,
+  slots,
+  chrome,
 }: {
   block: TitleBlock
   branding: PublicBranding
   doc: PublicDocData
+  slots?: TitleSlots
+  chrome?: ReactNode
 }) {
   const p = pad(branding)
   const titleDefaults: TextStyleDefaults = {
@@ -46,12 +57,18 @@ export function RenderTitle({
   return (
     <div className={p.blockY}>
       <div className={p.docX}>
-        <h1 className="leading-tight tracking-tight" style={titleCss}>{doc.title}</h1>
-        {block.subtitle && (
+        <h1 className="leading-tight tracking-tight" style={titleCss}>
+          {slots?.title ?? doc.title}
+        </h1>
+        {slots?.subtitle ? (
+          <p className="mt-2" style={subtitleCss}>
+            {slots.subtitle}
+          </p>
+        ) : block.subtitle ? (
           <p className="mt-2" style={subtitleCss}>
             <Html value={block.subtitle} allowLists={false} />
           </p>
-        )}
+        ) : null}
       </div>
       {(block.showRef || block.showExpires || block.showAbn) && (
         <div
@@ -67,6 +84,7 @@ export function RenderTitle({
           )}
         </div>
       )}
+      {chrome}
     </div>
   )
 }

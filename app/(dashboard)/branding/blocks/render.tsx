@@ -20,6 +20,8 @@ import { RenderSpacer } from '@/lib/branding/public-blocks/spacer'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
 import { RenderHeaderBanner as PublicRenderHeaderBanner } from '@/lib/branding/public-blocks/header-banner'
 import { RenderImage as PublicRenderImage } from '@/lib/branding/public-blocks/image'
+import { RenderTitle as PublicRenderTitle, type TitleSlots } from '@/lib/branding/public-blocks/title'
+import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
 
 import { publicBrandingFromEditorState } from '../editor-branding'
 import { InlineAsset } from './inline-asset'
@@ -647,69 +649,44 @@ export function RenderBusinessName({
 // ── Title ─────────────────────────────────────────────────────────────────────
 
 export function RenderTitle({ block, state, updateBlock }: RenderProps<TitleBlock>) {
-  const pad = PAD(state)
-  const titleDefaults: TextStyleDefaults = {
-    fontFamily: state.fontHeading,
-    fontSize: 36,
-    fontWeight: state.fontWeight,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.1,
-    letterSpacing: -0.01,
+  const branding = publicBrandingFromEditorState(state)
+
+  // Dummy doc for editor preview; meta row displays placeholder values
+  const dummyDoc: PublicDocData = {
+    title: '', // Replaced by slot
+    refNumber: 'PR-001',
+    expiresAt: '30 April 2026',
+    items: [],
+    subtotal: 0,
+    taxRate: 0,
   }
-  const subtitleDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
+
+  const slots: TitleSlots = {
+    title: (
+      <InlineText
+        value={block.title}
+        onChange={(v) => updateBlock<TitleBlock>(block.id, { title: v })}
+        placeholder="Document title"
+        as="span"
+      />
+    ),
+    subtitle: (
+      <InlineText
+        value={block.subtitle}
+        onChange={(v) => updateBlock<TitleBlock>(block.id, { subtitle: v })}
+        placeholder="Subtitle"
+        as="span"
+      />
+    ),
   }
-  const titleCss = resolveTextStyle(block.titleStyle, titleDefaults)
-  const subtitleCss = resolveTextStyle(block.subtitleStyle, subtitleDefaults)
-  const metaAlign = block.titleStyle?.align ?? 'left'
 
   return (
-    <div className={`${pad.blockY}`}>
-      <div className={`${pad.docX}`}>
-        <h1 className="leading-tight tracking-tight" style={titleCss}>
-          <InlineText
-            value={block.title}
-            onChange={(v) => updateBlock<TitleBlock>(block.id, { title: v })}
-            placeholder="Document title"
-            as="span"
-          />
-        </h1>
-        <p className="mt-2" style={subtitleCss}>
-          <InlineText
-            value={block.subtitle}
-            onChange={(v) => updateBlock<TitleBlock>(block.id, { subtitle: v })}
-            placeholder="Subtitle"
-            as="span"
-          />
-        </p>
-      </div>
-      {(block.showRef || block.showExpires || block.showAbn) && (
-        <div
-          className={`${pad.docX} mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2`}
-          style={{ justifyContent: metaAlign === 'center' ? 'center' : metaAlign === 'right' ? 'flex-end' : 'flex-start' }}
-        >
-          {block.showRef && <Meta label="Ref" value="PR-001" />}
-          {block.showExpires && <Meta label="Expires" value="30 April 2026" />}
-          {block.showAbn && state.abn && <Meta label="Abn" value={state.abn} />}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Meta({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{label}</span>
-      <span className="text-sm text-gray-700">{value}</span>
-    </div>
+    <PublicRenderTitle
+      block={block}
+      branding={branding}
+      doc={dummyDoc}
+      slots={slots}
+    />
   )
 }
 
