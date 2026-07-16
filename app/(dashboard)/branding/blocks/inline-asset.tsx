@@ -120,7 +120,7 @@ export function InlineAsset({
             title="Upload image"
             className="pointer-events-auto flex items-center justify-center w-11 h-11 rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-gray-900 hover:border-gray-400 cursor-pointer transition shadow-sm"
           >
-            <Upload size={16} strokeWidth={1.75} />
+            <Upload size={16} strokeWidth={1.5} />
           </button>
         </div>
       )}
@@ -160,7 +160,7 @@ export function InlineAsset({
             className="inline-flex items-center gap-1 px-2 h-7 rounded-md bg-gray-900/90 text-white text-[11px] font-medium hover:bg-gray-900 cursor-pointer transition shadow-sm"
             title="Replace image"
           >
-            <RefreshCw size={11} strokeWidth={2} />
+            <RefreshCw size={11} strokeWidth={1.5} />
             Replace
           </button>
           {onClear && (
@@ -170,7 +170,7 @@ export function InlineAsset({
               className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
               title="Remove image"
             >
-              <Trash2 size={11} strokeWidth={2} />
+              <Trash2 size={11} strokeWidth={1.5} />
             </button>
           )}
         </div>
