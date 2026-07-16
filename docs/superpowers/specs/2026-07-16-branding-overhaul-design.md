@@ -11,7 +11,7 @@ highly customisable, easy for non-designers (wedding MCs), safe (users cannot
 break functional documents like invoices), honest previews (phone preview and
 live pages render identically), and branding that actually reaches every
 customer-facing surface (proposals, invoices, contracts, portal, vendor
-timeline, emails, PDFs).
+timeline, questionnaires, emails, PDFs).
 
 Origin: full five-track audit on 2026-07-16 (block library, propagation,
 hydration, mobile overflow, UX/lock model). Findings summarised inline below.
@@ -25,21 +25,30 @@ hydration, mobile overflow, UX/lock model). Findings summarised inline below.
    uses the existing fallback layout still tinted with scalar branding.
    Re-enable any time from the brand panel.
 3. **Scope: everything in this one PR** — all audit fixes, onboarding,
-   vendor timeline as a fifth editable surface, 3 templates per surface, and
-   editor/public renderer unification. No follow-up PRs.
+   vendor timeline and questionnaire as new editable surfaces (six total),
+   3 templates per surface, and editor/public renderer unification. No
+   follow-up PRs.
+4. **Questionnaire display modes:** the typeform/form mode stays a
+   per-questionnaire choice in the questionnaire builder. One block tree
+   brands both modes: form mode renders pre/post-marker blocks as page
+   chrome; typeform mode renders pre-marker blocks on the welcome screen
+   and post-marker blocks on the thank-you screen.
 
 ## 1. Data layer and migration
 
 One new migration (deployed only via CI `supabase db push`):
 
 - `user_branding.enabled_surfaces jsonb not null default
-  '["proposal","invoice","contract","portal","vendorTimeline"]'`
+  '["proposal","invoice","contract","portal","vendorTimeline","questionnaire"]'`
 - `user_branding.onboarded_at timestamptz` — null means show onboarding.
 - Data reset: `update user_branding set brand_kits = '[]'::jsonb,
   branding_blocks = null;` (preview-phase reset; scalars retained).
 - `get_vendor_timeline` additionally returns `branding`
   (`_user_branding(user_id)`) and `branding_blocks`
   (`_user_branding_blocks(user_id, 'vendorTimeline')`).
+- The public questionnaire RPC additionally returns `branding_blocks`
+  (`_user_branding_blocks(user_id, 'questionnaire')`); it already merges
+  scalar branding via `_user_branding`.
 
 No other RPC changes. Disabling a surface clears that surface's key in
 `branding_blocks`; public pages already fall back when the block tree is
@@ -72,10 +81,29 @@ Outcome: preview cannot drift from production; every overflow fix lands once.
   split at the marker (same pattern as portal) with scalar tinting replacing
   today's hardcoded white/gray.
 
+## 3b. Questionnaire surface
+
+- New `SurfaceTab` value `questionnaire`, sixth editor tab.
+- Palette: headerBanner, businessName, tagline, text, divider, spacer, image,
+  footer around a new locked `questionnaireBody` marker block that renders
+  sample questions in the editor.
+- One block tree brands both display modes. Form mode: pre-marker blocks are
+  page chrome above the questions, post-marker blocks render beneath submit.
+  Typeform mode: pre-marker blocks form the welcome screen, post-marker
+  blocks the thank-you screen; mid-flow branding stays scalar-driven via the
+  existing `QuestionnaireTheme` resolver (`components/questionnaires/theme.ts`),
+  which the fill page, builder preview, and send preview already share.
+- The editor canvas gets a Form / One-at-a-time preview toggle for this
+  surface only.
+- Display mode remains a per-questionnaire choice in the questionnaire
+  builder (`QuestionnaireDisplayMode` in `lib/questionnaires/question-schema.ts`).
+- Out of scope: per-question styling (fonts/colors per question). Question
+  styling stays derived from brand scalars.
+
 ## 4. Templates
 
-Three distinct templates per surface (Classic, Minimal, Bold) x 5 surfaces =
-15 templates in `app/(dashboard)/branding/templates/`. Templates set blocks
+Three distinct templates per surface (Classic, Minimal, Bold) x 6 surfaces =
+18 templates in `app/(dashboard)/branding/templates/`. Templates set blocks
 only, never brand tokens. Classic is the onboarding seed.
 
 ## 5. Onboarding wizard
@@ -88,8 +116,8 @@ skippable ("Skip, use defaults"):
 2. **Your look** — brand color (extract-from-logo suggestion via
    `lib/branding/extract-colors.ts`), font pairing, density preset.
 3. **What do you send couples?** — toggle cards: Proposals, Invoices,
-   Contracts, Client Portal, Vendor Timeline. Enabled surfaces get the
-   Classic template seeded; disabled tabs hidden.
+   Contracts, Client Portal, Vendor Timeline, Questionnaires. Enabled
+   surfaces get the Classic template seeded; disabled tabs hidden.
 
 Finish → set `onboarded_at`, persist `enabled_surfaces`, land in the editor
 on the first enabled surface. Brand panel gains a **Documents** section
@@ -100,7 +128,8 @@ button.
 
 - `required` flag per (block type, surface): invoice = lineItems, totals,
   paymentDetails; all marker blocks (proposalBody, paymentSchedule,
-  contractBody, couplePortal, vendorTimelineBody) everywhere they appear.
+  contractBody, couplePortal, vendorTimelineBody, questionnaireBody)
+  everywhere they appear.
   Whether `action` is required on invoice/proposal/contract is finalized
   during planning after verifying which block actually carries the
   accept/pay/sign path on each live page (the marker blocks may already
@@ -140,7 +169,8 @@ title meta gaps, totals `min-w-0`.
 
 ## 9. Email and PDF wiring
 
-- Email send routes fetch sender scalar branding and pass it through to
+- Email send routes (proposal, invoice, contract, contract reminder,
+  questionnaire) fetch sender scalar branding and pass it through to
   `wrapTemplateHtml()` (already branding-capable).
 - `generateAndPrintPdf()` passes branding into `buildPdfHtml()`; contract
   PDFs stop bypassing branding.
@@ -168,7 +198,8 @@ title meta gaps, totals `min-w-0`.
 4. Container queries + overflow fixes (lands in unified renderers).
 5. Migration (schema + reset + vendor RPC) + enabled-surfaces plumbing.
 6. Vendor timeline surface (editor + public page).
-7. Templates (15).
+6b. Questionnaire surface (editor + fill page welcome/thank-you mapping).
+7. Templates (18).
 8. Onboarding wizard + brand panel Documents section + per-surface reset.
 9. Email/PDF wiring.
 10. Tests + docs + gate ratchets.
