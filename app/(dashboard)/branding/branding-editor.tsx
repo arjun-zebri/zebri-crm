@@ -207,7 +207,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
-  const { status } = useAutosave(state, async (value) => {
+  const { status, retry } = useAutosave(state, async (value) => {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Not signed in')
@@ -616,6 +616,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     if (!block || !isDeletable(block, surface)) return
     setBlocksForCurrent(state.blocks[docSurface].filter(b => b.id !== id))
     setSelectedBlockIds((prev) => prev.filter(x => x !== id))
+    toast('Block deleted', 'success', { label: 'Undo', onClick: undo })
   }
 
   function duplicateBlock(id: string) {
@@ -882,6 +883,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         brandKits={state.brandKits}
         onApplyKit={onApplyKit}
         onDeleteKit={onDeleteKit}
+        onRetry={retry}
         addBlockSlot={
           <AddBlockPalette
             open={paletteOpen}

@@ -21,6 +21,7 @@ interface EditorTopbarProps {
   brandKits: BrandKit[]
   onApplyKit: (kit: BrandKit) => void
   onDeleteKit: (id: string) => void
+  onRetry?: () => void
   addBlockSlot?: React.ReactNode
 }
 
@@ -39,6 +40,7 @@ export function EditorTopbar({
   brandKits,
   onApplyKit,
   onDeleteKit,
+  onRetry,
   addBlockSlot,
 }: EditorTopbarProps) {
   return (
@@ -80,7 +82,7 @@ export function EditorTopbar({
       </div>
 
       <div className="flex items-center gap-1.5 flex-1 justify-end">
-        <SaveStatusPill status={saveStatus} />
+        <SaveStatusPill status={saveStatus} onRetry={onRetry} />
 
         <div className="flex items-center gap-0.5">
           <button
@@ -278,7 +280,11 @@ function KitPicker({
   )
 }
 
-function SaveStatusPill({ status }: { status: SaveStatus }) {
+/**
+ * Save status indicator with optional retry button on error.
+ * Shows save status and provides a retry action when save fails.
+ */
+function SaveStatusPill({ status, onRetry }: { status: SaveStatus; onRetry?: () => void }) {
   const text =
     status === 'saving' ? 'Saving…' :
     status === 'error' ? 'Save failed' :
@@ -290,6 +296,25 @@ function SaveStatusPill({ status }: { status: SaveStatus }) {
     status === 'saved' ? 'bg-emerald-500' :
     'bg-gray-300'
   const tone = status === 'error' ? 'text-red-600' : 'text-gray-400'
+
+  if (status === 'error' && onRetry) {
+    return (
+      <div className="inline-flex items-center gap-1.5">
+        <span className={`inline-flex items-center gap-1.5 text-[11px] ${tone}`}>
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+          <span className="truncate">{text}</span>
+        </span>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="px-2 py-1 text-[11px] font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl cursor-pointer transition"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
   return (
     <span
       className={`inline-flex items-center gap-1.5 text-[11px] ${tone}`}
