@@ -9,7 +9,7 @@ import { FONT_STACKS } from '@/lib/branding/fonts'
 import { resolveProposalLabels, type ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import { htmlToPlainText } from '@/lib/branding/sanitize'
 import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
-import type { BrandPreviewState } from '@/types/branding-preview'
+import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 
 import { RenderText } from '@/lib/branding/public-blocks/text'
@@ -21,7 +21,11 @@ import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/p
 import { RenderHeaderBanner as PublicRenderHeaderBanner } from '@/lib/branding/public-blocks/header-banner'
 import { RenderImage as PublicRenderImage } from '@/lib/branding/public-blocks/image'
 import { RenderTitle as PublicRenderTitle, type TitleSlots } from '@/lib/branding/public-blocks/title'
+import { RenderLineItems as PublicRenderLineItems } from '@/lib/branding/public-blocks/line-items'
+import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks/totals'
+import { RenderPaymentDetails as PublicRenderPaymentDetails, type PaymentDetailsSlots } from '@/lib/branding/public-blocks/payment-details'
 import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
+import { SAMPLE_DOC_BY_SURFACE } from './sample-doc'
 
 import { publicBrandingFromEditorState } from '../editor-branding'
 import { InlineAsset } from './inline-asset'
@@ -41,21 +45,12 @@ import type {
   ImageBlock,
 } from './types'
 
-function fmt(n: number) {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
-}
-
-const PLACEHOLDER_ITEMS = [
-  { description: 'Full Day MC Services', amount: 2500 },
-  { description: 'Pre-Wedding Consultation', amount: 200 },
-  { description: 'Travel & Setup', amount: 180 },
-]
-
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
 
 interface RenderProps<B extends Block> {
   block: B
   state: BrandPreviewState
+  surface?: SurfaceTab
   updateBlock: <X extends Block>(id: string, patch: Partial<X>) => void
 }
 
@@ -692,113 +687,31 @@ export function RenderTitle({ block, state, updateBlock }: RenderProps<TitleBloc
 
 // ── Line items ────────────────────────────────────────────────────────────────
 
-export function RenderLineItems({ block, state }: RenderProps<LineItemsBlock>) {
-  const pad = PAD(state)
-  const showHeader = block.showHeader ?? true
-  const rowStyle = block.rowStyle ?? 'lines'
-  const headerDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 11,
-    fontWeight: 500,
-    color: state.mutedColor || '#9CA3AF',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0.06,
-  }
-  const itemDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-  const headerCss = resolveTextStyle(block.headerStyle, headerDefaults)
-  const itemCss = resolveTextStyle(block.itemStyle, itemDefaults)
-
-  const rowBorder = rowStyle === 'lines'
-    ? 'border-b border-gray-100 last:border-b-0'
-    : ''
-  const rowBg = (i: number) =>
-    rowStyle === 'stripes' && i % 2 === 1 ? 'bg-gray-50/60 -mx-2 px-2 rounded-md' : ''
+export function RenderLineItems({ block, state, surface }: RenderProps<LineItemsBlock>) {
+  const branding = publicBrandingFromEditorState(state)
+  const sampleDoc = SAMPLE_DOC_BY_SURFACE[surface || 'invoice']
 
   return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      {showHeader && (
-        <div className="flex items-center pb-3 border-b border-gray-200">
-          <span className="flex-1 uppercase" style={{ ...headerCss, textTransform: 'uppercase' }}>Description</span>
-          <span className={block.colSpread ? 'shrink-0' : 'flex-1'} style={{ ...headerCss, textTransform: 'uppercase', ...(block.colSpread ? { textAlign: 'right' } : {}) }}>Amount</span>
-        </div>
-      )}
-      {PLACEHOLDER_ITEMS.map((item, i) => (
-        <div
-          key={i}
-          className={`flex items-center ${pad.rowY} ${rowBorder} ${rowBg(i)}`}
-        >
-          <span className="flex-1" style={itemCss}>{item.description}</span>
-          <span className={`tabular-nums ${block.colSpread ? 'shrink-0 ml-4' : 'flex-1'}`} style={{ ...itemCss, ...(block.colSpread ? { textAlign: 'right' } : {}), fontWeight: (itemCss.fontWeight as number ?? 400) + 100 }}>
-            {fmt(item.amount)}
-          </span>
-        </div>
-      ))}
-    </div>
+    <PublicRenderLineItems
+      block={block}
+      branding={branding}
+      doc={sampleDoc}
+    />
   )
 }
 
 // ── Totals ────────────────────────────────────────────────────────────────────
 
-export function RenderTotals({ block, state }: RenderProps<TotalsBlock>) {
-  const pad = PAD(state)
-  const subtotal = PLACEHOLDER_ITEMS.reduce((s, i) => s + i.amount, 0)
-  const tax = subtotal * (block.taxRate / 100)
-  const total = subtotal + tax
-  const spread = block.colSpread ?? true
-
-  const rowDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 13,
-    fontWeight: 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-  const totalDefaults: TextStyleDefaults = {
-    fontFamily: state.fontHeading,
-    fontSize: 18,
-    fontWeight: state.fontWeight,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.2,
-    letterSpacing: 0,
-  }
-
-  const subtotalCss = resolveTextStyle(block.subtotalStyle, rowDefaults)
-  const taxCss = resolveTextStyle(block.taxStyle, rowDefaults)
-  const totalCss = resolveTextStyle(block.totalStyle, totalDefaults)
-
-  const renderRow = (label: string, value: string, css: React.CSSProperties) => (
-    <div className="flex items-center">
-      <span className="flex-1" style={css}>{label}</span>
-      <span className={`tabular-nums ${spread ? 'shrink-0 ml-4' : 'flex-1'}`} style={{ ...css, ...(spread ? { textAlign: 'right' } : {}) }}>{value}</span>
-    </div>
-  )
+export function RenderTotals({ block, state, surface }: RenderProps<TotalsBlock>) {
+  const branding = publicBrandingFromEditorState(state)
+  const sampleDoc = SAMPLE_DOC_BY_SURFACE[surface || 'invoice']
 
   return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      <div className="space-y-1.5 pt-3 border-t border-gray-200">
-        {block.showSubtotal && (
-          <div className="pt-2">
-            {renderRow('Subtotal', fmt(subtotal), subtotalCss)}
-          </div>
-        )}
-        {(block.showTax ?? true) && renderRow(`GST (${block.taxRate}%)`, fmt(tax), taxCss)}
-        <div className="pt-3 mt-2 border-t border-gray-200">
-          {renderRow('Total', fmt(total), totalCss)}
-        </div>
-      </div>
-    </div>
+    <PublicRenderTotals
+      block={block}
+      branding={branding}
+      doc={sampleDoc}
+    />
   )
 }
 
@@ -985,59 +898,49 @@ export function RenderAction({
 // ── Payment Details ───────────────────────────────────────────────────────────
 
 export function RenderPaymentDetails({ block, state, updateBlock }: RenderProps<PaymentDetailsBlock>) {
-  const pad = PAD(state)
-  const headingDefaults: TextStyleDefaults = {
-    fontFamily: state.fontHeading,
-    fontSize: 16,
-    fontWeight: state.fontWeight,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.3,
-    letterSpacing: 0,
-  }
-  const labelDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 12,
-    fontWeight: 500,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
-  const valueDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: 500,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
+  const branding = publicBrandingFromEditorState(state)
 
-  const headingCss = resolveTextStyle(block.headingStyle, headingDefaults)
-  const labelCss = resolveTextStyle(block.labelStyle, labelDefaults)
-  const valueCss = resolveTextStyle(block.valueStyle, valueDefaults)
+  const slots: PaymentDetailsSlots = {
+    heading: (
+      <InlineText
+        value={block.heading}
+        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { heading: v })}
+        placeholder="Heading"
+        as="span"
+      />
+    ),
+    accountName: (
+      <InlineText
+        value={block.accountName}
+        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountName: v })}
+        placeholder="Account name"
+        as="span"
+      />
+    ),
+    bsb: (
+      <InlineText
+        value={block.bsb}
+        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { bsb: v })}
+        placeholder="BSB"
+        as="span"
+      />
+    ),
+    accountNumber: (
+      <InlineText
+        value={block.accountNumber}
+        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountNumber: v })}
+        placeholder="Account number"
+        as="span"
+      />
+    ),
+  }
 
   return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      <p className="mb-3" style={headingCss}>
-        <InlineText value={block.heading} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { heading: v })} placeholder="Heading" as="span" />
-      </p>
-      <div className="space-y-1.5">
-        <div className="flex items-baseline gap-3">
-          <span className="w-28 shrink-0" style={labelCss}>Account name</span>
-          <span className="flex-1" style={valueCss}><InlineText value={block.accountName} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountName: v })} placeholder="Account name" as="span" /></span>
-        </div>
-        <div className="flex items-baseline gap-3">
-          <span className="w-28 shrink-0" style={labelCss}>BSB</span>
-          <span className="flex-1" style={valueCss}><InlineText value={block.bsb} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { bsb: v })} placeholder="BSB" as="span" /></span>
-        </div>
-        <div className="flex items-baseline gap-3">
-          <span className="w-28 shrink-0" style={labelCss}>Account number</span>
-          <span className="flex-1" style={valueCss}><InlineText value={block.accountNumber} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountNumber: v })} placeholder="Account number" as="span" /></span>
-        </div>
-      </div>
-    </div>
+    <PublicRenderPaymentDetails
+      block={block}
+      branding={branding}
+      slots={slots}
+    />
   )
 }
 

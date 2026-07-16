@@ -212,7 +212,7 @@ export function BlockRenderer({
                     {renderBlock(block, state, updateBlock, {
                       onEditProposalLabel,
                       setProposalPreviewMode,
-                    })}
+                    }, surface)}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -267,7 +267,7 @@ export function BlockRenderer({
                     removeHeader,
                     uploadImage,
                     removeImage,
-                  })}
+                  }, surface)}
                 </BlockFrame>
               )
             })}
@@ -278,7 +278,7 @@ export function BlockRenderer({
                 className="opacity-90 shadow-2xl rounded-md bg-white"
                 style={{ outline: `2px solid ${state.brandColor || '#111827'}` }}
               >
-                {renderBlock(activeBlock, state, updateBlock)}
+                {renderBlock(activeBlock, state, updateBlock, {}, surface)}
               </div>
             ) : null}
           </DragOverlay>
@@ -353,6 +353,7 @@ function renderBlock(
   state: BrandPreviewState,
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void,
   extras: RenderExtras = {},
+  surface?: SurfaceTab,
 ) {
   switch (block.type) {
     case 'headerBanner':
@@ -360,6 +361,7 @@ function renderBlock(
         <RenderHeaderBanner
           block={block}
           state={state}
+          surface={surface}
           updateBlock={updateBlock}
           uploadHeader={extras.uploadHeader}
           removeHeader={extras.removeHeader}
@@ -370,6 +372,7 @@ function renderBlock(
         <RenderBusinessName
           block={block}
           state={state}
+          surface={surface}
           updateBlock={updateBlock}
           setBusinessName={extras.setBusinessName}
           uploadLogo={extras.uploadLogo}
@@ -396,13 +399,13 @@ function renderBlock(
       )
     }
     case 'title':
-      return <RenderTitle block={block} state={state} updateBlock={updateBlock} />
+      return <RenderTitle block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'lineItems':
-      return <RenderLineItems block={block} state={state} updateBlock={updateBlock} />
+      return <RenderLineItems block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'totals':
-      return <RenderTotals block={block} state={state} updateBlock={updateBlock} />
+      return <RenderTotals block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'paymentDetails':
-      return <RenderPaymentDetails block={block} state={state} updateBlock={updateBlock} />
+      return <RenderPaymentDetails block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'text': {
       const branding = publicBrandingFromEditorState(state)
       return (
@@ -425,7 +428,7 @@ function renderBlock(
       )
     }
     case 'action':
-      return <RenderAction block={block} state={state} updateBlock={updateBlock} selected={extras.selected} />
+      return <RenderAction block={block} state={state} surface={surface} updateBlock={updateBlock} selected={extras.selected} />
     case 'divider': {
       const branding = publicBrandingFromEditorState(state)
       return <PublicRenderDivider block={block} branding={branding} />
@@ -468,6 +471,7 @@ function renderBlock(
         <RenderImage
           block={block}
           state={state}
+          surface={surface}
           updateBlock={updateBlock}
           uploadImage={extras.uploadImage}
           removeImage={extras.removeImage}

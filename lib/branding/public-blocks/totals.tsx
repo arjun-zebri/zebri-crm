@@ -34,10 +34,12 @@ export function RenderTotals({
   block,
   branding,
   doc,
+  chrome,
 }: {
   block: TotalsBlock
   branding: PublicBranding
   doc: PublicDocData
+  chrome?: React.ReactNode
 }) {
   const p = pad(branding)
   const subtotal = doc.subtotal
@@ -72,7 +74,7 @@ export function RenderTotals({
   const spread = block.colSpread ?? true
 
   return (
-    <div className={`${p.docX} ${p.blockY}`}>
+    <div className={`${p.docX} ${p.blockY} relative`}>
       <div className="space-y-1.5 pt-3 border-t border-gray-200">
         {block.showSubtotal && (
           <div className="pt-2">
@@ -94,6 +96,7 @@ export function RenderTotals({
           <Row label="Total" value={fmt(total)} css={totalCss} spread={spread} />
         </div>
       </div>
+      {chrome}
     </div>
   )
 }

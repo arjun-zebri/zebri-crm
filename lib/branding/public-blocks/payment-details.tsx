@@ -1,5 +1,7 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 // eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
@@ -9,12 +11,27 @@ import type { PublicBranding } from '../public-surface'
 import { pad } from './shared'
 import { Html } from './html'
 
+export interface PaymentDetailsSlots {
+  /** Editor slot for the heading text. */
+  heading?: ReactNode
+  /** Editor slot for the account name value. */
+  accountName?: ReactNode
+  /** Editor slot for the BSB value. */
+  bsb?: ReactNode
+  /** Editor slot for the account number value. */
+  accountNumber?: ReactNode
+}
+
 export function RenderPaymentDetails({
   block,
   branding,
+  slots,
+  chrome,
 }: {
   block: PaymentDetailsBlock
   branding: PublicBranding
+  slots?: PaymentDetailsSlots
+  chrome?: ReactNode
 }) {
   const p = pad(branding)
   const headingDefaults: TextStyleDefaults = {
@@ -56,24 +73,25 @@ export function RenderPaymentDetails({
   const accountNumber = branding.bank_account_number || ''
 
   return (
-    <div className={`${p.docX} ${p.blockY}`}>
+    <div className={`${p.docX} ${p.blockY} relative`}>
       <p className="mb-3" style={headingCss}>
-        <Html value={block.heading} allowLists={false} />
+        {slots?.heading ?? <Html value={block.heading} allowLists={false} />}
       </p>
       <div className="space-y-1.5">
         <div className="flex items-baseline gap-3">
           <span className="w-28 shrink-0" style={labelCss}>Account name</span>
-          <span className="flex-1" style={valueCss}><Html value={accountName} allowLists={false} /></span>
+          <span className="flex-1" style={valueCss}>{slots?.accountName ?? <Html value={accountName} allowLists={false} />}</span>
         </div>
         <div className="flex items-baseline gap-3">
           <span className="w-28 shrink-0" style={labelCss}>BSB</span>
-          <span className="flex-1" style={valueCss}><Html value={bsb} allowLists={false} /></span>
+          <span className="flex-1" style={valueCss}>{slots?.bsb ?? <Html value={bsb} allowLists={false} />}</span>
         </div>
         <div className="flex items-baseline gap-3">
           <span className="w-28 shrink-0" style={labelCss}>Account number</span>
-          <span className="flex-1" style={valueCss}><Html value={accountNumber} allowLists={false} /></span>
+          <span className="flex-1" style={valueCss}>{slots?.accountNumber ?? <Html value={accountNumber} allowLists={false} />}</span>
         </div>
       </div>
+      {chrome}
     </div>
   )
 }

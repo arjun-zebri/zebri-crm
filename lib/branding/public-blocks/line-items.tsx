@@ -12,10 +12,12 @@ export function RenderLineItems({
   block,
   branding,
   doc,
+  chrome,
 }: {
   block: LineItemsBlock
   branding: PublicBranding
   doc: PublicDocData
+  chrome?: React.ReactNode
 }) {
   const p = pad(branding)
   const showHeader = block.showHeader ?? true
@@ -54,7 +56,7 @@ export function RenderLineItems({
   }
 
   return (
-    <div className={`${p.docX} ${p.blockY}`}>
+    <div className={`${p.docX} ${p.blockY} relative`}>
       {showHeader && (
         <div className={`flex items-center pb-3 border-b border-gray-200 ${colSpread ? 'justify-between' : 'gap-4'}`}>
           <span style={{ ...headerCss, textTransform: 'uppercase', ...(colSpread ? { flex: 1 } : {}) }}>Description</span>
@@ -79,6 +81,7 @@ export function RenderLineItems({
           </span>
         </div>
       ))}
+      {chrome}
     </div>
   )
 }
