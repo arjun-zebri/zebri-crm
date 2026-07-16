@@ -93,7 +93,7 @@ interface BrandingEditorProps {
   }
 }
 
-interface EditorState {
+export interface EditorState {
   kitName: string
   logoUrl: string
   faviconUrl: string

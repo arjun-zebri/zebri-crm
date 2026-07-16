@@ -1,5 +1,7 @@
 'use client'
 
+import { ReactNode } from 'react'
+
 // eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
@@ -9,14 +11,23 @@ import type { PublicBranding } from '../public-surface'
 import { pad } from './shared'
 import { Html } from './html'
 
+export interface TextSlots {
+  /** Editor replaces static sanitized HTML with live InlineText. */
+  text?: ReactNode
+}
+
 export function RenderText({
   block,
   branding,
+  slots,
+  chrome,
 }: {
   block: TextBlock
   branding: PublicBranding
+  slots?: TextSlots
+  chrome?: ReactNode
 }) {
-  if (!block.text) return null
+  if (!block.text && !slots?.text) return null
   const p = pad(branding)
   const defaults: TextStyleDefaults = {
     fontFamily: branding.font_body,
@@ -29,7 +40,10 @@ export function RenderText({
   }
   return (
     <div className={`${p.docX} ${p.blockY}`} style={resolveTextStyle(block.textStyle, defaults)}>
-      <Html value={block.text} as="div" className="whitespace-pre-wrap" />
+      {slots?.text ?? (
+        <Html value={block.text} as="div" className="whitespace-pre-wrap break-words" />
+      )}
+      {chrome}
     </div>
   )
 }

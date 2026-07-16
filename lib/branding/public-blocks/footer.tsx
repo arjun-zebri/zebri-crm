@@ -1,5 +1,7 @@
 'use client'
 
+import { ReactNode } from 'react'
+
 // eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
@@ -9,12 +11,21 @@ import type { PublicBranding } from '../public-surface'
 import { pad } from './shared'
 import { Html } from './html'
 
+export interface FooterSlots {
+  /** Editor replaces static closing note with live InlineText. */
+  note?: ReactNode
+}
+
 export function RenderFooter({
   block,
   branding,
+  slots,
+  chrome,
 }: {
   block: FooterBlock
   branding: PublicBranding
+  slots?: FooterSlots
+  chrome?: ReactNode
 }) {
   const p = pad(branding)
   const noteDefaults: TextStyleDefaults = {
@@ -50,11 +61,23 @@ export function RenderFooter({
       <div className="space-y-1">
         {block.closingNote && (
           <p style={noteCss}>
-            <Html value={block.closingNote} allowLists={false} />
+            {slots?.note ?? (
+              <Html value={block.closingNote} allowLists={false} />
+            )}
           </p>
         )}
-        {contactParts.length > 0 && <p style={contactCss}>{contactParts.join('  ·  ')}</p>}
+        {contactParts.length > 0 && (
+          <p className="flex flex-wrap gap-x-3 gap-y-1 justify-center" style={contactCss}>
+            {contactParts.map((part, i) => (
+              <span key={i}>
+                {i > 0 && <span className="text-text-muted"> · </span>}
+                <span className="whitespace-nowrap">{part}</span>
+              </span>
+            ))}
+          </p>
+        )}
       </div>
+      {chrome}
     </div>
   )
 }

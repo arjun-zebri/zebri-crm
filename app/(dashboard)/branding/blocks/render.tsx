@@ -12,6 +12,13 @@ import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/
 import type { BrandPreviewState } from '@/types/branding-preview'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 
+import { RenderText } from '@/lib/branding/public-blocks/text'
+import { RenderTagline } from '@/lib/branding/public-blocks/tagline'
+import { RenderFooter } from '@/lib/branding/public-blocks/footer'
+import { RenderDivider } from '@/lib/branding/public-blocks/divider'
+import { RenderSpacer } from '@/lib/branding/public-blocks/spacer'
+
+import { publicBrandingFromEditorState } from '../editor-branding'
 import { InlineAsset } from './inline-asset'
 import { InlineText } from './inline-text'
 import { resolveTextStyle, type TextStyleDefaults } from './text-style'
@@ -19,19 +26,14 @@ import type {
   Block,
   HeaderBannerBlock,
   BusinessNameBlock,
-  TaglineBlock,
   TitleBlock,
   LineItemsBlock,
   TotalsBlock,
   PaymentDetailsBlock,
-  TextBlock,
   ActionBlock,
-  DividerBlock,
-  FooterBlock,
   CouplePortalBlock,
   PaymentScheduleBlock,
   ImageBlock,
-  SpacerBlock,
 } from './types'
 
 function fmt(n: number) {
@@ -253,7 +255,7 @@ export function RenderHeaderBanner({
   )
 }
 
-function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.MouseEvent) => void; active: boolean }) {
+export function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.MouseEvent) => void; active: boolean }) {
   return (
     <div
       onMouseDown={onMouseDown}
@@ -451,44 +453,7 @@ export function RenderImage({
 }
 
 // ── Spacer ────────────────────────────────────────────────────────────────────
-
-export function RenderSpacer({
-  block,
-  updateBlock,
-}: RenderProps<SpacerBlock>) {
-  const heightPx = block.heightPx ?? 32
-  const [resizing, setResizing] = useState(false)
-
-  const startResize = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const startY = e.clientY
-    const startHeight = heightPx
-    setResizing(true)
-    const onMove = (ev: MouseEvent) => {
-      const dy = ev.clientY - startY
-      const next = Math.max(8, Math.min(160, startHeight + dy))
-      updateBlock<SpacerBlock>(block.id, { heightPx: Math.round(next) })
-    }
-    const onUp = () => {
-      setResizing(false)
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
-
-  return (
-    <div
-      className="group relative w-full bg-gradient-to-b from-gray-100 to-gray-50 flex items-center justify-center"
-      style={{ height: heightPx, borderRadius: 4 }}
-    >
-      <span className="text-[10px] text-gray-400 font-medium">{heightPx}px</span>
-      <ResizeHandle onMouseDown={startResize} active={resizing} />
-    </div>
-  )
-}
+// Rendered via the public RenderSpacer component with editor chrome in block-renderer.tsx
 
 // ── Business name ─────────────────────────────────────────────────────────────
 
@@ -634,42 +599,8 @@ export function RenderBusinessName({
 
 // ── Tagline ───────────────────────────────────────────────────────────────────
 
-export function RenderTagline({
-  block,
-  state,
-  setTagline,
-}: RenderProps<TaglineBlock> & { setTagline?: (v: string) => void }) {
-  const { tagline } = state
-  const pad = PAD(state)
-  const defaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-  const textStyle = resolveTextStyle(block.textStyle, defaults)
-  return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      {setTagline ? (
-        <p style={textStyle}>
-          <InlineText
-            value={tagline ?? ''}
-            onChange={setTagline}
-            placeholder="Your tagline"
-            as="span"
-          />
-        </p>
-      ) : (
-        <p className="truncate" style={textStyle}>
-          {tagline || 'Your tagline'}
-        </p>
-      )}
-    </div>
-  )
-}
+// ── Tagline ───────────────────────────────────────────────────────────────────
+// Rendered via the public RenderTagline component with editor slots in block-renderer.tsx
 
 // ── Title ─────────────────────────────────────────────────────────────────────
 
@@ -854,32 +785,8 @@ export function RenderTotals({ block, state }: RenderProps<TotalsBlock>) {
 
 // ── Text ──────────────────────────────────────────────────────────────────────
 
-export function RenderText({ block, state, updateBlock }: RenderProps<TextBlock>) {
-  const pad = PAD(state)
-  const defaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.6,
-    letterSpacing: 0,
-  }
-  const css = resolveTextStyle(block.textStyle, defaults)
-
-  return (
-    <div className={`${pad.docX} ${pad.blockY}`} style={css}>
-      <InlineText
-        value={block.text}
-        onChange={(v) => updateBlock<TextBlock>(block.id, { text: v })}
-        placeholder="Add text…"
-        multiline
-        as="div"
-        className="whitespace-pre-wrap"
-      />
-    </div>
-  )
-}
+// ── Text ──────────────────────────────────────────────────────────────────────
+// Rendered via the public RenderText component with editor slots in block-renderer.tsx
 
 // ── Action ────────────────────────────────────────────────────────────────────
 
@@ -1050,84 +957,11 @@ export function RenderAction({
 
 // ── Divider ───────────────────────────────────────────────────────────────────
 
-export function RenderDivider({ block, state }: RenderProps<DividerBlock>) {
-  const pad = PAD(state)
-  const thickness = block.thickness ?? 1
-  const color = block.color ?? '#E5E7EB'
-  const lineStyle = block.lineStyle ?? 'solid'
-  const widthPct = block.widthPct ?? 100
-  return (
-    <div className={`${pad.docX} ${pad.blockY} flex justify-start`}>
-      <hr
-        style={{
-          borderTopWidth: thickness,
-          borderTopColor: color,
-          borderTopStyle: lineStyle,
-          borderBottom: 'none',
-          borderLeft: 'none',
-          borderRight: 'none',
-          width: `${widthPct}%`,
-        }}
-      />
-    </div>
-  )
-}
+// ── Divider ───────────────────────────────────────────────────────────────────
+// Rendered via the public RenderDivider component in block-renderer.tsx
 
 // ── Footer ────────────────────────────────────────────────────────────────────
-
-export function RenderFooter({ block, state, updateBlock }: RenderProps<FooterBlock>) {
-  const pad = PAD(state)
-  const noteDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 12,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
-  const contactDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 11,
-    fontWeight: 400,
-    color: state.mutedColor || '#9CA3AF',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
-  const noteCss = resolveTextStyle(block.noteStyle, noteDefaults)
-  const contactCss = resolveTextStyle(block.contactStyle, contactDefaults)
-
-  const contactParts = [
-    state.businessName,
-    state.phone,
-    state.website,
-    state.abn ? `ABN ${state.abn}` : null,
-  ].filter(Boolean) as string[]
-
-  return (
-    <div className={`${pad.docX} ${pad.blockY} mt-6 border-t border-gray-100 pt-5`}>
-      <div className="space-y-1">
-        <p style={noteCss}>
-          <InlineText
-            value={block.closingNote ?? ''}
-            onChange={(v) => updateBlock<FooterBlock>(block.id, { closingNote: v })}
-            placeholder="Closing line"
-            as="span"
-          />
-        </p>
-        {contactParts.length > 0 && (
-          <p
-            style={contactCss}
-            title="Contact details come from your business info — update them in the side panel"
-          >
-            {contactParts.join('  ·  ')}
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}
+// Rendered via the public RenderFooter component with editor slots in block-renderer.tsx
 
 // ── Payment Details ───────────────────────────────────────────────────────────
 

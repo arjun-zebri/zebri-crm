@@ -1,5 +1,7 @@
 'use client'
 
+import { ReactNode } from 'react'
+
 // eslint-disable-next-line no-restricted-imports
 import type { DividerBlock } from '@/app/(dashboard)/branding/blocks/types'
 
@@ -9,9 +11,11 @@ import { pad } from './shared'
 export function RenderDivider({
   block,
   branding,
+  chrome,
 }: {
   block: DividerBlock
   branding: PublicBranding
+  chrome?: ReactNode
 }) {
   const p = pad(branding)
   const thickness = block.thickness ?? 1
@@ -31,6 +35,7 @@ export function RenderDivider({
           width: `${widthPct}%`,
         }}
       />
+      {chrome}
     </div>
   )
 }

@@ -22,29 +22,32 @@ import { useEffect, useState } from 'react'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
+import { RenderDivider as PublicRenderDivider } from '@/lib/branding/public-blocks/divider'
+import { RenderFooter as PublicRenderFooter } from '@/lib/branding/public-blocks/footer'
+import { RenderSpacer as PublicRenderSpacer } from '@/lib/branding/public-blocks/spacer'
+import { RenderTagline as PublicRenderTagline } from '@/lib/branding/public-blocks/tagline'
+import { RenderText as PublicRenderText } from '@/lib/branding/public-blocks/text'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
+import { publicBrandingFromEditorState } from '../editor-branding'
 import { BlockFrame } from './block-frame'
+import { InlineText } from './inline-text'
 import {
-  RenderHeaderBanner,
-  RenderBusinessName,
-  RenderTagline,
-  RenderTitle,
-  RenderLineItems,
-  RenderTotals,
-  RenderPaymentDetails,
-  RenderText,
   RenderAction,
+  RenderBusinessName,
   RenderContractBody,
   RenderCouplePortal,
-  RenderDivider,
-  RenderFooter,
+  RenderHeaderBanner,
+  RenderImage,
+  RenderLineItems,
+  RenderPaymentDetails,
   RenderPaymentSchedule,
   RenderProposalBody,
-  RenderImage,
-  RenderSpacer,
+  RenderTitle,
+  RenderTotals,
+  ResizeHandle,
 } from './render'
-import type { Block } from './types'
+import type { Block, SpacerBlock } from './types'
 
 interface BlockRendererProps {
   blocks: Block[]
@@ -299,6 +302,52 @@ interface RenderExtras {
   setProposalPreviewMode?: ((mode: 'single' | 'multi') => void) | undefined
 }
 
+interface SpacerWithResizeProps {
+  block: SpacerBlock
+  branding: ReturnType<typeof publicBrandingFromEditorState>
+  heightPx: number
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}
+
+function SpacerWithResize({ block, branding, heightPx, updateBlock }: SpacerWithResizeProps) {
+  const [resizing, setResizing] = useState(false)
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = heightPx
+    setResizing(true)
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(8, Math.min(160, startHeight + dy))
+      updateBlock(block.id, { heightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      setResizing(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  return (
+    <div className="group relative w-full bg-gradient-to-b from-gray-100 to-gray-50 flex items-center justify-center" style={{ height: heightPx, borderRadius: 4 }}>
+      <PublicRenderSpacer
+        block={block}
+        branding={branding}
+        chrome={
+          <>
+            <span className="text-[10px] text-gray-400 font-medium">{heightPx}px</span>
+            <ResizeHandle onMouseDown={startResize} active={resizing} />
+          </>
+        }
+      />
+    </div>
+  )
+}
+
 function renderBlock(
   block: Block,
   state: BrandPreviewState,
@@ -327,8 +376,25 @@ function renderBlock(
           removeLogo={extras.removeLogo}
         />
       )
-    case 'tagline':
-      return <RenderTagline block={block} state={state} updateBlock={updateBlock} setTagline={extras.setTagline} />
+    case 'tagline': {
+      const branding = publicBrandingFromEditorState(state)
+      return (
+        <PublicRenderTagline
+          block={block}
+          branding={branding}
+          slots={{
+            text: (
+              <InlineText
+                value={state.tagline ?? ''}
+                onChange={(v) => extras.setTagline?.(v)}
+                placeholder="Your tagline"
+                as="span"
+              />
+            ),
+          }}
+        />
+      )
+    }
     case 'title':
       return <RenderTitle block={block} state={state} updateBlock={updateBlock} />
     case 'lineItems':
@@ -337,14 +403,52 @@ function renderBlock(
       return <RenderTotals block={block} state={state} updateBlock={updateBlock} />
     case 'paymentDetails':
       return <RenderPaymentDetails block={block} state={state} updateBlock={updateBlock} />
-    case 'text':
-      return <RenderText block={block} state={state} updateBlock={updateBlock} />
+    case 'text': {
+      const branding = publicBrandingFromEditorState(state)
+      return (
+        <PublicRenderText
+          block={block}
+          branding={branding}
+          slots={{
+            text: (
+              <InlineText
+                value={block.text}
+                onChange={(v) => updateBlock(block.id, { text: v })}
+                placeholder="Add text..."
+                multiline
+                as="div"
+                className="whitespace-pre-wrap"
+              />
+            ),
+          }}
+        />
+      )
+    }
     case 'action':
       return <RenderAction block={block} state={state} updateBlock={updateBlock} selected={extras.selected} />
-    case 'divider':
-      return <RenderDivider block={block} state={state} updateBlock={updateBlock} />
-    case 'footer':
-      return <RenderFooter block={block} state={state} updateBlock={updateBlock} />
+    case 'divider': {
+      const branding = publicBrandingFromEditorState(state)
+      return <PublicRenderDivider block={block} branding={branding} />
+    }
+    case 'footer': {
+      const branding = publicBrandingFromEditorState(state)
+      return (
+        <PublicRenderFooter
+          block={block}
+          branding={branding}
+          slots={{
+            note: (
+              <InlineText
+                value={block.closingNote ?? ''}
+                onChange={(v) => updateBlock(block.id, { closingNote: v })}
+                placeholder="Closing line"
+                as="span"
+              />
+            ),
+          }}
+        />
+      )
+    }
     case 'couplePortal':
       return <RenderCouplePortal state={state} />
     case 'paymentSchedule':
@@ -369,8 +473,18 @@ function renderBlock(
           removeImage={extras.removeImage}
         />
       )
-    case 'spacer':
-      return <RenderSpacer block={block} state={state} updateBlock={updateBlock} />
+    case 'spacer': {
+      const branding = publicBrandingFromEditorState(state)
+      const heightPx = block.heightPx ?? 32
+      return (
+        <SpacerWithResize
+          block={block}
+          branding={branding}
+          heightPx={heightPx}
+          updateBlock={updateBlock}
+        />
+      )
+    }
   }
 }
 
