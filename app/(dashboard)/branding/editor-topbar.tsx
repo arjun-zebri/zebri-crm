@@ -307,7 +307,7 @@ function SaveStatusPill({ status, onRetry }: { status: SaveStatus; onRetry?: () 
         <button
           type="button"
           onClick={onRetry}
-          className="px-2 py-1 text-[11px] font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl cursor-pointer transition"
+          className="px-2 py-1 text-[11px] font-medium text-danger hover:text-danger hover:bg-danger/10 rounded-xl cursor-pointer transition"
         >
           Retry
         </button>
