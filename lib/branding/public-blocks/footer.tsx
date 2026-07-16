@@ -59,13 +59,11 @@ export function RenderFooter({
   return (
     <div className={`${p.docX} ${p.blockY} mt-6 border-t border-gray-100 pt-5`}>
       <div className="space-y-1">
-        {block.closingNote && (
+        {slots?.note ? <p style={noteCss}>{slots.note}</p> : block.closingNote ? (
           <p style={noteCss}>
-            {slots?.note ?? (
-              <Html value={block.closingNote} allowLists={false} />
-            )}
+            <Html value={block.closingNote} allowLists={false} />
           </p>
-        )}
+        ) : null}
         {contactParts.length > 0 && (
           <p className="flex flex-wrap gap-x-3 gap-y-1 justify-center" style={contactCss}>
             {contactParts.map((part, i) => (

@@ -417,7 +417,7 @@ function renderBlock(
                 placeholder="Add text..."
                 multiline
                 as="div"
-                className="whitespace-pre-wrap"
+                className="whitespace-pre-wrap break-words"
               />
             ),
           }}
