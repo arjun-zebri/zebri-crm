@@ -45,6 +45,14 @@ describe('sanitizeHtml', () => {
       return fs.readFileSync('lib/branding/sanitize.ts', 'utf8')
     }
   })
+
+  it('drops content of unclosed dangerous tags', () => {
+    expect(sanitizeHtml('before<script>alert(1)')).toBe('before')
+  })
+
+  it('defensively double-escapes already-encoded entities', () => {
+    expect(sanitizeHtml('&lt;script&gt;')).toBe('&amp;lt;script&amp;gt;')
+  })
 })
 
 describe('htmlToPlainText', () => {

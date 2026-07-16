@@ -28,7 +28,9 @@ export function sanitizeHtml(input: string, opts: SanitizeOptions = {}): string 
   const allowLists = opts.allowLists !== false
 
   // Defense in depth: drop script-ish elements INCLUDING their content.
-  const src = input.replace(/<(script|style|iframe|object|embed)\b[\s\S]*?<\/\1\s*>/gi, '')
+  // (?:<\/\1\s*>|$) matches either a closing tag OR end-of-string, so unclosed
+  // dangerous tags also drop their content (e.g. 'before<script>bad' -> 'before').
+  const src = input.replace(/<(script|style|iframe|object|embed)\b[\s\S]*?(?:<\/\1\s*>|$)/gi, '')
 
   const allowed = (tag: string) =>
     ALLOWED_TAGS.has(tag) && (allowLists || (tag !== 'ul' && tag !== 'ol' && tag !== 'li'))
