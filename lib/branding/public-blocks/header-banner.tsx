@@ -1,17 +1,26 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 // eslint-disable-next-line no-restricted-imports
 import type { HeaderBannerBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
 import { HEADER_HEIGHTS } from './shared'
 
+/**
+ * Renders the header banner block with optional editor chrome.
+ * On public surfaces, renders a single image at the top.
+ * In the editor, chrome contains the InlineAsset overlay and ResizeHandle.
+ */
 export function RenderHeaderBanner({
   block,
   branding,
+  chrome,
 }: {
   block: HeaderBannerBlock
   branding: PublicBranding
+  chrome?: ReactNode
 }) {
   const url = branding.header_image_url
   if (!url) return null
@@ -51,6 +60,7 @@ export function RenderHeaderBanner({
           }}
         />
       )}
+      {chrome}
     </div>
   )
 }

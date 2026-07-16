@@ -17,6 +17,9 @@ import { RenderTagline } from '@/lib/branding/public-blocks/tagline'
 import { RenderFooter } from '@/lib/branding/public-blocks/footer'
 import { RenderDivider } from '@/lib/branding/public-blocks/divider'
 import { RenderSpacer } from '@/lib/branding/public-blocks/spacer'
+import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
+import { RenderHeaderBanner as PublicRenderHeaderBanner } from '@/lib/branding/public-blocks/header-banner'
+import { RenderImage as PublicRenderImage } from '@/lib/branding/public-blocks/image'
 
 import { publicBrandingFromEditorState } from '../editor-branding'
 import { InlineAsset } from './inline-asset'
@@ -62,6 +65,10 @@ const HEADER_HEIGHTS: Record<NonNullable<HeaderBannerBlock['height']>, number> =
   lg: 192,
 }
 
+/**
+ * Editor wrapper for headerBanner block. Manages pan/zoom/resize state and renders
+ * the image with InlineAsset overlay for upload control.
+ */
 export function RenderHeaderBanner({
   block,
   state,
@@ -72,6 +79,7 @@ export function RenderHeaderBanner({
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
 }) {
+  const branding = publicBrandingFromEditorState(state)
   const { headerImageUrl } = state
   const heightPx = block.heightPx ?? HEADER_HEIGHTS[block.height ?? 'md']
   const fit = block.fit ?? 'cover'
@@ -83,6 +91,7 @@ export function RenderHeaderBanner({
   const [panning, setPanning] = useState(false)
   const [resizing, setResizing] = useState(false)
 
+  // Pan/zoom control via mouse wheel (meta+scroll to zoom)
   useEffect(() => {
     const el = containerRef.current
     if (!el || !headerImageUrl) return
@@ -153,6 +162,7 @@ export function RenderHeaderBanner({
     window.addEventListener('mouseup', onUp)
   }
 
+  // Empty state: no image uploaded yet
   if (!headerImageUrl) {
     return (
       <div
@@ -191,38 +201,16 @@ export function RenderHeaderBanner({
     )
   }
 
-  const imageNode = (
-    <div
-      className="w-full h-full overflow-hidden relative"
-      style={{
-        borderTopLeftRadius: state.cornerRadius,
-        borderTopRightRadius: state.cornerRadius,
-      }}
-    >
-      <img
-        src={headerImageUrl}
-        alt=""
-        draggable={false}
-        onMouseDown={startPan}
-        className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
-        style={{
-          objectFit: fit,
-          objectPosition: `${imageX}% ${imageY}%`,
-          transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
-          transformOrigin: `${imageX}% ${imageY}%`,
-        }}
-      />
-      {block.overlayColor && (
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundColor: block.overlayColor,
-            opacity: block.overlayOpacity ?? 0.5,
-            pointerEvents: 'none',
-          }}
-        />
+  // Image populated: render via public component with editor chrome
+  const chrome = (
+    <>
+      {imageScale > 1 && (
+        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
+          {Math.round(imageScale * 100)}%
+        </div>
       )}
-    </div>
+      <ResizeHandle onMouseDown={startResize} active={resizing} />
+    </>
   )
 
   return (
@@ -240,17 +228,74 @@ export function RenderHeaderBanner({
           className="w-full h-full"
           emptyState={null}
         >
-          {imageNode}
+          {/* Render the image with pan/zoom handlers; InlineAsset wraps this with upload overlay */}
+          <div
+            className="w-full h-full overflow-hidden relative"
+            style={{
+              borderTopLeftRadius: state.cornerRadius,
+              borderTopRightRadius: state.cornerRadius,
+            }}
+            onMouseDown={startPan}
+          >
+            <img
+              src={headerImageUrl}
+              alt=""
+              draggable={false}
+              className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
+              style={{
+                objectFit: fit,
+                objectPosition: `${imageX}% ${imageY}%`,
+                transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
+                transformOrigin: `${imageX}% ${imageY}%`,
+              }}
+            />
+            {block.overlayColor && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundColor: block.overlayColor,
+                  opacity: block.overlayOpacity ?? 0.5,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+            {chrome}
+          </div>
         </InlineAsset>
       ) : (
-        imageNode
-      )}
-      {imageScale > 1 && (
-        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
-          {Math.round(imageScale * 100)}%
+        <div
+          className="w-full h-full overflow-hidden relative"
+          style={{
+            borderTopLeftRadius: state.cornerRadius,
+            borderTopRightRadius: state.cornerRadius,
+          }}
+          onMouseDown={startPan}
+        >
+          <img
+            src={headerImageUrl}
+            alt=""
+            draggable={false}
+            className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
+            style={{
+              objectFit: fit,
+              objectPosition: `${imageX}% ${imageY}%`,
+              transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
+              transformOrigin: `${imageX}% ${imageY}%`,
+            }}
+          />
+          {block.overlayColor && (
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundColor: block.overlayColor,
+                opacity: block.overlayOpacity ?? 0.5,
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+          {chrome}
         </div>
       )}
-      <ResizeHandle onMouseDown={startResize} active={resizing} />
     </div>
   )
 }
@@ -271,6 +316,11 @@ export function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.M
 
 // ── Image ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Editor wrapper for image block. Manages pan/zoom/resize state and renders
+ * the image with InlineAsset overlay for upload control. Supports selectableWhenEmpty
+ * to allow the block to be selected when empty (for deletion).
+ */
 export function RenderImage({
   block,
   state,
@@ -291,6 +341,7 @@ export function RenderImage({
   const [panning, setPanning] = useState(false)
   const [resizing, setResizing] = useState(false)
 
+  // Pan/zoom control via mouse wheel (meta+scroll to zoom)
   useEffect(() => {
     const el = containerRef.current
     if (!el || !block.url) return
@@ -359,6 +410,7 @@ export function RenderImage({
     window.addEventListener('mouseup', onUp)
   }
 
+  // Empty state: no image uploaded yet
   if (!block.url) {
     return (
       <div
@@ -396,30 +448,16 @@ export function RenderImage({
     )
   }
 
-  const imageNode = (
-    <div
-      className="w-full h-full overflow-hidden"
-      style={{
-        borderTopLeftRadius: state.cornerRadius,
-        borderTopRightRadius: state.cornerRadius,
-      }}
-    >
-      {/* User-uploaded brand asset — no next/image. */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={block.url}
-        alt=""
-        draggable={false}
-        onMouseDown={startPan}
-        className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
-        style={{
-          objectFit: fit,
-          objectPosition: `${imageX}% ${imageY}%`,
-          transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
-          transformOrigin: `${imageX}% ${imageY}%`,
-        }}
-      />
-    </div>
+  // Image populated: render with pan/zoom and resize chrome
+  const chrome = (
+    <>
+      {imageScale > 1 && (
+        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
+          {Math.round(imageScale * 100)}%
+        </div>
+      )}
+      <ResizeHandle onMouseDown={startResize} active={resizing} />
+    </>
   )
 
   return (
@@ -437,17 +475,56 @@ export function RenderImage({
           className="w-full h-full"
           emptyState={null}
         >
-          {imageNode}
+          {/* Render the image with pan/zoom handlers; InlineAsset wraps this with upload overlay */}
+          <div
+            className="w-full h-full overflow-hidden relative"
+            style={{
+              borderRadius: state.cornerRadius,
+            }}
+            onMouseDown={startPan}
+          >
+            {/* User-uploaded brand asset — no next/image. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={block.url}
+              alt=""
+              draggable={false}
+              className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
+              style={{
+                objectFit: fit,
+                objectPosition: `${imageX}% ${imageY}%`,
+                transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
+                transformOrigin: `${imageX}% ${imageY}%`,
+              }}
+            />
+            {chrome}
+          </div>
         </InlineAsset>
       ) : (
-        imageNode
-      )}
-      {imageScale > 1 && (
-        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
-          {Math.round(imageScale * 100)}%
+        <div
+          className="w-full h-full overflow-hidden relative"
+          style={{
+            borderRadius: state.cornerRadius,
+          }}
+          onMouseDown={startPan}
+        >
+          {/* User-uploaded brand asset — no next/image. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={block.url}
+            alt=""
+            draggable={false}
+            className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
+            style={{
+              objectFit: fit,
+              objectPosition: `${imageX}% ${imageY}%`,
+              transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
+              transformOrigin: `${imageX}% ${imageY}%`,
+            }}
+          />
+          {chrome}
         </div>
       )}
-      <ResizeHandle onMouseDown={startResize} active={resizing} />
     </div>
   )
 }
@@ -457,6 +534,10 @@ export function RenderImage({
 
 // ── Business name ─────────────────────────────────────────────────────────────
 
+/**
+ * Editor wrapper for businessName block. Provides interactive slots for logo
+ * upload and name editing, plus a resize grip for logo height adjustment.
+ */
 export function RenderBusinessName({
   block,
   state,
@@ -469,21 +550,9 @@ export function RenderBusinessName({
   uploadLogo?: (file: File) => Promise<void>
   removeLogo?: () => void | Promise<void>
 }) {
+  const branding = publicBrandingFromEditorState(state)
   const { logoUrl, businessName } = state
-  const pad = PAD(state)
-  const layout = block.layout ?? 'row'
   const logoHeight = block.logoHeightPx ?? 48
-  const align = block.nameStyle?.align ?? 'left'
-
-  const nameDefaults: TextStyleDefaults = {
-    fontFamily: state.fontHeading,
-    fontSize: 16,
-    fontWeight: 600,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.3,
-    letterSpacing: 0,
-  }
 
   const startResizeLogo = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -503,96 +572,69 @@ export function RenderBusinessName({
     window.addEventListener('mouseup', onUp)
   }
 
-  const resizeGrip = (
+  // Chrome element: resize grip positioned absolutely, rendered within the public component's relative container
+  const chrome = (
     <div
       onMouseDown={startResizeLogo}
       title="Drag to resize"
-      className="absolute -right-1 -bottom-1 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-ns-resize opacity-0 group-hover/logo:opacity-100 transition z-20"
+      className="absolute -right-1 -bottom-1 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-ns-resize opacity-0 group-hover:opacity-100 transition z-20"
     />
   )
 
-  const logoImage = (
-    <img
-      src={logoUrl}
-      alt={businessName || 'Logo'}
-      draggable={false}
-      className="block h-full w-auto object-contain select-none"
-    />
-  )
-
-  const logoPlaceholder = (
-    <div
-      className="flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
-      style={{
-        width: logoHeight,
-        height: logoHeight,
-        borderRadius: Math.min(state.cornerRadius, 12),
-      }}
-    >
-      <ImageIcon size={Math.max(12, Math.round(logoHeight * 0.3))} strokeWidth={1.5} className="text-gray-300" />
-    </div>
-  )
-
-  const logoNode = (
-    <div className="group/logo relative shrink-0" style={{ height: logoHeight }}>
-      {uploadLogo ? (
-        <InlineAsset
-          value={logoUrl || null}
-          onUpload={uploadLogo}
-          onClear={logoUrl ? removeLogo : undefined}
-          label={logoUrl ? 'Replace logo' : 'Upload logo'}
-          overlayPosition="center"
-          className="h-full"
-          style={logoUrl ? undefined : { width: logoHeight }}
-          emptyState={logoPlaceholder}
+  // Logo slot: wraps the logo with InlineAsset for upload overlay (selectableWhenEmpty=false)
+  const logoSlot = uploadLogo ? (
+    <InlineAsset
+      value={logoUrl || null}
+      onUpload={uploadLogo}
+      onClear={logoUrl ? removeLogo : undefined}
+      label={logoUrl ? 'Replace logo' : 'Upload logo'}
+      overlayPosition="center"
+      className="h-full"
+      style={logoUrl ? undefined : { width: logoHeight }}
+      selectableWhenEmpty={false}
+      emptyState={
+        <div
+          className="flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+          style={{
+            width: logoHeight,
+            height: logoHeight,
+            borderRadius: Math.min(state.cornerRadius, 12),
+          }}
         >
-          {logoImage}
-        </InlineAsset>
-      ) : (
-        logoUrl ? logoImage : logoPlaceholder
-      )}
-      {resizeGrip}
-    </div>
-  )
+          <ImageIcon size={Math.max(12, Math.round(logoHeight * 0.3))} strokeWidth={1.5} className="text-gray-300" />
+        </div>
+      }
+    >
+      <img
+        src={logoUrl}
+        alt={businessName || 'Logo'}
+        draggable={false}
+        className="block h-full w-auto object-contain select-none"
+      />
+    </InlineAsset>
+  ) : undefined
 
-  const nameNode = (
-    <p style={resolveTextStyle(block.nameStyle, nameDefaults)}>
-      {setBusinessName ? (
-        <InlineText
-          value={businessName ?? ''}
-          onChange={setBusinessName}
-          placeholder="Your business name"
-          as="span"
-        />
-      ) : (
-        <span className="truncate">{businessName || 'Your business name'}</span>
-      )}
-    </p>
-  )
+  // Name slot: wraps the name with InlineText for editing
+  const nameSlot = setBusinessName ? (
+    <InlineText
+      value={businessName ?? ''}
+      onChange={setBusinessName}
+      placeholder="Your business name"
+      as="span"
+    />
+  ) : undefined
 
-  const justify =
-    align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'
-  const items =
-    align === 'center' ? 'items-center' : align === 'right' ? 'items-end' : 'items-start'
-
-  if (layout === 'logo') {
-    return <div className={`${pad.docX} ${pad.blockY} flex ${justify}`}>{logoNode}</div>
-  }
-  if (layout === 'name') {
-    return <div className={`${pad.docX} ${pad.blockY} flex ${justify}`}>{nameNode}</div>
-  }
-  if (layout === 'stacked') {
-    return (
-      <div className={`${pad.docX} ${pad.blockY} flex flex-col gap-2 ${items}`}>
-        {logoNode}
-        {nameNode}
-      </div>
-    )
-  }
   return (
-    <div className={`${pad.docX} ${pad.blockY} flex items-center gap-4 ${justify}`}>
-      {logoNode}
-      {nameNode}
+    <div className="group relative">
+      <PublicRenderBusinessName
+        block={block}
+        branding={branding}
+        slots={{
+          logo: logoSlot,
+          name: nameSlot,
+        }}
+        chrome={chrome}
+      />
     </div>
   )
 }

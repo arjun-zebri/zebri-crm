@@ -1,5 +1,7 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 // Type-only import (erased at runtime); block types live under the editor surface.
 // eslint-disable-next-line no-restricted-imports
 import type { ImageBlock } from '@/app/(dashboard)/branding/blocks/types'
@@ -9,13 +11,16 @@ import type { PublicBranding } from '../public-surface'
 /**
  * Renders an image block on public surfaces (proposal, invoice, contract, portal).
  * Applies pan/zoom positioning if configured.
+ * In the editor, chrome contains the InlineAsset overlay and ResizeHandle.
  */
 export function RenderImage({
   block,
   branding,
+  chrome,
 }: {
   block: ImageBlock
   branding: PublicBranding
+  chrome?: ReactNode
 }) {
   if (!block.url) return null
 
@@ -46,6 +51,7 @@ export function RenderImage({
           transformOrigin: `${imageX}% ${imageY}%`,
         }}
       />
+      {chrome}
     </div>
   )
 }
