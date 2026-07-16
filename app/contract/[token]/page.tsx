@@ -33,6 +33,7 @@ import {
   headingFontFamily,
   useBrandingHead,
 } from '@/lib/branding/public-surface';
+import { repairBlocks } from '@/lib/branding/validate-blocks';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
 import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
@@ -155,17 +156,21 @@ export default function PublicContractPage() {
   const headingWeight = contract?.font_weight ?? 600;
   const pad = DENSITY_PAD[contract?.density ?? 'cozy'];
 
+  // Repair block tree when present so all required blocks are available.
+  const repairedBlocks = contract?.branding_blocks && contract.branding_blocks.length > 0
+    ? repairBlocks('contract', contract.branding_blocks)
+    : null;
+
   const showHeaderBanner =
     contract?.header_image_url &&
-    (!contract.branding_blocks || contract.branding_blocks.length === 0) &&
+    !repairedBlocks &&
     pageState !== 'loading' &&
     pageState !== 'not_found';
 
-  const hasBlockTree =
-    !!contract?.branding_blocks && contract.branding_blocks.length > 0;
+  const hasBlockTree = !!repairedBlocks;
 
   const actionStyle = contract
-    ? findActionStyle(contract.branding_blocks, {
+    ? findActionStyle(repairedBlocks, {
         brandColor: brand,
         cornerRadius: contract.corner_radius ?? 16,
       })
@@ -250,7 +255,10 @@ export default function PublicContractPage() {
         {contract && pageState !== 'not_found' && pageState !== 'loading' ? (
           hasBlockTree ? (
             <ContractBrandedCard
-              contract={contract}
+              contract={{
+                ...contract,
+                branding_blocks: repairedBlocks || [],
+              }}
               pageState={pageState}
               textColor={textColor}
               mutedColor={mutedColor}

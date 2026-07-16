@@ -14,6 +14,7 @@ import {
 } from '@/lib/branding/fonts'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import type { PublicBranding } from '@/lib/branding/public-surface'
+import { repairBlocks } from '@/lib/branding/validate-blocks'
 
 import { BrandingHead } from './branding-head'
 import { PortalShell } from './portal-shell'
@@ -242,7 +243,9 @@ export default async function PortalPage({
   // render before the portal and blocks placed below render after — matching
   // the branding editor's order. No couplePortal marker (legacy) → all blocks
   // render before the portal.
-  const allBlocks = portal.branding_blocks ?? []
+  const allBlocks = portal.branding_blocks && portal.branding_blocks.length > 0
+    ? repairBlocks('portal', portal.branding_blocks)
+    : []
   const hasBlocks = allBlocks.length > 0 && !!branding
   const cpIdx = allBlocks.findIndex((b) => b.type === 'couplePortal')
   const preBlocks = cpIdx >= 0 ? allBlocks.slice(0, cpIdx) : allBlocks

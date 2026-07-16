@@ -14,6 +14,7 @@ import {
 } from '@/lib/branding/themes'
 import { useAutosave } from '@/lib/branding/use-autosave'
 import { useHistory } from '@/lib/branding/use-history'
+import { repairBlocks } from '@/lib/branding/validate-blocks'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from '@/types/branding-preview'
 import type { Json } from '@/types/database'
@@ -213,6 +214,15 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     const user = session.user
     const existing = user.user_metadata || {}
 
+    // Repair each surface's blocks before upserting to ensure required blocks
+    // are present and markers are deduplicated.
+    const repairedBlocks = {
+      proposal: repairBlocks('proposal', value.blocks.proposal),
+      invoice: repairBlocks('invoice', value.blocks.invoice),
+      contract: repairBlocks('contract', value.blocks.contract),
+      portal: repairBlocks('portal', value.blocks.portal),
+    }
+
     // Heavy fields (block trees, saved kits, portal section toggles) live in
     // public.user_branding so they don't bloat the auth JWT and trigger HTTP
     // 431 on the cookie. user_metadata only keeps small scalar fields.
@@ -223,7 +233,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           user_id: user.id,
           // jsonb columns are generated as `Json`; the editor's strongly
           // typed structures are serialised as-is (shape unchanged).
-          branding_blocks: value.blocks as unknown as Json,
+          branding_blocks: repairedBlocks as unknown as Json,
           brand_kits: value.brandKits as unknown as Json,
           portal_sections: value.portalSections as unknown as Json,
           updated_at: new Date().toISOString(),

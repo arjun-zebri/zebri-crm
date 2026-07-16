@@ -43,6 +43,7 @@ import {
   headingFontFamily,
   useBrandingHead,
 } from '@/lib/branding/public-surface';
+import { repairBlocks } from '@/lib/branding/validate-blocks';
 import { createClient } from '@/lib/supabase/client';
 
 import { InvoiceBrandedCard } from './_components/invoice-branded-card';
@@ -123,21 +124,23 @@ export default function PublicInvoicePage() {
     cornerRadius: invoice?.corner_radius ?? 16,
   });
 
-  // Split the block tree at the `paymentSchedule` marker — anything
-  // before it renders the invoice body (header + items + totals),
+  // Repair block tree when present, then split at the `paymentSchedule` marker.
+  // Anything before it renders the invoice body (header + items + totals),
   // and anything after renders the footer (notes, contact, etc).
-  // The schedule + pay buttons get rendered by Zebri between the
-  // two halves.
+  // The schedule + pay buttons get rendered by Zebri between the two halves.
+  const repairedBlocks = invoice?.branding_blocks && invoice.branding_blocks.length > 0
+    ? repairBlocks('invoice', invoice.branding_blocks)
+    : null;
   const psIdx =
-    invoice?.branding_blocks?.findIndex((b) => b.type === 'paymentSchedule') ?? -1;
-  const preBlocks = invoice?.branding_blocks
+    repairedBlocks?.findIndex((b) => b.type === 'paymentSchedule') ?? -1;
+  const preBlocks = repairedBlocks
     ? psIdx >= 0
-      ? invoice.branding_blocks.slice(0, psIdx)
-      : invoice.branding_blocks
+      ? repairedBlocks.slice(0, psIdx)
+      : repairedBlocks
     : [];
   const postBlocks =
-    invoice?.branding_blocks && psIdx >= 0
-      ? invoice.branding_blocks.slice(psIdx + 1)
+    repairedBlocks && psIdx >= 0
+      ? repairedBlocks.slice(psIdx + 1)
       : [];
 
   const showHeaderBannerImage =

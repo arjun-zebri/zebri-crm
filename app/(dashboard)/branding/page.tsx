@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
+import { repairBlocks } from '@/lib/branding/validate-blocks'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandKit } from '@/types/branding-preview'
 
@@ -172,10 +173,10 @@ export default function BrandingPage() {
   const blocksSrc = branding?.branding_blocks ?? metadata?.branding_blocks ?? {}
   // Legacy fallback: pre-rollout saves keyed the surface `quote`.
   const proposalSrc = blocksSrc.proposal ?? blocksSrc.quote
-  const migratedProposal = proposalSrc !== undefined ? migrateBlocks(proposalSrc, 'proposal') : null
-  const migratedInvoice  = blocksSrc.invoice  !== undefined ? migrateBlocks(blocksSrc.invoice, 'invoice')  : null
-  const migratedContract = blocksSrc.contract !== undefined ? migrateBlocks(blocksSrc.contract, 'contract') : null
-  const migratedPortal   = blocksSrc.portal   !== undefined ? migrateBlocks(blocksSrc.portal, 'portal')   : null
+  const migratedProposal = proposalSrc !== undefined ? repairBlocks('proposal', migrateBlocks(proposalSrc, 'proposal')) : null
+  const migratedInvoice  = blocksSrc.invoice  !== undefined ? repairBlocks('invoice', migrateBlocks(blocksSrc.invoice, 'invoice'))  : null
+  const migratedContract = blocksSrc.contract !== undefined ? repairBlocks('contract', migrateBlocks(blocksSrc.contract, 'contract')) : null
+  const migratedPortal   = blocksSrc.portal   !== undefined ? repairBlocks('portal', migrateBlocks(blocksSrc.portal, 'portal'))   : null
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 

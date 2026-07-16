@@ -37,6 +37,7 @@ import {
 } from '@/components/proposal/proposal-document-body';
 import { viewBranding } from '@/components/proposal/proposal-page-view';
 import { DENSITY_PAD, useBrandingHead } from '@/lib/branding/public-surface';
+import { repairBlocks } from '@/lib/branding/validate-blocks';
 import {
   defaultSelection,
   deriveState,
@@ -201,7 +202,9 @@ export default function PublicProposalPage() {
 
         {proposal && branding && pageState !== 'not_found' && pageState !== 'loading' ? (
           <ProposalDocumentBody
-            blocks={proposal.branding_blocks ?? null}
+            blocks={proposal.branding_blocks && proposal.branding_blocks.length > 0
+              ? repairBlocks('proposal', proposal.branding_blocks)
+              : null}
             branding={proposal}
             title={proposal.title}
             coupleName={proposal.couple_name}
