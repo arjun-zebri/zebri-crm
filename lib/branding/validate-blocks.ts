@@ -80,8 +80,23 @@ export function repairBlocks(surface: SurfaceTab, blocks: Block[] | null | undef
   }
 
   // For each missing required block, insert it at the correct position.
+  // For invoices, process in document order (lineItems before totals) to
+  // avoid misordering when both are missing.
   let result = [...filtered]
-  for (const type of required) {
+  const requiredArray = Array.from(required)
+  if (surface === 'invoice') {
+    requiredArray.sort((a, b) => {
+      const order = ['paymentSchedule', 'lineItems', 'totals', 'paymentDetails']
+      const aIdx = order.indexOf(a)
+      const bIdx = order.indexOf(b)
+      if (aIdx >= 0 && bIdx >= 0) return aIdx - bIdx
+      if (aIdx >= 0) return -1
+      if (bIdx >= 0) return 1
+      return 0
+    })
+  }
+
+  for (const type of requiredArray) {
     const exists = result.some((b) => b.type === type)
     if (!exists) {
       const insertPos = getInsertionPosition(result, surface, type)
@@ -135,18 +150,23 @@ function getInsertionPosition(blocks: Block[], surface: SurfaceTab, type: BlockT
     return 0
   }
 
-  // Invoice lineItems/totals: right after the marker.
-  if ((type === 'lineItems' || type === 'totals') && surface === 'invoice') {
+  // Invoice lineItems: right after the marker.
+  if (type === 'lineItems' && surface === 'invoice') {
     const markerIdx = blocks.findIndex((b) => b.type === markerForSurface)
     if (markerIdx >= 0) {
-      // Find the first lineItems or totals already in the tree after the marker.
-      const existingIdx = blocks
-        .slice(markerIdx + 1)
-        .findIndex((b) => b.type === 'lineItems' || b.type === 'totals')
-      if (existingIdx >= 0) {
-        return markerIdx + 1 + existingIdx
+      return markerIdx + 1
+    }
+  }
+
+  // Invoice totals: after lineItems (or right after marker if lineItems missing).
+  if (type === 'totals' && surface === 'invoice') {
+    const markerIdx = blocks.findIndex((b) => b.type === markerForSurface)
+    if (markerIdx >= 0) {
+      const lineItemsIdx = blocks.findIndex((b) => b.type === 'lineItems')
+      if (lineItemsIdx >= 0) {
+        return lineItemsIdx + 1
       }
-      // No lineItems/totals yet, so insert right after the marker.
+      // lineItems doesn't exist yet, insert right after marker.
       return markerIdx + 1
     }
   }

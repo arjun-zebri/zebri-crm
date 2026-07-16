@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { repairBlocks } from '@/lib/branding/validate-blocks'
+import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 describe('repairBlocks', () => {
   it('re-inserts deleted required blocks on invoices', () => {
@@ -37,10 +38,25 @@ describe('repairBlocks', () => {
   })
 
   it('leaves a healthy tree untouched (same references)', () => {
-    const healthy = repairBlocks('contract', [
+    const input: Block[] = [
       { id: 'h', type: 'headerBanner' },
       { id: 'cb', type: 'contractBody', locked: true },
-    ])
-    expect(healthy.map((b) => b.id)).toEqual(['h', 'cb'])
+    ]
+    const repaired = repairBlocks('contract', input)
+    expect(repaired[0]).toBe(input[0])
+    expect(repaired[1]).toBe(input[1])
+  })
+
+  it('inserts invoice financial blocks in document order', () => {
+    const repaired = repairBlocks('invoice', [{ id: 'a', type: 'headerBanner' }])
+    const types = repaired.map((b) => b.type)
+    const lineItemsIdx = types.indexOf('lineItems')
+    const totalsIdx = types.indexOf('totals')
+    const paymentDetailsIdx = types.indexOf('paymentDetails')
+    const paymentScheduleIdx = types.indexOf('paymentSchedule')
+
+    expect(paymentScheduleIdx).toBeLessThan(lineItemsIdx)
+    expect(lineItemsIdx).toBeLessThan(totalsIdx)
+    expect(totalsIdx).toBeLessThan(paymentDetailsIdx)
   })
 })
