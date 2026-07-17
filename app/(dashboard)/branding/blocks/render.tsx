@@ -217,7 +217,7 @@ export function RenderHeaderBanner({
         <InlineAsset
           value={headerImageUrl}
           onUpload={uploadHeader}
-          onClear={removeHeader}
+          {...(removeHeader !== undefined ? { onClear: removeHeader } : {})}
           label="Replace header banner"
           className="w-full h-full"
           emptyState={null}
@@ -414,7 +414,7 @@ export function RenderImage({
         <InlineAsset
           value={block.url}
           onUpload={(file) => uploadImage(file, block.id)}
-          onClear={removeImage ? () => removeImage(block.id) : undefined}
+          {...(removeImage ? { onClear: () => removeImage(block.id) } : {})}
           label="Replace image"
           className="w-full h-full"
           emptyState={null}
@@ -495,7 +495,7 @@ export function RenderBusinessName({
     <InlineAsset
       value={logoUrl || null}
       onUpload={uploadLogo}
-      onClear={logoUrl ? removeLogo : undefined}
+      {...(logoUrl && removeLogo ? { onClear: removeLogo } : {})}
       label={logoUrl ? 'Replace logo' : 'Upload logo'}
       overlayPosition="center"
       className="h-full"

@@ -46,7 +46,10 @@ import { execSync } from 'node:child_process';
 // proposal code is strict-clean). Locking in.
 // Branding editor redesign: net strict-clean new code + deletions (starter
 // designs, dead theme paths) reduced strict errors 302 -> 295.
-const STRICT_BUDGET = 295;
+// Branding overhaul phase-a completion: fixed exactOptionalPropertyTypes
+// violations in block-toolbar.tsx and render.tsx by conditionally spreading
+// optional props instead of passing undefined (20-error reduction: 295 -> 290).
+const STRICT_BUDGET = 290;
 
 function runTscStrict() {
   try {

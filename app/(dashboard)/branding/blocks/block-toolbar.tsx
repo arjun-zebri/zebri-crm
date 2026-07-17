@@ -156,27 +156,27 @@ interface ControlsProps {
 function BlockSpecificControls({ block, state, updateBlock, expanded }: ControlsProps) {
   switch (block.type) {
     case 'title':
-      return <TitleControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+      return <TitleControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'text':
-      return <TextControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+      return <TextControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'action':
-      return <ActionControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+      return <ActionControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'headerBanner':
       return <HeaderBannerControls block={block} updateBlock={updateBlock} />
     case 'businessName':
-      return <BusinessNameControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+      return <BusinessNameControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'tagline':
-      return <TaglineControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+      return <TaglineControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'totals':
-      return <TotalsControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+      return <TotalsControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'paymentDetails':
-      return <PaymentDetailsControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+      return <PaymentDetailsControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'lineItems':
-      return <LineItemsControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+      return <LineItemsControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'divider':
       return <DividerControls block={block} updateBlock={updateBlock} />
     case 'footer':
-      return <FooterControls block={block} state={state} updateBlock={updateBlock} expanded={expanded} />
+      return <FooterControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'image':
       return <ImageControls block={block} updateBlock={updateBlock} />
     case 'spacer':
@@ -279,7 +279,7 @@ function TitleControls({
         ]}
       />
       <Divider />
-      <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} expanded={expanded} />
+      <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} />
     </div>
   )
 }
@@ -315,7 +315,7 @@ function TextControls({
         onChange={(patch) =>
           updateBlock<TextBlock>(block.id, { textStyle: { ...(block.textStyle ?? {}), ...patch } })
         }
-        expanded={expanded}
+        {...(expanded !== undefined ? { expanded } : {})}
       />
     </div>
   )
@@ -426,7 +426,7 @@ function ActionControls({
           const merged = { ...(style ?? {}), ...patch }
           updateBlock<ActionBlock>(block.id, isPrimary ? { primaryStyle: merged } : { secondaryStyle: merged })
         }}
-        expanded={expanded}
+        {...(expanded !== undefined ? { expanded } : {})}
       />
     </div>
   )
@@ -747,7 +747,7 @@ function BusinessNameControls({
             onChange={(patch) =>
               updateBlock<BusinessNameBlock>(block.id, { nameStyle: { ...(block.nameStyle ?? {}), ...patch } })
             }
-            expanded={expanded}
+            {...(expanded !== undefined ? { expanded } : {})}
           />
         </>
       )}
@@ -785,7 +785,7 @@ function TaglineControls({
         onChange={(patch) =>
           updateBlock<TaglineBlock>(block.id, { textStyle: { ...(block.textStyle ?? {}), ...patch } })
         }
-        expanded={expanded}
+        {...(expanded !== undefined ? { expanded } : {})}
       />
     </div>
   )
@@ -901,7 +901,7 @@ function TotalsControls({
         onChange={(patch) =>
           updateBlock<TotalsBlock>(block.id, { [styleKey]: { ...(style ?? {}), ...patch } })
         }
-        expanded={expanded}
+        {...(expanded !== undefined ? { expanded } : {})}
       />
     </div>
   )
@@ -979,7 +979,7 @@ function PaymentDetailsControls({
         onChange={(patch) =>
           updateBlock<PaymentDetailsBlock>(block.id, { [styleKey]: { ...(style ?? {}), ...patch } })
         }
-        expanded={expanded}
+        {...(expanded !== undefined ? { expanded } : {})}
       />
     </div>
   )
@@ -1092,7 +1092,7 @@ function LineItemsControls({
             isHeader ? { headerStyle: merged } : { itemStyle: merged },
           )
         }}
-        expanded={expanded}
+        {...(expanded !== undefined ? { expanded } : {})}
       />
     </div>
   )
@@ -1458,7 +1458,7 @@ function FooterControls({
         ]}
       />
       <Divider />
-      <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} expanded={expanded} />
+      <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} />
     </div>
   )
 }

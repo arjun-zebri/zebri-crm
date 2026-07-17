@@ -57,7 +57,9 @@ import { execSync } from 'node:child_process';
 // P5.D action/lineItems/totals/paymentDetails full controls: refactored
 // RenderTotals to use a pure renderRow helper (not component during render)
 // and fixed import-order across public block renderers → 75 → 72.
-const ERROR_BUDGET = 72;
+// Branding overhaul phase-a completion: strict type compliance fixes +
+// render consolidation clearances → 72 → 66.
+const ERROR_BUDGET = 66;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C

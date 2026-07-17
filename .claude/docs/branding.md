@@ -1,64 +1,74 @@
 # Zebri Custom Branding
 
-MCs customise how every public-facing surface looks to couples. Branding is one of the most visible product surfaces  -  every quote, invoice, contract, and (later) couple-portal a couple ever sees is a brand impression.
+MCs customize the look and layout of all customer-facing surfaces via a Canva-grade block-based editor. Branding flows from the editor into quotes, invoices, contracts, proposals, vendor timelines, questionnaires, emails, and PDFs.
 
-**Branded surfaces:**
+**Branded surfaces (Phase 11, 2026-07-17):**
 
-| Surface | Path | Status |
+| Surface | Public path | Status |
 |---|---|---|
 | Quote | `/quote/[token]` | shipped |
 | Invoice | `/invoice/[token]` | shipped |
 | Contract | `/contract/[token]` | shipped |
-| Couple Portal | (TBD) | preview-stub |
-| Transactional email | (Resend) | future |
+| Proposal | `/proposal/[token]` | shipped |
+| Vendor Timeline | `/vendor-timeline/[token]` | shipped |
+| Questionnaire | `/questionnaire/[token]` | shipped |
+| Email (sent docs) | Resend transactional | shipped |
+| PDF (generated docs) | Supabase Function | shipped |
 
 ------------------------------------------------------------------------
 
-# Branding Fields
+# Block-Tree Model
 
-Currently stored in Supabase Auth `user_metadata` (`logo_url`, `brand_color`, `tagline`, `abn`, `show_contact_on_documents`). Phase 2 of the redesign moves all branding to a dedicated `public.branding_settings` table to support uniqueness on `subdomain_slug` and easier joins from public RPCs.
+Branding is a per-surface block tree stored in `user_branding.branding_blocks` (jsonb, keyed by surface). Surfaces are `quote`, `invoice`, `contract`, `proposal`, `vendorTimeline`, `questionnaire`. Empty tree (`[]`) means the surface is disabled (public render returns null).
 
-| Field | Type | Default | Description | Phase |
-|---|---|---|---|---|
-| `logo_url` | text → Storage `branding/{user_id}/logo` | null | MC's primary logo (max 2 MB; PNG/JPG/SVG). | 1 |
-| `favicon_url` | text → Storage `branding/{user_id}/favicon` | null | Browser-tab icon for public pages (32×32 PNG/ICO/SVG). | 2 |
-| `header_image_url` | text → Storage `branding/{user_id}/header` | null | Optional decorative banner at top of public surfaces. | 2 |
-| `brand_color` | text (hex) | `#A7F3D0` | Accent color for buttons, header bands, and highlights. | 1 |
-| `tagline` | text, ≤ 80 chars | null | Short business tagline below logo. | 1 |
-| `footer_text` | text, ≤ 280 chars | null | Free-form footer (terms, address, signature line). Renders on quote, invoice, contract. | 2 |
-| `abn` | text, 11 digits | null | Australian Business Number on invoice header. | 1 |
-| `show_contact_on_documents` | boolean | false | Show phone, website, social links on public surfaces. | 1 |
-| `font_heading` | enum (registry) | `inter` | Heading font from curated registry. | 2 |
-| `font_body` | enum (registry) | `inter` | Body font from curated registry. | 2 |
-| `theme_preset` | enum: `minimal\|bold\|elegant\|modern\|classic\|custom` | `custom` | Currently-applied preset. Becomes `custom` after any field edit. | 2 |
-| `subdomain_slug` | text, unique, `[a-z0-9-]{3,32}` | null | Optional white-label URL: `<slug>.zebri.app`. | 3 |
+**Block types:** HeaderBanner, BusinessName, Tagline, Title, Text, LineItems, Totals, PaymentDetails, Action, Image, Spacer, Divider, Footer, ProposalBody, ContractBody, CouplePortal, VendorTimeline, Questionnaire.
+
+**Scalar fields** (global across all surfaces): logo_url, favicon_url, business_name, tagline, abn, phone, website, instagram_url, facebook_url, font_heading, font_body, font_scale, color_primary, color_accent, color_surface, color_text, color_muted, color_secondary, color_secondary_text, corner_radius, link_color, button_variant, button_size, button_radius, line_height_base, section_spacing, page_background.
 
 ------------------------------------------------------------------------
 
-# Theme Presets
+# Lock Model
 
-Five starter themes  -  TypeScript const in `lib/branding/themes.ts`. Applying a preset overwrites `brand_color`, `font_heading`, `font_body`. After any subsequent field edit, `theme_preset` becomes `custom`.
+Required blocks cannot be deleted. Determined by surface:
+- Invoice requires: Title, LineItems, Totals
+- Contract requires: Title, ContractBody
+- All other surfaces: no required blocks
 
-| Preset | Color | Heading | Body | Vibe |
-|---|---|---|---|---|
-| Minimal | `#000000` | Inter | Inter | Default. Editorial. |
-| Bold | `#FF6B35` | Space Grotesk | Inter | Confident, modern. |
-| Elegant | `#0F172A` | Playfair Display | Inter | Refined, traditional. |
-| Modern | `#A7F3D0` | DM Serif Display | DM Sans | Soft, current Zebri default. |
-| Classic | `#7C2D12` | Cormorant Garamond | Inter | Heritage. |
+`isDeletable(block, surface)` in `lib/branding/policy.ts` returns false for required blocks. Locked blocks show a "Required" chip in the editor toolbar.
 
 ------------------------------------------------------------------------
 
-# Font Registry
+# Templates
 
-Avoids the Google Fonts paradox of choice. Exported from `lib/branding/fonts.ts`:
+18 functional templates: `<surface>-classic`, `<surface>-minimal`, `<surface>-bold` for each surface. Applying a template replaces only the current surface's block tree in one undoable step. Stored in `lib/branding/templates/<surface>.ts`.
 
-```ts
-export const HEADING_FONTS = ['inter','playfair','dm_serif','space_grotesk','cormorant'] as const
-export const BODY_FONTS = ['inter','dm_sans'] as const
-```
+------------------------------------------------------------------------
 
-Loaded via `next/font/google` in `lib/branding/load-fonts.ts`. Public pages and the settings preview share the loader.
+# Surface Enablement & Reset
+
+`user_branding.enabled_surfaces` (text[]) tracks which surfaces the MC has customized. The editor's first-run wizard gates onboarding by this. A surface is **disabled** when its block tree is an empty array (`[]`); the `get_public_*` RPCs and email/PDF renderers check this and skip rendering (return null).
+
+**Per-surface reset:** "Reset to template" button in the Documents panel replaces the current surface's tree with a fresh template.
+
+------------------------------------------------------------------------
+
+# Container Queries
+
+Mobile responsive design via `@container` (not media queries). Block-level container queries gate the visibility and layout of nested elements, enabling responsive typography and spacing without viewport-level breaks. Editor canvas shows both desktop and mobile previews via a viewport-toggle.
+
+------------------------------------------------------------------------
+
+# Save / Load / Public Render Model
+
+Three distinct paths with clear repair semantics:
+
+1. **Save path** — MC edits form + block tree → `saveBrandingAction` → writes to `user_metadata` (logo_url, brand_color, fonts, etc.) + `user_branding.branding_blocks[surface]`. Autosave debounced 800ms after last edit + on blur.
+
+2. **Load path** — Form initialized via `getBrandingDataAction` reading from both tables. Empty block trees load as `[]` (deliberately empty, surface disabled). Required blocks are enforced by the UI when applying templates or resetting.
+
+3. **Public render path** — `get_public_quote`, `get_public_invoice`, `get_public_contract`, `get_public_proposal`, `get_vendor_timeline`, `get_public_questionnaire` RPCs merge `_user_branding(user_id)` + `_user_branding.branding_blocks[surface]`. If a surface's block tree is `[]` or null, the public renderer skips that tree and renders only fixed cores (e.g., invoice items, contract body). **Deliberately empty surface = disabled = null in public output.**
+
+Reset semantics: clicking "Reset [Surface]" saves an explicit empty array `[]` to the block tree, not a null. This flags the surface as explicitly disabled by the MC, distinct from "never customized." The first-run wizard initially populates `enabled_surfaces` with defaults; subsequent resets track explicit user choices.
 
 ------------------------------------------------------------------------
 

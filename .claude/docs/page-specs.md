@@ -1055,51 +1055,57 @@ Route group: `(dashboard)`
 
 Purpose: A Canva-grade design tool for customizing the MC's brand kit and block-based document layouts across proposal, invoice, contract, and couple portal surfaces.
 
+## First-Run Onboarding
+
+Users who have never customized branding see a three-step wizard at `/branding/onboarding/`: **Business** (logo, name, tagline), **Look** (brand colours + typography), **Documents** (surface enablement). Wizard is gated by `onboarded_at` in user_branding; once complete, the editor shows normally. Users can re-enter onboarding via Settings.
+
 ## Layout
 
-Two-pane: left rail (brand panel with accordions) + canvas (surface preview). Header has surface tabs (Proposal | Invoice | Contract | Portal) and a Preview button opening the surface in a new tab. Canvas shows a scope bar: "<Surface> layout — blocks and wording for this document only".
+Three-pane: **Header** (six surface tabs: Quote, Invoice, Contract, Proposal, Vendor Timeline, Questionnaire) + **Left rail** (brand panel with accordions + Documents panel) + **Canvas** (surface preview). Top-right has Preview button (opens surface in new tab) and Reset button (reverts current surface to template).
 
-## Brand Rail (left sidebar, collapsible accordions)
-
-Header: "Applies to every document" — one shared global brand kit flows into all surfaces.
+## Brand Rail (left sidebar)
 
 1. **Your business** — Logo, favicon, business name, tagline, ABN, phone, website, Instagram/Facebook URLs.
+2. **Brand colours** — Six colour roles (Primary, Accent, Surface, Text, Muted, Secondary + Secondary text), each with a palette selector.
+3. **Typography** — Per role (heading / body): font dropdown (30+ Google fonts), size, weight, colour, alignment, text case, letter-spacing, line-height. Overall scale slider.
+4. **Global styles** — Corner radius, link colour, default button style, base line-height, section spacing, page background.
 
-2. **Brand colours** — Six colour roles (Primary, Accent, Surface, Text, Muted, Secondary + Secondary text), each with a one-line role description and a palette selector (`ColorPopover`). Redundant circular swatches removed.
+## Documents Panel (below brand sections)
 
-3. **Typography** — Per role (heading / body): font dropdown (30+ Google fonts, each previewed in its own face), size (px), weight, colour (`ColorPopover`), alignment (left/centre/right), text case (none/UPPERCASE/Capitalize), letter-spacing, line-height. Small "Overall scale" slider (font_scale multiplier).
-
-4. **Global styles** — Corner radius, link colour, default button style (variant/size/radius), base line-height, section spacing, page background (colour or texture). Density control removed; stored density is honoured on render but not editable.
-
-5. **Templates** — Picker for functional templates (Wedding proposal, Deposit invoice, Standard e-sign contract, Couple portal). Applying one replaces only the current surface's block tree in one undoable step.
+Toggles to enable/disable individual surfaces. Only enabled surfaces render to their public endpoints. Disabled surfaces return null from get_public_* RPCs. Each surface has a quick-reset link ("Reset to template") that replaces its block tree.
 
 ## Canvas (right side)
 
-Renders the selected surface with live sample data, fed by the editor's saved branding. Fixed-core blocks (e.g. proposalBody, contractBody) are marked with a dashed "Fixed layout" frame; the MC can drag chrome blocks (header banner, business name, text, image, spacer, divider, footer) above and below.
+Renders the selected surface with live sample data. Fixed-core blocks (proposalBody, contractBody, couplePortal, questionnaire, vendorTimeline) are marked "Fixed layout"; chrome blocks (header banner, business name, text, image, spacer, divider, footer, action) are freely positioned above/below.
 
-Per-surface blocks available via an "Add block" palette (grouped into Structure / Content / Action). New blocks: Image (with fit/focal/height/rounding/width/align/padding/background) and Spacer (adjustable height).
+Per-block toolbar (Canva-style): padding (per side), background colour, border (width/colour/radius), width, horizontal alignment, space above/below. Text-bearing blocks add font/size/weight/colour/alignment/case/letter-spacing/line-height. Block-specific controls (header overlay, action variant/size/radius, divider thickness, etc.) per type.
 
-Every block exposes a full Canva-style toolbar: padding (per side), background colour, border (width/colour/radius), width, horizontal alignment, space above/below. Text-bearing blocks add font/size/weight/colour/alignment/case/letter-spacing/line-height. Block-specific controls (header banner overlay, action variant/size/radius, divider thickness, etc.) available per block type.
+Blocks inherit global branding (colours, fonts, corner radius, spacing); text blocks allow per-block overrides.
 
-Mobile responsive: canvas stacks vertically on mobile (<md breakpoint), canvas above, rail as a sticky drawer below.
+Mobile responsive: on <md breakpoint, sidebar becomes sticky-scrollable, canvas stacks below. Canvas uses container queries to adapt block layouts gracefully on small screens without breaking fixed-core block logic.
+
+## Public-Blocks Slots + Chrome Pattern
+
+The **public renderers** (`components/public-blocks/*`) are the sole markup for each surface. The **editor** injects `InlineText` slots into key text nodes (e.g. business-name text, action button label) to make those fields editable inline on the preview. The editor's toolbar is an overlay chrome that sits above the public renderer without modifying its output.
+
+Slots always render (no conditional gating). Editor slot classes (`edit-mode-*` prefixes) match the static renderers exactly. The `upload-brand-asset` shared helper handles logo/favicon/image uploads to Supabase Storage, returning a public URL synchronously cached.
 
 ## Customer Preview
 
-Top-right "Preview" button opens a new browser tab at `/branding/preview/[surface]`, rendering the surface exactly as the customer sees it via the shared public renderers. Read-only, fed by saved branding + realistic sample data. Closes the gap where customised layouts / footer / Accept button previewed different from the sent page.
+"Preview" button opens `/branding/preview/[surface]` in a new tab via the public block renderers, exactly as customers see it. Device toggle allows mobile (<md) testing. Requires the surface to be enabled.
 
-## Per-Surface Block Model
+## Lock Model
 
-Each surface has a fixed set of available block types (gated by `BLOCKS_BY_SURFACE`):
+Required blocks cannot be deleted (e.g., line-items on invoice). Locked blocks show a "Required" chip in their toolbar. Required markers vary by surface (invoice requires Title + LineItems + Totals; contract requires Title + ContractBody).
 
-- **All surfaces:** Header banner, Business name, Tagline, Text, Image, Spacer, Divider, Footer
-- **Proposal:** + Proposal core (fixed), Action block
-- **Invoice:** + Title & meta, Line items, Totals, Payment details, Action block
-- **Contract:** + Title & meta, Contract body (fixed)
-- **Portal:** + Couple portal (fixed)
+## Six Surfaces
 
-## No Density / Themes
-
-Density control (cozy/compact spacing) is removed from the UI. Stored density values are honoured on render (default cozy) so live documents don't shift. Themes + Starter-design controls are deleted; functional templates replace them.
+- **Quote** — Proposal block tree (fixed core + chrome)
+- **Invoice** — Title, Line items, Totals, Payment details (fixed core + chrome)
+- **Contract** — Title, Contract body (fixed core + chrome)
+- **Proposal** — ProposalBody block (fixed core + chrome)
+- **Vendor Timeline** — Vendor run-sheet blocks (vendorTimeline fixed core)
+- **Questionnaire** — Questionnaire form blocks (questionnaire fixed core)
 
 ## File Structure
 

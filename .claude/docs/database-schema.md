@@ -29,6 +29,10 @@ metadata_on_insert` trigger).
 
 Scalars returned by `_user_branding(uuid)` and merged into public RPCs. Migration `20260715000000_branding_editor_redesign.sql` extended the function with typography + layout fields.
 
+**user_branding table** (Branding overhaul, Phase 11 onwards). One row per user, RLS-owned, stores the block tree + surface configuration for the branding editor. Columns: `user_id` (PK, FK auth.users cascade), `branding_blocks` (jsonb, keyed by surface: `quote`, `invoice`, `contract`, `proposal`, `vendorTimeline`, `questionnaire`), `enabled_surfaces` (text[], default `{quote,invoice,contract}`), `onboarded_at` (timestamptz, null until first save), `created_at`, `updated_at`.
+
+Surface-level reset: setting a surface's block tree to an empty array disables public render (the get_public_* RPCs treat it as null). `enabled_surfaces` tracks which surfaces the MC has customized; the editor's first-run wizard gates by this.
+
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `logo_url` | text | null | Supabase Storage URL for MC logo |
@@ -471,8 +475,8 @@ RLS: Standard user_id = auth.uid(). MC dashboard uploads run client-side with th
 _resolve_portal_couple(p_token uuid)  -  maps either portal_token (primary) or secondary_portal_token (spouse) to (couple_id, owner_id, viewer) where viewer is 'primary' or 'spouse'. All other RPCs use this to derive authorization and viewer context.
 
 **Data retrieval:**
-get_portal_data(token uuid)  -  returns couple name + event + people + songs + files + timeline_items + payments + contracts + **vows (privacy-filtered: only the calling partner's vow)**. Adds 'viewer', 'primary_name', 'primary_email', 'primary_phone', 'secondary_name', 'secondary_email', 'secondary_phone' to result (the email/phone fields hydrate the editable Overview contact cards, added 2026-06-17). Each partner sees only their own vow content. As of 2026-06-25 `timeline_items` spans **all** of the couple's events (not just the soonest) and each item carries `event_id`, so the portal can group moments by day; `internal = true` items are excluded.
-get_vendor_timeline(token uuid)  -  returns the couple's `events` list (id/date/venue) + `timeline_items` across all events (each tagged with `event_id`), no PII. Uses portal_token only. As of 2026-06-25 it returns the full event list (was a single event) so the run sheet can offer a per-day selector; `internal = true` items are excluded.
+get_portal_data(token uuid)  -  returns couple name + event + people + songs + files + timeline_items + payments + contracts + **vows (privacy-filtered: only the calling partner's vow)** + `branding` key (MC's branded theme). Adds 'viewer', 'primary_name', 'primary_email', 'primary_phone', 'secondary_name', 'secondary_email', 'secondary_phone' to result (the email/phone fields hydrate the editable Overview contact cards, added 2026-06-17). Each partner sees only their own vow content. As of 2026-06-25 `timeline_items` spans **all** of the couple's events (not just the soonest) and each item carries `event_id`, so the portal can group moments by day; `internal = true` items are excluded.
+get_vendor_timeline(token uuid)  -  returns the couple's `events` list (id/date/venue) + `timeline_items` across all events (each tagged with `event_id`), no PII. Uses portal_token only. As of 2026-06-25 it returns the full event list (was a single event) so the run sheet can offer a per-day selector; `internal = true` items are excluded. Includes `branding` key (via `_user_branding` merge) for branded run-sheet display.
 
 **Timeline & people:**
 save_portal_timeline_item(p_token, p_id, p_start_time, p_title, p_description, p_duration_min, p_event_id?)  -  insert with pending_review=true. As of 2026-06-25 takes an optional `p_event_id` so a suggestion lands on the day the couple is viewing; when omitted (or not owned by the couple) it falls back to the soonest event. Couple suggestions are always `internal = false`.
@@ -866,10 +870,10 @@ completed_at, created_at, updated_at. Indexes: `(user_id)`, `(couple_id)`,
 
 Anon access via SECURITY DEFINER RPCs (all token-gated, granted to `anon`):
 - `get_public_questionnaire(token)` — returns the questionnaire (incl.
-  display_mode) + current responses + status with branding merged top-level
-  (via `_user_branding`); null when the token is missing or
+  display_mode) + current responses + status + `branding` key with merged MC branding
+  (via `_user_branding`, surfaces `questionnaire` block tree); null when the token is missing or
   `share_token_enabled = false`. Side effect: stamps `viewed_at` on the first
-  successful call.
+  successful call. MC branding enables branded welcome/thank-you fill-page messaging.
 - `save_questionnaire_progress(token, p_responses)` — autosave of partial
   answers; refuses once completed.
 - `submit_questionnaire(token, p_responses)` — stores answers, stamps

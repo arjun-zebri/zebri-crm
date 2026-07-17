@@ -112,6 +112,29 @@ changes; the parent modals own the actual form state + mutations.
 All parts are ≤200 LOC, TSDoc'd, and unit-tested under
 `tests/unit/components/builders/parts/*.test.tsx`.
 
+## Public Blocks components — `components/public-blocks/*` (Phase 11)
+
+Shared branded surface renderers. Each public surface (quote, invoice, contract, proposal, vendor timeline, questionnaire) consumes a block tree and renders it with the MC's branding (colours, fonts, corner radius, spacing).
+
+**Slots + Chrome Pattern:** The public component is the sole markup source. The editor injects `InlineText` slots (for editable fields: business name, heading, button text) as React node props. The editor's toolbar is a chrome overlay sitting above the public renderer without modifying DOM structure. **Two binding amendments:**
+1. Slots always render, even if empty (undefined slots render as nothing, not errors).
+2. Editor slot classes match static classes exactly (`edit-mode-{fieldName}` class prefix) — ensures clicking a slot in the preview reflects the edit without layout flicker.
+
+| Component | Used by | Notes |
+|---|---|---|
+| `public-block-renderer.tsx` | All surfaces | Orchestrator: renders a block tree by type (HeaderBanner, BusinessName, Text, Image, Spacer, Divider, Footer, Action, and surface-specific fixed cores). |
+| `header-banner.tsx` | All surfaces | Header image + overlay gradient. |
+| `business-name.tsx` | All surfaces | Logo + business name + tagline. |
+| `action-block.tsx` | Quote, Invoice, Proposal | Accept/Download/etc button. |
+| `text-block.tsx` | All surfaces | Rich text with font/colour overrides. |
+| `image-block.tsx` | All surfaces (chrome) | Image with fit, focal point, rounding, padding. |
+| `spacer-block.tsx` | All surfaces (chrome) | Vertical spacing. |
+| `quote-body.tsx` | Quote surface (fixed) | Renders proposal options + acceptance flow. |
+| `invoice-items.tsx` | Invoice surface (fixed) | Line items + totals + payment schedule. |
+| `contract-body.tsx` | Contract surface (fixed) | Contract text content. |
+
+**Shared helper:** `upload-brand-asset(file, type)` in `lib/branding/upload.ts` handles logo/favicon/header/image uploads to Supabase Storage (`branding/{user_id}/{type}`), returns a public URL via signed URL (1-hour TTL cached in-memory). Used by the editor's file picker, brand-panel upload controls, and image-block drag-drop.
+
 ## Events components — `components/events/*` (Phase 4A)
 
 Shared event-related components used by the couples profile + the

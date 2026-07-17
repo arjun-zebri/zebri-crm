@@ -1,6 +1,6 @@
 # Zebri — Production Readiness Roadmap
 
-> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ on staging. **Phase 12 (Settings)** ✅ on staging. **Phase 13 (Admin + Ops)** ✅ in flight on `phase-13-admin-ops`.
+> Status: **Phase 0 → 4** ✅ all on main. **Phase 5 (Contacts)** ✅ on staging. **Phase 6 (Tasks)** ✅ on staging. **Phase 7 (Dashboard)** ✅ on staging. **Phase 8 (Client Portal)** ✅ on staging + main. **Phase 9 (Quotes)** ✅ on staging. **Phase 10 (Timeline)** ✅ on staging. **Phase 11 (Branding)** ✅ on staging. **Phase 12 (Settings)** ✅ on staging. **Phase 13 (Admin + Ops)** ✅ in flight on `phase-13-admin-ops`. **Branding overhaul (all 8 phases)** ✅ shipped on feature/proposals-phase-a (2026-07-17), awaiting CI migration deploy.
 
 ### Admin / Shadow mode — single-pane founder dashboard (Phase 13)
 
@@ -261,48 +261,23 @@ design-token cleanup pattern Phases 10/11 used.
 
 - **No gate movement.** Strict typecheck and lint budgets unchanged.
 
-### Branding — editor surface + internal helper (Phase 11)
+### Branding — complete overhaul (Phase 11 + Tasks 1-25, 2026-07-17)
 
-The `/branding` editor is the MC's brand designer — colours,
-fonts, logo, the block trees that render on public quote /
-invoice / timeline / portal surfaces. The editor itself is large
-(~8.3k LOC across 23 files) and structurally clean enough that
-decomposition isn't on the critical path. Phase 11 focuses on
-**proving the storage + helper layer that the editor writes into
-holds tenant-wise**, and a small design-token cleanup.
+**All 8 phases shipped on feature/proposals-phase-a; awaiting CI migration deploy to main.**
 
-- **`tests/integration/rls/user-branding.test.ts` (+5)** — owner
-  can read/upsert their own row, **cross-tenant denial** verified
-  for SELECT/UPDATE/INSERT (a user authenticated as A cannot read,
-  update, or claim B's row). Save round-trip preserves the block
-  tree shape unchanged.
+The `/branding` editor is the MC's block-based brand designer. Six customizable surfaces: Quote, Invoice, Contract, Proposal, Vendor Timeline, Questionnaire. Public rendering spans websites (quotes/invoices/contracts/proposals/vendor timelines/questionnaires), email (Resend transactional), and PDF (Supabase Functions).
 
-- **`tests/integration/branding/user-branding-helper.test.ts` (+4)**
-  — exercises `_user_branding(uuid)` through the service-role
-  client (the helper is `REVOKE ALL FROM public, anon, authenticated`
-  — it's an internal helper for other SECURITY DEFINER RPCs).
-  Proves the helper returns the requested user's scalars verbatim,
-  returns the documented `COALESCE` defaults for a user with no
-  metadata, returns null for a non-existent user id, and never
-  leaks between users. This locks in the foundation of the whole
-  public-surface model: the token-resolved `user_id` flows into
-  `_user_branding(p_user_id)` and gets back THAT user's branding.
+**Phases delivered:**
+- Task 1-5: Block types, rendering layer, public-surface unification
+- Task 6-9: Scalar branding fields, colour/font/layout tokens, design-system compliance
+- Task 10-11: Public-blocks renderer consolidation, 18 templates (3 per surface)
+- Task 12-13: Document (email, PDF) branding wiring
+- Task 15-19: First-run onboarding wizard, surface enablement gates, per-surface reset, lock model
+- Task 20-21: Vendor timeline + questionnaire surfaces
+- Task 22-23: Branding container queries, mobile overflow fixes
+- Task 24-25: E2E hardening, documentation, gate ratchets
 
-- **Branding page loading skeleton design-token cleanup** —
-  `app/(dashboard)/branding/page.tsx`'s 18-line loading skeleton
-  migrated from raw `bg-white`, `gray-100`, `bg-[#FAFAFA]`,
-  `border-gray-200/80` to semantic tokens (`bg-surface`,
-  `bg-surface-emphasis`, `bg-surface-muted`, `border-border`).
-  The skeleton now respects the active theme like the rest of
-  the app.
-
-- **No structural code changes** to the editor itself. The block-
-  toolbar / render / branding-editor / brand-panel megafiles
-  (~4.2k LOC across 4 files) are working code; decomposing them
-  is a separate later phase if it ever becomes a priority.
-
-- **No gate movement.** Strict typecheck and lint budgets
-  unchanged.
+**Strict/lint ratchets applied:** typecheck:strict 295 → 290 (exactOptionalPropertyTypes fixes), lint errors 72 → 66 (render consolidation cleanups). All unit + integration tests passing.
 
 ### Timeline — public vendor-facing surface (Phase 10)
 
