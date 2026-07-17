@@ -43,6 +43,10 @@ export function blockTemplate(type: BlockType): Block {
       return { id: newId('cb'), type: 'contractBody', locked: true }
     case 'proposalBody':
       return { id: newId('pb'), type: 'proposalBody', locked: true }
+    case 'vendorTimelineBody':
+      return { id: newId('vt'), type: 'vendorTimelineBody', locked: true }
+    case 'questionnaireBody':
+      return { id: newId('qb'), type: 'questionnaireBody', locked: true }
     case 'image':
       return { id: newId('im'), type: 'image', fit: 'cover', heightPx: 160 }
     case 'spacer':
@@ -84,7 +88,7 @@ const SOFT_DIVIDER = { thickness: 1, color: '#E5E7EB' } as const
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
-export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 'portal'): Block[] {
+export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
   if (surface === 'portal') {
     return [
       { id: newId('hb'), type: 'headerBanner' },
@@ -141,6 +145,21 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
       { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.' },
     ]
   }
+  if (surface === 'vendorTimeline') {
+    return [
+      { id: newId('hb'), type: 'headerBanner' },
+      { id: newId('bn'), type: 'businessName' },
+      { id: newId('vt'), type: 'vendorTimelineBody', locked: true },
+      { id: newId('ft'), type: 'footer' },
+    ]
+  }
+  if (surface === 'questionnaire') {
+    return [
+      { id: newId('bn'), type: 'businessName' },
+      { id: newId('qb'), type: 'questionnaireBody', locked: true },
+      { id: newId('ft'), type: 'footer' },
+    ]
+  }
   // contract — minimal chrome scaffold. The contract body is
   // written by the MC per-couple in the builder modal's TipTap
   // editor and renders at the `contractBody` marker. MCs can add
@@ -159,7 +178,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
  * Migrate persisted block data from older shapes (e.g. type: 'message') to the
  * current schema. Safe to run on every load.
  */
-export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' | 'contract' | 'portal'): Block[] {
+export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
   if (!Array.isArray(blocks)) return []
   let migrated = blocks
     .map((raw): Block | null => {

@@ -15,6 +15,8 @@ const FIXED_MARKERS: Record<SurfaceTab, string> = {
   invoice: 'paymentSchedule',
   contract: 'contractBody',
   portal: 'couplePortal',
+  vendorTimeline: 'vendorTimelineBody',
+  questionnaire: 'questionnaireBody',
 }
 
 describe('TEMPLATES', () => {

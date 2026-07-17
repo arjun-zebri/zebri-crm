@@ -19,6 +19,8 @@ import type { BlockType } from './types'
  * - **invoice**: Payment document with line items, totals, and payment details.
  * - **contract**: E-signature document with title and content sections.
  * - **portal**: Couple-facing portal display (structural only, no actions).
+ * - **vendorTimeline**: Vendor run sheet (live timeline data).
+ * - **questionnaire**: Couple inquiry questionnaire (fixed steps).
  */
 export const BLOCKS_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
   proposal: [
@@ -61,6 +63,25 @@ export const BLOCKS_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
   ],
   portal: [
     'headerBanner',
+    'businessName',
+    'tagline',
+    'text',
+    'divider',
+    'spacer',
+    'image',
+    'footer',
+  ],
+  vendorTimeline: [
+    'headerBanner',
+    'businessName',
+    'tagline',
+    'text',
+    'divider',
+    'spacer',
+    'image',
+    'footer',
+  ],
+  questionnaire: [
     'businessName',
     'tagline',
     'text',

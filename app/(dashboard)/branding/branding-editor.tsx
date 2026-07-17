@@ -68,7 +68,7 @@ interface BrandingEditorProps {
     cornerRadius: number
     docPadding: number
     themePreset: ThemeIdOrCustom
-    blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
+    blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
     businessName: string
     phone: string
     website: string
@@ -122,7 +122,7 @@ export interface EditorState {
   cornerRadius: number
   docPadding: number
   themePreset: ThemeIdOrCustom
-  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
+  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
   brandKits: BrandKit[]
   activeKitId: string | null
   portalSections: PortalSectionSettings
@@ -582,7 +582,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     updateBlock<ImageBlock>(blockId, { url: undefined })
   }
 
-  const docSurface: 'proposal' | 'invoice' | 'contract' | 'portal' = surface
+  const docSurface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' = surface
 
   /** Kit block trees saved before the proposals rollout keyed the
    *  first surface `quote`; normalise to the editor's `proposal` key
@@ -593,9 +593,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     if (!blocks) return null
     return {
       proposal: blocks.proposal ?? blocks.quote ?? defaultBlocksFor('proposal'),
-      invoice: blocks.invoice,
-      contract: blocks.contract,
-      portal: blocks.portal,
+      invoice: blocks.invoice ?? defaultBlocksFor('invoice'),
+      contract: blocks.contract ?? defaultBlocksFor('contract'),
+      portal: blocks.portal ?? defaultBlocksFor('portal'),
+      vendorTimeline: blocks.vendorTimeline ?? defaultBlocksFor('vendorTimeline'),
+      questionnaire: blocks.questionnaire ?? defaultBlocksFor('questionnaire'),
     }
   }
 
@@ -706,6 +708,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       invoice: defaultBlocksFor('invoice'),
       contract: defaultBlocksFor('contract'),
       portal: defaultBlocksFor('portal'),
+      vendorTimeline: defaultBlocksFor('vendorTimeline'),
+      questionnaire: defaultBlocksFor('questionnaire'),
     }
     const kit: BrandKit = {
       id: `kit-${Date.now().toString(36)}`,
@@ -1138,8 +1142,8 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
-  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] },
-  docSurface: 'proposal' | 'invoice' | 'contract' | 'portal',
+  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] },
+  docSurface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire',
   surface: SurfaceTab,
 ) {
   if (typeof document === 'undefined') return

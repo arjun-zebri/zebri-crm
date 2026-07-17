@@ -32,6 +32,8 @@ export type BlockType =
   | 'paymentSchedule'
   | 'contractBody'
   | 'proposalBody'
+  | 'vendorTimelineBody'
+  | 'questionnaireBody'
   | 'image'
   | 'spacer'
 
@@ -255,6 +257,28 @@ export interface ProposalBodyBlock extends BaseBlock {
   type: 'proposalBody'
 }
 
+/**
+ * Marker block — represents the position where the vendor run sheet
+ * (live timeline data) will appear. The MC can drag chrome blocks above
+ * and below it in the branding editor; the run sheet content itself is
+ * never editable on the branding surface. Same model as `couplePortal`,
+ * `paymentSchedule`, and `contractBody`.
+ */
+export interface VendorTimelineBodyBlock extends BaseBlock {
+  type: 'vendorTimelineBody'
+}
+
+/**
+ * Marker block — represents the position where the questionnaire steps
+ * (fixed content) will appear. The MC can drag chrome blocks above and
+ * below it in the branding editor; the questionnaire itself is never
+ * editable on the branding surface. Same model as `couplePortal`,
+ * `paymentSchedule`, and `contractBody`.
+ */
+export interface QuestionnaireBodyBlock extends BaseBlock {
+  type: 'questionnaireBody'
+}
+
 export type Block =
   | HeaderBannerBlock
   | BusinessNameBlock
@@ -271,10 +295,12 @@ export type Block =
   | PaymentScheduleBlock
   | ContractBodyBlock
   | ProposalBodyBlock
+  | VendorTimelineBodyBlock
+  | QuestionnaireBodyBlock
   | ImageBlock
   | SpacerBlock
 
-export type BlocksByDoc = Record<'proposal' | 'invoice' | 'contract' | 'portal', Block[]>
+export type BlocksByDoc = Record<'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire', Block[]>
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   headerBanner: 'Header banner',
@@ -292,6 +318,8 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   paymentSchedule: 'Payment schedule',
   contractBody: 'Contract body',
   proposalBody: 'Proposal',
+  vendorTimelineBody: 'Run sheet',
+  questionnaireBody: 'Questionnaire',
   image: 'Image',
   spacer: 'Spacer',
 }
@@ -312,6 +340,8 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   paymentSchedule: 'Deposit & final balance (live invoice data)',
   contractBody: 'The contract body (fixed — edited per couple)',
   proposalBody: 'Packages, chooser and accept (fixed)',
+  vendorTimelineBody: 'The vendor run sheet (live timeline data)',
+  questionnaireBody: 'The questionnaire steps (fixed)',
   image: 'An uploaded image',
   spacer: 'Adjustable vertical gap',
 }

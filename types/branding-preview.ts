@@ -64,7 +64,7 @@ export interface BrandPreviewActions {
   setTagline: (v: string) => void
 }
 
-export type SurfaceTab = 'proposal' | 'invoice' | 'contract' | 'portal'
+export type SurfaceTab = 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'
 
 export const NOOP_ACTIONS: BrandPreviewActions = {
   onEditLogo: () => {},
@@ -108,6 +108,8 @@ export interface BrandKit {
     invoice: Block[]
     contract: Block[]
     portal: Block[]
+    vendorTimeline?: Block[]
+    questionnaire?: Block[]
   }
   createdAt: string
 }

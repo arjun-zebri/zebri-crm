@@ -100,6 +100,8 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'paymentSchedule': return null
     case 'contractBody': return null
     case 'proposalBody': return null
+    case 'vendorTimelineBody': return null
+    case 'questionnaireBody': return null
     case 'image': return <RenderImage block={block} branding={branding} />
   }
 }

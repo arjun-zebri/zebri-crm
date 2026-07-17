@@ -22,6 +22,8 @@ const SURFACE_LABEL: Record<SurfaceTab, string> = {
   invoice: 'Invoice',
   contract: 'Contract',
   portal: 'Portal',
+  vendorTimeline: 'Run sheet',
+  questionnaire: 'Questionnaire',
 }
 
 export interface CanvasScopeBarProps {

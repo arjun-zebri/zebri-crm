@@ -40,10 +40,11 @@ function escapeField(value) {
  * Converts celebrant rows into a CSV document.
  *
  * @param {Array<Record<string, unknown>>} rows
+ * @param {string[]} [columns] - Column order. Defaults to the register's own fields.
  * @returns {string} CSV text including a header row.
  */
-export function toCsv(rows) {
-  const header = COLUMNS.join(',')
-  const body = rows.map((row) => COLUMNS.map((column) => escapeField(row[column])).join(','))
+export function toCsv(rows, columns = COLUMNS) {
+  const header = columns.join(',')
+  const body = rows.map((row) => columns.map((column) => escapeField(row[column])).join(','))
   return [header, ...body].join('\n') + '\n'
 }

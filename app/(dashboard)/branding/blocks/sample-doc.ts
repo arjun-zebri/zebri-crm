@@ -60,6 +60,34 @@ function samplePortalDoc(): PublicDocData {
 }
 
 /**
+ * Sample data for vendor timeline surface (minimal, since it renders live data).
+ */
+function sampleVendorTimelineDoc(): PublicDocData {
+  return {
+    title: 'Run Sheet',
+    refNumber: '',
+    expiresAt: null,
+    items: [],
+    subtotal: 0,
+    taxRate: 0,
+  }
+}
+
+/**
+ * Sample data for questionnaire surface (minimal, since it renders fixed steps).
+ */
+function sampleQuestionnaireDoc(): PublicDocData {
+  return {
+    title: 'Questionnaire',
+    refNumber: '',
+    expiresAt: null,
+    items: [],
+    subtotal: 0,
+    taxRate: 0,
+  }
+}
+
+/**
  * Map of surface tabs to their sample document data.
  * Proposal surface doesn't include lineItems/totals/paymentDetails blocks, so no sample needed.
  */
@@ -68,4 +96,6 @@ export const SAMPLE_DOC_BY_SURFACE: Record<SurfaceTab, PublicDocData> = {
   contract: sampleContractDoc(),
   proposal: sampleInvoiceDoc(), // Fallback (not used by proposal blocks)
   portal: samplePortalDoc(),
+  vendorTimeline: sampleVendorTimelineDoc(),
+  questionnaire: sampleQuestionnaireDoc(),
 }

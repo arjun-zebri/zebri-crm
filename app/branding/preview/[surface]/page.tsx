@@ -26,8 +26,8 @@ import type { PublicProposalOption } from '@/lib/payments/proposal-view'
 /**
  * Validates a surface string and returns true if it is a valid BuilderSurface.
  */
-function isValidSurface(s: unknown): s is 'proposal' | 'invoice' | 'contract' | 'portal' {
-  return s === 'proposal' || s === 'invoice' || s === 'contract' || s === 'portal'
+function isValidSurface(s: unknown): s is 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' {
+  return s === 'proposal' || s === 'invoice' || s === 'contract' || s === 'portal' || s === 'vendorTimeline' || s === 'questionnaire'
 }
 
 /**
@@ -136,7 +136,7 @@ export default function BrandingPreviewPage() {
 /**
  * Content renderer for a valid surface.
  */
-function PreviewContent({ surface }: { surface: 'proposal' | 'invoice' | 'contract' | 'portal' }) {
+function PreviewContent({ surface }: { surface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' }) {
   const { branding, blocks: savedBlocks, loading } = useCurrentBranding(surface)
   useBrandingHead(branding)
 
@@ -180,6 +180,14 @@ function PreviewContent({ surface }: { surface: 'proposal' | 'invoice' | 'contra
 
   if (surface === 'portal') {
     return <PortalPreview branding={branding} blocks={savedBlocks} pageStyle={pageStyle} />
+  }
+
+  if (surface === 'vendorTimeline') {
+    return <VendorTimelinePreview branding={branding} blocks={savedBlocks} pageStyle={pageStyle} />
+  }
+
+  if (surface === 'questionnaire') {
+    return <QuestionnairePreview branding={branding} blocks={savedBlocks} pageStyle={pageStyle} />
   }
 
   return null
@@ -330,6 +338,80 @@ function PortalPreview({
 }
 
 /**
+ * Vendor timeline surface preview with sample data.
+ */
+function VendorTimelinePreview({
+  branding,
+  blocks,
+  pageStyle,
+}: {
+  branding: PublicBranding
+  blocks: Block[]
+  pageStyle: Record<string, string | number>
+}) {
+  const sampleDoc: PublicDocData = {
+    title: 'Run Sheet',
+    refNumber: '',
+    expiresAt: null,
+    items: [],
+    subtotal: 0,
+    taxRate: 0,
+  }
+
+  return (
+    <div style={pageStyle}>
+      <div className="mx-auto max-w-2xl p-4">
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
+          <PublicBlockRenderer
+            blocks={blocks}
+            branding={branding}
+            doc={sampleDoc}
+            hideAction
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Questionnaire surface preview with sample data.
+ */
+function QuestionnairePreview({
+  branding,
+  blocks,
+  pageStyle,
+}: {
+  branding: PublicBranding
+  blocks: Block[]
+  pageStyle: Record<string, string | number>
+}) {
+  const sampleDoc: PublicDocData = {
+    title: 'Questionnaire',
+    refNumber: '',
+    expiresAt: null,
+    items: [],
+    subtotal: 0,
+    taxRate: 0,
+  }
+
+  return (
+    <div style={pageStyle}>
+      <div className="mx-auto max-w-2xl p-4">
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
+          <PublicBlockRenderer
+            blocks={blocks}
+            branding={branding}
+            doc={sampleDoc}
+            hideAction
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
  * Fallback state for unknown surface.
  */
 function UnknownSurfaceState({ surface }: { surface: string }) {
@@ -337,7 +419,7 @@ function UnknownSurfaceState({ surface }: { surface: string }) {
     <div className="flex items-center justify-center min-h-screen bg-surface p-4">
       <div className="text-center">
         <p className="text-text-muted text-sm">Unknown surface: {surface}</p>
-        <p className="text-text-subtle text-xs mt-2">Valid surfaces: proposal, invoice, contract, portal</p>
+        <p className="text-text-subtle text-xs mt-2">Valid surfaces: proposal, invoice, contract, portal, vendorTimeline, questionnaire</p>
       </div>
     </div>
   )

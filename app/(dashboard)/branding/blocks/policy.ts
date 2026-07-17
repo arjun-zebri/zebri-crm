@@ -17,7 +17,7 @@ import type { Block, BlockType } from './types'
 
 /** Structural marker blocks: fixed cores that pages split/render around. */
 export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
-  'couplePortal', 'paymentSchedule', 'contractBody', 'proposalBody',
+  'couplePortal', 'paymentSchedule', 'contractBody', 'proposalBody', 'vendorTimelineBody', 'questionnaireBody',
 ] as const)
 
 /** Blocks whose content comes from live document data, not template text. */

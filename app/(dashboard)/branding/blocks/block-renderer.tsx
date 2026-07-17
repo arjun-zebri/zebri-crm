@@ -43,8 +43,10 @@ import {
   RenderPaymentDetails,
   RenderPaymentSchedule,
   RenderProposalBody,
+  RenderQuestionnaireBody,
   RenderTitle,
   RenderTotals,
+  RenderVendorTimelineBody,
   ResizeHandle,
 } from './render'
 import type { Block, SpacerBlock } from './types'
@@ -197,7 +199,9 @@ export function BlockRenderer({
                 block.type === 'couplePortal' ||
                 block.type === 'paymentSchedule' ||
                 block.type === 'contractBody' ||
-                block.type === 'proposalBody'
+                block.type === 'proposalBody' ||
+                block.type === 'vendorTimelineBody' ||
+                block.type === 'questionnaireBody'
               ) {
                 const fixedLabel =
                   block.type === 'couplePortal'
@@ -206,7 +210,11 @@ export function BlockRenderer({
                       ? 'Payment schedule (fixed)'
                       : block.type === 'contractBody'
                         ? 'Contract body (fixed)'
-                        : 'Proposal (fixed)';
+                        : block.type === 'proposalBody'
+                          ? 'Proposal (fixed)'
+                          : block.type === 'vendorTimelineBody'
+                            ? 'Run sheet (fixed)'
+                            : 'Questionnaire (fixed)';
                 return (
                   <div key={block.id} aria-label={fixedLabel} className="group relative">
                     {renderBlock(block, state, updateBlock, {
@@ -466,6 +474,10 @@ function renderBlock(
           setPreviewMode={extras.setProposalPreviewMode}
         />
       )
+    case 'vendorTimelineBody':
+      return <RenderVendorTimelineBody state={state} />
+    case 'questionnaireBody':
+      return <RenderQuestionnaireBody state={state} />
     case 'image':
       return (
         <RenderImage

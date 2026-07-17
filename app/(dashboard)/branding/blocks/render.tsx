@@ -1249,3 +1249,145 @@ export function RenderProposalBody({
     </div>
   )
 }
+
+/**
+ * Placeholder block shown in the branding editor where the vendor run sheet
+ * (live timeline data) will render on the public page. The MC can never edit
+ * the run sheet here — that flows from event data in real time. Same model
+ * as `RenderContractBody` and `RenderPaymentSchedule`.
+ *
+ * Renders with a dashed border + muted "Live data" badge so it is
+ * visually unambiguous this block is not editable on the branding surface.
+ */
+export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }) {
+  const pad = PAD(state)
+  const muted = state.mutedColor || '#6B7280'
+  const text = state.textColor || '#111827'
+  const surface = state.surfaceColor || '#FFFFFF'
+  return (
+    <div className="border-t border-gray-100">
+      <div className={`${pad.docX} ${pad.blockY}`}>
+        {/* Locked-slot affordance: dashed border + muted "Live data"
+            badge make it clear at a glance that this block is not
+            editable on the branding surface. */}
+        <div
+          className="rounded-xl border-2 border-dashed p-5"
+          style={{
+            borderColor: muted + '60',
+            backgroundColor: surface,
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <p
+              className="text-xs font-medium uppercase tracking-wider"
+              style={{ color: muted }}
+            >
+              Run sheet
+            </p>
+            <span
+              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: muted + '20',
+                color: muted,
+              }}
+            >
+              Live data - timeline
+            </span>
+          </div>
+
+          <div className="space-y-2 opacity-60 select-none pointer-events-none">
+            <div className="py-2.5 border-b border-gray-50 flex items-start justify-between gap-4">
+              <span className="text-sm" style={{ color: text }}>3:00 PM</span>
+              <span className="text-sm flex-1" style={{ color: text }}>Guests arrive and registration</span>
+            </div>
+            <div className="py-2.5 border-b border-gray-50 flex items-start justify-between gap-4">
+              <span className="text-sm" style={{ color: text }}>4:30 PM</span>
+              <span className="text-sm flex-1" style={{ color: text }}>Ceremony begins</span>
+            </div>
+            <div className="py-2.5 flex items-start justify-between gap-4">
+              <span className="text-sm" style={{ color: text }}>6:00 PM</span>
+              <span className="text-sm flex-1" style={{ color: text }}>Reception and dinner</span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
+            <p className="text-xs" style={{ color: muted }}>
+              The run sheet is driven by your event timeline and updates in real time. You cannot edit it here. You can drag other blocks above or below this slot to add headings or notes.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Placeholder block shown in the branding editor where the questionnaire
+ * will render on the public page. The MC can never edit the questionnaire
+ * here — the structure and content are fixed. Same model as
+ * `RenderContractBody` and `RenderPaymentSchedule`.
+ *
+ * Renders with a dashed border + muted "Fixed" badge so it is
+ * visually unambiguous this block is not editable on the branding surface.
+ */
+export function RenderQuestionnaireBody({ state }: { state: BrandPreviewState }) {
+  const pad = PAD(state)
+  const muted = state.mutedColor || '#6B7280'
+  const text = state.textColor || '#111827'
+  const surface = state.surfaceColor || '#FFFFFF'
+  return (
+    <div className="border-t border-gray-100">
+      <div className={`${pad.docX} ${pad.blockY}`}>
+        {/* Locked-slot affordance: dashed border + muted "Fixed"
+            badge make it clear at a glance that this block is not
+            editable on the branding surface. */}
+        <div
+          className="rounded-xl border-2 border-dashed p-5"
+          style={{
+            borderColor: muted + '60',
+            backgroundColor: surface,
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <p
+              className="text-xs font-medium uppercase tracking-wider"
+              style={{ color: muted }}
+            >
+              Questionnaire
+            </p>
+            <span
+              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: muted + '20',
+                color: muted,
+              }}
+            >
+              Fixed steps
+            </span>
+          </div>
+
+          <div className="space-y-3 max-w-prose opacity-60 select-none pointer-events-none">
+            <p className="text-base font-semibold" style={{ color: text }}>
+              About your celebration
+            </p>
+            <p className="text-sm leading-6" style={{ color: text }}>
+              Tell us about your wedding day. When is it? How many guests? What is the vibe you are going for?
+            </p>
+            <p className="text-base font-semibold mt-4" style={{ color: text }}>
+              Your vision
+            </p>
+            <p className="text-sm leading-6" style={{ color: text }}>
+              What music matters most to you? Are there special moments or songs you want included?
+            </p>
+          </div>
+
+          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
+            <p className="text-xs" style={{ color: muted }}>
+              The questionnaire structure is fixed and cannot be edited here. You can drag other blocks above or below this slot to add custom intros or additional sections.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

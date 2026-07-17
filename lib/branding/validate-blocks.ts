@@ -121,6 +121,10 @@ function getMarkerForSurface(surface: SurfaceTab): BlockType | null {
       return 'contractBody'
     case 'portal':
       return 'couplePortal'
+    case 'vendorTimeline':
+      return 'vendorTimelineBody'
+    case 'questionnaire':
+      return 'questionnaireBody'
     default:
       return null
   }

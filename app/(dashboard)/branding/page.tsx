@@ -60,7 +60,7 @@ interface UserMetadata {
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
   // `quote` is the legacy pre-proposals key; read-only fallback.
-  branding_blocks?: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] }
+  branding_blocks?: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] }
   brand_kits?: BrandKit[]
   portal_sections?: {
     timeline?: boolean
@@ -74,7 +74,7 @@ interface UserMetadata {
 }
 
 interface UserBrandingRow {
-  branding_blocks: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] } | null
+  branding_blocks: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] } | null
   brand_kits: BrandKit[] | null
   portal_sections: {
     timeline?: boolean
@@ -177,6 +177,8 @@ export default function BrandingPage() {
   const migratedInvoice  = blocksSrc.invoice  !== undefined ? repairBlocks('invoice', migrateBlocks(blocksSrc.invoice, 'invoice'))  : null
   const migratedContract = blocksSrc.contract !== undefined ? repairBlocks('contract', migrateBlocks(blocksSrc.contract, 'contract')) : null
   const migratedPortal   = blocksSrc.portal   !== undefined ? repairBlocks('portal', migrateBlocks(blocksSrc.portal, 'portal'))   : null
+  const migratedVendorTimeline = blocksSrc.vendorTimeline !== undefined ? repairBlocks('vendorTimeline', migrateBlocks(blocksSrc.vendorTimeline, 'vendorTimeline')) : null
+  const migratedQuestionnaire = blocksSrc.questionnaire !== undefined ? repairBlocks('questionnaire', migrateBlocks(blocksSrc.questionnaire, 'questionnaire')) : null
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
@@ -214,6 +216,8 @@ export default function BrandingPage() {
           invoice:  migratedInvoice  !== null ? migratedInvoice  : defaultBlocksFor('invoice'),
           contract: migratedContract !== null ? migratedContract : defaultBlocksFor('contract'),
           portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),
+          vendorTimeline: migratedVendorTimeline !== null ? migratedVendorTimeline : defaultBlocksFor('vendorTimeline'),
+          questionnaire: migratedQuestionnaire !== null ? migratedQuestionnaire : defaultBlocksFor('questionnaire'),
         },
         businessName: metadata?.business_name || '',
         phone: metadata?.phone || '',
