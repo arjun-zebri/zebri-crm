@@ -6,6 +6,7 @@ import { ReactNode } from 'react'
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { ActionBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import { getTextColor } from '../contrast'
 import type { PublicBranding } from '../public-surface'
 import { pad, type ActionSlotProps } from './shared'
@@ -78,20 +79,27 @@ export function RenderAction({
     letterSpacing: 0,
   }
 
+  const justifyClass = {
+    start: 'justify-start',
+    center: 'justify-center',
+    end: 'justify-end',
+  }[block.buttonJustify ?? 'center']
+
   return (
-    <div className={`${p.docX} ${p.blockY} flex flex-col gap-2 @sm/doc:flex-row @sm/doc:gap-3`}>
+    <div className={`${p.docX} ${p.blockY} flex flex-col gap-2 @sm/doc:flex-row @sm/doc:gap-3 ${justifyClass}`}>
       <button
         type="button"
         disabled={primaryDisabled || primaryLoading}
         onClick={onPrimary}
-        className={`cursor-pointer hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed ${
-          variant === 'outline' ? 'border border-current' : ''
-        }`}
+        className={`cursor-pointer hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed w-full ${
+          block.primaryWidthPx === undefined ? '@sm/doc:flex-1' : ''
+        } ${variant === 'outline' ? 'border border-current' : ''}`}
         style={{
           borderRadius: radius,
           background: variant === 'fill' ? buttonColor : 'transparent',
           paddingTop: sizeConfig.padY,
           paddingBottom: sizeConfig.padY,
+          ...(block.primaryWidthPx !== undefined ? { width: '100%', maxWidth: block.primaryWidthPx } : {}),
           ...resolveTextStyle(block.primaryStyle, primaryDefaults),
         }}
       >
@@ -110,7 +118,9 @@ export function RenderAction({
           type="button"
           disabled={primaryLoading}
           onClick={onSecondary}
-          className="border cursor-pointer hover:opacity-90 transition disabled:opacity-50"
+          className={`border cursor-pointer hover:opacity-90 transition disabled:opacity-50 w-full ${
+            block.secondaryWidthPx === undefined ? '@sm/doc:w-auto' : ''
+          }`}
           style={{
             borderRadius: radius,
             // Mirror the editor: the secondary button keeps its secondaryBg fill
@@ -121,6 +131,7 @@ export function RenderAction({
             paddingBottom: sizeConfig.padY,
             paddingLeft: '1.5rem',
             paddingRight: '1.5rem',
+            ...(block.secondaryWidthPx !== undefined ? { width: '100%', maxWidth: block.secondaryWidthPx } : {}),
             ...resolveTextStyle(block.secondaryStyle, secondaryDefaults),
           }}
         >

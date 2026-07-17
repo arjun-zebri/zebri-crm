@@ -4,16 +4,14 @@ import * as Popover from '@radix-ui/react-popover'
 import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw, Minus, AlignLeft, AlignCenter, AlignRight, Equal, Lock } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
-
 import { ColorPopover } from '@/components/ui/color-popover'
 import { Tooltip } from '@/components/ui/tooltip'
 import { getTextColor } from '@/lib/branding/contrast'
 import { COLOR_PALETTE } from '@/lib/branding/themes'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
-import { isDataBound, isDeletable } from './policy'
 
 import { Slider } from '../components/slider'
-
+import { isDataBound, isDeletable } from './policy'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'
 import type {
@@ -567,6 +565,42 @@ function ActionBlockControls({
         </Popover.Portal>
       </Popover.Root>
       <Divider />
+      <Popover.Root>
+        <Tooltip label="Primary button width">
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+            >
+              <Equal size={12} strokeWidth={1.75} />
+              {block.primaryWidthPx !== undefined && (
+                <span className="font-mono text-[10px]">{block.primaryWidthPx}px</span>
+              )}
+            </button>
+          </Popover.Trigger>
+        </Tooltip>
+        <Popover.Portal>
+          <Popover.Content
+            align="center"
+            sideOffset={6}
+            className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Primary width</span>
+              <span className="text-xs font-mono text-gray-700 tabular-nums">{block.primaryWidthPx ?? 'auto'}px</span>
+            </div>
+            <Slider
+              value={block.primaryWidthPx ?? 0}
+              min={0}
+              max={400}
+              step={10}
+              onChange={(v) => updateBlock<ActionBlock>(block.id, { primaryWidthPx: v || undefined })}
+              ariaLabel="Primary button width"
+            />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+      <Divider />
       <Toggle
         label="Secondary"
         active={block.secondary !== null}
@@ -576,6 +610,42 @@ function ActionBlockControls({
       />
       {block.secondary !== null && (
         <>
+          <Divider />
+          <Popover.Root>
+            <Tooltip label="Secondary button width">
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
+                >
+                  <Equal size={12} strokeWidth={1.75} />
+                  {block.secondaryWidthPx !== undefined && (
+                    <span className="font-mono text-[10px]">{block.secondaryWidthPx}px</span>
+                  )}
+                </button>
+              </Popover.Trigger>
+            </Tooltip>
+            <Popover.Portal>
+              <Popover.Content
+                align="center"
+                sideOffset={6}
+                className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[200px] animate-modal-in"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Secondary width</span>
+                  <span className="text-xs font-mono text-gray-700 tabular-nums">{block.secondaryWidthPx ?? 'auto'}px</span>
+                </div>
+                <Slider
+                  value={block.secondaryWidthPx ?? 0}
+                  min={0}
+                  max={400}
+                  step={10}
+                  onChange={(v) => updateBlock<ActionBlock>(block.id, { secondaryWidthPx: v || undefined })}
+                  ariaLabel="Secondary button width"
+                />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
           <Divider />
           <Tooltip label="Match secondary size to primary">
             <button
