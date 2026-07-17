@@ -1,3 +1,6 @@
+import { FONT_STACKS, googleFontsHref } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-branding'
+
 export interface PdfLineItem {
   description: string
   amount?: number
@@ -47,7 +50,18 @@ function formatDate(dateStr: string) {
   })
 }
 
-function generateContractHtml(doc: PdfDocumentData): string {
+/**
+ * Render contract HTML with optional branding.
+ *
+ * When branding is provided, the contract adopts the sender's brand
+ * color on headings, logo at the top, and custom fonts. Without
+ * branding, renders in legacy black-and-white.
+ *
+ * @param doc      The contract document data.
+ * @param branding Optional branding overrides (colours, fonts, logo).
+ * @returns        The HTML string ready for print or inline preview.
+ */
+function generateContractHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): string {
   const signatureCursive = "Caveat, 'Brush Script MT', cursive"
   const mcSig = doc.mcSignatureName || doc.businessName || ''
   const signedOn = doc.signedAt
@@ -55,6 +69,23 @@ function generateContractHtml(doc: PdfDocumentData): string {
         day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit',
       })
     : null
+
+  // Resolve branding with safe defaults (same pattern as invoices).
+  const brandColor = branding?.brandColor ?? '#111111'
+  const textColor = branding?.textColor ?? '#111111'
+  const mutedColor = branding?.mutedColor ?? '#666666'
+  const headingFont =
+    branding?.headingFontFamily ??
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  const bodyFont =
+    branding?.bodyFontFamily ??
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  const fontsLink = branding?.fontsHref
+    ? `<link rel="stylesheet" href="${branding.fontsHref}" />`
+    : ''
+  const logoTag = branding?.logoUrl
+    ? `<img src="${branding.logoUrl}" alt="" style="max-height:48px;max-width:200px;display:block;margin-bottom:12px" />`
+    : ''
 
   const auditBlock = signedOn
     ? `<div style="margin-top:40px;padding:18px;background:#f5f9f6;border:1px solid #d1e4d7;border-radius:8px">
@@ -72,14 +103,16 @@ function generateContractHtml(doc: PdfDocumentData): string {
   <meta charset="utf-8" />
   <title>Contract ${doc.documentNumber}</title>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&display=swap" rel="stylesheet" />
+  ${fontsLink}
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px; color: #111; max-width: 720px; margin: 0 auto; line-height: 1.6; }
-    h1 { font-size: 22px; margin: 24px 0 10px; color: #111; }
-    h2 { font-size: 16px; margin: 20px 0 6px; color: #111; }
-    h3 { font-size: 14px; margin: 16px 0 4px; color: #111; }
-    p { margin: 6px 0; color: #333; font-size: 14px; }
-    ul, ol { margin: 6px 0 6px 22px; color: #333; font-size: 14px; }
+    body { font-family: ${bodyFont}; padding: 48px; color: ${textColor}; max-width: 720px; margin: 0 auto; line-height: 1.6; }
+    h1, h2, h3 { font-family: ${headingFont}; color: ${brandColor}; }
+    h1 { font-size: 22px; margin: 24px 0 10px; }
+    h2 { font-size: 16px; margin: 20px 0 6px; }
+    h3 { font-size: 14px; margin: 16px 0 4px; }
+    p { margin: 6px 0; color: ${textColor}; font-size: 14px; }
+    ul, ol { margin: 6px 0 6px 22px; color: ${textColor}; font-size: 14px; }
     li { margin: 2px 0; }
     li > p { margin: 0; }
     li > p + ul, li > p + ol { margin-top: 2px; }
@@ -89,30 +122,31 @@ function generateContractHtml(doc: PdfDocumentData): string {
 <body>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px">
     <div>
-      ${doc.businessName ? `<p style="font-size:20px;font-weight:700;color:#111;margin-bottom:4px">${doc.businessName}</p>` : ''}
-      <p style="font-size:14px;color:#666">For ${doc.coupleName}</p>
+      ${logoTag}
+      ${doc.businessName ? `<p style="font-size:20px;font-weight:700;color:${textColor};margin-bottom:4px;margin-top:${logoTag ? '8px' : '0'}">${doc.businessName}</p>` : ''}
+      <p style="font-size:14px;color:${mutedColor}">For ${doc.coupleName}</p>
     </div>
     <div style="text-align:right">
-      <p style="font-size:22px;font-weight:700;color:#111">Contract</p>
-      <p style="font-size:14px;color:#888;margin-top:4px">#${doc.documentNumber}</p>
+      <p style="font-size:22px;font-weight:700;color:${brandColor}">Contract</p>
+      <p style="font-size:14px;color:${mutedColor};margin-top:4px">#${doc.documentNumber}</p>
     </div>
   </div>
 
-  ${doc.title ? `<h1 style="font-size:22px;font-weight:600;color:#111;margin-bottom:24px">${doc.title}</h1>` : ''}
+  ${doc.title ? `<h1 style="font-size:22px;font-weight:600;margin-bottom:24px">${doc.title}</h1>` : ''}
 
-  <div style="color:#333;font-size:14px">${doc.contractHtml || ''}</div>
+  <div style="color:${textColor};font-size:14px">${doc.contractHtml || ''}</div>
 
   <div style="margin-top:40px;padding-top:24px;border-top:1px solid #e5e5e5;display:flex;gap:40px;flex-wrap:wrap">
     <div style="flex:1;min-width:220px">
-      <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Signed by MC</p>
-      <p style="font-size:24px;font-family:${signatureCursive};color:#111">${mcSig}</p>
-      <p style="font-size:12px;color:#888;margin-top:4px">${doc.businessName || ''}</p>
+      <p style="font-size:11px;font-weight:600;color:${mutedColor};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Signed by MC</p>
+      <p style="font-size:24px;font-family:${signatureCursive};color:${textColor}">${mcSig}</p>
+      <p style="font-size:12px;color:${mutedColor};margin-top:4px">${doc.businessName || ''}</p>
     </div>
     ${doc.signerName ? `
     <div style="flex:1;min-width:220px">
-      <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Signed by Couple</p>
-      <p style="font-size:24px;font-family:${signatureCursive};color:#111">${doc.signerName}</p>
-      <p style="font-size:12px;color:#888;margin-top:4px">${signedOn || ''}</p>
+      <p style="font-size:11px;font-weight:600;color:${mutedColor};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Signed by Couple</p>
+      <p style="font-size:24px;font-family:${signatureCursive};color:${textColor}">${doc.signerName}</p>
+      <p style="font-size:12px;color:${mutedColor};margin-top:4px">${signedOn || ''}</p>
     </div>` : ''}
   </div>
 
@@ -145,6 +179,35 @@ export interface PdfBrandingOpts {
 }
 
 /**
+ * Convert PublicBranding to PdfBrandingOpts.
+ *
+ * Single adapter used by all PDF callers (public pages, dashboard,
+ * email pipelines) so branding logic lives in one place. Resolves
+ * font IDs to CSS font-family strings and generates the Google Fonts
+ * CDN href from the font names.
+ *
+ * @param branding The PublicBranding object (e.g. from RPC payload or buildPublicBranding).
+ * @returns        PdfBrandingOpts ready to pass to buildPdfHtml or generateAndPrintPdf.
+ */
+export function publicBrandingToPdfOpts(branding: PublicBranding): PdfBrandingOpts {
+  // Resolve font families using the same lookup tables as the public surfaces.
+  // This ensures print PDFs match the web preview pixel for pixel.
+  const headingFontFamily = FONT_STACKS[branding.font_heading]
+  const bodyFontFamily = FONT_STACKS[branding.font_body]
+  const fontsHref = googleFontsHref([branding.font_heading, branding.font_body])
+
+  return {
+    brandColor: branding.brand_color,
+    textColor: branding.text_color,
+    mutedColor: branding.muted_color,
+    headingFontFamily,
+    bodyFontFamily,
+    fontsHref,
+    logoUrl: branding.logo_url ?? undefined,
+  }
+}
+
+/**
  * Build the HTML string that `generateAndPrintPdf` would print.
  *
  * Exported separately so the Quote / Invoice builder preview pane
@@ -159,7 +222,7 @@ export interface PdfBrandingOpts {
  */
 export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): string {
   if (doc.type === 'contract') {
-    return generateContractHtml(doc)
+    return generateContractHtml(doc, branding)
   }
 
   // Resolve branding with safe defaults so the templating below
@@ -319,8 +382,18 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
   return html
 }
 
-export function generateAndPrintPdf(doc: PdfDocumentData) {
-  const html = buildPdfHtml(doc)
+/**
+ * Generate and print a PDF document.
+ *
+ * Opens a new print-dialog window with the HTML rendering. Accepts
+ * optional branding context — when supplied, the PDF adopts the
+ * sender's brand colours, fonts, and logo.
+ *
+ * @param doc      The document data (invoice or contract).
+ * @param branding Optional branding overrides (colours, fonts, logo).
+ */
+export function generateAndPrintPdf(doc: PdfDocumentData, branding?: PdfBrandingOpts) {
+  const html = buildPdfHtml(doc, branding)
   const win = window.open('', '_blank')
   if (!win) return
   win.document.write(html)

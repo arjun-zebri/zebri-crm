@@ -33,9 +33,9 @@ import {
   headingFontFamily,
   useBrandingHead,
 } from '@/lib/branding/public-surface';
-import { repairBlocks } from '@/lib/branding/validate-blocks';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
-import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf';
+import { repairBlocks } from '@/lib/branding/validate-blocks';
+import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
 
 import { ContractBrandedCard } from './_components/contract-branded-card';
@@ -126,23 +126,27 @@ export default function PublicContractPage() {
 
   const downloadPdf = () => {
     if (!contract) return;
-    generateAndPrintPdf({
-      type: 'contract',
-      documentNumber: contract.contract_number,
-      title: contract.title,
-      status: contract.status,
-      coupleName: contract.couple_name,
-      businessName: htmlToPlainText(contract.business_name ?? ''),
-      items: [],
-      subtotal: 0,
-      total: 0,
-      contractHtml: contract.locked_content_html ?? '',
-      signerName: contract.signer_name,
-      signedAt: contract.signed_at,
-      signerIp: contract.signer_ip,
-      signerUserAgent: contract.signer_user_agent,
-      mcSignatureName: contract.mc_signature_name,
-    });
+    generateAndPrintPdf(
+      {
+        type: 'contract',
+        documentNumber: contract.contract_number,
+        title: contract.title,
+        status: contract.status,
+        coupleName: contract.couple_name,
+        businessName: htmlToPlainText(contract.business_name ?? ''),
+        items: [],
+        subtotal: 0,
+        total: 0,
+        contractHtml: contract.locked_content_html ?? '',
+        signerName: contract.signer_name,
+        signedAt: contract.signed_at,
+        signerIp: contract.signer_ip,
+        signerUserAgent: contract.signer_user_agent,
+        mcSignatureName: contract.mc_signature_name,
+      },
+      // Pass the contract's branding directly (it extends PublicBranding).
+      publicBrandingToPdfOpts(contract),
+    );
   };
 
   /* ─── Branding-derived values ─── */

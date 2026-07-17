@@ -146,7 +146,10 @@ const ERROR_BUDGET = 72;
 // the codebase → 334 → 97.
 // Fix branding autosave: removed unused imports from validate-blocks.ts, fixed import
 // order in test file → 333 → 330.
-const WARNING_BUDGET = 330;
+// Task 23 PDF branding: added publicBrandingToPdfOpts adapter with clean imports,
+// updated two callers (contract page + builder modal) with proper type casts instead
+// of `any` (reduced pre-existing violations); fixed import-order across the changes → 330 → 329.
+const WARNING_BUDGET = 329;
 
 function runEslintJson() {
   try {

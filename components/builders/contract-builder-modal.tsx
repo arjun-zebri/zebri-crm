@@ -60,11 +60,12 @@ import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
+import { buildPublicBranding, type UserMetadata } from '@/lib/branding/public-branding';
 import {
   buildContractVariables,
   renderContractHtml,
 } from '@/lib/contracts/contract-variables';
-import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf';
+import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
 
 interface Contract {
@@ -414,23 +415,31 @@ export function ContractBuilderModal({
   /* ─── PDF download ──────────────────────────────────────────── */
   const downloadPdf = () => {
     if (!contract) return;
-    generateAndPrintPdf({
-      type: 'contract',
-      documentNumber: contract.contract_number,
-      title: contract.title,
-      status: contract.status,
-      coupleName,
-      businessName: (userMeta.business_name as string | undefined) ?? '',
-      items: [],
-      subtotal: 0,
-      total: 0,
-      contractHtml: previewHtml,
-      signerName: contract.signer_name,
-      signedAt: contract.signed_at,
-      signerIp: contract.signer_ip,
-      signerUserAgent: contract.signer_user_agent,
-      mcSignatureName: contract.mc_signature_name,
-    });
+    // Convert user metadata to PublicBranding, then to PDF options.
+    // This ensures the PDF uses the same branded styling as the web preview.
+    const branding = buildPublicBranding(userMeta as UserMetadata);
+    const pdfBranding = publicBrandingToPdfOpts(branding);
+
+    generateAndPrintPdf(
+      {
+        type: 'contract',
+        documentNumber: contract.contract_number,
+        title: contract.title,
+        status: contract.status,
+        coupleName,
+        businessName: (userMeta.business_name as string | undefined) ?? '',
+        items: [],
+        subtotal: 0,
+        total: 0,
+        contractHtml: previewHtml,
+        signerName: contract.signer_name,
+        signedAt: contract.signed_at,
+        signerIp: contract.signer_ip,
+        signerUserAgent: contract.signer_user_agent,
+        mcSignatureName: contract.mc_signature_name,
+      },
+      pdfBranding,
+    );
   };
 
   /* ─── chrome wiring ─────────────────────────────────────────── */
