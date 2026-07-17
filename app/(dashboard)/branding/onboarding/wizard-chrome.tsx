@@ -10,7 +10,10 @@ import { Button } from '@/components/ui/button'
  */
 interface WizardChromeProps {
   step: 1 | 2 | 3
+  /** True on the welcome screen: the primary action is Get started. */
+  intro: boolean
   loading: boolean
+  onStart: () => void
   onBack: () => void
   onSkip: () => void
   onNext: () => void
@@ -40,6 +43,13 @@ export function WizardChrome(props: WizardChromeProps) {
       </button>
 
       <div className="flex items-center gap-2">
+        {props.intro ? (
+          <Button variant="primary" size="sm" onClick={props.onStart} disabled={props.loading} className="rounded-xl">
+            Get started
+            <ChevronRight size={14} strokeWidth={1.5} />
+          </Button>
+        ) : (
+        <>
         {props.step > 1 && (
           <Button variant="ghost" size="sm" onClick={props.onBack} disabled={props.loading}>
             Back
@@ -61,6 +71,8 @@ export function WizardChrome(props: WizardChromeProps) {
           >
             Finish setup
           </Button>
+        )}
+        </>
         )}
       </div>
     </div>

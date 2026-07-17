@@ -10,7 +10,6 @@ import { buildPublicBranding } from '@/lib/branding/public-branding'
 import type { PublicDocData } from '@/lib/branding/public-renderer'
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type { Density } from '@/lib/branding/themes'
-import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
  * Props for the live wizard preview pane.
@@ -24,20 +23,23 @@ interface WizardPreviewProps {
   fontHeading: HeadingFont
   fontBody: BodyFont
   density: Density
-  enabledSurfaces: SurfaceTab[]
-  /** Current wizard step; step 3 highlights the document list. */
+  /** Current wizard step. */
   step: 1 | 2 | 3
+  /** True on the welcome screen: the full document shows undimmed. */
+  intro?: boolean
 }
 
-/** The unscaled document width. 560px keeps the @container/doc queries in
- *  their desktop range so the mini document lays out like a real one. */
-const DOC_WIDTH = 560
+/** Unscaled document widths per step. Step 1 renders a narrower page, which
+ *  reads as a zoom on the identity header at the same pane width; the other
+ *  steps show the whole document. Both stay >= the 384px @sm/doc container
+ *  breakpoint so the layout is the desktop one. */
+const DOC_WIDTH_FOCUS = 400
+const DOC_WIDTH_FULL = 560
 
-/** The preview pane's fixed content width (pane w-[340px] minus p-5 both
+/** The preview pane's fixed content width (pane w-[380px] minus p-5 both
  *  sides). The scale is a constant derived from it: container-query units
  *  proved flaky inside the transformed subtree, and the pane width is ours. */
-const PANE_CONTENT_WIDTH = 300
-const DOC_SCALE = PANE_CONTENT_WIDTH / DOC_WIDTH
+const PANE_CONTENT_WIDTH = 340
 
 /** Sample wedding line items so the preview reads as a real document. */
 const SAMPLE_DOC: PublicDocData = {
@@ -76,19 +78,12 @@ const FOOTER_BLOCKS: Block[] = [
  * document list below, so the whole page recedes.
  */
 const GROUP_OPACITY: Record<1 | 2 | 3, { identity: string; body: string }> = {
-  1: { identity: 'opacity-100', body: 'opacity-30' },
+  // Step 1 reaches this branch only on the intro screen (full document).
+  1: { identity: 'opacity-100', body: 'opacity-100' },
   2: { identity: 'opacity-100', body: 'opacity-100' },
-  3: { identity: 'opacity-40', body: 'opacity-40' },
+  3: { identity: 'opacity-100', body: 'opacity-100' },
 }
 
-const SURFACE_LABELS: ReadonlyArray<[SurfaceTab, string]> = [
-  ['proposal', 'Proposals'],
-  ['invoice', 'Invoices'],
-  ['contract', 'Contracts'],
-  ['portal', 'Client portal'],
-  ['vendorTimeline', 'Run sheet'],
-  ['questionnaire', 'Questionnaires'],
-]
 
 /**
  * WizardPreview: a real document, not a mock. Renders the shared
@@ -115,6 +110,8 @@ export function WizardPreview(props: WizardPreviewProps) {
     [props.businessName, props.tagline, props.logoUrl, props.brandColor, props.fontHeading, props.fontBody, props.density],
   )
 
+  const docWidth = props.step === 1 && !props.intro ? DOC_WIDTH_FOCUS : DOC_WIDTH_FULL
+
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
       <p className="text-[11px] uppercase tracking-wide text-text-subtle shrink-0">Live preview</p>
@@ -124,57 +121,85 @@ export function WizardPreview(props: WizardPreviewProps) {
           peeking out, not a cropped bug. */}
       <div className="relative flex-1 min-h-0 overflow-hidden">
         <div className="absolute inset-0">
-          <ScaledDoc>
+          <ScaledDoc docWidth={docWidth}>
             <div
-              className="@container/doc rounded-lg border border-border shadow-sm overflow-hidden"
-              style={{ width: DOC_WIDTH, background: branding.surface_color }}
+              className="@container/doc rounded-lg border border-border shadow-sm overflow-hidden transition-[width] duration-300 motion-reduce:transition-none"
+              style={{ width: docWidth, background: branding.surface_color }}
             >
-              <div className={`transition-opacity duration-300 ${GROUP_OPACITY[props.step].identity}`}>
-                <PublicBlockRenderer blocks={IDENTITY_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
-              </div>
-              <div className={`transition-opacity duration-300 ${GROUP_OPACITY[props.step].body}`}>
-                <PublicBlockRenderer blocks={BODY_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
-              </div>
-              <div className={`transition-opacity duration-300 ${GROUP_OPACITY[props.step].identity}`}>
-                <PublicBlockRenderer blocks={FOOTER_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
-              </div>
+              {props.step === 1 && !props.intro ? (
+                // Business step: the identity header renders for real and
+                // zoomed; everything not configured yet stays a skeleton.
+                <>
+                  <PublicBlockRenderer blocks={IDENTITY_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
+                  <DocSkeleton />
+                </>
+              ) : (
+                <>
+                  <div className={`transition-opacity duration-300 ${GROUP_OPACITY[props.step].identity}`}>
+                    <PublicBlockRenderer blocks={IDENTITY_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
+                  </div>
+                  <div className={`transition-opacity duration-300 ${GROUP_OPACITY[props.step].body}`}>
+                    <PublicBlockRenderer blocks={BODY_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
+                  </div>
+                  <div className={`transition-opacity duration-300 ${GROUP_OPACITY[props.step].identity}`}>
+                    <PublicBlockRenderer blocks={FOOTER_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
+                  </div>
+                </>
+              )}
             </div>
           </ScaledDoc>
         </div>
         <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-muted to-transparent pointer-events-none" />
       </div>
 
-      {/* Document types, so step 3's toggles have visible consequences. */}
-      <div className={`shrink-0 transition-opacity duration-300 ${props.step === 3 ? 'opacity-100' : 'opacity-70'}`}>
-        <p className="text-[11px] uppercase tracking-wide text-text-subtle mb-2">Your documents</p>
-        <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-          {SURFACE_LABELS.map(([key, label]) => {
-            const on = props.enabledSurfaces.includes(key)
-            return (
-              <li key={key} className={`flex items-center gap-1.5 text-xs ${on ? 'text-text' : 'text-text-subtle line-through'}`}>
-                <span
-                  aria-hidden
-                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${on ? 'bg-brand-fg' : 'border border-border'}`}
-                />
-                {label}
-              </li>
-            )
-          })}
-        </ul>
-      </div>
     </div>
   )
 }
 
 /**
  * ScaledDoc: scales the fixed-width document down to the pane's content
- * width with a constant factor, so the whole page width is always visible.
+ * width, so the whole page width is always visible. A narrower docWidth
+ * therefore reads as zooming in.
  * @internal
  */
-function ScaledDoc({ children }: { children: React.ReactNode }) {
+function ScaledDoc({ docWidth, children }: { docWidth: number; children: React.ReactNode }) {
   return (
-    <div style={{ transform: `scale(${DOC_SCALE})`, transformOrigin: 'top left' }}>
+    <div
+      className="transition-transform duration-300 motion-reduce:transition-none"
+      style={{ transform: `scale(${PANE_CONTENT_WIDTH / docWidth})`, transformOrigin: 'top left' }}
+    >
       {children}
+    </div>
+  )
+}
+
+/**
+ * DocSkeleton: loading-skeleton placeholder for the parts of the document
+ * the user has not configured yet. Grey bars in a document rhythm: intro
+ * lines, priced rows, a totals row, an action button, a footer line.
+ * @internal
+ */
+function DocSkeleton() {
+  return (
+    <div className="px-6 pb-6 pt-1 flex flex-col gap-5" aria-hidden>
+      <div className="flex flex-col gap-2">
+        <div className="h-2 rounded-full bg-gray-200 w-full" />
+        <div className="h-2 rounded-full bg-gray-200 w-4/5" />
+      </div>
+      <div className="flex flex-col gap-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center justify-between">
+            <div className={`h-2 rounded-full bg-gray-200 ${i === 1 ? 'w-1/3' : 'w-2/5'}`} />
+            <div className="h-2 rounded-full bg-gray-200 w-12" />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+        <div className="h-2.5 rounded-full bg-gray-300 w-16" />
+        <div className="h-2.5 rounded-full bg-gray-300 w-20" />
+      </div>
+      <div className="h-9 rounded-lg bg-gray-200 w-full" />
+      <div className="h-2 rounded-full bg-gray-100 w-1/2 mx-auto" />
     </div>
   )
 }

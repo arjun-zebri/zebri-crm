@@ -75,6 +75,10 @@ test.describe('Branding Onboarding Wizard', () => {
     // Modal dialog scoping
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible({ timeout: 5000 })
+    // Welcome screen precedes the steps.
+    await expect(dialog.getByRole('heading', { name: /welcome to your branding/i })).toBeVisible()
+    await dialog.getByRole('button', { name: /get started/i }).click()
+
     await expect(dialog.getByRole('heading', { name: /let's start with your identity/i })).toBeVisible()
 
     // Use aria-label for business name input, scoped within dialog

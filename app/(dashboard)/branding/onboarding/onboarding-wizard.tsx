@@ -53,6 +53,8 @@ export interface OnboardingWizardProps {
  */
 export function OnboardingWizard(props: OnboardingWizardProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1)
+  // Welcome screen shown before the steps; dismissed by Get started.
+  const [intro, setIntro] = useState(true)
   const [businessName, setBusinessName] = useState(props.initial.businessName || '')
   const [tagline, setTagline] = useState(props.initial.tagline || '')
   const [logoUrl, setLogoUrl] = useState(props.initial.logoUrl || '')
@@ -122,10 +124,23 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
           </div>
         )}
 
-        <StepIndicator currentStep={step} />
+        {intro ? (
+          /* Welcome screen: the message comes before the steps. */
+          <div className="flex-1 flex flex-col justify-center gap-3 pb-10">
+            <h2 className="text-xl font-semibold text-text">Welcome to your branding</h2>
+            <p className="text-sm text-text-muted leading-relaxed">
+              Three quick steps: your business, your look, and which documents
+              you send. This just gets you going, you can change everything
+              later in the editor.
+            </p>
+          </div>
+        ) : (
+          <StepIndicator currentStep={step} />
+        )}
 
         {/* Step content; the card is sized so this never scrolls at normal
             viewport heights, overflow-y-auto is the short-window fallback. */}
+        {!intro && (
         <div className="flex-1 overflow-y-auto min-h-0 pr-1">
         {step === 1 && (
           <StepBusiness
@@ -158,12 +173,15 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
             setEnabledSurfaces={setEnabledSurfaces}
           />
         )}
-      </div>
+        </div>
+        )}
 
         {/* Footer navigation (pinned) */}
         <WizardChrome
           step={step}
+          intro={intro}
           loading={loading}
+          onStart={() => setIntro(false)}
           onBack={() => setStep((s) => (s > 1 ? (s - 1 as 1 | 2 | 3) : s))}
           onSkip={handleSkip}
           onNext={() => setStep((s) => ((s + 1) as 1 | 2 | 3))}
@@ -173,7 +191,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       </div>
 
       {/* Right pane: live preview of the choices (hidden on narrow screens). */}
-      <div className="hidden sm:block w-[340px] shrink-0 border-l border-border bg-surface-muted rounded-r-xl p-5">
+      <div className="hidden sm:block w-[380px] shrink-0 border-l border-border bg-surface-muted rounded-r-xl p-5">
         <WizardPreview
           businessName={businessName}
           tagline={tagline}
@@ -182,8 +200,8 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
           fontHeading={fontHeading}
           fontBody={fontBody}
           density={density}
-          enabledSurfaces={enabledSurfaces}
           step={step}
+          intro={intro}
         />
       </div>
     </div>

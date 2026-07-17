@@ -29,6 +29,10 @@ describe('OnboardingWizard', () => {
 
     const dialog = screen.getByRole('dialog')
 
+    // Welcome screen precedes the steps; dismiss it.
+    expect(within(dialog).getByText('Welcome to your branding')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: /get started/i }))
+
     // Step 1: Business
     expect(within(dialog).getByText("Let's start with your identity")).toBeInTheDocument()
 
@@ -127,7 +131,8 @@ describe('OnboardingWizard', () => {
 
     const dialog = screen.getByRole('dialog')
 
-    // Navigate to step 3 (Documents)
+    // Dismiss the welcome screen, then navigate to step 3 (Documents).
+    await user.click(within(dialog).getByRole('button', { name: /get started/i }))
     const nextButton = within(dialog).getByRole('button', { name: /next/i })
     await user.click(nextButton)
     await user.click(nextButton)
