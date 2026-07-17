@@ -1,9 +1,7 @@
 'use client'
 
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 
-import { Button } from '@/components/ui/button'
 import type { BodyFont, HeadingFont } from '@/lib/branding/fonts'
 import type { Density } from '@/lib/branding/themes'
 import type { SurfaceTab } from '@/types/branding-preview'
@@ -11,6 +9,7 @@ import type { SurfaceTab } from '@/types/branding-preview'
 import { StepBusiness } from './step-business'
 import { StepDocuments } from './step-documents'
 import { StepLook } from './step-look'
+import { WizardChrome } from './wizard-chrome'
 
 /**
  * Complete onboarding result after all three steps.
@@ -36,6 +35,8 @@ export interface OnboardingWizardProps {
   initial: Partial<OnboardingResult>
   /** Called when wizard completes or is skipped; must reload page data after. */
   onComplete: (result: OnboardingResult) => Promise<void>
+  /** Error state from parent (e.g., failed auth update); displays inline, wizard stays. */
+  error?: string | null
 }
 
 /**
@@ -112,17 +113,12 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-surface px-4 py-8">
       <div className="w-full max-w-lg flex flex-col gap-6">
-        {/* Progress dots */}
-        <div className="flex items-center justify-center gap-2">
-          {[1, 2, 3].map((s) => (
-            <div
-              key={s}
-              className={`h-2 rounded-full transition-all ${
-                s <= step ? 'w-8 bg-brand' : 'w-2 bg-surface-muted'
-              }`}
-            />
-          ))}
-        </div>
+        {/* Error state */}
+        {props.error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+            {props.error}
+          </div>
+        )}
 
         {/* Step content */}
         <div className="min-h-[400px] flex flex-col gap-6">
@@ -159,53 +155,16 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
           )}
         </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between gap-3">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setStep((s) => (s > 1 ? (s - 1 as 1 | 2 | 3) : s))}
-            disabled={step === 1 || loading}
-            className="cursor-pointer"
-          >
-            <ChevronLeft size={16} strokeWidth={1.5} />
-            Back
-          </Button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={handleSkip}
-              disabled={loading}
-              className="text-sm text-text-muted hover:text-text underline cursor-pointer disabled:opacity-50 disabled:cursor-default transition"
-            >
-              Skip, use defaults
-            </button>
-          </div>
-
-          {step < 3 ? (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setStep((s) => ((s + 1) as 1 | 2 | 3))}
-              disabled={loading}
-              className="cursor-pointer"
-            >
-              Next
-              <ChevronRight size={16} strokeWidth={1.5} />
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleComplete}
-              disabled={loading || enabledSurfaces.length === 0}
-              className="cursor-pointer"
-            >
-              {loading ? 'Finishing...' : 'Finish'}
-            </Button>
-          )}
-        </div>
+        {/* Chrome (progress + navigation) */}
+        <WizardChrome
+          step={step}
+          loading={loading}
+          onBack={() => setStep((s) => (s > 1 ? (s - 1 as 1 | 2 | 3) : s))}
+          onSkip={handleSkip}
+          onNext={() => setStep((s) => ((s + 1) as 1 | 2 | 3))}
+          onFinish={handleComplete}
+          canFinish={enabledSurfaces.length > 0}
+        />
       </div>
     </div>
   )

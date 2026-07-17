@@ -97,6 +97,7 @@ export default function BrandingPage() {
   const [metadata, setMetadata] = useState<UserMetadata | null>(null)
   const [branding, setBranding] = useState<UserBrandingRow | null>(null)
   const [loading, setLoading] = useState(true)
+  const [wizardError, setWizardError] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -158,17 +159,42 @@ export default function BrandingPage() {
   }
 
   /**
-   * Wizard completion handler: merge metadata, upsert branding, reload.
-   * Follows the same merge pattern as the autosave callback in branding-editor.
+   * Wizard completion handler: (a) merge metadata, (b) upsert branding, (c) reload.
+   * CRITICAL: updateUser MUST run first; only proceed to branding upsert on success.
+   * Partial upserts preserve unprovided columns on conflict (PostgREST ON CONFLICT updates
+   * only the payload's columns; branding autosave relies on this).
    */
   const handleWizardComplete = async (result: OnboardingResult) => {
+    setWizardError(null)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not signed in')
+    if (!user) {
+      setWizardError('Not signed in')
+      return
+    }
 
     const existing = user.user_metadata || {}
 
-    // Build enabled_surfaces map from the result array.
+    // Step (a): Update auth metadata FIRST.
+    // If this fails, surface error and do not proceed to branding upsert.
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: {
+        ...existing,
+        business_name: result.businessName,
+        tagline: result.tagline,
+        logo_url: result.logoUrl || null,
+        brand_color: result.brandColor,
+        font_heading: result.fontHeading,
+        font_body: result.fontBody,
+        density: result.density,
+      },
+    })
+    if (metadataError) {
+      setWizardError(`Failed to save branding: ${metadataError.message}`)
+      return
+    }
+
+    // Step (b): Build enabled_surfaces map and blocks, then upsert user_branding.
     const enabledSurfacesMap = result.enabledSurfaces.reduce(
       (acc, surface) => {
         acc[surface] = true
@@ -182,7 +208,6 @@ export default function BrandingPage() {
     const branding_blocks: Record<string, Block[]> = {}
     for (const surface of ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as SurfaceTab[]) {
       if (result.enabledSurfaces.includes(surface)) {
-        // Find the classic template for this surface and call build() to get fresh blocks.
         const template = TEMPLATES.find((t) => t.id === `${surface}-classic`)
         branding_blocks[surface] = template ? template.build() : []
       } else {
@@ -190,7 +215,9 @@ export default function BrandingPage() {
       }
     }
 
-    // Upsert user_branding with blocks, enabled surfaces, and onboarded timestamp.
+    // Upsert is safe with partial payloads: PostgREST ON CONFLICT only updates
+    // the columns we provide (blocks, enabled_surfaces, timestamps). Unprovided
+    // columns like brand_kits and portal_sections preserve their existing values.
     const { error: brandingError } = await supabase
       .from('user_branding')
       .upsert(
@@ -203,40 +230,32 @@ export default function BrandingPage() {
         },
         { onConflict: 'user_id' },
       )
-    if (brandingError) throw brandingError
-
-    // Merge scalar branding into auth metadata (same pattern as autosave).
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        ...existing,
-        business_name: result.businessName,
-        tagline: result.tagline,
-        logo_url: result.logoUrl || null,
-        brand_color: result.brandColor,
-        font_heading: result.fontHeading,
-        font_body: result.fontBody,
-        density: result.density,
-      },
-    })
-    if (error) throw error
-
-    // Reload page data so editor mounts with new state.
-    const { data: { user: updatedUser } } = await supabase.auth.getUser()
-    if (updatedUser) {
-      setMetadata(updatedUser.user_metadata as UserMetadata)
+    if (brandingError) {
+      setWizardError(`Failed to save branding: ${brandingError.message}`)
+      return
     }
-    const { data: row } = await supabase
-      .from('user_branding')
-      .select('branding_blocks, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    setBranding((row as UserBrandingRow | null) ?? {
-      branding_blocks: null,
-      brand_kits: null,
-      portal_sections: null,
-      enabled_surfaces: null,
-      onboarded_at: new Date().toISOString(),
-    })
+
+    // Step (c): Reload page data so editor mounts with new state.
+    try {
+      const { data: { user: updatedUser } } = await supabase.auth.getUser()
+      if (updatedUser) {
+        setMetadata(updatedUser.user_metadata as UserMetadata)
+      }
+      const { data: row } = await supabase
+        .from('user_branding')
+        .select('branding_blocks, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      setBranding((row as UserBrandingRow | null) ?? {
+        branding_blocks: null,
+        brand_kits: null,
+        portal_sections: null,
+        enabled_surfaces: null,
+        onboarded_at: new Date().toISOString(),
+      })
+    } catch (err) {
+      setWizardError(`Failed to load branding: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
   }
 
   const themePreset = metadata?.theme_preset ?? 'minimal'
@@ -296,6 +315,7 @@ export default function BrandingPage() {
           density: metadata?.density || 'cozy',
         }}
         onComplete={handleWizardComplete}
+        error={wizardError}
       />
     )
   }

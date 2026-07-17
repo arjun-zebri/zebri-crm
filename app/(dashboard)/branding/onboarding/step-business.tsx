@@ -7,6 +7,8 @@ import { useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
 
+import { uploadBrandAsset } from '../upload-brand-asset'
+
 /**
  * Props for the business identity step.
  * @internal
@@ -76,45 +78,15 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
   const filled = !!logoUrl
 
   /**
-   * Upload logo to branding storage (same path pattern as branding-editor).
+   * Upload logo using shared brand asset uploader.
    */
   const uploadLogo = async (file: File) => {
-    if (file.size > 2 * 1024 * 1024) {
-      console.error('Logo too large (>2MB)')
-      return
-    }
-
     setUploading(true)
     try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-
-      const userId = session.user.id
-      const path = `${userId}/logo`
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/branding/${path}`
-      const apikey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-
-      const body = await file.arrayBuffer()
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey,
-          'x-upsert': 'true',
-          'Content-Type': file.type || 'application/octet-stream',
-          'Cache-Control': 'max-age=3600',
-        },
-        body,
-      })
-
-      if (!res.ok) {
-        console.error('Logo upload failed', res.status)
-        return
-      }
-
-      const { data } = supabase.storage.from('branding').getPublicUrl(path)
-      setLogoUrl(`${data.publicUrl}?t=${Date.now()}`)
+      const url = await uploadBrandAsset(file, 'logo')
+      setLogoUrl(url)
+    } catch {
+      // uploadBrandAsset logs errors; silently fail in wizard UI.
     } finally {
       setUploading(false)
     }

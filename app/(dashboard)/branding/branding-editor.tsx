@@ -31,6 +31,7 @@ import { EditorTopbar } from './editor-topbar'
 import { PortalSectionsBar } from './portal-preview'
 import { SurfaceTabs } from './surface-tabs'
 import { TEMPLATES } from './templates'
+import { uploadBrandAsset } from './upload-brand-asset'
 
 
 export interface PortalSectionSettings {
@@ -504,47 +505,13 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     applyTemplate(templateId)
   }
 
+  /**
+   * Upload asset using shared brand asset uploader with toast error feedback.
+   */
   const uploadAsset = async (file: File, kind: 'logo' | 'favicon' | 'header'): Promise<string> => {
-    const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) throw new Error('Not signed in')
-    const userId = session.user.id
-    const path = `${userId}/${kind}`
-    // Manual fetch (bypassing supabase-js) so we see the actual response body
-    // when Cloudflare/nginx in front of storage rejects with HTML. supabase-js
-    // throws away non-JSON response bodies and reports a generic "HTTP 400 error".
-    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/branding/${path}`
-    const apikey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-    const body = await file.arrayBuffer()
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        apikey,
-        'x-upsert': 'true',
-        'Content-Type': file.type || 'application/octet-stream',
-        'Cache-Control': 'max-age=3600',
-      },
-      body,
+    return uploadBrandAsset(file, kind, {
+      onError: (msg) => toast(msg, 'error'),
     })
-    if (!res.ok) {
-      const text = await res.text()
-      console.error('[branding upload failed]', {
-        kind,
-        size: file.size,
-        type: file.type,
-        fileName: file.name,
-        status: res.status,
-        respContentType: res.headers.get('content-type'),
-        respBodyPreview: text.slice(0, 800),
-        tokenLength: session.access_token.length,
-        apikeyLength: apikey.length,
-      })
-      toast(`Upload failed (${res.status}): ${text.slice(0, 100) || res.statusText}`, 'error')
-      throw new Error(`Upload failed: ${res.status}`)
-    }
-    const { data } = supabase.storage.from('branding').getPublicUrl(path)
-    return `${data.publicUrl}?t=${Date.now()}`
   }
 
   const removeAsset = async (kind: 'logo' | 'favicon' | 'header') => {
