@@ -32,7 +32,7 @@ interface WizardChromeProps {
  */
 export function WizardChrome(props: WizardChromeProps) {
   return (
-    <div className="-mx-6 mt-4 px-6 pt-4 border-t border-border flex items-center justify-between gap-3">
+    <div className="flex items-center justify-between gap-3">
       <button
         type="button"
         onClick={props.onSkip}

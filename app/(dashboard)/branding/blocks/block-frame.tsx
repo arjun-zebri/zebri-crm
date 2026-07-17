@@ -8,9 +8,9 @@ import { useEffect, useState, useRef } from 'react'
 
 import { blockOuterStyle } from '@/lib/branding/block-outer-style'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
-import { isDeletable } from './policy'
 
 import { BlockToolbar } from './block-toolbar'
+import { isDeletable } from './policy'
 import type { Block } from './types'
 
 interface BlockFrameProps {

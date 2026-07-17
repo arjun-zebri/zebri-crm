@@ -5,11 +5,13 @@ import { useMemo } from 'react'
 // Blocks and their types are co-located with the editor; this is the same
 // documented layering direction the shared lib helpers use.
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { getTextColor } from '@/lib/branding/contrast'
 import type { BodyFont, HeadingFont } from '@/lib/branding/fonts'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 import type { PublicDocData } from '@/lib/branding/public-renderer'
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type { Density } from '@/lib/branding/themes'
+import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
  * Props for the live wizard preview pane.
@@ -27,6 +29,8 @@ interface WizardPreviewProps {
   density: Density
   /** Corner radius in px for cards and buttons. */
   cornerRadius: number
+  /** Enabled document surfaces; drives the step-3 document guide. */
+  enabledSurfaces: SurfaceTab[]
   /** Current wizard step. */
   step: 1 | 2 | 3
   /** True on the welcome screen: the full document shows undimmed. */
@@ -69,7 +73,7 @@ const BODY_BLOCKS: Block[] = [
   { id: 'pv-tx', type: 'text', text: 'We would love to be part of your day. Everything you need to lock in your date is below.' },
   { id: 'pv-li', type: 'lineItems', colSpread: true },
   { id: 'pv-to', type: 'totals', taxRate: 10, showSubtotal: true },
-  { id: 'pv-ac', type: 'action', primary: 'Accept proposal', secondary: null },
+  { id: 'pv-ac', type: 'action', primary: 'Accept proposal', secondary: 'Ask a question' },
 ]
 const FOOTER_BLOCKS: Block[] = [
   { id: 'pv-ft', type: 'footer', closingNote: 'Thank you for thinking of us.' },
@@ -107,7 +111,8 @@ export function WizardPreview(props: WizardPreviewProps) {
         tagline: props.tagline,
         logo_url: props.logoUrl || undefined,
         brand_color: props.brandColor,
-        accent_color: props.secondaryColor,
+        secondary_color: props.secondaryColor,
+        secondary_text_color: getTextColor(props.secondaryColor),
         font_heading: props.fontHeading,
         font_body: props.fontBody,
         density: props.density,
@@ -118,6 +123,10 @@ export function WizardPreview(props: WizardPreviewProps) {
 
   const docWidth = props.step === 1 && !props.intro ? DOC_WIDTH_FOCUS : DOC_WIDTH_FULL
 
+  if (props.step === 3 && !props.intro) {
+    return <DocumentGuide enabledSurfaces={props.enabledSurfaces} />
+  }
+
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
       {/* Scaled real document. The wrapper reserves the scaled footprint and
@@ -127,10 +136,10 @@ export function WizardPreview(props: WizardPreviewProps) {
         <div className="absolute inset-0 flex items-center">
           {/* Keyed by width: a zoom change remounts and fades in at its final
               size, instead of tweening width and scale against each other. */}
-          <ScaledDoc key={`${docWidth}-${props.density}`} docWidth={docWidth}>
+          <ScaledDoc key={docWidth} docWidth={docWidth}>
             <div
-              className="@container/doc rounded-lg border border-border shadow-sm overflow-hidden animate-fade-in motion-reduce:animate-none"
-              style={{ width: docWidth, background: branding.surface_color }}
+              className="@container/doc border border-border shadow-sm overflow-hidden animate-fade-in motion-reduce:animate-none [&_*]:transition-[padding,margin,gap,border-radius] [&_*]:duration-300 motion-reduce:[&_*]:transition-none"
+              style={{ width: docWidth, background: branding.surface_color, borderRadius: Math.min(props.cornerRadius, 16) }}
             >
               {props.step === 1 && !props.intro ? (
                 // Business step: the identity header renders for real and
@@ -159,6 +168,39 @@ export function WizardPreview(props: WizardPreviewProps) {
         <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-muted to-transparent pointer-events-none" />
       </div>
 
+    </div>
+  )
+}
+
+
+/** What each document type is, for the step-3 guide. */
+const DOCUMENT_GUIDE: ReadonlyArray<{ key: SurfaceTab; name: string; description: string }> = [
+  { key: 'proposal', name: 'Proposals', description: 'Priced packages your couples review and accept online.' },
+  { key: 'invoice', name: 'Invoices', description: 'Deposits and balances, paid by card or bank transfer.' },
+  { key: 'contract', name: 'Contracts', description: 'Agreements your couples sign electronically.' },
+  { key: 'portal', name: 'Client portal', description: 'One link where couples see their timeline, payments, and documents.' },
+  { key: 'vendorTimeline', name: 'Run sheet', description: 'A vendor-facing timeline for the day itself.' },
+  { key: 'questionnaire', name: 'Questionnaires', description: 'Forms that collect details from your couples.' },
+]
+
+/**
+ * DocumentGuide: the step-3 companion. A proposal preview says nothing about
+ * the documents choice, so this pane describes each document type instead,
+ * dimming the ones toggled off.
+ * @internal
+ */
+function DocumentGuide({ enabledSurfaces }: { enabledSurfaces: SurfaceTab[] }) {
+  return (
+    <div className="flex flex-col justify-center gap-4 h-full">
+      {DOCUMENT_GUIDE.map((doc) => {
+        const on = enabledSurfaces.includes(doc.key)
+        return (
+          <div key={doc.key} className={`transition-opacity duration-300 ${on ? 'opacity-100' : 'opacity-40'}`}>
+            <p className={`text-sm font-medium text-text ${on ? '' : 'line-through'}`}>{doc.name}</p>
+            <p className="text-xs text-text-muted leading-snug mt-0.5">{doc.description}</p>
+          </div>
+        )
+      })}
     </div>
   )
 }

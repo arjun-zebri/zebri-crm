@@ -151,7 +151,7 @@ const ERROR_BUDGET = 64;
 // Task 23 PDF branding: added publicBrandingToPdfOpts adapter with clean imports,
 // updated two callers (contract page + builder modal) with proper type casts instead
 // of `any` (reduced pre-existing violations); fixed import-order across the changes → 330 → 329.
-const WARNING_BUDGET = 329;
+const WARNING_BUDGET = 299;
 
 function runEslintJson() {
   try {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+
 import { sanitizeHtml } from '@/lib/branding/sanitize'
 
 type InlineTextElement = 'span' | 'div' | 'p' | 'h1' | 'h2' | 'h3'

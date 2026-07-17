@@ -30,6 +30,7 @@ import { RenderText as PublicRenderText } from '@/lib/branding/public-blocks/tex
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
 import { publicBrandingFromEditorState } from '../editor-branding'
+
 import { BlockFrame } from './block-frame'
 import { InlineText } from './inline-text'
 import {

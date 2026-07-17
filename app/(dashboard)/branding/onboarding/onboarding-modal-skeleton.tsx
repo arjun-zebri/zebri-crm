@@ -18,7 +18,7 @@ export function OnboardingModalSkeleton() {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           aria-busy="true"
-          className="w-full max-w-3xl bg-surface rounded-xl shadow-lg outline-none animate-modal-in h-[700px] max-h-[92vh] flex overflow-hidden"
+          className="w-full max-w-3xl bg-surface rounded-xl shadow-lg outline-none animate-modal-in h-[780px] max-h-[94vh] flex overflow-hidden"
         >
           {/* Left pane: welcome-screen shaped skeleton. */}
           <div className="flex-1 min-w-0 flex flex-col px-6 py-6">

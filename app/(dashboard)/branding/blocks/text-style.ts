@@ -1,4 +1,5 @@
 import { FONT_STACKS, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
+
 import type { TextStyle } from './types'
 
 export interface TextStyleDefaults {

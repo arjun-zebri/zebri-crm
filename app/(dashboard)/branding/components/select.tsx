@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { Check, ChevronDown } from 'lucide-react'
+import { useState } from 'react'
 
 export interface SelectOption<V extends string = string> {
   value: V
@@ -15,8 +15,11 @@ interface SelectProps<V extends string> {
   value: V
   options: SelectOption<V>[]
   onChange: (v: V) => void
+  /** Optional custom label renderer (e.g. render font names in their own
+   *  typeface). Falls back to the plain label. */
+  renderLabel?: (option: SelectOption<V>) => React.ReactNode
   className?: string
-  size?: 'sm' | 'md'
+  size?: 'xs' | 'sm' | 'md'
   align?: 'start' | 'end'
   placeholder?: string
 }
@@ -24,6 +27,7 @@ interface SelectProps<V extends string> {
 export function Select<V extends string>({
   value,
   options,
+  renderLabel,
   onChange,
   className = '',
   size = 'sm',
@@ -32,7 +36,7 @@ export function Select<V extends string>({
 }: SelectProps<V>) {
   const [open, setOpen] = useState(false)
   const selected = options.find(o => o.value === value)
-  const triggerSize = size === 'sm' ? 'px-2.5 py-1.5 text-sm' : 'px-3 py-2 text-sm'
+  const triggerSize = size === 'xs' ? 'px-2.5 h-8 text-xs' : size === 'sm' ? 'px-2.5 py-1.5 text-sm' : 'px-3 py-2 text-sm'
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -43,7 +47,7 @@ export function Select<V extends string>({
           style={selected?.fontFamily ? { fontFamily: selected.fontFamily } : undefined}
         >
           <span className="truncate flex-1">
-            {selected ? selected.label : <span className="text-gray-400">{placeholder ?? 'Select…'}</span>}
+            {selected ? (renderLabel ? renderLabel(selected) : selected.label) : <span className="text-gray-400">{placeholder ?? 'Select…'}</span>}
           </span>
           <ChevronDown size={12} strokeWidth={2} className="text-gray-400 shrink-0" />
         </button>
@@ -74,7 +78,7 @@ export function Select<V extends string>({
                 }`}
                 style={opt.fontFamily ? { fontFamily: opt.fontFamily } : undefined}
               >
-                <span className="flex-1 text-left truncate">{opt.label}</span>
+                <span className="flex-1 text-left truncate">{renderLabel ? renderLabel(opt) : opt.label}</span>
                 {opt.meta && (
                   <span className="text-[11px] text-gray-400" style={opt.fontFamily ? { fontFamily: 'inherit' } : undefined}>
                     {opt.meta}

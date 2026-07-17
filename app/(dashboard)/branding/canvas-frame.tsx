@@ -1,6 +1,7 @@
 'use client'
 
 import { Minus, Plus, Maximize2 } from 'lucide-react'
+
 import { Slider } from './components/slider'
 
 interface CanvasFrameProps {

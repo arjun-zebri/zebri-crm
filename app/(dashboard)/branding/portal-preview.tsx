@@ -1,6 +1,7 @@
 'use client'
 
 import { LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText, Heart, Info, Eye, EyeOff } from 'lucide-react'
+
 import type { PortalSectionSettings } from './branding-editor'
 
 type SectionKey = 'timeline' | 'contacts' | 'payments' | 'contracts' | 'songs' | 'files' | 'vows'

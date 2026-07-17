@@ -22,7 +22,7 @@ export interface OnboardingResult {
   tagline: string
   logoUrl: string
   brandColor: string
-  /** Secondary brand colour; persisted as accent_color. */
+  /** Secondary brand colour; persisted as secondary_color (supporting buttons). */
   secondaryColor: string
   fontHeading: HeadingFont
   fontBody: BodyFont
@@ -125,16 +125,24 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
   }
 
   return (
-    <div className="flex h-full">
-      {/* Left pane: stepper, step content, footer nav. */}
-      <div className="flex-1 min-w-0 flex flex-col gap-5 px-6 py-6">
-        {props.error && (
-          <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg text-sm text-danger">
-            {props.error}
-          </div>
-        )}
+    <div className="flex flex-col h-full">
+      {props.error && (
+        <div className="mx-6 mt-4 p-3 bg-danger/10 border border-danger/20 rounded-lg text-sm text-danger">
+          {props.error}
+        </div>
+      )}
 
-        {intro ? (
+      {/* Header: the step rail spans the full modal width. */}
+      {!intro && (
+        <div className="px-6 pt-6 pb-4 border-b border-border">
+          <StepIndicator currentStep={step} />
+        </div>
+      )}
+
+      {/* Middle: form column left, companion pane right. */}
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 min-w-0 flex flex-col px-6 py-5">
+        {intro && (
           /* Welcome screen: the message comes before the steps. */
           <div className="flex-1 flex flex-col justify-center gap-3 pb-10">
             <h2 className="text-xl font-semibold text-text">Welcome to your branding</h2>
@@ -144,8 +152,6 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
               later in the editor.
             </p>
           </div>
-        ) : (
-          <StepIndicator currentStep={step} />
         )}
 
         {/* Step content; the card is sized so this never scrolls at normal
@@ -189,8 +195,29 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
         )}
         </div>
         )}
+        </div>
 
-        {/* Footer navigation (pinned) */}
+        {/* Right pane: live preview of the choices (hidden on narrow screens). */}
+        <div className="hidden sm:block w-[380px] shrink-0 border-l border-border bg-surface-muted p-5">
+          <WizardPreview
+            businessName={businessName}
+            tagline={tagline}
+            logoUrl={logoUrl}
+            brandColor={brandColor}
+            fontHeading={fontHeading}
+            fontBody={fontBody}
+            density={density}
+            secondaryColor={secondaryColor}
+            cornerRadius={cornerRadius}
+            enabledSurfaces={enabledSurfaces}
+            step={step}
+            intro={intro}
+          />
+        </div>
+      </div>
+
+      {/* Footer: spans the full modal width. */}
+      <div className="px-6 py-4 border-t border-border">
         <WizardChrome
           step={step}
           intro={intro}
@@ -201,23 +228,6 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
           onNext={() => setStep((s) => ((s + 1) as 1 | 2 | 3))}
           onFinish={handleComplete}
           canFinish={enabledSurfaces.length > 0}
-        />
-      </div>
-
-      {/* Right pane: live preview of the choices (hidden on narrow screens). */}
-      <div className="hidden sm:block w-[380px] shrink-0 border-l border-border bg-surface-muted rounded-r-xl p-5">
-        <WizardPreview
-          businessName={businessName}
-          tagline={tagline}
-          logoUrl={logoUrl}
-          brandColor={brandColor}
-          fontHeading={fontHeading}
-          fontBody={fontBody}
-          density={density}
-          secondaryColor={secondaryColor}
-          cornerRadius={cornerRadius}
-          step={step}
-          intro={intro}
         />
       </div>
     </div>

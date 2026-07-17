@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { extractColorsFromFile } from '@/lib/branding/extract-colors'
-import { BODY_FONTS, FONT_LABELS, HEADING_FONTS, type BodyFont, type HeadingFont } from '@/lib/branding/fonts'
+import { BODY_FONTS, FONT_LABELS, FONT_STACKS, HEADING_FONTS, type BodyFont, type HeadingFont } from '@/lib/branding/fonts'
 import type { Density } from '@/lib/branding/themes'
 
 import { Select } from '../components/select'
@@ -80,6 +80,10 @@ export function StepLook(props: StepLookProps) {
             <ColorField label="Primary colour" value={props.brandColor} onChange={props.setBrandColor} />
             <ColorField label="Secondary colour" value={props.secondaryColor} onChange={props.setSecondaryColor} />
           </div>
+          <p className="mt-2 text-xs text-text-muted leading-snug">
+            Primary colours your main buttons, like Accept and Pay. Secondary
+            colours supporting buttons, like Decline or Ask a question.
+          </p>
 
           {suggestedColors.length > 0 && (
             <div className="mt-2.5 flex items-center gap-2">
@@ -103,11 +107,23 @@ export function StepLook(props: StepLookProps) {
         <div className="flex gap-3">
           <div className="flex-1 min-w-0">
             <label className="block text-xs font-medium text-text-muted mb-2">Heading font</label>
-            <Select value={props.fontHeading} options={HEADING_OPTIONS} onChange={props.setFontHeading} size="sm" />
+            <Select
+              value={props.fontHeading}
+              options={HEADING_OPTIONS}
+              onChange={props.setFontHeading}
+              size="xs"
+              renderLabel={(o) => <span style={{ fontFamily: FONT_STACKS[o.value] }}>{o.label}</span>}
+            />
           </div>
           <div className="flex-1 min-w-0">
             <label className="block text-xs font-medium text-text-muted mb-2">Body font</label>
-            <Select value={props.fontBody} options={BODY_OPTIONS} onChange={props.setFontBody} size="sm" />
+            <Select
+              value={props.fontBody}
+              options={BODY_OPTIONS}
+              onChange={props.setFontBody}
+              size="xs"
+              renderLabel={(o) => <span style={{ fontFamily: FONT_STACKS[o.value] }}>{o.label}</span>}
+            />
           </div>
         </div>
 

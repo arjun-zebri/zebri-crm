@@ -11,6 +11,7 @@ import { COLOR_PALETTE } from '@/lib/branding/themes'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
 import { Slider } from '../components/slider'
+
 import { isDataBound, isDeletable } from './policy'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'

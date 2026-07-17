@@ -122,7 +122,10 @@ interface RadiusPickerProps {
 export function RadiusPicker(props: RadiusPickerProps) {
   return (
     <div>
-      <label className="block text-xs font-medium text-text-muted mb-2">Corners</label>
+      <label className="block text-xs font-medium text-text-muted mb-1">Corners</label>
+      <p className="text-xs text-text-muted leading-snug mb-2">
+        Rounds the corners of your document pages, cards, and buttons.
+      </p>
       <div className="grid grid-cols-3 gap-2">
         {RADIUS_OPTIONS.map((o) => {
           const selected = props.cornerRadius === o.value

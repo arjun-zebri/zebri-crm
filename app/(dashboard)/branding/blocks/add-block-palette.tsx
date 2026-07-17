@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { SurfaceTab } from '@/types/branding-preview'
 

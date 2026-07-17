@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { getTextColor } from '@/lib/branding/contrast'
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
@@ -209,7 +210,8 @@ export default function BrandingPage() {
         tagline: result.tagline,
         logo_url: result.logoUrl || null,
         brand_color: result.brandColor,
-        accent_color: result.secondaryColor,
+        secondary_color: result.secondaryColor,
+        secondary_text_color: getTextColor(result.secondaryColor),
         font_heading: result.fontHeading,
         font_body: result.fontBody,
         density: result.density,
@@ -412,7 +414,7 @@ export default function BrandingPage() {
             tagline: metadata?.tagline,
             logoUrl: metadata?.logo_url,
             brandColor: metadata?.brand_color || '#6366F1',
-            secondaryColor: metadata?.accent_color || '#111827',
+            secondaryColor: metadata?.secondary_color || '#111827',
             fontHeading: sanitizeHeading(metadata?.font_heading),
             fontBody: sanitizeBody(metadata?.font_body),
             density: metadata?.density || 'cozy',
