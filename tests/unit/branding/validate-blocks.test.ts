@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { repairBlocks } from '@/lib/branding/validate-blocks'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { repairBlocks, repairAllSurfaces, type BlocksByDoc } from '@/lib/branding/validate-blocks'
 
 describe('repairBlocks', () => {
   it('re-inserts deleted required blocks on invoices', () => {
@@ -58,5 +58,76 @@ describe('repairBlocks', () => {
     expect(paymentScheduleIdx).toBeLessThan(lineItemsIdx)
     expect(lineItemsIdx).toBeLessThan(totalsIdx)
     expect(totalsIdx).toBeLessThan(paymentDetailsIdx)
+  })
+})
+
+describe('repairAllSurfaces', () => {
+  it('returns all six surface keys when input has all six', () => {
+    const input: BlocksByDoc = {
+      proposal: [{ id: 'p', type: 'proposalBody', locked: true }],
+      invoice: [{ id: 'i', type: 'paymentSchedule', locked: true }],
+      contract: [{ id: 'c', type: 'contractBody', locked: true }],
+      portal: [{ id: 'pt', type: 'couplePortal', locked: true }],
+      vendorTimeline: [{ id: 'vt', type: 'vendorTimelineBody', locked: true }],
+      questionnaire: [{ id: 'q', type: 'questionnaireBody', locked: true }],
+    }
+    const result = repairAllSurfaces(input)
+    expect(Object.keys(result).sort()).toEqual([
+      'contract',
+      'invoice',
+      'portal',
+      'proposal',
+      'questionnaire',
+      'vendorTimeline',
+    ])
+  })
+
+  it('preserves empty arrays without resurrecting required blocks', () => {
+    const input: Partial<BlocksByDoc> = {
+      proposal: [],
+      invoice: [{ id: 'i', type: 'headerBanner' }],
+      contract: [],
+    }
+    const result = repairAllSurfaces(input)
+
+    // Empty arrays stay empty, never get markers or required blocks added.
+    expect(result.proposal).toEqual([])
+    expect(result.contract).toEqual([])
+
+    // Non-empty invoice tree gets repaired with required blocks.
+    expect(result.invoice.map((b) => b.type)).toContain('paymentSchedule')
+    expect(result.invoice.map((b) => b.type)).toContain('lineItems')
+    expect(result.invoice.map((b) => b.type)).toContain('totals')
+  })
+
+  it('repairs non-empty trees and inserts required blocks', () => {
+    const input: Partial<BlocksByDoc> = {
+      proposal: [{ id: 'h', type: 'headerBanner' }],
+    }
+    const result = repairAllSurfaces(input)
+
+    // Proposal tree should be repaired with proposalBody marker.
+    expect(result.proposal.map((b) => b.type)).toContain('proposalBody')
+  })
+
+  it('seeds missing keys as empty arrays for lossless round-trip', () => {
+    // Old data without vendorTimeline and questionnaire.
+    const input: Partial<BlocksByDoc> = {
+      proposal: [{ id: 'p', type: 'proposalBody', locked: true }],
+      invoice: [{ id: 'i', type: 'paymentSchedule', locked: true }],
+      contract: [{ id: 'c', type: 'contractBody', locked: true }],
+      portal: [{ id: 'pt', type: 'couplePortal', locked: true }],
+    }
+    const result = repairAllSurfaces(input)
+
+    // New surfaces should be empty arrays, not dropped or seeded with defaults.
+    expect(result.vendorTimeline).toEqual([])
+    expect(result.questionnaire).toEqual([])
+
+    // Existing surfaces should be preserved.
+    expect(result.proposal[0]?.id).toBe('p')
+    expect(result.invoice[0]?.id).toBe('i')
+    expect(result.contract[0]?.id).toBe('c')
+    expect(result.portal[0]?.id).toBe('pt')
   })
 })

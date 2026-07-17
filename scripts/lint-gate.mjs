@@ -144,7 +144,8 @@ const ERROR_BUDGET = 72;
 // P6.1 templates: deleted starter-designs.ts + starterLayout; added templates/index.ts
 // and templates-section.tsx with strict-clean code; lint --fix swept import-order across
 // the codebase → 334 → 97.
-const WARNING_BUDGET = 333;
+// Fix branding autosave: removed unused imports from validate-blocks.ts → 333 → 331.
+const WARNING_BUDGET = 331;
 
 function runEslintJson() {
   try {

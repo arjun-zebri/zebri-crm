@@ -14,7 +14,7 @@ import {
 } from '@/lib/branding/themes'
 import { useAutosave } from '@/lib/branding/use-autosave'
 import { useHistory } from '@/lib/branding/use-history'
-import { repairBlocks } from '@/lib/branding/validate-blocks'
+import { repairAllSurfaces } from '@/lib/branding/validate-blocks'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandPreviewState, SurfaceTab, BrandKit } from '@/types/branding-preview'
 import type { Json } from '@/types/database'
@@ -220,14 +220,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     const user = session.user
     const existing = user.user_metadata || {}
 
-    // Repair each surface's blocks before upserting to ensure required blocks
-    // are present and markers are deduplicated.
-    const repairedBlocks = {
-      proposal: repairBlocks('proposal', value.blocks.proposal),
-      invoice: repairBlocks('invoice', value.blocks.invoice),
-      contract: repairBlocks('contract', value.blocks.contract),
-      portal: repairBlocks('portal', value.blocks.portal),
-    }
+    // Repair all surfaces at once. This ensures every saved branding_blocks
+    // record has all six keys, with empty arrays preserved (not resurrected
+    // with required blocks), so the user's "hide and clear" intent is not lost.
+    const repairedBlocks = repairAllSurfaces(value.blocks)
 
     // Build enabled_surfaces map from the enabledSurfaces array.
     const enabledSurfacesMap = value.enabledSurfaces.reduce(
