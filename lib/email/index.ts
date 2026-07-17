@@ -1,3 +1,5 @@
+import type { PublicBranding } from "@/lib/branding/public-branding";
+
 import { dispatchEmail, type DispatchResult, type EmailAttachment } from "./dispatch";
 import {
   contractHtml,
@@ -59,11 +61,13 @@ export async function sendProposalEmail(opts: {
   optionCount: number;
   /** Resolved transport. Defaults to the shared Zebri address (Resend). */
   sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
     to: opts.coupleEmail,
     subject: `Proposal from ${opts.mcBusinessName} - ${opts.proposalNumber}`,
-    html: proposalHtml(opts),
+    html: proposalHtml(opts, opts.branding),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }
@@ -76,11 +80,13 @@ export async function sendQuestionnaireEmail(opts: {
   mcBusinessName: string;
   /** Resolved transport. Defaults to the shared Zebri address (Resend). */
   sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
     to: opts.coupleEmail,
     subject: `${opts.mcBusinessName} sent you a few questions`,
-    html: questionnaireHtml(opts),
+    html: questionnaireHtml(opts, opts.branding),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }
@@ -95,11 +101,13 @@ export async function sendContractEmail(opts: {
   mcBusinessName: string;
   /** Resolved transport. Defaults to the shared Zebri address (Resend). */
   sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
     to: opts.coupleEmail,
     subject: `Contract from ${opts.mcBusinessName} - ${opts.contractNumber}`,
-    html: contractHtml(opts),
+    html: contractHtml(opts, opts.branding),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }
@@ -114,11 +122,13 @@ export async function sendContractReminderEmail(opts: {
   mcBusinessName: string;
   /** Resolved transport. Defaults to the shared Zebri address (Resend). */
   sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
     to: opts.coupleEmail,
     subject: `Reminder: please sign your contract - ${opts.contractNumber}`,
-    html: contractReminderHtml(opts),
+    html: contractReminderHtml(opts, opts.branding),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }
@@ -133,11 +143,13 @@ export async function sendInvoiceEmail(opts: {
   mcBusinessName: string;
   /** Resolved transport. Defaults to the shared Zebri address (Resend). */
   sender?: ResolvedSender;
+  /** Optional sender's branding for branded emails. */
+  branding?: PublicBranding | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
     to: opts.coupleEmail,
     subject: `Invoice from ${opts.mcBusinessName} - ${opts.invoiceNumber}`,
-    html: invoiceHtml(opts),
+    html: invoiceHtml(opts, opts.branding),
   });
   return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }

@@ -31,6 +31,7 @@ import {
 } from '@/lib/contracts/contract-variables';
 import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendContractEmail } from '@/lib/email';
+import { emailBrandingForUser } from '@/lib/email/branding';
 import { resolveSender } from '@/lib/email/sender-identity';
 import { createClient } from '@/lib/supabase/server';
 
@@ -180,6 +181,10 @@ export async function POST(request: NextRequest) {
 
   const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/contract/${contract.share_token}`;
 
+  // Fetch the sender's branding to render the email with their brand colors,
+  // fonts, and logo. Gracefully continues without branding if fetch fails.
+  const branding = await emailBrandingForUser(supabase, user.id);
+
   const result = await sendContractEmail({
     coupleEmail,
     coupleName,
@@ -189,6 +194,7 @@ export async function POST(request: NextRequest) {
     shareUrl,
     mcBusinessName,
     sender: await resolveSender(supabase, user.id, mcBusinessName),
+    branding,
   });
 
   if (!result.ok) {

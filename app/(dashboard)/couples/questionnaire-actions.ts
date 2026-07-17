@@ -16,6 +16,7 @@ import { z } from 'zod'
 import { logger } from '@/lib/alerts/logger'
 import { resolveCoupleEmail } from '@/lib/couples/email'
 import { sendQuestionnaireEmail } from '@/lib/email'
+import { emailBrandingForUser } from '@/lib/email/branding'
 import { resolveSender } from '@/lib/email/sender-identity'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
@@ -97,6 +98,9 @@ export async function sendCoupleQuestionnaireAction(
       (user.user_metadata?.business_name as string | undefined) ||
       (user.user_metadata?.display_name as string | undefined) ||
       'Your celebrant'
+    // Fetch the sender's branding to render the email with their brand colors,
+    // fonts, and logo. Gracefully continues without branding if fetch fails.
+    const branding = await emailBrandingForUser(supabase, user.id)
     const res = await sendQuestionnaireEmail({
       coupleEmail,
       coupleName: couple.name || 'there',
@@ -104,6 +108,7 @@ export async function sendCoupleQuestionnaireAction(
       shareUrl,
       mcBusinessName,
       sender: await resolveSender(supabase, user.id, mcBusinessName),
+      branding,
     })
     emailSent = res.ok
     if (!res.ok) {
@@ -151,6 +156,9 @@ export async function resendCoupleQuestionnaireAction(
     (user.user_metadata?.business_name as string | undefined) ||
     (user.user_metadata?.display_name as string | undefined) ||
     'Your celebrant'
+  // Fetch the sender's branding to render the email with their brand colors,
+  // fonts, and logo. Gracefully continues without branding if fetch fails.
+  const branding = await emailBrandingForUser(supabase, user.id)
   const res = await sendQuestionnaireEmail({
     coupleEmail,
     coupleName: couple?.name || 'there',
@@ -158,6 +166,7 @@ export async function resendCoupleQuestionnaireAction(
     shareUrl: `${APP_URL}/questionnaire/${q.share_token}`,
     mcBusinessName,
     sender: await resolveSender(supabase, user.id, mcBusinessName),
+    branding,
   })
   if (!res.ok) {
     logger.error('[couples/questionnaire-actions] resend email failed', null, { userId: user.id, error: res.error })

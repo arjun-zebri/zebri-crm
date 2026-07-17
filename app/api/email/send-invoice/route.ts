@@ -23,6 +23,7 @@ import { EMAIL_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
 import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendInvoiceEmail } from '@/lib/email';
+import { emailBrandingForUser } from '@/lib/email/branding';
 import { resolveSender } from '@/lib/email/sender-identity';
 import { createClient } from '@/lib/supabase/server';
 
@@ -116,6 +117,10 @@ export async function POST(request: NextRequest) {
       })
     : null;
 
+  // Fetch the sender's branding to render the email with their brand colors,
+  // fonts, and logo. Gracefully continues without branding if fetch fails.
+  const branding = await emailBrandingForUser(supabase, user.id);
+
   const result = await sendInvoiceEmail({
     coupleEmail,
     coupleName,
@@ -125,6 +130,7 @@ export async function POST(request: NextRequest) {
     shareUrl,
     mcBusinessName,
     sender: await resolveSender(supabase, user.id, mcBusinessName),
+    branding,
   });
 
   if (!result.ok) {

@@ -120,15 +120,18 @@ export function wrapTemplateHtml(
 </body></html>`;
 }
 
-export function proposalHtml(opts: {
-  coupleName: string;
-  proposalNumber: string;
-  proposalTitle: string;
-  shareUrl: string;
-  mcBusinessName: string;
-  /** More than one package option → the copy invites choosing. */
-  optionCount: number;
-}): string {
+export function proposalHtml(
+  opts: {
+    coupleName: string;
+    proposalNumber: string;
+    proposalTitle: string;
+    shareUrl: string;
+    mcBusinessName: string;
+    /** More than one package option → the copy invites choosing. */
+    optionCount: number;
+  },
+  branding?: PublicBranding | null,
+): string {
   const { proposalNumber, shareUrl, optionCount } = opts;
   // User-controlled strings are escaped — titles/names come straight
   // from MC input and land in HTML.
@@ -139,6 +142,27 @@ export function proposalHtml(opts: {
     optionCount > 1
       ? 'View it to compare the package options, pick the one that fits your day, and respond.'
       : 'Click the button below to view it and respond.';
+
+  // When branding is provided, use the branded email wrapper; otherwise,
+  // preserve the current hardcoded HTML for byte-for-byte compatibility.
+  if (branding) {
+    const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Proposal ${proposalNumber}</p>
+          <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${proposalTitle}</h1>
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            Hi ${coupleName},<br><br>
+            ${mcBusinessName} has sent you a proposal. ${invite}
+          </p>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">View Proposal</a>
+            </td></tr>
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
+          </p>`;
+    return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
+  }
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -172,13 +196,37 @@ export function proposalHtml(opts: {
 </html>`;
 }
 
-export function questionnaireHtml(opts: {
-  coupleName: string;
-  title: string;
-  shareUrl: string;
-  mcBusinessName: string;
-}): string {
+export function questionnaireHtml(
+  opts: {
+    coupleName: string;
+    title: string;
+    shareUrl: string;
+    mcBusinessName: string;
+  },
+  branding?: PublicBranding | null,
+): string {
   const { coupleName, title, shareUrl, mcBusinessName } = opts;
+
+  // When branding is provided, use the branded email wrapper; otherwise,
+  // preserve the current hardcoded HTML for byte-for-byte compatibility.
+  if (branding) {
+    const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">A few questions</p>
+          <h1 style="margin:0 0 24px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${title}</h1>
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            Hi ${coupleName},<br><br>
+            ${mcBusinessName} would love a few details to help plan your day. It only takes a couple of minutes, and you can come back to it any time.
+          </p>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Start questionnaire</a>
+            </td></tr>
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
+          </p>`;
+    return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
+  }
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -212,14 +260,17 @@ export function questionnaireHtml(opts: {
 </html>`;
 }
 
-export function invoiceHtml(opts: {
-  coupleName: string;
-  invoiceNumber: string;
-  invoiceTitle: string;
-  dueDate: string | null;
-  shareUrl: string;
-  mcBusinessName: string;
-}): string {
+export function invoiceHtml(
+  opts: {
+    coupleName: string;
+    invoiceNumber: string;
+    invoiceTitle: string;
+    dueDate: string | null;
+    shareUrl: string;
+    mcBusinessName: string;
+  },
+  branding?: PublicBranding | null,
+): string {
   const {
     coupleName,
     invoiceNumber,
@@ -231,6 +282,28 @@ export function invoiceHtml(opts: {
   const dueLine = dueDate
     ? `<p style="margin:0 0 32px;font-size:14px;color:#374151;">Due: <strong>${dueDate}</strong></p>`
     : "";
+
+  // When branding is provided, use the branded email wrapper; otherwise,
+  // preserve the current hardcoded HTML for byte-for-byte compatibility.
+  if (branding) {
+    const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Invoice ${invoiceNumber}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${invoiceTitle}</h1>
+          ${dueLine}
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            Hi ${coupleName},<br><br>
+            ${mcBusinessName} has sent you an invoice. Click the button below to view it and arrange payment.
+          </p>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">View Invoice</a>
+            </td></tr>
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
+          </p>`;
+    return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
+  }
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -265,14 +338,17 @@ export function invoiceHtml(opts: {
 </html>`;
 }
 
-export function contractHtml(opts: {
-  coupleName: string;
-  contractNumber: string;
-  contractTitle: string;
-  expiresAt: string | null;
-  shareUrl: string;
-  mcBusinessName: string;
-}): string {
+export function contractHtml(
+  opts: {
+    coupleName: string;
+    contractNumber: string;
+    contractTitle: string;
+    expiresAt: string | null;
+    shareUrl: string;
+    mcBusinessName: string;
+  },
+  branding?: PublicBranding | null,
+): string {
   const {
     coupleName,
     contractNumber,
@@ -284,6 +360,28 @@ export function contractHtml(opts: {
   const expiryLine = expiresAt
     ? `<p style="margin:0 0 32px;font-size:14px;color:#374151;">Please sign by <strong>${expiresAt}</strong>.</p>`
     : "";
+
+  // When branding is provided, use the branded email wrapper; otherwise,
+  // preserve the current hardcoded HTML for byte-for-byte compatibility.
+  if (branding) {
+    const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Contract ${contractNumber}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${contractTitle}</h1>
+          ${expiryLine}
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            Hi ${coupleName},<br><br>
+            ${mcBusinessName} has sent you a contract to review and sign.
+          </p>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Review &amp; Sign Contract</a>
+            </td></tr>
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
+          </p>`;
+    return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
+  }
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -318,14 +416,17 @@ export function contractHtml(opts: {
 </html>`;
 }
 
-export function contractReminderHtml(opts: {
-  coupleName: string;
-  contractNumber: string;
-  contractTitle: string;
-  expiresAt: string | null;
-  shareUrl: string;
-  mcBusinessName: string;
-}): string {
+export function contractReminderHtml(
+  opts: {
+    coupleName: string;
+    contractNumber: string;
+    contractTitle: string;
+    expiresAt: string | null;
+    shareUrl: string;
+    mcBusinessName: string;
+  },
+  branding?: PublicBranding | null,
+): string {
   const {
     coupleName,
     contractNumber,
@@ -337,6 +438,28 @@ export function contractReminderHtml(opts: {
   const expiryLine = expiresAt
     ? `<p style="margin:0 0 32px;font-size:14px;color:#b45309;">Reminder: this contract expires on <strong>${expiresAt}</strong>.</p>`
     : "";
+
+  // When branding is provided, use the branded email wrapper; otherwise,
+  // preserve the current hardcoded HTML for byte-for-byte compatibility.
+  if (branding) {
+    const bodyHtml = `<p style="margin:0 0 8px;font-size:13px;color:#6b7280;font-weight:500;letter-spacing:0.05em;text-transform:uppercase;">Friendly reminder · Contract ${contractNumber}</p>
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">${contractTitle}</h1>
+          ${expiryLine}
+          <p style="margin:0 0 32px;font-size:15px;color:#374151;line-height:1.6;">
+            Hi ${coupleName},<br><br>
+            Just a gentle nudge - your contract from ${mcBusinessName} is still waiting for your signature.
+          </p>
+          <table cellpadding="0" cellspacing="0">
+            <tr><td style="background:#111827;border-radius:8px;">
+              <a href="${shareUrl}" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Review &amp; Sign</a>
+            </td></tr>
+          </table>
+          <p style="margin:32px 0 0;font-size:13px;color:#9ca3af;">
+            Or copy this link: <a href="${shareUrl}" style="color:#6b7280;">${shareUrl}</a>
+          </p>`;
+    return wrapTemplateHtml(bodyHtml, opts.mcBusinessName, branding);
+  }
+
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
