@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "deadcode": "knip",
+    "scrape:celebrants": "node scripts/celebrants/main.mjs",
     "typecheck": "tsc --noEmit",
     "typecheck:strict": "tsc -p tsconfig.strict.json --noEmit",
     "typecheck:strict:gate": "node scripts/typecheck-strict-gate.mjs",

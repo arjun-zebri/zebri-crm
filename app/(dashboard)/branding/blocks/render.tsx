@@ -18,6 +18,8 @@ import { RenderLineItems as PublicRenderLineItems } from '@/lib/branding/public-
 import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks/totals'
 import { RenderPaymentDetails as PublicRenderPaymentDetails, type PaymentDetailsSlots } from '@/lib/branding/public-blocks/payment-details'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
+import { RenderImage as PublicRenderImage, type ImageInteraction } from '@/lib/branding/public-blocks/image'
+import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
 import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
 import { SAMPLE_DOC_BY_SURFACE } from './sample-doc'
 
@@ -49,15 +51,17 @@ interface RenderProps<B extends Block> {
 
 // ── Header banner ─────────────────────────────────────────────────────────────
 
-const HEADER_HEIGHTS: Record<NonNullable<HeaderBannerBlock['height']>, number> = {
-  sm: 80,
-  md: 128,
-  lg: 192,
-}
-
 /**
  * Editor wrapper for headerBanner block. Manages pan/zoom/resize state and renders
- * the image with InlineAsset overlay for upload control.
+ * the image through the public RenderHeaderBanner component with editor-only chrome
+ * (upload overlay via InlineAsset, drag-resize handle, zoom percentage display).
+ * The image element itself is owned by the public component; this wrapper injects
+ * interactivity and handles the upload flow.
+ *
+ * Exception: headerBanner retains its own editor implementation instead of rendering
+ * through a pure public component slot because the combination of overlay color +
+ * height customization + pan/zoom requires too many interaction props to cleanly
+ * abstract. This is a bounded exception documented here and in the public component.
  */
 export function RenderHeaderBanner({
   block,
@@ -69,18 +73,17 @@ export function RenderHeaderBanner({
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
 }) {
+  const branding = publicBrandingFromEditorState(state)
   const { headerImageUrl } = state
-  const heightPx = block.heightPx ?? HEADER_HEIGHTS[block.height ?? 'md']
-  const fit = block.fit ?? 'cover'
-  const imageX = block.imageX ?? 50
-  const imageY = block.imageY ?? 50
+  const heightPx = block.heightPx ?? 128
   const imageScale = block.imageScale ?? 1
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [panning, setPanning] = useState(false)
   const [resizing, setResizing] = useState(false)
 
-  // Pan/zoom control via mouse wheel (meta+scroll to zoom)
+  // Pan/zoom control via mouse wheel (ctrl+scroll to zoom); attached via addEventListener
+  // for passive: false support, which React.onWheel cannot provide.
   useEffect(() => {
     const el = containerRef.current
     if (!el || !headerImageUrl) return
@@ -104,8 +107,8 @@ export function RenderHeaderBanner({
     if (!rect) return
     const startX = e.clientX
     const startY = e.clientY
-    const startImageX = imageX
-    const startImageY = imageY
+    const imageX = block.imageX ?? 50
+    const imageY = block.imageY ?? 50
     let dragged = false
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX
@@ -115,8 +118,8 @@ export function RenderHeaderBanner({
       setPanning(true)
       // Drag-the-image semantics: moving right reveals more of the LEFT side,
       // so object-position X decreases as the cursor moves right.
-      const nextX = Math.max(0, Math.min(100, startImageX - (dx / rect.width) * 100))
-      const nextY = Math.max(0, Math.min(100, startImageY - (dy / rect.height) * 100))
+      const nextX = Math.max(0, Math.min(100, imageX - (dx / rect.width) * 100))
+      const nextY = Math.max(0, Math.min(100, imageY - (dy / rect.height) * 100))
       updateBlock<HeaderBannerBlock>(block.id, {
         imageX: Math.round(nextX),
         imageY: Math.round(nextY),
@@ -168,7 +171,7 @@ export function RenderHeaderBanner({
             className="w-full h-full"
             emptyState={
               <div
-                className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+                className="w-full h-full border-2 border-dashed border-gray-200 bg-gray-50/40 flex items-center justify-center"
                 style={{ borderRadius: state.cornerRadius }}
               >
                 <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
@@ -190,7 +193,7 @@ export function RenderHeaderBanner({
     )
   }
 
-  // Image populated: render via public component with editor chrome
+  // Image populated: render through public component with editor chrome
   const chrome = (
     <>
       {imageScale > 1 && (
@@ -202,12 +205,14 @@ export function RenderHeaderBanner({
     </>
   )
 
+  const imageInteraction: HeaderBannerInteraction = {
+    ref: containerRef,
+    onMouseDown: startPan,
+    panning,
+  }
+
   return (
-    <div
-      ref={containerRef}
-      className="group relative w-full"
-      style={{ height: heightPx }}
-    >
+    <div className="group">
       {uploadHeader ? (
         <InlineAsset
           value={headerImageUrl}
@@ -217,73 +222,20 @@ export function RenderHeaderBanner({
           className="w-full h-full"
           emptyState={null}
         >
-          {/* Render the image with pan/zoom handlers; InlineAsset wraps this with upload overlay */}
-          <div
-            className="w-full h-full overflow-hidden relative"
-            style={{
-              borderTopLeftRadius: state.cornerRadius,
-              borderTopRightRadius: state.cornerRadius,
-            }}
-            onMouseDown={startPan}
-          >
-            <img
-              src={headerImageUrl}
-              alt=""
-              draggable={false}
-              className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
-              style={{
-                objectFit: fit,
-                objectPosition: `${imageX}% ${imageY}%`,
-                transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
-                transformOrigin: `${imageX}% ${imageY}%`,
-              }}
-            />
-            {block.overlayColor && (
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundColor: block.overlayColor,
-                  opacity: block.overlayOpacity ?? 0.5,
-                  pointerEvents: 'none',
-                }}
-              />
-            )}
-            {chrome}
-          </div>
+          <PublicRenderHeaderBanner
+            block={block}
+            branding={branding}
+            chrome={chrome}
+            imageInteraction={imageInteraction}
+          />
         </InlineAsset>
       ) : (
-        <div
-          className="w-full h-full overflow-hidden relative"
-          style={{
-            borderTopLeftRadius: state.cornerRadius,
-            borderTopRightRadius: state.cornerRadius,
-          }}
-          onMouseDown={startPan}
-        >
-          <img
-            src={headerImageUrl}
-            alt=""
-            draggable={false}
-            className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{
-              objectFit: fit,
-              objectPosition: `${imageX}% ${imageY}%`,
-              transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
-              transformOrigin: `${imageX}% ${imageY}%`,
-            }}
-          />
-          {block.overlayColor && (
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundColor: block.overlayColor,
-                opacity: block.overlayOpacity ?? 0.5,
-                pointerEvents: 'none',
-              }}
-            />
-          )}
-          {chrome}
-        </div>
+        <PublicRenderHeaderBanner
+          block={block}
+          branding={branding}
+          chrome={chrome}
+          imageInteraction={imageInteraction}
+        />
       )}
     </div>
   )
@@ -307,8 +259,10 @@ export function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.M
 
 /**
  * Editor wrapper for image block. Manages pan/zoom/resize state and renders
- * the image with InlineAsset overlay for upload control. Supports selectableWhenEmpty
- * to allow the block to be selected when empty (for deletion).
+ * the image through the public RenderImage component with editor-only chrome
+ * (upload overlay via InlineAsset, drag-resize handle, zoom percentage display).
+ * The image element itself is owned by the public component; this wrapper injects
+ * interactivity and handles the upload flow.
  */
 export function RenderImage({
   block,
@@ -320,17 +274,16 @@ export function RenderImage({
   uploadImage?: (file: File, blockId: string) => Promise<void>
   removeImage?: (blockId: string) => void | Promise<void>
 }) {
+  const branding = publicBrandingFromEditorState(state)
   const heightPx = block.heightPx ?? 160
-  const fit = block.fit ?? 'cover'
-  const imageX = block.imageX ?? 50
-  const imageY = block.imageY ?? 50
   const imageScale = block.imageScale ?? 1
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [panning, setPanning] = useState(false)
   const [resizing, setResizing] = useState(false)
 
-  // Pan/zoom control via mouse wheel (meta+scroll to zoom)
+  // Pan/zoom control via mouse wheel (ctrl+scroll to zoom); attached via addEventListener
+  // for passive: false support, which React.onWheel cannot provide.
   useEffect(() => {
     const el = containerRef.current
     if (!el || !block.url) return
@@ -354,8 +307,8 @@ export function RenderImage({
     if (!rect) return
     const startX = e.clientX
     const startY = e.clientY
-    const startImageX = imageX
-    const startImageY = imageY
+    const imageX = block.imageX ?? 50
+    const imageY = block.imageY ?? 50
     let dragged = false
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX
@@ -363,8 +316,8 @@ export function RenderImage({
       if (!dragged && Math.abs(dx) + Math.abs(dy) < 3) return
       dragged = true
       setPanning(true)
-      const nextX = Math.max(0, Math.min(100, startImageX - (dx / rect.width) * 100))
-      const nextY = Math.max(0, Math.min(100, startImageY - (dy / rect.height) * 100))
+      const nextX = Math.max(0, Math.min(100, imageX - (dx / rect.width) * 100))
+      const nextY = Math.max(0, Math.min(100, imageY - (dy / rect.height) * 100))
       updateBlock<ImageBlock>(block.id, {
         imageX: Math.round(nextX),
         imageY: Math.round(nextY),
@@ -437,7 +390,7 @@ export function RenderImage({
     )
   }
 
-  // Image populated: render with pan/zoom and resize chrome
+  // Image populated: render through public component with editor chrome
   const chrome = (
     <>
       {imageScale > 1 && (
@@ -449,12 +402,14 @@ export function RenderImage({
     </>
   )
 
+  const imageInteraction: ImageInteraction = {
+    ref: containerRef,
+    onMouseDown: startPan,
+    panning,
+  }
+
   return (
-    <div
-      ref={containerRef}
-      className="group relative w-full"
-      style={{ height: heightPx }}
-    >
+    <div className="group">
       {uploadImage ? (
         <InlineAsset
           value={block.url}
@@ -464,55 +419,20 @@ export function RenderImage({
           className="w-full h-full"
           emptyState={null}
         >
-          {/* Render the image with pan/zoom handlers; InlineAsset wraps this with upload overlay */}
-          <div
-            className="w-full h-full overflow-hidden relative"
-            style={{
-              borderRadius: state.cornerRadius,
-            }}
-            onMouseDown={startPan}
-          >
-            {/* User-uploaded brand asset — no next/image. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={block.url}
-              alt=""
-              draggable={false}
-              className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
-              style={{
-                objectFit: fit,
-                objectPosition: `${imageX}% ${imageY}%`,
-                transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
-                transformOrigin: `${imageX}% ${imageY}%`,
-              }}
-            />
-            {chrome}
-          </div>
+          <PublicRenderImage
+            block={block}
+            branding={branding}
+            chrome={chrome}
+            imageInteraction={imageInteraction}
+          />
         </InlineAsset>
       ) : (
-        <div
-          className="w-full h-full overflow-hidden relative"
-          style={{
-            borderRadius: state.cornerRadius,
-          }}
-          onMouseDown={startPan}
-        >
-          {/* User-uploaded brand asset — no next/image. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={block.url}
-            alt=""
-            draggable={false}
-            className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{
-              objectFit: fit,
-              objectPosition: `${imageX}% ${imageY}%`,
-              transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
-              transformOrigin: `${imageX}% ${imageY}%`,
-            }}
-          />
-          {chrome}
-        </div>
+        <PublicRenderImage
+          block={block}
+          branding={branding}
+          chrome={chrome}
+          imageInteraction={imageInteraction}
+        />
       )}
     </div>
   )
