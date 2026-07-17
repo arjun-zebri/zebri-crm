@@ -637,20 +637,20 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   function updateBlock<B extends Block>(id: string, patch: Partial<B>) {
-    const list = state.blocks[docSurface]
+    const list = state.blocks[docSurface] ?? []
     setBlocksForCurrent(list.map(b => (b.id === id ? ({ ...b, ...patch } as Block) : b)))
   }
 
   function deleteBlock(id: string) {
-    const block = state.blocks[docSurface].find(b => b.id === id)
+    const block = (state.blocks[docSurface] ?? []).find(b => b.id === id)
     if (!block || !isDeletable(block, surface)) return
-    setBlocksForCurrent(state.blocks[docSurface].filter(b => b.id !== id))
+    setBlocksForCurrent((state.blocks[docSurface] ?? []).filter(b => b.id !== id))
     setSelectedBlockIds((prev) => prev.filter(x => x !== id))
     toast('Block deleted', 'success', { label: 'Undo', onClick: undo })
   }
 
   function duplicateBlock(id: string) {
-    const list = state.blocks[docSurface]
+    const list = state.blocks[docSurface] ?? []
     const idx = list.findIndex(b => b.id === id)
     if (idx < 0) return
     const original = list[idx]
@@ -665,7 +665,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   function resetBlockStyles(id: string) {
-    const list = state.blocks[docSurface]
+    const list = state.blocks[docSurface] ?? []
     const target = list.find((b) => b.id === id)
     if (!target) return
     const cleared = clearStyleOverrides(target)
@@ -674,7 +674,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
     const newBlock = blockTemplate(type)
-    const list = state.blocks[docSurface]
+    const list = state.blocks[docSurface] ?? []
     if (insertAfterId) {
       const idx = list.findIndex((b) => b.id === insertAfterId)
       const next = [...list]
@@ -897,7 +897,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     questionnairePreviewMode,
   }), [state, proposalPreviewMode, questionnairePreviewMode])
 
-  const visibleBlocks = state.blocks[docSurface]
+  // Null-safe: state persisted or hot-reloaded from before the six-surface
+  // rollout can lack the newer keys until the next save normalizes it.
+  const visibleBlocks = state.blocks[docSurface] ?? []
 
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden">
@@ -1031,7 +1033,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
                 ? () => {
                     // Keep the fixed marker blocks (they can't be removed).
                     setBlocksForCurrent(
-                      state.blocks[docSurface].filter(
+                      (state.blocks[docSurface] ?? []).filter(
                         (b) =>
                           b.type === 'couplePortal' ||
                           b.type === 'paymentSchedule' ||
@@ -1085,15 +1087,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       </div>
     </div>
   )
-}
-
-export function defaultBlocks(): { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] } {
-  return {
-    proposal: defaultBlocksFor('proposal'),
-    invoice: defaultBlocksFor('invoice'),
-    contract: defaultBlocksFor('contract'),
-    portal: defaultBlocksFor('portal'),
-  }
 }
 
 // ── Block style helpers ──────────────────────────────────────────────────────
