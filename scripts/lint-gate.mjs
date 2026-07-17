@@ -58,8 +58,8 @@ import { execSync } from 'node:child_process';
 // RenderTotals to use a pure renderRow helper (not component during render)
 // and fixed import-order across public block renderers → 75 → 72.
 // Branding overhaul phase-a completion: strict type compliance fixes +
-// render consolidation clearances → 72 → 66.
-const ERROR_BUDGET = 66;
+// render consolidation clearances → 72 → 66 → 64 (page.tsx any-casts fixed).
+const ERROR_BUDGET = 64;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C

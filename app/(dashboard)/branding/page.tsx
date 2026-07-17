@@ -8,6 +8,7 @@ import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/brandin
 import { repairBlocks } from '@/lib/branding/validate-blocks'
 import { createClient } from '@/lib/supabase/client'
 import type { BrandKit, SurfaceTab } from '@/types/branding-preview'
+import type { Json } from '@/types/database'
 
 import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
 import type { Block } from './blocks/types'
@@ -112,6 +113,10 @@ export default function BrandingPage() {
   // the server and client trees differ and breaks hydration.
   const [likelyNeedsOnboarding, setLikelyNeedsOnboarding] = useState(false)
   useEffect(() => {
+    // One-shot post-hydration cache read; the sync setState is deliberate so
+    // the skeleton appears on the very next paint (established pattern from
+    // the branding lint cleanup for mount-only reads).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLikelyNeedsOnboarding(localStorage.getItem(ONBOARDED_CACHE_KEY) !== 'true')
   }, [])
 
@@ -243,8 +248,8 @@ export default function BrandingPage() {
       .upsert(
         {
           user_id: user.id,
-          branding_blocks: branding_blocks as unknown as any,
-          enabled_surfaces: enabledSurfacesMap as unknown as any,
+          branding_blocks: branding_blocks as unknown as Json,
+          enabled_surfaces: enabledSurfacesMap as unknown as Json,
           onboarded_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
