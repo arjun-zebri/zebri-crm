@@ -197,7 +197,9 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
         )}
         </div>
 
-        {/* Right pane: live preview of the choices (hidden on narrow screens). */}
+        {/* Right pane: live preview of the choices (hidden on narrow screens
+            and on the documents step, whose cards carry their own copy). */}
+        {(intro || step !== 3) && (
         <div className="hidden sm:block w-[380px] shrink-0 border-l border-border bg-surface-muted p-5">
           <WizardPreview
             businessName={businessName}
@@ -209,11 +211,11 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
             density={density}
             secondaryColor={secondaryColor}
             cornerRadius={cornerRadius}
-            enabledSurfaces={enabledSurfaces}
             step={step}
             intro={intro}
           />
         </div>
+        )}
       </div>
 
       {/* Footer: spans the full modal width. */}

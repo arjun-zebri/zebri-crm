@@ -26,27 +26,27 @@ interface SurfaceDescription {
 const SURFACES: Record<SurfaceTab, SurfaceDescription> = {
   proposal: {
     label: 'Proposals',
-    description: 'Priced packages couples accept online',
+    description: 'Priced packages your couples review and accept online',
   },
   invoice: {
     label: 'Invoices',
-    description: 'Card and bank transfer payments',
+    description: 'Deposits and balances, paid by card or bank transfer',
   },
   contract: {
     label: 'Contracts',
-    description: 'E-sign agreements',
+    description: 'Agreements your couples sign electronically',
   },
   portal: {
     label: 'Client portal',
-    description: 'The couple home for everything',
+    description: 'One link where couples see their timeline, payments, and documents',
   },
   vendorTimeline: {
     label: 'Run sheet',
-    description: 'Vendor-facing day-of timeline',
+    description: 'A vendor-facing timeline for the day itself',
   },
   questionnaire: {
     label: 'Questionnaires',
-    description: 'Collect details from couples',
+    description: 'Forms that collect details from your couples',
   },
 }
 
@@ -116,7 +116,7 @@ export function StepDocuments(props: StepDocumentsProps) {
               />
               <div className="flex-1 min-w-0 flex items-baseline gap-2">
                 <span className="text-sm font-medium text-text shrink-0">{info.label}</span>
-                <span className="text-xs text-text-muted truncate">{info.description}</span>
+                <span className="text-xs text-text-muted">{info.description}</span>
               </div>
             </label>
           )

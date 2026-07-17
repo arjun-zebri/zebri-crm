@@ -11,7 +11,6 @@ import { buildPublicBranding } from '@/lib/branding/public-branding'
 import type { PublicDocData } from '@/lib/branding/public-renderer'
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type { Density } from '@/lib/branding/themes'
-import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
  * Props for the live wizard preview pane.
@@ -29,8 +28,6 @@ interface WizardPreviewProps {
   density: Density
   /** Corner radius in px for cards and buttons. */
   cornerRadius: number
-  /** Enabled document surfaces; drives the step-3 document guide. */
-  enabledSurfaces: SurfaceTab[]
   /** Current wizard step. */
   step: 1 | 2 | 3
   /** True on the welcome screen: the full document shows undimmed. */
@@ -123,10 +120,6 @@ export function WizardPreview(props: WizardPreviewProps) {
 
   const docWidth = props.step === 1 && !props.intro ? DOC_WIDTH_FOCUS : DOC_WIDTH_FULL
 
-  if (props.step === 3 && !props.intro) {
-    return <DocumentGuide enabledSurfaces={props.enabledSurfaces} />
-  }
-
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
       {/* Scaled real document. The wrapper reserves the scaled footprint and
@@ -172,38 +165,6 @@ export function WizardPreview(props: WizardPreviewProps) {
   )
 }
 
-
-/** What each document type is, for the step-3 guide. */
-const DOCUMENT_GUIDE: ReadonlyArray<{ key: SurfaceTab; name: string; description: string }> = [
-  { key: 'proposal', name: 'Proposals', description: 'Priced packages your couples review and accept online.' },
-  { key: 'invoice', name: 'Invoices', description: 'Deposits and balances, paid by card or bank transfer.' },
-  { key: 'contract', name: 'Contracts', description: 'Agreements your couples sign electronically.' },
-  { key: 'portal', name: 'Client portal', description: 'One link where couples see their timeline, payments, and documents.' },
-  { key: 'vendorTimeline', name: 'Run sheet', description: 'A vendor-facing timeline for the day itself.' },
-  { key: 'questionnaire', name: 'Questionnaires', description: 'Forms that collect details from your couples.' },
-]
-
-/**
- * DocumentGuide: the step-3 companion. A proposal preview says nothing about
- * the documents choice, so this pane describes each document type instead,
- * dimming the ones toggled off.
- * @internal
- */
-function DocumentGuide({ enabledSurfaces }: { enabledSurfaces: SurfaceTab[] }) {
-  return (
-    <div className="flex flex-col justify-center gap-4 h-full">
-      {DOCUMENT_GUIDE.map((doc) => {
-        const on = enabledSurfaces.includes(doc.key)
-        return (
-          <div key={doc.key} className={`transition-opacity duration-300 ${on ? 'opacity-100' : 'opacity-40'}`}>
-            <p className={`text-sm font-medium text-text ${on ? '' : 'line-through'}`}>{doc.name}</p>
-            <p className="text-xs text-text-muted leading-snug mt-0.5">{doc.description}</p>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
 
 /**
  * ScaledDoc: scales the fixed-width document down to the pane's content
