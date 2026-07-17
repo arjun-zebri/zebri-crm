@@ -489,34 +489,19 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   /** Reset the current surface to its template layout. For surfaces without templates,
-   *  applies defaultBlocksFor. Task 20 wires vendorTimeline and questionnaire template ids. */
+   *  applies defaultBlocksFor. */
   const resetSurfaceToTemplate = () => {
-    const templateMap: Record<SurfaceTab, string | null> = {
-      proposal: 'wedding-proposal',
-      invoice: 'deposit-invoice',
-      contract: 'esign-contract',
-      portal: 'couple-portal',
-      vendorTimeline: null, // Task 20 wires vendor-timeline-classic template id
-      questionnaire: null, // Task 20 wires questionnaire-classic template id
+    const templateMap: Record<SurfaceTab, string> = {
+      proposal: 'proposal-classic',
+      invoice: 'invoice-classic',
+      contract: 'contract-classic',
+      portal: 'portal-classic',
+      vendorTimeline: 'vendorTimeline-classic',
+      questionnaire: 'questionnaire-classic',
     }
 
     const templateId = templateMap[surface]
-    if (templateId) {
-      applyTemplate(templateId)
-    } else {
-      // For surfaces without registry templates, apply defaults directly
-      setState(
-        (prev) => ({
-          ...prev,
-          blocks: {
-            ...prev.blocks,
-            [surface]: defaultBlocksFor(surface),
-          },
-        }),
-        { commit: true }
-      )
-      toast(`Reset ${surface} to default layout`, 'success')
-    }
+    applyTemplate(templateId)
   }
 
   const uploadAsset = async (file: File, kind: 'logo' | 'favicon' | 'header'): Promise<string> => {

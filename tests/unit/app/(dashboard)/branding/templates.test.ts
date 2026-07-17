@@ -29,7 +29,7 @@ describe('TEMPLATES', () => {
       expect(tpl.id).toBeTruthy()
       expect(tpl.name).toBeTruthy()
       expect(tpl.description).toBeTruthy()
-      expect(['proposal', 'invoice', 'contract', 'portal']).toContain(tpl.surface)
+      expect(['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire']).toContain(tpl.surface)
       expect(typeof tpl.build).toBe('function')
     }
   })
