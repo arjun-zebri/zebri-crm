@@ -84,7 +84,7 @@ export function StepLook(props: StepLookProps) {
               trigger={
                 <button
                   type="button"
-                  className="w-10 h-10 rounded-lg border border-border cursor-pointer focus-visible:ring-2 focus-visible:ring-brand/50 transition"
+                  className="w-8 h-8 rounded-lg border border-border cursor-pointer focus-visible:ring-2 focus-visible:ring-brand/50 transition"
                   style={{ backgroundColor: props.brandColor }}
                   aria-label="Pick brand color"
                 />
@@ -95,7 +95,7 @@ export function StepLook(props: StepLookProps) {
               type="text"
               value={props.brandColor}
               onChange={(e) => props.setBrandColor(e.target.value)}
-              className="flex-1 text-sm px-3 py-2 rounded-lg border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand"
+              className="flex-1 h-8 text-xs px-2.5 rounded-lg border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand"
               aria-label="Brand color hex"
             />
           </div>

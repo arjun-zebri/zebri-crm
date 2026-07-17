@@ -689,7 +689,7 @@ function BusinessNameControls({
     letterSpacing: 0,
   }
   const layout = block.layout ?? 'row'
-  const logoHeight = block.logoHeightPx ?? 48
+  const logoHeight = block.logoHeightPx ?? 40
   return (
     <div className="flex items-center gap-2">
       <PillToggle
@@ -711,7 +711,7 @@ function BusinessNameControls({
               className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition bg-white text-gray-600 border-gray-200 hover:text-gray-900 shrink-0"
             >
               <Square size={12} strokeWidth={1.75} />
-              {logoHeight !== 48 && (
+              {logoHeight !== 40 && (
                 <span className="font-mono text-[10px]">{logoHeight}px</span>
               )}
             </button>

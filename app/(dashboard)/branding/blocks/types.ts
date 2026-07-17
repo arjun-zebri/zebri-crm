@@ -94,7 +94,7 @@ export interface BusinessNameBlock extends BaseBlock {
   nameStyle?: TextStyle
   /** Composition layout. Defaults to 'row' (mark on left, name on right). */
   layout?: BusinessNameLayout
-  /** Pixel height of the logo / monogram. Defaults to 48. */
+  /** Pixel height of the logo / monogram. Defaults to 40, capped at 3.5x width. */
   logoHeightPx?: number
 }
 

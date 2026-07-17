@@ -37,7 +37,7 @@ export function WizardChrome(props: WizardChromeProps) {
         type="button"
         onClick={props.onSkip}
         disabled={props.loading}
-        className="text-sm text-text-muted hover:text-text cursor-pointer disabled:opacity-50 disabled:cursor-default transition"
+        className="text-xs text-text-muted hover:text-text cursor-pointer disabled:opacity-50 disabled:cursor-default transition"
       >
         Skip, use defaults
       </button>

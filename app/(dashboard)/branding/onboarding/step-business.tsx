@@ -39,6 +39,7 @@ export function StepBusiness(props: StepBusinessProps) {
         <div>
           <label className="block text-sm font-medium text-text-muted mb-2">Business name</label>
           <Input
+            size="sm"
             value={props.businessName}
             onChange={(e) => props.setBusinessName(e.target.value)}
             placeholder="Your business name"
@@ -49,6 +50,7 @@ export function StepBusiness(props: StepBusinessProps) {
         <div>
           <label className="block text-sm font-medium text-text-muted mb-2">Tagline</label>
           <Input
+            size="sm"
             value={props.tagline}
             onChange={(e) => props.setTagline(e.target.value)}
             placeholder="A short line about you"

@@ -461,7 +461,7 @@ export function RenderBusinessName({
 }) {
   const branding = publicBrandingFromEditorState(state)
   const { logoUrl, businessName } = state
-  const logoHeight = block.logoHeightPx ?? 48
+  const logoHeight = block.logoHeightPx ?? 40
 
   const startResizeLogo = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -518,7 +518,7 @@ export function RenderBusinessName({
         src={logoUrl}
         alt={businessName || 'Logo'}
         draggable={false}
-        className="block h-full w-auto object-contain select-none"
+        className="block h-full w-auto max-w-full object-contain select-none"
       />
     </InlineAsset>
   ) : undefined

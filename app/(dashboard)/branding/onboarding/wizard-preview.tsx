@@ -114,16 +114,16 @@ export function WizardPreview(props: WizardPreviewProps) {
 
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
-      <p className="text-[11px] uppercase tracking-wide text-text-subtle shrink-0">Live preview</p>
-
       {/* Scaled real document. The wrapper reserves the scaled footprint and
           fades out at the bottom edge so a taller document reads as a page
           peeking out, not a cropped bug. */}
       <div className="relative flex-1 min-h-0 overflow-hidden">
-        <div className="absolute inset-0">
-          <ScaledDoc docWidth={docWidth}>
+        <div className="absolute inset-0 flex items-center">
+          {/* Keyed by width: a zoom change remounts and fades in at its final
+              size, instead of tweening width and scale against each other. */}
+          <ScaledDoc key={docWidth} docWidth={docWidth}>
             <div
-              className="@container/doc rounded-lg border border-border shadow-sm overflow-hidden transition-[width] duration-300 motion-reduce:transition-none"
+              className="@container/doc rounded-lg border border-border shadow-sm overflow-hidden animate-fade-in motion-reduce:animate-none"
               style={{ width: docWidth, background: branding.surface_color }}
             >
               {props.step === 1 && !props.intro ? (
@@ -149,6 +149,7 @@ export function WizardPreview(props: WizardPreviewProps) {
             </div>
           </ScaledDoc>
         </div>
+        <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-surface-muted to-transparent pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-muted to-transparent pointer-events-none" />
       </div>
 
@@ -165,8 +166,7 @@ export function WizardPreview(props: WizardPreviewProps) {
 function ScaledDoc({ docWidth, children }: { docWidth: number; children: React.ReactNode }) {
   return (
     <div
-      className="transition-transform duration-300 motion-reduce:transition-none"
-      style={{ transform: `scale(${PANE_CONTENT_WIDTH / docWidth})`, transformOrigin: 'top left' }}
+      style={{ transform: `scale(${PANE_CONTENT_WIDTH / docWidth})`, transformOrigin: 'left center' }}
     >
       {children}
     </div>

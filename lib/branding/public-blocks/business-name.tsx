@@ -44,7 +44,11 @@ export function RenderBusinessName({
   const businessName = branding.business_name
   const fallbackInitial = businessName?.[0]?.toUpperCase() || 'Z'
   const layout = block.layout ?? 'row'
-  const logoHeight = block.logoHeightPx ?? 48
+  const logoHeight = block.logoHeightPx ?? 40
+  // Cap the logo's footprint: object-contain then scales very wide or very
+  // tall uploads down inside this box, so an unedited upload never dominates
+  // the document. The editor's size grip still overrides via logoHeightPx.
+  const logoCap = Math.round(logoHeight * 3.5)
   const align = block.nameStyle?.align ?? 'left'
 
   const nameDefaults: TextStyleDefaults = {
@@ -59,13 +63,15 @@ export function RenderBusinessName({
 
   // Logo node: editor slot renders if provided, else static fallback.
   const logoNode = slots?.logo !== undefined ? (
-    slots.logo
+    <div className="shrink-0" style={{ height: logoHeight, maxWidth: logoCap }}>
+      {slots.logo}
+    </div>
   ) : logoUrl ? (
     <img
       src={logoUrl}
       alt={businessName || 'Logo'}
-      className="block w-auto object-contain shrink-0"
-      style={{ height: logoHeight }}
+      className="block w-auto max-w-full object-contain shrink-0"
+      style={{ height: logoHeight, maxWidth: logoCap }}
     />
   ) : (
     <div

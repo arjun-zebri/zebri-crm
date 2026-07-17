@@ -13,6 +13,7 @@ import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import { BrandingEditor } from './branding-editor'
 import { OnboardingModal } from './onboarding/onboarding-modal'
+import { OnboardingModalSkeleton } from './onboarding/onboarding-modal-skeleton'
 import type { OnboardingResult } from './onboarding/onboarding-wizard'
 import { TEMPLATES } from './templates'
 
@@ -94,11 +95,25 @@ interface UserBrandingRow {
 
 const fontsHref = googleFontsHref([...HEADING_FONTS, ...BODY_FONTS])
 
+/** localStorage key caching whether this user finished branding onboarding,
+ *  so the wizard modal can paint instantly on the next visit instead of
+ *  waiting for the first fetch to say whether it is needed. */
+const ONBOARDED_CACHE_KEY = 'zebri:branding-onboarded'
+
 export default function BrandingPage() {
   const [metadata, setMetadata] = useState<UserMetadata | null>(null)
   const [branding, setBranding] = useState<UserBrandingRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [wizardError, setWizardError] = useState<string | null>(null)
+  // True when the cache says this user has NOT completed onboarding (or we
+  // have never seen them): the modal skeleton shows immediately while the
+  // fetch runs. Onboarded users skip it, so they never see a modal flash.
+  // Set post-hydration: reading localStorage during the first render makes
+  // the server and client trees differ and breaks hydration.
+  const [likelyNeedsOnboarding, setLikelyNeedsOnboarding] = useState(false)
+  useEffect(() => {
+    setLikelyNeedsOnboarding(localStorage.getItem(ONBOARDED_CACHE_KEY) !== 'true')
+  }, [])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -122,13 +137,16 @@ export default function BrandingPage() {
           .select('branding_blocks, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
           .eq('user_id', user.id)
           .maybeSingle()
-        setBranding((row as UserBrandingRow | null) ?? {
+        const resolved = (row as UserBrandingRow | null) ?? {
           branding_blocks: null,
           brand_kits: null,
           portal_sections: null,
           enabled_surfaces: null,
           onboarded_at: null,
-        })
+        }
+        setBranding(resolved)
+        // Keep the instant-modal cache honest for the next visit.
+        localStorage.setItem(ONBOARDED_CACHE_KEY, resolved.onboarded_at ? 'true' : 'false')
       }
       setLoading(false)
     }
@@ -138,6 +156,7 @@ export default function BrandingPage() {
   if (loading) {
     return (
       <div className="flex flex-col h-full bg-surface">
+        {likelyNeedsOnboarding && <OnboardingModalSkeleton />}
         <div className="h-12 border-b border-border px-3 flex items-center gap-2">
           <div className="h-4 w-32 bg-surface-emphasis rounded animate-pulse" />
         </div>
