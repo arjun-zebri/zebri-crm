@@ -7,6 +7,7 @@
  * @module tests/e2e/branding-editor-locks.spec.ts
  */
 import { test, expect } from '@playwright/test'
+
 import { login } from './helpers'
 
 test.describe('Branding Editor - Block Locks', () => {
@@ -14,7 +15,7 @@ test.describe('Branding Editor - Block Locks', () => {
     await login(page)
     await page.goto('/branding')
 
-    const wizardHeading = page.getByRole('heading', { name: /get started/i })
+    const wizardHeading = page.getByRole('heading', { name: /let's start with your identity/i })
     if (await wizardHeading.isVisible({ timeout: 2000 }).catch(() => false)) {
       const businessInput = page.locator('input[placeholder*="name" i], input[placeholder*="MC" i]').first()
       await businessInput.fill('Test MC')
@@ -23,8 +24,10 @@ test.describe('Branding Editor - Block Locks', () => {
       await nextBtn.click()
       await page.waitForTimeout(200)
 
-      const colorInput = page.locator('input[type="color"]').first()
+      // Set brand color via hex textbox instead of color input
+      const colorInput = page.getByLabel(/brand color hex/i)
       if (await colorInput.isVisible()) {
+        await colorInput.clear()
         await colorInput.fill('#8B5CF6')
       }
 
@@ -36,7 +39,7 @@ test.describe('Branding Editor - Block Locks', () => {
       await page.waitForTimeout(500)
     }
 
-    await expect(page.getByRole('button', { name: /preview/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible({ timeout: 10000 })
   })
 
   test('Line-items block cannot be deleted (locked)', async ({ page }) => {
@@ -51,9 +54,8 @@ test.describe('Branding Editor - Block Locks', () => {
       await documentsButton.click()
       await page.waitForTimeout(200)
 
-      const invoiceToggleContainer = page.locator('div').filter({ has: page.getByText(/^invoice$/i) }).first()
-      const invoiceCheckbox = invoiceToggleContainer.locator('input[type="checkbox"]')
-      if (await invoiceCheckbox.isVisible()) {
+      const invoiceCheckbox = page.getByRole('checkbox', { name: /toggle invoices/i })
+      if (await invoiceCheckbox.isVisible().catch(() => false)) {
         const isChecked = await invoiceCheckbox.isChecked()
         if (!isChecked) {
           await invoiceCheckbox.click()
@@ -98,8 +100,6 @@ test.describe('Branding Editor - Block Locks', () => {
       await proposalTab.click()
       await page.waitForTimeout(300)
     }
-
-    const textBlocks = page.locator('[data-testid="block"]').or(page.locator('div[data-type="text"]'))
 
     const blockCountBefore = await page.locator('[data-testid="block"], div[data-type]').count()
 
@@ -161,8 +161,6 @@ test.describe('Branding Editor - Block Locks', () => {
 
     if (await textInputs.count() > 0) {
       const firstInput = textInputs.first()
-
-      const initialValue = await firstInput.inputValue()
 
       await firstInput.click()
       await firstInput.press('Control+A')
