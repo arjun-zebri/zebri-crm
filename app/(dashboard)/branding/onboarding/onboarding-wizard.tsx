@@ -1,0 +1,212 @@
+'use client'
+
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+
+import { Button } from '@/components/ui/button'
+import type { BodyFont, HeadingFont } from '@/lib/branding/fonts'
+import type { Density } from '@/lib/branding/themes'
+import type { SurfaceTab } from '@/types/branding-preview'
+
+import { StepBusiness } from './step-business'
+import { StepDocuments } from './step-documents'
+import { StepLook } from './step-look'
+
+/**
+ * Complete onboarding result after all three steps.
+ * @public
+ */
+export interface OnboardingResult {
+  businessName: string
+  tagline: string
+  logoUrl: string
+  brandColor: string
+  fontHeading: HeadingFont
+  fontBody: BodyFont
+  density: Density
+  enabledSurfaces: SurfaceTab[]
+}
+
+/**
+ * Props for the onboarding wizard.
+ * @public
+ */
+export interface OnboardingWizardProps {
+  /** Prefill from existing scalar branding (users keep their look). */
+  initial: Partial<OnboardingResult>
+  /** Called when wizard completes or is skipped; must reload page data after. */
+  onComplete: (result: OnboardingResult) => Promise<void>
+}
+
+/**
+ * OnboardingWizard — First-run setup for branding.
+ *
+ * Three-step wizard: business identity, visual look, document surfaces.
+ * Supports skip on every step (uses defaults).
+ * Shows progress dots and step navigation.
+ *
+ * Design: full-page centered column, calm, no boxes-in-boxes.
+ * @public
+ */
+export function OnboardingWizard(props: OnboardingWizardProps) {
+  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [businessName, setBusinessName] = useState(props.initial.businessName || '')
+  const [tagline, setTagline] = useState(props.initial.tagline || '')
+  const [logoUrl, setLogoUrl] = useState(props.initial.logoUrl || '')
+  const [brandColor, setBrandColor] = useState(props.initial.brandColor || '#6366F1')
+  const [fontHeading, setFontHeading] = useState<HeadingFont>(props.initial.fontHeading || 'playfair')
+  const [fontBody, setFontBody] = useState<BodyFont>(props.initial.fontBody || 'inter')
+  const [density, setDensity] = useState<Density>(props.initial.density || 'cozy')
+  const [enabledSurfaces, setEnabledSurfaces] = useState<SurfaceTab[]>(
+    props.initial.enabledSurfaces && props.initial.enabledSurfaces.length > 0
+      ? props.initial.enabledSurfaces
+      : ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
+  )
+  const [loading, setLoading] = useState(false)
+
+  /**
+   * Merge into result object and call onComplete callback.
+   * Page will reload and mount the editor with new state.
+   */
+  const handleComplete = async () => {
+    const result: OnboardingResult = {
+      businessName,
+      tagline,
+      logoUrl,
+      brandColor,
+      fontHeading,
+      fontBody,
+      density,
+      enabledSurfaces,
+    }
+    setLoading(true)
+    try {
+      await props.onComplete(result)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * Skip: use initial (or defaults if missing) and enable all six surfaces.
+   */
+  const handleSkip = async () => {
+    const result: OnboardingResult = {
+      businessName: businessName || props.initial.businessName || '',
+      tagline: tagline || props.initial.tagline || '',
+      logoUrl: logoUrl || props.initial.logoUrl || '',
+      brandColor: brandColor || props.initial.brandColor || '#6366F1',
+      fontHeading: fontHeading || props.initial.fontHeading || 'playfair',
+      fontBody: fontBody || props.initial.fontBody || 'inter',
+      density: density || props.initial.density || 'cozy',
+      enabledSurfaces: ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
+    }
+    setLoading(true)
+    try {
+      await props.onComplete(result)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-surface px-4 py-8">
+      <div className="w-full max-w-lg flex flex-col gap-6">
+        {/* Progress dots */}
+        <div className="flex items-center justify-center gap-2">
+          {[1, 2, 3].map((s) => (
+            <div
+              key={s}
+              className={`h-2 rounded-full transition-all ${
+                s <= step ? 'w-8 bg-brand' : 'w-2 bg-surface-muted'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Step content */}
+        <div className="min-h-[400px] flex flex-col gap-6">
+          {step === 1 && (
+            <StepBusiness
+              businessName={businessName}
+              setBusinessName={setBusinessName}
+              tagline={tagline}
+              setTagline={setTagline}
+              logoUrl={logoUrl}
+              setLogoUrl={setLogoUrl}
+            />
+          )}
+
+          {step === 2 && (
+            <StepLook
+              logoUrl={logoUrl}
+              brandColor={brandColor}
+              setBrandColor={setBrandColor}
+              fontHeading={fontHeading}
+              setFontHeading={setFontHeading}
+              fontBody={fontBody}
+              setFontBody={setFontBody}
+              density={density}
+              setDensity={setDensity}
+            />
+          )}
+
+          {step === 3 && (
+            <StepDocuments
+              enabledSurfaces={enabledSurfaces}
+              setEnabledSurfaces={setEnabledSurfaces}
+            />
+          )}
+        </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setStep((s) => (s > 1 ? (s - 1 as 1 | 2 | 3) : s))}
+            disabled={step === 1 || loading}
+            className="cursor-pointer"
+          >
+            <ChevronLeft size={16} strokeWidth={1.5} />
+            Back
+          </Button>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={loading}
+              className="text-sm text-text-muted hover:text-text underline cursor-pointer disabled:opacity-50 disabled:cursor-default transition"
+            >
+              Skip, use defaults
+            </button>
+          </div>
+
+          {step < 3 ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setStep((s) => ((s + 1) as 1 | 2 | 3))}
+              disabled={loading}
+              className="cursor-pointer"
+            >
+              Next
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleComplete}
+              disabled={loading || enabledSurfaces.length === 0}
+              className="cursor-pointer"
+            >
+              {loading ? 'Finishing...' : 'Finish'}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

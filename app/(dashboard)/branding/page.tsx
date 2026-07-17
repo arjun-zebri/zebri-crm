@@ -12,6 +12,8 @@ import type { BrandKit, SurfaceTab } from '@/types/branding-preview'
 import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import { BrandingEditor } from './branding-editor'
+import { OnboardingWizard, type OnboardingResult } from './onboarding/onboarding-wizard'
+import { TEMPLATES } from './templates'
 
 interface UserMetadata {
   display_name?: string
@@ -155,6 +157,88 @@ export default function BrandingPage() {
     )
   }
 
+  /**
+   * Wizard completion handler: merge metadata, upsert branding, reload.
+   * Follows the same merge pattern as the autosave callback in branding-editor.
+   */
+  const handleWizardComplete = async (result: OnboardingResult) => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not signed in')
+
+    const existing = user.user_metadata || {}
+
+    // Build enabled_surfaces map from the result array.
+    const enabledSurfacesMap = result.enabledSurfaces.reduce(
+      (acc, surface) => {
+        acc[surface] = true
+        return acc
+      },
+      {} as Record<string, boolean>,
+    )
+
+    // Seed branding_blocks from classic templates for each ENABLED surface only.
+    // Disabled surfaces get empty arrays.
+    const branding_blocks: Record<string, Block[]> = {}
+    for (const surface of ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as SurfaceTab[]) {
+      if (result.enabledSurfaces.includes(surface)) {
+        // Find the classic template for this surface and call build() to get fresh blocks.
+        const template = TEMPLATES.find((t) => t.id === `${surface}-classic`)
+        branding_blocks[surface] = template ? template.build() : []
+      } else {
+        branding_blocks[surface] = []
+      }
+    }
+
+    // Upsert user_branding with blocks, enabled surfaces, and onboarded timestamp.
+    const { error: brandingError } = await supabase
+      .from('user_branding')
+      .upsert(
+        {
+          user_id: user.id,
+          branding_blocks: branding_blocks as unknown as any,
+          enabled_surfaces: enabledSurfacesMap as unknown as any,
+          onboarded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      )
+    if (brandingError) throw brandingError
+
+    // Merge scalar branding into auth metadata (same pattern as autosave).
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        ...existing,
+        business_name: result.businessName,
+        tagline: result.tagline,
+        logo_url: result.logoUrl || null,
+        brand_color: result.brandColor,
+        font_heading: result.fontHeading,
+        font_body: result.fontBody,
+        density: result.density,
+      },
+    })
+    if (error) throw error
+
+    // Reload page data so editor mounts with new state.
+    const { data: { user: updatedUser } } = await supabase.auth.getUser()
+    if (updatedUser) {
+      setMetadata(updatedUser.user_metadata as UserMetadata)
+    }
+    const { data: row } = await supabase
+      .from('user_branding')
+      .select('branding_blocks, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    setBranding((row as UserBrandingRow | null) ?? {
+      branding_blocks: null,
+      brand_kits: null,
+      portal_sections: null,
+      enabled_surfaces: null,
+      onboarded_at: new Date().toISOString(),
+    })
+  }
+
   const themePreset = metadata?.theme_preset ?? 'minimal'
   const fallback = themePreset === 'custom' ? THEME_PRESETS.minimal : (THEME_PRESETS[themePreset] ?? THEME_PRESETS.minimal)
 
@@ -197,6 +281,24 @@ export default function BrandingPage() {
   }
   const enabledSrc = (branding?.enabled_surfaces ?? defaultEnabledSurfaces) as Record<string, boolean>
   const onboardedAt = branding?.onboarded_at ?? null
+
+  // Gate: show wizard on first run, editor after onboarding.
+  if (onboardedAt === null) {
+    return (
+      <OnboardingWizard
+        initial={{
+          businessName: metadata?.business_name,
+          tagline: metadata?.tagline,
+          logoUrl: metadata?.logo_url,
+          brandColor: metadata?.brand_color || '#6366F1',
+          fontHeading: sanitizeHeading(metadata?.font_heading),
+          fontBody: sanitizeBody(metadata?.font_body),
+          density: metadata?.density || 'cozy',
+        }}
+        onComplete={handleWizardComplete}
+      />
+    )
+  }
 
   return (
     <BrandingEditor
