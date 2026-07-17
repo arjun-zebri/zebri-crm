@@ -52,7 +52,7 @@ export function FontPairingPicker(props: FontPairingPickerProps) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-text-muted mb-2">Font pairing</label>
+      <label className="block text-xs font-medium text-text-muted mb-2">Font pairing</label>
       <div className="space-y-2">
         {FONT_PAIRINGS.map((pairing) => {
           const selected = currentName === pairing.name
@@ -102,7 +102,7 @@ interface DensityPickerProps {
 export function DensityPicker(props: DensityPickerProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-text-muted mb-2">Spacing</label>
+      <label className="block text-xs font-medium text-text-muted mb-2">Spacing</label>
       <div className="grid grid-cols-3 gap-2">
         {(['compact', 'cozy', 'roomy'] as const).map((d) => {
           const selected = props.density === d

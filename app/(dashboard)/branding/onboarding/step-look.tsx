@@ -76,7 +76,7 @@ export function StepLook(props: StepLookProps) {
       <div className="space-y-4">
         {/* Brand color */}
         <div>
-          <label className="block text-sm font-medium text-text-muted mb-2">Brand color</label>
+          <label className="block text-xs font-medium text-text-muted mb-2">Brand color</label>
           <div className="flex items-center gap-3">
             <ColorPopover
               value={props.brandColor}

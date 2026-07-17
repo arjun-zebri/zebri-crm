@@ -37,7 +37,7 @@ export function StepBusiness(props: StepBusinessProps) {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-text-muted mb-2">Business name</label>
+          <label className="block text-xs font-medium text-text-muted mb-2">Business name</label>
           <Input
             size="sm"
             value={props.businessName}
@@ -48,7 +48,7 @@ export function StepBusiness(props: StepBusinessProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-muted mb-2">Tagline</label>
+          <label className="block text-xs font-medium text-text-muted mb-2">Tagline</label>
           <Input
             size="sm"
             value={props.tagline}
@@ -59,7 +59,7 @@ export function StepBusiness(props: StepBusinessProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-text-muted mb-2">Logo</label>
+          <label className="block text-xs font-medium text-text-muted mb-2">Logo</label>
           <LogoUpload logoUrl={props.logoUrl} setLogoUrl={props.setLogoUrl} />
         </div>
       </div>
