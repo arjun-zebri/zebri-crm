@@ -7,7 +7,7 @@ import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
 import { createClient } from '@/lib/supabase/client'
-import type { BrandKit } from '@/types/branding-preview'
+import type { BrandKit, SurfaceTab } from '@/types/branding-preview'
 
 import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
 import type { Block } from './blocks/types'
@@ -85,6 +85,8 @@ interface UserBrandingRow {
     files?: boolean
     vows?: boolean
   } | null
+  enabled_surfaces: Record<string, boolean> | null
+  onboarded_at: string | null
 }
 
 const fontsHref = googleFontsHref([...HEADING_FONTS, ...BODY_FONTS])
@@ -113,13 +115,15 @@ export default function BrandingPage() {
         setMetadata(user.user_metadata as UserMetadata)
         const { data: row } = await supabase
           .from('user_branding')
-          .select('branding_blocks, brand_kits, portal_sections')
+          .select('branding_blocks, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
           .eq('user_id', user.id)
           .maybeSingle()
         setBranding((row as UserBrandingRow | null) ?? {
           branding_blocks: null,
           brand_kits: null,
           portal_sections: null,
+          enabled_surfaces: null,
+          onboarded_at: null,
         })
       }
       setLoading(false)
@@ -181,6 +185,18 @@ export default function BrandingPage() {
   const migratedQuestionnaire = blocksSrc.questionnaire !== undefined ? repairBlocks('questionnaire', migrateBlocks(blocksSrc.questionnaire, 'questionnaire')) : null
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
+
+  // Default to all six surfaces enabled
+  const defaultEnabledSurfaces: Record<string, boolean> = {
+    proposal: true,
+    invoice: true,
+    contract: true,
+    portal: true,
+    vendorTimeline: true,
+    questionnaire: true,
+  }
+  const enabledSrc = (branding?.enabled_surfaces ?? defaultEnabledSurfaces) as Record<string, boolean>
+  const onboardedAt = branding?.onboarded_at ?? null
 
   return (
     <BrandingEditor
@@ -248,6 +264,8 @@ export default function BrandingPage() {
         buttonRadius: typeof metadata?.button_radius === 'number' ? metadata.button_radius : 8,
         sectionSpacing: typeof metadata?.section_spacing === 'number' ? metadata.section_spacing : 32,
         pageBackground: metadata?.page_background ?? surfaceColor,
+        enabledSurfaces: Object.keys(enabledSrc).filter((k) => enabledSrc[k]) as SurfaceTab[],
+        onboardedAt,
       }}
     />
   )

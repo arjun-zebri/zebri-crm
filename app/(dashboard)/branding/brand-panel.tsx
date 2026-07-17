@@ -34,6 +34,7 @@ import type { SurfaceTab } from '@/types/branding-preview'
 
 import { BusinessSection } from './business-section'
 import { Slider } from './components/slider'
+import { DocumentsSection } from './documents-section'
 import { TemplatesSection } from './templates-section'
 
 
@@ -43,6 +44,9 @@ interface BrandPanelProps {
   applyTemplate: (id: string) => void
   resetToTheme: () => void
   surface: SurfaceTab
+  enabledSurfaces: SurfaceTab[]
+  onToggleSurface: (surface: SurfaceTab, enabled: boolean) => void
+  resetSurfaceToTemplate: () => void
 
   brandColor: string
   setBrandColor: (v: string) => void
@@ -124,11 +128,12 @@ interface BrandPanelProps {
 
 }
 
-type SectionId = 'business' | 'templates' | 'colors' | 'fonts' | 'globalStyles'
+type SectionId = 'business' | 'documents' | 'templates' | 'colors' | 'fonts' | 'globalStyles'
 
 export function BrandPanel(props: BrandPanelProps) {
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
     business: true,
+    documents: false,
     templates: false,
     colors: false,
     fonts: false,
@@ -191,12 +196,22 @@ export function BrandPanel(props: BrandPanelProps) {
 
         <Accordion
           icon={<LayoutTemplate size={13} strokeWidth={1.75} className="text-gray-500" />}
+          title="Documents"
+          subtitle="Manage which surfaces are active"
+          open={open.documents}
+          onToggle={() => toggle('documents')}
+        >
+          <DocumentsSection enabledSurfaces={props.enabledSurfaces} onToggleSurface={props.onToggleSurface} />
+        </Accordion>
+
+        <Accordion
+          icon={<LayoutTemplate size={13} strokeWidth={1.75} className="text-gray-500" />}
           title="Templates"
           subtitle="Ready-made layouts for this surface"
           open={open.templates}
           onToggle={() => toggle('templates')}
         >
-          <TemplatesSection surface={props.surface} applyTemplate={props.applyTemplate} />
+          <TemplatesSection surface={props.surface} applyTemplate={props.applyTemplate} resetToTemplate={props.resetSurfaceToTemplate} />
         </Accordion>
 
         <Accordion

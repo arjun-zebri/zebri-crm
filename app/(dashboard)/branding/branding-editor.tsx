@@ -90,6 +90,8 @@ interface BrandingEditorProps {
     buttonRadius: number
     sectionSpacing: number
     pageBackground: string
+    enabledSurfaces: SurfaceTab[]
+    onboardedAt: string | null
   }
 }
 
@@ -139,6 +141,8 @@ export interface EditorState {
   buttonRadius: number
   sectionSpacing: number
   pageBackground: string
+  enabledSurfaces: SurfaceTab[]
+  onboardedAt: string | null
 }
 
 export function BrandingEditor({ initialData }: BrandingEditorProps) {
@@ -191,6 +195,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       buttonRadius: initialData.buttonRadius,
       sectionSpacing: initialData.sectionSpacing,
       pageBackground: initialData.pageBackground,
+      enabledSurfaces: initialData.enabledSurfaces,
+      onboardedAt: initialData.onboardedAt,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -223,6 +229,15 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       portal: repairBlocks('portal', value.blocks.portal),
     }
 
+    // Build enabled_surfaces map from the enabledSurfaces array.
+    const enabledSurfacesMap = value.enabledSurfaces.reduce(
+      (acc, surface) => {
+        acc[surface] = true
+        return acc
+      },
+      {} as Record<string, boolean>,
+    )
+
     // Heavy fields (block trees, saved kits, portal section toggles) live in
     // public.user_branding so they don't bloat the auth JWT and trigger HTTP
     // 431 on the cookie. user_metadata only keeps small scalar fields.
@@ -236,6 +251,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           branding_blocks: repairedBlocks as unknown as Json,
           brand_kits: value.brandKits as unknown as Json,
           portal_sections: value.portalSections as unknown as Json,
+          enabled_surfaces: enabledSurfacesMap as unknown as Json,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' },
@@ -301,6 +317,13 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   useEffect(() => {
     if (status === 'error') toast('Could not save changes', 'error')
   }, [status, toast])
+
+  // Switch to the first enabled surface if the active surface becomes disabled.
+  useEffect(() => {
+    if (!state.enabledSurfaces.includes(surface)) {
+      setSurface(state.enabledSurfaces[0] || 'proposal')
+    }
+  }, [state.enabledSurfaces, surface])
 
   const setEditor = (patch: Partial<EditorState>, customize = true) => {
     setState((prev) => ({ ...prev, ...patch, themePreset: customize ? 'custom' : prev.themePreset }))
@@ -441,6 +464,60 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       { commit: true },
     )
     toast(`Applied the "${tpl.name}" template`, 'success')
+  }
+
+  /** Toggle a surface's enabled state. Disabling clears the surface's blocks to [].
+   *  Enabling re-seeds blocks if they are empty. */
+  const onToggleSurface = (surface: SurfaceTab, enabled: boolean) => {
+    setState((prev) => {
+      const newEnabled = enabled
+        ? [...prev.enabledSurfaces, surface]
+        : prev.enabledSurfaces.filter((s) => s !== surface)
+
+      return {
+        ...prev,
+        enabledSurfaces: newEnabled,
+        blocks: {
+          ...prev.blocks,
+          [surface]: enabled && prev.blocks[surface].length === 0
+            ? defaultBlocksFor(surface)
+            : enabled
+              ? prev.blocks[surface]
+              : [],
+        },
+      }
+    })
+  }
+
+  /** Reset the current surface to its template layout. For surfaces without templates,
+   *  applies defaultBlocksFor. Task 20 wires vendorTimeline and questionnaire template ids. */
+  const resetSurfaceToTemplate = () => {
+    const templateMap: Record<SurfaceTab, string | null> = {
+      proposal: 'wedding-proposal',
+      invoice: 'deposit-invoice',
+      contract: 'esign-contract',
+      portal: 'couple-portal',
+      vendorTimeline: null, // Task 20 wires vendor-timeline-classic template id
+      questionnaire: null, // Task 20 wires questionnaire-classic template id
+    }
+
+    const templateId = templateMap[surface]
+    if (templateId) {
+      applyTemplate(templateId)
+    } else {
+      // For surfaces without registry templates, apply defaults directly
+      setState(
+        (prev) => ({
+          ...prev,
+          blocks: {
+            ...prev.blocks,
+            [surface]: defaultBlocksFor(surface),
+          },
+        }),
+        { commit: true }
+      )
+      toast(`Reset ${surface} to default layout`, 'success')
+    }
   }
 
   const uploadAsset = async (file: File, kind: 'logo' | 'favicon' | 'header'): Promise<string> => {
@@ -909,7 +986,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         }
       />
 
-      <SurfaceTabs surface={surface} setSurface={setSurface} state={previewState} />
+      <SurfaceTabs surface={surface} setSurface={setSurface} state={previewState} enabledSurfaces={state.enabledSurfaces} />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <BrandPanel
@@ -918,6 +995,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           applyTemplate={applyTemplate}
           resetToTheme={resetToTheme}
           surface={surface}
+          enabledSurfaces={state.enabledSurfaces}
+          onToggleSurface={onToggleSurface}
+          resetSurfaceToTemplate={resetSurfaceToTemplate}
           brandColor={state.brandColor}
           setBrandColor={(v) => setEditor({ brandColor: v })}
           accentColor={state.accentColor}

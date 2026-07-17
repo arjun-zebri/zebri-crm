@@ -1,6 +1,7 @@
 'use client'
 
-import { FileText, Receipt, FileSignature, Users2, Clock, MessageSquare } from 'lucide-react'
+import { Clock, FileSignature, FileText, MessageSquare, Receipt, Users2 } from 'lucide-react'
+
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { SurfaceTab, BrandPreviewState } from '@/types/branding-preview'
 
@@ -8,6 +9,7 @@ interface SurfaceTabsProps {
   surface: SurfaceTab
   setSurface: (s: SurfaceTab) => void
   state: BrandPreviewState
+  enabledSurfaces: SurfaceTab[]
 }
 
 const TABS: { id: SurfaceTab; label: string; icon: typeof FileText; subtitle: string }[] = [
@@ -19,11 +21,11 @@ const TABS: { id: SurfaceTab; label: string; icon: typeof FileText; subtitle: st
   { id: 'questionnaire', label: 'Questionnaire', subtitle: 'Inquiry form', icon: MessageSquare },
 ]
 
-export function SurfaceTabs({ surface, setSurface, state }: SurfaceTabsProps) {
+export function SurfaceTabs({ surface, setSurface, state, enabledSurfaces }: SurfaceTabsProps) {
   return (
     <div className="flex-shrink-0 border-b border-gray-100 bg-white">
       <div className="flex items-center gap-2 px-3 py-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {TABS.map((tab) => {
+        {TABS.filter((tab) => enabledSurfaces.includes(tab.id)).map((tab) => {
           const active = surface === tab.id
           return (
             <button
