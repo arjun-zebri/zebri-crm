@@ -12,7 +12,8 @@ import type { BrandKit, SurfaceTab } from '@/types/branding-preview'
 import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import { BrandingEditor } from './branding-editor'
-import { OnboardingWizard, type OnboardingResult } from './onboarding/onboarding-wizard'
+import { OnboardingModal } from './onboarding/onboarding-modal'
+import type { OnboardingResult } from './onboarding/onboarding-wizard'
 import { TEMPLATES } from './templates'
 
 interface UserMetadata {
@@ -301,94 +302,98 @@ export default function BrandingPage() {
   const enabledSrc = (branding?.enabled_surfaces ?? defaultEnabledSurfaces) as Record<string, boolean>
   const onboardedAt = branding?.onboarded_at ?? null
 
-  // Gate: show wizard on first run, editor after onboarding.
-  if (onboardedAt === null) {
-    return (
-      <OnboardingWizard
-        initial={{
-          businessName: metadata?.business_name,
-          tagline: metadata?.tagline,
-          logoUrl: metadata?.logo_url,
-          brandColor: metadata?.brand_color || '#6366F1',
-          fontHeading: sanitizeHeading(metadata?.font_heading),
-          fontBody: sanitizeBody(metadata?.font_body),
-          density: metadata?.density || 'cozy',
-        }}
-        onComplete={handleWizardComplete}
-        error={wizardError}
-      />
-    )
-  }
-
   return (
-    <BrandingEditor
-      initialData={{
-        kitName: metadata?.brand_kit_name || 'My brand',
-        logoUrl: metadata?.logo_url || '',
-        faviconUrl: metadata?.favicon_url || '',
-        headerImageUrl: metadata?.header_image_url || '',
-        brandColor,
-        accentColor: metadata?.accent_color || fallback.accent,
-        surfaceColor,
-        textColor: metadata?.text_color || fallback.text,
-        mutedColor: metadata?.muted_color || fallback.muted,
-        secondaryColor: metadata?.secondary_color || '#FFFFFF',
-        secondaryTextColor: metadata?.secondary_text_color || '#374151',
-        tagline: metadata?.tagline || '',
-        abn: metadata?.abn || '',
-        showContactOnDocuments: true,
-        fontHeading: sanitizeHeading(metadata?.font_heading),
-        fontBody: sanitizeBody(metadata?.font_body),
-        fontWeight: sanitizeWeight(metadata?.font_weight, fallback.headingWeight),
-        fontBodyWeight: sanitizeWeight(metadata?.font_body_weight, fallback.bodyWeight),
-        fontScale: typeof metadata?.font_scale === 'number' ? metadata.font_scale : fallback.scale,
-        density: metadata?.density ?? fallback.density,
-        cornerRadius: typeof metadata?.corner_radius === 'number' ? metadata.corner_radius : fallback.radius,
-        docPadding: typeof metadata?.doc_padding === 'number' ? metadata.doc_padding : 12,
-        themePreset,
-        blocks: {
-          // Only fall back to defaults when the user has never saved this
-          // surface. An empty array means they intentionally deleted everything
-          // and should see the empty state, not the defaults.
-          proposal: migratedProposal !== null ? migratedProposal : defaultBlocksFor('proposal'),
-          invoice:  migratedInvoice  !== null ? migratedInvoice  : defaultBlocksFor('invoice'),
-          contract: migratedContract !== null ? migratedContract : defaultBlocksFor('contract'),
-          portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),
-          vendorTimeline: migratedVendorTimeline !== null ? migratedVendorTimeline : defaultBlocksFor('vendorTimeline'),
-          questionnaire: migratedQuestionnaire !== null ? migratedQuestionnaire : defaultBlocksFor('questionnaire'),
-        },
-        businessName: metadata?.business_name || '',
-        phone: metadata?.phone || '',
-        website: metadata?.website || '',
-        instagramUrl: metadata?.instagram_url || '',
-        facebookUrl: metadata?.facebook_url || '',
-        brandKits: kits,
-        activeKitId: metadata?.active_kit_id ?? null,
-        portalSections: {
-          timeline: portalSrc.timeline ?? true,
-          contacts: portalSrc.contacts ?? true,
-          payments: portalSrc.payments ?? true,
-          contracts: portalSrc.contracts ?? true,
-          songs: portalSrc.songs ?? true,
-          files: portalSrc.files ?? true,
-          vows: portalSrc.vows ?? true,
-        },
-        proposalLabels: resolveProposalLabels(metadata?.proposal_labels),
-        headingSize: typeof metadata?.heading_size === 'number' ? metadata.heading_size : 32,
-        bodySize: typeof metadata?.body_size === 'number' ? metadata.body_size : 15,
-        headingCase: metadata?.heading_case ?? 'none',
-        bodyCase: metadata?.body_case ?? 'none',
-        headingLetterSpacing: typeof metadata?.heading_letter_spacing === 'number' ? metadata.heading_letter_spacing : 0,
-        bodyLineHeight: typeof metadata?.body_line_height === 'number' ? metadata.body_line_height : 1.5,
-        linkColor: metadata?.link_color ?? brandColor,
-        buttonVariant: metadata?.button_variant ?? 'fill',
-        buttonSize: metadata?.button_size ?? 'md',
-        buttonRadius: typeof metadata?.button_radius === 'number' ? metadata.button_radius : 8,
-        sectionSpacing: typeof metadata?.section_spacing === 'number' ? metadata.section_spacing : 32,
-        pageBackground: metadata?.page_background ?? surfaceColor,
-        enabledSurfaces: Object.keys(enabledSrc).filter((k) => enabledSrc[k]) as SurfaceTab[],
-        onboardedAt,
-      }}
-    />
+    <>
+      {/* Editor always renders, made inert while onboarding modal is open. */}
+      <div inert={onboardedAt === null ? true : undefined}>
+        <BrandingEditor
+          initialData={{
+            kitName: metadata?.brand_kit_name || 'My brand',
+            logoUrl: metadata?.logo_url || '',
+            faviconUrl: metadata?.favicon_url || '',
+            headerImageUrl: metadata?.header_image_url || '',
+            brandColor,
+            accentColor: metadata?.accent_color || fallback.accent,
+            surfaceColor,
+            textColor: metadata?.text_color || fallback.text,
+            mutedColor: metadata?.muted_color || fallback.muted,
+            secondaryColor: metadata?.secondary_color || '#FFFFFF',
+            secondaryTextColor: metadata?.secondary_text_color || '#374151',
+            tagline: metadata?.tagline || '',
+            abn: metadata?.abn || '',
+            showContactOnDocuments: true,
+            fontHeading: sanitizeHeading(metadata?.font_heading),
+            fontBody: sanitizeBody(metadata?.font_body),
+            fontWeight: sanitizeWeight(metadata?.font_weight, fallback.headingWeight),
+            fontBodyWeight: sanitizeWeight(metadata?.font_body_weight, fallback.bodyWeight),
+            fontScale: typeof metadata?.font_scale === 'number' ? metadata.font_scale : fallback.scale,
+            density: metadata?.density ?? fallback.density,
+            cornerRadius: typeof metadata?.corner_radius === 'number' ? metadata.corner_radius : fallback.radius,
+            docPadding: typeof metadata?.doc_padding === 'number' ? metadata.doc_padding : 12,
+            themePreset,
+            blocks: {
+              // Only fall back to defaults when the user has never saved this
+              // surface. An empty array means they intentionally deleted everything
+              // and should see the empty state, not the defaults.
+              proposal: migratedProposal !== null ? migratedProposal : defaultBlocksFor('proposal'),
+              invoice:  migratedInvoice  !== null ? migratedInvoice  : defaultBlocksFor('invoice'),
+              contract: migratedContract !== null ? migratedContract : defaultBlocksFor('contract'),
+              portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),
+              vendorTimeline: migratedVendorTimeline !== null ? migratedVendorTimeline : defaultBlocksFor('vendorTimeline'),
+              questionnaire: migratedQuestionnaire !== null ? migratedQuestionnaire : defaultBlocksFor('questionnaire'),
+            },
+            businessName: metadata?.business_name || '',
+            phone: metadata?.phone || '',
+            website: metadata?.website || '',
+            instagramUrl: metadata?.instagram_url || '',
+            facebookUrl: metadata?.facebook_url || '',
+            brandKits: kits,
+            activeKitId: metadata?.active_kit_id ?? null,
+            portalSections: {
+              timeline: portalSrc.timeline ?? true,
+              contacts: portalSrc.contacts ?? true,
+              payments: portalSrc.payments ?? true,
+              contracts: portalSrc.contracts ?? true,
+              songs: portalSrc.songs ?? true,
+              files: portalSrc.files ?? true,
+              vows: portalSrc.vows ?? true,
+            },
+            proposalLabels: resolveProposalLabels(metadata?.proposal_labels),
+            headingSize: typeof metadata?.heading_size === 'number' ? metadata.heading_size : 32,
+            bodySize: typeof metadata?.body_size === 'number' ? metadata.body_size : 15,
+            headingCase: metadata?.heading_case ?? 'none',
+            bodyCase: metadata?.body_case ?? 'none',
+            headingLetterSpacing: typeof metadata?.heading_letter_spacing === 'number' ? metadata.heading_letter_spacing : 0,
+            bodyLineHeight: typeof metadata?.body_line_height === 'number' ? metadata.body_line_height : 1.5,
+            linkColor: metadata?.link_color ?? brandColor,
+            buttonVariant: metadata?.button_variant ?? 'fill',
+            buttonSize: metadata?.button_size ?? 'md',
+            buttonRadius: typeof metadata?.button_radius === 'number' ? metadata.button_radius : 8,
+            sectionSpacing: typeof metadata?.section_spacing === 'number' ? metadata.section_spacing : 32,
+            pageBackground: metadata?.page_background ?? surfaceColor,
+            enabledSurfaces: Object.keys(enabledSrc).filter((k) => enabledSrc[k]) as SurfaceTab[],
+            onboardedAt,
+          }}
+        />
+      </div>
+
+      {/* Onboarding modal overlay (only when fresh user). */}
+      {onboardedAt === null && (
+        <OnboardingModal
+          isOpen={true}
+          initial={{
+            businessName: metadata?.business_name,
+            tagline: metadata?.tagline,
+            logoUrl: metadata?.logo_url,
+            brandColor: metadata?.brand_color || '#6366F1',
+            fontHeading: sanitizeHeading(metadata?.font_heading),
+            fontBody: sanitizeBody(metadata?.font_body),
+            density: metadata?.density || 'cozy',
+          }}
+          onComplete={handleWizardComplete}
+          error={wizardError}
+        />
+      )}
+    </>
   )
 }

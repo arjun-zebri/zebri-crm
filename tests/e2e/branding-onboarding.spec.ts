@@ -72,21 +72,24 @@ test.describe('Branding Onboarding Wizard', () => {
     await login(page)
     await page.goto('/branding')
 
-    await expect(page.getByRole('heading', { name: /let's start with your identity/i })).toBeVisible({ timeout: 5000 })
+    // Modal dialog scoping
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 5000 })
+    await expect(dialog.getByRole('heading', { name: /let's start with your identity/i })).toBeVisible()
 
-    // Use aria-label for business name input
-    const businessNameInput = page.getByLabel('Business name')
+    // Use aria-label for business name input, scoped within dialog
+    const businessNameInput = dialog.getByLabel('Business name')
     await businessNameInput.waitFor({ state: 'visible', timeout: 5000 })
     await businessNameInput.fill('Test MC')
 
-    const nextButton = page.getByRole('button', { name: /next/i }).first()
+    const nextButton = dialog.getByRole('button', { name: /next/i }).first()
     await nextButton.click()
     await page.waitForTimeout(200)
 
-    await expect(page.getByRole('heading', { name: /choose your look/i })).toBeVisible({ timeout: 5000 })
+    await expect(dialog.getByRole('heading', { name: /choose your look/i })).toBeVisible({ timeout: 5000 })
 
     // Set brand color via the hex textbox using aria-label
-    const colorInput = page.getByLabel('Brand color hex')
+    const colorInput = dialog.getByLabel('Brand color hex')
     await colorInput.waitFor({ state: 'visible', timeout: 5000 })
     await colorInput.clear()
     await colorInput.fill('#8B5CF6')
@@ -94,15 +97,15 @@ test.describe('Branding Onboarding Wizard', () => {
     await nextButton.click()
     await page.waitForTimeout(200)
 
-    await expect(page.getByRole('heading', { name: /which documents/i })).toBeVisible({ timeout: 5000 })
+    await expect(dialog.getByRole('heading', { name: /which documents/i })).toBeVisible({ timeout: 5000 })
 
     // Uncheck Invoices if it's checked
-    const invoiceCheckbox = page.getByRole('checkbox', { name: /invoices/i })
+    const invoiceCheckbox = dialog.getByRole('checkbox', { name: /invoices/i })
     if (await invoiceCheckbox.isChecked()) {
       await invoiceCheckbox.click()
     }
 
-    const finishButton = page.getByRole('button', { name: /finish|complete/i }).first()
+    const finishButton = dialog.getByRole('button', { name: /finish|complete/i }).first()
     await finishButton.click()
 
     await page.waitForTimeout(500)
@@ -127,27 +130,28 @@ test.describe('Branding Onboarding Wizard', () => {
     await login(page)
     await page.goto('/branding')
 
-    const wizard = page.getByRole('heading', { name: /let's start with your identity/i })
+    const dialog = page.getByRole('dialog')
+    const wizard = dialog.getByRole('heading', { name: /let's start with your identity/i })
     const editor = page.getByRole('button', { name: 'Preview', exact: true })
 
     const wizardVisible = await wizard.isVisible({ timeout: 2000 }).catch(() => false)
 
     if (wizardVisible) {
       // User is fresh, complete the wizard
-      const businessNameInput = page.getByLabel('Business name')
+      const businessNameInput = dialog.getByLabel('Business name')
       await businessNameInput.fill('Quick Test MC')
 
-      const nextButton = page.getByRole('button', { name: /next/i }).first()
+      const nextButton = dialog.getByRole('button', { name: /next/i }).first()
       await nextButton.click()
       await page.waitForTimeout(200)
 
-      const colorInput = page.getByLabel('Brand color hex')
+      const colorInput = dialog.getByLabel('Brand color hex')
       await colorInput.fill('#6366F1')
 
       await nextButton.click()
       await page.waitForTimeout(200)
 
-      const finishButton = page.getByRole('button', { name: /finish|complete/i }).first()
+      const finishButton = dialog.getByRole('button', { name: /finish|complete/i }).first()
       await finishButton.click()
     }
 

@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 
+import { OnboardingModal } from '@/app/(dashboard)/branding/onboarding/onboarding-modal'
 import { OnboardingWizard } from '@/app/(dashboard)/branding/onboarding/onboarding-wizard'
 
 describe('OnboardingWizard', () => {
@@ -10,64 +11,68 @@ describe('OnboardingWizard', () => {
     const onComplete = vi.fn().mockResolvedValue(undefined)
 
     render(
-      <OnboardingWizard
-        initial={{
-          businessName: '',
-          tagline: '',
-          logoUrl: '',
-          brandColor: '#6366F1',
-          fontHeading: 'playfair',
-          fontBody: 'inter',
-          density: 'cozy',
-        }}
-        onComplete={onComplete}
-      />,
+      <div role="dialog">
+        <OnboardingWizard
+          initial={{
+            businessName: '',
+            tagline: '',
+            logoUrl: '',
+            brandColor: '#6366F1',
+            fontHeading: 'playfair',
+            fontBody: 'inter',
+            density: 'cozy',
+          }}
+          onComplete={onComplete}
+        />
+      </div>,
     )
 
-    // Step 1: Business
-    expect(screen.getByText("Let's start with your identity")).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog')
 
-    const businessInput = screen.getByLabelText('Business name')
+    // Step 1: Business
+    expect(within(dialog).getByText("Let's start with your identity")).toBeInTheDocument()
+
+    const businessInput = within(dialog).getByLabelText('Business name')
     await user.type(businessInput, 'My Wedding Band')
 
-    const taglineInput = screen.getByLabelText('Tagline')
+    const taglineInput = within(dialog).getByLabelText('Tagline')
     await user.type(taglineInput, 'Making your day unforgettable')
 
     // Click Next to go to Step 2
-    const nextButton = screen.getByRole('button', { name: /next/i })
+    const nextButton = within(dialog).getByRole('button', { name: /next/i })
     await user.click(nextButton)
 
     // Step 2: Look
     await waitFor(() => {
-      expect(screen.getByText('Choose your look')).toBeInTheDocument()
+      expect(within(dialog).getByText('Choose your look')).toBeInTheDocument()
     })
 
     // Verify font pairings are shown
-    expect(screen.getByLabelText('Serif classic')).toBeInTheDocument()
-    expect(screen.getByLabelText('Modern')).toBeInTheDocument()
-    expect(screen.getByLabelText('Editorial')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Serif classic')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Modern')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Editorial')).toBeInTheDocument()
 
     // Verify density options are shown
-    expect(screen.getByLabelText('compact')).toBeInTheDocument()
-    expect(screen.getByLabelText('cozy')).toBeInTheDocument()
-    expect(screen.getByLabelText('roomy')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('compact')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('cozy')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('roomy')).toBeInTheDocument()
 
     // Click Next to go to Step 3
-    const nextButton2 = screen.getByRole('button', { name: /next/i })
+    const nextButton2 = within(dialog).getByRole('button', { name: /next/i })
     await user.click(nextButton2)
 
     // Step 3: Documents
     await waitFor(() => {
-      expect(screen.getByText('Which documents?')).toBeInTheDocument()
+      expect(within(dialog).getByText('Which documents?')).toBeInTheDocument()
     })
 
     // Verify all surface toggles are shown and initially checked
-    const proposalCheckbox = screen.getByLabelText('Proposals')
-    const invoiceCheckbox = screen.getByLabelText('Invoices')
-    const contractCheckbox = screen.getByLabelText('Contracts')
-    const portalCheckbox = screen.getByLabelText('Client portal')
-    const runSheetCheckbox = screen.getByLabelText('Run sheet')
-    const questionnaireCheckbox = screen.getByLabelText('Questionnaires')
+    const proposalCheckbox = within(dialog).getByLabelText('Proposals')
+    const invoiceCheckbox = within(dialog).getByLabelText('Invoices')
+    const contractCheckbox = within(dialog).getByLabelText('Contracts')
+    const portalCheckbox = within(dialog).getByLabelText('Client portal')
+    const runSheetCheckbox = within(dialog).getByLabelText('Run sheet')
+    const questionnaireCheckbox = within(dialog).getByLabelText('Questionnaires')
 
     expect(proposalCheckbox).toBeChecked()
     expect(invoiceCheckbox).toBeChecked()
@@ -85,7 +90,7 @@ describe('OnboardingWizard', () => {
     expect(contractCheckbox).toBeChecked()
 
     // Click Finish button
-    const finishButton = screen.getByRole('button', { name: /finish/i })
+    const finishButton = within(dialog).getByRole('button', { name: /finish/i })
     await user.click(finishButton)
 
     // Verify onComplete was called with correct payload
@@ -112,23 +117,27 @@ describe('OnboardingWizard', () => {
     const onComplete = vi.fn().mockResolvedValue(undefined)
 
     render(
-      <OnboardingWizard
-        initial={{}}
-        onComplete={onComplete}
-      />,
+      <div role="dialog">
+        <OnboardingWizard
+          initial={{}}
+          onComplete={onComplete}
+        />
+      </div>,
     )
 
+    const dialog = screen.getByRole('dialog')
+
     // Navigate to step 3 (Documents)
-    const nextButton = screen.getByRole('button', { name: /next/i })
+    const nextButton = within(dialog).getByRole('button', { name: /next/i })
     await user.click(nextButton)
     await user.click(nextButton)
 
     await waitFor(() => {
-      expect(screen.getByText('Which documents?')).toBeInTheDocument()
+      expect(within(dialog).getByText('Which documents?')).toBeInTheDocument()
     })
 
     // Get all checkboxes
-    const checkboxes = screen.getAllByRole('checkbox')
+    const checkboxes = within(dialog).getAllByRole('checkbox')
 
     // Uncheck 5 of the 6 surfaces
     for (let i = 0; i < 5; i++) {
@@ -147,14 +156,18 @@ describe('OnboardingWizard', () => {
     const onComplete = vi.fn().mockResolvedValue(undefined)
 
     render(
-      <OnboardingWizard
-        initial={{}}
-        onComplete={onComplete}
-      />,
+      <div role="dialog">
+        <OnboardingWizard
+          initial={{}}
+          onComplete={onComplete}
+        />
+      </div>,
     )
 
+    const dialog = screen.getByRole('dialog')
+
     // Click Skip button
-    const skipButton = screen.getByRole('button', { name: /skip, use defaults/i })
+    const skipButton = within(dialog).getByRole('button', { name: /skip, use defaults/i })
     await user.click(skipButton)
 
     // Verify onComplete was called with all surfaces enabled
