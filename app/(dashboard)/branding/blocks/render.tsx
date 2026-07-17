@@ -1253,7 +1253,7 @@ export function RenderProposalBody({
 /**
  * Placeholder block shown in the branding editor where the vendor run sheet
  * (live timeline data) will render on the public page. The MC can never edit
- * the run sheet here — that flows from event data in real time. Same model
+ * the run sheet here: it flows from event data in real time. Same model
  * as `RenderContractBody` and `RenderPaymentSchedule`.
  *
  * Renders with a dashed border + muted "Live data" badge so it is
@@ -1324,7 +1324,7 @@ export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }
 /**
  * Placeholder block shown in the branding editor where the questionnaire
  * will render on the public page. The MC can never edit the questionnaire
- * here — the structure and content are fixed. Same model as
+ * here: the structure and content are fixed. Same model as
  * `RenderContractBody` and `RenderPaymentSchedule`.
  *
  * Renders with a dashed border + muted "Fixed" badge so it is

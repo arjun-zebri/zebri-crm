@@ -95,7 +95,7 @@ function MiniThumb({
         </div>
       )}
       <span className="absolute bottom-0.5 right-0.5 text-gray-300">
-        <Icon size={6} strokeWidth={2} />
+        <Icon size={6} strokeWidth={1.5} />
       </span>
     </div>
   )

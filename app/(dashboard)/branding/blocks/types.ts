@@ -258,7 +258,7 @@ export interface ProposalBodyBlock extends BaseBlock {
 }
 
 /**
- * Marker block — represents the position where the vendor run sheet
+ * Marker block represents the position where the vendor run sheet
  * (live timeline data) will appear. The MC can drag chrome blocks above
  * and below it in the branding editor; the run sheet content itself is
  * never editable on the branding surface. Same model as `couplePortal`,
@@ -269,7 +269,7 @@ export interface VendorTimelineBodyBlock extends BaseBlock {
 }
 
 /**
- * Marker block — represents the position where the questionnaire steps
+ * Marker block represents the position where the questionnaire steps
  * (fixed content) will appear. The MC can drag chrome blocks above and
  * below it in the branding editor; the questionnaire itself is never
  * editable on the branding surface. Same model as `couplePortal`,
