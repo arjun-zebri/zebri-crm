@@ -155,7 +155,7 @@ export default function PublicInvoicePage() {
       className={`min-h-screen ${pad.page} px-4`}
       style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
     >
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg mx-auto @container/doc">
         {showHeaderBannerImage ? (
           <div
             className="mb-5 overflow-hidden"

@@ -229,7 +229,7 @@ export default function PublicContractPage() {
       className="min-h-screen"
       style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
     >
-      <div className={`max-w-3xl mx-auto ${pad.page} px-4`}>
+      <div className={`max-w-3xl mx-auto ${pad.page} px-4 @container/doc`}>
         {showHeaderBanner ? (
           <div className="mb-5 overflow-hidden" style={{ borderRadius: radius }}>
             {/* User-uploaded brand asset — no next/image. */}

@@ -258,7 +258,7 @@ export default async function PortalPage({
     >
       <BrandingHead branding={branding} />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-20">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-20 @container/doc">
 
         {hasBlocks && branding ? (
           preBlocks.length > 0 && (

@@ -175,7 +175,7 @@ export default function PublicProposalPage() {
         fontFamily: branding?.bodyFontFamily,
       }}
     >
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-xl mx-auto @container/doc">
         {proposal && pageState === 'accepted' ? (
           <ProposalStatusBanner
             kind="accepted"

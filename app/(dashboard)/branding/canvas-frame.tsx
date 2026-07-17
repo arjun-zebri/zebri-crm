@@ -37,9 +37,9 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children }: CanvasFra
             style={{ zoom }}
           >
             {device === 'mobile' ? (
-              <div className="w-[380px]">{children}</div>
+              <div className="w-[380px] @container/doc">{children}</div>
             ) : (
-              <div style={{ width: desktopWidth }} className="max-w-full">{children}</div>
+              <div style={{ width: desktopWidth }} className="max-w-full @container/doc">{children}</div>
             )}
           </div>
         </div>

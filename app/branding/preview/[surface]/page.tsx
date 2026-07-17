@@ -209,7 +209,7 @@ function ProposalPreview({
   return (
     <div style={pageStyle}>
       <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden" style={{ background: branding.surface_color }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden @container/doc" style={{ background: branding.surface_color }}>
           <ProposalDocumentBody
             blocks={blocks}
             branding={branding}
@@ -249,7 +249,7 @@ function InvoicePreview({
   return (
     <div style={pageStyle}>
       <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8" style={{ background: branding.surface_color }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
           <PublicBlockRenderer
             blocks={blocks}
             branding={branding}
@@ -279,7 +279,7 @@ function ContractPreview({
   return (
     <div style={pageStyle}>
       <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8" style={{ background: branding.surface_color }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
           <PublicBlockRenderer
             blocks={blocks}
             branding={branding}
@@ -316,7 +316,7 @@ function PortalPreview({
   return (
     <div style={pageStyle}>
       <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden p-8" style={{ background: branding.surface_color }}>
+        <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
           <PublicBlockRenderer
             blocks={blocks}
             branding={branding}
