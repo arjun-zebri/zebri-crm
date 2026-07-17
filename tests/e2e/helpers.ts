@@ -12,7 +12,8 @@ export function uniqueName(prefix: string): string {
  * This function checks for that fast path first.
  *
  * Without storageState (or when running auth tests with cleared state), it
- * performs the full login flow.
+ * performs the full login flow via UI. Works on all servers: production, main dev server,
+ * and isolated local Supabase (localhost:3123).
  */
 export async function login(page: Page) {
   // Fast path: if storageState already has a valid session, '/' won't redirect to /login
