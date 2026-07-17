@@ -65,6 +65,8 @@ describe('buildPdfHtml with branding', () => {
     expect(html).toContain('$1,100.00')
     // Verify no branding artifacts when branding omitted.
     expect(html).not.toContain('#FF6B35')
+    // Snapshot unbranded output to catch future changes.
+    expect(html).toMatchSnapshot()
   })
 
   it('renders invoice with branding', () => {
@@ -89,6 +91,8 @@ describe('buildPdfHtml with branding', () => {
     expect(html).toContain('Test contract content')
     // Verify no branding artifacts when branding omitted.
     expect(html).not.toContain('#FF6B35')
+    // Snapshot unbranded output to catch future changes.
+    expect(html).toMatchSnapshot()
   })
 
   it('renders contract with branding', () => {
