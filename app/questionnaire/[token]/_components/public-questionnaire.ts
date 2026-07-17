@@ -7,6 +7,7 @@
  *
  * @module app/questionnaire/[token]/_components/public-questionnaire
  */
+import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import type { Question, Responses } from '@/lib/questionnaires/question-schema'
 
@@ -21,6 +22,7 @@ export interface PublicQuestionnaire extends PublicBranding {
   responses: Responses
   completed_at: string | null
   couple_name: string
+  branding_blocks: Block[] | null
 }
 
 /**

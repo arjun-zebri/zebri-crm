@@ -75,6 +75,8 @@ interface BlockRendererProps {
   onEditProposalLabel?: ProposalLabelEdit
   /** Proposal surface only: toggle the single/multi package preview. */
   setProposalPreviewMode?: (mode: 'single' | 'multi') => void
+  /** Questionnaire surface only: toggle the form/typeform preview mode. */
+  setQuestionnairePreviewMode?: (mode: 'form' | 'typeform') => void
 }
 
 export function BlockRenderer({
@@ -99,6 +101,7 @@ export function BlockRenderer({
   removeImage,
   onEditProposalLabel,
   setProposalPreviewMode,
+  setQuestionnairePreviewMode,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -220,6 +223,7 @@ export function BlockRenderer({
                     {renderBlock(block, state, updateBlock, {
                       onEditProposalLabel,
                       setProposalPreviewMode,
+                      setQuestionnairePreviewMode,
                     }, surface)}
                     <button
                       type="button"
@@ -308,6 +312,7 @@ interface RenderExtras {
   removeImage?: (blockId: string) => void | Promise<void>
   onEditProposalLabel?: ProposalLabelEdit | undefined
   setProposalPreviewMode?: ((mode: 'single' | 'multi') => void) | undefined
+  setQuestionnairePreviewMode?: ((mode: 'form' | 'typeform') => void) | undefined
 }
 
 interface SpacerWithResizeProps {

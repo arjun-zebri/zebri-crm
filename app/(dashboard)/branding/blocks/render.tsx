@@ -1349,20 +1349,28 @@ export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }
  * here: the structure and content are fixed. Same model as
  * `RenderContractBody` and `RenderPaymentSchedule`.
  *
- * Renders with a dashed border + muted "Fixed" badge so it is
+ * Renders with a dashed border + muted "Fixed steps" badge so it is
  * visually unambiguous this block is not editable on the branding surface.
+ * The sample renders in form or typeform mode based on a preview-only toggle.
  */
-export function RenderQuestionnaireBody({ state }: { state: BrandPreviewState }) {
+export function RenderQuestionnaireBody({
+  state,
+  setPreviewMode,
+}: {
+  state: BrandPreviewState
+  setPreviewMode?: ((mode: 'form' | 'typeform') => void) | undefined
+}) {
   const pad = PAD(state)
   const muted = state.mutedColor || '#6B7280'
   const text = state.textColor || '#111827'
   const surface = state.surfaceColor || '#FFFFFF'
+  const radius = state.cornerRadius || 16
+  const brand = state.brandColor || '#A7F3D0'
+  const mode = state.questionnairePreviewMode ?? 'form'
+
   return (
     <div className="border-t border-gray-100">
       <div className={`${pad.docX} ${pad.blockY}`}>
-        {/* Locked-slot affordance: dashed border + muted "Fixed"
-            badge make it clear at a glance that this block is not
-            editable on the branding surface. */}
         <div
           className="rounded-xl border-2 border-dashed p-5"
           style={{
@@ -1377,31 +1385,105 @@ export function RenderQuestionnaireBody({ state }: { state: BrandPreviewState })
             >
               Questionnaire
             </p>
-            <span
-              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: muted + '20',
-                color: muted,
-              }}
-            >
-              Fixed steps
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                Preview
+              </span>
+              <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
+                {(['form', 'typeform'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPreviewMode?.(m)
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition cursor-pointer ${
+                      mode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    {m === 'form' ? 'Form' : 'One at a time'}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-3 max-w-prose opacity-60 select-none pointer-events-none">
-            <p className="text-base font-semibold" style={{ color: text }}>
-              About your celebration
-            </p>
-            <p className="text-sm leading-6" style={{ color: text }}>
-              Tell us about your wedding day. When is it? How many guests? What is the vibe you are going for?
-            </p>
-            <p className="text-base font-semibold mt-4" style={{ color: text }}>
-              Your vision
-            </p>
-            <p className="text-sm leading-6" style={{ color: text }}>
-              What music matters most to you? Are there special moments or songs you want included?
-            </p>
-          </div>
+          {/* Form mode: two stacked labelled inputs. */}
+          {mode === 'form' && (
+            <div className="space-y-4 max-w-prose opacity-60 select-none pointer-events-none">
+              <div>
+                <label className="text-sm font-medium mb-2 block" style={{ color: text }}>
+                  What is the date of your wedding?
+                </label>
+                <input
+                  type="text"
+                  placeholder="DD/MM/YYYY"
+                  disabled
+                  className="w-full px-4 py-3 border text-sm"
+                  style={{
+                    borderColor: muted + '40',
+                    borderRadius: radius,
+                    backgroundColor: '#fafafa',
+                  }}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block" style={{ color: text }}>
+                  How many guests are you expecting?
+                </label>
+                <input
+                  type="text"
+                  placeholder="Type your answer…"
+                  disabled
+                  className="w-full px-4 py-3 border text-sm"
+                  style={{
+                    borderColor: muted + '40',
+                    borderRadius: radius,
+                    backgroundColor: '#fafafa',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Typeform mode: one large question + progress bar. */}
+          {mode === 'typeform' && (
+            <div className="space-y-6 max-w-prose opacity-60 select-none pointer-events-none">
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold" style={{ color: text }}>
+                  What is the date of your wedding?
+                </h2>
+                <input
+                  type="text"
+                  placeholder="DD/MM/YYYY"
+                  disabled
+                  className="w-full px-4 py-3 border text-lg"
+                  style={{
+                    borderColor: brand + '40',
+                    borderRadius: radius,
+                    backgroundColor: '#fafafa',
+                  }}
+                />
+              </div>
+
+              {/* Progress bar. */}
+              <div className="space-y-2">
+                <div
+                  className="h-1 rounded-full"
+                  style={{ background: muted + '20' }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: '33%', background: brand }}
+                  />
+                </div>
+                <p className="text-xs" style={{ color: muted }}>
+                  Question 1 of 3
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
             <p className="text-xs" style={{ color: muted }}>

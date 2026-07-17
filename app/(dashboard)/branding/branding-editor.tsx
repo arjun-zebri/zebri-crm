@@ -210,6 +210,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   // Preview-only: whether the proposal core previews one package or the
   // multi-package chooser. Not persisted.
   const [proposalPreviewMode, setProposalPreviewMode] = useState<'single' | 'multi'>('multi')
+  // Preview-only: whether the questionnaire previews form or typeform mode.
+  // Not persisted.
+  const [questionnairePreviewMode, setQuestionnairePreviewMode] = useState<'form' | 'typeform'>('form')
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
@@ -939,7 +942,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     portalSections: state.portalSections,
     proposalLabels: state.proposalLabels,
     proposalPreviewMode,
-  }), [state, proposalPreviewMode])
+    questionnairePreviewMode,
+  }), [state, proposalPreviewMode, questionnairePreviewMode])
 
   const visibleBlocks = state.blocks[docSurface]
 
@@ -1123,6 +1127,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
             }
             setProposalPreviewMode={setProposalPreviewMode}
+            setQuestionnairePreviewMode={setQuestionnairePreviewMode}
           />
         </CanvasFrame>
       </div>
