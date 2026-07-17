@@ -4,7 +4,7 @@ import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Musi
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ProposalPageView } from '@/components/proposal/proposal-page-view'
-import { getTextColor, pillForeground } from '@/lib/branding/contrast'
+import { pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import { resolveProposalLabels, type ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import { htmlToPlainText } from '@/lib/branding/sanitize'
@@ -12,25 +12,18 @@ import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 
-import { RenderText } from '@/lib/branding/public-blocks/text'
-import { RenderTagline } from '@/lib/branding/public-blocks/tagline'
-import { RenderFooter } from '@/lib/branding/public-blocks/footer'
-import { RenderDivider } from '@/lib/branding/public-blocks/divider'
-import { RenderSpacer } from '@/lib/branding/public-blocks/spacer'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
-import { RenderHeaderBanner as PublicRenderHeaderBanner } from '@/lib/branding/public-blocks/header-banner'
-import { RenderImage as PublicRenderImage } from '@/lib/branding/public-blocks/image'
 import { RenderTitle as PublicRenderTitle, type TitleSlots } from '@/lib/branding/public-blocks/title'
 import { RenderLineItems as PublicRenderLineItems } from '@/lib/branding/public-blocks/line-items'
 import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks/totals'
 import { RenderPaymentDetails as PublicRenderPaymentDetails, type PaymentDetailsSlots } from '@/lib/branding/public-blocks/payment-details'
+import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
 import { SAMPLE_DOC_BY_SURFACE } from './sample-doc'
 
 import { publicBrandingFromEditorState } from '../editor-branding'
 import { InlineAsset } from './inline-asset'
 import { InlineText } from './inline-text'
-import { resolveTextStyle, type TextStyleDefaults } from './text-style'
 import type {
   Block,
   HeaderBannerBlock,
@@ -40,8 +33,8 @@ import type {
   TotalsBlock,
   PaymentDetailsBlock,
   ActionBlock,
-  CouplePortalBlock,
-  PaymentScheduleBlock,
+  ContractBodyBlock,
+  ProposalBodyBlock,
   ImageBlock,
 } from './types'
 
@@ -76,7 +69,6 @@ export function RenderHeaderBanner({
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
 }) {
-  const branding = publicBrandingFromEditorState(state)
   const { headerImageUrl } = state
   const heightPx = block.heightPx ?? HEADER_HEIGHTS[block.height ?? 'md']
   const fit = block.fit ?? 'cover'
@@ -722,55 +714,35 @@ export function RenderTotals({ block, state, surface }: RenderProps<TotalsBlock>
 
 // ── Action ────────────────────────────────────────────────────────────────────
 
+/**
+ * Editor wrapper for action block. Manages resize state for button customization
+ * and renders real but non-interactive buttons via the public component.
+ */
 export function RenderAction({
   block,
   state,
   updateBlock,
   selected,
 }: RenderProps<ActionBlock> & { selected?: boolean }) {
-  const pad = PAD(state)
-  const buttonColor = block.buttonColor ?? state.brandColor
-  const secondaryBg = block.secondaryColor ?? state.secondaryColor
-  const radius = block.buttonRadius ?? state.cornerRadius
-
-  // Resolve variant and size from block or defaults (editor defaults to 'fill'/'md').
-  const variant = block.variant ?? 'fill'
-  const size = block.size ?? 'md'
-
-  // Size presets for the editor preview.
-  const sizeMap = {
-    sm: { padY: 8, fontSize: 13 },
-    md: { padY: 14, fontSize: 14 },
-    lg: { padY: 16, fontSize: 15 },
-  }
-  const sizeConfig = sizeMap[size]
-
-  // Use explicit padding if set, otherwise use size preset.
-  const primaryPadY = block.primaryPaddingY ?? sizeConfig.padY
-  const secondaryPadY = block.secondaryPaddingY ?? sizeConfig.padY
-
-  const primaryDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: sizeConfig.fontSize,
-    fontWeight: 500,
-    color: variant === 'outline' ? buttonColor : getTextColor(buttonColor),
-    align: 'center',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-  const secondaryDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: sizeConfig.fontSize,
-    fontWeight: 500,
-    color: state.secondaryTextColor || '#374151',
-    align: 'center',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-
+  const branding = publicBrandingFromEditorState(state)
   const primaryRef = useRef<HTMLButtonElement>(null)
   const secondaryRef = useRef<HTMLButtonElement>(null)
 
+  // Size presets matching public component.
+  const sizeMap = {
+    sm: { padY: 8 },
+    md: { padY: 14 },
+    lg: { padY: 16 },
+  }
+  const size = block.size ?? 'md'
+  const sizeConfig = sizeMap[size]
+  const primaryPadY = block.primaryPaddingY ?? sizeConfig.padY
+  const secondaryPadY = block.secondaryPaddingY ?? sizeConfig.padY
+
+  /**
+   * Create a resize handler for either primary or secondary button.
+   * Tracks both width and vertical padding changes via mouse drag.
+   */
   const makeResizeHandler = useCallback((
     whichButton: 'primary' | 'secondary',
     widthKey: 'primaryWidthPx' | 'secondaryWidthPx',
@@ -794,95 +766,69 @@ export function RenderAction({
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [block, updateBlock, primaryRef, secondaryRef])
+  }, [block, updateBlock])
 
-  const hasPrimaryW = block.primaryWidthPx !== undefined
-  const hasSecondaryW = block.secondaryWidthPx !== undefined
-  const justifyClass = { start: 'justify-start', center: 'justify-center', end: 'justify-end' }[block.buttonJustify ?? 'start']
+  /**
+   * Create slots with InlineText for live button label editing.
+   * The public component renders these without any onClick handlers
+   * (non-interactive in the editor).
+   */
+  const slots: ActionSlots = {
+    primary: (
+      <InlineText
+        value={block.primary}
+        onChange={(v) => updateBlock<ActionBlock>(block.id, { primary: v })}
+        placeholder="Primary"
+        as="span"
+      />
+    ),
+    secondary: block.secondary !== null ? (
+      <InlineText
+        value={block.secondary}
+        onChange={(v) => updateBlock<ActionBlock>(block.id, { secondary: v })}
+        placeholder="Secondary"
+        as="span"
+      />
+    ) : undefined,
+  }
 
   return (
-    <div className={`group ${pad.docX} ${pad.blockY}`}>
-      <div className={`relative flex gap-3 items-stretch w-full ${justifyClass}`}>
+    <div className="group relative">
+      <PublicRenderAction
+        block={block}
+        branding={branding}
+        slots={slots}
+      />
+      {/* Resize grips as absolute-positioned overlays */}
+      <div
+        onMouseDown={makeResizeHandler('primary', 'primaryWidthPx', 'primaryPaddingY', primaryPadY)}
+        title="Drag to resize primary button"
+        className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/pbtn:opacity-100 transition z-20 pointer-events-auto"
+        style={{ left: 'auto', top: 'auto' }}
+      />
+      {block.secondary !== null && (
+        <div
+          onMouseDown={makeResizeHandler('secondary', 'secondaryWidthPx', 'secondaryPaddingY', secondaryPadY)}
+          title="Drag to resize secondary button"
+          className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/sbtn:opacity-100 transition z-20 pointer-events-auto"
+          style={{ left: 'auto', top: 'auto' }}
+        />
+      )}
+      {block.secondary === null && (
         <button
-          ref={primaryRef}
           type="button"
-          tabIndex={-1}
-          className={`relative group/pbtn transition cursor-text ${hasPrimaryW ? 'shrink-0' : 'px-6'} ${
-            variant === 'outline' ? 'border' : ''
-          }`}
-          style={{
-            borderRadius: radius,
-            background: variant === 'fill' ? buttonColor : 'transparent',
-            borderColor: variant === 'outline' ? buttonColor : undefined,
-            paddingTop: primaryPadY,
-            paddingBottom: primaryPadY,
-            ...(hasPrimaryW ? { width: block.primaryWidthPx } : {}),
-            ...resolveTextStyle(block.primaryStyle, primaryDefaults),
+          onClick={(e) => {
+            e.stopPropagation()
+            updateBlock<ActionBlock>(block.id, { secondary: 'Secondary' })
           }}
-          onClick={(e) => e.preventDefault()}
+          className={`absolute left-1/2 -translate-x-1/2 mt-2 px-4 border border-dashed border-text-muted rounded-md text-xs text-text-muted hover:text-text hover:border-text cursor-pointer transition ${
+            selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          }`}
+          title="Add secondary button"
         >
-          <InlineText
-            value={block.primary}
-            onChange={(v) => updateBlock<ActionBlock>(block.id, { primary: v })}
-            placeholder="Primary"
-            as="span"
-          />
-          <div
-            onMouseDown={makeResizeHandler('primary', 'primaryWidthPx', 'primaryPaddingY', primaryPadY)}
-            title="Drag to resize"
-            className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/pbtn:opacity-100 transition z-20"
-          />
+          + Add secondary
         </button>
-        {block.secondary !== null ? (
-          <button
-            ref={secondaryRef}
-            type="button"
-            tabIndex={-1}
-            className={`relative group/sbtn border transition cursor-text ${hasSecondaryW ? 'shrink-0' : 'px-6'}`}
-            style={{
-              borderRadius: radius,
-              background: secondaryBg,
-              borderColor: variant === 'outline' ? secondaryBg : '#E5E7EB',
-              paddingTop: secondaryPadY,
-              paddingBottom: secondaryPadY,
-              ...(hasSecondaryW ? { width: block.secondaryWidthPx } : {}),
-              ...resolveTextStyle(block.secondaryStyle, secondaryDefaults),
-            }}
-            onClick={(e) => e.preventDefault()}
-          >
-            <InlineText
-              value={block.secondary}
-              onChange={(v) => updateBlock<ActionBlock>(block.id, { secondary: v })}
-              placeholder="Secondary"
-              as="span"
-            />
-            <div
-              onMouseDown={makeResizeHandler('secondary', 'secondaryWidthPx', 'secondaryPaddingY', secondaryPadY)}
-              title="Drag to resize"
-              className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/sbtn:opacity-100 transition z-20"
-            />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              updateBlock<ActionBlock>(block.id, { secondary: 'Secondary' })
-            }}
-            className={`px-4 border border-dashed border-gray-300 rounded-md text-xs text-gray-400 hover:text-gray-700 hover:border-gray-400 cursor-pointer transition ${
-              selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-            }`}
-            style={{
-              borderRadius: radius,
-              paddingTop: secondaryPadY,
-              paddingBottom: secondaryPadY,
-            }}
-            title="Add secondary button"
-          >
-            + Add secondary
-          </button>
-        )}
-      </div>
+      )}
     </div>
   )
 }

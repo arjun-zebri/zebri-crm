@@ -1,5 +1,7 @@
 'use client'
 
+import { ReactNode } from 'react'
+
 // eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
@@ -9,9 +11,21 @@ import type { PublicBranding } from '../public-surface'
 import { pad, type ActionSlotProps } from './shared'
 import { Html } from './html'
 
+/**
+ * Editor slots for customizing button text content.
+ * Allows the editor to inject InlineText components for live editing of button labels.
+ */
+export interface ActionSlots {
+  /** Editor replaces static primary button text with live InlineText. */
+  primary?: ReactNode
+  /** Editor replaces static secondary button text with live InlineText. */
+  secondary?: ReactNode
+}
+
 export function RenderAction({
   block,
   branding,
+  slots,
   onPrimary,
   onSecondary,
   primaryLabel,
@@ -22,6 +36,7 @@ export function RenderAction({
 }: {
   block: ActionBlock
   branding: PublicBranding
+  slots?: ActionSlots
 } & ActionSlotProps) {
   if (hideAction) return null
   const p = pad(branding)
@@ -80,7 +95,9 @@ export function RenderAction({
           ...resolveTextStyle(block.primaryStyle, primaryDefaults),
         }}
       >
-        {primaryLoading ? (
+        {slots?.primary ? (
+          slots.primary
+        ) : primaryLoading ? (
           'Processing…'
         ) : primaryLabel !== undefined ? (
           primaryText
@@ -107,7 +124,13 @@ export function RenderAction({
             ...resolveTextStyle(block.secondaryStyle, secondaryDefaults),
           }}
         >
-          {secondaryLabel !== undefined ? secondaryText : <Html value={secondaryText} allowLists={false} />}
+          {slots?.secondary ? (
+            slots.secondary
+          ) : secondaryLabel !== undefined ? (
+            secondaryText
+          ) : (
+            <Html value={secondaryText} allowLists={false} />
+          )}
         </button>
       )}
     </div>
