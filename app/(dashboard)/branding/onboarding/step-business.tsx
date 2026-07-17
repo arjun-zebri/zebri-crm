@@ -1,7 +1,6 @@
 'use client'
 
 import { Upload, Trash2, ImageIcon } from 'lucide-react'
-import Image from 'next/image'
 import { useRef, useState } from 'react'
 
 import { Input } from '@/components/ui/input'
@@ -145,7 +144,11 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
         }`}
       >
         {filled && logoUrl ? (
-          <Image src={logoUrl} alt="Logo preview" className="max-w-[80%] max-h-[80%] object-contain pointer-events-none" width={128} height={128} />
+          // User-uploaded brand asset, no next/image: the storage host is not
+          // in the image allowlist and these assets skip optimization by
+          // convention (same pattern as the public questionnaire page).
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="Logo preview" className="max-w-[80%] max-h-[80%] object-contain pointer-events-none" width={128} height={128} />
         ) : uploading ? (
           <span className="text-xs text-text-muted pointer-events-none">Uploading...</span>
         ) : (
@@ -154,7 +157,7 @@ function LogoUpload({ logoUrl, setLogoUrl }: { logoUrl: string; setLogoUrl: (v: 
         {filled && hovering && (
           <span className="absolute inset-0 bg-text/5 flex items-center justify-center pointer-events-none">
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-surface/95 text-text text-xs font-medium shadow-sm">
-              <Upload size={12} strokeWidth={2} />
+              <Upload size={12} strokeWidth={1.5} />
               Replace
             </span>
           </span>
