@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_audit_log: {
@@ -2340,6 +2365,8 @@ export type Database = {
         Row: {
           brand_kits: Json
           branding_blocks: Json | null
+          enabled_surfaces: Json
+          onboarded_at: string | null
           portal_sections: Json | null
           updated_at: string
           user_id: string
@@ -2347,6 +2374,8 @@ export type Database = {
         Insert: {
           brand_kits?: Json
           branding_blocks?: Json | null
+          enabled_surfaces?: Json
+          onboarded_at?: string | null
           portal_sections?: Json | null
           updated_at?: string
           user_id: string
@@ -2354,6 +2383,8 @@ export type Database = {
         Update: {
           brand_kits?: Json
           branding_blocks?: Json | null
+          enabled_surfaces?: Json
+          onboarded_at?: string | null
           portal_sections?: Json | null
           updated_at?: string
           user_id?: string
@@ -2702,11 +2733,11 @@ export type Database = {
       }
       save_portal_timeline_item: {
         Args: {
-          p_description: string | null
-          p_duration_min: number | null
-          p_event_id?: string | null
+          p_description: string
+          p_duration_min: number
+          p_event_id?: string
           p_id: string
-          p_start_time: string | null
+          p_start_time: string
           p_title: string
           p_token: string
         }
@@ -2865,6 +2896,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
