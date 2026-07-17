@@ -112,6 +112,10 @@ export default function BrandingPage() {
   // fetch runs. Onboarded users skip it, so they never see a modal flash.
   // Set post-hydration: reading localStorage during the first render makes
   // the server and client trees differ and breaks hydration.
+  // Bumped whenever page data is re-fetched after onboarding completes;
+  // keys BrandingEditor so it remounts with the fresh state (its initial
+  // useHistory snapshot is deliberately frozen per mount).
+  const [dataVersion, setDataVersion] = useState(0)
   const [likelyNeedsOnboarding, setLikelyNeedsOnboarding] = useState(false)
   useEffect(() => {
     // One-shot post-hydration cache read; the sync setState is deliberate so
@@ -282,6 +286,9 @@ export default function BrandingPage() {
         enabled_surfaces: null,
         onboarded_at: new Date().toISOString(),
       })
+      localStorage.setItem(ONBOARDED_CACHE_KEY, 'true')
+      // Remount the editor so it picks up the wizard's choices immediately.
+      setDataVersion((v) => v + 1)
     } catch (err) {
       setWizardError(`Failed to load branding: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
@@ -335,6 +342,7 @@ export default function BrandingPage() {
       {/* Editor always renders, made inert while onboarding modal is open. */}
       <div inert={onboardedAt === null ? true : undefined}>
         <BrandingEditor
+          key={dataVersion}
           initialData={{
             kitName: metadata?.brand_kit_name || 'My brand',
             logoUrl: metadata?.logo_url || '',
