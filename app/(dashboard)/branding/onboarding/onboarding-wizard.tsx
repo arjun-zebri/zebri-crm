@@ -22,9 +22,13 @@ export interface OnboardingResult {
   tagline: string
   logoUrl: string
   brandColor: string
+  /** Secondary brand colour; persisted as accent_color. */
+  secondaryColor: string
   fontHeading: HeadingFont
   fontBody: BodyFont
   density: Density
+  /** Corner radius in px for cards and buttons. */
+  cornerRadius: number
   enabledSurfaces: SurfaceTab[]
 }
 
@@ -59,9 +63,11 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
   const [tagline, setTagline] = useState(props.initial.tagline || '')
   const [logoUrl, setLogoUrl] = useState(props.initial.logoUrl || '')
   const [brandColor, setBrandColor] = useState(props.initial.brandColor || '#6366F1')
+  const [secondaryColor, setSecondaryColor] = useState(props.initial.secondaryColor || '#111827')
   const [fontHeading, setFontHeading] = useState<HeadingFont>(props.initial.fontHeading || 'playfair')
   const [fontBody, setFontBody] = useState<BodyFont>(props.initial.fontBody || 'inter')
   const [density, setDensity] = useState<Density>(props.initial.density || 'cozy')
+  const [cornerRadius, setCornerRadius] = useState(props.initial.cornerRadius ?? 8)
   const [enabledSurfaces, setEnabledSurfaces] = useState<SurfaceTab[]>(
     props.initial.enabledSurfaces && props.initial.enabledSurfaces.length > 0
       ? props.initial.enabledSurfaces
@@ -79,9 +85,11 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       tagline,
       logoUrl,
       brandColor,
+      secondaryColor,
       fontHeading,
       fontBody,
       density,
+      cornerRadius,
       enabledSurfaces,
     }
     setLoading(true)
@@ -101,9 +109,11 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       tagline: tagline || props.initial.tagline || '',
       logoUrl: logoUrl || props.initial.logoUrl || '',
       brandColor: brandColor || props.initial.brandColor || '#6366F1',
+      secondaryColor: secondaryColor || props.initial.secondaryColor || '#111827',
       fontHeading: fontHeading || props.initial.fontHeading || 'playfair',
       fontBody: fontBody || props.initial.fontBody || 'inter',
       density: density || props.initial.density || 'cozy',
+      cornerRadius,
       enabledSurfaces: ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
     }
     setLoading(true)
@@ -158,12 +168,16 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
             logoUrl={logoUrl}
             brandColor={brandColor}
             setBrandColor={setBrandColor}
+            secondaryColor={secondaryColor}
+            setSecondaryColor={setSecondaryColor}
             fontHeading={fontHeading}
             setFontHeading={setFontHeading}
             fontBody={fontBody}
             setFontBody={setFontBody}
             density={density}
             setDensity={setDensity}
+            cornerRadius={cornerRadius}
+            setCornerRadius={setCornerRadius}
           />
         )}
 
@@ -200,6 +214,8 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
           fontHeading={fontHeading}
           fontBody={fontBody}
           density={density}
+          secondaryColor={secondaryColor}
+          cornerRadius={cornerRadius}
           step={step}
           intro={intro}
         />

@@ -93,7 +93,7 @@ test.describe('Branding Onboarding Wizard', () => {
     await expect(dialog.getByRole('heading', { name: /choose your look/i })).toBeVisible({ timeout: 5000 })
 
     // Set brand color via the hex textbox using aria-label
-    const colorInput = dialog.getByLabel('Brand color hex')
+    const colorInput = dialog.getByLabel('Primary colour hex')
     await colorInput.waitFor({ state: 'visible', timeout: 5000 })
     await colorInput.clear()
     await colorInput.fill('#8B5CF6')
@@ -149,7 +149,7 @@ test.describe('Branding Onboarding Wizard', () => {
       await nextButton.click()
       await page.waitForTimeout(200)
 
-      const colorInput = dialog.getByLabel('Brand color hex')
+      const colorInput = dialog.getByLabel('Primary colour hex')
       await colorInput.fill('#6366F1')
 
       await nextButton.click()

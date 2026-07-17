@@ -51,10 +51,13 @@ describe('OnboardingWizard', () => {
       expect(within(dialog).getByText('Choose your look')).toBeInTheDocument()
     })
 
-    // Verify font pairings are shown
-    expect(within(dialog).getByLabelText('Serif classic')).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('Modern')).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('Editorial')).toBeInTheDocument()
+    // Verify the look controls are shown: colour fields, font selects,
+    // and the corner radius tiles.
+    expect(within(dialog).getByLabelText('Primary colour hex')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Secondary colour hex')).toBeInTheDocument()
+    expect(within(dialog).getByText('Heading font')).toBeInTheDocument()
+    expect(within(dialog).getByText('Body font')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Round')).toBeInTheDocument()
 
     // Verify density options are shown
     expect(within(dialog).getByLabelText('compact')).toBeInTheDocument()

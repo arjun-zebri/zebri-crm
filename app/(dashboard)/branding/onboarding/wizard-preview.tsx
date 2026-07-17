@@ -20,9 +20,13 @@ interface WizardPreviewProps {
   tagline: string
   logoUrl: string
   brandColor: string
+  /** Secondary brand colour (accent). */
+  secondaryColor: string
   fontHeading: HeadingFont
   fontBody: BodyFont
   density: Density
+  /** Corner radius in px for cards and buttons. */
+  cornerRadius: number
   /** Current wizard step. */
   step: 1 | 2 | 3
   /** True on the welcome screen: the full document shows undimmed. */
@@ -103,11 +107,13 @@ export function WizardPreview(props: WizardPreviewProps) {
         tagline: props.tagline,
         logo_url: props.logoUrl || undefined,
         brand_color: props.brandColor,
+        accent_color: props.secondaryColor,
         font_heading: props.fontHeading,
         font_body: props.fontBody,
         density: props.density,
+        corner_radius: props.cornerRadius,
       }),
-    [props.businessName, props.tagline, props.logoUrl, props.brandColor, props.fontHeading, props.fontBody, props.density],
+    [props.businessName, props.tagline, props.logoUrl, props.brandColor, props.secondaryColor, props.fontHeading, props.fontBody, props.density, props.cornerRadius],
   )
 
   const docWidth = props.step === 1 && !props.intro ? DOC_WIDTH_FOCUS : DOC_WIDTH_FULL
@@ -121,7 +127,7 @@ export function WizardPreview(props: WizardPreviewProps) {
         <div className="absolute inset-0 flex items-center">
           {/* Keyed by width: a zoom change remounts and fades in at its final
               size, instead of tweening width and scale against each other. */}
-          <ScaledDoc key={docWidth} docWidth={docWidth}>
+          <ScaledDoc key={`${docWidth}-${props.density}`} docWidth={docWidth}>
             <div
               className="@container/doc rounded-lg border border-border shadow-sm overflow-hidden animate-fade-in motion-reduce:animate-none"
               style={{ width: docWidth, background: branding.surface_color }}

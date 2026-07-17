@@ -1,85 +1,55 @@
 'use client'
 
-import type { HeadingFont, BodyFont } from '@/lib/branding/fonts'
-import { FONT_LABELS, FONT_STACKS } from '@/lib/branding/fonts'
+import { ColorPopover } from '@/components/ui/color-popover'
 import type { Density } from '@/lib/branding/themes'
 
-/**
- * Font pairing: heading + body combo with display name.
- * @internal
- */
-interface FontPairing {
-  name: string
-  heading: HeadingFont
-  body: BodyFont
-}
-
-/** Curated font pairings for onboarding. */
-const FONT_PAIRINGS: FontPairing[] = [
-  { name: 'Serif classic', heading: 'playfair', body: 'inter' },
-  { name: 'Modern', heading: 'inter', body: 'inter' },
-  { name: 'Editorial', heading: 'dm_serif', body: 'source_sans' },
-]
-
-/** Shared row/tile styling for the two pickers; single-width border so
- *  selection never shifts layout. */
+/** Shared tile styling for the pickers; single-width border so selection
+ *  never shifts layout. */
 const OPTION_CLASSES = (selected: boolean) =>
   `rounded-lg border cursor-pointer transition ${
     selected ? 'border-border-strong bg-surface-muted' : 'border-border hover:border-border-strong'
   }`
 
 /**
- * Props for font pairing picker.
+ * Props for a labelled colour field (swatch popover + hex input).
  * @internal
  */
-interface FontPairingPickerProps {
-  fontHeading: HeadingFont
-  setFontHeading: (v: HeadingFont) => void
-  fontBody: BodyFont
-  setFontBody: (v: BodyFont) => void
+interface ColorFieldProps {
+  label: string
+  value: string
+  onChange: (v: string) => void
 }
 
 /**
- * FontPairingPicker: three curated pairings. Each row renders its own name
- * in the pairing's heading font, so the choice is visible in place instead
- * of described.
+ * ColorField: compact colour input used for the primary and secondary brand
+ * colours; a swatch opens the picker, the hex is editable beside it.
  * @internal
  */
-export function FontPairingPicker(props: FontPairingPickerProps) {
-  const currentName = FONT_PAIRINGS.find(
-    (p) => p.heading === props.fontHeading && p.body === props.fontBody,
-  )?.name
-
+export function ColorField({ label, value, onChange }: ColorFieldProps) {
   return (
-    <div>
-      <label className="block text-xs font-medium text-text-muted mb-2">Font pairing</label>
-      <div className="space-y-2">
-        {FONT_PAIRINGS.map((pairing) => {
-          const selected = currentName === pairing.name
-          return (
-            <label key={pairing.name} className="block">
-              <input
-                type="radio"
-                name="fontPairing"
-                checked={selected}
-                onChange={() => {
-                  props.setFontHeading(pairing.heading)
-                  props.setFontBody(pairing.body)
-                }}
-                className="sr-only"
-                aria-label={pairing.name}
-              />
-              <div className={`flex items-baseline justify-between gap-3 px-3 py-2.5 ${OPTION_CLASSES(selected)}`}>
-                <span className="text-base text-text" style={{ fontFamily: FONT_STACKS[pairing.heading] }}>
-                  {pairing.name}
-                </span>
-                <span className="text-xs text-text-muted truncate" style={{ fontFamily: FONT_STACKS[pairing.body] }}>
-                  {FONT_LABELS[pairing.heading]} + {FONT_LABELS[pairing.body]}
-                </span>
-              </div>
-            </label>
-          )
-        })}
+    <div className="flex-1 min-w-0">
+      <label className="block text-xs font-medium text-text-muted mb-2">{label}</label>
+      <div className="flex items-center gap-2">
+        <ColorPopover
+          value={value}
+          onChange={onChange}
+          trigger={
+            <button
+              type="button"
+              className="w-8 h-8 shrink-0 rounded-lg border border-border cursor-pointer focus-visible:ring-2 focus-visible:ring-brand/50 transition"
+              style={{ backgroundColor: value }}
+              aria-label={`Pick ${label.toLowerCase()}`}
+            />
+          }
+          align="start"
+        />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full min-w-0 h-8 text-xs px-2.5 rounded-lg border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand"
+          aria-label={`${label} hex`}
+        />
       </div>
     </div>
   )
@@ -119,6 +89,60 @@ export function DensityPicker(props: DensityPickerProps) {
               <div className={`flex flex-col items-center gap-2 px-2 py-3 ${OPTION_CLASSES(selected)}`}>
                 <DensityGlyph density={d} />
                 <span className="text-xs font-medium text-text capitalize">{d}</span>
+              </div>
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Corner radius choices offered during onboarding. */
+const RADIUS_OPTIONS = [
+  { label: 'Sharp', value: 0 },
+  { label: 'Soft', value: 8 },
+  { label: 'Round', value: 16 },
+] as const
+
+/**
+ * Props for corner radius picker.
+ * @internal
+ */
+interface RadiusPickerProps {
+  cornerRadius: number
+  setCornerRadius: (v: number) => void
+}
+
+/**
+ * RadiusPicker: corner radius as three tiles, each glyph a square with the
+ * radius it represents.
+ * @internal
+ */
+export function RadiusPicker(props: RadiusPickerProps) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-text-muted mb-2">Corners</label>
+      <div className="grid grid-cols-3 gap-2">
+        {RADIUS_OPTIONS.map((o) => {
+          const selected = props.cornerRadius === o.value
+          return (
+            <label key={o.label} className="block">
+              <input
+                type="radio"
+                name="cornerRadius"
+                checked={selected}
+                onChange={() => props.setCornerRadius(o.value)}
+                className="sr-only"
+                aria-label={o.label}
+              />
+              <div className={`flex flex-col items-center gap-2 px-2 py-3 ${OPTION_CLASSES(selected)}`}>
+                <div
+                  aria-hidden
+                  className="w-7 h-7 border-2 border-text-subtle"
+                  style={{ borderRadius: Math.min(o.value, 12) }}
+                />
+                <span className="text-xs font-medium text-text">{o.label}</span>
               </div>
             </label>
           )

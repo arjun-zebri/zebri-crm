@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 
-import { ColorPopover } from '@/components/ui/color-popover'
 import { extractColorsFromFile } from '@/lib/branding/extract-colors'
-import type { HeadingFont, BodyFont } from '@/lib/branding/fonts'
+import { BODY_FONTS, FONT_LABELS, HEADING_FONTS, type BodyFont, type HeadingFont } from '@/lib/branding/fonts'
 import type { Density } from '@/lib/branding/themes'
 
-import { FontPairingPicker, DensityPicker } from './look-pickers'
+import { Select } from '../components/select'
+
+import { ColorField, DensityPicker, RadiusPicker } from './look-pickers'
 
 /**
  * Props for the visual look step.
@@ -17,52 +18,51 @@ interface StepLookProps {
   logoUrl: string
   brandColor: string
   setBrandColor: (v: string) => void
+  secondaryColor: string
+  setSecondaryColor: (v: string) => void
   fontHeading: HeadingFont
   setFontHeading: (v: HeadingFont) => void
   fontBody: BodyFont
   setFontBody: (v: BodyFont) => void
   density: Density
   setDensity: (v: Density) => void
+  cornerRadius: number
+  setCornerRadius: (v: number) => void
 }
 
+const HEADING_OPTIONS = HEADING_FONTS.map((f) => ({ value: f, label: FONT_LABELS[f] }))
+const BODY_OPTIONS = BODY_FONTS.map((f) => ({ value: f, label: FONT_LABELS[f] }))
+
 /**
- * StepLook — Select brand color, font pairing, and density.
- *
- * Color: input + 4 suggested swatches from logo if uploaded.
- * Fonts: 3 curated pairings as radio cards.
- * Density: 3 radio cards (compact, cozy, roomy) with spacing glyphs.
+ * StepLook: primary and secondary brand colours, heading and body fonts,
+ * spacing density, and corner radius. Suggested swatches from the uploaded
+ * logo feed the primary colour.
  * @internal
  */
 export function StepLook(props: StepLookProps) {
   const [suggestedColors, setSuggestedColors] = useState<string[]>([])
   const [loadingColors, setLoadingColors] = useState(false)
 
-  /**
-   * Extract suggested colors from logo on mount or when logoUrl changes.
-   */
+  /** Extract suggested colours from the logo when it changes. */
   useEffect(() => {
     const extract = async () => {
       if (!props.logoUrl) {
         setSuggestedColors([])
         return
       }
-
       setLoadingColors(true)
       try {
-        // Fetch the logo as a blob so we can convert to File for extraction
         const res = await fetch(props.logoUrl)
         const blob = await res.blob()
         const file = new File([blob], 'logo.png', { type: blob.type })
-        const colors = await extractColorsFromFile(file, 4)
-        setSuggestedColors(colors)
+        setSuggestedColors(await extractColorsFromFile(file, 4))
       } catch {
-        // Silently fail; suggest colors are optional
+        // Suggestions are optional; fail quietly.
         setSuggestedColors([])
       } finally {
         setLoadingColors(false)
       }
     }
-
     extract()
   }, [props.logoUrl])
 
@@ -70,39 +70,19 @@ export function StepLook(props: StepLookProps) {
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-xl font-semibold text-text mb-1">Choose your look</h2>
-        <p className="text-sm text-text-muted">Brand color, fonts, and spacing.</p>
+        <p className="text-sm text-text-muted">Colours, fonts, spacing, and corners.</p>
       </div>
 
       <div className="space-y-4">
-        {/* Brand color */}
+        {/* Brand colours */}
         <div>
-          <label className="block text-xs font-medium text-text-muted mb-2">Brand color</label>
-          <div className="flex items-center gap-3">
-            <ColorPopover
-              value={props.brandColor}
-              onChange={props.setBrandColor}
-              trigger={
-                <button
-                  type="button"
-                  className="w-8 h-8 rounded-lg border border-border cursor-pointer focus-visible:ring-2 focus-visible:ring-brand/50 transition"
-                  style={{ backgroundColor: props.brandColor }}
-                  aria-label="Pick brand color"
-                />
-              }
-              align="start"
-            />
-            <input
-              type="text"
-              value={props.brandColor}
-              onChange={(e) => props.setBrandColor(e.target.value)}
-              className="flex-1 h-8 text-xs px-2.5 rounded-lg border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand"
-              aria-label="Brand color hex"
-            />
+          <div className="flex gap-3">
+            <ColorField label="Primary colour" value={props.brandColor} onChange={props.setBrandColor} />
+            <ColorField label="Secondary colour" value={props.secondaryColor} onChange={props.setSecondaryColor} />
           </div>
 
-          {/* Suggested colors from logo */}
           {suggestedColors.length > 0 && (
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-2.5 flex items-center gap-2">
               <span className="text-xs text-text-muted">From logo:</span>
               {suggestedColors.map((color) => (
                 <button
@@ -111,26 +91,29 @@ export function StepLook(props: StepLookProps) {
                   className="w-6 h-6 rounded-lg border border-border cursor-pointer hover:ring-1 hover:ring-brand/50 transition"
                   style={{ backgroundColor: color }}
                   title={color}
-                  aria-label={`Use color ${color}`}
+                  aria-label={`Use colour ${color}`}
                 />
               ))}
             </div>
           )}
-          {loadingColors && <p className="mt-2 text-xs text-text-muted">Extracting colors...</p>}
+          {loadingColors && <p className="mt-2 text-xs text-text-muted">Extracting colours...</p>}
         </div>
 
-        {/* Font pairing and density pickers */}
-        <FontPairingPicker
-          fontHeading={props.fontHeading}
-          setFontHeading={props.setFontHeading}
-          fontBody={props.fontBody}
-          setFontBody={props.setFontBody}
-        />
+        {/* Fonts */}
+        <div className="flex gap-3">
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs font-medium text-text-muted mb-2">Heading font</label>
+            <Select value={props.fontHeading} options={HEADING_OPTIONS} onChange={props.setFontHeading} size="sm" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs font-medium text-text-muted mb-2">Body font</label>
+            <Select value={props.fontBody} options={BODY_OPTIONS} onChange={props.setFontBody} size="sm" />
+          </div>
+        </div>
 
-        <DensityPicker
-          density={props.density}
-          setDensity={props.setDensity}
-        />
+        <DensityPicker density={props.density} setDensity={props.setDensity} />
+
+        <RadiusPicker cornerRadius={props.cornerRadius} setCornerRadius={props.setCornerRadius} />
       </div>
     </div>
   )

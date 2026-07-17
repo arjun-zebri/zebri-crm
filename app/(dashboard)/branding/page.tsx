@@ -209,9 +209,11 @@ export default function BrandingPage() {
         tagline: result.tagline,
         logo_url: result.logoUrl || null,
         brand_color: result.brandColor,
+        accent_color: result.secondaryColor,
         font_heading: result.fontHeading,
         font_body: result.fontBody,
         density: result.density,
+        corner_radius: result.cornerRadius,
       },
     })
     if (metadataError) {
@@ -410,9 +412,11 @@ export default function BrandingPage() {
             tagline: metadata?.tagline,
             logoUrl: metadata?.logo_url,
             brandColor: metadata?.brand_color || '#6366F1',
+            secondaryColor: metadata?.accent_color || '#111827',
             fontHeading: sanitizeHeading(metadata?.font_heading),
             fontBody: sanitizeBody(metadata?.font_body),
             density: metadata?.density || 'cozy',
+            cornerRadius: typeof metadata?.corner_radius === 'number' ? metadata.corner_radius : 8,
           }}
           onComplete={handleWizardComplete}
           error={wizardError}
