@@ -14,16 +14,17 @@ interface RowProps {
   label: string
   value: string
   css: CSSProperties
+  /** @deprecated No longer affects layout. Kept for backward compatibility. */
   spread?: boolean
 }
 
-function Row({ label, value, css, spread }: RowProps) {
+function Row({ label, value, css }: RowProps) {
   return (
     <div className="flex items-center">
-      <span className="flex-1" style={css}>
+      <span className="flex-1 min-w-0 break-words" style={css}>
         {label}
       </span>
-      <span className={`tabular-nums ${spread ? 'shrink-0 ml-4' : 'flex-1'}`} style={{ ...css, ...(spread ? { textAlign: 'right' } : {}) }}>
+      <span className="shrink-0 tabular-nums ml-4" style={{ ...css, textAlign: 'right' }}>
         {value}
       </span>
     </div>

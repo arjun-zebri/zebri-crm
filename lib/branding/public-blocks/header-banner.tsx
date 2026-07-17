@@ -56,7 +56,7 @@ export function RenderHeaderBanner({
   return (
     <div
       ref={imageInteraction?.ref}
-      className={`relative w-full overflow-hidden ${cursorClass}`}
+      className={`relative w-full max-w-full overflow-hidden ${cursorClass}`}
       style={{
         height: heightPx,
         borderTopLeftRadius: branding.corner_radius,

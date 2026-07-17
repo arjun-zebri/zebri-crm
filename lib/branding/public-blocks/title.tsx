@@ -72,7 +72,7 @@ export function RenderTitle({
       </div>
       {(block.showRef || block.showExpires || block.showAbn) && (
         <div
-          className={`${p.docX} mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2`}
+          className={`${p.docX} mt-3 flex flex-wrap items-baseline gap-x-4 @sm/doc:gap-x-8 gap-y-2`}
           style={{ justifyContent: metaAlign === 'center' ? 'center' : metaAlign === 'right' ? 'flex-end' : 'flex-start' }}
         >
           {block.showRef && doc.refNumber && <Meta label="Ref" value={doc.refNumber} muted={branding.muted_color} />}

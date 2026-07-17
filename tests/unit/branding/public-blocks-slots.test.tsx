@@ -1,8 +1,11 @@
 import { render, screen } from '@testing-library/react'
+import '@testing-library/jest-dom'
 import { describe, expect, it } from 'vitest'
 
 import { RenderFooter } from '@/lib/branding/public-blocks/footer'
 import { RenderText } from '@/lib/branding/public-blocks/text'
+import { RenderLineItems } from '@/lib/branding/public-blocks/line-items'
+import { RenderPaymentDetails } from '@/lib/branding/public-blocks/payment-details'
 
 const branding = { density: 'cozy', corner_radius: 8, brand_color: '#111', surface_color: '#fff', text_color: '#111', muted_color: '#666' } as never
 
@@ -58,5 +61,47 @@ describe('public footer block slots', () => {
     )
     expect(screen.getByText('thank you')).toBeInTheDocument()
     expect(document.querySelector('script')).toBeNull()
+  })
+})
+
+describe('public line items block layout', () => {
+  it('renders amount element with shrink-0 class', () => {
+    const doc = {
+      title: 'Invoice',
+      refNumber: 'INV-001',
+      expiresAt: '2026-12-31',
+      items: [
+        { id: '1', description: 'Service', amount: 100, unit_price: undefined, quantity: undefined },
+      ],
+      subtotal: 100,
+      taxRate: 10,
+      discountType: undefined,
+      discountValue: 0,
+    }
+
+    const container = render(
+      <RenderLineItems
+        block={{ id: 'li', type: 'lineItems', showHeader: true }}
+        branding={branding}
+        doc={doc}
+      />,
+    ).container
+
+    const amountElement = container.querySelector('span.shrink-0.tabular-nums')
+    expect(amountElement).toBeInTheDocument()
+  })
+})
+
+describe('public payment details block layout', () => {
+  it('renders rows with flex-col class on mobile', () => {
+    const container = render(
+      <RenderPaymentDetails
+        block={{ id: 'pd', type: 'paymentDetails', heading: 'Bank details', accountName: '', bsb: '', accountNumber: '' }}
+        branding={branding}
+      />,
+    ).container
+
+    const flexColElement = container.querySelector('[class*="flex-col"]')
+    expect(flexColElement).toBeInTheDocument()
   })
 })

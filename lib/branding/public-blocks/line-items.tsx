@@ -8,6 +8,13 @@ import type { LineItemsBlock } from '@/app/(dashboard)/branding/blocks/types'
 import type { PublicBranding } from '../public-surface'
 import { fmt, pad, type PublicDocData } from './shared'
 
+/**
+ * Renders the line items block for a document (invoice, proposal).
+ * Each item displays description and amount with responsive layout.
+ *
+ * @note The `colSpread` prop is deprecated and no longer affects layout.
+ * It is accepted for backward compatibility with existing blocks but ignored.
+ */
 export function RenderLineItems({
   block,
   branding,
@@ -22,7 +29,6 @@ export function RenderLineItems({
   const p = pad(branding)
   const showHeader = block.showHeader ?? true
   const rowStyle = block.rowStyle ?? 'lines'
-  const colSpread = block.colSpread ?? false
   const headerDefaults: TextStyleDefaults = {
     fontFamily: branding.font_body,
     fontSize: 11,
@@ -58,14 +64,14 @@ export function RenderLineItems({
   return (
     <div className={`${p.docX} ${p.blockY} relative`}>
       {showHeader && (
-        <div className={`flex items-center pb-3 border-b border-gray-200 ${colSpread ? 'justify-between' : 'gap-4'}`}>
-          <span style={{ ...headerCss, textTransform: 'uppercase', ...(colSpread ? { flex: 1 } : {}) }}>Description</span>
-          <span style={{ ...headerCss, textTransform: 'uppercase', ...(colSpread ? { shrink: 0, marginLeft: '1rem' } : {}) }}>Amount</span>
+        <div className="flex justify-between items-center pb-3 border-b border-gray-200 gap-4">
+          <span style={{ ...headerCss, textTransform: 'uppercase', flex: 1 }}>Description</span>
+          <span style={{ ...headerCss, textTransform: 'uppercase', marginLeft: '1rem' }}>Amount</span>
         </div>
       )}
       {doc.items.map((item, i) => (
-        <div key={item.id} className={`flex items-start ${colSpread ? 'justify-between' : 'gap-4'} ${p.rowY} ${rowBorder} ${rowBg(i)}`}>
-          <div className={colSpread ? 'flex-1 min-w-0' : 'flex-1 min-w-0'}>
+        <div key={item.id} className={`flex justify-between items-start gap-4 ${p.rowY} ${rowBorder} ${rowBg(i)}`}>
+          <div className="flex-1 min-w-0 break-words">
             <span style={itemCss}>{item.description}</span>
             {item.quantity !== undefined && item.quantity !== 1 && item.unit_price !== undefined && (
               <span className="block text-xs" style={{ color: branding.muted_color }}>
@@ -74,8 +80,8 @@ export function RenderLineItems({
             )}
           </div>
           <span
-            className={`tabular-nums ${colSpread ? 'shrink-0 ml-4' : 'flex-1'}`}
-            style={{ ...itemCss, fontWeight: (itemCss.fontWeight as number ?? 400) + 100, ...(colSpread ? { textAlign: 'right' } : {}) }}
+            className="shrink-0 tabular-nums"
+            style={{ ...itemCss, fontWeight: (itemCss.fontWeight as number ?? 400) + 100, textAlign: 'right' }}
           >
             {fmt(item.amount)}
           </span>

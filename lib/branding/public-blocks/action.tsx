@@ -79,12 +79,12 @@ export function RenderAction({
   }
 
   return (
-    <div className={`${p.docX} ${p.blockY} flex gap-3`}>
+    <div className={`${p.docX} ${p.blockY} flex flex-col gap-2 @sm/doc:flex-row @sm/doc:gap-3`}>
       <button
         type="button"
         disabled={primaryDisabled || primaryLoading}
         onClick={onPrimary}
-        className={`flex-1 cursor-pointer hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`cursor-pointer hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed ${
           variant === 'outline' ? 'border border-current' : ''
         }`}
         style={{

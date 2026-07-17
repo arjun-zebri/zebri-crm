@@ -878,8 +878,8 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
                 Fill in your details below. Everything saves automatically. You can come back anytime.
               </p>
             </div>
-            <div className="flex gap-8 px-2 py-6 min-h-[420px]">
-              <nav className="w-52 shrink-0 border-r border-gray-100 pr-4 space-y-0.5">
+            <div className="flex flex-col @md/doc:flex-row gap-8 px-2 py-6 min-h-[420px]">
+              <nav className="hidden @md/doc:flex w-52 shrink-0 border-r border-gray-100 pr-4 space-y-0.5">
                 {visibleSections.map((s) => {
                   const Icon = s.icon
                   return (
@@ -891,7 +891,7 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
                   )
                 })}
               </nav>
-              <div className="flex-1 min-w-0 space-y-6">
+              <div className="w-full @md/doc:flex-1 @md/doc:min-w-0 space-y-6">
                 <div>
                   <h2 className="text-2xl font-semibold text-gray-900" style={fontHeading}>Overview</h2>
                   <p className="text-sm text-gray-500 mt-1">Your details and upcoming events</p>

@@ -78,16 +78,16 @@ export function RenderPaymentDetails({
         {slots?.heading ?? <Html value={block.heading} allowLists={false} />}
       </p>
       <div className="space-y-1.5">
-        <div className="flex items-baseline gap-3">
-          <span className="w-28 shrink-0" style={labelCss}>Account name</span>
+        <div className="flex flex-col gap-0.5 @sm/doc:flex-row @sm/doc:items-baseline @sm/doc:gap-3">
+          <span className="shrink-0 @sm/doc:w-28" style={labelCss}>Account name</span>
           <span className="flex-1" style={valueCss}>{slots?.accountName ?? <Html value={accountName} allowLists={false} />}</span>
         </div>
-        <div className="flex items-baseline gap-3">
-          <span className="w-28 shrink-0" style={labelCss}>BSB</span>
+        <div className="flex flex-col gap-0.5 @sm/doc:flex-row @sm/doc:items-baseline @sm/doc:gap-3">
+          <span className="shrink-0 @sm/doc:w-28" style={labelCss}>BSB</span>
           <span className="flex-1" style={valueCss}>{slots?.bsb ?? <Html value={bsb} allowLists={false} />}</span>
         </div>
-        <div className="flex items-baseline gap-3">
-          <span className="w-28 shrink-0" style={labelCss}>Account number</span>
+        <div className="flex flex-col gap-0.5 @sm/doc:flex-row @sm/doc:items-baseline @sm/doc:gap-3">
+          <span className="shrink-0 @sm/doc:w-28" style={labelCss}>Account number</span>
           <span className="flex-1" style={valueCss}>{slots?.accountNumber ?? <Html value={accountNumber} allowLists={false} />}</span>
         </div>
       </div>

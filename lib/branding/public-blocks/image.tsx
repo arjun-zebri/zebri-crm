@@ -56,7 +56,7 @@ export function RenderImage({
   return (
     <div
       ref={imageInteraction?.ref}
-      className={`relative w-full overflow-hidden ${cursorClass}`}
+      className={`relative w-full max-w-full overflow-hidden ${cursorClass}`}
       style={{
         height: heightPx,
         borderRadius: branding.corner_radius,
