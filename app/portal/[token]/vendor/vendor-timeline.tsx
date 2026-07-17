@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, Clock } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 export interface VendorTimelineItem {
   id: string
@@ -75,19 +75,35 @@ function dayLabel(day: VendorDay): string {
   return day.venues.length > 0 ? `${date} · ${day.venues.join(', ')}` : date
 }
 
-/** Per-day dropdown for the run sheet. */
+/**
+ * Per-day dropdown for the run sheet.
+ *
+ * @param days - List of distinct days with their events and venues
+ * @param value - Currently selected date (YYYY-MM-DD)
+ * @param onChange - Callback when a new day is selected
+ * @param borderColor - Optional border colour; defaults to gray-200
+ * @param textColor - Optional text colour; defaults to gray-900
+ */
 function DaySelector({
   days,
   value,
   onChange,
+  borderColor,
+  textColor,
 }: {
   days: VendorDay[]
   value: string
   onChange: (date: string) => void
+  borderColor?: string
+  textColor?: string
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const active = days.find((d) => d.date === value) ?? null
+
+  // Default to the original gray palette when colours are not provided.
+  const border = borderColor ?? '#E5E7EB'
+  const text = textColor ?? '#111827'
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -104,16 +120,17 @@ function DaySelector({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between gap-2 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none"
+        className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none"
+        style={{ borderColor: border, borderWidth: 1, color: text }}
       >
-        <span className="text-gray-900 font-medium">
+        <span className="font-medium">
           {active ? dayLabel(active) : formatEventDate(value)}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#9CA3AF' }} />
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 min-w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden py-1">
+        <div className="absolute z-50 mt-1 min-w-full bg-white rounded-xl shadow-lg overflow-hidden py-1" style={{ borderColor: border, borderWidth: 1 }}>
           {days.map((d) => (
             <button
               key={d.date}
@@ -123,8 +140,9 @@ function DaySelector({
                 setOpen(false)
               }}
               className={`block w-full text-left px-3 py-2 text-sm whitespace-nowrap transition hover:bg-gray-50 cursor-pointer ${
-                d.date === value ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-500'
+                d.date === value ? 'bg-gray-50 font-medium' : ''
               }`}
+              style={{ color: d.date === value ? text : '#6B7280' }}
             >
               {dayLabel(d)}
             </button>
@@ -138,13 +156,25 @@ function DaySelector({
 interface VendorTimelineProps {
   events: VendorEvent[]
   items: VendorTimelineItem[]
+  /**
+   * Optional colour for headings. When not provided, defaults to gray-900.
+   * Applied to the "Run Sheet" title, day label, and item titles.
+   */
+  headingColor?: string
+  /**
+   * Optional accent colour for the day selector border and active states.
+   * When not provided, defaults to gray-200 for borders and gray-900 for text.
+   */
+  accentColor?: string
 }
 
 /**
  * Vendor-facing run sheet. Lists the couple's events as a per-day selector
  * and shows the merged, time-ordered moments for the chosen day. Read-only.
+ * Optional branding colors tint headings and accents; when not provided,
+ * the component renders identically to the original unbranded layout.
  */
-export function VendorTimeline({ events, items }: VendorTimelineProps) {
+export function VendorTimeline({ events, items, headingColor, accentColor }: VendorTimelineProps) {
   const days = useMemo(() => buildDays(events), [events])
   const [pickedDay, setPickedDay] = useState<string | null>(null)
 
@@ -159,16 +189,21 @@ export function VendorTimeline({ events, items }: VendorTimelineProps) {
   const dayEventIds = new Set(activeDay?.eventIds ?? [])
   const dayItems = items.filter((i) => dayEventIds.has(i.event_id))
 
+  // Derived colors — default to grays so unbranded output is byte-identical.
+  const hCol = headingColor ?? '#111827'
+  const borderCol = accentColor ? accentColor + '20' : '#F3F4F6'
+  const mutedCol = '#6B7280'
+
   return (
     <>
       {/* Header */}
-      <div className="pt-8 pb-8 border-b border-gray-100">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Run Sheet</h1>
+      <div className="pt-8 pb-8" style={{ borderColor: '#F3F4F6', borderBottomWidth: 1 }}>
+        <h1 className="text-2xl font-semibold mb-1" style={{ color: hCol }}>Run Sheet</h1>
         {selectedDay && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm" style={{ color: mutedCol }}>
             {formatEventDate(selectedDay)}
             {activeDay && activeDay.venues.length > 0
-              ? ` · ${activeDay.venues.join(', ').replace(/\s*[—–]\s*/g, ', ')}`
+              ? ` · ${activeDay.venues.join(', ').replace(/\s*-\s*/g, ', ')}`
               : ''}
           </p>
         )}
@@ -176,48 +211,48 @@ export function VendorTimeline({ events, items }: VendorTimelineProps) {
 
       {days.length > 1 && selectedDay && (
         <div className="pt-6 flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-400">Day</span>
-          <DaySelector days={days} value={selectedDay} onChange={setPickedDay} />
+          <span className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Day</span>
+          <DaySelector days={days} value={selectedDay} onChange={setPickedDay} borderColor={borderCol} textColor={hCol} />
         </div>
       )}
 
       {/* Timeline */}
       <div className="pt-8 space-y-2">
         {dayItems.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4">No items yet.</p>
+          <p className="text-sm py-4" style={{ color: '#9CA3AF' }}>No items yet.</p>
         ) : (
           dayItems.map((item) => (
             <div
               key={item.id}
-              className={`flex items-start gap-4 border rounded-xl px-4 py-3 ${
-                item.pending_review
-                  ? 'border-amber-100 bg-amber-50/30'
-                  : 'border-gray-100 bg-white'
-              }`}
+              className="flex items-start gap-4 rounded-xl px-4 py-3"
+              style={{
+                borderWidth: 1,
+                borderColor: item.pending_review ? '#FCD34D' : '#F3F4F6',
+                backgroundColor: item.pending_review ? 'rgba(254, 243, 199, 0.3)' : '#ffffff',
+              }}
             >
               <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
-                <Clock size={11} strokeWidth={1.5} className="text-gray-300" />
+                <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
                 <span
-                  className={
-                    item.start_time
-                      ? 'text-gray-600 font-medium tabular-nums'
-                      : 'text-gray-300'
-                  }
+                  className="font-medium tabular-nums"
+                  style={{
+                    color: item.start_time ? '#4B5563' : '#D1D5DB',
+                  }}
                 >
                   {formatTime(item.start_time)}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                <p className="text-sm font-medium" style={{ color: hCol }}>{item.title}</p>
                 {item.description && (
-                  <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>
+                  <p className="text-xs mt-0.5" style={{ color: mutedCol }}>{item.description}</p>
                 )}
                 {item.duration_min && (
-                  <p className="text-xs text-gray-400 mt-0.5">{item.duration_min} min</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{item.duration_min} min</p>
                 )}
               </div>
               {item.pending_review && (
-                <span className="text-xs bg-amber-50 text-amber-500 border border-amber-100 rounded-full px-2 py-0.5 shrink-0">
+                <span className="text-xs border rounded-full px-2 py-0.5 shrink-0" style={{ borderColor: '#FCD34D', backgroundColor: 'rgba(254, 243, 199, 0.5)', color: '#D97706' }}>
                   Provisional
                 </span>
               )}
@@ -227,9 +262,9 @@ export function VendorTimeline({ events, items }: VendorTimelineProps) {
       </div>
 
       {/* Footer note */}
-      <div className="border-t border-gray-100 mt-12 pt-6">
-        <p className="text-xs text-gray-400">
-          Items marked &quot;Provisional&quot; are awaiting MC confirmation. This run sheet
+      <div className="mt-12 pt-6" style={{ borderColor: '#F3F4F6', borderTopWidth: 1 }}>
+        <p className="text-xs" style={{ color: '#9CA3AF' }}>
+          Items marked "Provisional" are awaiting MC confirmation. This run sheet
           may be updated. Check back for the latest version.
         </p>
       </div>
