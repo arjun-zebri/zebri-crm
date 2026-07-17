@@ -4,6 +4,9 @@
  * Tests the fresh user onboarding flow: entering business name, selecting colors,
  * toggling surfaces, and verifying the editor appears without the wizard on reload.
  *
+ * REQUIRES isolated local Supabase stack on port 3123.
+ * Set PLAYWRIGHT_BASE_URL=http://localhost:3123 or define BRANDING_E2E env flag.
+ *
  * @module tests/e2e/branding-onboarding.spec.ts
  */
 import { test, expect } from '@playwright/test'
@@ -56,6 +59,12 @@ async function resetFreshUserState() {
 }
 
 test.describe('Branding Onboarding Wizard', () => {
+  // Guard: these tests depend on local Supabase for state reset
+  test.skip(
+    !process.env.PLAYWRIGHT_BASE_URL?.includes('3123') && !process.env.BRANDING_E2E,
+    'requires the isolated local-supabase stack (port 3123 or BRANDING_E2E=true)'
+  )
+
   test.beforeEach(async () => {
     await resetFreshUserState()
   })
@@ -65,7 +74,8 @@ test.describe('Branding Onboarding Wizard', () => {
 
     await expect(page.getByRole('heading', { name: /let's start with your identity/i })).toBeVisible({ timeout: 5000 })
 
-    const businessNameInput = page.locator('input[placeholder*="business" i], input[placeholder*="name" i], input[placeholder*="MC" i]').first()
+    // Use aria-label for business name input
+    const businessNameInput = page.getByLabel('Business name')
     await businessNameInput.waitFor({ state: 'visible', timeout: 5000 })
     await businessNameInput.fill('Test MC')
 
@@ -75,8 +85,8 @@ test.describe('Branding Onboarding Wizard', () => {
 
     await expect(page.getByRole('heading', { name: /choose your look/i })).toBeVisible({ timeout: 5000 })
 
-    // Set brand color via the hex textbox
-    const colorInput = page.getByLabel(/brand color hex/i)
+    // Set brand color via the hex textbox using aria-label
+    const colorInput = page.getByLabel('Brand color hex')
     await colorInput.waitFor({ state: 'visible', timeout: 5000 })
     await colorInput.clear()
     await colorInput.fill('#8B5CF6')
@@ -110,14 +120,32 @@ test.describe('Branding Onboarding Wizard', () => {
     await expect(page.getByRole('heading', { name: /let's start with your identity/i })).not.toBeVisible()
   })
 
-  test('Branding page loads successfully', async ({ page }) => {
-    // This test verifies the branding page loads successfully and contains
-    // the main navigation/UI elements.
+  test('Editor displays after onboarding (no wizard on return)', async ({ page }) => {
+    // Start with a fresh user
+    await resetFreshUserState()
     await login(page)
     await page.goto('/branding')
 
-    // Just verify the page contains the main element
-    const mainContent = page.locator('main')
-    await expect(mainContent).toBeVisible({ timeout: 10000 })
+    // Complete the wizard quickly
+    await expect(page.getByRole('heading', { name: /let's start with your identity/i })).toBeVisible({ timeout: 5000 })
+
+    const businessNameInput = page.getByLabel('Business name')
+    await businessNameInput.fill('Quick Test MC')
+
+    const nextButton = page.getByRole('button', { name: /next/i }).first()
+    await nextButton.click()
+    await page.waitForTimeout(200)
+
+    const colorInput = page.getByLabel('Brand color hex')
+    await colorInput.fill('#6366F1')
+
+    await nextButton.click()
+    await page.waitForTimeout(200)
+
+    const finishButton = page.getByRole('button', { name: /finish|complete/i }).first()
+    await finishButton.click()
+
+    // Verify editor loaded (not the wizard)
+    await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeVisible({ timeout: 10000 })
   })
 })
