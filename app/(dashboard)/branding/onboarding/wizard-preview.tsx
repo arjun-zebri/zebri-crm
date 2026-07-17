@@ -1,7 +1,14 @@
 'use client'
 
-import { getTextColor } from '@/lib/branding/contrast'
-import { FONT_STACKS, type BodyFont, type HeadingFont } from '@/lib/branding/fonts'
+import { useMemo } from 'react'
+
+// Blocks and their types are co-located with the editor; this is the same
+// documented layering direction the shared lib helpers use.
+import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import type { BodyFont, HeadingFont } from '@/lib/branding/fonts'
+import { buildPublicBranding } from '@/lib/branding/public-branding'
+import type { PublicDocData } from '@/lib/branding/public-renderer'
+import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type { Density } from '@/lib/branding/themes'
 import type { SurfaceTab } from '@/types/branding-preview'
 
@@ -22,8 +29,57 @@ interface WizardPreviewProps {
   step: 1 | 2 | 3
 }
 
-/** Vertical rhythm inside the mini document per density choice. */
-const DENSITY_GAP: Record<Density, number> = { compact: 6, cozy: 10, roomy: 14 }
+/** The unscaled document width. 560px keeps the @container/doc queries in
+ *  their desktop range so the mini document lays out like a real one. */
+const DOC_WIDTH = 560
+
+/** The preview pane's fixed content width (pane w-[340px] minus p-5 both
+ *  sides). The scale is a constant derived from it: container-query units
+ *  proved flaky inside the transformed subtree, and the pane width is ours. */
+const PANE_CONTENT_WIDTH = 300
+const DOC_SCALE = PANE_CONTENT_WIDTH / DOC_WIDTH
+
+/** Sample wedding line items so the preview reads as a real document. */
+const SAMPLE_DOC: PublicDocData = {
+  title: 'Wedding proposal',
+  refNumber: 'PROP-0412',
+  expiresAt: null,
+  items: [
+    { id: 'p1', description: 'MC and hosting, reception', amount: 1200 },
+    { id: 'p2', description: 'Ceremony coordination', amount: 400 },
+    { id: 'p3', description: 'Rehearsal walkthrough', amount: 150 },
+  ],
+  subtotal: 1750,
+  taxRate: 10,
+}
+
+/** Static block tree for the preview document, in three contiguous groups so
+ *  the parts a step does not touch can dim (fixed ids keep React stable). */
+const IDENTITY_BLOCKS: Block[] = [
+  { id: 'pv-bn', type: 'businessName' },
+  { id: 'pv-tg', type: 'tagline' },
+]
+const BODY_BLOCKS: Block[] = [
+  { id: 'pv-tx', type: 'text', text: 'We would love to be part of your day. Everything you need to lock in your date is below.' },
+  { id: 'pv-li', type: 'lineItems', colSpread: true },
+  { id: 'pv-to', type: 'totals', taxRate: 10, showSubtotal: true },
+  { id: 'pv-ac', type: 'action', primary: 'Accept proposal', secondary: null },
+]
+const FOOTER_BLOCKS: Block[] = [
+  { id: 'pv-ft', type: 'footer', closingNote: 'Thank you for thinking of us.' },
+]
+
+/**
+ * Per-step emphasis: what the current step edits stays at full opacity, the
+ * rest of the document greys back. Step 1 edits identity (name, tagline,
+ * logo, footer contact); step 2 restyles everything; step 3 is about the
+ * document list below, so the whole page recedes.
+ */
+const GROUP_OPACITY: Record<1 | 2 | 3, { identity: string; body: string }> = {
+  1: { identity: 'opacity-100', body: 'opacity-30' },
+  2: { identity: 'opacity-100', body: 'opacity-100' },
+  3: { identity: 'opacity-40', body: 'opacity-40' },
+}
 
 const SURFACE_LABELS: ReadonlyArray<[SurfaceTab, string]> = [
   ['proposal', 'Proposals'],
@@ -35,79 +91,61 @@ const SURFACE_LABELS: ReadonlyArray<[SurfaceTab, string]> = [
 ]
 
 /**
- * WizardPreview: a miniature document that live-updates with the wizard's
- * current choices, so each option's effect is visible the moment it changes.
- *
- * Deliberately a mock, not a real block render: at this size a faithful
- * document would be unreadable, while a logo + name in the chosen fonts, a
- * brand-colored accept button, and density-spaced placeholder lines
- * communicate exactly what each control does. Step 3 adds the six document
- * types with their on/off state so the toggles have visible consequences.
+ * WizardPreview: a real document, not a mock. Renders the shared
+ * PublicBlockRenderer (the exact code live proposals use) with a sample
+ * wedding proposal, branded by the wizard's current choices, scaled to fill
+ * the pane. Below it, the six document types show their on/off state so the
+ * step-3 toggles have visible consequences.
  * @internal
  */
 export function WizardPreview(props: WizardPreviewProps) {
-  const gap = DENSITY_GAP[props.density]
-  const name = props.businessName.trim() || 'Your business'
-  const monogram = name.charAt(0).toUpperCase()
+  // buildPublicBranding fills every PublicBranding field from partial
+  // metadata, so the preview inherits the same defaults real pages get.
+  const branding = useMemo(
+    () =>
+      buildPublicBranding({
+        business_name: props.businessName.trim() || 'Your business',
+        tagline: props.tagline,
+        logo_url: props.logoUrl || undefined,
+        brand_color: props.brandColor,
+        font_heading: props.fontHeading,
+        font_body: props.fontBody,
+        density: props.density,
+      }),
+    [props.businessName, props.tagline, props.logoUrl, props.brandColor, props.fontHeading, props.fontBody, props.density],
+  )
 
   return (
-    <div className="flex flex-col gap-3 h-full">
-      <p className="text-[11px] uppercase tracking-wide text-text-subtle">Live preview</p>
+    <div className="flex flex-col gap-3 h-full min-h-0">
+      <p className="text-[11px] uppercase tracking-wide text-text-subtle shrink-0">Live preview</p>
 
-      {/* Mini document mock. */}
-      <div className="rounded-lg border border-border bg-white shadow-sm p-4">
-        <div className="flex items-center gap-2.5">
-          {props.logoUrl ? (
-            // User-uploaded brand asset, plain img by convention.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={props.logoUrl} alt="" className="w-8 h-8 rounded-lg object-contain" />
-          ) : (
-            <span
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
-              style={{ background: props.brandColor, color: getTextColor(props.brandColor) }}
+      {/* Scaled real document. The wrapper reserves the scaled footprint and
+          fades out at the bottom edge so a taller document reads as a page
+          peeking out, not a cropped bug. */}
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        <div className="absolute inset-0">
+          <ScaledDoc>
+            <div
+              className="@container/doc rounded-lg border border-border shadow-sm overflow-hidden"
+              style={{ width: DOC_WIDTH, background: branding.surface_color }}
             >
-              {monogram}
-            </span>
-          )}
-          <div className="min-w-0">
-            <p
-              className="text-sm leading-tight truncate text-gray-900"
-              style={{ fontFamily: FONT_STACKS[props.fontHeading] }}
-            >
-              {name}
-            </p>
-            {props.tagline.trim() && (
-              <p
-                className="text-[11px] leading-tight truncate text-gray-500"
-                style={{ fontFamily: FONT_STACKS[props.fontBody] }}
-              >
-                {props.tagline}
-              </p>
-            )}
-          </div>
+              <div className={`transition-opacity duration-300 ${GROUP_OPACITY[props.step].identity}`}>
+                <PublicBlockRenderer blocks={IDENTITY_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
+              </div>
+              <div className={`transition-opacity duration-300 ${GROUP_OPACITY[props.step].body}`}>
+                <PublicBlockRenderer blocks={BODY_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
+              </div>
+              <div className={`transition-opacity duration-300 ${GROUP_OPACITY[props.step].identity}`}>
+                <PublicBlockRenderer blocks={FOOTER_BLOCKS} branding={branding} doc={SAMPLE_DOC} />
+              </div>
+            </div>
+          </ScaledDoc>
         </div>
-
-        {/* Placeholder copy whose rhythm follows the density choice. */}
-        <div className="mt-4" style={{ display: 'flex', flexDirection: 'column', gap }}>
-          <div className="h-1.5 rounded-full bg-gray-200 w-full" />
-          <div className="h-1.5 rounded-full bg-gray-200 w-11/12" />
-          <div className="h-1.5 rounded-full bg-gray-100 w-2/3" />
-        </div>
-
-        <div
-          className="mt-4 h-8 rounded-lg flex items-center justify-center text-xs font-medium"
-          style={{
-            background: props.brandColor,
-            color: getTextColor(props.brandColor),
-            fontFamily: FONT_STACKS[props.fontBody],
-          }}
-        >
-          Accept proposal
-        </div>
+        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-muted to-transparent pointer-events-none" />
       </div>
 
       {/* Document types, so step 3's toggles have visible consequences. */}
-      <div className={`transition-opacity duration-300 ${props.step === 3 ? 'opacity-100' : 'opacity-60'}`}>
+      <div className={`shrink-0 transition-opacity duration-300 ${props.step === 3 ? 'opacity-100' : 'opacity-70'}`}>
         <p className="text-[11px] uppercase tracking-wide text-text-subtle mb-2">Your documents</p>
         <ul className="grid grid-cols-2 gap-x-3 gap-y-1.5">
           {SURFACE_LABELS.map(([key, label]) => {
@@ -124,6 +162,19 @@ export function WizardPreview(props: WizardPreviewProps) {
           })}
         </ul>
       </div>
+    </div>
+  )
+}
+
+/**
+ * ScaledDoc: scales the fixed-width document down to the pane's content
+ * width with a constant factor, so the whole page width is always visible.
+ * @internal
+ */
+function ScaledDoc({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ transform: `scale(${DOC_SCALE})`, transformOrigin: 'top left' }}>
+      {children}
     </div>
   )
 }

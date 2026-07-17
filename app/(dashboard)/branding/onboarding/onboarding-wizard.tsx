@@ -173,7 +173,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       </div>
 
       {/* Right pane: live preview of the choices (hidden on narrow screens). */}
-      <div className="hidden sm:block w-[280px] shrink-0 border-l border-border bg-surface-muted rounded-r-xl p-5">
+      <div className="hidden sm:block w-[340px] shrink-0 border-l border-border bg-surface-muted rounded-r-xl p-5">
         <WizardPreview
           businessName={businessName}
           tagline={tagline}
