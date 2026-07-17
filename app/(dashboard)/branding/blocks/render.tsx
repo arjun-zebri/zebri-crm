@@ -1256,8 +1256,10 @@ export function RenderProposalBody({
  * the run sheet here: it flows from event data in real time. Same model
  * as `RenderContractBody` and `RenderPaymentSchedule`.
  *
- * Renders with a dashed border + muted "Live data" badge so it is
+ * Renders with a dashed border + muted "Live data - run sheet" badge so it is
  * visually unambiguous this block is not editable on the branding surface.
+ * The sample shows event title and three static timeline rows styled to match
+ * vendor-timeline.tsx row rendering.
  */
 export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }) {
   const pad = PAD(state)
@@ -1267,7 +1269,7 @@ export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }
   return (
     <div className="border-t border-gray-100">
       <div className={`${pad.docX} ${pad.blockY}`}>
-        {/* Locked-slot affordance: dashed border + muted "Live data"
+        {/* Locked-slot affordance: dashed border + muted "Live data - run sheet"
             badge make it clear at a glance that this block is not
             editable on the branding surface. */}
         <div
@@ -1291,22 +1293,42 @@ export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }
                 color: muted,
               }}
             >
-              Live data - timeline
+              Live data - run sheet
             </span>
           </div>
 
-          <div className="space-y-2 opacity-60 select-none pointer-events-none">
-            <div className="py-2.5 border-b border-gray-50 flex items-start justify-between gap-4">
-              <span className="text-sm" style={{ color: text }}>3:00 PM</span>
-              <span className="text-sm flex-1" style={{ color: text }}>Guests arrive and registration</span>
-            </div>
-            <div className="py-2.5 border-b border-gray-50 flex items-start justify-between gap-4">
-              <span className="text-sm" style={{ color: text }}>4:30 PM</span>
-              <span className="text-sm flex-1" style={{ color: text }}>Ceremony begins</span>
-            </div>
-            <div className="py-2.5 flex items-start justify-between gap-4">
-              <span className="text-sm" style={{ color: text }}>6:00 PM</span>
-              <span className="text-sm flex-1" style={{ color: text }}>Reception and dinner</span>
+          <div className="space-y-3 opacity-60 select-none pointer-events-none">
+            <p className="text-sm font-semibold mb-4" style={{ color: text }}>
+              Alex & Jordan - Reception
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
+                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
+                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
+                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>5:00 PM</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: text }}>Guest arrival</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
+                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
+                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
+                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>6:30 PM</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: text }}>Entrance</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
+                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
+                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
+                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>9:45 PM</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: text }}>Farewell circle</p>
+                </div>
+              </div>
             </div>
           </div>
 
