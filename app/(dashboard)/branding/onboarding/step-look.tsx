@@ -69,7 +69,7 @@ export function StepLook(props: StepLookProps) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-text mb-4">Choose your look</h2>
+        <h2 className="text-xl font-semibold text-text mb-1">Choose your look</h2>
         <p className="text-sm text-text-muted">Brand color, fonts, and spacing.</p>
       </div>
 

@@ -1,11 +1,11 @@
 'use client'
 
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
 /**
- * Props for wizard chrome (header + footer nav).
+ * Props for the wizard footer navigation.
  * @internal
  */
 interface WizardChromeProps {
@@ -19,61 +19,36 @@ interface WizardChromeProps {
 }
 
 /**
- * WizardChrome — Progress dots + navigation buttons for onboarding wizard.
+ * WizardChrome: the onboarding modal's pinned footer.
  *
- * Header: 3-step progress indicator (filled dots advance, empty dots follow).
- * Footer: Back / Skip / Next / Finish buttons with proper state.
+ * One row under a full-bleed hairline: "Skip, use defaults" as a quiet text
+ * link on the left; Back (ghost, hidden on the first step) and Next / Finish
+ * (primary) grouped on the right. The negative horizontal margins cancel the
+ * modal card's px-6 so the top border spans the full card width.
  * @internal
  */
 export function WizardChrome(props: WizardChromeProps) {
   return (
-    <>
-      {/* Progress dots */}
-      <div className="flex items-center justify-center gap-2">
-        {[1, 2, 3].map((s) => (
-          <div
-            key={s}
-            className={`h-2 rounded-full transition-all ${
-              s <= props.step ? 'w-8 bg-brand' : 'w-2 bg-surface-muted'
-            }`}
-          />
-        ))}
-      </div>
+    <div className="-mx-6 mt-4 px-6 pt-4 border-t border-border flex items-center justify-between gap-3">
+      <button
+        type="button"
+        onClick={props.onSkip}
+        disabled={props.loading}
+        className="text-sm text-text-muted hover:text-text cursor-pointer disabled:opacity-50 disabled:cursor-default transition"
+      >
+        Skip, use defaults
+      </button>
 
-      {/* Navigation footer */}
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={props.onBack}
-          disabled={props.step === 1 || props.loading}
-          className="cursor-pointer"
-        >
-          <ChevronLeft size={16} strokeWidth={1.5} />
-          Back
-        </Button>
-
-        <div className="text-center">
-          <button
-            type="button"
-            onClick={props.onSkip}
-            disabled={props.loading}
-            className="text-sm text-text-muted hover:text-text underline cursor-pointer disabled:opacity-50 disabled:cursor-default transition"
-          >
-            Skip, use defaults
-          </button>
-        </div>
-
+      <div className="flex items-center gap-2">
+        {props.step > 1 && (
+          <Button variant="ghost" size="sm" onClick={props.onBack} disabled={props.loading}>
+            Back
+          </Button>
+        )}
         {props.step < 3 ? (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={props.onNext}
-            disabled={props.loading}
-            className="cursor-pointer"
-          >
+          <Button variant="primary" size="sm" onClick={props.onNext} disabled={props.loading} className="rounded-xl">
             Next
-            <ChevronRight size={16} strokeWidth={1.5} />
+            <ChevronRight size={14} strokeWidth={1.5} />
           </Button>
         ) : (
           <Button
@@ -81,12 +56,13 @@ export function WizardChrome(props: WizardChromeProps) {
             size="sm"
             onClick={props.onFinish}
             disabled={props.loading || !props.canFinish}
-            className="cursor-pointer"
+            loading={props.loading}
+            className="rounded-xl"
           >
-            {props.loading ? 'Finishing...' : 'Finish'}
+            Finish setup
           </Button>
         )}
       </div>
-    </>
+    </div>
   )
 }

@@ -8,8 +8,10 @@ import type { SurfaceTab } from '@/types/branding-preview'
 
 import { StepBusiness } from './step-business'
 import { StepDocuments } from './step-documents'
+import { StepIndicator } from './step-indicator'
 import { StepLook } from './step-look'
 import { WizardChrome } from './wizard-chrome'
+import { WizardPreview } from './wizard-preview'
 
 /**
  * Complete onboarding result after all three steps.
@@ -111,51 +113,54 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-surface px-4 py-8">
-      <div className="w-full max-w-lg flex flex-col gap-6">
-        {/* Error state */}
+    <div className="flex h-full">
+      {/* Left pane: stepper, step content, footer nav. */}
+      <div className="flex-1 min-w-0 flex flex-col gap-5 px-6 py-6">
         {props.error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
+          <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg text-sm text-danger">
             {props.error}
           </div>
         )}
 
-        {/* Step content */}
-        <div className="min-h-[400px] flex flex-col gap-6">
-          {step === 1 && (
-            <StepBusiness
-              businessName={businessName}
-              setBusinessName={setBusinessName}
-              tagline={tagline}
-              setTagline={setTagline}
-              logoUrl={logoUrl}
-              setLogoUrl={setLogoUrl}
-            />
-          )}
+        <StepIndicator currentStep={step} />
 
-          {step === 2 && (
-            <StepLook
-              logoUrl={logoUrl}
-              brandColor={brandColor}
-              setBrandColor={setBrandColor}
-              fontHeading={fontHeading}
-              setFontHeading={setFontHeading}
-              fontBody={fontBody}
-              setFontBody={setFontBody}
-              density={density}
-              setDensity={setDensity}
-            />
-          )}
+        {/* Step content; the card is sized so this never scrolls at normal
+            viewport heights, overflow-y-auto is the short-window fallback. */}
+        <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+        {step === 1 && (
+          <StepBusiness
+            businessName={businessName}
+            setBusinessName={setBusinessName}
+            tagline={tagline}
+            setTagline={setTagline}
+            logoUrl={logoUrl}
+            setLogoUrl={setLogoUrl}
+          />
+        )}
 
-          {step === 3 && (
-            <StepDocuments
-              enabledSurfaces={enabledSurfaces}
-              setEnabledSurfaces={setEnabledSurfaces}
-            />
-          )}
-        </div>
+        {step === 2 && (
+          <StepLook
+            logoUrl={logoUrl}
+            brandColor={brandColor}
+            setBrandColor={setBrandColor}
+            fontHeading={fontHeading}
+            setFontHeading={setFontHeading}
+            fontBody={fontBody}
+            setFontBody={setFontBody}
+            density={density}
+            setDensity={setDensity}
+          />
+        )}
 
-        {/* Chrome (progress + navigation) */}
+        {step === 3 && (
+          <StepDocuments
+            enabledSurfaces={enabledSurfaces}
+            setEnabledSurfaces={setEnabledSurfaces}
+          />
+        )}
+      </div>
+
+        {/* Footer navigation (pinned) */}
         <WizardChrome
           step={step}
           loading={loading}
@@ -164,6 +169,21 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
           onNext={() => setStep((s) => ((s + 1) as 1 | 2 | 3))}
           onFinish={handleComplete}
           canFinish={enabledSurfaces.length > 0}
+        />
+      </div>
+
+      {/* Right pane: live preview of the choices (hidden on narrow screens). */}
+      <div className="hidden sm:block w-[280px] shrink-0 border-l border-border bg-surface-muted rounded-r-xl p-5">
+        <WizardPreview
+          businessName={businessName}
+          tagline={tagline}
+          logoUrl={logoUrl}
+          brandColor={brandColor}
+          fontHeading={fontHeading}
+          fontBody={fontBody}
+          density={density}
+          enabledSurfaces={enabledSurfaces}
+          step={step}
         />
       </div>
     </div>

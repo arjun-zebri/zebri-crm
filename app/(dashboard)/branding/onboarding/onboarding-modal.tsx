@@ -105,33 +105,17 @@ export function OnboardingModal({
         aria-modal="true"
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
-        {/* Modal card: centered, max-w-lg, with smooth entry transition. */}
+        {/* Modal card: centered, fixed height, with smooth entry transition. */}
         <div
           ref={initialFocusRef}
           tabIndex={-1}
-          className="w-full max-w-lg bg-surface rounded-xl shadow-lg animate-modal-in onboarding-modal-card"
-          style={{ maxHeight: '85vh', overflowY: 'auto' }}
+          className="w-full max-w-3xl bg-surface rounded-xl shadow-lg outline-none animate-modal-in onboarding-modal-card h-[700px] max-h-[92vh] flex flex-col overflow-hidden"
         >
           <OnboardingWizard {...wizardProps} />
         </div>
       </div>
 
       <style>{`
-        /* Override wizard's full-page layout when inside modal. */
-        .onboarding-modal-card > div:first-child {
-          min-height: auto;
-          background: transparent;
-          padding: 2rem 1.5rem;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .onboarding-modal-card > div:first-child > div:first-child {
-          min-height: auto;
-        }
-
         @media (prefers-reduced-motion: reduce) {
           .animate-fade-in,
           .animate-modal-in {

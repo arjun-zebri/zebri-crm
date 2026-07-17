@@ -31,7 +31,7 @@ export function StepBusiness(props: StepBusinessProps) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-text mb-4">Let's start with your identity</h2>
+        <h2 className="text-xl font-semibold text-text mb-1">Let's start with your identity</h2>
         <p className="text-sm text-text-muted">We'll use these to brand all your documents.</p>
       </div>
 

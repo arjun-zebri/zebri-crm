@@ -87,11 +87,11 @@ export function StepDocuments(props: StepDocumentsProps) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h2 className="text-xl font-semibold text-text mb-4">Which documents?</h2>
+        <h2 className="text-xl font-semibold text-text mb-1">Which documents?</h2>
         <p className="text-sm text-text-muted">You can change these later. At least one must be enabled.</p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {SURFACE_ORDER.map((surface) => {
           const enabled = props.enabledSurfaces.includes(surface)
           const isOnlyEnabled = enabled && allDisabledExceptOne
@@ -100,9 +100,9 @@ export function StepDocuments(props: StepDocumentsProps) {
           return (
             <label
               key={surface}
-              className={`flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${
                 enabled
-                  ? 'border-brand bg-brand/5'
+                  ? 'border-border-strong bg-surface-muted'
                   : 'border-border hover:border-border-strong'
               }`}
             >
@@ -111,12 +111,12 @@ export function StepDocuments(props: StepDocumentsProps) {
                 checked={enabled}
                 onChange={() => toggleSurface(surface)}
                 disabled={isOnlyEnabled}
-                className="mt-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                className="accent-black cursor-pointer disabled:opacity-50 disabled:cursor-default"
                 aria-label={info.label}
               />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-text">{info.label}</div>
-                <div className="text-xs text-text-muted mt-0.5">{info.description}</div>
+              <div className="flex-1 min-w-0 flex items-baseline gap-2">
+                <span className="text-sm font-medium text-text shrink-0">{info.label}</span>
+                <span className="text-xs text-text-muted truncate">{info.description}</span>
               </div>
             </label>
           )
@@ -124,9 +124,7 @@ export function StepDocuments(props: StepDocumentsProps) {
       </div>
 
       {allDisabledExceptOne && (
-        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
-          <p className="text-xs text-amber-800 font-medium">Keep at least one document type enabled</p>
-        </div>
+        <p className="text-xs text-text-muted">Keep at least one document type enabled.</p>
       )}
     </div>
   )
