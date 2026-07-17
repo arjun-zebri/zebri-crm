@@ -167,7 +167,7 @@ describe('Internal timeline items are hidden from public surfaces', () => {
       p_id: newId,
       p_start_time: '20:00',
       p_title: 'First dance',
-      p_description: null,
+      p_description: '',
       p_duration_min: 15,
       p_event_id: a.ev2Id,
     });

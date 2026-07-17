@@ -89,15 +89,24 @@ describe('Branding overhaul migration', () => {
 
     expect(error).toBeNull();
     expect(data).not.toBeNull();
-    expect(data).toHaveProperty('events');
-    expect(data).toHaveProperty('timeline_items');
-    expect(data).toHaveProperty('branding');
-    expect(data).toHaveProperty('branding_blocks');
+
+    // Narrow the Json type to access properties
+    const payload = data as unknown as {
+      events: unknown[];
+      timeline_items: unknown[];
+      branding: unknown;
+      branding_blocks: unknown;
+    };
+
+    expect(payload).toHaveProperty('events');
+    expect(payload).toHaveProperty('timeline_items');
+    expect(payload).toHaveProperty('branding');
+    expect(payload).toHaveProperty('branding_blocks');
 
     // branding should be a jsonb object with branding fields
-    expect(typeof data.branding).toBe('object');
+    expect(typeof payload.branding).toBe('object');
     // branding_blocks can be null if no blocks have been configured
-    expect(data.branding_blocks === null || typeof data.branding_blocks === 'object').toBe(
+    expect(payload.branding_blocks === null || typeof payload.branding_blocks === 'object').toBe(
       true,
     );
   });
