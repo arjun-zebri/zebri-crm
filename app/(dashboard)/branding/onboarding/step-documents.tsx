@@ -114,7 +114,7 @@ export function StepDocuments(props: StepDocumentsProps) {
                 className="accent-black cursor-pointer disabled:opacity-50 disabled:cursor-default"
                 aria-label={info.label}
               />
-              <div className="flex-1 min-w-0 flex items-baseline gap-2">
+              <div className="flex-1 min-w-0 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
                 <span className="text-sm font-medium text-text shrink-0">{info.label}</span>
                 <span className="text-xs text-text-muted">{info.description}</span>
               </div>
