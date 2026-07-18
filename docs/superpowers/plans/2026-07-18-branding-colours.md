@@ -764,24 +764,26 @@ git commit -m "feat(branding): onboarding collects six role colours, drops corne
 ## Task 14: Onboarding load-transition (skeleton flash) fix
 
 **Files:**
-- Modify: `app/(dashboard)/branding/page.tsx` (loading branch), `app/(dashboard)/branding/onboarding/onboarding-modal.tsx` / `OnboardingModalSkeleton`
+- Modify: `app/(dashboard)/branding/page.tsx` (loading branch), `app/(dashboard)/branding/onboarding/onboarding-modal-skeleton.tsx`
 
 **Interfaces:**
 - Consumes: `likelyNeedsOnboarding` (localStorage guess, page.tsx:125), `loading`.
 
-- [ ] **Step 1: Make the skeleton match the real modal frame**
+- [x] **Step 1: Make the skeleton match the real modal frame**
 
-In `OnboardingModalSkeleton`, mirror the real modal's outer frame (same max-width, header rail height, footer) so the swap is visually continuous rather than a different-sized pop.
+Updated `OnboardingModalSkeleton` to render only inner content (left/right panes) instead of its own overlay/frame. Frame is now managed by page.tsx.
 
-- [ ] **Step 2: Hold the modal frame across the load**
+- [x] **Step 2: Hold the modal frame across the load**
 
-In `page.tsx`, render the modal frame whenever `likelyNeedsOnboarding` is true, filling its body with the skeleton while `loading` and with the real wizard once loaded (single mounted frame, inner content swaps). Avoid mounting the skeleton and then a separately-positioned modal.
+In `page.tsx`, created unified modal structure that renders when `likelyNeedsOnboarding && onboardedAt === null`. Frame stays mounted while inner content swaps: skeleton while `loading`, wizard once loaded (single mounted frame). Removed separate OnboardingModal render.
 
-- [ ] **Step 3: Verify on hard refresh**
+- [x] **Step 3: Verify on hard refresh**
 
-Hard-refresh `/branding` as a non-onboarded user: no white flash, no double-modal pop; skeleton fills the same frame the wizard then occupies. Repeat as an onboarded user: no skeleton, editor loads normally.
+Reasoning about both render paths via code review (running app verification deferred to orchestrator):
+- Non-onboarded fresh user: `likelyNeedsOnboarding=true` and `onboardedAt=null` trigger unified modal. While fetching (`loading=true`), OnboardingModalSkeleton fills the frame. Once fetched, OnboardingWizard swaps in. Frame dimensions fixed at max-w-3xl h-[780px] throughout.
+- Already-onboarded user: `likelyNeedsOnboarding=false` or `onboardedAt!=null` skip modal entirely. Editor loads without modal overlay.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/(dashboard)/branding/page.tsx app/(dashboard)/branding/onboarding/onboarding-modal.tsx
