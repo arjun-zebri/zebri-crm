@@ -685,24 +685,32 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
    * headingColor, subheadingColor, surfaceColor, textColor, secondaryColor).
    *
    * Legacy kits persisted before the headingColor/subheadingColor rollout
-   * use the old schema with accentColor, mutedColor, and secondaryTextColor.
-   * This helper applies fallback relationships:
+   * use the old schema with mutedColor. This helper applies fallback
+   * relationships:
    * - headingColor: kit.headingColor || kit.textColor || current state
    * - subheadingColor: kit.subheadingColor || kit.mutedColor || current state
    * This ensures legacy kits apply coherently without undefined slots.
    */
+  type LegacyBrandKit = BrandKit & {
+    mutedColor?: string
+    accentColor?: string
+  }
+
   const normalizeLegacyKit = (
     kit: BrandKit,
     currentState: EditorState,
-  ): Partial<EditorState> => {
+  ): { headingColor: string; subheadingColor: string } => {
+    // Widen to legacy shape to safely access mutedColor and accentColor
+    // which existed in pre-role-colour-model kits
+    const legacy = kit as LegacyBrandKit
     return {
       headingColor:
-        kit.headingColor ||
-        (kit as any).textColor ||
+        legacy.headingColor ||
+        legacy.textColor ||
         currentState.headingColor,
       subheadingColor:
-        kit.subheadingColor ||
-        (kit as any).mutedColor ||
+        legacy.subheadingColor ||
+        legacy.mutedColor ||
         currentState.subheadingColor,
     }
   }
@@ -716,8 +724,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         activeKitId: kit.id,
         themePreset: 'custom',
         brandColor: kit.brandColor,
-        headingColor: legacy.headingColor!,
-        subheadingColor: legacy.subheadingColor!,
+        headingColor: legacy.headingColor,
+        subheadingColor: legacy.subheadingColor,
         surfaceColor: kit.surfaceColor,
         textColor: kit.textColor,
         secondaryColor: kit.secondaryColor,
@@ -839,8 +847,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           kitName: next.name,
           themePreset: 'custom',
           brandColor: next.brandColor,
-          headingColor: legacy.headingColor!,
-          subheadingColor: legacy.subheadingColor!,
+          headingColor: legacy.headingColor,
+          subheadingColor: legacy.subheadingColor,
           surfaceColor: next.surfaceColor,
           textColor: next.textColor,
           secondaryColor: next.secondaryColor,
