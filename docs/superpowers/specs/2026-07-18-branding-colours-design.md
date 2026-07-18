@@ -179,6 +179,25 @@ four dropped keys), `branding.md`, `page-specs.md` (onboarding + branding
 editor), `component-library.md` if the colour-row set is documented,
 `production-readiness.md` status line.
 
+## 8. Onboarding load transition (reported bug)
+
+On a hard refresh of `/branding`, `page.tsx` renders `<OnboardingModalSkeleton>`
+(gated by the `zebri:branding-onboarded` localStorage guess) during the async
+load, then swaps in the real `<OnboardingModal>` once `loading` clears. The
+skeleton disappears and a visibly *different* modal pops in — a jarring flash
+rather than a smooth hand-off.
+
+Fix as part of this work (we're already reshaping the Look step, so the skeleton
+would otherwise drift further from the real modal):
+
+- Make `OnboardingModalSkeleton` structurally match the real modal's frame
+  (same width, header, step chrome, footer) so the swap is visually continuous.
+- Only render the skeleton when the localStorage guess says onboarding is
+  likely AND we are still loading; cross-fade or hold the modal frame so the
+  inner content fills in rather than the whole modal remounting.
+- Verify on hard refresh: no white flash, no double-modal pop, for both the
+  "needs onboarding" and "already onboarded" paths.
+
 ## Risks
 
 - **Hierarchy flattening:** collapsing `muted_color`→`text_color` makes
