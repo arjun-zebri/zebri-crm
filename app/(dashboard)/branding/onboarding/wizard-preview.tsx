@@ -20,14 +20,21 @@ interface WizardPreviewProps {
   businessName: string
   tagline: string
   logoUrl: string
-  brandColor: string
-  /** Secondary brand colour (accent). */
-  secondaryColor: string
+  /** Heading colour for page titles and key headlines. */
+  headingColor: string
+  /** Subheading colour for secondary headings and hierarchy levels. */
+  subheadingColor: string
+  /** Body text colour. */
+  bodyColor: string
+  /** Page background colour. */
+  backgroundColor: string
+  /** Primary button colour; persisted as brand_color. */
+  primaryButtonColor: string
+  /** Secondary button colour; persisted as secondary_color. */
+  secondaryButtonColor: string
   fontHeading: HeadingFont
   fontBody: BodyFont
   density: Density
-  /** Corner radius in px for cards and buttons. */
-  cornerRadius: number
   /** Current wizard step. */
   step: 1 | 2 | 3
   /** True on the welcome screen: the full document shows undimmed. */
@@ -107,15 +114,17 @@ export function WizardPreview(props: WizardPreviewProps) {
         business_name: props.businessName.trim() || 'Your business',
         tagline: props.tagline,
         logo_url: props.logoUrl || undefined,
-        brand_color: props.brandColor,
-        secondary_color: props.secondaryColor,
-        secondary_text_color: getTextColor(props.secondaryColor),
+        heading_color: props.headingColor,
+        subheading_color: props.subheadingColor,
+        text_color: props.bodyColor,
+        surface_color: props.backgroundColor,
+        brand_color: props.primaryButtonColor,
+        secondary_color: props.secondaryButtonColor,
         font_heading: props.fontHeading,
         font_body: props.fontBody,
         density: props.density,
-        corner_radius: props.cornerRadius,
       }),
-    [props.businessName, props.tagline, props.logoUrl, props.brandColor, props.secondaryColor, props.fontHeading, props.fontBody, props.density, props.cornerRadius],
+    [props.businessName, props.tagline, props.logoUrl, props.headingColor, props.subheadingColor, props.bodyColor, props.backgroundColor, props.primaryButtonColor, props.secondaryButtonColor, props.fontHeading, props.fontBody, props.density],
   )
 
   const docWidth = props.step === 1 && !props.intro ? DOC_WIDTH_FOCUS : DOC_WIDTH_FULL
@@ -132,7 +141,7 @@ export function WizardPreview(props: WizardPreviewProps) {
           <ScaledDoc key={docWidth} docWidth={docWidth}>
             <div
               className="@container/doc border border-border shadow-sm overflow-hidden animate-fade-in motion-reduce:animate-none [&_*]:transition-[padding,margin,gap,border-radius] [&_*]:duration-300 motion-reduce:[&_*]:transition-none"
-              style={{ width: docWidth, background: branding.surface_color, borderRadius: Math.min(props.cornerRadius, 16) }}
+              style={{ width: docWidth, background: branding.surface_color, borderRadius: 8 }}
             >
               {props.step === 1 && !props.intro ? (
                 // Business step: the identity header renders for real and

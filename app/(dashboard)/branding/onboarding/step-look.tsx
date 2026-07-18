@@ -8,7 +8,7 @@ import type { Density } from '@/lib/branding/themes'
 
 import { Select } from '../components/select'
 
-import { ColorField, DensityPicker, RadiusPicker } from './look-pickers'
+import { ColorField, DensityPicker } from './look-pickers'
 
 /**
  * Props for the visual look step.
@@ -16,27 +16,33 @@ import { ColorField, DensityPicker, RadiusPicker } from './look-pickers'
  */
 interface StepLookProps {
   logoUrl: string
-  brandColor: string
-  setBrandColor: (v: string) => void
-  secondaryColor: string
-  setSecondaryColor: (v: string) => void
+  headingColor: string
+  setHeadingColor: (v: string) => void
+  subheadingColor: string
+  setSubheadingColor: (v: string) => void
+  bodyColor: string
+  setBodyColor: (v: string) => void
+  backgroundColor: string
+  setBackgroundColor: (v: string) => void
+  primaryButtonColor: string
+  setPrimaryButtonColor: (v: string) => void
+  secondaryButtonColor: string
+  setSecondaryButtonColor: (v: string) => void
   fontHeading: HeadingFont
   setFontHeading: (v: HeadingFont) => void
   fontBody: BodyFont
   setFontBody: (v: BodyFont) => void
   density: Density
   setDensity: (v: Density) => void
-  cornerRadius: number
-  setCornerRadius: (v: number) => void
 }
 
 const HEADING_OPTIONS = HEADING_FONTS.map((f) => ({ value: f, label: FONT_LABELS[f] }))
 const BODY_OPTIONS = BODY_FONTS.map((f) => ({ value: f, label: FONT_LABELS[f] }))
 
 /**
- * StepLook: primary and secondary brand colours, heading and body fonts,
- * spacing density, and corner radius. Suggested swatches from the uploaded
- * logo feed the primary colour.
+ * StepLook: six role-based brand colours, heading and body fonts,
+ * and spacing density. Suggested swatches from the uploaded
+ * logo feed the primary button colour.
  * @internal
  */
 export function StepLook(props: StepLookProps) {
@@ -70,19 +76,23 @@ export function StepLook(props: StepLookProps) {
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-xl font-semibold text-text mb-1">Choose your look</h2>
-        <p className="text-sm text-text-muted">Colours, fonts, spacing, and corners.</p>
+        <p className="text-sm text-text-muted">Colours, fonts, and spacing.</p>
       </div>
 
       <div className="space-y-4">
         {/* Brand colours */}
         <div>
-          <div className="flex gap-3">
-            <ColorField label="Primary colour" value={props.brandColor} onChange={props.setBrandColor} />
-            <ColorField label="Secondary colour" value={props.secondaryColor} onChange={props.setSecondaryColor} />
+          <div className="grid grid-cols-2 gap-3">
+            <ColorField label="Heading" value={props.headingColor} onChange={props.setHeadingColor} />
+            <ColorField label="Subheading" value={props.subheadingColor} onChange={props.setSubheadingColor} />
+            <ColorField label="Body text" value={props.bodyColor} onChange={props.setBodyColor} />
+            <ColorField label="Background" value={props.backgroundColor} onChange={props.setBackgroundColor} />
+            <ColorField label="Primary button" value={props.primaryButtonColor} onChange={props.setPrimaryButtonColor} />
+            <ColorField label="Secondary button" value={props.secondaryButtonColor} onChange={props.setSecondaryButtonColor} />
           </div>
           <p className="mt-2 text-xs text-text-muted leading-snug">
-            Primary colours your main buttons, like Accept and Pay. Secondary
-            colours supporting buttons, like Decline or Ask a question.
+            Primary colours your main buttons like Accept and Pay. Secondary
+            colours supporting buttons like Decline.
           </p>
 
           {suggestedColors.length > 0 && (
@@ -91,7 +101,7 @@ export function StepLook(props: StepLookProps) {
               {suggestedColors.map((color) => (
                 <button
                   key={color}
-                  onClick={() => props.setBrandColor(color)}
+                  onClick={() => props.setPrimaryButtonColor(color)}
                   className="w-6 h-6 rounded-lg border border-border cursor-pointer hover:ring-1 hover:ring-brand/50 transition"
                   style={{ backgroundColor: color }}
                   title={color}
@@ -128,8 +138,6 @@ export function StepLook(props: StepLookProps) {
         </div>
 
         <DensityPicker density={props.density} setDensity={props.setDensity} />
-
-        <RadiusPicker cornerRadius={props.cornerRadius} setCornerRadius={props.setCornerRadius} />
       </div>
     </div>
   )

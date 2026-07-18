@@ -21,14 +21,15 @@ export interface OnboardingResult {
   businessName: string
   tagline: string
   logoUrl: string
-  brandColor: string
-  /** Secondary brand colour; persisted as secondary_color (supporting buttons). */
-  secondaryColor: string
+  headingColor: string
+  subheadingColor: string
+  bodyColor: string
+  backgroundColor: string
+  primaryButtonColor: string
+  secondaryButtonColor: string
   fontHeading: HeadingFont
   fontBody: BodyFont
   density: Density
-  /** Corner radius in px for cards and buttons. */
-  cornerRadius: number
   enabledSurfaces: SurfaceTab[]
 }
 
@@ -62,12 +63,15 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
   const [businessName, setBusinessName] = useState(props.initial.businessName || '')
   const [tagline, setTagline] = useState(props.initial.tagline || '')
   const [logoUrl, setLogoUrl] = useState(props.initial.logoUrl || '')
-  const [brandColor, setBrandColor] = useState(props.initial.brandColor || '#6366F1')
-  const [secondaryColor, setSecondaryColor] = useState(props.initial.secondaryColor || '#111827')
+  const [headingColor, setHeadingColor] = useState(props.initial.headingColor || '#111827')
+  const [subheadingColor, setSubheadingColor] = useState(props.initial.subheadingColor || '#111827')
+  const [bodyColor, setBodyColor] = useState(props.initial.bodyColor || '#6B7280')
+  const [backgroundColor, setBackgroundColor] = useState(props.initial.backgroundColor || '#FFFFFF')
+  const [primaryButtonColor, setPrimaryButtonColor] = useState(props.initial.primaryButtonColor || '#111827')
+  const [secondaryButtonColor, setSecondaryButtonColor] = useState(props.initial.secondaryButtonColor || '#6B7280')
   const [fontHeading, setFontHeading] = useState<HeadingFont>(props.initial.fontHeading || 'playfair')
   const [fontBody, setFontBody] = useState<BodyFont>(props.initial.fontBody || 'inter')
   const [density, setDensity] = useState<Density>(props.initial.density || 'cozy')
-  const [cornerRadius, setCornerRadius] = useState(props.initial.cornerRadius ?? 8)
   const [enabledSurfaces, setEnabledSurfaces] = useState<SurfaceTab[]>(
     props.initial.enabledSurfaces && props.initial.enabledSurfaces.length > 0
       ? props.initial.enabledSurfaces
@@ -84,12 +88,15 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       businessName,
       tagline,
       logoUrl,
-      brandColor,
-      secondaryColor,
+      headingColor,
+      subheadingColor,
+      bodyColor,
+      backgroundColor,
+      primaryButtonColor,
+      secondaryButtonColor,
       fontHeading,
       fontBody,
       density,
-      cornerRadius,
       enabledSurfaces,
     }
     setLoading(true)
@@ -108,12 +115,15 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       businessName: businessName || props.initial.businessName || '',
       tagline: tagline || props.initial.tagline || '',
       logoUrl: logoUrl || props.initial.logoUrl || '',
-      brandColor: brandColor || props.initial.brandColor || '#6366F1',
-      secondaryColor: secondaryColor || props.initial.secondaryColor || '#111827',
+      headingColor: headingColor || props.initial.headingColor || '#111827',
+      subheadingColor: subheadingColor || props.initial.subheadingColor || '#111827',
+      bodyColor: bodyColor || props.initial.bodyColor || '#6B7280',
+      backgroundColor: backgroundColor || props.initial.backgroundColor || '#FFFFFF',
+      primaryButtonColor: primaryButtonColor || props.initial.primaryButtonColor || '#111827',
+      secondaryButtonColor: secondaryButtonColor || props.initial.secondaryButtonColor || '#6B7280',
       fontHeading: fontHeading || props.initial.fontHeading || 'playfair',
       fontBody: fontBody || props.initial.fontBody || 'inter',
       density: density || props.initial.density || 'cozy',
-      cornerRadius,
       enabledSurfaces: ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
     }
     setLoading(true)
@@ -172,18 +182,24 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
         {step === 2 && (
           <StepLook
             logoUrl={logoUrl}
-            brandColor={brandColor}
-            setBrandColor={setBrandColor}
-            secondaryColor={secondaryColor}
-            setSecondaryColor={setSecondaryColor}
+            headingColor={headingColor}
+            setHeadingColor={setHeadingColor}
+            subheadingColor={subheadingColor}
+            setSubheadingColor={setSubheadingColor}
+            bodyColor={bodyColor}
+            setBodyColor={setBodyColor}
+            backgroundColor={backgroundColor}
+            setBackgroundColor={setBackgroundColor}
+            primaryButtonColor={primaryButtonColor}
+            setPrimaryButtonColor={setPrimaryButtonColor}
+            secondaryButtonColor={secondaryButtonColor}
+            setSecondaryButtonColor={setSecondaryButtonColor}
             fontHeading={fontHeading}
             setFontHeading={setFontHeading}
             fontBody={fontBody}
             setFontBody={setFontBody}
             density={density}
             setDensity={setDensity}
-            cornerRadius={cornerRadius}
-            setCornerRadius={setCornerRadius}
           />
         )}
 
@@ -205,12 +221,15 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
             businessName={businessName}
             tagline={tagline}
             logoUrl={logoUrl}
-            brandColor={brandColor}
+            headingColor={headingColor}
+            subheadingColor={subheadingColor}
+            bodyColor={bodyColor}
+            backgroundColor={backgroundColor}
+            primaryButtonColor={primaryButtonColor}
+            secondaryButtonColor={secondaryButtonColor}
             fontHeading={fontHeading}
             fontBody={fontBody}
             density={density}
-            secondaryColor={secondaryColor}
-            cornerRadius={cornerRadius}
             step={step}
             intro={intro}
           />

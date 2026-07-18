@@ -17,7 +17,12 @@ describe('OnboardingWizard', () => {
             businessName: '',
             tagline: '',
             logoUrl: '',
-            brandColor: '#6366F1',
+            headingColor: '#111827',
+            subheadingColor: '#111827',
+            bodyColor: '#6B7280',
+            backgroundColor: '#FFFFFF',
+            primaryButtonColor: '#111827',
+            secondaryButtonColor: '#6B7280',
             fontHeading: 'playfair',
             fontBody: 'inter',
             density: 'cozy',
@@ -51,13 +56,15 @@ describe('OnboardingWizard', () => {
       expect(within(dialog).getByText('Choose your look')).toBeInTheDocument()
     })
 
-    // Verify the look controls are shown: colour fields, font selects,
-    // and the corner radius tiles.
-    expect(within(dialog).getByLabelText('Primary colour hex')).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('Secondary colour hex')).toBeInTheDocument()
+    // Verify the look controls are shown: six colour fields and font selects.
+    expect(within(dialog).getByLabelText('Heading hex')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Subheading hex')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Body text hex')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Background hex')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Primary button hex')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Secondary button hex')).toBeInTheDocument()
     expect(within(dialog).getByText('Heading font')).toBeInTheDocument()
     expect(within(dialog).getByText('Body font')).toBeInTheDocument()
-    expect(within(dialog).getByLabelText('Round')).toBeInTheDocument()
 
     // Verify density options are shown
     expect(within(dialog).getByLabelText('compact')).toBeInTheDocument()
@@ -100,12 +107,18 @@ describe('OnboardingWizard', () => {
     const finishButton = within(dialog).getByRole('button', { name: /finish/i })
     await user.click(finishButton)
 
-    // Verify onComplete was called with correct payload
+    // Verify onComplete was called with correct payload containing six colours
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledWith(
         expect.objectContaining({
           businessName: 'My Wedding Band',
           tagline: 'Making your day unforgettable',
+          headingColor: expect.any(String),
+          subheadingColor: expect.any(String),
+          bodyColor: expect.any(String),
+          backgroundColor: expect.any(String),
+          primaryButtonColor: expect.any(String),
+          secondaryButtonColor: expect.any(String),
           enabledSurfaces: expect.not.arrayContaining(['invoice']),
         }),
       )
