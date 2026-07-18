@@ -103,7 +103,7 @@ export default function PublicQuestionnairePage() {
 
           {pageState === 'not_found' && (
             <div className="text-center">
-              <h1 className="mb-2 text-2xl font-semibold" style={{ fontFamily: theme.headingStack }}>
+              <h1 className="mb-2 text-2xl font-semibold" style={{ color: theme.headingColor, fontFamily: theme.headingStack }}>
                 This link isn&apos;t available
               </h1>
               <p className="text-sm" style={{ color: theme.mutedColor }}>
@@ -130,7 +130,7 @@ export default function PublicQuestionnairePage() {
                 <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full" style={{ background: `${theme.brand}33` }}>
                   <span className="text-2xl">✓</span>
                 </div>
-                <h1 className="mb-2 text-2xl font-semibold" style={{ color: theme.textColor, fontFamily: theme.headingStack }}>
+                <h1 className="mb-2 text-2xl font-semibold" style={{ color: theme.headingColor, fontFamily: theme.headingStack }}>
                   All done, thank you!
                 </h1>
                 <p className="text-sm" style={{ color: theme.mutedColor }}>

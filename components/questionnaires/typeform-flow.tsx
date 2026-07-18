@@ -34,7 +34,7 @@ interface TypeformFlowProps {
 }
 
 export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSubmit, submitting = false, submitError = null, saveState = 'idle' }: TypeformFlowProps) {
-  const { brand, textColor, mutedColor, radius, headingStack } = theme
+  const { brand, textColor, mutedColor, headingColor, subheadingColor, radius, headingStack } = theme
   const steps = useMemo(() => buildSteps(questions), [questions])
   const [index, setIndex] = useState(0)
   // One index past the last question = the confirmation step.
@@ -99,7 +99,7 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
 
       {atConfirm ? (
         <div className="min-h-[300px] flex-1 overflow-y-auto">
-          <h2 className="mb-2 text-2xl font-semibold" style={{ color: textColor, fontFamily: headingStack }}>
+          <h2 className="mb-2 text-2xl font-semibold" style={{ color: headingColor, fontFamily: headingStack }}>
             Ready to send your answers?
           </h2>
           <p className="text-sm" style={{ color: mutedColor }}>
@@ -109,8 +109,8 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
         </div>
       ) : (
         <div className="min-h-[300px] flex-1 overflow-y-auto">
-          {step.section && <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: mutedColor }}>{step.section}</p>}
-          <h2 className="mb-2 text-2xl font-semibold" style={{ color: textColor, fontFamily: headingStack }}>
+          {step.section && <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: subheadingColor }}>{step.section}</p>}
+          <h2 className="mb-2 text-2xl font-semibold" style={{ color: headingColor, fontFamily: headingStack }}>
             {step.question.label}
             {step.question.required && <span style={{ color: brand }}> *</span>}
           </h2>

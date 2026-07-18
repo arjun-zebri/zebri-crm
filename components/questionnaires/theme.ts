@@ -21,6 +21,10 @@ export interface QuestionnaireTheme {
   textColor: string
   /** Secondary text: section eyebrows, help text, counters. */
   mutedColor: string
+  /** Heading colour: page titles, question labels. */
+  headingColor: string
+  /** Subheading colour: section eyebrows. */
+  subheadingColor: string
   /** Input/choice borders — derived from the text colour so it harmonises
    *  with the MC's palette instead of a fixed grey. */
   borderColor: string
@@ -42,6 +46,8 @@ export type ThemeSource = Partial<
     | 'surface_color'
     | 'text_color'
     | 'muted_color'
+    | 'heading_color'
+    | 'subheading_color'
     | 'corner_radius'
     | 'font_heading'
     | 'font_body'
@@ -56,11 +62,14 @@ export type ThemeSource = Partial<
  */
 export function themeFromBranding(branding: ThemeSource | undefined): QuestionnaireTheme {
   const textColor = branding?.text_color || '#111827'
+  const mutedColor = branding?.muted_color || '#6B7280'
   return {
     brand: branding?.brand_color || '#A7F3D0',
     pageBg: branding?.surface_color || '#fafafa',
     textColor,
-    mutedColor: branding?.muted_color || '#6B7280',
+    mutedColor,
+    headingColor: branding?.heading_color ?? textColor,
+    subheadingColor: branding?.subheading_color ?? mutedColor,
     borderColor: withAlpha(textColor, '26'), // ~15% — quiet but on-palette
     radius: branding?.corner_radius ?? 16,
     headingStack: branding?.font_heading ? headingFontFamily({ font_heading: branding.font_heading }) : undefined,

@@ -33,7 +33,7 @@ interface ClassicFormProps {
 }
 
 export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSubmit, submitting = false, submitError = null, saveState = 'idle' }: ClassicFormProps) {
-  const { brand, textColor, mutedColor, radius, headingStack } = theme
+  const { brand, textColor, mutedColor, headingColor, subheadingColor, radius, headingStack } = theme
   const [missing, setMissing] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
 
@@ -63,7 +63,7 @@ export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSub
         {questions.map((q) => {
           if (q.type === 'section') {
             return (
-              <h2 key={q.id} className="pt-2 text-xs font-medium uppercase tracking-wider" style={{ color: mutedColor }}>
+              <h2 key={q.id} className="pt-2 text-xs font-medium uppercase tracking-wider" style={{ color: subheadingColor }}>
                 {q.label}
               </h2>
             )
@@ -71,7 +71,7 @@ export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSub
           if (!QUESTION_TYPE_META[q.type].isInput) return null
           return (
             <div key={q.id} id={`question-${q.id}`}>
-              <h3 className="mb-1.5 text-lg font-semibold" style={{ color: textColor, fontFamily: headingStack }}>
+              <h3 className="mb-1.5 text-lg font-semibold" style={{ color: headingColor, fontFamily: headingStack }}>
                 {q.label}
                 {q.required && <span style={{ color: brand }}> *</span>}
               </h3>
