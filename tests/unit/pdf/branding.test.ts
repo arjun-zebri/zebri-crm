@@ -113,7 +113,6 @@ describe('publicBrandingToPdfOpts adapter', () => {
       logo_url: 'https://example.com/logo.png',
       brand_color: '#FF6B35',
       text_color: '#1A1A1A',
-      muted_color: '#666666',
       font_heading: 'inter' as const,
       font_body: 'inter' as const,
       theme_preset: 'custom',
@@ -124,7 +123,7 @@ describe('publicBrandingToPdfOpts adapter', () => {
 
     expect(opts.brandColor).toBe('#FF6B35')
     expect(opts.textColor).toBe('#1A1A1A')
-    expect(opts.mutedColor).toBe('#666666')
+    expect(opts.mutedColor).toBe('#1A1A1A')
     expect(opts.logoUrl).toBe('https://example.com/logo.png')
     expect(opts.headingFontFamily).toBeDefined()
     expect(opts.bodyFontFamily).toBeDefined()

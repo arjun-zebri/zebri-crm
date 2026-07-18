@@ -11,10 +11,17 @@ describe('resolveTypeDefaults', () => {
     expect(td.heading.font).toBe(b.font_heading)
     expect(td.heading.sizePx).toBe(b.heading_size)
     expect(td.heading.weight).toBe(b.font_weight)
-    expect(td.heading.color).toBe(b.text_color)
+    expect(td.heading.color).toBe(b.heading_color)
     expect(td.heading.textTransform).toBe('none')
     expect(td.heading.letterSpacing).toBe(b.heading_letter_spacing)
     expect(td.heading.align).toBe('left')
+  })
+
+  it('heading role uses heading_color, body uses text_color', () => {
+    const b = buildPublicBranding({ heading_color: '#000000', text_color: '#777777' })
+    const t = resolveTypeDefaults(b)
+    expect(t.heading.color).toBe('#000000')
+    expect(t.body.color).toBe('#777777')
   })
 
   it('resolves body defaults from PublicBranding', () => {
@@ -68,6 +75,7 @@ describe('resolveTypeDefaults', () => {
       font_body: 'lora',
       font_weight: 600,
       font_body_weight: 500,
+      heading_color: '#FF00FF',
       text_color: '#FF0000',
     })
     const td = resolveTypeDefaults(b)
@@ -75,7 +83,7 @@ describe('resolveTypeDefaults', () => {
     expect(td.heading.weight).toBe(600)
     expect(td.body.font).toBe('lora')
     expect(td.body.weight).toBe(500)
-    expect(td.heading.color).toBe('#FF0000')
+    expect(td.heading.color).toBe('#FF00FF')
     expect(td.body.color).toBe('#FF0000')
   })
 })
