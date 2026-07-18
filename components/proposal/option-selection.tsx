@@ -95,12 +95,12 @@ export function ProposalSelection({
           placeholder={headingDefaultText}
           className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
           style={{
-            color: brand,
+            color: subheadingColor,
             ...resolveTextStyle(headingLabel?.style, {
               fontFamily: 'work_sans',
               fontSize: 11,
               fontWeight: 600,
-              color: brand,
+              color: subheadingColor,
               align: 'left',
               lineHeight: 1.4,
               letterSpacing: 0.18,
@@ -146,12 +146,12 @@ export function ProposalSelection({
             placeholder={PROPOSAL_LABEL_DEFAULTS.addOns.text}
             className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
             style={{
-              color: brand,
+              color: subheadingColor,
               ...resolveTextStyle(labels.addOns.style, {
                 fontFamily: 'work_sans',
                 fontSize: 11,
                 fontWeight: 600,
-                color: brand,
+                color: subheadingColor,
                 align: 'left',
                 lineHeight: 1.4,
                 letterSpacing: 0.18,

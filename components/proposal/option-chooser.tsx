@@ -56,12 +56,12 @@ export function ProposalOptionChooser({
         placeholder={PROPOSAL_LABEL_DEFAULTS.choose.text}
         className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
         style={{
-          color: brand,
+          color: subheadingColor,
           ...resolveTextStyle(labels.choose.style, {
             fontFamily: 'work_sans',
             fontSize: 11,
             fontWeight: 600,
-            color: brand,
+            color: subheadingColor,
             align: 'left',
             lineHeight: 1.4,
             letterSpacing: 0.18,
