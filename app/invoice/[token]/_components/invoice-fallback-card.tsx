@@ -37,6 +37,8 @@ export interface InvoiceFallbackCardProps {
   /** Inline-style branding values from the invoice payload. */
   textColor: string;
   mutedColor: string;
+  headingColor: string;
+  subheadingColor: string;
   radius: number;
   headingStack: string | undefined;
   headingWeight: number;
@@ -57,6 +59,8 @@ export function InvoiceFallbackCard({
   buttonRadius,
   textColor,
   mutedColor,
+  headingColor,
+  subheadingColor,
   radius,
   headingStack,
   headingWeight,
@@ -96,7 +100,7 @@ export function InvoiceFallbackCard({
         <h1
           className="text-2xl mb-1"
           style={{
-            color: textColor,
+            color: headingColor,
             fontFamily: headingStack,
             fontWeight: headingWeight,
           }}
@@ -199,7 +203,7 @@ export function InvoiceFallbackCard({
             </>
           ) : null}
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold" style={{ color: textColor }}>
+            <span className="text-sm font-semibold" style={{ color: headingColor }}>
               Total
             </span>
             <span
@@ -221,7 +225,7 @@ export function InvoiceFallbackCard({
         <div className="px-8 pb-6">
           <p
             className="text-xs font-medium uppercase tracking-wider mb-3"
-            style={{ color: mutedColor }}
+            style={{ color: subheadingColor }}
           >
             Payment schedule
           </p>
@@ -247,7 +251,7 @@ export function InvoiceFallbackCard({
         <div className="px-8 pb-8">
           <p
             className="text-xs font-medium uppercase tracking-wider mb-3"
-            style={{ color: mutedColor }}
+            style={{ color: subheadingColor }}
           >
             Payment instructions
           </p>

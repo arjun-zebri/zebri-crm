@@ -45,6 +45,7 @@ export default async function VendorPage({
   const pageBg = branding?.page_background ?? branding?.surface_color ?? '#ffffff'
   const textColor = branding?.text_color ?? '#111827'
   const mutedColor = branding?.muted_color ?? '#6B7280'
+  const headingColor = branding?.heading_color ?? textColor
   const headingFont = (branding?.font_heading || 'inter') as HeadingFont
   const bodyFont = (branding?.font_body || 'inter') as BodyFont
   const bodyStack = FONT_STACKS[bodyFont]
@@ -119,7 +120,7 @@ export default async function VendorPage({
         <VendorTimeline
           events={vendorData.events}
           items={vendorData.timeline_items}
-          headingColor={textColor}
+          headingColor={headingColor}
           accentColor={branding?.brand_color}
         />
 

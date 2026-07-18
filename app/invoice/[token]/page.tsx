@@ -110,6 +110,8 @@ export default function PublicInvoicePage() {
   const pageBg = invoice?.surface_color || '#fafafa';
   const textColor = invoice?.text_color || '#111827';
   const mutedColor = invoice?.muted_color || '#6B7280';
+  const headingColor = invoice?.heading_color || textColor;
+  const subheadingColor = invoice?.subheading_color || mutedColor;
   const radius = invoice?.corner_radius ?? 16;
   const headingStack = invoice ? headingFontFamily(invoice) : undefined;
   const bodyStack = invoice ? bodyFontFamily(invoice) : undefined;
@@ -227,6 +229,8 @@ export default function PublicInvoicePage() {
               buttonRadius={actionStyle.radius}
               textColor={textColor}
               mutedColor={mutedColor}
+              headingColor={headingColor}
+              subheadingColor={subheadingColor}
               radius={radius}
               headingStack={headingStack}
               headingWeight={headingWeight}
