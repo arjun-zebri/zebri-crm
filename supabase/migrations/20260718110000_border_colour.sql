@@ -69,21 +69,10 @@ as $$
   where id = p_user_id;
 $$;
 
--- Reset every account's scalar colours to the new role-based defaults and
--- strip the dropped keys. Overwrites saved colours by intent (all users
--- re-onboard). Not DDL; jsonb key removal is not flagged by the safety gate.
--- @ALLOW_DESTRUCTIVE: intentional one-time reset of branding colours to the new role-based defaults; every account re-onboards.
+-- Seeds the border_color key for existing accounts. Overwrites any existing
+-- border_color value by intent.
+-- @ALLOW_DESTRUCTIVE: overwrites existing border_color values by intent.
 update auth.users
    set raw_user_meta_data =
        (coalesce(raw_user_meta_data, '{}'::jsonb)
-         || jsonb_build_object(
-              'heading_color',    '#111827',
-              'subheading_color', '#111827',
-              'text_color',       '#6B7280',
-              'surface_color',    '#FFFFFF',
-              'brand_color',      '#111827',
-              'secondary_color',  '#6B7280',
-              'link_color',       '#111827',
-              'border_color',     '#E5E7EB'))
-         - 'accent_color' - 'muted_color'
-         - 'secondary_text_color' - 'page_background';
+         || jsonb_build_object('border_color', '#E5E7EB'));
