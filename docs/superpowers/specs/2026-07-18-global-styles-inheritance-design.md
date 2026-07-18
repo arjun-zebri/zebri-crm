@@ -73,12 +73,17 @@ pixel size derived from the two global numbers.
 | `subtitle` | `body_size` x 1.0 | 15px |
 | `body` | `body_size` x 1.0 | 15px |
 | `finePrint` | `body_size` x 0.8 | 12px |
-| `sectionLabel` | `body_size` x 0.73, uppercase | 11px |
+| `sectionLabel` | `body_size` x 0.73 | 11px |
 
 Sizes round to the nearest pixel and clamp to a 9px floor, so a small Body size
-cannot render fine print illegibly. `sectionLabel` carries the eyebrow
-treatment (uppercase, `letterSpacing` 0.18em) unless `heading_case` or
-`heading_letter_spacing` say otherwise.
+cannot render fine print illegibly.
+
+`sectionLabel` follows the global heading case and letter spacing exactly as
+the heading roles do, with no treatment of its own. An earlier draft gave it a
+built-in uppercase and 0.18em default that global settings could only partly
+override, which made a plain non-uppercase label impossible to express and was
+itself a form of the baked styling this work removes. Size and colour alone
+distinguish a label now, so one rule covers every role.
 
 `resolveTypeDefaults` is extended to return a `TextStyleDefaults` for every role
 above, drawing colour from the matching role (`docTitle` and `sectionHeading`

@@ -189,15 +189,20 @@ describe('roleDefaults', () => {
     expect(d.fontFamily).toBe(b.font_body)
   })
 
-  it('gives the section label the eyebrow treatment by default', () => {
+  it('gives the section label no treatment of its own', () => {
     const d = roleDefaults(b, 'sectionLabel')
-    expect(d.textTransform).toBe('uppercase')
-    expect(d.letterSpacing).toBe(0.18)
+    expect(d.textTransform).toBe('none')
+    expect(d.letterSpacing).toBe(0)
   })
 
-  it('lets a global heading case override the eyebrow treatment', () => {
+  it('applies the global heading case to the section label', () => {
     const d = roleDefaults({ ...b, heading_case: 'capitalize' }, 'sectionLabel')
     expect(d.textTransform).toBe('capitalize')
+  })
+
+  it('applies the global heading letter spacing to the section label', () => {
+    const d = roleDefaults({ ...b, heading_letter_spacing: 0.25 }, 'sectionLabel')
+    expect(d.letterSpacing).toBe(0.25)
   })
 
   it('propagates a heading size change to every heading role', () => {
@@ -253,11 +258,11 @@ export function roleDefaults(b: PublicBranding, role: TypeRole): TextStyleDefaul
     : src.colour === 'subheading' ? b.subheading_color
     : b.text_color
 
-  // The eyebrow treatment is the section label's identity, so it applies
-  // unless the user has set a global case or tracking of their own.
-  const isLabel = role === 'sectionLabel'
-  const textTransform = isLabel && b.heading_case === 'none' ? 'uppercase' : b.heading_case
-  const letterSpacing = isLabel && b.heading_letter_spacing === 0 ? 0.18 : b.heading_letter_spacing
+  // Section labels take the heading case and tracking even though they use
+  // the body font, so every role answers to the global type settings and
+  // none carries a built-in treatment. Size and colour make a label read as
+  // a label.
+  const followsHeadingType = isHeadingFont || role === 'sectionLabel'
 
   return {
     fontFamily: isHeadingFont ? b.font_heading : b.font_body,
@@ -266,8 +271,8 @@ export function roleDefaults(b: PublicBranding, role: TypeRole): TextStyleDefaul
     color: colour,
     align: 'left',
     lineHeight: b.body_line_height,
-    letterSpacing: isHeadingFont || isLabel ? letterSpacing : 0,
-    textTransform: isHeadingFont ? b.heading_case : isLabel ? textTransform : b.body_case,
+    letterSpacing: followsHeadingType ? b.heading_letter_spacing : 0,
+    textTransform: followsHeadingType ? b.heading_case : b.body_case,
   }
 }
 ```
