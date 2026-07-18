@@ -85,6 +85,8 @@ export interface PublicBranding {
   body_line_height: number
   /** Global color for text links. Defaults to brand_color. */
   link_color: string
+  /** Global color for borders and hairlines. Defaults to neutral grey. */
+  border_color: string
   /** Global button style variant (fill or outline). */
   button_variant: 'fill' | 'outline'
   /** Global button size (sm, md, or lg). */
@@ -142,6 +144,7 @@ export interface UserMetadata {
   heading_letter_spacing?: number
   body_line_height?: number
   link_color?: string
+  border_color?: string
   button_variant?: 'fill' | 'outline'
   button_size?: 'sm' | 'md' | 'lg'
   button_radius?: number
@@ -225,6 +228,7 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
     heading_letter_spacing: typeof metadata.heading_letter_spacing === 'number' ? metadata.heading_letter_spacing : 0,
     body_line_height: typeof metadata.body_line_height === 'number' ? metadata.body_line_height : 1.5,
     link_color: metadata.link_color ?? brandColor,
+    border_color: metadata.border_color ?? '#E5E7EB',
     button_variant: metadata.button_variant ?? 'fill',
     button_size: metadata.button_size ?? 'md',
     button_radius: typeof metadata.button_radius === 'number' ? metadata.button_radius : 8,

@@ -19,4 +19,14 @@ describe('buildPublicBranding role-based colours', () => {
     expect(b.accent_color).toBe('#222222')       // = brand_color
     expect(b.page_background).toBe('#EEEEEE')     // = surface_color
   })
+
+  it('defaults border_color to the neutral hairline', () => {
+    const b = buildPublicBranding({})
+    expect(b.border_color).toBe('#E5E7EB')
+  })
+
+  it('passes a user border_color through', () => {
+    const b = buildPublicBranding({ border_color: '#123456' })
+    expect(b.border_color).toBe('#123456')
+  })
 })

@@ -48,6 +48,7 @@ const createMockBranding = (linkColor: string): PublicBranding => ({
   heading_letter_spacing: 0,
   body_line_height: 1.5,
   link_color: linkColor,
+  border_color: '#E5E7EB',
   button_variant: 'fill',
   button_size: 'md',
   button_radius: 8,

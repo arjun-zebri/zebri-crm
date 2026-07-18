@@ -103,6 +103,7 @@ function createMockBranding(overrides?: Partial<PublicBranding>): PublicBranding
     heading_letter_spacing: 0,
     body_line_height: 1.5,
     link_color: '#000000',
+    border_color: '#E5E7EB',
     button_variant: 'fill',
     button_size: 'md',
     button_radius: 8,
