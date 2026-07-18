@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 
 import { OnboardingModal } from '@/app/(dashboard)/branding/onboarding/onboarding-modal'
+import { OnboardingModalSkeleton } from '@/app/(dashboard)/branding/onboarding/onboarding-modal-skeleton'
 import { OnboardingWizard } from '@/app/(dashboard)/branding/onboarding/onboarding-wizard'
 
 describe('OnboardingWizard', () => {
@@ -205,5 +206,116 @@ describe('OnboardingWizard', () => {
       'vendorTimeline',
       'questionnaire',
     ])
+  })
+})
+
+describe('OnboardingModalSkeleton', () => {
+  it('renders with flex column layout matching wizard structure', () => {
+    const { container } = render(<OnboardingModalSkeleton />)
+
+    // Verify skeleton renders a single root div with flex flex-col h-full
+    const root = container.firstChild as HTMLDivElement
+    expect(root).toBeInstanceOf(HTMLDivElement)
+    expect(root.className).toContain('flex')
+    expect(root.className).toContain('flex-col')
+    expect(root.className).toContain('h-full')
+  })
+
+  it('renders two-pane layout inside flex container', () => {
+    const { container } = render(<OnboardingModalSkeleton />)
+
+    // Verify the middle section contains left and right panes
+    const flexContainer = container.querySelector('.flex.flex-1.min-h-0')
+    expect(flexContainer).toBeInTheDocument()
+
+    // Verify left pane (flex-1 min-w-0) exists
+    const leftPane = flexContainer?.querySelector('.flex-1.min-w-0')
+    expect(leftPane).toBeInTheDocument()
+
+    // Verify right pane (hidden sm:block w-[380px]) exists
+    const rightPane = flexContainer?.querySelector('.w-\\[380px\\]')
+    expect(rightPane).toBeInTheDocument()
+  })
+
+  it('renders skeleton footer at bottom with border-top', () => {
+    const { container } = render(<OnboardingModalSkeleton />)
+
+    // Verify footer structure with border-t
+    const footer = container.querySelector('.border-t.border-border')
+    expect(footer).toBeInTheDocument()
+    expect(footer?.className).toContain('px-6')
+    expect(footer?.className).toContain('py-4')
+    expect(footer?.className).toContain('flex')
+  })
+})
+
+describe('Onboarding modal frame continuity', () => {
+  it('maintains same modal frame dimensions when content swaps from skeleton to wizard', async () => {
+    /**
+     * This test verifies the continuity property: when a modal card holds
+     * the skeleton while loading=true, then swaps to the wizard when
+     * loading=false, the frame dimensions stay constant (max-w-3xl h-[780px]).
+     *
+     * We simulate this by rendering the skeleton and wizard in the same
+     * modal container and verifying both render within a flex column that
+     * can accommodate the height.
+     */
+    const { rerender } = render(
+      <div
+        className="w-full max-w-3xl bg-surface rounded-xl shadow-lg outline-none h-[780px] max-h-[94vh] flex flex-col overflow-hidden"
+        role="dialog"
+      >
+        <OnboardingModalSkeleton />
+      </div>,
+    )
+
+    // Verify skeleton is in the DOM
+    const container = screen.getByRole('dialog')
+    expect(container.className).toContain('flex')
+    expect(container.className).toContain('flex-col')
+    expect(container.className).toContain('h-[780px]')
+
+    // Verify skeleton structure has flex flex-col h-full root
+    const skeletonRoot = container.querySelector(':scope > .flex.flex-col.h-full')
+    expect(skeletonRoot).toBeInTheDocument()
+
+    // Swap to wizard (same container dimensions)
+    const onComplete = vi.fn().mockResolvedValue(undefined)
+    rerender(
+      <div
+        className="w-full max-w-3xl bg-surface rounded-xl shadow-lg outline-none h-[780px] max-h-[94vh] flex flex-col overflow-hidden"
+        role="dialog"
+      >
+        <OnboardingWizard
+          initial={{
+            businessName: '',
+            tagline: '',
+            logoUrl: '',
+            headingColor: '#111827',
+            subheadingColor: '#111827',
+            bodyColor: '#6B7280',
+            backgroundColor: '#FFFFFF',
+            primaryButtonColor: '#111827',
+            secondaryButtonColor: '#6B7280',
+            fontHeading: 'playfair',
+            fontBody: 'inter',
+            density: 'cozy',
+          }}
+          onComplete={onComplete}
+        />
+      </div>,
+    )
+
+    // Verify wizard is now in the DOM with same flex flex-col h-full root
+    const wizardRoot = container.querySelector(':scope > .flex.flex-col.h-full')
+    expect(wizardRoot).toBeInTheDocument()
+
+    // Verify the modal container still has the same dimensions
+    expect(container.className).toContain('h-[780px]')
+
+    // Verify both components render their middle flex section
+    // (skeleton: flex flex-1 min-h-0 for panes; wizard: flex flex-1 min-h-0 for panes)
+    const middleSection = container.querySelector(':scope > .flex.flex-col.h-full > .flex.flex-1.min-h-0')
+    expect(middleSection).toBeInTheDocument()
   })
 })

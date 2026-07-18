@@ -14,40 +14,45 @@
  */
 export function OnboardingModalSkeleton() {
   return (
-    <>
-      {/* Left pane: welcome-screen shaped skeleton. */}
-      <div className="flex-1 min-w-0 flex flex-col px-6 py-6">
-        <div className="flex-1 flex flex-col justify-center gap-3 pb-10">
-          <div className="h-6 w-56 rounded-full bg-surface-emphasis animate-pulse" />
-          <div className="h-3 w-full rounded-full bg-surface-emphasis animate-pulse" />
-          <div className="h-3 w-4/5 rounded-full bg-surface-emphasis animate-pulse" />
+    <div className="flex flex-col h-full">
+      {/* Middle: form column left, companion pane right. */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left pane: welcome-screen shaped skeleton. */}
+        <div className="flex-1 min-w-0 flex flex-col px-6 py-5">
+          <div className="flex-1 flex flex-col justify-center gap-3 pb-10">
+            <div className="h-6 w-56 rounded-full bg-surface-emphasis animate-pulse" />
+            <div className="h-3 w-full rounded-full bg-surface-emphasis animate-pulse" />
+            <div className="h-3 w-4/5 rounded-full bg-surface-emphasis animate-pulse" />
+          </div>
         </div>
-        <div className="-mx-6 mt-4 px-6 pt-4 border-t border-border flex items-center justify-between">
-          <div className="h-3 w-28 rounded-full bg-surface-emphasis animate-pulse" />
-          <div className="h-8 w-28 rounded-xl bg-surface-emphasis animate-pulse" />
+
+        {/* Right pane: document-shaped skeleton. */}
+        <div className="hidden sm:block w-[380px] shrink-0 border-l border-border bg-surface-muted p-5">
+          <div className="rounded-lg border border-border bg-surface shadow-sm p-5 flex flex-col gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-surface-emphasis animate-pulse" />
+              <div className="h-3 w-32 rounded-full bg-surface-emphasis animate-pulse" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="h-2 w-full rounded-full bg-surface-emphasis animate-pulse" />
+              <div className="h-2 w-4/5 rounded-full bg-surface-emphasis animate-pulse" />
+            </div>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="h-2 w-2/5 rounded-full bg-surface-emphasis animate-pulse" />
+                <div className="h-2 w-12 rounded-full bg-surface-emphasis animate-pulse" />
+              </div>
+            ))}
+            <div className="h-9 w-full rounded-lg bg-surface-emphasis animate-pulse" />
+          </div>
         </div>
       </div>
 
-      {/* Right pane: document-shaped skeleton. */}
-      <div className="hidden sm:block w-[380px] shrink-0 border-l border-border bg-surface-muted p-5">
-        <div className="rounded-lg border border-border bg-surface shadow-sm p-5 flex flex-col gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-surface-emphasis animate-pulse" />
-            <div className="h-3 w-32 rounded-full bg-surface-emphasis animate-pulse" />
-          </div>
-          <div className="flex flex-col gap-2">
-            <div className="h-2 w-full rounded-full bg-surface-emphasis animate-pulse" />
-            <div className="h-2 w-4/5 rounded-full bg-surface-emphasis animate-pulse" />
-          </div>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-center justify-between">
-              <div className="h-2 w-2/5 rounded-full bg-surface-emphasis animate-pulse" />
-              <div className="h-2 w-12 rounded-full bg-surface-emphasis animate-pulse" />
-            </div>
-          ))}
-          <div className="h-9 w-full rounded-lg bg-surface-emphasis animate-pulse" />
-        </div>
+      {/* Footer: skeleton button area at bottom. */}
+      <div className="px-6 py-4 border-t border-border flex items-center justify-between">
+        <div className="h-3 w-28 rounded-full bg-surface-emphasis animate-pulse" />
+        <div className="h-8 w-28 rounded-xl bg-surface-emphasis animate-pulse" />
       </div>
-    </>
+    </div>
   )
 }
