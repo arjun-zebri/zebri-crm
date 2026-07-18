@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 
-import { getTextColor } from '@/lib/branding/contrast'
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'

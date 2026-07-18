@@ -8,8 +8,9 @@ import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/bran
 import type { PaymentDetailsBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
-import { pad } from './shared'
+
 import { Html } from './html'
+import { pad } from './shared'
 
 export interface PaymentDetailsSlots {
   /** Editor slot for the heading text. */

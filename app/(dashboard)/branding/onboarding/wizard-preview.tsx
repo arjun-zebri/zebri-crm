@@ -5,7 +5,6 @@ import { useMemo } from 'react'
 // Blocks and their types are co-located with the editor; this is the same
 // documented layering direction the shared lib helpers use.
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { getTextColor } from '@/lib/branding/contrast'
 import type { BodyFont, HeadingFont } from '@/lib/branding/fonts'
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 import type { PublicDocData } from '@/lib/branding/public-renderer'

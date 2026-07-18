@@ -2,7 +2,6 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 
-import { OnboardingModal } from '@/app/(dashboard)/branding/onboarding/onboarding-modal'
 import { OnboardingModalSkeleton } from '@/app/(dashboard)/branding/onboarding/onboarding-modal-skeleton'
 import { OnboardingWizard } from '@/app/(dashboard)/branding/onboarding/onboarding-wizard'
 

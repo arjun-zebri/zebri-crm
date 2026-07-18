@@ -6,6 +6,7 @@ import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/bran
 import type { LineItemsBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
+
 import { fmt, pad, type PublicDocData } from './shared'
 
 /**

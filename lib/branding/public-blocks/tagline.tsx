@@ -8,8 +8,9 @@ import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/bran
 import type { TaglineBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
-import { pad } from './shared'
+
 import { Html } from './html'
+import { pad } from './shared'
 
 export interface TaglineSlots {
   /** Editor replaces static tagline with live InlineText. */

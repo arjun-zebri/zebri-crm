@@ -151,7 +151,13 @@ const ERROR_BUDGET = 64;
 // Task 23 PDF branding: added publicBrandingToPdfOpts adapter with clean imports,
 // updated two callers (contract page + builder modal) with proper type casts instead
 // of `any` (reduced pre-existing violations); fixed import-order across the changes → 330 → 329.
-const WARNING_BUDGET = 299;
+// Role-based branding colours: dropping accent/muted/secondary-text/page-background
+// left unused imports across the public-blocks and surface views; removing them
+// cleared 20 warnings → 299 → 279.
+// Lint cleanup (getTextColor imports + dead destructured variables): removing 8 unused
+// imports and destructured variables + fixing import-order violations across
+// public-blocks files → 299 → 279.
+const WARNING_BUDGET = 279;
 
 function runEslintJson() {
   try {

@@ -2,10 +2,10 @@ import { render } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { describe, expect, it } from 'vitest'
 
-import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import type { PublicBranding } from '@/lib/branding/public-surface'
 import { PROPOSAL_LABEL_DEFAULTS } from '@/lib/branding/proposal-labels'
+import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
+import type { PublicBranding } from '@/lib/branding/public-surface'
 
 const createMockBranding = (linkColor: string): PublicBranding => ({
   logo_url: null,

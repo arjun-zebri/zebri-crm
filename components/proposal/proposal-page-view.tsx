@@ -119,7 +119,7 @@ export function ProposalPageView({
   onEditLabel,
   variant = 'standalone',
 }: ProposalPageViewProps) {
-  const { brand, textColor, mutedColor, headingColor, subheadingColor, radius, headingFontFamily, headingWeight, labels } =
+  const { brand, textColor, mutedColor, headingColor, radius, headingFontFamily, headingWeight, labels } =
     branding;
   const interactive = state === 'active' && !!onToggle;
   const chosen = options.find((o) => o.id === chosenId) ?? null;

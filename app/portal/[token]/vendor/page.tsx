@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import Image from 'next/image'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { FONT_STACKS, googleFontsHref, type BodyFont, type HeadingFont } from '@/lib/branding/fonts'
+import { FONT_STACKS, googleFontsHref, type BodyFont } from '@/lib/branding/fonts'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
@@ -46,7 +46,6 @@ export default async function VendorPage({
   const textColor = branding?.text_color ?? '#111827'
   const mutedColor = branding?.muted_color ?? '#6B7280'
   const headingColor = branding?.heading_color ?? textColor
-  const headingFont = (branding?.font_heading || 'inter') as HeadingFont
   const bodyFont = (branding?.font_body || 'inter') as BodyFont
   const bodyStack = FONT_STACKS[bodyFont]
 

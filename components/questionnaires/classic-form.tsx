@@ -33,7 +33,7 @@ interface ClassicFormProps {
 }
 
 export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSubmit, submitting = false, submitError = null, saveState = 'idle' }: ClassicFormProps) {
-  const { brand, textColor, mutedColor, headingColor, subheadingColor, radius, headingStack } = theme
+  const { brand, mutedColor, headingColor, subheadingColor, radius, headingStack } = theme
   const [missing, setMissing] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
 

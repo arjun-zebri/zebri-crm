@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 
 describe('buildPublicBranding role-based colours', () => {

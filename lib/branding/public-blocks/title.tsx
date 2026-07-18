@@ -8,8 +8,9 @@ import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/bran
 import type { TitleBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
-import { fmtDate, pad, type PublicDocData } from './shared'
+
 import { Html } from './html'
+import { fmtDate, pad, type PublicDocData } from './shared'
 
 export interface TitleSlots {
   /** Editor replaces static title with live InlineText. */

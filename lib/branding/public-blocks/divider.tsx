@@ -6,6 +6,7 @@ import { ReactNode } from 'react'
 import type { DividerBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
+
 import { pad } from './shared'
 
 export function RenderDivider({

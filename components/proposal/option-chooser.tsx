@@ -44,7 +44,7 @@ export function ProposalOptionChooser({
   branding,
   onEditLabel,
 }: ProposalOptionChooserProps) {
-  const { brand, accent, textColor, mutedColor, headingColor, subheadingColor, headingFontFamily, headingWeight, labels } =
+  const { brand, accent, mutedColor, headingColor, subheadingColor, headingFontFamily, headingWeight, labels } =
     branding;
   const radius = Math.min(branding.radius, 12);
   return (

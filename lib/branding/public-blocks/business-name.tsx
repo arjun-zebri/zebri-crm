@@ -9,8 +9,9 @@ import type { BusinessNameBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import { FONT_STACKS } from '../fonts'
 import type { PublicBranding } from '../public-surface'
-import { pad } from './shared'
+
 import { Html } from './html'
+import { pad } from './shared'
 
 /**
  * Slot elements for the business name block. Logo uses selectableWhenEmpty=false.

@@ -11,6 +11,7 @@
  * @module lib/branding/public-branding
  */
 
+import { getTextColor } from './contrast'
 import {
   BODY_FONTS,
   HEADING_FONTS,
@@ -21,7 +22,6 @@ import {
 import { resolveProposalLabels, type ProposalLabels } from './proposal-labels'
 import type { Density } from './themes'
 import { THEME_PRESETS } from './themes'
-import { getTextColor } from './contrast'
 
 /** The resolved branding shape every branded surface renders from. */
 export interface PublicBranding {

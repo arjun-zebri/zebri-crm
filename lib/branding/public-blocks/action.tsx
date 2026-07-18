@@ -9,8 +9,9 @@ import type { ActionBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import { getTextColor } from '../contrast'
 import type { PublicBranding } from '../public-surface'
-import { pad, type ActionSlotProps } from './shared'
+
 import { Html } from './html'
+import { pad, type ActionSlotProps } from './shared'
 
 /**
  * Editor slots for customizing button text content.
