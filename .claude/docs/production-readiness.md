@@ -272,7 +272,9 @@ The `/branding` editor is the MC's block-based brand designer. Six customizable 
 - Task 6-9: Scalar branding fields, colour/font/layout tokens, design-system compliance
 - Task 10-11: Public-blocks renderer consolidation, 18 templates (3 per surface)
 - Task 12-13: Document (email, PDF) branding wiring
-- Task 15-19: First-run onboarding wizard, surface enablement gates, per-surface reset, lock model
+- **Task 14**: Onboarding modal skeleton (load-transition fix: no white flash during hard refresh)
+- **Task 15**: Role-based colour model (six user-set colours + four derived aliases); integration + e2e + docs + gate ratchets ✅
+- Task 16-19: Surface enablement gates, per-surface reset, lock model, link colour wiring
 - Task 20-21: Vendor timeline + questionnaire surfaces
 - Task 22-23: Branding container queries, mobile overflow fixes
 - Task 24-25: E2E hardening, documentation, gate ratchets

@@ -27,7 +27,7 @@ metadata_on_insert` trigger).
 
 **Branding fields (stored in `user_metadata`, user-owned):**
 
-Scalars returned by `_user_branding(uuid)` and merged into public RPCs. Migration `20260715000000_branding_editor_redesign.sql` extended the function with typography + layout fields.
+Scalars returned by `_user_branding(uuid)` and merged into public RPCs. Migration `20260715000000_branding_editor_redesign.sql` extended the function with typography + layout fields. Migration `20260718100000_branding_colours.sql` replaced the old colour model with a role-based system: six user-set colours (heading, subheading, body, background, primary button, secondary button, plus link for the editor) with derived aliases for backward compatibility.
 
 **user_branding table** (Branding overhaul, Phase 11 onwards). One row per user, RLS-owned, stores the block tree + surface configuration for the branding editor. Columns: `user_id` (PK, FK auth.users cascade), `branding_blocks` (jsonb, keyed by surface: `quote`, `invoice`, `contract`, `proposal`, `vendorTimeline`, `questionnaire`), `enabled_surfaces` (text[], default `{quote,invoice,contract}`), `onboarded_at` (timestamptz, null until first save), `created_at`, `updated_at`.
 
@@ -38,13 +38,17 @@ Surface-level reset: setting a surface's block tree to an empty array disables p
 | `logo_url` | text | null | Supabase Storage URL for MC logo |
 | `favicon_url` | text | null | Favicon URL |
 | `header_image_url` | text | null | Header banner background image |
-| `brand_color` | text | `#A7F3D0` | Primary accent (headings, buttons, key accents) |
-| `accent_color` | text | `#111827` | Highlights badge colour |
-| `surface_color` | text | `#ffffff` | Page background fallback |
-| `text_color` | text | `#111827` | Body copy |
-| `muted_color` | text | `#6B7280` | Secondary/subtle text |
-| `secondary_color` | text | `#FFFFFF` | Priced-summary panel background |
-| `secondary_text_color` | text | `#374151` | Priced-summary panel text |
+| `heading_color` | text | `#111827` | Role-based: headings on all surfaces (h1, h2, etc) |
+| `subheading_color` | text | `#111827` | Role-based: secondary headings and section titles |
+| `text_color` | text | `#6B7280` | Role-based: body copy and regular text |
+| `surface_color` | text | `#FFFFFF` | Role-based: page background and surface fills |
+| `brand_color` | text | `#111827` | Role-based: primary CTAs (main buttons) |
+| `secondary_color` | text | `#6B7280` | Role-based: secondary CTAs (supporting buttons) |
+| `link_color` | text | `#111827` | Hyperlink colour (editor-only control; defaults to brand_color) |
+| `accent_color` | text | (derived) | DERIVED ALIAS: `accent_color ≡ brand_color`. No longer user-set; remove from onboarding. |
+| `muted_color` | text | (derived) | DERIVED ALIAS: `muted_color ≡ text_color`. No longer user-set; used for metadata/labels/column headers. |
+| `secondary_text_color` | text | (derived) | DERIVED ALIAS: computed via `getTextColor(secondary_color)` at render sites. Kept in payload for back-compat. |
+| `page_background` | text | (derived) | DERIVED ALIAS: `page_background ≡ surface_color`. No longer user-set. |
 | `tagline` | text | null | Business tagline, max 80 chars |
 | `abn` | text | null | Australian Business Number |
 | `show_contact_on_documents` | boolean | true | Show phone/website/socials on public pages |
@@ -59,13 +63,11 @@ Surface-level reset: setting a surface's block tree to an empty array disables p
 | `body_case` | text | `none` | Body text transform |
 | `heading_letter_spacing` | int | 0 | Heading letter spacing in px |
 | `body_line_height` | numeric | 1.5 | Body line height multiplier |
-| `link_color` | text | brand_color | Link colour (defaults to brand_color) |
 | `button_variant` | text | `fill` | Default button style (fill, outline) |
 | `button_size` | text | `md` | Default button size (sm, md, lg) |
 | `button_radius` | int | 8 | Button corner radius in px |
 | `corner_radius` | int | 12 | Global corner radius in px (applied to blocks) |
 | `section_spacing` | int | 32 | Space between blocks in px |
-| `page_background` | text | surface_color | Page background (colour or texture ID) |
 | `doc_padding` | int | 0 | Extra horizontal inset on documents |
 | `density` | text | `cozy` | Vertical spacing preset (cozy/compact) — read-only (frozen to baseline) |
 | `proposal_labels` | jsonb | `{}` | Stylable proposal section labels (string or {text, style}) |

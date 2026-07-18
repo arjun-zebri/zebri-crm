@@ -1057,7 +1057,9 @@ Purpose: A Canva-grade design tool for customizing the MC's brand kit and block-
 
 ## First-Run Onboarding
 
-Users who have never customized branding see a three-step wizard at `/branding/onboarding/`: **Business** (logo, name, tagline), **Look** (brand colours + typography), **Documents** (surface enablement). Wizard is gated by `onboarded_at` in user_branding; once complete, the editor shows normally. Users can re-enter onboarding via Settings.
+Users who have never customized branding see a three-step wizard at `/branding/onboarding/`: **Business** (logo, name, tagline), **Look** (six role-based colours + typography + density), **Documents** (surface enablement). Wizard is gated by `onboarded_at` in user_branding; once complete, the editor shows normally. Users can re-enter onboarding via Settings.
+
+The **Look** step collects exactly six colour pickers (no more, no less): Heading, Subheading, Body text, Background, Primary button, Secondary button. Density (cozy/compact) is shown but corner-radius is NOT a control in onboarding (frozen to defaults; users edit corner-radius in the editor's Global styles section only).
 
 ## Layout
 
@@ -1066,9 +1068,18 @@ Three-pane: **Header** (six surface tabs: Quote, Invoice, Contract, Proposal, Ve
 ## Brand Rail (left sidebar)
 
 1. **Your business** — Logo, favicon, business name, tagline, ABN, phone, website, Instagram/Facebook URLs.
-2. **Brand colours** — Six colour roles (Primary, Accent, Surface, Text, Muted, Secondary + Secondary text), each with a palette selector.
-3. **Typography** — Per role (heading / body): font dropdown (30+ Google fonts), size, weight, colour, alignment, text case, letter-spacing, line-height. Overall scale slider.
-4. **Global styles** — Corner radius, link colour, default button style, base line-height, section spacing, page background.
+2. **Brand colours** — Six role-based colour pickers (all required, no toggles):
+   - **Heading colour** — for h1, h2, h3 across all surfaces; default: black (#111827)
+   - **Subheading colour** — for section titles and secondary headings; default: black (#111827)
+   - **Body text colour** — for paragraphs, regular text, and the muted label/metadata alias; default: grey (#6B7280)
+   - **Background colour** — for page backgrounds and surface fills; default: white (#FFFFFF)
+   - **Primary button colour** — for main CTAs (Accept, Pay, etc.); default: black (#111827)
+   - **Secondary button colour** — for supporting CTAs (Decline, etc.); default: grey (#6B7280)
+   Each role has a colour picker + hex input + suggested swatches from the uploaded logo.
+   **Derived aliases** (no longer user-set): accent_color (≡ primary button), muted_color (≡ body text), secondary_text_color (computed from secondary button), page_background (≡ background colour).
+3. **Link colour** (editor-only control) — hyperlink colour; defaults to primary button colour. Not shown in onboarding.
+4. **Typography** — Per role (heading / body): font dropdown (30+ Google fonts), size, weight, colour, alignment, text case, letter-spacing, line-height. Overall scale slider.
+5. **Global styles** — Corner radius, link colour, default button style, base line-height, section spacing, page background.
 
 ## Documents Panel (below brand sections)
 

@@ -23,7 +23,12 @@ Branding is a per-surface block tree stored in `user_branding.branding_blocks` (
 
 **Block types:** HeaderBanner, BusinessName, Tagline, Title, Text, LineItems, Totals, PaymentDetails, Action, Image, Spacer, Divider, Footer, ProposalBody, ContractBody, CouplePortal, VendorTimeline, Questionnaire.
 
-**Scalar fields** (global across all surfaces): logo_url, favicon_url, business_name, tagline, abn, phone, website, instagram_url, facebook_url, font_heading, font_body, font_scale, color_primary, color_accent, color_surface, color_text, color_muted, color_secondary, color_secondary_text, corner_radius, link_color, button_variant, button_size, button_radius, line_height_base, section_spacing, page_background.
+**Scalar fields** (global across all surfaces, stored in `user_metadata`):
+- **Role-based colours** (user-set via onboarding + editor): `heading_color`, `subheading_color`, `text_color`, `surface_color`, `brand_color` (primary button), `secondary_color` (secondary button), `link_color` (editor-only).
+- **Derived aliases** (no longer user-set; automatically derived): `accent_color` (≡ `brand_color`), `muted_color` (≡ `text_color`), `secondary_text_color` (computed from `secondary_color`), `page_background` (≡ `surface_color`).
+- **Contact & business info**: logo_url, favicon_url, header_image_url, business_name, tagline, abn, phone, website, instagram_url, facebook_url, show_contact_on_documents.
+- **Typography**: font_heading, font_body, font_weight, font_body_weight, heading_size, body_size, heading_case, body_case, heading_letter_spacing, body_line_height.
+- **Layout & UI**: button_variant, button_size, button_radius, corner_radius, section_spacing, doc_padding, density, proposal_labels, theme_preset.
 
 ------------------------------------------------------------------------
 
