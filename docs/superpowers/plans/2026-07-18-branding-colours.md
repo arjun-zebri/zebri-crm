@@ -684,11 +684,11 @@ git commit -m "feat(branding): editor state carries heading/subheading, drops 4 
 **Files:**
 - Modify: `app/(dashboard)/branding/page.tsx`
 
-- [ ] **Step 1: Metadata type + initialData**
+- [x] **Step 1: Metadata type + initialData**
 
 In the local `UserMetadata`-ish type (lines 33-65) add `heading_color?`, `subheading_color?`; remove `accent_color?`, `secondary_text_color?`, `page_background?` (keep `muted_color?` out too). In `initialData` (lines 348-415): add `headingColor: metadata?.heading_color || fallback.heading`, `subheadingColor: metadata?.subheading_color || fallback.subheading`; remove `accentColor`, `mutedColor`, `secondaryTextColor`, `pageBackground`.
 
-- [ ] **Step 2: `handleWizardComplete` mapping**
+- [x] **Step 2: `handleWizardComplete` mapping**
 
 Replace the colour writes (lines 216-218) with:
 ```ts
@@ -701,7 +701,7 @@ Replace the colour writes (lines 216-218) with:
 ```
 Remove the `secondary_text_color` and `corner_radius` writes.
 
-- [ ] **Step 3: Typecheck + commit**
+- [x] **Step 3: Typecheck + commit**
 
 Run: `npm run typecheck` → 0 errors (after Task 13 updates `OnboardingResult`).
 ```bash
@@ -719,11 +719,11 @@ git commit -m "feat(branding): branding page maps role colours end to end"
 **Interfaces:**
 - Produces: `OnboardingResult` colour fields become `headingColor`, `subheadingColor`, `bodyColor`, `backgroundColor`, `primaryButtonColor`, `secondaryButtonColor`; `cornerRadius` removed.
 
-- [ ] **Step 1: `OnboardingResult` + wizard state**
+- [x] **Step 1: `OnboardingResult` + wizard state**
 
 `onboarding-wizard.tsx`: replace `brandColor`/`secondaryColor` in `OnboardingResult` (24-26) with the six colour fields; remove `cornerRadius` (30-31). Replace the corresponding `useState`s (65-70) with six colour states defaulting to the new palette (`headingColor '#111827'`, `subheadingColor '#111827'`, `bodyColor '#6B7280'`, `backgroundColor '#FFFFFF'`, `primaryButtonColor '#111827'`, `secondaryButtonColor '#6B7280'`); remove `cornerRadius` state. Update `handleComplete`/`handleSkip` result objects (82-125) and the `<StepLook>` + `<WizardPreview>` prop passing (172-217) accordingly.
 
-- [ ] **Step 2: `step-look.tsx` — six pickers, drop RadiusPicker**
+- [x] **Step 2: `step-look.tsx` — six pickers, drop RadiusPicker**
 
 Replace `StepLookProps` colour props with the six setters. Replace the two-`ColorField` block (lines 78-104) with a 2-column grid of six `ColorField`s (Heading, Subheading, Body text, Background, Primary button, Secondary button) and button help text. Remove the `RadiusPicker` import + render (line 132) and its prop. Keep the from-logo suggestion feeding `setPrimaryButtonColor`.
 ```tsx
@@ -740,19 +740,19 @@ Replace `StepLookProps` colour props with the six setters. Replace the two-`Colo
 </p>
 ```
 
-- [ ] **Step 3: `look-pickers.tsx`**
+- [x] **Step 3: `look-pickers.tsx`**
 
 Leave `ColorField`/`DensityPicker` as-is; `RadiusPicker` may remain exported (unused by onboarding now) or be removed if no other importer. Confirm with `grep -rn RadiusPicker app` before deleting.
 
-- [ ] **Step 4: `wizard-preview.tsx` — feed six colours + show a subheading**
+- [x] **Step 4: `wizard-preview.tsx` — feed six colours + show a subheading**
 
 Update `WizardPreviewProps` to take the six colours (replace `brandColor`/`secondaryColor`/`cornerRadius`). In the `buildPublicBranding` call (106-117) pass `heading_color`, `subheading_color`, `text_color: bodyColor`, `surface_color: backgroundColor`, `brand_color: primaryButtonColor`, `secondary_color: secondaryButtonColor` (drop `secondary_text_color`/`corner_radius`). Add a `title` block with a subtitle to `IDENTITY_BLOCKS` (or a `text` heading) so the subheading colour is visibly demonstrated alongside the heading, body, background, and both buttons already present in `BODY_BLOCKS`.
 
-- [ ] **Step 5: Typecheck + e2e-ready check**
+- [x] **Step 5: Typecheck + e2e-ready check**
 
 Run: `npm run typecheck` → 0 errors. Open `/branding` as a fresh (non-onboarded) user; the Look step shows six colour pickers, no corner-radius control, no scroll; the preview reflects each colour and shows a distinct heading, subheading, body, background, and two buttons.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/(dashboard)/branding/onboarding/*.tsx
