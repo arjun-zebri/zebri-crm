@@ -14,9 +14,8 @@ import type { Json } from '@/types/database'
 import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
 import type { Block } from './blocks/types'
 import { BrandingEditor } from './branding-editor'
-import { OnboardingModalSkeleton } from './onboarding/onboarding-modal-skeleton'
+import { OnboardingModal } from './onboarding/onboarding-modal'
 import type { OnboardingResult } from './onboarding/onboarding-wizard'
-import { OnboardingWizard } from './onboarding/onboarding-wizard'
 import { TEMPLATES } from './templates'
 
 interface UserMetadata {
@@ -413,64 +412,29 @@ export default function BrandingPage() {
         />
       </div>
 
-      {/* Unified onboarding modal: single frame that holds skeleton during load,
-          then swaps to wizard once data arrives. Prevents jarring flash by keeping
-          the modal frame mounted while the inner content transitions. */}
-      {likelyNeedsOnboarding && onboardedAt === null && (
-        <>
-          {/* Overlay backdrop: fixed full screen, non-dismissible backdrop. */}
-          <div
-            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px] animate-fade-in"
-            aria-hidden="true"
-          />
-
-          {/* Modal container: centers the card. */}
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          >
-            {/* Modal card: centered, fixed height, with smooth entry transition.
-                Holds either skeleton or wizard; frame stays constant to avoid jarring swap. */}
-            <div
-              tabIndex={-1}
-              className="w-full max-w-3xl bg-surface rounded-xl shadow-lg outline-none animate-modal-in h-[780px] max-h-[94vh] flex flex-col overflow-hidden"
-            >
-              {loading ? (
-                <OnboardingModalSkeleton />
-              ) : (
-                <OnboardingWizard
-                  initial={{
-                    businessName: metadata?.business_name,
-                    tagline: metadata?.tagline,
-                    logoUrl: metadata?.logo_url,
-                    headingColor: metadata?.heading_color || '#111827',
-                    subheadingColor: metadata?.subheading_color || '#111827',
-                    bodyColor: metadata?.text_color || '#6B7280',
-                    backgroundColor: metadata?.surface_color || '#FFFFFF',
-                    primaryButtonColor: metadata?.brand_color || '#111827',
-                    secondaryButtonColor: metadata?.secondary_color || '#6B7280',
-                    fontHeading: sanitizeHeading(metadata?.font_heading),
-                    fontBody: sanitizeBody(metadata?.font_body),
-                    density: metadata?.density || 'cozy',
-                  }}
-                  onComplete={handleWizardComplete}
-                  error={wizardError}
-                />
-              )}
-            </div>
-          </div>
-
-          <style>{`
-            @media (prefers-reduced-motion: reduce) {
-              .animate-fade-in,
-              .animate-modal-in {
-                animation: none !important;
-              }
-            }
-          `}</style>
-        </>
-      )}
+      {/* Onboarding modal: one frame that holds a skeleton during the load and
+          then fills with the wizard, so the hand-off is continuous rather than
+          a second modal popping in at a different size. */}
+      <OnboardingModal
+        isOpen={likelyNeedsOnboarding && onboardedAt === null}
+        loading={loading}
+        initial={{
+          businessName: metadata?.business_name,
+          tagline: metadata?.tagline,
+          logoUrl: metadata?.logo_url,
+          headingColor: metadata?.heading_color || '#111827',
+          subheadingColor: metadata?.subheading_color || '#111827',
+          bodyColor: metadata?.text_color || '#6B7280',
+          backgroundColor: metadata?.surface_color || '#FFFFFF',
+          primaryButtonColor: metadata?.brand_color || '#111827',
+          secondaryButtonColor: metadata?.secondary_color || '#6B7280',
+          fontHeading: sanitizeHeading(metadata?.font_heading),
+          fontBody: sanitizeBody(metadata?.font_body),
+          density: metadata?.density || 'cozy',
+        }}
+        onComplete={handleWizardComplete}
+        error={wizardError}
+      />
     </>
   )
 }

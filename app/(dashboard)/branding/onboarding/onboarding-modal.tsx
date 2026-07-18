@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 
+import { OnboardingModalSkeleton } from './onboarding-modal-skeleton'
 import type { OnboardingWizardProps } from './onboarding-wizard'
 import { OnboardingWizard } from './onboarding-wizard'
 
@@ -14,6 +15,12 @@ interface OnboardingModalProps extends OnboardingWizardProps {
   isOpen: boolean
   /** Callback to return focus after modal closes. */
   onRestoreFocus?: () => void
+  /**
+   * While true the card holds a skeleton in place of the wizard. The frame
+   * itself stays mounted across the transition, so the loaded wizard fills
+   * the same card rather than the whole modal remounting at a new size.
+   */
+  loading?: boolean
 }
 
 /**
@@ -26,11 +33,15 @@ interface OnboardingModalProps extends OnboardingWizardProps {
  * Focus is trapped inside the modal while open and restored on close.
  * Respects prefers-reduced-motion for accessibility.
  *
+ * When `loading` is set the card holds a skeleton, so the frame is already
+ * on screen at its final size when the wizard arrives.
+ *
  * @internal
  */
 export function OnboardingModal({
   isOpen,
   onRestoreFocus,
+  loading = false,
   ...wizardProps
 }: OnboardingModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
@@ -111,7 +122,7 @@ export function OnboardingModal({
           tabIndex={-1}
           className="w-full max-w-3xl bg-surface rounded-xl shadow-lg outline-none animate-modal-in onboarding-modal-card h-[780px] max-h-[94vh] flex flex-col overflow-hidden"
         >
-          <OnboardingWizard {...wizardProps} />
+          {loading ? <OnboardingModalSkeleton /> : <OnboardingWizard {...wizardProps} />}
         </div>
       </div>
 
