@@ -233,8 +233,8 @@ function KitPicker({
                   <li key={kit.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50">
                     <span className="flex items-center gap-0.5 shrink-0">
                       <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.brandColor }} />
-                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.accentColor }} />
-                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.surfaceColor }} />
+                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.headingColor }} />
+                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.textColor }} />
                     </span>
                     <Popover.Close asChild>
                       <button

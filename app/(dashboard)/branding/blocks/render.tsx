@@ -827,7 +827,7 @@ const PORTAL_SECTIONS: Array<{ label: string; icon: typeof LayoutDashboard; coun
 
 export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
   const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
-  const muted = state.mutedColor || '#6B7280'
+  const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
   const surface = state.surfaceColor || '#FFFFFF'
   const visibleSections = PORTAL_SECTIONS.filter(
@@ -912,7 +912,7 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
                         <p className="text-base font-medium text-gray-900">Saturday, 14 September 2026</p>
                         <p className="text-sm text-gray-500 mt-0.5">The Glasshouse, Sydney</p>
                       </div>
-                      <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-full whitespace-nowrap" style={{ background: `${state.accentColor || state.brandColor}26`, color: pillForeground(state.accentColor, state.brandColor, state.surfaceColor || '#FFFFFF') }}>127 days away</span>
+                      <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-full whitespace-nowrap" style={{ background: `${state.brandColor || state.brandColor}26`, color: pillForeground(state.brandColor, state.brandColor, state.surfaceColor || '#FFFFFF') }}>127 days away</span>
                     </div>
                   </div>
                 </div>
@@ -946,7 +946,7 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
  */
 export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
   const pad = PAD(state)
-  const muted = state.mutedColor || '#6B7280'
+  const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
   const surface = state.surfaceColor || '#FFFFFF'
   return (
@@ -1015,7 +1015,7 @@ export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
  */
 export function RenderContractBody({ state }: { state: BrandPreviewState }) {
   const pad = PAD(state)
-  const muted = state.mutedColor || '#6B7280'
+  const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
   const surface = state.surfaceColor || '#FFFFFF'
   const heading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
@@ -1087,13 +1087,13 @@ function proposalBranding(state: BrandPreviewState): ProposalViewBranding {
   return {
     pageBg: state.surfaceColor || '#FFFFFF',
     textColor: state.textColor || '#111827',
-    mutedColor: state.mutedColor || '#6B7280',
+    mutedColor: state.textColor || '#6B7280',
     brand: state.brandColor || '#111827',
-    accent: state.accentColor || state.brandColor || '#111827',
+    accent: state.brandColor || state.brandColor || '#111827',
     secondaryColor: state.secondaryColor || '#FFFFFF',
     secondaryTextColor: getTextColor(state.secondaryColor || '#FFFFFF'),
     headingColor: state.textColor || '#111827',
-    subheadingColor: state.mutedColor || '#6B7280',
+    subheadingColor: state.textColor || '#6B7280',
     radius: state.cornerRadius ?? 16,
     headingFontFamily: FONT_STACKS[state.fontHeading],
     bodyFontFamily: FONT_STACKS[state.fontBody],
@@ -1266,7 +1266,7 @@ export function RenderProposalBody({
  */
 export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }) {
   const pad = PAD(state)
-  const muted = state.mutedColor || '#6B7280'
+  const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
   const surface = state.surfaceColor || '#FFFFFF'
   return (
@@ -1364,7 +1364,7 @@ export function RenderQuestionnaireBody({
   setPreviewMode?: ((mode: 'form' | 'typeform') => void) | undefined
 }) {
   const pad = PAD(state)
-  const muted = state.mutedColor || '#6B7280'
+  const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
   const surface = state.surfaceColor || '#FFFFFF'
   const radius = state.cornerRadius || 16

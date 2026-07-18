@@ -118,7 +118,7 @@ function KitPreviewCard({ state }: { state: BrandPreviewState }) {
           className="text-xs mt-1.5 truncate"
           style={{
             fontFamily: FONT_STACKS[state.fontBody],
-            color: state.mutedColor,
+            color: state.textColor,
           }}
         >
           {FONT_LABELS[state.fontHeading]} · {FONT_LABELS[state.fontBody]}
@@ -126,9 +126,9 @@ function KitPreviewCard({ state }: { state: BrandPreviewState }) {
       </div>
       <div className="flex items-center gap-1 shrink-0">
         <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.brandColor }} title="Primary" />
-        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.accentColor }} title="Accent" />
+        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.headingColor }} title="Heading" />
         <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.textColor }} title="Text" />
-        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.mutedColor }} title="Muted" />
+        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.secondaryColor }} title="Secondary" />
       </div>
     </div>
   )

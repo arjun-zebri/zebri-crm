@@ -20,12 +20,9 @@ export interface BrandPreviewState {
   brandColor: string
   headingColor: string
   subheadingColor: string
-  accentColor: string
   surfaceColor: string
   textColor: string
-  mutedColor: string
   secondaryColor: string
-  secondaryTextColor: string
   tagline: string
   footerText: string
   abn: string
@@ -88,12 +85,9 @@ export interface BrandKit {
   brandColor: string
   headingColor: string
   subheadingColor: string
-  accentColor: string
   surfaceColor: string
   textColor: string
-  mutedColor: string
   secondaryColor: string
-  secondaryTextColor: string
   fontHeading: HeadingFont
   fontBody: BodyFont
   fontWeight: FontWeight

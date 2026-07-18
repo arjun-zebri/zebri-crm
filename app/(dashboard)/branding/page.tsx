@@ -32,12 +32,10 @@ interface UserMetadata {
   brand_color?: string
   heading_color?: string
   subheading_color?: string
-  accent_color?: string
   surface_color?: string
   text_color?: string
   muted_color?: string
   secondary_color?: string
-  secondary_text_color?: string
   tagline?: string
   abn?: string
   show_contact_on_documents?: boolean
@@ -64,7 +62,6 @@ interface UserMetadata {
   button_size?: 'sm' | 'md' | 'lg'
   button_radius?: number
   section_spacing?: number
-  page_background?: string
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
   // `quote` is the legacy pre-proposals key; read-only fallback.
@@ -217,11 +214,9 @@ export default function BrandingPage() {
         logo_url: result.logoUrl || null,
         brand_color: result.brandColor,
         secondary_color: result.secondaryColor,
-        secondary_text_color: getTextColor(result.secondaryColor),
         font_heading: result.fontHeading,
         font_body: result.fontBody,
         density: result.density,
-        corner_radius: result.cornerRadius,
       },
     })
     if (metadataError) {
@@ -356,12 +351,9 @@ export default function BrandingPage() {
             brandColor,
             headingColor: metadata?.heading_color || fallback.heading,
             subheadingColor: metadata?.subheading_color || fallback.subheading,
-            accentColor: metadata?.accent_color || fallback.accent,
             surfaceColor,
             textColor: metadata?.text_color || fallback.text,
-            mutedColor: metadata?.muted_color || fallback.muted,
             secondaryColor: metadata?.secondary_color || '#FFFFFF',
-            secondaryTextColor: metadata?.secondary_text_color || '#374151',
             tagline: metadata?.tagline || '',
             abn: metadata?.abn || '',
             showContactOnDocuments: true,
@@ -413,7 +405,6 @@ export default function BrandingPage() {
             buttonSize: metadata?.button_size ?? 'md',
             buttonRadius: typeof metadata?.button_radius === 'number' ? metadata.button_radius : 8,
             sectionSpacing: typeof metadata?.section_spacing === 'number' ? metadata.section_spacing : 32,
-            pageBackground: metadata?.page_background ?? surfaceColor,
             enabledSurfaces: Object.keys(enabledSrc).filter((k) => enabledSrc[k]) as SurfaceTab[],
             onboardedAt,
           }}

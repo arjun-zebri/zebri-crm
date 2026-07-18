@@ -22,10 +22,8 @@ import {
 } from '@/lib/branding/fonts'
 import {
   COLOR_PALETTE,
-  ACCENT_PALETTE,
   SURFACE_PALETTE,
   TEXT_PALETTE,
-  MUTED_PALETTE,
   type ThemeId,
   type ThemeIdOrCustom,
   type Density,
@@ -50,18 +48,16 @@ interface BrandPanelProps {
 
   brandColor: string
   setBrandColor: (v: string) => void
-  accentColor: string
-  setAccentColor: (v: string) => void
+  headingColor: string
+  setHeadingColor: (v: string) => void
+  subheadingColor: string
+  setSubheadingColor: (v: string) => void
   surfaceColor: string
   setSurfaceColor: (v: string) => void
   textColor: string
   setTextColor: (v: string) => void
-  mutedColor: string
-  setMutedColor: (v: string) => void
   secondaryColor: string
   setSecondaryColor: (v: string) => void
-  secondaryTextColor: string
-  setSecondaryTextColor: (v: string) => void
 
   fontHeading: HeadingFont
   setFontHeading: (v: HeadingFont) => void
@@ -103,8 +99,6 @@ interface BrandPanelProps {
   setButtonRadius: (v: number) => void
   sectionSpacing: number
   setSectionSpacing: (v: number) => void
-  pageBackground: string
-  setPageBackground: (v: string) => void
 
   faviconUrl: string
   uploadFavicon: (file: File) => Promise<void>
@@ -292,40 +286,31 @@ function Accordion({
 
 function ColorSection({
   brandColor, setBrandColor,
-  accentColor, setAccentColor,
+  headingColor, setHeadingColor,
+  subheadingColor, setSubheadingColor,
   surfaceColor, setSurfaceColor,
   textColor, setTextColor,
-  mutedColor, setMutedColor,
   secondaryColor, setSecondaryColor,
-  secondaryTextColor, setSecondaryTextColor,
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
-      <ColorRow label="Primary" description="Headings, buttons and key accents" value={brandColor} onChange={setBrandColor} swatches={COLOR_PALETTE} />
-      <ColorRow label="Accent" description="Highlights like the most popular badge" value={accentColor} onChange={setAccentColor} swatches={ACCENT_PALETTE} />
-      <ColorRow label="Surface" description="The page background" value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
-      <ColorRow label="Text" description="Body copy" value={textColor} onChange={setTextColor} swatches={TEXT_PALETTE} />
-      <ColorRow label="Muted" description="Secondary and subtle text" value={mutedColor} onChange={setMutedColor} swatches={MUTED_PALETTE} />
-      <ColorRow label="Secondary" description="The priced-summary panel background" value={secondaryColor} onChange={setSecondaryColor} swatches={COLOR_PALETTE} />
-      <ColorRow label="Secondary text" description="Text on the priced-summary panel" value={secondaryTextColor} onChange={setSecondaryTextColor} swatches={TEXT_PALETTE} />
-      <ContrastWarnings
-        textColor={textColor}
-        mutedColor={mutedColor}
-        surfaceColor={surfaceColor}
-        brandColor={brandColor}
-      />
+      <ColorRow label="Heading" description="Main headings and titles" value={headingColor} onChange={setHeadingColor} swatches={TEXT_PALETTE} />
+      <ColorRow label="Subheading" description="Section labels under headings" value={subheadingColor} onChange={setSubheadingColor} swatches={TEXT_PALETTE} />
+      <ColorRow label="Body text" description="Paragraph and detail text" value={textColor} onChange={setTextColor} swatches={TEXT_PALETTE} />
+      <ColorRow label="Background" description="The page background" value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
+      <ColorRow label="Primary button" description="Accept and Pay buttons" value={brandColor} onChange={setBrandColor} swatches={COLOR_PALETTE} />
+      <ColorRow label="Secondary button" description="Decline and supporting buttons" value={secondaryColor} onChange={setSecondaryColor} swatches={COLOR_PALETTE} />
+      <ContrastWarnings textColor={textColor} surfaceColor={surfaceColor} brandColor={brandColor} />
     </div>
   )
 }
 
 function ContrastWarnings({
   textColor,
-  mutedColor,
   surfaceColor,
   brandColor,
 }: {
   textColor: string
-  mutedColor: string
   surfaceColor: string
   brandColor: string
 }) {
@@ -334,11 +319,6 @@ function ContrastWarnings({
       label: 'Text on Surface',
       ratio: getContrastRatio(textColor, surfaceColor),
       level: getWcagLevel(textColor, surfaceColor),
-    },
-    {
-      label: 'Muted on Surface',
-      ratio: getContrastRatio(mutedColor, surfaceColor),
-      level: getWcagLevel(mutedColor, surfaceColor),
     },
     {
       label: 'Primary on Surface',
@@ -615,8 +595,6 @@ function GlobalStylesSection({
   setButtonRadius,
   sectionSpacing,
   setSectionSpacing,
-  pageBackground,
-  setPageBackground,
 }: BrandPanelProps) {
   return (
     <div className="space-y-4">
@@ -709,26 +687,6 @@ function GlobalStylesSection({
           <span className="text-xs font-mono text-gray-700 tabular-nums">{sectionSpacing}px</span>
         </div>
         <Slider value={sectionSpacing} min={8} max={64} step={2} onChange={setSectionSpacing} ariaLabel="Section spacing" />
-      </div>
-
-      <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Page background</p>
-        <div className="flex items-center gap-2">
-          <ColorPopover
-            value={pageBackground}
-            onChange={setPageBackground}
-            trigger={
-              <button
-                type="button"
-                className="w-9 h-9 rounded-lg ring-1 ring-black/10 cursor-pointer shrink-0 hover:ring-black/20 transition"
-                style={{ background: pageBackground }}
-                aria-label="Page background colour"
-                title={pageBackground}
-              />
-            }
-          />
-          <p className="text-xs font-mono text-gray-700 flex-1 truncate">{pageBackground}</p>
-        </div>
       </div>
     </div>
   )

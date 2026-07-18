@@ -53,12 +53,9 @@ interface BrandingEditorProps {
     brandColor: string
     headingColor: string
     subheadingColor: string
-    accentColor: string
     surfaceColor: string
     textColor: string
-    mutedColor: string
     secondaryColor: string
-    secondaryTextColor: string
     tagline: string
     abn: string
     showContactOnDocuments: boolean
@@ -92,7 +89,6 @@ interface BrandingEditorProps {
     buttonSize: 'sm' | 'md' | 'lg'
     buttonRadius: number
     sectionSpacing: number
-    pageBackground: string
     enabledSurfaces: SurfaceTab[]
     onboardedAt: string | null
   }
@@ -106,12 +102,9 @@ export interface EditorState {
   brandColor: string
   headingColor: string
   subheadingColor: string
-  accentColor: string
   surfaceColor: string
   textColor: string
-  mutedColor: string
   secondaryColor: string
-  secondaryTextColor: string
   tagline: string
   abn: string
   showContactOnDocuments: boolean
@@ -145,7 +138,6 @@ export interface EditorState {
   buttonSize: 'sm' | 'md' | 'lg'
   buttonRadius: number
   sectionSpacing: number
-  pageBackground: string
   enabledSurfaces: SurfaceTab[]
   onboardedAt: string | null
 }
@@ -162,12 +154,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       brandColor: initialData.brandColor,
       headingColor: initialData.headingColor,
       subheadingColor: initialData.subheadingColor,
-      accentColor: initialData.accentColor,
       surfaceColor: initialData.surfaceColor,
       textColor: initialData.textColor,
-      mutedColor: initialData.mutedColor,
       secondaryColor: initialData.secondaryColor,
-      secondaryTextColor: initialData.secondaryTextColor,
       tagline: initialData.tagline,
       abn: initialData.abn,
       showContactOnDocuments: initialData.showContactOnDocuments,
@@ -201,7 +190,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       buttonSize: initialData.buttonSize,
       buttonRadius: initialData.buttonRadius,
       sectionSpacing: initialData.sectionSpacing,
-      pageBackground: initialData.pageBackground,
       enabledSurfaces: initialData.enabledSurfaces,
       onboardedAt: initialData.onboardedAt,
     }),
@@ -280,12 +268,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         brand_color: value.brandColor,
         heading_color: value.headingColor,
         subheading_color: value.subheadingColor,
-        accent_color: value.accentColor,
         surface_color: value.surfaceColor,
         text_color: value.textColor,
-        muted_color: value.mutedColor,
         secondary_color: value.secondaryColor,
-        secondary_text_color: value.secondaryTextColor,
         tagline: value.tagline,
         abn: value.abn,
         show_contact_on_documents: value.showContactOnDocuments,
@@ -316,7 +301,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         button_size: value.buttonSize,
         button_radius: value.buttonRadius,
         section_spacing: value.sectionSpacing,
-        page_background: value.pageBackground,
       },
     })
     if (error) throw error
@@ -353,12 +337,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         brandColor: prev.brandColor,
         headingColor: prev.headingColor,
         subheadingColor: prev.subheadingColor,
-        accentColor: prev.accentColor,
         surfaceColor: prev.surfaceColor,
         textColor: prev.textColor,
-        mutedColor: prev.mutedColor,
         secondaryColor: prev.secondaryColor,
-        secondaryTextColor: prev.secondaryTextColor,
         fontHeading: prev.fontHeading,
         fontBody: prev.fontBody,
         fontWeight: prev.fontWeight,
@@ -378,12 +359,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         current.brandColor === next.brandColor &&
         current.headingColor === next.headingColor &&
         current.subheadingColor === next.subheadingColor &&
-        current.accentColor === next.accentColor &&
         current.surfaceColor === next.surfaceColor &&
         current.textColor === next.textColor &&
-        current.mutedColor === next.mutedColor &&
         current.secondaryColor === next.secondaryColor &&
-        current.secondaryTextColor === next.secondaryTextColor &&
         current.fontHeading === next.fontHeading &&
         current.fontBody === next.fontBody &&
         current.fontWeight === next.fontWeight &&
@@ -410,12 +388,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     state.brandColor,
     state.headingColor,
     state.subheadingColor,
-    state.accentColor,
     state.surfaceColor,
     state.textColor,
-    state.mutedColor,
     state.secondaryColor,
-    state.secondaryTextColor,
     state.fontHeading,
     state.fontBody,
     state.fontWeight,
@@ -441,12 +416,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         brandColor: p.color,
         headingColor: p.heading,
         subheadingColor: p.subheading,
-        accentColor: p.accent,
         surfaceColor: p.surface,
         textColor: p.text,
-        mutedColor: p.muted,
         secondaryColor: '#FFFFFF',
-        secondaryTextColor: '#374151',
         fontHeading: p.headingFont,
         fontBody: p.bodyFont,
         fontWeight: p.headingWeight,
@@ -715,12 +687,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       activeKitId: kit.id,
       themePreset: 'custom',
       brandColor: kit.brandColor,
-      accentColor: kit.accentColor,
+      headingColor: kit.headingColor,
+      subheadingColor: kit.subheadingColor,
       surfaceColor: kit.surfaceColor,
       textColor: kit.textColor,
-      mutedColor: kit.mutedColor,
       secondaryColor: kit.secondaryColor,
-      secondaryTextColor: kit.secondaryTextColor,
       fontHeading: kit.fontHeading,
       fontBody: kit.fontBody,
       fontWeight: kit.fontWeight,
@@ -761,12 +732,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       brandColor: preset.color,
       headingColor: preset.heading,
       subheadingColor: preset.subheading,
-      accentColor: preset.accent,
       surfaceColor: preset.surface,
       textColor: preset.text,
-      mutedColor: preset.muted,
       secondaryColor: '#FFFFFF',
-      secondaryTextColor: '#374151',
       fontHeading: preset.headingFont,
       fontBody: preset.bodyFont,
       fontWeight: preset.headingWeight,
@@ -791,12 +759,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         brandColor: kit.brandColor,
         headingColor: kit.headingColor,
         subheadingColor: kit.subheadingColor,
-        accentColor: kit.accentColor,
         surfaceColor: kit.surfaceColor,
         textColor: kit.textColor,
-        mutedColor: kit.mutedColor,
         secondaryColor: kit.secondaryColor,
-        secondaryTextColor: kit.secondaryTextColor,
         fontHeading: kit.fontHeading,
         fontBody: kit.fontBody,
         fontWeight: kit.fontWeight,
@@ -845,12 +810,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           brandColor: next.brandColor,
           headingColor: next.headingColor,
           subheadingColor: next.subheadingColor,
-          accentColor: next.accentColor,
           surfaceColor: next.surfaceColor,
           textColor: next.textColor,
-          mutedColor: next.mutedColor,
           secondaryColor: next.secondaryColor,
-          secondaryTextColor: next.secondaryTextColor,
           fontHeading: next.fontHeading,
           fontBody: next.fontBody,
           fontWeight: next.fontWeight,
@@ -892,12 +854,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     brandColor: state.brandColor,
     headingColor: state.headingColor,
     subheadingColor: state.subheadingColor,
-    accentColor: state.accentColor,
     surfaceColor: state.surfaceColor,
     textColor: state.textColor,
-    mutedColor: state.mutedColor,
     secondaryColor: state.secondaryColor,
-    secondaryTextColor: state.secondaryTextColor,
     tagline: state.tagline,
     footerText: '',
     abn: state.abn,
@@ -978,18 +937,16 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           resetSurfaceToTemplate={resetSurfaceToTemplate}
           brandColor={state.brandColor}
           setBrandColor={(v) => setEditor({ brandColor: v })}
-          accentColor={state.accentColor}
-          setAccentColor={(v) => setEditor({ accentColor: v })}
+          headingColor={state.headingColor}
+          setHeadingColor={(v) => setEditor({ headingColor: v })}
+          subheadingColor={state.subheadingColor}
+          setSubheadingColor={(v) => setEditor({ subheadingColor: v })}
           surfaceColor={state.surfaceColor}
           setSurfaceColor={(v) => setEditor({ surfaceColor: v })}
           textColor={state.textColor}
           setTextColor={(v) => setEditor({ textColor: v })}
-          mutedColor={state.mutedColor}
-          setMutedColor={(v) => setEditor({ mutedColor: v })}
           secondaryColor={state.secondaryColor}
           setSecondaryColor={(v) => setEditor({ secondaryColor: v })}
-          secondaryTextColor={state.secondaryTextColor}
-          setSecondaryTextColor={(v) => setEditor({ secondaryTextColor: v })}
           fontHeading={state.fontHeading}
           setFontHeading={(v) => setEditor({ fontHeading: v })}
           fontBody={state.fontBody}
@@ -1028,8 +985,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setButtonRadius={(v) => setEditor({ buttonRadius: v })}
           sectionSpacing={state.sectionSpacing}
           setSectionSpacing={(v) => setEditor({ sectionSpacing: v })}
-          pageBackground={state.pageBackground}
-          setPageBackground={(v) => setEditor({ pageBackground: v })}
           faviconUrl={state.faviconUrl}
           uploadFavicon={uploadFavicon}
           removeFavicon={removeFavicon}
@@ -1171,10 +1126,8 @@ type TokenKey = keyof EditorState
 
 const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
   brandColor: new Set(['businessName', 'title', 'action', 'totals', 'footer']),
-  accentColor: new Set(['action']),
   surfaceColor: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text', 'action', 'divider', 'headerBanner', 'footer']),
   textColor: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text']),
-  mutedColor: new Set(['tagline', 'lineItems', 'text', 'title', 'footer']),
   fontHeading: new Set(['businessName', 'title', 'totals']),
   fontBody: new Set(['tagline', 'lineItems', 'text', 'action', 'footer']),
   fontWeight: new Set(['businessName', 'title', 'totals']),

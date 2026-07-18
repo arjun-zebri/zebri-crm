@@ -1,5 +1,6 @@
 'use client'
 
+import { getTextColor } from '@/lib/branding/contrast'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import type { BrandPreviewState } from '@/types/branding-preview'
 
@@ -16,12 +17,12 @@ export function publicBrandingFromEditorState(state: BrandPreviewState): PublicB
     brand_color: state.brandColor,
     heading_color: state.headingColor,
     subheading_color: state.subheadingColor,
-    accent_color: state.accentColor,
+    accent_color: state.brandColor,
     surface_color: state.surfaceColor,
     text_color: state.textColor,
-    muted_color: state.mutedColor,
+    muted_color: state.textColor,
     secondary_color: state.secondaryColor,
-    secondary_text_color: state.secondaryTextColor,
+    secondary_text_color: getTextColor(state.secondaryColor),
     business_name: state.businessName || null,
     tagline: state.tagline || null,
     abn: state.abn || null,
