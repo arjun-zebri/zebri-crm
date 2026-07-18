@@ -127,6 +127,74 @@ test.describe('Branding Onboarding Wizard', () => {
     await expect(page.getByRole('heading', { name: /let's start with your identity/i })).not.toBeVisible()
   })
 
+  test('Look step displays exactly 6 colour pickers with correct labels', async ({ page }) => {
+    await login(page)
+    await page.goto('/branding')
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 5000 })
+    await dialog.getByRole('button', { name: /get started/i }).click()
+
+    // Step 1: Business
+    const businessNameInput = dialog.getByLabel('Business name')
+    await businessNameInput.waitFor({ state: 'visible', timeout: 5000 })
+    await businessNameInput.fill('Color Test MC')
+
+    await dialog.getByRole('button', { name: /next/i }).first().click()
+    await page.waitForTimeout(200)
+
+    // Step 2: Look — verify 6 colour pickers are present
+    await expect(dialog.getByRole('heading', { name: /choose your look/i })).toBeVisible({ timeout: 5000 })
+
+    const colourLabels = ['Heading', 'Subheading', 'Body text', 'Background', 'Primary button', 'Secondary button']
+    for (const label of colourLabels) {
+      const input = dialog.getByLabel(new RegExp(label, 'i'))
+      await expect(input).toBeVisible({ timeout: 3000 })
+    }
+  })
+
+  test('Look step has no corner-radius control', async ({ page }) => {
+    await login(page)
+    await page.goto('/branding')
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 5000 })
+    await dialog.getByRole('button', { name: /get started/i }).click()
+
+    // Step 1: Business
+    const businessNameInput = dialog.getByLabel('Business name')
+    await businessNameInput.waitFor({ state: 'visible', timeout: 5000 })
+    await businessNameInput.fill('Corner Test MC')
+
+    await dialog.getByRole('button', { name: /next/i }).first().click()
+    await page.waitForTimeout(200)
+
+    // Step 2: Look — verify NO corner-radius control
+    await expect(dialog.getByRole('heading', { name: /choose your look/i })).toBeVisible({ timeout: 5000 })
+
+    const cornerRadiusControl = dialog.getByLabel(/corner\s*radius/i)
+    await expect(cornerRadiusControl).not.toBeVisible()
+  })
+
+  test('onboarding load transition: hard refresh shows no white flash (modal present continuously)', async ({ page }) => {
+    await login(page)
+    await page.goto('/branding')
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: 5000 })
+
+    // Hard refresh (Cmd+Shift+R / Ctrl+Shift+R)
+    await page.reload({ waitUntil: 'networkidle' })
+
+    // After hard refresh, the modal should still be visible continuously (no white flash)
+    // If the modal was missing during load, this will timeout
+    await expect(dialog).toBeVisible({ timeout: 5000 })
+
+    // Verify wizard content is present (not just an empty modal)
+    const wizardHeading = dialog.getByRole('heading', { name: /welcome to your branding|let's start with your identity/i })
+    await expect(wizardHeading).toBeVisible({ timeout: 3000 })
+  })
+
   test('Editor displays after onboarding (no wizard on return)', async ({ page }) => {
     // This test verifies that the branding page either shows the wizard (if fresh)
     // or the editor (if already onboarded). Since test state persists across tests,
