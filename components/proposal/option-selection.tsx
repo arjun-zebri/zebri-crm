@@ -21,6 +21,7 @@ import { Check } from 'lucide-react';
 
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
 import { EditableLabel } from '@/components/proposal/editable-label';
+import { getTextColor } from '@/lib/branding/contrast';
 import {
   PROPOSAL_LABEL_DEFAULTS,
   type ProposalLabelEdit,
@@ -67,7 +68,7 @@ export function ProposalSelection({
   branding,
   onEditLabel,
 }: ProposalSelectionProps) {
-  const { brand, textColor, mutedColor, radius, headingFontFamily, headingWeight, labels } =
+  const { brand, textColor, mutedColor, headingColor, subheadingColor, radius, headingFontFamily, headingWeight, labels } =
     branding;
   const base = baseItems(option);
   const addOns = addOnItems(option);
@@ -78,7 +79,7 @@ export function ProposalSelection({
   // The summary panel is a SECONDARY surface — the MC's secondary
   // colour + text carry it, so it reads as its own block rather than
   // yet another brand-tinted card.
-  const panelText = branding.secondaryTextColor;
+  const panelText = getTextColor(branding.secondaryColor);
   const panelMuted = `color-mix(in srgb, ${panelText} 65%, transparent)`;
 
   const headingDefaultText = headingKey ? PROPOSAL_LABEL_DEFAULTS[headingKey].text : '';
@@ -108,12 +109,12 @@ export function ProposalSelection({
         />
         <h2
           className="mt-2 text-[1.5em]"
-          style={{ color: textColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
+          style={{ color: headingColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
         >
           {option.title}
         </h2>
         {option.description ? (
-          <p className="mt-1 text-[0.875em]" style={{ color: mutedColor }}>
+          <p className="mt-1 text-[0.875em]" style={{ color: subheadingColor }}>
             {option.description}
           </p>
         ) : null}

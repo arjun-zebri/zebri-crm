@@ -133,6 +133,8 @@ export interface ProposalViewBranding {
   /** Surface + text for the price summary panel. */
   secondaryColor: string;
   secondaryTextColor: string;
+  headingColor: string;
+  subheadingColor: string;
   radius: number;
   headingFontFamily: string | undefined;
   bodyFontFamily: string | undefined;

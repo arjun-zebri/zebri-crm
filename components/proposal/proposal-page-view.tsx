@@ -55,7 +55,9 @@ export function viewBranding(b: PublicBranding): ProposalViewBranding {
     brand: b.brand_color || '#111827',
     accent: b.accent_color || b.brand_color || '#111827',
     secondaryColor: b.secondary_color || '#FFFFFF',
-    secondaryTextColor: b.secondary_text_color || '#374151',
+    secondaryTextColor: getTextColor(b.secondary_color ?? '#6B7280'),
+    headingColor: b.heading_color ?? b.text_color,
+    subheadingColor: b.subheading_color ?? b.muted_color,
     radius: b.corner_radius ?? 16,
     headingFontFamily: FONT_STACKS[b.font_heading],
     bodyFontFamily: FONT_STACKS[b.font_body],
@@ -117,7 +119,7 @@ export function ProposalPageView({
   onEditLabel,
   variant = 'standalone',
 }: ProposalPageViewProps) {
-  const { brand, textColor, mutedColor, radius, headingFontFamily, headingWeight, labels } =
+  const { brand, textColor, mutedColor, headingColor, subheadingColor, radius, headingFontFamily, headingWeight, labels } =
     branding;
   const interactive = state === 'active' && !!onToggle;
   const chosen = options.find((o) => o.id === chosenId) ?? null;
@@ -174,7 +176,7 @@ export function ProposalPageView({
         </div>
         <h1
           className="mt-3 text-[2.25em] leading-tight"
-          style={{ color: textColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
+          style={{ color: headingColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
         >
           {coupleName}
         </h1>

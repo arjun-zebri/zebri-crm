@@ -4,7 +4,7 @@ import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Musi
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ProposalPageView } from '@/components/proposal/proposal-page-view'
-import { pillForeground } from '@/lib/branding/contrast'
+import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import { resolveProposalLabels, type ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
@@ -1091,7 +1091,9 @@ function proposalBranding(state: BrandPreviewState): ProposalViewBranding {
     brand: state.brandColor || '#111827',
     accent: state.accentColor || state.brandColor || '#111827',
     secondaryColor: state.secondaryColor || '#FFFFFF',
-    secondaryTextColor: state.secondaryTextColor || '#374151',
+    secondaryTextColor: getTextColor(state.secondaryColor || '#FFFFFF'),
+    headingColor: state.textColor || '#111827',
+    subheadingColor: state.mutedColor || '#6B7280',
     radius: state.cornerRadius ?? 16,
     headingFontFamily: FONT_STACKS[state.fontHeading],
     bodyFontFamily: FONT_STACKS[state.fontBody],

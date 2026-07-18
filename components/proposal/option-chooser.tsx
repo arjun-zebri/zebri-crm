@@ -44,7 +44,7 @@ export function ProposalOptionChooser({
   branding,
   onEditLabel,
 }: ProposalOptionChooserProps) {
-  const { brand, accent, textColor, mutedColor, headingFontFamily, headingWeight, labels } =
+  const { brand, accent, textColor, mutedColor, headingColor, subheadingColor, headingFontFamily, headingWeight, labels } =
     branding;
   const radius = Math.min(branding.radius, 12);
   return (
@@ -142,7 +142,7 @@ export function ProposalOptionChooser({
                       <span
                         className="min-w-0 text-[1.25em]"
                         style={{
-                          color: textColor,
+                          color: headingColor,
                           fontFamily: headingFontFamily,
                           fontWeight: headingWeight,
                         }}
@@ -153,7 +153,7 @@ export function ProposalOptionChooser({
                         <span
                           className="block text-[1.5em] tabular-nums"
                           style={{
-                            color: textColor,
+                            color: headingColor,
                             fontFamily: headingFontFamily,
                             fontWeight: headingWeight,
                           }}
@@ -166,12 +166,12 @@ export function ProposalOptionChooser({
                       </span>
                     </div>
                     {option.description ? (
-                      <p className="mt-1 text-[0.875em]" style={{ color: mutedColor }}>
+                      <p className="mt-1 text-[0.875em]" style={{ color: subheadingColor }}>
                         {option.description}
                       </p>
                     ) : null}
                     {summary ? (
-                      <p className="mt-3 text-[0.875em]" style={{ color: mutedColor }}>
+                      <p className="mt-3 text-[0.875em]" style={{ color: subheadingColor }}>
                         {summary}
                       </p>
                     ) : null}
