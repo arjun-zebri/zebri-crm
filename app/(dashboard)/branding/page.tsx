@@ -30,6 +30,8 @@ interface UserMetadata {
   favicon_url?: string
   header_image_url?: string
   brand_color?: string
+  heading_color?: string
+  subheading_color?: string
   accent_color?: string
   surface_color?: string
   text_color?: string
@@ -339,8 +341,11 @@ export default function BrandingPage() {
 
   return (
     <>
-      {/* Editor always renders, made inert while onboarding modal is open. */}
-      <div inert={onboardedAt === null ? true : undefined}>
+      {/* Editor always renders, made inert while onboarding modal is open.
+          h-full passes the layout container's height through to the editor so
+          its h-full root resolves; without it the editor grows to content
+          height inside the overflow-hidden layout and its panels can't scroll. */}
+      <div className="h-full" inert={onboardedAt === null ? true : undefined}>
         <BrandingEditor
           key={dataVersion}
           initialData={{
@@ -349,6 +354,8 @@ export default function BrandingPage() {
             faviconUrl: metadata?.favicon_url || '',
             headerImageUrl: metadata?.header_image_url || '',
             brandColor,
+            headingColor: metadata?.heading_color || fallback.heading,
+            subheadingColor: metadata?.subheading_color || fallback.subheading,
             accentColor: metadata?.accent_color || fallback.accent,
             surfaceColor,
             textColor: metadata?.text_color || fallback.text,

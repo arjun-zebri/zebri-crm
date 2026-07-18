@@ -21,6 +21,7 @@ import {
 import { resolveProposalLabels, type ProposalLabels } from './proposal-labels'
 import type { Density } from './themes'
 import { THEME_PRESETS } from './themes'
+import { getTextColor } from './contrast'
 
 /** The resolved branding shape every branded surface renders from. */
 export interface PublicBranding {
@@ -28,6 +29,10 @@ export interface PublicBranding {
   favicon_url: string | null
   header_image_url: string | null
   brand_color: string
+  /** Primary heading colour. */
+  heading_color: string
+  /** Secondary heading / subtitle colour. */
+  subheading_color: string
   accent_color: string
   surface_color: string
   text_color: string
@@ -98,6 +103,8 @@ export interface UserMetadata {
   favicon_url?: string
   header_image_url?: string
   brand_color?: string
+  heading_color?: string
+  subheading_color?: string
   accent_color?: string
   surface_color?: string
   text_color?: string
@@ -173,12 +180,17 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
     favicon_url: metadata.favicon_url ?? null,
     header_image_url: metadata.header_image_url ?? null,
     brand_color: brandColor,
-    accent_color: metadata.accent_color ?? fallback.accent,
+    // accent_color is no longer a control; it aliases brand_color.
+    accent_color: brandColor,
     surface_color: surfaceColor,
+    heading_color: metadata.heading_color ?? fallback.heading,
+    subheading_color: metadata.subheading_color ?? fallback.subheading,
     text_color: metadata.text_color ?? fallback.text,
-    muted_color: metadata.muted_color ?? fallback.muted,
-    secondary_color: metadata.secondary_color ?? '#FFFFFF',
-    secondary_text_color: metadata.secondary_text_color ?? '#374151',
+    // muted_color is no longer a control; it aliases body text_color.
+    muted_color: metadata.text_color ?? fallback.text,
+    secondary_color: metadata.secondary_color ?? '#6B7280',
+    // secondary button label sits ON the secondary fill; contrast-derived.
+    secondary_text_color: getTextColor(metadata.secondary_color ?? '#6B7280'),
     business_name: metadata.business_name ?? null,
     tagline: metadata.tagline ?? null,
     abn: metadata.abn ?? null,
@@ -217,6 +229,7 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
     button_size: metadata.button_size ?? 'md',
     button_radius: typeof metadata.button_radius === 'number' ? metadata.button_radius : 8,
     section_spacing: typeof metadata.section_spacing === 'number' ? metadata.section_spacing : 32,
-    page_background: metadata.page_background ?? surfaceColor,
+    // page_background is no longer a control; it aliases surface_color.
+    page_background: surfaceColor,
   }
 }

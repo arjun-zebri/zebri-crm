@@ -14,6 +14,8 @@ export function publicBrandingFromEditorState(state: BrandPreviewState): PublicB
     favicon_url: state.faviconUrl,
     header_image_url: state.headerImageUrl,
     brand_color: state.brandColor,
+    heading_color: state.headingColor,
+    subheading_color: state.subheadingColor,
     accent_color: state.accentColor,
     surface_color: state.surfaceColor,
     text_color: state.textColor,

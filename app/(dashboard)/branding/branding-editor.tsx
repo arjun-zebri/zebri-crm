@@ -51,6 +51,8 @@ interface BrandingEditorProps {
     faviconUrl: string
     headerImageUrl: string
     brandColor: string
+    headingColor: string
+    subheadingColor: string
     accentColor: string
     surfaceColor: string
     textColor: string
@@ -102,6 +104,8 @@ export interface EditorState {
   faviconUrl: string
   headerImageUrl: string
   brandColor: string
+  headingColor: string
+  subheadingColor: string
   accentColor: string
   surfaceColor: string
   textColor: string
@@ -156,6 +160,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       faviconUrl: initialData.faviconUrl,
       headerImageUrl: initialData.headerImageUrl,
       brandColor: initialData.brandColor,
+      headingColor: initialData.headingColor,
+      subheadingColor: initialData.subheadingColor,
       accentColor: initialData.accentColor,
       surfaceColor: initialData.surfaceColor,
       textColor: initialData.textColor,
@@ -272,6 +278,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         favicon_url: value.faviconUrl || null,
         header_image_url: value.headerImageUrl || null,
         brand_color: value.brandColor,
+        heading_color: value.headingColor,
+        subheading_color: value.subheadingColor,
         accent_color: value.accentColor,
         surface_color: value.surfaceColor,
         text_color: value.textColor,
@@ -343,6 +351,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         ...current,
         name: prev.kitName,
         brandColor: prev.brandColor,
+        headingColor: prev.headingColor,
+        subheadingColor: prev.subheadingColor,
         accentColor: prev.accentColor,
         surfaceColor: prev.surfaceColor,
         textColor: prev.textColor,
@@ -366,6 +376,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       if (
         current.name === next.name &&
         current.brandColor === next.brandColor &&
+        current.headingColor === next.headingColor &&
+        current.subheadingColor === next.subheadingColor &&
         current.accentColor === next.accentColor &&
         current.surfaceColor === next.surfaceColor &&
         current.textColor === next.textColor &&
@@ -396,6 +408,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     state.activeKitId,
     state.kitName,
     state.brandColor,
+    state.headingColor,
+    state.subheadingColor,
     state.accentColor,
     state.surfaceColor,
     state.textColor,
@@ -425,6 +439,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         ...prev,
         themePreset: id,
         brandColor: p.color,
+        headingColor: p.heading,
+        subheadingColor: p.subheading,
         accentColor: p.accent,
         surfaceColor: p.surface,
         textColor: p.text,
@@ -743,6 +759,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       id: `kit-${Date.now().toString(36)}`,
       name,
       brandColor: preset.color,
+      headingColor: preset.heading,
+      subheadingColor: preset.subheading,
       accentColor: preset.accent,
       surfaceColor: preset.surface,
       textColor: preset.text,
@@ -771,6 +789,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         activeKitId: kit.id,
         themePreset: 'minimal',
         brandColor: kit.brandColor,
+        headingColor: kit.headingColor,
+        subheadingColor: kit.subheadingColor,
         accentColor: kit.accentColor,
         surfaceColor: kit.surfaceColor,
         textColor: kit.textColor,
@@ -823,6 +843,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           kitName: next.name,
           themePreset: 'custom',
           brandColor: next.brandColor,
+          headingColor: next.headingColor,
+          subheadingColor: next.subheadingColor,
           accentColor: next.accentColor,
           surfaceColor: next.surfaceColor,
           textColor: next.textColor,
@@ -868,6 +890,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     faviconUrl: state.faviconUrl,
     headerImageUrl: state.headerImageUrl,
     brandColor: state.brandColor,
+    headingColor: state.headingColor,
+    subheadingColor: state.subheadingColor,
     accentColor: state.accentColor,
     surfaceColor: state.surfaceColor,
     textColor: state.textColor,

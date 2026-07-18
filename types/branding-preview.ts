@@ -18,6 +18,8 @@ export interface BrandPreviewState {
   faviconUrl: string
   headerImageUrl: string
   brandColor: string
+  headingColor: string
+  subheadingColor: string
   accentColor: string
   surfaceColor: string
   textColor: string
@@ -84,6 +86,8 @@ export interface BrandKit {
   id: string
   name: string
   brandColor: string
+  headingColor: string
+  subheadingColor: string
   accentColor: string
   surfaceColor: string
   textColor: string
