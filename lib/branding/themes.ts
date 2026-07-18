@@ -8,6 +8,8 @@ export interface ThemePreset {
   accent: string        // accent
   surface: string       // page surface
   text: string          // primary text
+  heading: string       // primary heading colour
+  subheading: string    // secondary heading / subtitle colour
   muted: string         // secondary / muted text
   headingFont: HeadingFont
   bodyFont: BodyFont
@@ -21,10 +23,12 @@ export interface ThemePreset {
 export const THEME_PRESETS: Record<string, ThemePreset> = {
   minimal: {
     name: 'Minimal',
-    color: '#0F172A',
-    accent: '#6366F1',
+    color: '#111827',
+    accent: '#111827',
     surface: '#FFFFFF',
-    text: '#0F172A',
+    text: '#6B7280',
+    heading: '#111827',
+    subheading: '#111827',
     muted: '#6B7280',
     headingFont: 'inter',
     bodyFont: 'inter',
@@ -40,6 +44,8 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     accent: '#FFC107',
     surface: '#FFFFFF',
     text: '#0F172A',
+    heading: '#0F172A',
+    subheading: '#0F172A',
     muted: '#6B7280',
     headingFont: 'space_grotesk',
     bodyFont: 'inter',
@@ -55,6 +61,8 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     accent: '#B45309',
     surface: '#FAFAF7',
     text: '#1F2937',
+    heading: '#1F2937',
+    subheading: '#1F2937',
     muted: '#6B7280',
     headingFont: 'playfair',
     bodyFont: 'inter',
@@ -70,6 +78,8 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     accent: '#A7F3D0',
     surface: '#FFFFFF',
     text: '#0F172A',
+    heading: '#0F172A',
+    subheading: '#0F172A',
     muted: '#6B7280',
     headingFont: 'dm_serif',
     bodyFont: 'dm_sans',
@@ -85,6 +95,8 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     accent: '#D97706',
     surface: '#FBF8F3',
     text: '#1F2937',
+    heading: '#1F2937',
+    subheading: '#1F2937',
     muted: '#78716C',
     headingFont: 'cormorant',
     bodyFont: 'inter',
@@ -100,6 +112,8 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     accent: '#DC2626',
     surface: '#F8F4EC',
     text: '#111827',
+    heading: '#111827',
+    subheading: '#111827',
     muted: '#57534E',
     headingFont: 'fraunces',
     bodyFont: 'source_sans',
@@ -115,6 +129,8 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     accent: '#F9A8D4',
     surface: '#FFF7FA',
     text: '#3F1530',
+    heading: '#3F1530',
+    subheading: '#3F1530',
     muted: '#9F7AA1',
     headingFont: 'instrument_serif',
     bodyFont: 'public_sans',
