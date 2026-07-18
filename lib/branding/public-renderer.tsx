@@ -34,7 +34,10 @@ interface PublicRendererProps extends ActionSlotProps {
 
 export function PublicBlockRenderer(props: PublicRendererProps) {
   return (
-    <>
+    <div
+      style={{ ['--doc-link' as string]: props.branding.link_color }}
+      className="[&_a]:[color:var(--doc-link)]"
+    >
       {props.blocks
         .filter((b) => !b.hidden)
         .map((b) => (
@@ -42,7 +45,7 @@ export function PublicBlockRenderer(props: PublicRendererProps) {
             <BlockBody block={b} {...props} />
           </BlockOuter>
         ))}
-    </>
+    </div>
   )
 }
 
