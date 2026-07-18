@@ -62,7 +62,7 @@ export function resolveTypeDefaults(b: PublicBranding): TypeDefaults {
       font: b.font_heading,
       sizePx: b.heading_size,
       weight: b.font_weight,
-      color: b.text_color,
+      color: b.heading_color,
       align: 'left',
       textTransform: b.heading_case,
       letterSpacing: b.heading_letter_spacing,

@@ -55,7 +55,7 @@ export function RenderBusinessName({
     fontFamily: branding.font_heading,
     fontSize: 16,
     fontWeight: 600,
-    color: branding.text_color || '#111827',
+    color: branding.heading_color || '#111827',
     align: 'left',
     lineHeight: 1.3,
     letterSpacing: 0,

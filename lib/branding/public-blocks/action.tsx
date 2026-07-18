@@ -75,7 +75,7 @@ export function RenderAction({
     fontWeight: 500,
     // Text sits ON the secondary fill, so it must use the secondary text
     // token; text_color here made dark-on-dark labels invisible.
-    color: branding.secondary_text_color || '#374151',
+    color: getTextColor(secondaryBg),
     align: 'center',
     lineHeight: 1.4,
     letterSpacing: 0,
