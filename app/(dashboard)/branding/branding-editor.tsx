@@ -680,32 +680,62 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     setPaletteOpen(true)
   }
 
+  /**
+   * Normalizes a possibly-legacy kit into the six role colours (brandColor,
+   * headingColor, subheadingColor, surfaceColor, textColor, secondaryColor).
+   *
+   * Legacy kits persisted before the headingColor/subheadingColor rollout
+   * use the old schema with accentColor, mutedColor, and secondaryTextColor.
+   * This helper applies fallback relationships:
+   * - headingColor: kit.headingColor || kit.textColor || current state
+   * - subheadingColor: kit.subheadingColor || kit.mutedColor || current state
+   * This ensures legacy kits apply coherently without undefined slots.
+   */
+  const normalizeLegacyKit = (
+    kit: BrandKit,
+    currentState: EditorState,
+  ): Partial<EditorState> => {
+    return {
+      headingColor:
+        kit.headingColor ||
+        (kit as any).textColor ||
+        currentState.headingColor,
+      subheadingColor:
+        kit.subheadingColor ||
+        (kit as any).mutedColor ||
+        currentState.subheadingColor,
+    }
+  }
+
   const onApplyKit = (kit: BrandKit) => {
-    setState((prev) => ({
-      ...prev,
-      kitName: kit.name,
-      activeKitId: kit.id,
-      themePreset: 'custom',
-      brandColor: kit.brandColor,
-      headingColor: kit.headingColor,
-      subheadingColor: kit.subheadingColor,
-      surfaceColor: kit.surfaceColor,
-      textColor: kit.textColor,
-      secondaryColor: kit.secondaryColor,
-      fontHeading: kit.fontHeading,
-      fontBody: kit.fontBody,
-      fontWeight: kit.fontWeight,
-      fontBodyWeight: kit.fontBodyWeight,
-      fontScale: kit.fontScale,
-      density: kit.density,
-      cornerRadius: kit.cornerRadius,
-      docPadding: kit.docPadding ?? prev.docPadding,
-      tagline: kit.tagline ?? '',
-      logoUrl: kit.logoUrl ?? '',
-      faviconUrl: kit.faviconUrl ?? prev.faviconUrl,
-      headerImageUrl: kit.headerImageUrl ?? '',
-      blocks: normalizeKitBlocks(kit.blocks) ?? prev.blocks,
-    }), { commit: true })
+    setState((prev) => {
+      const legacy = normalizeLegacyKit(kit, prev)
+      return {
+        ...prev,
+        kitName: kit.name,
+        activeKitId: kit.id,
+        themePreset: 'custom',
+        brandColor: kit.brandColor,
+        headingColor: legacy.headingColor!,
+        subheadingColor: legacy.subheadingColor!,
+        surfaceColor: kit.surfaceColor,
+        textColor: kit.textColor,
+        secondaryColor: kit.secondaryColor,
+        fontHeading: kit.fontHeading,
+        fontBody: kit.fontBody,
+        fontWeight: kit.fontWeight,
+        fontBodyWeight: kit.fontBodyWeight,
+        fontScale: kit.fontScale,
+        density: kit.density,
+        cornerRadius: kit.cornerRadius,
+        docPadding: kit.docPadding ?? prev.docPadding,
+        tagline: kit.tagline ?? '',
+        logoUrl: kit.logoUrl ?? '',
+        faviconUrl: kit.faviconUrl ?? prev.faviconUrl,
+        headerImageUrl: kit.headerImageUrl ?? '',
+        blocks: normalizeKitBlocks(kit.blocks) ?? prev.blocks,
+      }
+    }, { commit: true })
     toast(`Applied "${kit.name}"`, 'success')
   }
 
@@ -801,6 +831,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         }
         // Auto-switch: prefer the kit that took the deleted slot, else the previous one
         const next = remaining[idx] ?? remaining[idx - 1] ?? remaining[0]
+        const legacy = normalizeLegacyKit(next, prev)
         return {
           ...prev,
           brandKits: remaining,
@@ -808,8 +839,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           kitName: next.name,
           themePreset: 'custom',
           brandColor: next.brandColor,
-          headingColor: next.headingColor,
-          subheadingColor: next.subheadingColor,
+          headingColor: legacy.headingColor!,
+          subheadingColor: legacy.subheadingColor!,
           surfaceColor: next.surfaceColor,
           textColor: next.textColor,
           secondaryColor: next.secondaryColor,
@@ -1126,6 +1157,8 @@ type TokenKey = keyof EditorState
 
 const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
   brandColor: new Set(['businessName', 'title', 'action', 'totals', 'footer']),
+  headingColor: new Set(['businessName', 'title', 'totals', 'paymentDetails']),
+  subheadingColor: new Set(['title']),
   surfaceColor: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text', 'action', 'divider', 'headerBanner', 'footer']),
   textColor: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text']),
   fontHeading: new Set(['businessName', 'title', 'totals']),
