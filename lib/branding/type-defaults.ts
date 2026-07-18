@@ -6,8 +6,11 @@
  * @module lib/branding/type-defaults
  */
 
+import type { TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+
 import type { HeadingFont, BodyFont, FontWeight } from './fonts'
 import type { PublicBranding } from './public-branding'
+import { roleSizePx, type TypeRole } from './type-scale'
 
 /** Text alignment values used in styled type roles. */
 type TextAlign = 'left' | 'center' | 'right'
@@ -78,5 +81,52 @@ export function resolveTypeDefaults(b: PublicBranding): TypeDefaults {
       letterSpacing: 0,
       lineHeight: b.body_line_height,
     },
+  }
+}
+
+/** Which colour role and font family each text role draws from. */
+const ROLE_SOURCE: Record<TypeRole, { colour: 'heading' | 'subheading' | 'body'; font: 'heading' | 'body' }> = {
+  docTitle: { colour: 'heading', font: 'heading' },
+  sectionHeading: { colour: 'heading', font: 'heading' },
+  total: { colour: 'heading', font: 'heading' },
+  subtitle: { colour: 'subheading', font: 'body' },
+  sectionLabel: { colour: 'subheading', font: 'body' },
+  body: { colour: 'body', font: 'body' },
+  finePrint: { colour: 'body', font: 'body' },
+}
+
+/**
+ * Resolve the rendering defaults for one document text role.
+ *
+ * Every public renderer calls this instead of hardcoding sizes, which is
+ * what makes the global typography controls reach the page at all.
+ *
+ * @param b - The resolved public branding for this document.
+ * @param role - Which text role is being rendered.
+ * @returns Defaults ready to hand to `resolveTextStyle`.
+ */
+export function roleDefaults(b: PublicBranding, role: TypeRole): TextStyleDefaults {
+  const src = ROLE_SOURCE[role]
+  const isHeadingFont = src.font === 'heading'
+  const colour =
+    src.colour === 'heading' ? b.heading_color
+    : src.colour === 'subheading' ? b.subheading_color
+    : b.text_color
+
+  // The eyebrow treatment is the section label's identity, so it applies
+  // unless the user has set a global case or tracking of their own.
+  const isLabel = role === 'sectionLabel'
+  const textTransform = isLabel && b.heading_case === 'none' ? 'uppercase' : b.heading_case
+  const letterSpacing = isLabel && b.heading_letter_spacing === 0 ? 0.18 : b.heading_letter_spacing
+
+  return {
+    fontFamily: isHeadingFont ? b.font_heading : b.font_body,
+    fontSize: roleSizePx(role, b.heading_size, b.body_size),
+    fontWeight: isHeadingFont ? b.font_weight : b.font_body_weight,
+    color: colour,
+    align: 'left',
+    lineHeight: b.body_line_height,
+    letterSpacing: isHeadingFont || isLabel ? letterSpacing : 0,
+    textTransform: isHeadingFont ? b.heading_case : isLabel ? textTransform : b.body_case,
   }
 }

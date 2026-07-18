@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { buildPublicBranding } from '@/lib/branding/public-branding'
-import { resolveTypeDefaults } from '@/lib/branding/type-defaults'
+import { resolveTypeDefaults, roleDefaults } from '@/lib/branding/type-defaults'
 
 describe('resolveTypeDefaults', () => {
   it('resolves heading defaults from PublicBranding', () => {
@@ -85,5 +85,50 @@ describe('resolveTypeDefaults', () => {
     expect(td.body.weight).toBe(500)
     expect(td.heading.color).toBe('#FF00FF')
     expect(td.body.color).toBe('#FF0000')
+  })
+})
+
+describe('roleDefaults', () => {
+  const b = buildPublicBranding({
+    heading_size: 32,
+    body_size: 15,
+    heading_color: '#111827',
+    subheading_color: '#7828C8',
+    text_color: '#333333',
+  })
+
+  it('maps heading roles to the heading colour and heading font', () => {
+    const d = roleDefaults(b, 'docTitle')
+    expect(d.fontSize).toBe(32)
+    expect(d.color).toBe('#111827')
+    expect(d.fontFamily).toBe(b.font_heading)
+  })
+
+  it('maps label and subtitle roles to the subheading colour', () => {
+    expect(roleDefaults(b, 'sectionLabel').color).toBe('#7828C8')
+    expect(roleDefaults(b, 'subtitle').color).toBe('#7828C8')
+  })
+
+  it('maps body roles to the body colour and body font', () => {
+    const d = roleDefaults(b, 'body')
+    expect(d.color).toBe('#333333')
+    expect(d.fontFamily).toBe(b.font_body)
+  })
+
+  it('gives the section label the eyebrow treatment by default', () => {
+    const d = roleDefaults(b, 'sectionLabel')
+    expect(d.textTransform).toBe('uppercase')
+    expect(d.letterSpacing).toBe(0.18)
+  })
+
+  it('lets a global heading case override the eyebrow treatment', () => {
+    const d = roleDefaults(buildPublicBranding({ heading_case: 'capitalize', heading_size: 32, body_size: 15, heading_color: '#111827', subheading_color: '#7828C8', text_color: '#333333' }), 'sectionLabel')
+    expect(d.textTransform).toBe('capitalize')
+  })
+
+  it('propagates a heading size change to every heading role', () => {
+    const big = buildPublicBranding({ heading_size: 40, body_size: 15, heading_color: '#111827', subheading_color: '#7828C8', text_color: '#333333' })
+    expect(roleDefaults(big, 'docTitle').fontSize).toBe(40)
+    expect(roleDefaults(big, 'sectionHeading').fontSize).toBe(25)
   })
 })
