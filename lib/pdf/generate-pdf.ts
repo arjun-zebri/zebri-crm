@@ -74,6 +74,7 @@ function generateContractHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts):
   const brandColor = branding?.brandColor ?? '#111111'
   const textColor = branding?.textColor ?? '#111111'
   const mutedColor = branding?.mutedColor ?? '#666666'
+  const headingColor = branding?.headingColor ?? textColor
   const headingFont =
     branding?.headingFontFamily ??
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
@@ -107,7 +108,7 @@ function generateContractHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts):
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: ${bodyFont}; padding: 48px; color: ${textColor}; max-width: 720px; margin: 0 auto; line-height: 1.6; }
-    h1, h2, h3 { font-family: ${headingFont}; color: ${brandColor}; }
+    h1, h2, h3 { font-family: ${headingFont}; color: ${headingColor}; }
     h1 { font-size: 22px; margin: 24px 0 10px; }
     h2 { font-size: 16px; margin: 20px 0 6px; }
     h3 { font-size: 14px; margin: 16px 0 4px; }
@@ -168,6 +169,10 @@ export interface PdfBrandingOpts {
   brandColor?: string
   textColor?: string
   mutedColor?: string
+  /** CSS colour for headings. */
+  headingColor?: string
+  /** CSS colour for subheadings / section labels. */
+  subheadingColor?: string
   /** CSS font-family string for headings (e.g. `'Inter', sans-serif`). */
   headingFontFamily?: string
   /** CSS font-family string for body. */
@@ -200,6 +205,8 @@ export function publicBrandingToPdfOpts(branding: PublicBranding): PdfBrandingOp
     brandColor: branding.brand_color,
     textColor: branding.text_color,
     mutedColor: branding.muted_color,
+    headingColor: branding.heading_color ?? branding.text_color,
+    subheadingColor: branding.subheading_color ?? branding.muted_color,
     headingFontFamily,
     bodyFontFamily,
     fontsHref,
@@ -230,6 +237,8 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
   const brandColor = branding?.brandColor ?? '#111111'
   const textColor = branding?.textColor ?? '#111111'
   const mutedColor = branding?.mutedColor ?? '#666666'
+  const headingColor = branding?.headingColor ?? textColor
+  const subheadingColor = branding?.subheadingColor ?? mutedColor
   const headingFont =
     branding?.headingFontFamily ??
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
@@ -308,7 +317,7 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
   const bankDetails =
     doc.type === 'invoice' && (doc.bankAccountName || doc.bankBsb || doc.bankAccountNumber)
       ? `<div style="margin-top:32px;padding:16px;background:#f9f9f9;border-radius:8px">
-          <p style="font-size:12px;font-weight:600;color:${mutedColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Bank transfer details</p>
+          <p style="font-size:12px;font-weight:600;color:${subheadingColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Bank transfer details</p>
           ${doc.bankAccountName ? `<p style="font-size:13px;color:${textColor};margin:4px 0">Account name: ${doc.bankAccountName}</p>` : ''}
           ${doc.bankBsb ? `<p style="font-size:13px;color:${textColor};margin:4px 0">BSB: ${doc.bankBsb}</p>` : ''}
           ${doc.bankAccountNumber ? `<p style="font-size:13px;color:${textColor};margin:4px 0">Account number: ${doc.bankAccountNumber}</p>` : ''}
@@ -317,7 +326,7 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
 
   const notesSection = doc.notes
     ? `<div style="margin-top:24px">
-        <p style="font-size:12px;font-weight:600;color:${mutedColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Notes</p>
+        <p style="font-size:12px;font-weight:600;color:${subheadingColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Notes</p>
         <p style="font-size:13px;color:${mutedColor};white-space:pre-line;line-height:1.6">${doc.notes}</p>
       </div>`
     : ''
@@ -346,13 +355,13 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
       <p style="font-size:14px;color:${mutedColor}">${doc.coupleName}</p>
     </div>
     <div style="text-align:right">
-      <p class="heading" style="font-size:22px;font-weight:700;color:${brandColor};text-transform:capitalize">${'Invoice'}</p>
+      <p class="heading" style="font-size:22px;font-weight:700;color:${headingColor};text-transform:capitalize">${'Invoice'}</p>
       <p style="font-size:14px;color:${mutedColor};margin-top:4px">#${doc.documentNumber}</p>
       ${metaLine}
     </div>
   </div>
 
-  ${doc.title ? `<p class="heading" style="font-size:16px;font-weight:600;color:${textColor};margin-bottom:32px">${doc.title}</p>` : ''}
+  ${doc.title ? `<p class="heading" style="font-size:16px;font-weight:600;color:${headingColor};margin-bottom:32px">${doc.title}</p>` : ''}
 
   <table style="width:100%;border-collapse:collapse">
     <thead>${headerRow}</thead>
@@ -368,8 +377,8 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
       ${discountRow}
       ${taxRow}
       <tr style="border-top:1px solid #e5e5e5">
-        <td class="heading" style="padding:10px 0 6px;font-size:15px;font-weight:700;color:${brandColor}">Total</td>
-        <td class="heading" style="padding:10px 0 6px;font-size:15px;font-weight:700;color:${brandColor};text-align:right">${formatCurrency(doc.total)}</td>
+        <td class="heading" style="padding:10px 0 6px;font-size:15px;font-weight:700;color:${headingColor}">Total</td>
+        <td class="heading" style="padding:10px 0 6px;font-size:15px;font-weight:700;color:${headingColor};text-align:right">${formatCurrency(doc.total)}</td>
       </tr>
     </table>
   </div>
