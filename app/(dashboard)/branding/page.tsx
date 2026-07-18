@@ -34,7 +34,6 @@ interface UserMetadata {
   subheading_color?: string
   surface_color?: string
   text_color?: string
-  muted_color?: string
   secondary_color?: string
   tagline?: string
   abn?: string
