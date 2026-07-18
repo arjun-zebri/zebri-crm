@@ -85,6 +85,7 @@ interface BrandingEditorProps {
     headingLetterSpacing: number
     bodyLineHeight: number
     linkColor: string
+    borderColor: string
     buttonVariant: 'fill' | 'outline'
     buttonSize: 'sm' | 'md' | 'lg'
     buttonRadius: number
@@ -134,6 +135,7 @@ export interface EditorState {
   headingLetterSpacing: number
   bodyLineHeight: number
   linkColor: string
+  borderColor: string
   buttonVariant: 'fill' | 'outline'
   buttonSize: 'sm' | 'md' | 'lg'
   buttonRadius: number
@@ -186,6 +188,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       headingLetterSpacing: initialData.headingLetterSpacing,
       bodyLineHeight: initialData.bodyLineHeight,
       linkColor: initialData.linkColor,
+      borderColor: initialData.borderColor,
       buttonVariant: initialData.buttonVariant,
       buttonSize: initialData.buttonSize,
       buttonRadius: initialData.buttonRadius,
@@ -297,6 +300,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         heading_letter_spacing: value.headingLetterSpacing,
         body_line_height: value.bodyLineHeight,
         link_color: value.linkColor,
+        border_color: value.borderColor,
         button_variant: value.buttonVariant,
         button_size: value.buttonSize,
         button_radius: value.buttonRadius,
@@ -340,6 +344,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         surfaceColor: prev.surfaceColor,
         textColor: prev.textColor,
         secondaryColor: prev.secondaryColor,
+        borderColor: prev.borderColor,
         fontHeading: prev.fontHeading,
         fontBody: prev.fontBody,
         fontWeight: prev.fontWeight,
@@ -362,6 +367,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         current.surfaceColor === next.surfaceColor &&
         current.textColor === next.textColor &&
         current.secondaryColor === next.secondaryColor &&
+        current.borderColor === next.borderColor &&
         current.fontHeading === next.fontHeading &&
         current.fontBody === next.fontBody &&
         current.fontWeight === next.fontWeight &&
@@ -403,6 +409,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     state.logoUrl,
     state.faviconUrl,
     state.headerImageUrl,
+    state.borderColor,
     state.blocks,
     setState,
   ])
@@ -729,6 +736,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         surfaceColor: kit.surfaceColor,
         textColor: kit.textColor,
         secondaryColor: kit.secondaryColor,
+        borderColor: kit.borderColor,
         fontHeading: kit.fontHeading,
         fontBody: kit.fontBody,
         fontWeight: kit.fontWeight,
@@ -773,6 +781,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       surfaceColor: preset.surface,
       textColor: preset.text,
       secondaryColor: '#FFFFFF',
+      borderColor: preset.border,
       fontHeading: preset.headingFont,
       fontBody: preset.bodyFont,
       fontWeight: preset.headingWeight,
@@ -852,6 +861,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           surfaceColor: next.surfaceColor,
           textColor: next.textColor,
           secondaryColor: next.secondaryColor,
+          borderColor: next.borderColor,
           fontHeading: next.fontHeading,
           fontBody: next.fontBody,
           fontWeight: next.fontWeight,
@@ -896,6 +906,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     surfaceColor: state.surfaceColor,
     textColor: state.textColor,
     secondaryColor: state.secondaryColor,
+    borderColor: state.borderColor,
     tagline: state.tagline,
     footerText: '',
     abn: state.abn,
@@ -1016,6 +1027,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setDocPadding={(v) => setEditor({ docPadding: v })}
           linkColor={state.linkColor}
           setLinkColor={(v) => setEditor({ linkColor: v })}
+          borderColor={state.borderColor}
+          onBorderColorChange={(v) => setEditor({ borderColor: v })}
           buttonVariant={state.buttonVariant}
           setButtonVariant={(v) => setEditor({ buttonVariant: v })}
           buttonSize={state.buttonSize}

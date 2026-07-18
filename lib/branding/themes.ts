@@ -11,6 +11,7 @@ export interface ThemePreset {
   heading: string       // primary heading colour
   subheading: string    // secondary heading / subtitle colour
   muted: string         // secondary / muted text
+  border: string        // hairlines and borders
   headingFont: HeadingFont
   bodyFont: BodyFont
   headingWeight: FontWeight
@@ -30,6 +31,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     heading: '#111827',
     subheading: '#111827',
     muted: '#6B7280',
+    border: '#E5E7EB',
     headingFont: 'inter',
     bodyFont: 'inter',
     headingWeight: 600,
@@ -47,6 +49,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     heading: '#0F172A',
     subheading: '#0F172A',
     muted: '#6B7280',
+    border: '#E5E7EB',
     headingFont: 'space_grotesk',
     bodyFont: 'inter',
     headingWeight: 700,
@@ -64,6 +67,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     heading: '#1F2937',
     subheading: '#1F2937',
     muted: '#6B7280',
+    border: '#E5E7EB',
     headingFont: 'playfair',
     bodyFont: 'inter',
     headingWeight: 500,
@@ -81,6 +85,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     heading: '#0F172A',
     subheading: '#0F172A',
     muted: '#6B7280',
+    border: '#E5E7EB',
     headingFont: 'dm_serif',
     bodyFont: 'dm_sans',
     headingWeight: 400,
@@ -98,6 +103,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     heading: '#1F2937',
     subheading: '#1F2937',
     muted: '#78716C',
+    border: '#E5E7EB',
     headingFont: 'cormorant',
     bodyFont: 'inter',
     headingWeight: 500,
@@ -115,6 +121,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     heading: '#111827',
     subheading: '#111827',
     muted: '#57534E',
+    border: '#E5E7EB',
     headingFont: 'fraunces',
     bodyFont: 'source_sans',
     headingWeight: 500,
@@ -132,6 +139,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
     heading: '#3F1530',
     subheading: '#3F1530',
     muted: '#9F7AA1',
+    border: '#E5E7EB',
     headingFont: 'instrument_serif',
     bodyFont: 'public_sans',
     headingWeight: 400,
@@ -204,4 +212,13 @@ export const MUTED_PALETTE = [
   '#9CA3AF',
   '#57534E',
   '#9F7AA1',
+] as const
+
+export const BORDER_PALETTE = [
+  '#F3F4F6',
+  '#E5E7EB',
+  '#D1D5DB',
+  '#9CA3AF',
+  '#6B7280',
+  '#111827',
 ] as const

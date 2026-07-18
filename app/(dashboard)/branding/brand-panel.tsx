@@ -24,6 +24,7 @@ import {
   COLOR_PALETTE,
   SURFACE_PALETTE,
   TEXT_PALETTE,
+  BORDER_PALETTE,
   type ThemeId,
   type ThemeIdOrCustom,
   type Density,
@@ -91,6 +92,8 @@ interface BrandPanelProps {
 
   linkColor: string
   setLinkColor: (v: string) => void
+  borderColor: string
+  onBorderColorChange: (v: string) => void
   buttonVariant: 'fill' | 'outline'
   setButtonVariant: (v: 'fill' | 'outline') => void
   buttonSize: 'sm' | 'md' | 'lg'
@@ -291,6 +294,7 @@ function ColorSection({
   surfaceColor, setSurfaceColor,
   textColor, setTextColor,
   secondaryColor, setSecondaryColor,
+  borderColor, onBorderColorChange,
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
@@ -300,6 +304,7 @@ function ColorSection({
       <ColorRow label="Background" description="The page background" value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
       <ColorRow label="Primary button" description="Accept and Pay buttons" value={brandColor} onChange={setBrandColor} swatches={COLOR_PALETTE} />
       <ColorRow label="Secondary button" description="Decline and supporting buttons" value={secondaryColor} onChange={setSecondaryColor} swatches={COLOR_PALETTE} />
+      <ColorRow label="Border" description="Lines, rules and card outlines" value={borderColor} onChange={onBorderColorChange} swatches={BORDER_PALETTE} />
       <ContrastWarnings textColor={textColor} surfaceColor={surfaceColor} brandColor={brandColor} />
     </div>
   )

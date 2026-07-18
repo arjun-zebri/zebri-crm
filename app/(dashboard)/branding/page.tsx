@@ -55,6 +55,7 @@ interface UserMetadata {
   heading_letter_spacing?: number
   body_line_height?: number
   link_color?: string
+  border_color?: string
   button_variant?: 'fill' | 'outline'
   button_size?: 'sm' | 'md' | 'lg'
   button_radius?: number
@@ -401,6 +402,7 @@ export default function BrandingPage() {
             headingLetterSpacing: typeof metadata?.heading_letter_spacing === 'number' ? metadata.heading_letter_spacing : 0,
             bodyLineHeight: typeof metadata?.body_line_height === 'number' ? metadata.body_line_height : 1.5,
             linkColor: metadata?.link_color ?? brandColor,
+            borderColor: metadata?.border_color || '#E5E7EB',
             buttonVariant: metadata?.button_variant ?? 'fill',
             buttonSize: metadata?.button_size ?? 'md',
             buttonRadius: typeof metadata?.button_radius === 'number' ? metadata.button_radius : 8,
