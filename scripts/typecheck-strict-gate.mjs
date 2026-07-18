@@ -49,7 +49,8 @@ import { execSync } from 'node:child_process';
 // Branding overhaul phase-a completion: fixed exactOptionalPropertyTypes
 // violations in block-toolbar.tsx and render.tsx by conditionally spreading
 // optional props instead of passing undefined (20-error reduction: 295 -> 290).
-const STRICT_BUDGET = 290;
+// Branding role-colour model removed 2 further strict errors (290 -> 288).
+const STRICT_BUDGET = 288;
 
 function runTscStrict() {
   try {
