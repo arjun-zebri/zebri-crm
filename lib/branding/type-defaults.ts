@@ -113,11 +113,10 @@ export function roleDefaults(b: PublicBranding, role: TypeRole): TextStyleDefaul
     : src.colour === 'subheading' ? b.subheading_color
     : b.text_color
 
-  // The eyebrow treatment is the section label's identity, so it applies
-  // unless the user has set a global case or tracking of their own.
-  const isLabel = role === 'sectionLabel'
-  const textTransform = isLabel && b.heading_case === 'none' ? 'uppercase' : b.heading_case
-  const letterSpacing = isLabel && b.heading_letter_spacing === 0 ? 0.18 : b.heading_letter_spacing
+  // Section labels use heading case and letter spacing globally, ensuring that
+  // global type controls reach all roles uniformly. The label's identity comes
+  // from its size and color, not special typography overrides.
+  const usesHeadingTypography = isHeadingFont || role === 'sectionLabel'
 
   return {
     fontFamily: isHeadingFont ? b.font_heading : b.font_body,
@@ -126,7 +125,7 @@ export function roleDefaults(b: PublicBranding, role: TypeRole): TextStyleDefaul
     color: colour,
     align: 'left',
     lineHeight: b.body_line_height,
-    letterSpacing: isHeadingFont || isLabel ? letterSpacing : 0,
-    textTransform: isHeadingFont ? b.heading_case : isLabel ? textTransform : b.body_case,
+    letterSpacing: usesHeadingTypography ? b.heading_letter_spacing : 0,
+    textTransform: usesHeadingTypography ? b.heading_case : b.body_case,
   }
 }

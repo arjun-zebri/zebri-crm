@@ -115,15 +115,40 @@ describe('roleDefaults', () => {
     expect(d.fontFamily).toBe(b.font_body)
   })
 
-  it('gives the section label the eyebrow treatment by default', () => {
+  it('sectionLabel follows global heading case and letter spacing', () => {
     const d = roleDefaults(b, 'sectionLabel')
-    expect(d.textTransform).toBe('uppercase')
-    expect(d.letterSpacing).toBe(0.18)
+    expect(d.textTransform).toBe('none')
+    expect(d.letterSpacing).toBe(0)
   })
 
-  it('lets a global heading case override the eyebrow treatment', () => {
-    const d = roleDefaults(buildPublicBranding({ heading_case: 'capitalize', heading_size: 32, body_size: 15, heading_color: '#111827', subheading_color: '#7828C8', text_color: '#333333' }), 'sectionLabel')
-    expect(d.textTransform).toBe('capitalize')
+  it('sectionLabel applies heading_case override', () => {
+    const d = roleDefaults(
+      buildPublicBranding({
+        heading_case: 'uppercase',
+        heading_size: 32,
+        body_size: 15,
+        heading_color: '#111827',
+        subheading_color: '#7828C8',
+        text_color: '#333333',
+      }),
+      'sectionLabel'
+    )
+    expect(d.textTransform).toBe('uppercase')
+  })
+
+  it('sectionLabel applies heading_letter_spacing override', () => {
+    const d = roleDefaults(
+      buildPublicBranding({
+        heading_letter_spacing: 0.2,
+        heading_size: 32,
+        body_size: 15,
+        heading_color: '#111827',
+        subheading_color: '#7828C8',
+        text_color: '#333333',
+      }),
+      'sectionLabel'
+    )
+    expect(d.letterSpacing).toBe(0.2)
   })
 
   it('propagates a heading size change to every heading role', () => {
