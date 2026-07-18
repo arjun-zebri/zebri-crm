@@ -7,7 +7,8 @@
 -- replacement plus a data update.
 --
 -- @ALLOW_DESTRUCTIVE: the scalar update overwrites border_color by intent,
--- matching the colour-model reset that ships alongside it.
+-- seeding the new key for existing accounts. It touches border_color and
+-- nothing else, so replaying it cannot disturb the other brand colours.
 
 create or replace function _user_branding(p_user_id uuid)
 returns jsonb
