@@ -68,10 +68,12 @@ const SAMPLE_DOC: PublicDocData = {
 }
 
 /** Static block tree for the preview document, in three contiguous groups so
- *  the parts a step does not touch can dim (fixed ids keep React stable). */
+ *  the parts a step does not touch can dim (fixed ids keep React stable).
+ *  Includes a title with subtitle block to demonstrate both heading and subheading colours. */
 const IDENTITY_BLOCKS: Block[] = [
   { id: 'pv-bn', type: 'businessName' },
   { id: 'pv-tg', type: 'tagline' },
+  { id: 'pv-title', type: 'title', title: 'Your complete celebration', subtitle: 'From coordination to memories', showRef: false, showExpires: false, showAbn: false },
 ]
 const BODY_BLOCKS: Block[] = [
   { id: 'pv-tx', type: 'text', text: 'We would love to be part of your day. Everything you need to lock in your date is below.' },

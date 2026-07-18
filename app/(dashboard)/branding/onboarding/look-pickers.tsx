@@ -98,62 +98,6 @@ export function DensityPicker(props: DensityPickerProps) {
   )
 }
 
-/** Corner radius choices offered during onboarding. */
-const RADIUS_OPTIONS = [
-  { label: 'Sharp', value: 0 },
-  { label: 'Soft', value: 8 },
-  { label: 'Round', value: 16 },
-] as const
-
-/**
- * Props for corner radius picker.
- * @internal
- */
-interface RadiusPickerProps {
-  cornerRadius: number
-  setCornerRadius: (v: number) => void
-}
-
-/**
- * RadiusPicker: corner radius as three tiles, each glyph a square with the
- * radius it represents.
- * @internal
- */
-export function RadiusPicker(props: RadiusPickerProps) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-text-muted mb-1">Corners</label>
-      <p className="text-xs text-text-muted leading-snug mb-2">
-        Rounds the corners of your document pages, cards, and buttons.
-      </p>
-      <div className="grid grid-cols-3 gap-2">
-        {RADIUS_OPTIONS.map((o) => {
-          const selected = props.cornerRadius === o.value
-          return (
-            <label key={o.label} className="block">
-              <input
-                type="radio"
-                name="cornerRadius"
-                checked={selected}
-                onChange={() => props.setCornerRadius(o.value)}
-                className="sr-only"
-                aria-label={o.label}
-              />
-              <div className={`flex flex-col items-center gap-2 px-2 py-3 ${OPTION_CLASSES(selected)}`}>
-                <div
-                  aria-hidden
-                  className="w-7 h-7 border-2 border-text-subtle"
-                  style={{ borderRadius: Math.min(o.value, 12) }}
-                />
-                <span className="text-xs font-medium text-text">{o.label}</span>
-              </div>
-            </label>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 /**
  * DensityGlyph: three short lines whose vertical gaps mirror the density's
