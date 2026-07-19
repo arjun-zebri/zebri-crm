@@ -35,7 +35,7 @@ const PLACEHOLDERS: Partial<Record<Question['type'], string>> = {
 }
 
 export function QuestionField({ question, value, onChange, onAutoAdvance, autoFocus = false, theme }: FieldProps) {
-  const { brand, textColor, borderColor, radius, pageBg } = theme
+  const { brand, textColor, borderColor, radius, pageBg, bodyFontSize } = theme
   // Use theme properties for styling: pageBg for backgrounds (from surface_color), borderColor for outlines.
   const borderStyle = { borderColor, borderRadius: radius, color: textColor, backgroundColor: pageBg }
 
@@ -90,8 +90,8 @@ export function QuestionField({ question, value, onChange, onAutoAdvance, autoFo
                   onChange(opt)
                   onAutoAdvance?.()
                 }}
-                className="flex w-full cursor-pointer items-center justify-between border px-4 py-3 text-left text-lg transition hover:border-current"
-                style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor }}
+                className="flex w-full cursor-pointer items-center justify-between border px-4 py-3 text-left transition hover:border-current"
+                style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor, fontSize: `${bodyFontSize}px` }}
               >
                 {opt}
               </button>
@@ -113,8 +113,8 @@ export function QuestionField({ question, value, onChange, onAutoAdvance, autoFo
                 key={opt}
                 type="button"
                 onClick={() => toggle(opt)}
-                className="flex w-full cursor-pointer items-center gap-3 border px-4 py-3 text-left text-lg transition hover:border-current"
-                style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor }}
+                className="flex w-full cursor-pointer items-center gap-3 border px-4 py-3 text-left transition hover:border-current"
+                style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor, fontSize: `${bodyFontSize}px` }}
               >
                 <span className="grid h-5 w-5 shrink-0 place-items-center rounded border" style={{ borderColor: isSel ? brand : borderColor, background: isSel ? brand : pageBg }}>
                   {isSel && <span className="text-xs" style={{ color: readableTextOn(brand) }}>✓</span>}

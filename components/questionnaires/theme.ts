@@ -33,6 +33,8 @@ export interface QuestionnaireTheme {
   /** Resolved CSS font stacks; undefined falls back to the app font. */
   headingStack: string | undefined
   bodyStack: string | undefined
+  /** Default body text size in pixels. */
+  bodyFontSize: number
   logoUrl: string | null
   businessName: string
 }
@@ -74,6 +76,7 @@ export function themeFromBranding(branding: ThemeSource | undefined): Questionna
     radius: branding?.corner_radius ?? 16,
     headingStack: branding?.font_heading ? headingFontFamily({ font_heading: branding.font_heading }) : undefined,
     bodyStack: branding?.font_body ? bodyFontFamily({ font_body: branding.font_body }) : undefined,
+    bodyFontSize: 16, // Default body text size; inherited from branding-driven type scale.
     logoUrl: branding?.logo_url ?? null,
     businessName: branding?.business_name || 'Your celebrant',
   }

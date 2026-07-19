@@ -54,7 +54,7 @@ export function RenderFooter({
           <p className="flex flex-wrap gap-x-3 gap-y-1 justify-center" style={contactCss}>
             {contactParts.map((part, i) => (
               <span key={i}>
-                {i > 0 && <span className="text-text-muted"> · </span>}
+                {i > 0 && <span style={contactCss}> · </span>}
                 <span className="whitespace-nowrap">{part}</span>
               </span>
             ))}

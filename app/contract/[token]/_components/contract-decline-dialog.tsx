@@ -73,14 +73,16 @@ export function ContractDeclineDialog({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/40 z-[70]"
+        className="fixed inset-0 z-[70]"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
         onClick={onCancel}
         aria-hidden="true"
       />
       <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
         <div
-          className="bg-surface border max-w-sm w-full"
+          className="border max-w-sm w-full"
           style={{
+            backgroundColor: branding.surface_color,
             borderRadius: branding.corner_radius,
             borderColor: branding.border_color,
           }}

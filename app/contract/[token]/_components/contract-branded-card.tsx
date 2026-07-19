@@ -58,8 +58,9 @@ export function ContractBrandedCard({
 
   return (
     <div
-      className="bg-surface shadow-sm border overflow-hidden"
+      className="shadow-sm border overflow-hidden"
       style={{
+        backgroundColor: contract.surface_color,
         borderRadius: radius,
         borderColor: contract.border_color,
       }}

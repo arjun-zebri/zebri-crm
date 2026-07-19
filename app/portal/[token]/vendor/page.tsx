@@ -73,8 +73,8 @@ export default async function VendorPage({
         style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
       >
         <Image src="/zebri-logo.svg" alt="Zebri" width={80} height={29} />
-        <p className="text-sm" style={{ color: mutedColor }}>This link is not active.</p>
-        <p className="text-xs text-center max-w-xs" style={{ color: mutedColor }}>
+        <p className="text-sm" style={{ color: mutedColor }}>{/* gate-allow: pre-branding state */}This link is not active.</p>
+        <p className="text-xs text-center max-w-xs" style={{ color: mutedColor }}>{/* gate-allow: pre-branding state */}
           Contact the MC to activate the run sheet link.
         </p>
       </div>

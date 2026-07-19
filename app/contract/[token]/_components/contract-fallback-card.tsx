@@ -52,8 +52,9 @@ export function ContractFallbackCard({
 
   return (
     <div
-      className="bg-surface border overflow-hidden shadow-sm"
+      className="border overflow-hidden shadow-sm"
       style={{
+        backgroundColor: contract.surface_color,
         borderRadius: radius,
         borderColor: contract.border_color,
       }}
@@ -69,8 +70,8 @@ export function ContractFallbackCard({
             <img
               src={contract.logo_url}
               alt=""
-              className="h-10 w-10 object-cover bg-white"
-              style={{ borderRadius: Math.min(radius, 12) }}
+              className="h-10 w-10 object-cover"
+              style={{ borderRadius: Math.min(radius, 12), backgroundColor: contract.surface_color }}
             />
           ) : null}
           <div className="min-w-0">

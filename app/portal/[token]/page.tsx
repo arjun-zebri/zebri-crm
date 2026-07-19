@@ -214,8 +214,8 @@ export default async function PortalPage({
     return (
       <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-4 gap-6">
         <Image src="/zebri-logo.svg" alt="Zebri" width={80} height={29} />
-        <p className="text-sm text-text-muted">This link is not active.</p>
-        <p className="text-xs text-text-subtle text-center max-w-xs">
+        <p className="text-sm text-text-muted">{/* gate-allow: pre-branding state */}This link is not active.</p>
+        <p className="text-xs text-text-subtle text-center max-w-xs">{/* gate-allow: pre-branding state */}
           Contact your MC to activate your portal link.
         </p>
       </div>
