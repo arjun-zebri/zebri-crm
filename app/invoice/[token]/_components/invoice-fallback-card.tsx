@@ -12,6 +12,7 @@
  *
  * @module app/invoice/[token]/_components/invoice-fallback-card
  */
+import { getRgb } from '@/lib/branding/contrast';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import { Html } from '@/lib/branding/public-blocks/html';
 import type { PublicBranding } from '@/lib/branding/public-branding';
@@ -68,13 +69,24 @@ export function InvoiceFallbackCard({
   const finePrintDefaults = roleDefaults(branding, 'finePrint');
   const totalDefaults = roleDefaults(branding, 'total');
 
+  // Compute border colours from the brand's border_color setting.
+  // Soft opacity is achieved by compositing rgba rather than
+  // reintroducing Zebri app-chrome tokens.
+  const borderRgb = getRgb(branding.border_color);
+  const borderColor = borderRgb
+    ? `rgba(${borderRgb[0]}, ${borderRgb[1]}, ${borderRgb[2]}, 1)`
+    : branding.border_color;
+  const borderColorHalf = borderRgb
+    ? `rgba(${borderRgb[0]}, ${borderRgb[1]}, ${borderRgb[2]}, 0.5)`
+    : branding.border_color;
+
   return (
     <div
-      className="overflow-hidden shadow-sm border border-border"
-      style={{ borderRadius: radius, backgroundColor: branding.surface_color }}
+      className="overflow-hidden shadow-sm border"
+      style={{ borderRadius: radius, backgroundColor: branding.surface_color, borderColor }}
     >
       {/* Header */}
-      <div className={`${pad.cardHeader} border-b border-border`}>
+      <div className={`${pad.cardHeader} border-b`} style={{ borderBottomColor: borderColor }}>
         {invoice.logo_url ? (
           // User-uploaded brand asset hosted on Supabase storage—
           // no next/image since we don't have the domain allow-listed
@@ -186,7 +198,7 @@ export function InvoiceFallbackCard({
 
       {/* Line items */}
       <div className={pad.cardSection}>
-        <div className="flex items-center justify-between pb-2 border-b border-border">
+        <div className="flex items-center justify-between pb-2 border-b" style={{ borderBottomColor: borderColor }}>
           <span
             style={{
               fontSize: `${sectionLabelDefaults.fontSize}px`,
@@ -232,7 +244,8 @@ export function InvoiceFallbackCard({
           invoice.items.map((item) => (
             <div
               key={item.id}
-              className="flex items-start justify-between py-3 border-b border-border/50 gap-4"
+              className="flex items-start justify-between py-3 border-b gap-4"
+              style={{ borderBottomColor: borderColorHalf }}
             >
               <div className="flex-1 min-w-0">
                 <span
@@ -530,8 +543,9 @@ export function InvoiceFallbackCard({
         invoice.instagram_url ||
         invoice.facebook_url) ? (
         <div
-          className="px-8 py-6 border-t border-border flex flex-wrap gap-4"
+          className="px-8 py-6 border-t flex flex-wrap gap-4"
           style={{
+            borderTopColor: borderColor,
             fontSize: `${finePrintDefaults.fontSize}px`,
             color: finePrintDefaults.color,
             fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],

@@ -12,6 +12,7 @@
  */
 import { CheckCircle } from 'lucide-react';
 
+import { getRgb } from '@/lib/branding/contrast';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import type { PublicBranding } from '@/lib/branding/public-branding';
 import { STATUS_COLORS } from '@/lib/branding/status-colors';
@@ -47,10 +48,17 @@ export function InvoicePaymentSchedule({
   const bodyDefaults = roleDefaults(branding, 'body');
   const finePrintDefaults = roleDefaults(branding, 'finePrint');
 
+  // Compute soft-opacity border for deposit/final schedule rows.
+  // Composited from branding colour to avoid Zebri app-chrome tokens.
+  const borderRgb = getRgb(branding.border_color);
+  const borderColorHalf = borderRgb
+    ? `rgba(${borderRgb[0]}, ${borderRgb[1]}, ${borderRgb[2]}, 0.5)`
+    : branding.border_color;
+
   return (
     <div className="space-y-2">
       {/* Deposit */}
-      <div className="py-2.5 border-b border-border/50">
+      <div className="py-2.5 border-b" style={{ borderBottomColor: borderColorHalf }}>
         <div className="flex items-center justify-between">
           <div>
             <span

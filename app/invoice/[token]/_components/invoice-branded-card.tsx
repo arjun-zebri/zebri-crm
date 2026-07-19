@@ -17,6 +17,7 @@
  * @module app/invoice/[token]/_components/invoice-branded-card
  */
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
+import { getRgb } from '@/lib/branding/contrast';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import type { PublicBranding } from '@/lib/branding/public-branding';
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer';
@@ -63,6 +64,13 @@ export function InvoiceBrandedCard({
   const pad = DENSITY_PAD[invoice.density ?? 'cozy'];
   const sectionLabelDefaults = roleDefaults(branding, 'sectionLabel');
 
+  // Compute border colours from the brand's border_color setting.
+  // Hairlines follow the MC's brand setting rather than Zebri's app-chrome tokens.
+  const borderRgb = getRgb(branding.border_color);
+  const borderColor = borderRgb
+    ? `rgba(${borderRgb[0]}, ${borderRgb[1]}, ${borderRgb[2]}, 1)`
+    : branding.border_color;
+
   const doc = {
     title: invoice.title,
     refNumber: invoice.invoice_number,
@@ -74,8 +82,8 @@ export function InvoiceBrandedCard({
 
   return (
     <div
-      className="overflow-hidden shadow-sm border border-border"
-      style={{ borderRadius: radius, backgroundColor: branding.surface_color }}
+      className="overflow-hidden shadow-sm border"
+      style={{ borderRadius: radius, backgroundColor: branding.surface_color, borderColor }}
     >
       <PublicBlockRenderer
         blocks={preBlocks}
@@ -85,7 +93,7 @@ export function InvoiceBrandedCard({
       />
 
       {hasSchedule ? (
-        <div className={`${pad.cardSection} border-t border-border`}>
+        <div className={`${pad.cardSection} border-t`} style={{ borderTopColor: borderColor }}>
           <p
             className="mb-3"
             style={{
@@ -114,7 +122,7 @@ export function InvoiceBrandedCard({
       ) : null}
 
       {showFullButton ? (
-        <div className={`${pad.cardSection} border-t border-border`}>
+        <div className={`${pad.cardSection} border-t`} style={{ borderTopColor: borderColor }}>
           <PayWithCardButton
             invoiceId={invoice.id}
             shareToken={invoice.share_token}
