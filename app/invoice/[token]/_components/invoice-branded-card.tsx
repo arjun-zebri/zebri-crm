@@ -42,6 +42,8 @@ export interface InvoiceBrandedCardProps {
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding;
   radius: number;
+  /** Action block overrides for button color and radius. Required. */
+  actionStyle: { color: string; radius: number } | null;
 }
 
 export function InvoiceBrandedCard({
@@ -56,6 +58,7 @@ export function InvoiceBrandedCard({
   showFinalButton,
   branding,
   radius,
+  actionStyle,
 }: InvoiceBrandedCardProps) {
   const pad = DENSITY_PAD[invoice.density ?? 'cozy'];
   const sectionLabelDefaults = roleDefaults(branding, 'sectionLabel');
@@ -111,16 +114,18 @@ export function InvoiceBrandedCard({
             showDepositButton={showDepositButton}
             showFinalButton={showFinalButton}
             branding={branding}
+            actionStyle={actionStyle}
           />
         </div>
       ) : null}
 
-      {showFullButton ? (
+      {showFullButton && actionStyle ? (
         <div className={`${pad.cardSection} border-t`} style={{ borderTopColor: borderColor }}>
           <PayWithCardButton
             invoiceId={invoice.id}
             shareToken={invoice.share_token}
             branding={branding}
+            actionStyle={actionStyle}
           />
         </div>
       ) : null}

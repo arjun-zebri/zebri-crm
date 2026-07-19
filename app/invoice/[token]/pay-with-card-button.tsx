@@ -12,20 +12,22 @@ import { roleDefaults } from '@/lib/branding/type-defaults'
  * Pay-with-card button for the public invoice surface.
  *
  * Uses branding to resolve button colors, corner radius, and text styles.
- * The button background comes from the MC's brand colour, the text color
- * from contrast analysis, and the error message from STATUS_COLORS.error
- * (red is never brand-tinted).
+ * The button background comes from the action block override (if present) or
+ * the MC's brand colour. The text color is derived from contrast analysis, and
+ * the error message uses STATUS_COLORS.error (red is never brand-tinted).
  */
 interface PayWithCardButtonProps {
   invoiceId: string
   shareToken: string
   /** The resolved branding kit for this invoice. */
   branding: PublicBranding
+  /** Action block overrides for button color and radius. Required. */
+  actionStyle: { color: string; radius: number }
   paymentType?: 'full' | 'deposit' | 'final'
   label?: string
 }
 
-export function PayWithCardButton({ invoiceId, shareToken, branding, paymentType = 'full', label = 'Pay with card' }: PayWithCardButtonProps) {
+export function PayWithCardButton({ invoiceId, shareToken, branding, actionStyle, paymentType = 'full', label = 'Pay with card' }: PayWithCardButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -51,7 +53,7 @@ export function PayWithCardButton({ invoiceId, shareToken, branding, paymentType
     }
   }
 
-  const bg = branding.brand_color
+  const bg = actionStyle.color
   const textColor = getTextColor(bg)
   const bodyDefaults = roleDefaults(branding, 'body')
   const finePrintDefaults = roleDefaults(branding, 'finePrint')
@@ -64,7 +66,7 @@ export function PayWithCardButton({ invoiceId, shareToken, branding, paymentType
         style={{
           backgroundColor: bg,
           color: textColor,
-          borderRadius: branding.corner_radius,
+          borderRadius: actionStyle.radius,
           fontSize: `${bodyDefaults.fontSize}px`,
           fontWeight: bodyDefaults.fontWeight,
           lineHeight: bodyDefaults.lineHeight,

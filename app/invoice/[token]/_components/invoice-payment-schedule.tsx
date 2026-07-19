@@ -30,6 +30,8 @@ export interface InvoicePaymentScheduleProps {
   showFinalButton: boolean;
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding;
+  /** Action block overrides for button color and radius. Required. */
+  actionStyle: { color: string; radius: number } | null;
 }
 
 export function InvoicePaymentSchedule({
@@ -39,6 +41,7 @@ export function InvoicePaymentSchedule({
   showDepositButton,
   showFinalButton,
   branding,
+  actionStyle,
 }: InvoicePaymentScheduleProps) {
   const bodyDefaults = roleDefaults(branding, 'body');
   const finePrintDefaults = roleDefaults(branding, 'finePrint');
@@ -112,12 +115,13 @@ export function InvoicePaymentSchedule({
             ) : null}
           </div>
         </div>
-        {showDepositButton ? (
+        {showDepositButton && actionStyle ? (
           <div className="mt-2">
             <PayWithCardButton
               invoiceId={invoice.id}
               shareToken={invoice.share_token}
               branding={branding}
+              actionStyle={actionStyle}
               paymentType="deposit"
               label="Pay deposit"
             />
@@ -185,12 +189,13 @@ export function InvoicePaymentSchedule({
             ) : null}
           </div>
         </div>
-        {showFinalButton ? (
+        {showFinalButton && actionStyle ? (
           <div className="mt-2">
             <PayWithCardButton
               invoiceId={invoice.id}
               shareToken={invoice.share_token}
               branding={branding}
+              actionStyle={actionStyle}
               paymentType="final"
               label="Pay balance"
             />

@@ -40,6 +40,8 @@ export interface InvoiceFallbackCardProps {
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding;
   radius: number;
+  /** Action block overrides for button color and radius. Required. */
+  actionStyle: { color: string; radius: number } | null;
 }
 
 export function InvoiceFallbackCard({
@@ -55,6 +57,7 @@ export function InvoiceFallbackCard({
   showFinalButton,
   branding,
   radius,
+  actionStyle,
 }: InvoiceFallbackCardProps) {
   const pad = DENSITY_PAD[invoice.density ?? 'cozy'];
 
@@ -395,6 +398,7 @@ export function InvoiceFallbackCard({
             finalAmount={finalAmount}
             showDepositButton={showDepositButton}
             showFinalButton={showFinalButton}
+            actionStyle={actionStyle}
           />
         </div>
       ) : null}
@@ -582,12 +586,13 @@ export function InvoiceFallbackCard({
       ) : null}
 
       {/* Pay with card (full - no schedule) */}
-      {showFullButton ? (
+      {showFullButton && actionStyle ? (
         <div className="px-8 pb-8">
           <PayWithCardButton
             invoiceId={invoice.id}
             shareToken={invoice.share_token}
             branding={branding}
+            actionStyle={actionStyle}
           />
         </div>
       ) : null}

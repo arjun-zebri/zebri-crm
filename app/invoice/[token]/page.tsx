@@ -36,6 +36,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { findActionStyle } from '@/lib/branding/public-renderer';
 import {
   bodyFontFamily,
   DENSITY_PAD,
@@ -138,6 +139,15 @@ export default function PublicInvoicePage() {
     pageState !== 'not_found' &&
     pageState !== 'cancelled';
 
+  // Extract action block's button color and radius overrides.
+  // Falls back to brand color and corner radius when not customised.
+  const actionStyle = invoice
+    ? findActionStyle(repairedBlocks, {
+        brandColor: invoice.brand_color || '#A7F3D0',
+        cornerRadius: invoice.corner_radius ?? 16,
+      })
+    : null;
+
   return (
     <div
       className={`min-h-screen ${pad.page} px-4`}
@@ -195,6 +205,7 @@ export default function PublicInvoicePage() {
               showFinalButton={showFinalButton}
               branding={invoice}
               radius={radius}
+              actionStyle={actionStyle}
             />
           ) : (
             <InvoiceFallbackCard
@@ -210,6 +221,7 @@ export default function PublicInvoicePage() {
               showFinalButton={showFinalButton}
               branding={invoice}
               radius={radius}
+              actionStyle={actionStyle}
             />
           )
         ) : null}
