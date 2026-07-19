@@ -40,7 +40,6 @@ import { findActionStyle } from '@/lib/branding/public-renderer';
 import {
   bodyFontFamily,
   DENSITY_PAD,
-  headingFontFamily,
   useBrandingHead,
 } from '@/lib/branding/public-surface';
 import { repairBlocks } from '@/lib/branding/validate-blocks';
@@ -110,12 +109,8 @@ export default function PublicInvoicePage() {
   const pageBg = invoice?.surface_color || '#fafafa';
   const textColor = invoice?.text_color || '#111827';
   const mutedColor = invoice?.muted_color || '#6B7280';
-  const headingColor = invoice?.heading_color || textColor;
-  const subheadingColor = invoice?.subheading_color || mutedColor;
   const radius = invoice?.corner_radius ?? 16;
-  const headingStack = invoice ? headingFontFamily(invoice) : undefined;
   const bodyStack = invoice ? bodyFontFamily(invoice) : undefined;
-  const headingWeight = invoice?.font_weight ?? 600;
   const pad = DENSITY_PAD[invoice?.density ?? 'cozy'];
   // Action-style: the brand-customised colour + radius for the Pay
   // buttons. Read from the saved action block (if any) so the MC's
@@ -209,8 +204,7 @@ export default function PublicInvoicePage() {
               showFinalButton={showFinalButton}
               buttonColor={actionStyle.color}
               buttonRadius={actionStyle.radius}
-              textColor={textColor}
-              mutedColor={mutedColor}
+              branding={invoice}
               radius={radius}
             />
           ) : (
@@ -227,13 +221,8 @@ export default function PublicInvoicePage() {
               showFinalButton={showFinalButton}
               buttonColor={actionStyle.color}
               buttonRadius={actionStyle.radius}
-              textColor={textColor}
-              mutedColor={mutedColor}
-              headingColor={headingColor}
-              subheadingColor={subheadingColor}
+              branding={invoice}
               radius={radius}
-              headingStack={headingStack}
-              headingWeight={headingWeight}
             />
           )
         ) : null}

@@ -12,9 +12,13 @@
  *
  * @module app/invoice/[token]/_components/invoice-fallback-card
  */
+import { FONT_STACKS } from '@/lib/branding/fonts';
 import { Html } from '@/lib/branding/public-blocks/html';
+import type { PublicBranding } from '@/lib/branding/public-branding';
 import { DENSITY_PAD } from '@/lib/branding/public-surface';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
+import { STATUS_COLORS } from '@/lib/branding/status-colors';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 
 import { PayWithCardButton } from '../pay-with-card-button';
 
@@ -34,14 +38,9 @@ export interface InvoiceFallbackCardProps {
   showFinalButton: boolean;
   buttonColor: string;
   buttonRadius: number;
-  /** Inline-style branding values from the invoice payload. */
-  textColor: string;
-  mutedColor: string;
-  headingColor: string;
-  subheadingColor: string;
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding;
   radius: number;
-  headingStack: string | undefined;
-  headingWeight: number;
 }
 
 export function InvoiceFallbackCard({
@@ -57,25 +56,27 @@ export function InvoiceFallbackCard({
   showFinalButton,
   buttonColor,
   buttonRadius,
-  textColor,
-  mutedColor,
-  headingColor,
-  subheadingColor,
+  branding,
   radius,
-  headingStack,
-  headingWeight,
 }: InvoiceFallbackCardProps) {
   const pad = DENSITY_PAD[invoice.density ?? 'cozy'];
 
+  // Resolve type styles for all text roles.
+  const docTitleDefaults = roleDefaults(branding, 'docTitle');
+  const sectionLabelDefaults = roleDefaults(branding, 'sectionLabel');
+  const bodyDefaults = roleDefaults(branding, 'body');
+  const finePrintDefaults = roleDefaults(branding, 'finePrint');
+  const totalDefaults = roleDefaults(branding, 'total');
+
   return (
     <div
-      className="bg-surface shadow-sm border border-border overflow-hidden"
-      style={{ borderRadius: radius }}
+      className="overflow-hidden shadow-sm border border-border"
+      style={{ borderRadius: radius, backgroundColor: branding.surface_color }}
     >
       {/* Header */}
       <div className={`${pad.cardHeader} border-b border-border`}>
         {invoice.logo_url ? (
-          // User-uploaded brand asset hosted on Supabase storage —
+          // User-uploaded brand asset hosted on Supabase storage—
           // no next/image since we don't have the domain allow-listed
           // and each MC has a different storage path.
           // eslint-disable-next-line @next/next/no-img-element
@@ -86,45 +87,95 @@ export function InvoiceFallbackCard({
           />
         ) : invoice.business_name ? (
           <p
-            className="text-xs font-medium uppercase tracking-wider mb-3"
-            style={{ color: mutedColor }}
+            className="mb-3"
+            style={{
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              fontWeight: sectionLabelDefaults.fontWeight,
+              lineHeight: sectionLabelDefaults.lineHeight,
+              letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+            }}
           >
             <Html value={invoice.business_name} allowLists={false} />
           </p>
         ) : null}
         {invoice.tagline ? (
-          <p className="text-xs mb-3" style={{ color: mutedColor }}>
+          <p
+            className="mb-3"
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: finePrintDefaults.fontWeight,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
             <Html value={invoice.tagline} allowLists={false} />
           </p>
         ) : null}
         <h1
-          className="text-2xl mb-1"
+          className="mb-1"
           style={{
-            color: headingColor,
-            fontFamily: headingStack,
-            fontWeight: headingWeight,
+            fontSize: `${docTitleDefaults.fontSize}px`,
+            color: docTitleDefaults.color,
+            fontFamily: FONT_STACKS[docTitleDefaults.fontFamily as never],
+            fontWeight: docTitleDefaults.fontWeight,
+            lineHeight: docTitleDefaults.lineHeight,
+            letterSpacing: `${docTitleDefaults.letterSpacing}px`,
+            textTransform: docTitleDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
           }}
         >
           {invoice.title}
         </h1>
-        <p className="text-sm" style={{ color: mutedColor }}>
+        <p
+          style={{
+            fontSize: `${bodyDefaults.fontSize}px`,
+            color: bodyDefaults.color,
+            fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+            fontWeight: bodyDefaults.fontWeight,
+            lineHeight: bodyDefaults.lineHeight,
+          }}
+        >
           {invoice.couple_name}
         </p>
         {invoice.abn ? (
-          <p className="text-xs mt-1" style={{ color: mutedColor }}>
+          <p
+            className="mt-1"
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: finePrintDefaults.fontWeight,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
             ABN: {invoice.abn}
           </p>
         ) : null}
         <div className="flex items-center gap-3 mt-3 flex-wrap">
-          <span className="text-xs" style={{ color: mutedColor }}>
+          <span
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: finePrintDefaults.fontWeight,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
             {invoice.invoice_number}
           </span>
           {invoice.due_date && !hasSchedule ? (
             <span
-              className={`text-xs font-medium ${
-                pageState === 'overdue' ? 'text-danger' : ''
-              }`}
-              style={pageState === 'overdue' ? undefined : { color: mutedColor }}
+              className="font-medium"
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                color: pageState === 'overdue' ? STATUS_COLORS.error : finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                fontWeight: finePrintDefaults.fontWeight,
+                lineHeight: finePrintDefaults.lineHeight,
+              }}
             >
               {pageState === 'overdue' ? 'Overdue · ' : 'Due '}
               {formatDate(invoice.due_date)}
@@ -137,21 +188,44 @@ export function InvoiceFallbackCard({
       <div className={pad.cardSection}>
         <div className="flex items-center justify-between pb-2 border-b border-border">
           <span
-            className="text-xs font-medium uppercase tracking-wider"
-            style={{ color: mutedColor }}
+            style={{
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              fontWeight: sectionLabelDefaults.fontWeight,
+              lineHeight: sectionLabelDefaults.lineHeight,
+              letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+            }}
           >
             Description
           </span>
           <span
-            className="text-xs font-medium uppercase tracking-wider"
-            style={{ color: mutedColor }}
+            style={{
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              fontWeight: sectionLabelDefaults.fontWeight,
+              lineHeight: sectionLabelDefaults.lineHeight,
+              letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+            }}
           >
             Amount
           </span>
         </div>
 
         {!invoice.items || invoice.items.length === 0 ? (
-          <p className="text-sm py-4" style={{ color: mutedColor }}>
+          <p
+            className="py-4"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: bodyDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: bodyDefaults.fontWeight,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
+          >
             No line items.
           </p>
         ) : (
@@ -161,18 +235,41 @@ export function InvoiceFallbackCard({
               className="flex items-start justify-between py-3 border-b border-border/50 gap-4"
             >
               <div className="flex-1 min-w-0">
-                <span className="text-sm" style={{ color: textColor }}>
+                <span
+                  style={{
+                    fontSize: `${bodyDefaults.fontSize}px`,
+                    color: bodyDefaults.color,
+                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                    fontWeight: bodyDefaults.fontWeight,
+                    lineHeight: bodyDefaults.lineHeight,
+                  }}
+                >
                   {item.description}
                 </span>
                 {item.quantity !== 1 ? (
-                  <span className="text-xs block" style={{ color: mutedColor }}>
+                  <span
+                    className="block"
+                    style={{
+                      fontSize: `${finePrintDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                      fontWeight: finePrintDefaults.fontWeight,
+                      lineHeight: finePrintDefaults.lineHeight,
+                    }}
+                  >
                     {item.quantity} × {formatCurrency(item.unit_price)}
                   </span>
                 ) : null}
               </div>
               <span
-                className="text-sm font-medium tabular-nums shrink-0"
-                style={{ color: textColor }}
+                className="font-medium tabular-nums shrink-0"
+                style={{
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  color: bodyDefaults.color,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  lineHeight: bodyDefaults.lineHeight,
+                }}
               >
                 {formatCurrency(item.amount)}
               </span>
@@ -185,33 +282,78 @@ export function InvoiceFallbackCard({
           {(invoice.tax_rate || 0) > 0 ? (
             <>
               <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: mutedColor }}>
+                <span
+                  style={{
+                    fontSize: `${bodyDefaults.fontSize}px`,
+                    color: bodyDefaults.color,
+                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                    fontWeight: bodyDefaults.fontWeight,
+                    lineHeight: bodyDefaults.lineHeight,
+                  }}
+                >
                   Subtotal
                 </span>
-                <span className="text-sm tabular-nums" style={{ color: textColor }}>
+                <span
+                  className="tabular-nums"
+                  style={{
+                    fontSize: `${bodyDefaults.fontSize}px`,
+                    color: bodyDefaults.color,
+                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                    fontWeight: bodyDefaults.fontWeight,
+                    lineHeight: bodyDefaults.lineHeight,
+                  }}
+                >
                   {formatCurrency(invoice.subtotal)}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm" style={{ color: mutedColor }}>
+                <span
+                  style={{
+                    fontSize: `${bodyDefaults.fontSize}px`,
+                    color: bodyDefaults.color,
+                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                    fontWeight: bodyDefaults.fontWeight,
+                    lineHeight: bodyDefaults.lineHeight,
+                  }}
+                >
                   GST ({invoice.tax_rate}%)
                 </span>
-                <span className="text-sm tabular-nums" style={{ color: textColor }}>
+                <span
+                  className="tabular-nums"
+                  style={{
+                    fontSize: `${bodyDefaults.fontSize}px`,
+                    color: bodyDefaults.color,
+                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                    fontWeight: bodyDefaults.fontWeight,
+                    lineHeight: bodyDefaults.lineHeight,
+                  }}
+                >
                   {formatCurrency(taxAmount)}
                 </span>
               </div>
             </>
           ) : null}
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold" style={{ color: headingColor }}>
+            <span
+              className="font-semibold"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: docTitleDefaults.color,
+                fontFamily: FONT_STACKS[docTitleDefaults.fontFamily as never],
+                fontWeight: docTitleDefaults.fontWeight,
+                lineHeight: docTitleDefaults.lineHeight,
+              }}
+            >
               Total
             </span>
             <span
-              className="text-lg tabular-nums"
+              className="font-semibold tabular-nums"
               style={{
-                color: textColor,
-                fontFamily: headingStack,
-                fontWeight: headingWeight,
+                fontSize: `${totalDefaults.fontSize}px`,
+                color: totalDefaults.color,
+                fontFamily: FONT_STACKS[totalDefaults.fontFamily as never],
+                fontWeight: totalDefaults.fontWeight,
+                lineHeight: totalDefaults.lineHeight,
               }}
             >
               {formatCurrency(total)}
@@ -224,19 +366,26 @@ export function InvoiceFallbackCard({
       {hasSchedule ? (
         <div className="px-8 pb-6">
           <p
-            className="text-xs font-medium uppercase tracking-wider mb-3"
-            style={{ color: subheadingColor }}
+            className="mb-3"
+            style={{
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              fontWeight: sectionLabelDefaults.fontWeight,
+              lineHeight: sectionLabelDefaults.lineHeight,
+              letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+            }}
           >
             Payment schedule
           </p>
           <InvoicePaymentSchedule
             invoice={invoice}
+            branding={branding}
             depositAmount={depositAmount}
             finalAmount={finalAmount}
             showDepositButton={showDepositButton}
             showFinalButton={showFinalButton}
-            textColor={textColor}
-            mutedColor={mutedColor}
             buttonColor={buttonColor}
             buttonRadius={buttonRadius}
           />
@@ -250,16 +399,30 @@ export function InvoiceFallbackCard({
       invoice.bank_account_number ? (
         <div className="px-8 pb-8">
           <p
-            className="text-xs font-medium uppercase tracking-wider mb-3"
-            style={{ color: subheadingColor }}
+            className="mb-3"
+            style={{
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              fontWeight: sectionLabelDefaults.fontWeight,
+              lineHeight: sectionLabelDefaults.lineHeight,
+              letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+            }}
           >
             Payment instructions
           </p>
           <div className="space-y-3">
             {invoice.notes ? (
               <p
-                className="text-sm whitespace-pre-wrap"
-                style={{ color: mutedColor }}
+                className="whitespace-pre-wrap"
+                style={{
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  color: bodyDefaults.color,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  lineHeight: bodyDefaults.lineHeight,
+                }}
               >
                 {invoice.notes}
               </p>
@@ -267,21 +430,61 @@ export function InvoiceFallbackCard({
             {invoice.bank_account_name ||
             invoice.bank_bsb ||
             invoice.bank_account_number ? (
-              <div className="bg-surface-muted rounded-control p-3 space-y-1.5 text-sm">
+              <div
+                className="rounded-lg p-3 space-y-1.5"
+                style={{
+                  backgroundColor: branding.surface_color,
+                }}
+              >
                 {invoice.bank_account_name ? (
                   <div>
-                    <span style={{ color: mutedColor }}>Account name:</span>
-                    <span className="ml-2" style={{ color: textColor }}>
+                    <span
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        color: bodyDefaults.color,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: bodyDefaults.fontWeight,
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
+                    >
+                      Account name:
+                    </span>
+                    <span
+                      className="ml-2"
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        color: bodyDefaults.color,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: bodyDefaults.fontWeight,
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
+                    >
                       {invoice.bank_account_name}
                     </span>
                   </div>
                 ) : null}
                 {invoice.bank_bsb ? (
                   <div>
-                    <span style={{ color: mutedColor }}>BSB:</span>
+                    <span
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        color: bodyDefaults.color,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: bodyDefaults.fontWeight,
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
+                    >
+                      BSB:
+                    </span>
                     <span
                       className="ml-2 font-mono"
-                      style={{ color: textColor }}
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        color: bodyDefaults.color,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: bodyDefaults.fontWeight,
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
                     >
                       {invoice.bank_bsb}
                     </span>
@@ -289,10 +492,26 @@ export function InvoiceFallbackCard({
                 ) : null}
                 {invoice.bank_account_number ? (
                   <div>
-                    <span style={{ color: mutedColor }}>Account:</span>
+                    <span
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        color: bodyDefaults.color,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: bodyDefaults.fontWeight,
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
+                    >
+                      Account:
+                    </span>
                     <span
                       className="ml-2 font-mono"
-                      style={{ color: textColor }}
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        color: bodyDefaults.color,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: bodyDefaults.fontWeight,
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
                     >
                       {invoice.bank_account_number}
                     </span>
@@ -311,8 +530,14 @@ export function InvoiceFallbackCard({
         invoice.instagram_url ||
         invoice.facebook_url) ? (
         <div
-          className="px-8 py-6 border-t border-border flex flex-wrap gap-4 text-xs"
-          style={{ color: mutedColor }}
+          className="px-8 py-6 border-t border-border flex flex-wrap gap-4"
+          style={{
+            fontSize: `${finePrintDefaults.fontSize}px`,
+            color: finePrintDefaults.color,
+            fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+            fontWeight: finePrintDefaults.fontWeight,
+            lineHeight: finePrintDefaults.lineHeight,
+          }}
         >
           {invoice.phone ? <span>{invoice.phone}</span> : null}
           {invoice.website ? (

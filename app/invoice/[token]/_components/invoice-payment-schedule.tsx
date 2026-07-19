@@ -1,16 +1,21 @@
 /**
  * Vertical deposit + final-balance schedule, used by both rendering
  * paths (branded block-tree + hardcoded fallback). Previously
- * duplicated in two places inside `page.tsx`; extracted here so
+ * duplicated in two places inside page.tsx; extracted here so
  * there's one truth.
  *
- * The "Paid" check next to a stage uses the `text-success` token
- * (was `text-green-600`); brand colours flow through the
- * `PayWithCardButton` via `brandColor` + `radius` props.
+ * The "Paid" check next to a stage uses STATUS_COLORS.success;
+ * brand colours flow through the PayWithCardButton via brandColor
+ * and radius props.
  *
  * @module app/invoice/[token]/_components/invoice-payment-schedule
  */
 import { CheckCircle } from 'lucide-react';
+
+import { FONT_STACKS } from '@/lib/branding/fonts';
+import type { PublicBranding } from '@/lib/branding/public-branding';
+import { STATUS_COLORS } from '@/lib/branding/status-colors';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 
 import { PayWithCardButton } from '../pay-with-card-button';
 
@@ -22,10 +27,9 @@ export interface InvoicePaymentScheduleProps {
   finalAmount: number;
   showDepositButton: boolean;
   showFinalButton: boolean;
-  /** Inline-style branding for the rows. */
-  textColor: string;
-  mutedColor: string;
-  /** Brand colour + corner radius for the Pay-with-card button. */
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding;
+  /** Brand colour for the Pay-with-card button. */
   buttonColor: string;
   buttonRadius: number;
 }
@@ -36,35 +40,69 @@ export function InvoicePaymentSchedule({
   finalAmount,
   showDepositButton,
   showFinalButton,
-  textColor,
-  mutedColor,
+  branding,
   buttonColor,
   buttonRadius,
 }: InvoicePaymentScheduleProps) {
+  const bodyDefaults = roleDefaults(branding, 'body');
+  const finePrintDefaults = roleDefaults(branding, 'finePrint');
+
   return (
     <div className="space-y-2">
       {/* Deposit */}
       <div className="py-2.5 border-b border-border/50">
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-sm" style={{ color: textColor }}>
+            <span
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
+            >
               Deposit ({invoice.deposit_percent}%)
             </span>
             {invoice.deposit_due_date ? (
-              <span className="text-xs block" style={{ color: mutedColor }}>
+              <span
+                className="block"
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: finePrintDefaults.color,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }}
+              >
                 Due {formatDate(invoice.deposit_due_date)}
               </span>
             ) : null}
           </div>
           <div className="flex items-center gap-2">
             <span
-              className="text-sm font-medium tabular-nums"
-              style={{ color: textColor }}
+              className="font-medium tabular-nums"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
             >
               {formatCurrency(depositAmount)}
             </span>
             {invoice.deposit_paid_at ? (
-              <span className="flex items-center gap-1 text-xs text-success">
+              <span
+                className="flex items-center gap-1"
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: STATUS_COLORS.success,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }}
+              >
                 <CheckCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
                 Paid
               </span>
@@ -89,24 +127,56 @@ export function InvoicePaymentSchedule({
       <div className="py-2.5">
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-sm" style={{ color: textColor }}>
+            <span
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
+            >
               Final balance ({100 - (invoice.deposit_percent ?? 0)}%)
             </span>
             {invoice.final_due_date ? (
-              <span className="text-xs block" style={{ color: mutedColor }}>
+              <span
+                className="block"
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: finePrintDefaults.color,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }}
+              >
                 Due {formatDate(invoice.final_due_date)}
               </span>
             ) : null}
           </div>
           <div className="flex items-center gap-2">
             <span
-              className="text-sm font-medium tabular-nums"
-              style={{ color: textColor }}
+              className="font-medium tabular-nums"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
             >
               {formatCurrency(finalAmount)}
             </span>
             {invoice.final_paid_at ? (
-              <span className="flex items-center gap-1 text-xs text-success">
+              <span
+                className="flex items-center gap-1"
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: STATUS_COLORS.success,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }}
+              >
                 <CheckCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
                 Paid
               </span>
