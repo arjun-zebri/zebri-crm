@@ -38,6 +38,13 @@ const QUESTIONNAIRE_DOC: PublicDocData = {
   taxRate: 0,
 }
 
+/** Generate a translucent tint of a hex colour for skeleton backgrounds. */
+function skeletonBg(hex: string): string {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
+  if (!match?.[1]) return '#00000010'
+  return `${match[0]}10`
+}
+
 export default function PublicQuestionnairePage() {
   const params = useParams<{ token: string }>()
   const supabase = createClient()
@@ -95,9 +102,9 @@ export default function PublicQuestionnairePage() {
         <div className={`flex flex-1 flex-col ${pageState === 'active' ? '' : 'justify-center'}`}>
           {pageState === 'loading' && (
             <div className="space-y-4">
-              <div className="h-1 w-full animate-pulse rounded-full bg-black/10" />
-              <div className="h-8 w-2/3 animate-pulse rounded bg-black/10" />
-              <div className="h-12 w-full animate-pulse rounded bg-black/10" />
+              <div className="h-1 w-full animate-pulse rounded-full" style={{ backgroundColor: skeletonBg(questionnaire?.border_color ?? '#111827') }} />
+              <div className="h-8 w-2/3 animate-pulse rounded" style={{ backgroundColor: skeletonBg(questionnaire?.border_color ?? '#111827') }} />
+              <div className="h-12 w-full animate-pulse rounded" style={{ backgroundColor: skeletonBg(questionnaire?.border_color ?? '#111827') }} />
             </div>
           )}
 

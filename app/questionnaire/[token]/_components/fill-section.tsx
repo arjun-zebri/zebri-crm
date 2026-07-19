@@ -20,6 +20,7 @@ import type { QuestionnaireTheme } from '@/components/questionnaires/theme'
 import { readableTextOn } from '@/components/questionnaires/theme'
 import { TypeformFlow } from '@/components/questionnaires/typeform-flow'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { buildSteps } from '@/lib/questionnaires/flow-steps'
 
 import type { PublicQuestionnaire } from './public-questionnaire'
@@ -63,6 +64,9 @@ export function FillSection({
 
   const Renderer = isTypeform ? TypeformFlow : ClassicForm
 
+  // Resolve button typography for consistent styling across the section.
+  const buttonStyles = roleDefaults(questionnaire, 'body')
+
   const rendererProps = {
     questions: questionnaire.questions,
     responses: fill.responses,
@@ -73,6 +77,7 @@ export function FillSection({
     submitting: fill.submitting,
     submitError: fill.submitError,
     saveState: fill.saveState,
+    branding: questionnaire,
   }
 
   // Typeform welcome screen (pre-blocks + Start button).
@@ -93,10 +98,15 @@ export function FillSection({
           <button
             type="button"
             onClick={() => setWelcomeComplete(true)}
-            className="mt-6 self-start px-8 py-3 rounded-xl font-medium transition"
+            className="mt-6 self-start font-medium transition cursor-pointer"
             style={{
               backgroundColor: theme.brand,
               color: startButtonBg,
+              borderRadius: questionnaire.corner_radius,
+              padding: '0.75rem 2rem',
+              fontSize: `${buttonStyles.fontSize}px`,
+              fontFamily: buttonStyles.fontFamily,
+              fontWeight: buttonStyles.fontWeight,
             }}
           >
             Start

@@ -76,9 +76,9 @@ export function QuestionnaireExperiencePreview({ title, questions, displayMode, 
         </h1>
 
         {displayMode === 'form' ? (
-          <ClassicForm questions={questions} responses={responses} onAnswer={onAnswer} theme={theme} mode="preview" />
+          <ClassicForm questions={questions} responses={responses} onAnswer={onAnswer} theme={theme} mode="preview" branding={branding!} />
         ) : (
-          <TypeformFlow questions={questions} responses={responses} onAnswer={onAnswer} theme={theme} mode="preview" />
+          <TypeformFlow questions={questions} responses={responses} onAnswer={onAnswer} theme={theme} mode="preview" branding={branding!} />
         )}
       </div>
     </div>

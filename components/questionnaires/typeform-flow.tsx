@@ -12,6 +12,9 @@
 
 import { useMemo, useState } from 'react'
 
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { buildSteps } from '@/lib/questionnaires/flow-steps'
 import { missingRequiredAnswers, type Answer, type Question, type Responses } from '@/lib/questionnaires/question-schema'
 
@@ -31,14 +34,21 @@ interface TypeformFlowProps {
   /** Submission failure surfaced by the caller (network / server). */
   submitError?: string | null
   saveState?: SaveState
+  /** Required: the MC's resolved branding for typography roles and styling. */
+  branding: PublicBranding
 }
 
-export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSubmit, submitting = false, submitError = null, saveState = 'idle' }: TypeformFlowProps) {
-  const { brand, textColor, mutedColor, headingColor, subheadingColor, radius, headingStack } = theme
+export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSubmit, submitting = false, submitError = null, saveState = 'idle', branding }: TypeformFlowProps) {
+  const { brand, textColor, mutedColor } = theme
   const steps = useMemo(() => buildSteps(questions), [questions])
   const [index, setIndex] = useState(0)
   // One index past the last question = the confirmation step.
   const [error, setError] = useState<string | null>(null)
+
+  // Resolve typography roles for use in the flow.
+  const sectionLabelStyles = roleDefaults(branding, 'sectionLabel')
+  const questionHeadingStyles = roleDefaults(branding, 'sectionHeading')
+  const bodyStyles = roleDefaults(branding, 'body')
 
   const total = steps.length
   // Clamp instead of resetting when the question list changes under us (the
@@ -95,26 +105,26 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
       <div className="mb-2 h-1 w-full shrink-0 overflow-hidden rounded-full" style={{ background: `${textColor}14` }}>
         <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: brand }} />
       </div>
-      <p className="mb-6 min-h-4 shrink-0 text-right text-xs" style={{ color: saveState === 'error' ? '#dc2626' : mutedColor }}>{saveLabel}</p>
+      <p className="mb-6 min-h-4 shrink-0 text-right" style={{ color: saveState === 'error' ? STATUS_COLORS.error : mutedColor, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, lineHeight: bodyStyles.lineHeight }}>{saveLabel}</p>
 
       {atConfirm ? (
         <div className="min-h-[300px] flex-1 overflow-y-auto">
-          <h2 className="mb-2 text-2xl font-semibold" style={{ color: headingColor, fontFamily: headingStack }}>
+          <h2 style={{ color: questionHeadingStyles.color, fontSize: `${questionHeadingStyles.fontSize}px`, fontFamily: questionHeadingStyles.fontFamily, fontWeight: questionHeadingStyles.fontWeight, lineHeight: questionHeadingStyles.lineHeight, marginBottom: '0.5rem' }}>
             Ready to send your answers?
           </h2>
-          <p className="text-sm" style={{ color: mutedColor }}>
+          <p style={{ color: bodyStyles.color, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, lineHeight: bodyStyles.lineHeight }}>
             You can go back and change anything before sending.
             {mode === 'preview' && ' (Preview only, nothing is sent.)'}
           </p>
         </div>
       ) : (
         <div className="min-h-[300px] flex-1 overflow-y-auto">
-          {step.section && <p className="mb-2 text-xs font-medium uppercase tracking-wider" style={{ color: subheadingColor }}>{step.section}</p>}
-          <h2 className="mb-2 text-2xl font-semibold" style={{ color: headingColor, fontFamily: headingStack }}>
+          {step.section && <p className="mb-2" style={{ color: sectionLabelStyles.color, fontSize: `${sectionLabelStyles.fontSize}px`, fontFamily: sectionLabelStyles.fontFamily, fontWeight: sectionLabelStyles.fontWeight, textTransform: sectionLabelStyles.textTransform, letterSpacing: `${sectionLabelStyles.letterSpacing}em`, lineHeight: sectionLabelStyles.lineHeight }}>{step.section}</p>}
+          <h2 style={{ color: questionHeadingStyles.color, fontSize: `${questionHeadingStyles.fontSize}px`, fontFamily: questionHeadingStyles.fontFamily, fontWeight: questionHeadingStyles.fontWeight, lineHeight: questionHeadingStyles.lineHeight, marginBottom: '0.5rem' }}>
             {step.question.label}
             {step.question.required && <span style={{ color: brand }}> *</span>}
           </h2>
-          {step.question.help_text ? <p className="mb-5 text-sm" style={{ color: mutedColor }}>{step.question.help_text}</p> : <div className="mb-5" />}
+          {step.question.help_text ? <p style={{ color: bodyStyles.color, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, marginBottom: '1.25rem', lineHeight: bodyStyles.lineHeight }}>{step.question.help_text}</p> : <div className="mb-5" />}
 
           <QuestionField
             key={step.question.id}
@@ -131,28 +141,28 @@ export function TypeformFlow({ questions, responses, onAnswer, theme, mode, onSu
         </div>
       )}
 
-      {(error || submitError) && <p className="mt-3 shrink-0 text-sm" style={{ color: '#dc2626' }}>{error ?? submitError}</p>}
+      {(error || submitError) && <p className="mt-3 shrink-0" style={{ color: STATUS_COLORS.error, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, lineHeight: bodyStyles.lineHeight }}>{error ?? submitError}</p>}
 
       <div className="mt-8 flex shrink-0 items-center justify-between">
         <button
           type="button"
           onClick={goBack}
           disabled={current === 0}
-          className="cursor-pointer text-sm disabled:opacity-0"
-          style={{ color: mutedColor }}
+          className="cursor-pointer disabled:opacity-0"
+          style={{ color: mutedColor, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}
         >
           Back
         </button>
         <div className="flex items-center gap-3">
-          <span className="text-sm" style={{ color: mutedColor }}>
+          <span style={{ color: mutedColor, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}>
             {atConfirm ? `${total} of ${total}` : `${current + 1} of ${total}`}
           </span>
           <button
             type="button"
             onClick={() => goNext()}
             disabled={submitting}
-            className="cursor-pointer px-6 py-2.5 text-base font-medium transition hover:opacity-90 disabled:opacity-60"
-            style={{ background: brand, color: readableTextOn(brand), borderRadius: radius }}
+            className="cursor-pointer transition hover:opacity-90 disabled:opacity-60"
+            style={{ background: brand, color: readableTextOn(brand), borderRadius: branding.corner_radius, padding: '0.625rem 1.5rem', fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}
           >
             {submitting ? 'Sending…' : atConfirm ? 'Send answers' : 'Next'}
           </button>
