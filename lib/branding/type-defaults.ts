@@ -6,6 +6,10 @@
  * @module lib/branding/type-defaults
  */
 
+// The block style types live with the editor that owns them, and the public
+// renderers already reach across for the same reason. Type-only, so nothing
+// from app/ ends up in the bundle.
+// eslint-disable-next-line no-restricted-imports
 import type { TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
 
 import type { HeadingFont, BodyFont, FontWeight } from './fonts'
