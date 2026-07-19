@@ -426,6 +426,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         surfaceColor: p.surface,
         textColor: p.text,
         secondaryColor: '#FFFFFF',
+        borderColor: p.border,
         fontHeading: p.headingFont,
         fontBody: p.bodyFont,
         fontWeight: p.headingWeight,
