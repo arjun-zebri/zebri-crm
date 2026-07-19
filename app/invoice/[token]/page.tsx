@@ -170,10 +170,10 @@ export default function PublicInvoicePage() {
         ) : null}
 
         {invoice && pageState === 'paid' ? (
-          <InvoiceStatusBanner kind="paid" paidAt={invoice.paid_at} />
+          <InvoiceStatusBanner kind="paid" paidAt={invoice.paid_at} branding={invoice} />
         ) : null}
         {invoice && pageState === 'overdue' ? (
-          <InvoiceStatusBanner kind="overdue" businessName={invoice.business_name} />
+          <InvoiceStatusBanner kind="overdue" businessName={invoice.business_name} branding={invoice} />
         ) : null}
 
         {pageState === 'loading' ? <InvoiceLoading radius={radius} /> : null}
