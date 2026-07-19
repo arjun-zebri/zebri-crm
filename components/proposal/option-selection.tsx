@@ -93,7 +93,7 @@ export function ProposalSelection({
           value={heading}
           onCommit={headingKey && onEditLabel ? (v) => onEditLabel(headingKey, v) : undefined}
           placeholder={headingDefaultText}
-          className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
+          className="text-[0.6875em] font-semibold"
           style={{
             color: subheadingColor,
             ...resolveTextStyle(headingLabel?.style, {
@@ -122,7 +122,8 @@ export function ProposalSelection({
           {base.map((item) => (
             <li
               key={item.id}
-              className="flex items-baseline justify-between gap-4 border-b border-border/60 py-3"
+              className="flex items-baseline justify-between gap-4 py-3"
+              style={{ borderBottom: `1px solid ${branding.borderColor}` }}
             >
               <span className="flex min-w-0 items-start gap-2.5 text-[0.875em]" style={{ color: textColor }}>
                 <Check size={14} strokeWidth={2} className="mt-[3px] shrink-0" style={{ color: brand }} />
@@ -144,7 +145,7 @@ export function ProposalSelection({
             value={labels.addOns.text}
             onCommit={onEditLabel && ((v) => onEditLabel('addOns', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.addOns.text}
-            className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
+            className="text-[0.6875em] font-semibold"
             style={{
               color: subheadingColor,
               ...resolveTextStyle(labels.addOns.style, {
@@ -185,10 +186,10 @@ export function ProposalSelection({
               return (
                 <label
                   key={item.id}
-                  className={`flex items-center gap-3 border border-border px-4 py-3.5 transition ${
+                  className={`flex items-center gap-3 px-4 py-3.5 transition ${
                     locked ? '' : 'cursor-pointer'
                   }`}
-                  style={{ borderRadius: cardRadius }}
+                  style={{ borderRadius: cardRadius, border: `1px solid ${branding.borderColor}` }}
                 >
                   <input
                     type="checkbox"
@@ -196,8 +197,8 @@ export function ProposalSelection({
                     disabled={locked}
                     onChange={(e) => onToggle?.(item.id, e.target.checked)}
                     aria-label={`Include ${item.description}`}
-                    className="h-4 w-4 shrink-0 cursor-pointer rounded border-border disabled:cursor-not-allowed"
-                    style={{ accentColor: brand }}
+                    className="h-4 w-4 shrink-0 cursor-pointer rounded disabled:cursor-not-allowed"
+                    style={{ accentColor: brand, borderColor: branding.borderColor }}
                   />
                   <span className="min-w-0 flex-1 text-[0.875em]" style={{ color: textColor }}>
                     {item.description}

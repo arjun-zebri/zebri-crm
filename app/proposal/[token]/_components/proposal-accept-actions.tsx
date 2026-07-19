@@ -17,6 +17,7 @@ import { useState } from 'react';
 
 import { getTextColor } from '@/lib/branding/contrast';
 import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabels } from '@/lib/branding/proposal-labels';
+import { STATUS_COLORS } from '@/lib/branding/status-colors';
 
 import { formatDate } from './public-proposal';
 
@@ -33,6 +34,8 @@ export interface ProposalAcceptActionsProps {
   radius: number;
   textColor: string;
   mutedColor: string;
+  borderColor?: string;
+  surfaceColor?: string;
   /** The MC's editable accept/decline wording. */
   labels?: ProposalLabels;
 }
@@ -49,6 +52,8 @@ export function ProposalAcceptActions({
   radius,
   textColor,
   mutedColor,
+  borderColor,
+  surfaceColor,
   labels = PROPOSAL_LABEL_DEFAULTS,
 }: ProposalAcceptActionsProps) {
   const [confirming, setConfirming] = useState(false);
@@ -57,7 +62,11 @@ export function ProposalAcceptActions({
 
   return (
     <div>
-      {actionError ? <p className="mb-4 text-sm text-danger">{actionError}</p> : null}
+      {actionError ? (
+        <p className="mb-4 text-sm" style={{ color: STATUS_COLORS.error }}>
+          {actionError}
+        </p>
+      ) : null}
 
       {confirming && canAccept ? (
         <div>
@@ -85,8 +94,21 @@ export function ProposalAcceptActions({
               type="button"
               onClick={() => setConfirming(false)}
               disabled={actionLoading}
-              style={{ borderRadius: buttonRadius, color: textColor }}
-              className="flex-1 py-3 border border-border text-sm font-medium hover:bg-surface-muted transition cursor-pointer disabled:opacity-50"
+              style={{
+                borderRadius: buttonRadius,
+                color: textColor,
+                border: `1px solid ${borderColor || '#e5e7eb'}`,
+                backgroundColor: 'transparent',
+              }}
+              className="flex-1 py-3 text-sm font-medium hover:opacity-80 transition cursor-pointer disabled:opacity-50"
+              onMouseEnter={(e) => {
+                if (!actionLoading) {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = surfaceColor || '#f3f4f6';
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+              }}
             >
               Go back
             </button>

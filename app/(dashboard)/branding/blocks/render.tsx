@@ -1095,6 +1095,8 @@ function proposalBranding(state: BrandPreviewState): ProposalViewBranding {
     headingColor: state.textColor || '#111827',
     subheadingColor: state.textColor || '#6B7280',
     radius: state.cornerRadius ?? 16,
+    borderColor: state.borderColor || '#E5E7EB',
+    cornerRadius: state.cornerRadius ?? 8,
     headingFontFamily: FONT_STACKS[state.fontHeading],
     bodyFontFamily: FONT_STACKS[state.fontBody],
     headingWeight: state.fontWeight,

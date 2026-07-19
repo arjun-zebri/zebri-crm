@@ -8,6 +8,7 @@
  * @module app/proposal/[token]/_components/proposal-state-cards
  */
 import { htmlToPlainText } from '@/lib/branding/sanitize';
+import { STATUS_COLORS } from '@/lib/branding/status-colors';
 
 import { formatDate } from './public-proposal';
 
@@ -17,12 +18,18 @@ export function ProposalStatusBanner({
   expiresAt,
   businessName,
   mutedColor,
+  borderColor,
+  cornerRadius,
+  surfaceColor,
 }: {
   kind: 'accepted' | 'declined' | 'expired';
   acceptedAt?: string | null;
   expiresAt?: string | null;
   businessName?: string | null;
   mutedColor?: string;
+  borderColor?: string;
+  cornerRadius?: number;
+  surfaceColor?: string;
 }) {
   if (kind === 'accepted') {
     const datePart =
@@ -30,9 +37,18 @@ export function ProposalStatusBanner({
         ? ` on ${formatDate(acceptedAt.split('T')[0] as string)}`
         : '';
     return (
-      <div className="mb-3 px-5 py-4 rounded-card bg-success/10 border border-success/20">
-        <p className="text-sm font-semibold text-success mb-1">Proposal accepted{datePart}.</p>
-        <p className="text-sm text-success/80">
+      <div
+        className="mb-3 px-5 py-4"
+        style={{
+          borderRadius: cornerRadius ?? 8,
+          backgroundColor: STATUS_COLORS.success + '15',
+          border: `1px solid ${STATUS_COLORS.success}33`,
+        }}
+      >
+        <p className="text-sm font-semibold mb-1" style={{ color: STATUS_COLORS.success }}>
+          Proposal accepted{datePart}.
+        </p>
+        <p className="text-sm" style={{ color: STATUS_COLORS.success + 'cc' }}>
           {businessName ? `${htmlToPlainText(businessName)} will` : 'Your MC will'} be in touch to
           confirm the details.
         </p>
@@ -42,7 +58,14 @@ export function ProposalStatusBanner({
 
   if (kind === 'declined') {
     return (
-      <div className="mb-3 px-5 py-3 rounded-card bg-surface-muted border border-border">
+      <div
+        className="mb-3 px-5 py-3"
+        style={{
+          borderRadius: cornerRadius ?? 8,
+          backgroundColor: surfaceColor || '#f3f4f6',
+          border: `1px solid ${borderColor || '#e5e7eb'}`,
+        }}
+      >
         <p className="text-sm" style={{ color: mutedColor }}>
           You declined this proposal.
         </p>
@@ -51,8 +74,15 @@ export function ProposalStatusBanner({
   }
 
   return (
-    <div className="mb-3 px-5 py-3 rounded-card bg-warning/10 border border-warning/20">
-      <p className="text-sm text-warning">
+    <div
+      className="mb-3 px-5 py-3"
+      style={{
+        borderRadius: cornerRadius ?? 8,
+        backgroundColor: STATUS_COLORS.warning + '15',
+        border: `1px solid ${STATUS_COLORS.warning}33`,
+      }}
+    >
+      <p className="text-sm" style={{ color: STATUS_COLORS.warning }}>
         This proposal expired
         {expiresAt ? ` on ${formatDate(expiresAt)}` : ''}.
         {businessName
@@ -63,17 +93,41 @@ export function ProposalStatusBanner({
   );
 }
 
-export function ProposalLoading({ radius }: { radius: number }) {
+export function ProposalLoading({
+  radius,
+  surfaceColor,
+  borderColor,
+  mutedColor,
+}: {
+  radius: number;
+  surfaceColor?: string;
+  borderColor?: string;
+  mutedColor?: string;
+}) {
   return (
     <div
-      className="bg-surface shadow-sm border border-border p-8 space-y-4"
-      style={{ borderRadius: radius }}
+      className="shadow-sm p-8 space-y-4"
+      style={{
+        borderRadius: radius,
+        backgroundColor: surfaceColor || '#fff',
+        border: `1px solid ${borderColor || '#e5e7eb'}`,
+      }}
     >
-      <div className="h-5 w-24 bg-surface-muted rounded animate-pulse" />
-      <div className="h-7 w-64 bg-surface-muted rounded animate-pulse" />
+      <div
+        className="h-5 w-24 rounded animate-pulse"
+        style={{ backgroundColor: mutedColor || '#e5e7eb' }}
+      />
+      <div
+        className="h-7 w-64 rounded animate-pulse"
+        style={{ backgroundColor: mutedColor || '#e5e7eb' }}
+      />
       <div className="space-y-2 pt-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-10 bg-surface-muted rounded animate-pulse" />
+          <div
+            key={i}
+            className="h-10 rounded animate-pulse"
+            style={{ backgroundColor: mutedColor || '#e5e7eb' }}
+          />
         ))}
       </div>
     </div>
@@ -84,15 +138,23 @@ export function ProposalUnavailable({
   radius,
   textColor,
   mutedColor,
+  surfaceColor,
+  borderColor,
 }: {
   radius: number;
   textColor: string;
   mutedColor: string;
+  surfaceColor?: string;
+  borderColor?: string;
 }) {
   return (
     <div
-      className="bg-surface shadow-sm border border-border p-10 text-center"
-      style={{ borderRadius: radius }}
+      className="shadow-sm p-10 text-center"
+      style={{
+        borderRadius: radius,
+        backgroundColor: surfaceColor || '#fff',
+        border: `1px solid ${borderColor || '#e5e7eb'}`,
+      }}
     >
       <p className="text-sm font-medium mb-1" style={{ color: textColor }}>
         This proposal is no longer available

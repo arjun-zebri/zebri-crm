@@ -54,7 +54,7 @@ export function ProposalOptionChooser({
         value={labels.choose.text}
         onCommit={onEditLabel && ((v) => onEditLabel('choose', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.choose.text}
-        className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
+        className="text-[0.6875em] font-semibold"
         style={{
           color: subheadingColor,
           ...resolveTextStyle(labels.choose.style, {
@@ -116,7 +116,7 @@ export function ProposalOptionChooser({
                 className="w-full border p-5 text-left transition cursor-pointer disabled:cursor-not-allowed"
                 style={{
                   borderRadius: radius,
-                  borderColor: chosen ? brand : popular ? accent : 'var(--color-border, #e5e7eb)',
+                  borderColor: chosen ? brand : popular ? accent : branding.borderColor,
                   boxShadow: chosen ? `0 0 0 1px ${brand}` : undefined,
                   backgroundColor: popular
                     ? `color-mix(in srgb, ${accent} 6%, transparent)`
@@ -127,7 +127,7 @@ export function ProposalOptionChooser({
                   {/* Ring radio */}
                   <span
                     className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
-                    style={{ borderColor: chosen ? brand : 'var(--color-border, #d1d5db)' }}
+                    style={{ borderColor: chosen ? brand : branding.borderColor }}
                   >
                     {chosen ? (
                       <span

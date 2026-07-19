@@ -39,6 +39,7 @@ import {
 } from '@/lib/branding/proposal-labels';
 import type { PublicBranding } from '@/lib/branding/public-surface';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 import {
   formatDate,
   type ProposalViewBranding,
@@ -59,6 +60,8 @@ export function viewBranding(b: PublicBranding): ProposalViewBranding {
     headingColor: b.heading_color ?? b.text_color,
     subheadingColor: b.subheading_color ?? b.muted_color,
     radius: b.corner_radius ?? 16,
+    borderColor: b.border_color || '#E5E7EB',
+    cornerRadius: b.corner_radius ?? 8,
     headingFontFamily: FONT_STACKS[b.font_heading],
     bodyFontFamily: FONT_STACKS[b.font_body],
     headingWeight: b.font_weight ?? 600,
@@ -81,6 +84,10 @@ export interface ProposalPageViewProps {
   options: PublicProposalOption[];
   /** Drives which affordances render; previews pass 'active'. */
   state: 'active' | 'accepted' | 'declined' | 'expired';
+  /** Source branding for roleDefaults() and role-based styling.
+   *  Optional — when omitted, text sizes fall back to hardcoded em values.
+   *  Provided when the proposal renders with global type scale integration. */
+  brandingSource?: PublicBranding | undefined;
   branding: ProposalViewBranding;
   chosenId: string | null;
   selection: Record<string, boolean>;
@@ -110,6 +117,7 @@ export function ProposalPageView({
   expiresAt,
   options,
   state,
+  brandingSource,
   branding,
   chosenId,
   selection,
@@ -126,6 +134,13 @@ export function ProposalPageView({
   // In block-core mode the logo, header image, business line, actions
   // and footer are separate editable blocks around this core.
   const core = variant === 'blockCore';
+
+  // Role defaults for global type scale integration. Only available when
+  // brandingSource is provided (public page, test); editor preview falls back
+  // to hardcoded em sizes.
+  const docTitleDefaults = brandingSource ? roleDefaults(brandingSource, 'docTitle') : null;
+  const sectionLabelDefaults = brandingSource ? roleDefaults(brandingSource, 'sectionLabel') : null;
+  const finePrintDefaults = brandingSource ? roleDefaults(brandingSource, 'finePrint') : null;
 
   // Font-scale: root font-size drives every `em` text size below.
   // docPadding: extra horizontal inset on top of the surface's base.
@@ -154,34 +169,105 @@ export function ProposalPageView({
             value={labels.eyebrow.text}
             onCommit={onEditLabel && ((v) => onEditLabel('eyebrow', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.eyebrow.text}
-            className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
-            style={{
-              color: subheadingColor,
-              ...resolveTextStyle(labels.eyebrow.style, {
-                fontFamily: 'work_sans',
-                fontSize: 11,
-                fontWeight: 600,
-                color: subheadingColor,
-                align: 'left',
-                lineHeight: 1.4,
-                letterSpacing: 0.18,
-              }),
-            }}
+            className={sectionLabelDefaults ? 'font-semibold' : 'text-[0.6875em] font-semibold uppercase tracking-[0.18em]'}
+            style={
+              sectionLabelDefaults
+                ? {
+                    fontSize: `${sectionLabelDefaults.fontSize}px`,
+                    color: sectionLabelDefaults.color,
+                    fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+                    fontWeight: sectionLabelDefaults.fontWeight,
+                    lineHeight: sectionLabelDefaults.lineHeight,
+                    letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+                    textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+                    ...resolveTextStyle(labels.eyebrow.style, {
+                      fontFamily: 'work_sans',
+                      fontSize: sectionLabelDefaults.fontSize,
+                      fontWeight: sectionLabelDefaults.fontWeight,
+                      color: sectionLabelDefaults.color,
+                      align: 'left',
+                      lineHeight: sectionLabelDefaults.lineHeight,
+                      letterSpacing: sectionLabelDefaults.letterSpacing,
+                    }),
+                  }
+                : {
+                    color: subheadingColor,
+                    ...resolveTextStyle(labels.eyebrow.style, {
+                      fontFamily: 'work_sans',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: subheadingColor,
+                      align: 'left',
+                      lineHeight: 1.4,
+                      letterSpacing: 0.18,
+                    }),
+                  }
+            }
           />
           {expiresAt && state === 'active' ? (
-            <p className="shrink-0 text-[0.75em]" style={{ color: mutedColor }}>
+            <p
+              className="shrink-0"
+              style={
+                finePrintDefaults
+                  ? {
+                      fontSize: `${finePrintDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                      fontWeight: finePrintDefaults.fontWeight,
+                      lineHeight: finePrintDefaults.lineHeight,
+                      letterSpacing: `${finePrintDefaults.letterSpacing}px`,
+                    }
+                  : {
+                      fontSize: '0.75em',
+                      color: mutedColor,
+                    }
+              }
+            >
               Expires {formatDate(expiresAt)}
             </p>
           ) : null}
         </div>
         <h1
-          className="mt-3 text-[2.25em] leading-tight"
-          style={{ color: headingColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
+          className="mt-3 leading-tight"
+          style={
+            docTitleDefaults
+              ? {
+                  fontSize: `${docTitleDefaults.fontSize}px`,
+                  color: docTitleDefaults.color,
+                  fontFamily: FONT_STACKS[docTitleDefaults.fontFamily as never],
+                  fontWeight: docTitleDefaults.fontWeight,
+                  lineHeight: docTitleDefaults.lineHeight,
+                  letterSpacing: `${docTitleDefaults.letterSpacing}px`,
+                  textTransform: docTitleDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+                }
+              : {
+                  fontSize: '2.25em',
+                  color: headingColor,
+                  fontFamily: headingFontFamily,
+                  fontWeight: headingWeight,
+                }
+          }
         >
           {coupleName}
         </h1>
         {branding.businessName && !core ? (
-          <p className="mt-2 text-[0.875em]" style={{ color: mutedColor }}>
+          <p
+            className="mt-2"
+            style={
+              finePrintDefaults
+                ? {
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    color: finePrintDefaults.color,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                  }
+                : {
+                    fontSize: '0.875em',
+                    color: mutedColor,
+                  }
+            }
+          >
             A proposal from {branding.businessName}
             {branding.tagline ? ` · ${branding.tagline}` : ''}
           </p>
@@ -204,19 +290,40 @@ export function ProposalPageView({
             value={labels.note.text}
             onCommit={onEditLabel && ((v) => onEditLabel('note', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.note.text}
-            className="text-[0.6875em] font-semibold uppercase tracking-[0.18em]"
-            style={{
-              color: subheadingColor,
-              ...resolveTextStyle(labels.note.style, {
-                fontFamily: 'work_sans',
-                fontSize: 11,
-                fontWeight: 600,
-                color: subheadingColor,
-                align: 'left',
-                lineHeight: 1.4,
-                letterSpacing: 0.18,
-              }),
-            }}
+            className={sectionLabelDefaults ? 'font-semibold' : 'text-[0.6875em] font-semibold uppercase tracking-[0.18em]'}
+            style={
+              sectionLabelDefaults
+                ? {
+                    fontSize: `${sectionLabelDefaults.fontSize}px`,
+                    color: sectionLabelDefaults.color,
+                    fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+                    fontWeight: sectionLabelDefaults.fontWeight,
+                    lineHeight: sectionLabelDefaults.lineHeight,
+                    letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+                    textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+                    ...resolveTextStyle(labels.note.style, {
+                      fontFamily: 'work_sans',
+                      fontSize: sectionLabelDefaults.fontSize,
+                      fontWeight: sectionLabelDefaults.fontWeight,
+                      color: sectionLabelDefaults.color,
+                      align: 'left',
+                      lineHeight: sectionLabelDefaults.lineHeight,
+                      letterSpacing: sectionLabelDefaults.letterSpacing,
+                    }),
+                  }
+                : {
+                    color: subheadingColor,
+                    ...resolveTextStyle(labels.note.style, {
+                      fontFamily: 'work_sans',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: subheadingColor,
+                      align: 'left',
+                      lineHeight: 1.4,
+                      letterSpacing: 0.18,
+                    }),
+                  }
+            }
           />
           <p
             className="mt-2 text-[1.125em] italic leading-relaxed whitespace-pre-wrap"
@@ -263,7 +370,23 @@ export function ProposalPageView({
       {!core ? actions : null}
 
       {!core ? (
-        <div className="space-y-0.5 text-center text-[0.625em]" style={{ color: mutedColor }}>
+        <div
+          className="space-y-0.5 text-center"
+          style={
+            finePrintDefaults
+              ? {
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: finePrintDefaults.color,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }
+              : {
+                  fontSize: '0.625em',
+                  color: mutedColor,
+                }
+          }
+        >
           <p>{proposalNumber}</p>
           {branding.abn ? <p>ABN {branding.abn}</p> : null}
         </div>

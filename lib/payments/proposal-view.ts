@@ -136,6 +136,10 @@ export interface ProposalViewBranding {
   headingColor: string;
   subheadingColor: string;
   radius: number;
+  /** Hairlines, rules, outlines and card edges. */
+  borderColor: string;
+  /** Corner radius for cards and interactive elements. */
+  cornerRadius: number;
   headingFontFamily: string | undefined;
   bodyFontFamily: string | undefined;
   headingWeight: number;

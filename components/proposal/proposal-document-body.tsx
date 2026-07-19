@@ -124,6 +124,7 @@ export function ProposalDocumentBody({
       options={options}
       // Declined has no distinct core layout; it reads like expired.
       state={state === 'accepted' ? 'accepted' : state === 'active' ? 'active' : 'expired'}
+      brandingSource={branding}
       branding={view}
       chosenId={chosenId}
       selection={selection}
@@ -172,6 +173,7 @@ export function ProposalDocumentBody({
       expiresAt={expiresAt}
       options={options}
       state={state}
+      brandingSource={branding}
       branding={view}
       chosenId={chosenId}
       selection={selection}

@@ -14,7 +14,7 @@ const HEADING = 'rgb(17, 24, 39)'
 const SUBHEADING = 'rgb(120, 40, 200)'
 const BRAND = 'rgb(0, 255, 82)'
 
-const brandingFixture = (): PublicBranding => ({
+const brandingFixture = (overrides?: Partial<PublicBranding>): PublicBranding => ({
   logo_url: null,
   favicon_url: null,
   header_image_url: null,
@@ -61,10 +61,12 @@ const brandingFixture = (): PublicBranding => ({
   button_radius: 8,
   section_spacing: 32,
   page_background: '#fff',
+  ...overrides,
 })
 
-const renderProposal = () =>
-  render(
+const renderProposal = (overrides?: Partial<PublicBranding>) => {
+  const branding = brandingFixture(overrides);
+  return render(
     <ProposalPageView
       coupleName="Alex & Jordan"
       proposalNumber="PROP-001"
@@ -80,11 +82,13 @@ const renderProposal = () =>
         } as never,
       ]}
       state="active"
-      branding={viewBranding(brandingFixture())}
+      brandingSource={branding}
+      branding={viewBranding(branding)}
       chosenId="opt-1"
       selection={{}}
     />,
-  )
+  );
+}
 
 describe('proposal section labels follow the subheading colour', () => {
   it('renders the couple name in the heading colour', () => {
@@ -104,5 +108,17 @@ describe('proposal section labels follow the subheading colour', () => {
     const label = screen.getByText(text)
     expect(label).toHaveStyle({ color: SUBHEADING })
     expect(label).not.toHaveStyle({ color: BRAND })
+  })
+})
+
+describe('proposal text sizes follow the global type scale', () => {
+  it('renders the couple name at the global heading size', () => {
+    renderProposal({ heading_size: 50, body_size: 22 })
+    expect(screen.getByText('Alex & Jordan')).toHaveStyle({ fontSize: '50px' })
+  })
+
+  it('renders section labels at the derived label size', () => {
+    renderProposal({ heading_size: 50, body_size: 22 })
+    expect(screen.getByText(PROPOSAL_LABEL_DEFAULTS.eyebrow.text)).toHaveStyle({ fontSize: '16px' })
   })
 })
