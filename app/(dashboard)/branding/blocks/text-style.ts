@@ -11,7 +11,7 @@ export interface TextStyleDefaults {
   lineHeight: number
   letterSpacing: number
   /** Text transformation default. Typically 'none'. */
-  textTransform?: 'none' | 'uppercase' | 'capitalize'
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
 }
 
 export function resolveTextStyle(

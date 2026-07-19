@@ -35,7 +35,7 @@ export interface RoleType {
   /** Text alignment (left, center, right). */
   align: TextAlign
   /** Text transform: none, uppercase, or capitalize. */
-  textTransform: 'none' | 'uppercase' | 'capitalize'
+  textTransform: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
   /** Letter spacing in pixels. */
   letterSpacing: number
   /** Line height as a unitless multiplier. */

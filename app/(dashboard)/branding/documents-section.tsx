@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, Eye, EyeOff, FileSignature, FileText, MessageSquare, Receipt, Users2 } from 'lucide-react'
+import { Clock, FileSignature, FileText, MessageSquare, Receipt, Users2 } from 'lucide-react'
 import { useState } from 'react'
 
 import type { SurfaceTab } from '@/types/branding-preview'
@@ -61,9 +61,10 @@ export function DocumentsSection({ enabledSurfaces, onToggleSurface }: Documents
   }
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
-      <p className="text-sm font-semibold text-text mb-3">Documents</p>
-      <div className="space-y-2">
+    // No card and no heading of its own: this renders inside the tab strip's
+    // settings popover, which supplies both. Nesting a bordered card inside a
+    // bordered popover was a box inside a box with the title said twice.
+    <div className="space-y-0.5">
         {SURFACES.map((surface) => {
           const enabled = enabledSurfaces.includes(surface.id)
           const armed = armedSurface === surface.id
@@ -75,44 +76,35 @@ export function DocumentsSection({ enabledSurfaces, onToggleSurface }: Documents
               type="button"
               onClick={() => handleToggle(surface.id)}
               disabled={isLastEnabled}
-              className={`w-full flex items-start gap-3 p-3 rounded-lg transition cursor-pointer text-left ${
+              className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition cursor-pointer text-left ${
                 isLastEnabled
-                  ? 'bg-surface-muted opacity-60 cursor-not-allowed'
+                  ? 'opacity-50 cursor-not-allowed'
                   : armed
                     ? 'bg-red-50 hover:bg-red-100'
-                    : enabled
-                      ? 'hover:bg-surface-muted'
-                      : 'hover:bg-surface-muted'
+                    : 'hover:bg-gray-50'
               }`}
               title={isLastEnabled ? 'At least one surface must remain enabled' : ''}
             >
-              <div className="mt-0.5">
-                {enabled ? (
-                  <Eye size={16} strokeWidth={1.5} className="text-text" />
-                ) : (
-                  <EyeOff size={16} strokeWidth={1.5} className="text-text-muted" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${enabled ? 'text-text' : 'text-text-muted'}`}>
-                  {surface.label}
-                </p>
-                <p className="text-xs text-text-muted leading-snug">
-                  {armed ? 'Hide and clear this design?' : surface.description}
-                </p>
-              </div>
               <input
                 type="checkbox"
                 checked={enabled}
                 onChange={() => {}}
                 disabled={isLastEnabled}
-                className="mt-0.5 accent-black cursor-pointer"
+                className="accent-black cursor-pointer shrink-0 w-3.5 h-3.5"
                 aria-label={`Toggle ${surface.label}`}
+                tabIndex={-1}
               />
+              <div className="flex-1 min-w-0">
+                <p className={`text-[11px] font-medium leading-tight ${enabled ? 'text-gray-900' : 'text-gray-400'}`}>
+                  {surface.label}
+                </p>
+                <p className={`text-[10px] leading-tight truncate ${armed ? 'text-red-500' : 'text-gray-400'}`}>
+                  {armed ? 'Hide and clear this design?' : surface.description}
+                </p>
+              </div>
             </button>
           )
         })}
-      </div>
     </div>
   )
 }

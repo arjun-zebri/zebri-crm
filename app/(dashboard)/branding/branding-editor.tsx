@@ -78,8 +78,8 @@ interface BrandingEditorProps {
     proposalLabels: ProposalLabels
     headingSize: number
     bodySize: number
-    headingCase: 'none' | 'uppercase' | 'capitalize'
-    bodyCase: 'none' | 'uppercase' | 'capitalize'
+    headingCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+    bodyCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
     headingLetterSpacing: number
     bodyLineHeight: number
     linkColor: string
@@ -127,8 +127,8 @@ export interface EditorState {
   proposalLabels: ProposalLabels
   headingSize: number
   bodySize: number
-  headingCase: 'none' | 'uppercase' | 'capitalize'
-  bodyCase: 'none' | 'uppercase' | 'capitalize'
+  headingCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  bodyCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
   headingLetterSpacing: number
   bodyLineHeight: number
   linkColor: string

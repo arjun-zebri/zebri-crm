@@ -76,9 +76,9 @@ export interface PublicBranding {
   /** Global body text font size in pixels. */
   body_size: number
   /** Global heading text transform (none, uppercase, capitalize). */
-  heading_case: 'none' | 'uppercase' | 'capitalize'
+  heading_case: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
   /** Global body text transform (none, uppercase, capitalize). */
-  body_case: 'none' | 'uppercase' | 'capitalize'
+  body_case: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
   /** Global heading letter spacing in pixels. */
   heading_letter_spacing: number
   /** Global body line height (unitless multiplier). */
@@ -139,8 +139,8 @@ export interface UserMetadata {
   email_shell_show_accent?: boolean
   heading_size?: number
   body_size?: number
-  heading_case?: 'none' | 'uppercase' | 'capitalize'
-  body_case?: 'none' | 'uppercase' | 'capitalize'
+  heading_case?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  body_case?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
   heading_letter_spacing?: number
   body_line_height?: number
   link_color?: string

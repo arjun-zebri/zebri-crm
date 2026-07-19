@@ -13,7 +13,7 @@ export interface TextStyle {
   italic?: boolean
   underline?: boolean
   /** Text transformation: none, uppercase, or capitalize. Defaults to 'none'. */
-  textTransform?: 'none' | 'uppercase' | 'capitalize'
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
 }
 
 export type BlockType =

@@ -69,10 +69,10 @@ interface BrandPanelProps {
   setHeadingSize: (v: number) => void
   bodySize: number
   setBodySize: (v: number) => void
-  headingCase: 'none' | 'uppercase' | 'capitalize'
-  setHeadingCase: (v: 'none' | 'uppercase' | 'capitalize') => void
-  bodyCase: 'none' | 'uppercase' | 'capitalize'
-  setBodyCase: (v: 'none' | 'uppercase' | 'capitalize') => void
+  headingCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  setHeadingCase: (v: 'none' | 'uppercase' | 'lowercase' | 'capitalize') => void
+  bodyCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  setBodyCase: (v: 'none' | 'uppercase' | 'lowercase' | 'capitalize') => void
   headingLetterSpacing: number
   setHeadingLetterSpacing: (v: number) => void
   bodyLineHeight: number
@@ -273,6 +273,7 @@ function ColorSection({
   textColor, setTextColor,
   secondaryColor, setSecondaryColor,
   borderColor, onBorderColorChange,
+  linkColor, setLinkColor,
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
@@ -283,6 +284,7 @@ function ColorSection({
       <ColorRow label="Primary button" description="Accept and Pay buttons" value={brandColor} onChange={setBrandColor} swatches={COLOR_PALETTE} />
       <ColorRow label="Secondary button" description="Decline and supporting buttons" value={secondaryColor} onChange={setSecondaryColor} swatches={COLOR_PALETTE} />
       <ColorRow label="Border" description="Lines, rules and card outlines" value={borderColor} onChange={onBorderColorChange} swatches={BORDER_PALETTE} />
+      <ColorRow label="Link" description="Links inside document text" value={linkColor} onChange={setLinkColor} swatches={COLOR_PALETTE} />
       <ContrastWarnings textColor={textColor} surfaceColor={surfaceColor} />
     </div>
   )
@@ -464,11 +466,14 @@ function WeightPills({ label, value, onChange, compact }: { label: string; value
   )
 }
 
-function CasePills({ label, value, onChange }: { label: string; value: 'none' | 'uppercase' | 'capitalize'; onChange: (v: 'none' | 'uppercase' | 'capitalize') => void }) {
-  const cases: Array<{ id: 'none' | 'uppercase' | 'capitalize'; label: string; preview: string }> = [
-    { id: 'none', label: 'None', preview: 'Aa' },
+function CasePills({ label, value, onChange }: { label: string; value: 'none' | 'uppercase' | 'lowercase' | 'capitalize'; onChange: (v: 'none' | 'uppercase' | 'lowercase' | 'capitalize') => void }) {
+  // Word labels rather than glyphs: "none" and "capitalize" both preview as
+  // "Aa", so a glyph row could not tell them apart.
+  const cases: Array<{ id: 'none' | 'uppercase' | 'lowercase' | 'capitalize'; label: string; preview: string }> = [
+    { id: 'none', label: 'As typed', preview: 'Aa' },
     { id: 'uppercase', label: 'Uppercase', preview: 'AA' },
-    { id: 'capitalize', label: 'Capitalize', preview: 'Aa' },
+    { id: 'lowercase', label: 'Lowercase', preview: 'aa' },
+    { id: 'capitalize', label: 'Capitalise Each Word', preview: 'Ab' },
   ]
   return (
     <div>
@@ -564,16 +569,12 @@ function GlobalStylesSection({
   setCornerRadius,
   docPadding,
   setDocPadding,
-  linkColor,
-  setLinkColor,
   buttonVariant,
   setButtonVariant,
   buttonSize,
   setButtonSize,
   buttonRadius,
   setButtonRadius,
-  sectionSpacing,
-  setSectionSpacing,
 }: BrandPanelProps) {
   return (
     <div className="space-y-4">
@@ -591,26 +592,6 @@ function GlobalStylesSection({
           <span className="text-[9px] font-mono text-gray-700 tabular-nums">{docPadding}px</span>
         </div>
         <Slider value={docPadding} min={0} max={48} step={1} onChange={setDocPadding} ariaLabel="Document padding" />
-      </div>
-
-      <div>
-        <p className="text-[10px] text-gray-500 mb-1.5">Link colour</p>
-        <div className="flex items-center gap-2">
-          <ColorPopover
-            value={linkColor}
-            onChange={setLinkColor}
-            trigger={
-              <button
-                type="button"
-                className="w-9 h-9 rounded-lg ring-1 ring-black/10 cursor-pointer shrink-0 hover:ring-black/20 transition"
-                style={{ background: linkColor }}
-                aria-label="Link colour"
-                title={linkColor}
-              />
-            }
-          />
-          <p className="text-xs font-mono text-gray-700 flex-1 truncate">{linkColor}</p>
-        </div>
       </div>
 
       <div>
@@ -660,13 +641,12 @@ function GlobalStylesSection({
         </div>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] text-gray-500">Section spacing</span>
-          <span className="text-[9px] font-mono text-gray-700 tabular-nums">{sectionSpacing}px</span>
-        </div>
-        <Slider value={sectionSpacing} min={8} max={64} step={2} onChange={setSectionSpacing} ariaLabel="Section spacing" />
-      </div>
+      {/* Section spacing is not offered here. Nothing reads it: blocks take
+          their vertical rhythm from per-block padding and their own internal
+          margins, and there is no container gap for the value to drive. It
+          stays in the data layer, dormant, exactly as font_scale does, rather
+          than being wired now, which would add spacing on top of existing
+          padding and shift the layout of every document already sent. */}
     </div>
   )
 }
