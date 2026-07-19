@@ -1185,11 +1185,21 @@ function flashAffectedBlocks(
 
   // Wait one frame so React's render has the latest values painted.
   requestAnimationFrame(() => {
-    const first = document.querySelector(`[data-block-id="${targets[0].id}"]`) as HTMLElement | null
-    if (first) {
-      const rect = first.getBoundingClientRect()
-      const inView = rect.top > 32 && rect.bottom < window.innerHeight - 32
-      if (!inView) first.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const isInView = (el: HTMLElement) => {
+      const rect = el.getBoundingClientRect()
+      return rect.top > 32 && rect.bottom < window.innerHeight - 32
+    }
+    const elements = targets
+      .map((t) => document.querySelector(`[data-block-id="${t.id}"]`) as HTMLElement | null)
+      .filter((el): el is HTMLElement => el !== null)
+
+    // Only travel when every affected block is off-screen. A global token like
+    // text colour or density touches nearly every block, and the first of them
+    // is the title at the very top, so scrolling to it dragged the preview
+    // upward on each edit even when a block that had just changed was already
+    // in front of the user.
+    if (!elements.some(isInView) && elements[0]) {
+      elements[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
     targets.forEach((t) => {
       const el = document.querySelector(`[data-block-id="${t.id}"]`) as HTMLElement | null

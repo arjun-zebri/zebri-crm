@@ -302,30 +302,33 @@ function ColorSection({
       <ColorRow label="Primary button" description="Accept and Pay buttons" value={brandColor} onChange={setBrandColor} swatches={COLOR_PALETTE} />
       <ColorRow label="Secondary button" description="Decline and supporting buttons" value={secondaryColor} onChange={setSecondaryColor} swatches={COLOR_PALETTE} />
       <ColorRow label="Border" description="Lines, rules and card outlines" value={borderColor} onChange={onBorderColorChange} swatches={BORDER_PALETTE} />
-      <ContrastWarnings textColor={textColor} surfaceColor={surfaceColor} brandColor={brandColor} />
+      <ContrastWarnings textColor={textColor} surfaceColor={surfaceColor} />
     </div>
   )
 }
 
+/**
+ * Flags brand colour combinations that would genuinely be hard to read.
+ *
+ * Only body text against the page background is checked. An earlier version
+ * also compared the primary button colour to the background at 4.5:1, which
+ * was wrong twice over: 4.5:1 is the WCAG threshold for text, and the button
+ * is a fill whose label already picks black or white through getTextColor, so
+ * its legibility is never the user's problem to solve. That check fired on
+ * perfectly readable buttons and cited a rule that did not apply to them.
+ */
 function ContrastWarnings({
   textColor,
   surfaceColor,
-  brandColor,
 }: {
   textColor: string
   surfaceColor: string
-  brandColor: string
 }) {
   const checks: Array<{ label: string; ratio: number; level: ReturnType<typeof getWcagLevel> }> = [
     {
       label: 'Text on Surface',
       ratio: getContrastRatio(textColor, surfaceColor),
       level: getWcagLevel(textColor, surfaceColor),
-    },
-    {
-      label: 'Primary on Surface',
-      ratio: getContrastRatio(brandColor, surfaceColor),
-      level: getWcagLevel(brandColor, surfaceColor),
     },
   ]
   const fails = checks.filter((c) => c.level === 'fail')
@@ -460,14 +463,14 @@ function FontSection({
 function WeightPills({ label, value, onChange, compact }: { label: string; value: FontWeight; onChange: (v: FontWeight) => void; compact?: boolean }) {
   return (
     <div>
-      <p className={`mb-1 uppercase tracking-[0.08em] ${compact ? 'text-[10px] text-gray-500' : 'text-[11px] text-gray-400'}`}>{label}</p>
+      <p className={`mb-1 ${compact ? 'text-[10px] text-gray-500' : 'text-[11px] text-gray-400'}`}>{label}</p>
       <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
         {FONT_WEIGHTS.map((w) => (
           <button
             key={w}
             type="button"
             onClick={() => onChange(w)}
-            className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+            className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
               value === w ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
             }`}
             style={{ fontWeight: w }}
@@ -488,14 +491,14 @@ function CasePills({ label, value, onChange }: { label: string; value: 'none' | 
   ]
   return (
     <div>
-      <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-[0.08em]">{label}</p>
+      <p className="text-[10px] text-gray-500 mb-1">{label}</p>
       <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
         {cases.map((c) => (
           <button
             key={c.id}
             type="button"
             onClick={() => onChange(c.id)}
-            className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+            className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
               value === c.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
             }`}
             title={c.label}
@@ -525,12 +528,14 @@ function FontPicker<V extends HeadingFont | BodyFont>({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="w-full flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white text-left hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer transition"
+          aria-label={`${role} font`}
+          className="w-full flex items-center gap-2 border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-left hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer transition"
         >
-          <span className="flex-1 min-w-0 truncate text-[14px] text-gray-900" style={{ fontFamily: FONT_STACKS[value] }}>
+          {/* No role badge here. The group heading directly above already says
+              HEADING or BODY, so repeating it inside the control was noise. */}
+          <span className="flex-1 min-w-0 truncate text-[12px] text-gray-900" style={{ fontFamily: FONT_STACKS[value] }}>
             {FONT_LABELS[value]}
           </span>
-          <span className="text-[10px] uppercase tracking-[0.08em] text-gray-400 shrink-0">{role}</span>
           <ChevronDown size={12} strokeWidth={2} className="text-gray-400 shrink-0" />
         </button>
       </Popover.Trigger>
@@ -555,7 +560,7 @@ function FontPicker<V extends HeadingFont | BodyFont>({
                   onChange(opt)
                   setOpen(false)
                 }}
-                className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-[14px] hover:bg-gray-50 cursor-pointer ${
+                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md text-[12px] hover:bg-gray-50 cursor-pointer ${
                   active ? 'text-gray-900' : 'text-gray-700'
                 }`}
                 style={{ fontFamily: FONT_STACKS[opt] }}
