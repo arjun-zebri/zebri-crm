@@ -22,12 +22,15 @@ import { Check } from 'lucide-react';
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
 import { EditableLabel } from '@/components/proposal/editable-label';
 import { getTextColor } from '@/lib/branding/contrast';
+import { FONT_STACKS } from '@/lib/branding/fonts';
 import {
   PROPOSAL_LABEL_DEFAULTS,
   type ProposalLabelEdit,
   type ProposalLabels,
   type StyledLabel,
 } from '@/lib/branding/proposal-labels';
+import type { PublicBranding } from '@/lib/branding/public-surface';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 import {
   addOnItems,
   baseItems,
@@ -54,6 +57,7 @@ export interface ProposalSelectionProps {
    *  status string ("Chosen package") that isn't user-editable. */
   headingKey?: keyof ProposalLabels | null;
   branding: ProposalViewBranding;
+  publicBranding: PublicBranding;
   onEditLabel?: ProposalLabelEdit | undefined;
 }
 
@@ -66,10 +70,13 @@ export function ProposalSelection({
   headingLabel,
   headingKey,
   branding,
+  publicBranding,
   onEditLabel,
 }: ProposalSelectionProps) {
   const { brand, textColor, mutedColor, headingColor, subheadingColor, radius, headingFontFamily, headingWeight, labels } =
     branding;
+  const sectionLabelDefaults = roleDefaults(publicBranding, 'sectionLabel');
+  const bodyDefaults = roleDefaults(publicBranding, 'body');
   const base = baseItems(option);
   const addOns = addOnItems(option);
   const ticked = addOns.filter((item) => !!selection[item.id]);
@@ -93,17 +100,23 @@ export function ProposalSelection({
           value={heading}
           onCommit={headingKey && onEditLabel ? (v) => onEditLabel(headingKey, v) : undefined}
           placeholder={headingDefaultText}
-          className="text-[0.6875em] font-semibold"
+          className="font-semibold"
           style={{
-            color: subheadingColor,
+            fontSize: `${sectionLabelDefaults.fontSize}px`,
+            color: sectionLabelDefaults.color,
+            fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+            fontWeight: sectionLabelDefaults.fontWeight,
+            lineHeight: sectionLabelDefaults.lineHeight,
+            letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+            textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
             ...resolveTextStyle(headingLabel?.style, {
               fontFamily: 'work_sans',
-              fontSize: 11,
-              fontWeight: 600,
-              color: subheadingColor,
+              fontSize: sectionLabelDefaults.fontSize,
+              fontWeight: sectionLabelDefaults.fontWeight,
+              color: sectionLabelDefaults.color,
               align: 'left',
-              lineHeight: 1.4,
-              letterSpacing: 0.18,
+              lineHeight: sectionLabelDefaults.lineHeight,
+              letterSpacing: sectionLabelDefaults.letterSpacing,
             }),
           }}
         />
@@ -145,17 +158,23 @@ export function ProposalSelection({
             value={labels.addOns.text}
             onCommit={onEditLabel && ((v) => onEditLabel('addOns', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.addOns.text}
-            className="text-[0.6875em] font-semibold"
+            className="font-semibold"
             style={{
-              color: subheadingColor,
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              fontWeight: sectionLabelDefaults.fontWeight,
+              lineHeight: sectionLabelDefaults.lineHeight,
+              letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
               ...resolveTextStyle(labels.addOns.style, {
                 fontFamily: 'work_sans',
-                fontSize: 11,
-                fontWeight: 600,
-                color: subheadingColor,
+                fontSize: sectionLabelDefaults.fontSize,
+                fontWeight: sectionLabelDefaults.fontWeight,
+                color: sectionLabelDefaults.color,
                 align: 'left',
-                lineHeight: 1.4,
-                letterSpacing: 0.18,
+                lineHeight: sectionLabelDefaults.lineHeight,
+                letterSpacing: sectionLabelDefaults.letterSpacing,
               }),
             }}
           />
@@ -165,17 +184,23 @@ export function ProposalSelection({
               value={labels.addOnsHint.text}
               onCommit={onEditLabel && ((v) => onEditLabel('addOnsHint', v))}
               placeholder={PROPOSAL_LABEL_DEFAULTS.addOnsHint.text}
-              className="mt-1 text-[0.75em]"
+              className="mt-1"
               style={{
-                color: mutedColor,
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+                letterSpacing: `${bodyDefaults.letterSpacing}px`,
+                textTransform: bodyDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
                 ...resolveTextStyle(labels.addOnsHint.style, {
                   fontFamily: 'work_sans',
-                  fontSize: 12,
-                  fontWeight: 400,
-                  color: mutedColor,
+                  fontSize: bodyDefaults.fontSize,
+                  fontWeight: bodyDefaults.fontWeight,
+                  color: bodyDefaults.color,
                   align: 'left',
-                  lineHeight: 1.4,
-                  letterSpacing: 0,
+                  lineHeight: bodyDefaults.lineHeight,
+                  letterSpacing: bodyDefaults.letterSpacing,
                 }),
               }}
             />

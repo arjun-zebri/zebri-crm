@@ -1179,6 +1179,7 @@ export function RenderProposalBody({
   setPreviewMode?: ((mode: 'single' | 'multi') => void) | undefined
 }) {
   const branding = proposalBranding(state)
+  const publicBranding = publicBrandingFromEditorState(state)
   const muted = branding.mutedColor
   const mode = state.proposalPreviewMode ?? 'multi'
   const options = mode === 'single' ? [PROPOSAL_SAMPLE_MULTI[1]!] : PROPOSAL_SAMPLE_MULTI
@@ -1245,6 +1246,7 @@ export function RenderProposalBody({
           expiresAt={SAMPLE_EXPIRES}
           options={options}
           state="active"
+          publicBranding={publicBranding}
           branding={branding}
           chosenId={chosen.id}
           selection={selection}

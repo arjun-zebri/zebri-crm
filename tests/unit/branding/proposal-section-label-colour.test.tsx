@@ -82,7 +82,7 @@ const renderProposal = (overrides?: Partial<PublicBranding>) => {
         } as never,
       ]}
       state="active"
-      brandingSource={branding}
+      publicBranding={branding}
       branding={viewBranding(branding)}
       chosenId="opt-1"
       selection={{}}

@@ -19,7 +19,10 @@
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
 import { EditableLabel } from '@/components/proposal/editable-label';
 import { getTextColor } from '@/lib/branding/contrast';
+import { FONT_STACKS } from '@/lib/branding/fonts';
 import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabelEdit } from '@/lib/branding/proposal-labels';
+import type { PublicBranding } from '@/lib/branding/public-surface';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 import {
   baseItems,
   formatCurrency,
@@ -33,6 +36,7 @@ export interface ProposalOptionChooserProps {
   onChoose?: ((optionId: string) => void) | undefined;
   disabled: boolean;
   branding: ProposalViewBranding;
+  publicBranding: PublicBranding;
   onEditLabel?: ProposalLabelEdit | undefined;
 }
 
@@ -42,11 +46,14 @@ export function ProposalOptionChooser({
   onChoose,
   disabled,
   branding,
+  publicBranding,
   onEditLabel,
 }: ProposalOptionChooserProps) {
   const { brand, accent, mutedColor, headingColor, subheadingColor, headingFontFamily, headingWeight, labels } =
     branding;
   const radius = Math.min(branding.radius, 12);
+  const sectionLabelDefaults = roleDefaults(publicBranding, 'sectionLabel');
+  const bodyDefaults = roleDefaults(publicBranding, 'body');
   return (
     <div role="radiogroup" aria-label="Choose your package">
       <EditableLabel
@@ -54,17 +61,23 @@ export function ProposalOptionChooser({
         value={labels.choose.text}
         onCommit={onEditLabel && ((v) => onEditLabel('choose', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.choose.text}
-        className="text-[0.6875em] font-semibold"
+        className="font-semibold"
         style={{
-          color: subheadingColor,
+          fontSize: `${sectionLabelDefaults.fontSize}px`,
+          color: sectionLabelDefaults.color,
+          fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+          fontWeight: sectionLabelDefaults.fontWeight,
+          lineHeight: sectionLabelDefaults.lineHeight,
+          letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+          textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
           ...resolveTextStyle(labels.choose.style, {
             fontFamily: 'work_sans',
-            fontSize: 11,
-            fontWeight: 600,
-            color: subheadingColor,
+            fontSize: sectionLabelDefaults.fontSize,
+            fontWeight: sectionLabelDefaults.fontWeight,
+            color: sectionLabelDefaults.color,
             align: 'left',
-            lineHeight: 1.4,
-            letterSpacing: 0.18,
+            lineHeight: sectionLabelDefaults.lineHeight,
+            letterSpacing: sectionLabelDefaults.letterSpacing,
           }),
         }}
       />
@@ -73,17 +86,23 @@ export function ProposalOptionChooser({
         value={labels.chooseHint.text}
         onCommit={onEditLabel && ((v) => onEditLabel('chooseHint', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.chooseHint.text}
-        className="mt-1 mb-4 text-[0.875em]"
+        className="mt-1 mb-4"
         style={{
-          color: mutedColor,
+          fontSize: `${bodyDefaults.fontSize}px`,
+          color: bodyDefaults.color,
+          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+          fontWeight: bodyDefaults.fontWeight,
+          lineHeight: bodyDefaults.lineHeight,
+          letterSpacing: `${bodyDefaults.letterSpacing}px`,
+          textTransform: bodyDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
           ...resolveTextStyle(labels.chooseHint.style, {
             fontFamily: 'work_sans',
-            fontSize: 14,
-            fontWeight: 400,
-            color: mutedColor,
+            fontSize: bodyDefaults.fontSize,
+            fontWeight: bodyDefaults.fontWeight,
+            color: bodyDefaults.color,
             align: 'left',
-            lineHeight: 1.5,
-            letterSpacing: 0,
+            lineHeight: bodyDefaults.lineHeight,
+            letterSpacing: bodyDefaults.letterSpacing,
           }),
         }}
       />
