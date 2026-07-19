@@ -97,12 +97,16 @@ function AudioRecorder({
   personId,
   token,
   onRecorded,
+  branding,
 }: {
   audioUrl: string | null
   personId: string
   token: string
   onRecorded: (url: string) => void
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }) {
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
   const [recording, setRecording] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -217,12 +221,10 @@ function AudioRecorder({
           />
         </svg>
         <span
-          className={`absolute inset-[5px] rounded-full flex items-center justify-center transition ${
-            recording ? '' : 'bg-surface-muted text-text-muted'
-          }`}
+          className="absolute inset-[5px] rounded-full flex items-center justify-center transition"
           // Recording is a status, not a brand state, so it uses the fixed
           // error colour with a soft tint composited from the same value.
-          style={recording ? { color: STATUS_COLORS.error, backgroundColor: RECORDING_TINT } : undefined}
+          style={recording ? { color: STATUS_COLORS.error, backgroundColor: RECORDING_TINT } : { backgroundColor: branding.surface_color, color: finePrintDefaults.color }}
         >
           {uploading
             ? <Loader2 size={18} strokeWidth={1.5} className="animate-spin" />
@@ -230,7 +232,7 @@ function AudioRecorder({
         </span>
       </button>
       <div className="min-w-0 space-y-1">
-        <p className="text-caption text-text-subtle">
+        <p style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: finePrintDefaults.color, fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never] }}>
           {recording
             ? 'Recording... release to finish'
             : uploading
@@ -455,6 +457,7 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
               personId={person?.id ?? 'new'}
               token={token}
               onRecorded={setAudioUrl}
+              branding={branding}
             />
           </div>
           <div>
@@ -609,7 +612,7 @@ function PersonRow({ person, onEdit }: { person: PortalPerson; onEdit: () => voi
           </button>
         </div>
       )}
-      <Pencil size={13} strokeWidth={1.5} className="text-text-subtle shrink-0" />
+      <Pencil size={13} strokeWidth={1.5} className="shrink-0" style={{ color: finePrintDefaults.color }} />
     </div>
   )
 }
@@ -624,13 +627,17 @@ interface PeopleGroupProps {
   roleOptions: string[]
   onAdd: () => void
   onEdit: (person: PortalPerson) => void
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
-function PeopleGroup({ label, addLabel, people, onAdd, onEdit }: PeopleGroupProps) {
+function PeopleGroup({ label, addLabel, people, onAdd, onEdit, branding }: PeopleGroupProps) {
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between mb-1">
-        <p className="text-body font-medium text-text-muted">{label} <span className="text-caption font-normal text-text-subtle">({people.length})</span></p>
+        <p style={{ fontSize: `${bodyDefaults.fontSize}px`, fontWeight: 500, color: bodyDefaults.color, fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never] }}>{label} <span style={{ fontSize: `${finePrintDefaults.fontSize}px`, fontWeight: 'normal', color: finePrintDefaults.color }}>({people.length})</span></p>
       </div>
       {people.length === 0 && (
         <div className="border border-dashed border-border rounded-card p-4 text-center bg-surface-muted/50">
@@ -830,6 +837,7 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
 
         onAdd={() => openAdd('partner', PARTNER_ROLES)}
         onEdit={(p) => openEdit(p, PARTNER_ROLES)}
+        branding={branding}
       />
 
       {/* Bridal Party */}
@@ -841,6 +849,7 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
 
         onAdd={() => openAdd('bridal_party', BRIDAL_ROLES)}
         onEdit={(p) => openEdit(p, BRIDAL_ROLES)}
+        branding={branding}
       />
 
       {/* Family */}
@@ -852,6 +861,7 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
 
         onAdd={() => openAdd('family', FAMILY_ROLES)}
         onEdit={(p) => openEdit(p, FAMILY_ROLES)}
+        branding={branding}
       />
 
       {/* Other */}
@@ -863,6 +873,7 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
 
         onAdd={() => openAdd('other', OTHER_ROLES)}
         onEdit={(p) => openEdit(p, OTHER_ROLES)}
+        branding={branding}
       />
 
       {/* Vendors */}

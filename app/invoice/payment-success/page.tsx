@@ -44,6 +44,10 @@ import { CheckCircle2 } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
 import { sendAlert } from '@/lib/alerts/send-alert';
+import { FONT_STACKS } from '@/lib/branding/fonts';
+import { buildPublicBranding } from '@/lib/branding/public-branding';
+import { STATUS_COLORS } from '@/lib/branding/status-colors';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 import { stripeConnectAccountId } from '@/lib/auth/entitlements';
 import { stripe } from '@/lib/payments/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -124,17 +128,30 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     notFound();
   }
 
+  // Fetch branding from the user's account for the success page styling.
+  const { data: brandingData } = await admin.rpc('_user_branding', {
+    p_user_id: invoice.user_id,
+  });
+  const branding = brandingData ? buildPublicBranding(brandingData) : null;
+
+  // Apply branding or fallback to safe defaults.
+  const bodyDefaults = branding ? roleDefaults(branding, 'body') : { fontSize: 16, fontFamily: 'sans-serif', color: '#111827' };
+  const borderColor = branding?.border_color ?? '#e5e7eb';
+  const surfaceColor = branding?.surface_color ?? '#ffffff';
+  const cardRadius = branding?.corner_radius ?? 8;
+
   return (
-    <div className="min-h-screen bg-surface-muted flex items-center justify-center px-4">
-      <div className="bg-surface rounded-card border border-border shadow-sm p-10 max-w-sm w-full text-center">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: branding?.surface_color ?? '#fafafa' }}>
+      <div className="shadow-sm p-10 max-w-sm w-full text-center" style={{ backgroundColor: surfaceColor, borderRadius: cardRadius, border: `1px solid ${borderColor}` }}>
         <CheckCircle2
-          className="w-12 h-12 text-success mx-auto mb-4"
+          className="w-12 h-12 mx-auto mb-4"
           strokeWidth={1.5}
+          style={{ color: STATUS_COLORS.success }}
         />
-        <h1 className="text-section font-semibold text-text mb-2">
+        <h1 className="font-semibold mb-2" style={{ fontSize: '20px', color: bodyDefaults.color, fontFamily: FONT_STACKS[branding?.font_body as never] ?? 'sans-serif' }}>
           Payment successful
         </h1>
-        <p className="text-body text-text-muted">
+        <p style={{ fontSize: `${bodyDefaults.fontSize}px`, color: bodyDefaults.color, fontFamily: FONT_STACKS[branding?.font_body as never] ?? 'sans-serif' }}>
           Thank you — your payment has been received. You&apos;ll get a
           confirmation by email shortly.
         </p>

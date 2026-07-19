@@ -37,13 +37,13 @@ export function QuestionnaireExperiencePreview({ title, questions, displayMode, 
   const onAnswer = (questionId: string, value: Answer) => setResponses((r) => ({ ...r, [questionId]: value }))
 
   if (questions.length === 0) {
-    return <p className="text-sm text-text-muted">Add questions to see them here.</p>
+    return <p style={{ fontSize: '14px', color: theme.mutedColor }}>Add questions to see them here.</p>
   }
 
   // Hold a quiet skeleton until the MC's branding resolves — rendering the
   // default palette first would flash the wrong brand colour for a beat.
   if (loading && !branding) {
-    return <div className={`${heightClass} animate-pulse rounded-2xl bg-surface-muted`} />
+    return <div className={`${heightClass} animate-pulse rounded-2xl`} style={{ backgroundColor: theme.pageBg, opacity: 0.5 }} />
   }
 
   return (
@@ -66,12 +66,12 @@ export function QuestionnaireExperiencePreview({ title, questions, displayMode, 
             // eslint-disable-next-line @next/next/no-img-element
             <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
           ) : null}
-          <span className="text-sm font-medium" style={{ color: theme.mutedColor }}>
+          <span style={{ fontSize: '14px', fontWeight: 500, color: theme.mutedColor }}>
             {theme.businessName}
           </span>
         </div>
 
-        <h1 className="mb-8 text-3xl font-semibold" style={{ color: theme.textColor, fontFamily: theme.headingStack }}>
+        <h1 className="mb-8 font-semibold" style={{ fontSize: '30px', color: theme.textColor, fontFamily: theme.headingStack }}>
           {title || 'Untitled questionnaire'}
         </h1>
 

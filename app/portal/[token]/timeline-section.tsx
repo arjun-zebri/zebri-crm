@@ -371,9 +371,13 @@ function ItemModal({
 interface SortableRowProps {
   item: PortalTimelineItem;
   onEdit: (item: PortalTimelineItem) => void;
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding;
 }
 
-function SortableRow({ item, onEdit }: SortableRowProps) {
+function SortableRow({ item, onEdit, branding }: SortableRowProps) {
+  const bodyDefaults = roleDefaults(branding, 'body');
+  const finePrintDefaults = roleDefaults(branding, 'finePrint');
   const {
     attributes,
     listeners,
@@ -408,19 +412,21 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
 
         {/* Time pill */}
         <div
-          className={`text-xs font-medium tabular-nums px-2 py-1 rounded-pill whitespace-nowrap ${
-            item.start_time
+          className="font-medium tabular-nums px-2 py-1 rounded-pill whitespace-nowrap"
+          style={{
+            fontSize: '11px',
+            ...(item.start_time
               ? approved
-                ? "bg-surface-muted text-text"
-                : "bg-surface-emphasis text-text-muted"
-              : "text-text-subtle"
-          }`}
+                ? { backgroundColor: '#e5e7eb', color: '#111827' }
+                : { backgroundColor: '#f3f4f6', color: '#9ca3af' }
+              : { color: '#9ca3af' })
+          }}
         >
           {item.start_time ? formatTimeDisplay(item.start_time) : ""}
         </div>
 
         {/* Connecting line (bottom half) */}
-        <div className="flex-1 w-0.5 sm:w-px bg-border mt-2" />
+        <div className="flex-1 w-0.5 sm:w-px mt-2" style={{ backgroundColor: branding.border_color }} />
       </div>
 
       {/* Right column: card */}
@@ -440,16 +446,16 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
           />
           <div className="flex-1 pl-3 pr-4 py-3 flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-body font-semibold text-text">
+              <p className="font-semibold" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: bodyDefaults.color, fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never] }}>
                 {item.title}
               </p>
               {item.description && (
-                <p className="text-caption text-text-muted mt-1 line-clamp-2">
+                <p className="mt-1 line-clamp-2" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: finePrintDefaults.color, fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never] }}>
                   {item.description}
                 </p>
               )}
               {item.duration_min && (
-                <p className="text-caption text-text-subtle mt-1">
+                <p className="mt-1" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: finePrintDefaults.color, fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never] }}>
                   {item.duration_min} min
                 </p>
               )}
@@ -717,7 +723,7 @@ export function TimelineSection({
 
   if (!hasEvent) {
     return (
-      <p className="text-body text-text-muted py-2">
+      <p className="py-2" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: bodyDefaults.color, fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never] }}>
         Your MC will set up a timeline for your event. Check back soon.
       </p>
     );
@@ -832,6 +838,7 @@ export function TimelineSection({
                     key={item.id}
                     item={item}
                     onEdit={handleOpenEdit}
+                    branding={branding}
                   />
                 ))}
                 {pendingItems.length > 0 && (
@@ -853,6 +860,7 @@ export function TimelineSection({
                     key={item.id}
                     item={item}
                     onEdit={handleOpenEdit}
+                    branding={branding}
                   />
                 ))}
               </div>

@@ -89,7 +89,7 @@ export default function PublicQuestionnairePage() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
             ) : null}
-            <span className="text-sm font-medium" style={{ color: theme.mutedColor }}>
+            <span style={{ fontSize: '14px', fontWeight: 500, color: theme.mutedColor }}>
               {theme.businessName}
             </span>
           </div>
@@ -110,10 +110,10 @@ export default function PublicQuestionnairePage() {
 
           {pageState === 'not_found' && (
             <div className="text-center">
-              <h1 className="mb-2 text-2xl font-semibold" style={{ color: theme.headingColor, fontFamily: theme.headingStack }}>
+              <h1 className="mb-2 font-semibold" style={{ fontSize: '24px', color: theme.headingColor, fontFamily: theme.headingStack }}>
                 This link isn&apos;t available
               </h1>
-              <p className="text-sm" style={{ color: theme.mutedColor }}>
+              <p style={{ fontSize: '14px', color: theme.mutedColor }}>
                 The questionnaire may have been closed. Reach out to your celebrant for a fresh link.
               </p>
             </div>
@@ -135,12 +135,12 @@ export default function PublicQuestionnairePage() {
             <>
               <div className="text-center">
                 <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full" style={{ background: `${theme.brand}33` }}>
-                  <span className="text-2xl">✓</span>
+                  <span style={{ fontSize: '24px' }}>✓</span>
                 </div>
-                <h1 className="mb-2 text-2xl font-semibold" style={{ color: theme.headingColor, fontFamily: theme.headingStack }}>
+                <h1 className="mb-2 font-semibold" style={{ fontSize: '24px', color: theme.headingColor, fontFamily: theme.headingStack }}>
                   All done, thank you!
                 </h1>
-                <p className="text-sm" style={{ color: theme.mutedColor }}>
+                <p style={{ fontSize: '14px', color: theme.mutedColor }}>
                   Your answers have been sent to {theme.businessName}. They&apos;ll be in touch soon.
                 </p>
               </div>
@@ -157,7 +157,7 @@ export default function PublicQuestionnairePage() {
           )}
         </div>
 
-        <p className="mt-10 text-center text-xs" style={{ color: theme.mutedColor }}>
+        <p className="mt-10 text-center" style={{ fontSize: '12px', color: theme.mutedColor }}>
           Secured by Zebri ·{' '}
           <a href="https://zebri.com.au" className="hover:opacity-70">
             zebri.com.au

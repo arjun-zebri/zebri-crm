@@ -13,7 +13,9 @@
  * Exemptions (declared inline with why-comments):
  * - Files matching *-loading.tsx and *-unavailable.tsx (render before branding RPC resolves)
  * - Inline unavailable states in portal page.tsx (marked with // gate-allow: pre-branding state)
- * - App-chrome tokens on portal interactive controls only (app-chrome is UI furniture, not document content)
+ * - App-chrome tokens on portal interactive controls ONLY: <button>, <input>, <select>, <textarea>,
+ *   elements with onClick/onChange/cursor-pointer/role="button" (app-chrome is UI furniture on controls,
+ *   not document content; portal document text must use branding colors)
  *
  * Usage: npm run check:public-styling
  */
@@ -121,12 +123,37 @@ function hasInlineExemption(line) {
 }
 
 /**
+ * Check if a line in a portal file is part of an interactive control.
+ * Looks at the line and surrounding context (±5 lines) for interactive signals:
+ * cursor-pointer, <button, <input, <select, <textarea, onClick, onChange, role="button".
+ * This handles className strings spanning multiple lines and various JSX structures.
+ */
+function isPortalInteractiveControl(lines, lineNum) {
+  const windowStart = Math.max(0, lineNum - 6);
+  const windowEnd = Math.min(lines.length, lineNum + 5);
+  const window = lines.slice(windowStart, windowEnd).map(l => l.text).join('\n');
+
+  const interactiveSignals = [
+    /cursor-pointer/,
+    /<button/,
+    /<input/,
+    /<select/,
+    /<textarea/,
+    /onClick/,
+    /onChange/,
+    /role=["']button["']/,
+  ];
+
+  return interactiveSignals.some(sig => sig.test(window));
+}
+
+/**
  * Find all violations in a file, respecting exemptions.
  */
 function findViolations(filePath, src) {
   const violations = [];
   const lines = getLines(src);
-  // Portal files are exempted for app-chrome tokens on interactive controls.
+  // Portal files are exempted for app-chrome tokens on interactive controls only.
   // Paths are relative from repo root (e.g. app/portal/[token]/page.tsx).
   const isPortalFile = filePath.startsWith('app/portal/');
 
@@ -143,9 +170,8 @@ function findViolations(filePath, src) {
     for (const pattern of PATTERNS) {
       if (!pattern.regex.test(text)) continue;
 
-      // Portal exemption: allow app-chrome tokens on portal interactive controls.
-      // The pattern is: if this is a portal file and the pattern is one of the
-      // app-chrome tokens, allow it (don't flag it).
+      // Portal exemption: allow app-chrome tokens ONLY on portal interactive controls.
+      // Interactive controls are detected by interactive signals in surrounding context.
       if (isPortalFile && [
         'border-border',
         'bg-surface-muted',
@@ -156,8 +182,10 @@ function findViolations(filePath, src) {
         'text-text',
       ].includes(pattern.name)) {
         // This is a portal file and the pattern is an app-chrome token.
-        // These are allowed on portal interactive controls, so skip flagging.
-        continue;
+        // Only allow it if the line is part of an interactive control.
+        if (isPortalInteractiveControl(lines, lineNum - 1)) {
+          continue;
+        }
       }
 
       violations.push({

@@ -58,10 +58,10 @@ export function ProposalStatusBanner({
           border: `1px solid ${STATUS_COLORS.success}33`,
         }}
       >
-        <p className="text-sm font-semibold mb-1" style={{ color: STATUS_COLORS.success }}>
+        <p className="font-semibold mb-1" style={{ fontSize: '14px', color: STATUS_COLORS.success }}>
           Proposal accepted{datePart}.
         </p>
-        <p className="text-sm" style={{ color: STATUS_COLORS.success + 'cc' }}>
+        <p style={{ fontSize: '14px', color: STATUS_COLORS.success + 'cc' }}>
           {businessName ? `${htmlToPlainText(businessName)} will` : 'Your MC will'} be in touch to
           confirm the details.
         </p>
@@ -79,7 +79,7 @@ export function ProposalStatusBanner({
           border: `1px solid ${borderColor}`,
         }}
       >
-        <p className="text-sm" style={{ color: mutedColor }}>
+        <p style={{ fontSize: '14px', color: mutedColor }}>
           You declined this proposal.
         </p>
       </div>
@@ -95,7 +95,7 @@ export function ProposalStatusBanner({
         border: `1px solid ${STATUS_COLORS.warning}33`,
       }}
     >
-      <p className="text-sm" style={{ color: STATUS_COLORS.warning }}>
+      <p style={{ fontSize: '14px', color: STATUS_COLORS.warning }}>
         This proposal expired
         {expiresAt ? ` on ${formatDate(expiresAt)}` : ''}.
         {businessName
@@ -188,10 +188,10 @@ export function ProposalUnavailable({
         border: `1px solid ${borderColor}`,
       }}
     >
-      <p className="text-sm font-medium mb-1" style={{ color: textColor }}>
+      <p className="font-medium mb-1" style={{ fontSize: '14px', color: textColor }}>
         This proposal is no longer available
       </p>
-      <p className="text-sm" style={{ color: mutedColor }}>
+      <p style={{ fontSize: '14px', color: mutedColor }}>
         The link may have been disabled or replaced. Please contact your MC for a new one.
       </p>
     </div>

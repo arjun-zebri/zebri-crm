@@ -212,7 +212,7 @@ export default async function PortalPage({
       notFound()
     }
     return (
-      <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-4 gap-6">
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 gap-6" style={{ backgroundColor: '#fafafa' }}>
         <Image src="/zebri-logo.svg" alt="Zebri" width={80} height={29} />
         <p className="text-sm text-text-muted">{/* gate-allow: pre-branding state */}This link is not active.</p>
         <p className="text-xs text-text-subtle text-center max-w-xs">{/* gate-allow: pre-branding state */}
@@ -332,8 +332,8 @@ export default async function PortalPage({
               {branding.business_name && (
                 <div className="min-w-0">
                   <p
-                    className="text-base font-semibold truncate"
-                    style={{ color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
+                    className="font-semibold truncate"
+                    style={{ fontSize: '16px', color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
                   >
                     {branding.business_name}
                   </p>
@@ -363,8 +363,8 @@ export default async function PortalPage({
           style={{ borderColor: branding.border_color, borderBottomWidth: 1 }}
         >
           <h1
-            className="text-3xl mb-1"
-            style={{ color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
+            className="mb-1"
+            style={{ fontSize: '30px', color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
           >
             {portal.couple_name}
           </h1>

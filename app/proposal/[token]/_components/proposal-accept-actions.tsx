@@ -65,44 +65,48 @@ export function ProposalAcceptActions({
   return (
     <div>
       {actionError ? (
-        <p className="mb-4 text-sm" style={{ color: STATUS_COLORS.error }}>
+        <p className=”mb-4” style={{ fontSize: '14px', color: STATUS_COLORS.error }}>
           {actionError}
         </p>
       ) : null}
 
       {confirming && canAccept ? (
         <div>
-          <p className="mb-1 text-sm font-medium" style={{ color: textColor }}>
+          <p className=”mb-1 font-medium” style={{ fontSize: '14px', color: textColor }}>
             Accept “{chosenOptionTitle}” for {totalLabel}?
           </p>
-          <p className="mb-4 text-xs" style={{ color: mutedColor }}>
+          <p className=”mb-4” style={{ fontSize: '12px', color: mutedColor }}>
             By accepting you confirm your package choice and the extras selected above.
           </p>
-          <div className="flex gap-3">
+          <div className=”flex gap-3”>
             <button
-              type="button"
+              type=”button”
               onClick={() => void onAccept()}
               disabled={actionLoading}
               style={{
+                fontSize: '14px',
+                fontWeight: 500,
                 backgroundColor: brand,
                 color: getTextColor(brand),
                 borderRadius: buttonRadius,
               }}
-              className="flex-1 py-3 text-sm font-medium hover:opacity-90 transition cursor-pointer disabled:opacity-50"
+              className=”flex-1 py-3 hover:opacity-90 transition cursor-pointer disabled:opacity-50”
             >
               {actionLoading ? 'Processing…' : 'Yes, accept'}
             </button>
             <button
-              type="button"
+              type=”button”
               onClick={() => setConfirming(false)}
               disabled={actionLoading}
               style={{
+                fontSize: '14px',
+                fontWeight: 500,
                 borderRadius: buttonRadius,
                 color: textColor,
                 border: `1px solid ${borderColor}`,
                 backgroundColor: 'transparent',
               }}
-              className="flex-1 py-3 text-sm font-medium hover:opacity-80 transition cursor-pointer disabled:opacity-50"
+              className=”flex-1 py-3 hover:opacity-80 transition cursor-pointer disabled:opacity-50”
               onMouseEnter={(e) => {
                 if (!actionLoading) {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = surfaceColor;
@@ -119,31 +123,31 @@ export function ProposalAcceptActions({
       ) : (
         <div>
           {!canAccept ? (
-            <p className="mb-3 text-center text-xs" style={{ color: mutedColor }}>
+            <p className=”mb-3 text-center” style={{ fontSize: '12px', color: mutedColor }}>
               Choose a package above to accept.
             </p>
           ) : null}
           <button
-            type="button"
+            type=”button”
             onClick={() => setConfirming(true)}
             disabled={actionLoading || !canAccept}
-            style={{ backgroundColor: brand, color: getTextColor(brand), borderRadius: buttonRadius }}
-            className="w-full py-3.5 text-[15px] font-medium hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ fontSize: '15px', fontWeight: 500, backgroundColor: brand, color: getTextColor(brand), borderRadius: buttonRadius }}
+            className=”w-full py-3.5 hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed”
           >
             {labels.accept.text}
           </button>
           {expiresAt ? (
-            <p className="mt-2.5 text-center text-xs" style={{ color: mutedColor }}>
+            <p className=”mt-2.5 text-center” style={{ fontSize: '12px', color: mutedColor }}>
               This proposal is held for you until {formatDate(expiresAt)}
             </p>
           ) : null}
-          <div className="mt-4 text-center">
+          <div className=”mt-4 text-center”>
             <button
-              type="button"
+              type=”button”
               onClick={() => void onDecline()}
               disabled={actionLoading}
-              style={{ color: mutedColor }}
-              className="text-xs underline underline-offset-2 hover:opacity-80 transition cursor-pointer disabled:opacity-50"
+              style={{ fontSize: '12px', color: mutedColor, textDecoration: 'underline', textDecorationOffset: '2px' }}
+              className=”hover:opacity-80 transition cursor-pointer disabled:opacity-50”
             >
               {labels.decline.text}
             </button>
