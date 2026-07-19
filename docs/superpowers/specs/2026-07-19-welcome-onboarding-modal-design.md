@@ -53,9 +53,19 @@ Three fields arrive prefilled from signup (`app/(auth)/actions.ts:145`
 collects display name and business name; email comes from the auth
 user):
 
-- Name (prefilled from `display_name`)
-- Email (prefilled from the auth user)
-- Business name (prefilled from `business_name`)
+- Name (prefilled from `display_name`, editable)
+- Email (prefilled from the auth user, **read-only**)
+- Business name (prefilled from `business_name`, editable)
+
+Name and business name stay editable because business name appears on
+every proposal and invoice, and a typo made at signup should be fixable
+here rather than requiring a trip to Settings.
+
+Email is read-only, with a note pointing at Settings. Changing it
+triggers Supabase's confirmation-email round-trip
+(`personal-info-section.tsx:207`), so an editable field would appear to
+work and then quietly not take effect until the user clicked a link in
+their inbox. That is worse than no field.
 
 Plus the remaining identity fields from Settings → Personal info
 (`app/(dashboard)/settings/personal-info-section.tsx`):
@@ -75,7 +85,8 @@ The remaining Personal info fields:
 - Facebook URL
 
 All optional. **Clicking Next on this step saves both step 2 and step
-3 to `user_metadata`.** The split into two steps exists so neither
+3 to `user_metadata`**, eight fields in total: the two editable
+prefilled ones plus the six new. The split into two steps exists so neither
 screen becomes a dense nine-field form; the save is deliberately at the
 end of the pair so a user who drops out at step 4 still keeps
 everything they typed.
@@ -212,8 +223,10 @@ Note this is *not* an entitlement field. The `app_metadata` rule in
 
 **When writes happen.** Exactly twice:
 
-1. Step 3's Next writes the six non-prefilled fields (phone, address,
-   signature name, website, Instagram, Facebook).
+1. Step 3's Next writes eight fields: `display_name` and
+   `business_name` (editable prefills), plus phone, address (with
+   `address_lat` / `address_lng`), signature name, website, Instagram
+   and Facebook. Email is never written here.
 2. Any exit stamps `welcome_onboarded_at`.
 
 **Avoiding the flash.** A localStorage hint
