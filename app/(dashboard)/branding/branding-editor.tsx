@@ -30,7 +30,6 @@ import { CanvasScopeBar } from './canvas-scope-bar'
 import { EditorTopbar } from './editor-topbar'
 import { PortalSectionsBar } from './portal-preview'
 import { SurfaceTabs } from './surface-tabs'
-import { TEMPLATES } from './templates'
 import { uploadBrandAsset } from './upload-brand-asset'
 
 
@@ -443,25 +442,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     if (state.themePreset !== 'custom') applyTheme(state.themePreset)
   }
 
-  /** Apply a template: replaces that surface's block layout only.
-   *  Does NOT touch global tokens or other surfaces. Committed as one
-   *  undoable step. */
-  const applyTemplate = (id: string) => {
-    const tpl = TEMPLATES.find((t) => t.id === id)
-    if (!tpl) return
-    setState(
-      (prev) => ({
-        ...prev,
-        blocks: {
-          ...prev.blocks,
-          [tpl.surface]: tpl.build(),
-        },
-      }),
-      { commit: true },
-    )
-    toast(`Applied the "${tpl.name}" template`, 'success')
-  }
-
   /** Toggle a surface's enabled state. Disabling clears the surface's blocks to [].
    *  Enabling re-seeds blocks if they are empty. */
   const onToggleSurface = (surface: SurfaceTab, enabled: boolean) => {
@@ -485,20 +465,23 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     })
   }
 
-  /** Reset the current surface to its template layout. For surfaces without templates,
-   *  applies defaultBlocksFor. */
-  const resetSurfaceToTemplate = () => {
-    const templateMap: Record<SurfaceTab, string> = {
-      proposal: 'proposal-classic',
-      invoice: 'invoice-classic',
-      contract: 'contract-classic',
-      portal: 'portal-classic',
-      vendorTimeline: 'vendorTimeline-classic',
-      questionnaire: 'questionnaire-classic',
-    }
-
-    const templateId = templateMap[surface]
-    applyTemplate(templateId)
+  /**
+   * Reset the current surface to its default block layout.
+   * Replaces that surface's block tree only. Does NOT touch global tokens or other surfaces.
+   * Committed as one undoable step.
+   */
+  const resetSurfaceToDefault = () => {
+    setState(
+      (prev) => ({
+        ...prev,
+        blocks: {
+          ...prev.blocks,
+          [surface]: defaultBlocksFor(surface),
+        },
+      }),
+      { commit: true },
+    )
+    toast('Layout reset to default', 'success')
   }
 
   /**
@@ -980,12 +963,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         <BrandPanel
           themePreset={state.themePreset}
           applyTheme={applyTheme}
-          applyTemplate={applyTemplate}
           resetToTheme={resetToTheme}
           surface={surface}
           enabledSurfaces={state.enabledSurfaces}
           onToggleSurface={onToggleSurface}
-          resetSurfaceToTemplate={resetSurfaceToTemplate}
+          resetSurfaceToDefault={resetSurfaceToDefault}
           brandColor={state.brandColor}
           setBrandColor={(v) => setEditor({ brandColor: v })}
           headingColor={state.headingColor}

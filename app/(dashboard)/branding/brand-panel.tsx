@@ -34,18 +34,17 @@ import type { SurfaceTab } from '@/types/branding-preview'
 import { BusinessSection } from './business-section'
 import { Slider } from './components/slider'
 import { DocumentsSection } from './documents-section'
-import { TemplatesSection } from './templates-section'
+import { ResetLayoutButton } from './templates-section'
 
 
 interface BrandPanelProps {
   themePreset: ThemeIdOrCustom
   applyTheme: (id: ThemeId) => void
-  applyTemplate: (id: string) => void
   resetToTheme: () => void
   surface: SurfaceTab
   enabledSurfaces: SurfaceTab[]
   onToggleSurface: (surface: SurfaceTab, enabled: boolean) => void
-  resetSurfaceToTemplate: () => void
+  resetSurfaceToDefault: () => void
 
   brandColor: string
   setBrandColor: (v: string) => void
@@ -202,13 +201,13 @@ export function BrandPanel(props: BrandPanelProps) {
         </Accordion>
 
         <Accordion
-          icon={<LayoutTemplate size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Templates"
-          subtitle="Ready-made layouts for this surface"
+          icon={<RotateCcw size={13} strokeWidth={1.75} className="text-gray-500" />}
+          title="Reset layout"
+          subtitle="Restore default document structure"
           open={open.templates}
           onToggle={() => toggle('templates')}
         >
-          <TemplatesSection surface={props.surface} applyTemplate={props.applyTemplate} resetToTemplate={props.resetSurfaceToTemplate} />
+          <ResetLayoutButton onReset={props.resetSurfaceToDefault} />
         </Accordion>
 
         <Accordion

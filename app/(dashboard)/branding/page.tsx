@@ -15,7 +15,6 @@ import type { Block } from './blocks/types'
 import { BrandingEditor } from './branding-editor'
 import { OnboardingModal } from './onboarding/onboarding-modal'
 import type { OnboardingResult } from './onboarding/onboarding-wizard'
-import { TEMPLATES } from './templates'
 
 interface UserMetadata {
   display_name?: string
@@ -234,16 +233,13 @@ export default function BrandingPage() {
       {} as Record<string, boolean>,
     )
 
-    // Seed branding_blocks from classic templates for each ENABLED surface only.
+    // Seed branding_blocks from the default tree for each ENABLED surface only.
     // Disabled surfaces get empty arrays.
     const branding_blocks: Record<string, Block[]> = {}
     for (const surface of ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as SurfaceTab[]) {
-      if (result.enabledSurfaces.includes(surface)) {
-        const template = TEMPLATES.find((t) => t.id === `${surface}-classic`)
-        branding_blocks[surface] = template ? template.build() : []
-      } else {
-        branding_blocks[surface] = []
-      }
+      branding_blocks[surface] = result.enabledSurfaces.includes(surface)
+        ? defaultBlocksFor(surface)
+        : []
     }
 
     // Upsert is safe with partial payloads: PostgREST ON CONFLICT only updates
