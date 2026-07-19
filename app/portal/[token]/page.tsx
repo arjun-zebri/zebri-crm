@@ -273,7 +273,7 @@ export default async function PortalPage({
           )
         ) : (
           <>
-            {branding?.header_image_url && (
+            {branding.header_image_url && (
               <div className="pt-6">
                 <div
                   className="overflow-hidden"
@@ -289,7 +289,7 @@ export default async function PortalPage({
             )}
 
             <div className={`${docX} pt-10 pb-2 flex items-center gap-4`}>
-              {branding?.logo_url ? (
+              {branding.logo_url ? (
                 <img
                   src={branding.logo_url}
                   alt={branding.business_name || 'Logo'}
@@ -301,7 +301,7 @@ export default async function PortalPage({
                     borderRadius: branding.corner_radius,
                   }}
                 />
-              ) : branding?.favicon_url ? (
+              ) : branding.favicon_url ? (
                 <img
                   src={branding.favicon_url}
                   alt={branding.business_name || 'Logo'}
@@ -319,17 +319,17 @@ export default async function PortalPage({
                   style={{
                     width: 48,
                     height: 48,
-                    background: branding?.brand_color || '#111827',
-                    borderRadius: Math.min(branding?.corner_radius ?? 12, 12),
+                    background: branding.brand_color,
+                    borderRadius: Math.min(branding.corner_radius, 12),
                     fontSize: 22,
                     fontFamily: headingStack,
                     fontWeight: headingWeight,
                   }}
                 >
-                  {branding?.business_name?.[0]?.toUpperCase() || 'Z'}
+                  {branding.business_name?.[0]?.toUpperCase() || 'Z'}
                 </div>
               )}
-              {branding?.business_name && (
+              {branding.business_name && (
                 <div className="min-w-0">
                   <p
                     className="text-base font-semibold truncate"

@@ -3,8 +3,10 @@
 import { ChevronDown, Clock } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { getRgb } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 
 export interface VendorTimelineItem {
@@ -184,6 +186,24 @@ interface VendorTimelineProps {
  * and shows the merged, time-ordered moments for the chosen day. Read-only.
  * Branding colors tint headings and accents.
  */
+/**
+ * Provisional (pending review) styling. Pending is a status, not a brand
+ * state, so it derives from the fixed warning colour rather than a copied
+ * hex. Tints composite through getRgb because a hex inside rgba() is invalid
+ * CSS and the declaration would be dropped silently.
+ */
+const PROVISIONAL = (() => {
+  const rgb = getRgb(STATUS_COLORS.warning)
+  const tint = (alpha: number) =>
+    rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})` : 'transparent'
+  return {
+    border: tint(0.45),
+    rowBackground: tint(0.08),
+    badgeBackground: tint(0.14),
+    text: STATUS_COLORS.warning,
+  }
+})()
+
 export function VendorTimeline({ events, items, branding }: VendorTimelineProps) {
   const days = useMemo(() => buildDays(events), [events])
   const [pickedDay, setPickedDay] = useState<string | null>(null)
@@ -286,8 +306,8 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
               className="flex items-start gap-4 rounded-xl px-4 py-3"
               style={{
                 borderWidth: 1,
-                borderColor: item.pending_review ? '#FCD34D' : softBorder,
-                backgroundColor: item.pending_review ? 'rgba(254, 243, 199, 0.3)' : branding.surface_color,
+                borderColor: item.pending_review ? PROVISIONAL.border : softBorder,
+                backgroundColor: item.pending_review ? PROVISIONAL.rowBackground : branding.surface_color,
                 borderRadius: branding.corner_radius,
               }}
             >
@@ -361,9 +381,9 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
                     fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
                     fontWeight: finePrintDefaults.fontWeight,
                     lineHeight: finePrintDefaults.lineHeight,
-                    borderColor: '#FCD34D',
-                    backgroundColor: 'rgba(254, 243, 199, 0.5)',
-                    color: '#D97706',
+                    borderColor: PROVISIONAL.border,
+                    backgroundColor: PROVISIONAL.badgeBackground,
+                    color: PROVISIONAL.text,
                   }}
                 >
                   Provisional
