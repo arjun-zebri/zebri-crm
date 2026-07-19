@@ -35,6 +35,26 @@ export interface BrandPreviewState {
   density: Density
   cornerRadius: number
   docPadding: number
+  /**
+   * Global type scale and style fields.
+   *
+   * These drive roleDefaults() in every renderer, so the canvas cannot show a
+   * faithful preview without them. They were previously absent here, which
+   * left publicBrandingFromEditorState with nothing to read and hardcoded
+   * literals in their place: the Typography and Global styles controls
+   * changed the saved document but never the preview.
+   */
+  headingSize: number
+  bodySize: number
+  headingCase: 'none' | 'uppercase' | 'capitalize'
+  bodyCase: 'none' | 'uppercase' | 'capitalize'
+  headingLetterSpacing: number
+  bodyLineHeight: number
+  linkColor: string
+  buttonVariant: 'fill' | 'outline'
+  buttonSize: 'sm' | 'md' | 'lg'
+  buttonRadius: number
+  sectionSpacing: number
   businessName: string
   phone: string
   website: string

@@ -47,18 +47,21 @@ export function publicBrandingFromEditorState(state: BrandPreviewState): PublicB
     email_show_logo: true,
     email_logo_align: 'left',
     email_show_accent: true,
-    heading_size: 32,
-    body_size: 15,
-    heading_case: 'none',
-    body_case: 'none',
-    heading_letter_spacing: 0,
-    body_line_height: 1.5,
-    link_color: state.brandColor,
+    // Read every one of these from state. They were hardcoded, so the
+    // Typography and Global styles controls moved the saved document while
+    // the canvas kept rendering the same frozen defaults.
+    heading_size: state.headingSize,
+    body_size: state.bodySize,
+    heading_case: state.headingCase,
+    body_case: state.bodyCase,
+    heading_letter_spacing: state.headingLetterSpacing,
+    body_line_height: state.bodyLineHeight,
+    link_color: state.linkColor,
     border_color: state.borderColor,
-    button_variant: 'fill',
-    button_size: 'md',
-    button_radius: 8,
-    section_spacing: 32,
+    button_variant: state.buttonVariant,
+    button_size: state.buttonSize,
+    button_radius: state.buttonRadius,
+    section_spacing: state.sectionSpacing,
     page_background: state.surfaceColor,
   }
 }

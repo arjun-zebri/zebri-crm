@@ -59,7 +59,6 @@ export function blockTemplate(type: BlockType): Block {
 export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
   if (surface === 'portal') {
     return [
-      { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       { id: newId('cp'), type: 'couplePortal', locked: true },
     ]
@@ -82,14 +81,20 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
     ]
   }
   if (surface === 'invoice') {
+    // Only what an invoice cannot be an invoice without: who it is from, what
+    // it is, what is owed, and how to pay. No banner, and no pre-written prose
+    // the MC did not ask for. Everything else stays one click away in the
+    // block palette.
+    //
+    // The title carries NO subtitle. It used to ship a sample one, and since
+    // the public renderer has no slot to override it, that placeholder was
+    // rendering verbatim on real invoices sent to real couples.
     return [
-      { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       {
         id: newId('tt'),
         type: 'title',
         title: 'Invoice',
-        subtitle: 'ALEX & JORDAN  ·  14 SEPTEMBER 2026',
         showRef: true,
         showExpires: true,
         showAbn: true,
@@ -102,29 +107,20 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
         showSubtotal: true,
       },
       { id: newId('ps'), type: 'paymentSchedule', locked: true },
-      {
-        id: newId('tx'),
-        type: 'text',
-        text: 'Payment due within 14 days. Pay by card, or by bank transfer using the details below.',
-      },
       { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' },
       { id: newId('ac'), type: 'action', primary: 'Pay with card', secondary: null },
-      { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.' },
     ]
   }
   if (surface === 'vendorTimeline') {
     return [
-      { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       { id: newId('vt'), type: 'vendorTimelineBody', locked: true },
-      { id: newId('ft'), type: 'footer' },
     ]
   }
   if (surface === 'questionnaire') {
     return [
       { id: newId('bn'), type: 'businessName' },
       { id: newId('qb'), type: 'questionnaireBody', locked: true },
-      { id: newId('ft'), type: 'footer' },
     ]
   }
   // contract — minimal chrome scaffold. The contract body is
@@ -135,7 +131,6 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
   // stays intentionally lean so MCs aren't fighting pre-canned
   // structure they didn't ask for.
   return [
-    { id: newId('hb'), type: 'headerBanner' },
     { id: newId('bn'), type: 'businessName' },
     { id: newId('cb'), type: 'contractBody', locked: true },
   ]
