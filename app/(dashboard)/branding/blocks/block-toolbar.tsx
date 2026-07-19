@@ -8,9 +8,11 @@ import { ColorPopover } from '@/components/ui/color-popover'
 import { Tooltip } from '@/components/ui/tooltip'
 import { getTextColor } from '@/lib/branding/contrast'
 import { COLOR_PALETTE } from '@/lib/branding/themes'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
 import { Slider } from '../components/slider'
+import { publicBrandingFromEditorState } from '../editor-branding'
 
 import { isDataBound, isDeletable } from './policy'
 import type { TextStyleDefaults } from './text-style'
@@ -299,13 +301,8 @@ function TextControls({
   expanded?: boolean
 }) {
   const defaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: 400,
-    color: '#6B7280',
+    ...roleDefaults(publicBrandingFromEditorState(state), 'body'),
     align: 'left',
-    lineHeight: 1.6,
-    letterSpacing: 0,
   }
 
   return (
@@ -369,13 +366,10 @@ function ActionControls({
   const style = isPrimary ? block.primaryStyle : block.secondaryStyle
   const buttonColor = block.buttonColor ?? state.brandColor
   const defaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
+    ...roleDefaults(publicBrandingFromEditorState(state), 'body'),
     fontWeight: 500,
     color: isPrimary ? getTextColor(buttonColor) : getTextColor(state.secondaryColor),
     align: 'center',
-    lineHeight: 1.4,
-    letterSpacing: 0,
   }
 
   return (
@@ -681,13 +675,8 @@ function BusinessNameControls({
   expanded?: boolean
 }) {
   const defaults: TextStyleDefaults = {
-    fontFamily: state.fontHeading,
-    fontSize: 16,
-    fontWeight: 600,
-    color: '#111827',
+    ...roleDefaults(publicBrandingFromEditorState(state), 'sectionHeading'),
     align: 'left',
-    lineHeight: 1.3,
-    letterSpacing: 0,
   }
   const layout = block.layout ?? 'row'
   const logoHeight = block.logoHeightPx ?? 40
@@ -770,13 +759,8 @@ function TaglineControls({
   expanded?: boolean
 }) {
   const defaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: 400,
-    color: '#6B7280',
+    ...roleDefaults(publicBrandingFromEditorState(state), 'body'),
     align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0,
   }
   return (
     <div className="flex items-center gap-2">
