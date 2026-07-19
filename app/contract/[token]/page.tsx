@@ -26,14 +26,15 @@
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
+import { FONT_STACKS } from '@/lib/branding/fonts';
 import { findActionStyle } from '@/lib/branding/public-renderer';
 import {
   bodyFontFamily,
   DENSITY_PAD,
-  headingFontFamily,
   useBrandingHead,
 } from '@/lib/branding/public-surface';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 import { repairBlocks } from '@/lib/branding/validate-blocks';
 import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
@@ -155,7 +156,6 @@ export default function PublicContractPage() {
   const mutedColor = contract?.muted_color || '#6B7280';
   const brand = contract?.brand_color || '#A7F3D0';
   const radius = contract?.corner_radius ?? 16;
-  const headingStack = contract ? headingFontFamily(contract) : undefined;
   const bodyStack = contract ? bodyFontFamily(contract) : undefined;
   const headingWeight = contract?.font_weight ?? 600;
   const pad = DENSITY_PAD[contract?.density ?? 'cozy'];
@@ -192,6 +192,7 @@ export default function PublicContractPage() {
             signedAt={contract.signed_at}
             signerIp={contract.signer_ip}
             onDownloadPdf={downloadPdf}
+            branding={contract}
           />
         ) : null}
         {pageState === 'declined' ? (
@@ -199,6 +200,7 @@ export default function PublicContractPage() {
             kind="declined"
             declinedAt={contract.declined_at}
             declinedReason={contract.declined_reason}
+            branding={contract}
           />
         ) : null}
         {pageState === 'expired' ? (
@@ -206,6 +208,7 @@ export default function PublicContractPage() {
             kind="expired"
             expiresAt={contract.expires_at}
             businessName={contract.business_name}
+            branding={contract}
           />
         ) : null}
         {pageState === 'active' && actionStyle ? (
@@ -222,6 +225,7 @@ export default function PublicContractPage() {
             textColor={textColor}
             mutedColor={mutedColor}
             radius={radius}
+            branding={contract}
             actionStyle={actionStyle}
           />
         ) : null}
@@ -277,37 +281,44 @@ export default function PublicContractPage() {
               mutedColor={mutedColor}
               brand={brand}
               radius={radius}
-              headingStack={headingStack}
               headingWeight={headingWeight}
               bodyTrailing={bodyTrailing}
             />
           )
         ) : null}
 
-        <p
-          className="text-xs text-center mt-6"
-          style={{ color: mutedColor }}
-        >
-          Secured by Zebri ·{' '}
-          <a href="https://zebri.com.au" className="hover:opacity-70">
-            zebri.com.au
-          </a>
-        </p>
+        {contract ? (
+          <p
+            className="text-center mt-6 hover:opacity-70"
+            style={{
+              color: mutedColor,
+              fontSize: `${roleDefaults(contract, 'finePrint').fontSize}px`,
+              fontFamily: FONT_STACKS[roleDefaults(contract, 'finePrint').fontFamily as never],
+            }}
+          >
+            Secured by Zebri ·{' '}
+            <a href="https://zebri.com.au" className="hover:opacity-70">
+              zebri.com.au
+            </a>
+          </p>
+        ) : null}
       </div>
 
-      <ContractDeclineDialog
-        open={declineOpen}
-        onCancel={() => setDeclineOpen(false)}
-        onConfirm={handleDecline}
-        reason={declineReason}
-        onReasonChange={setDeclineReason}
-        loading={actionLoading}
-        error={actionError}
-        businessName={contract?.business_name}
-        textColor={textColor}
-        mutedColor={mutedColor}
-        headingStack={headingStack}
-      />
+      {contract ? (
+        <ContractDeclineDialog
+          open={declineOpen}
+          onCancel={() => setDeclineOpen(false)}
+          onConfirm={handleDecline}
+          reason={declineReason}
+          onReasonChange={setDeclineReason}
+          loading={actionLoading}
+          error={actionError}
+          businessName={contract.business_name}
+          textColor={textColor}
+          mutedColor={mutedColor}
+          branding={contract}
+        />
+      ) : null}
     </div>
   );
 }

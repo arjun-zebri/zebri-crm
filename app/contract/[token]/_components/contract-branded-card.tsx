@@ -58,8 +58,11 @@ export function ContractBrandedCard({
 
   return (
     <div
-      className="bg-surface shadow-sm border border-border overflow-hidden"
-      style={{ borderRadius: radius }}
+      className="bg-surface shadow-sm border overflow-hidden"
+      style={{
+        borderRadius: radius,
+        borderColor: contract.border_color,
+      }}
     >
       {preBlocks.length > 0 ? (
         <PublicBlockRenderer
@@ -78,7 +81,8 @@ export function ContractBrandedCard({
       ) : null}
 
       <div
-        className={`${pad.cardSection} space-y-8 border-t border-border`}
+        className={`${pad.cardSection} space-y-8 border-t`}
+        style={{ borderTopColor: contract.border_color }}
       >
         <ContractBodySection
           contract={contract}

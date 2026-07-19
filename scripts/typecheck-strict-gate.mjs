@@ -50,7 +50,9 @@ import { execSync } from 'node:child_process';
 // violations in block-toolbar.tsx and render.tsx by conditionally spreading
 // optional props instead of passing undefined (20-error reduction: 295 -> 290).
 // Branding role-colour model removed 2 further strict errors (290 -> 288).
-const STRICT_BUDGET = 288;
+// Contract surface global styles: retiring the optional `headingStack` prop
+// removed its exactOptionalPropertyTypes violation (288 -> 287).
+const STRICT_BUDGET = 287;
 
 function runTscStrict() {
   try {

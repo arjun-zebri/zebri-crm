@@ -12,8 +12,10 @@
  * @module app/contract/[token]/_components/contract-fallback-card
  */
 import { getTextColor } from '@/lib/branding/contrast';
+import { FONT_STACKS } from '@/lib/branding/fonts';
 import { Html } from '@/lib/branding/public-blocks/html';
 import { DENSITY_PAD } from '@/lib/branding/public-surface';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 
 import { ContractBodySection } from './contract-body-section';
 import { formatDate, type PageState, type PublicContract } from './public-contract';
@@ -25,7 +27,6 @@ export interface ContractFallbackCardProps {
   mutedColor: string;
   brand: string;
   radius: number;
-  headingStack?: string | undefined;
   headingWeight: number;
   /** Sign/decline form + any status banners — placed under the body. */
   bodyTrailing?: React.ReactNode;
@@ -38,17 +39,24 @@ export function ContractFallbackCard({
   mutedColor,
   brand,
   radius,
-  headingStack,
   headingWeight,
   bodyTrailing,
 }: ContractFallbackCardProps) {
   const pad = DENSITY_PAD[contract.density ?? 'cozy'];
   const brandText = getTextColor(brand);
 
+  // Resolve type roles for the hero header
+  const labelDefaults = roleDefaults(contract, 'sectionLabel');
+  const titleDefaults = roleDefaults(contract, 'docTitle');
+  const bodyDefaults = roleDefaults(contract, 'body');
+
   return (
     <div
-      className="bg-surface border border-border overflow-hidden shadow-sm"
-      style={{ borderRadius: radius }}
+      className="bg-surface border overflow-hidden shadow-sm"
+      style={{
+        borderRadius: radius,
+        borderColor: contract.border_color,
+      }}
     >
       {/* Branded hero header band */}
       <div
@@ -67,8 +75,13 @@ export function ContractFallbackCard({
           ) : null}
           <div className="min-w-0">
             <p
-              className="text-sm font-semibold truncate"
-              style={{ color: brandText, fontFamily: headingStack }}
+              className="truncate"
+              style={{
+                color: brandText,
+                fontFamily: FONT_STACKS[labelDefaults.fontFamily as never],
+                fontSize: `${labelDefaults.fontSize}px`,
+                fontWeight: labelDefaults.fontWeight,
+              }}
             >
               {contract.business_name ? (
                 <Html value={contract.business_name} allowLists={false} />
@@ -78,8 +91,12 @@ export function ContractFallbackCard({
             </p>
             {contract.tagline ? (
               <p
-                className="text-xs opacity-80 truncate"
-                style={{ color: brandText }}
+                className="truncate"
+                style={{
+                  color: brandText,
+                  opacity: 0.8,
+                  fontSize: `${Math.round(labelDefaults.fontSize * 0.875)}px`,
+                }}
               >
                 <Html value={contract.tagline} allowLists={false} />
               </p>
@@ -87,25 +104,39 @@ export function ContractFallbackCard({
           </div>
         </div>
         <p
-          className="text-xs font-medium opacity-75 uppercase tracking-wide mb-1"
-          style={{ color: brandText }}
+          className="mb-1"
+          style={{
+            color: brandText,
+            fontFamily: FONT_STACKS[labelDefaults.fontFamily as never],
+            fontSize: `${labelDefaults.fontSize}px`,
+            fontWeight: labelDefaults.fontWeight,
+            letterSpacing: labelDefaults.letterSpacing,
+            textTransform: labelDefaults.textTransform,
+          }}
         >
           Contract {contract.contract_number}
         </p>
         <h1
-          className="text-2xl sm:text-3xl"
           style={{
             color: brandText,
-            fontFamily: headingStack,
+            fontFamily: FONT_STACKS[titleDefaults.fontFamily as never],
+            fontSize: `${titleDefaults.fontSize}px`,
             fontWeight: headingWeight,
+            lineHeight: titleDefaults.lineHeight,
           }}
         >
           {contract.title}
         </h1>
         {contract.expires_at && pageState === 'active' ? (
           <p
-            className="mt-3 text-sm opacity-90"
-            style={{ color: brandText }}
+            className="mt-3"
+            style={{
+              color: brandText,
+              opacity: 0.9,
+              fontSize: `${bodyDefaults.fontSize}px`,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              lineHeight: bodyDefaults.lineHeight,
+            }}
           >
             Please sign by <strong>{formatDate(contract.expires_at)}</strong>
           </p>
@@ -114,7 +145,8 @@ export function ContractFallbackCard({
 
       {/* Body */}
       <div
-        className={`${pad.cardSection} space-y-8 border-t border-border`}
+        className={`${pad.cardSection} space-y-8 border-t`}
+        style={{ borderTopColor: contract.border_color }}
       >
         <ContractBodySection
           contract={contract}
@@ -126,8 +158,14 @@ export function ContractFallbackCard({
         {contract.show_contact_on_documents &&
         (contract.phone || contract.website) ? (
           <div
-            className="border-t border-border pt-6 text-xs space-y-0.5"
-            style={{ color: mutedColor }}
+            className="pt-6 space-y-0.5"
+            style={{
+              borderTopColor: contract.border_color,
+              borderTopWidth: '1px',
+              borderTopStyle: 'solid',
+              color: mutedColor,
+              fontSize: `${roleDefaults(contract, 'finePrint').fontSize}px`,
+            }}
           >
             {contract.phone ? <p>{contract.phone}</p> : null}
             {contract.website ? <p>{contract.website}</p> : null}

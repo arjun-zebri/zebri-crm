@@ -9,7 +9,9 @@
  *
  * @module app/contract/[token]/_components/contract-body-section
  */
+import { FONT_STACKS } from '@/lib/branding/fonts';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 
 import { formatDate, type PublicContract } from './public-contract';
 
@@ -24,40 +26,73 @@ export function ContractBodySection({
   textColor,
   mutedColor,
 }: ContractBodySectionProps) {
+  const bodyDefaults = roleDefaults(contract, 'body');
+  const labelDefaults = roleDefaults(contract, 'sectionLabel');
+  const finePrintDefaults = roleDefaults(contract, 'finePrint');
+
   return (
     <div className="space-y-8">
       {contract.locked_content_html ? (
         <div
-          className="contract-content text-sm"
-          style={{ color: textColor }}
+          className="contract-content"
+          style={{
+            color: textColor,
+            fontSize: `${bodyDefaults.fontSize}px`,
+            fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+            lineHeight: bodyDefaults.lineHeight,
+          }}
           // The HTML is generated server-side from a TipTap document
           // and sanitised by the renderer — safe to inject.
           dangerouslySetInnerHTML={{ __html: contract.locked_content_html }}
         />
       ) : (
-        <p className="text-sm" style={{ color: mutedColor }}>
+        <p
+          style={{
+            color: mutedColor,
+            fontSize: `${bodyDefaults.fontSize}px`,
+            fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+            lineHeight: bodyDefaults.lineHeight,
+          }}
+        >
           No content.
         </p>
       )}
 
       {/* MC countersignature. Stays visible across all states; the
           MC effectively signs the moment the contract is sent. */}
-      <div className="border-t border-border pt-6">
-        <p className="text-xs font-medium mb-1" style={{ color: mutedColor }}>
+      <div className="border-t pt-6" style={{ borderTopColor: contract.border_color }}>
+        <p
+          className="mb-1"
+          style={{
+            color: mutedColor,
+            fontSize: `${labelDefaults.fontSize}px`,
+            fontFamily: FONT_STACKS[labelDefaults.fontFamily as never],
+            fontWeight: labelDefaults.fontWeight,
+          }}
+        >
           Signed by MC
         </p>
         <p
-          className="text-xl"
           style={{
             color: textColor,
+            fontSize: `${roleDefaults(contract, 'sectionHeading').fontSize}px`,
             fontFamily: 'Caveat, "Brush Script MT", cursive',
+            lineHeight: roleDefaults(contract, 'sectionHeading').lineHeight,
           }}
         >
           {contract.mc_signature_name ||
             htmlToPlainText(contract.business_name) ||
             'Your MC'}
         </p>
-        <p className="text-xs mt-1" style={{ color: mutedColor }}>
+        <p
+          className="mt-1"
+          style={{
+            color: mutedColor,
+            fontSize: `${finePrintDefaults.fontSize}px`,
+            fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+            lineHeight: finePrintDefaults.lineHeight,
+          }}
+        >
           {htmlToPlainText(contract.business_name) || ''} ·{' '}
           {formatDate(contract.email_sent_at)}
         </p>
