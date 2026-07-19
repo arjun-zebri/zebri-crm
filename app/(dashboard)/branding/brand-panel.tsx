@@ -385,21 +385,21 @@ function FontSection({
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Heading</p>
         <div className="space-y-2.5">
           <div>
-            <p className="text-[10px] text-gray-500 mb-1.5">Font</p>
+            <p className="text-[10px] text-gray-500 mb-1">Font</p>
             <FontPicker role="Heading" value={fontHeading} options={HEADING_FONTS as readonly HeadingFont[]} onChange={setFontHeading} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-gray-500">Size</span>
-                <span className="text-[9px] font-mono text-gray-700">{headingSize}px</span>
+                <span className="text-[9px] font-mono text-gray-700 tabular-nums">{headingSize}px</span>
               </div>
               <Slider value={headingSize} min={16} max={64} step={1} onChange={setHeadingSize} ariaLabel="Heading size" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-gray-500">Letter sp.</span>
-                <span className="text-[9px] font-mono text-gray-700">{headingLetterSpacing.toFixed(2)}</span>
+                <span className="text-[9px] font-mono text-gray-700 tabular-nums">{headingLetterSpacing.toFixed(2)}</span>
               </div>
               <Slider value={headingLetterSpacing} min={-0.05} max={0.1} step={0.01} onChange={setHeadingLetterSpacing} ariaLabel="Heading letter spacing" />
             </div>
@@ -413,21 +413,21 @@ function FontSection({
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Body</p>
         <div className="space-y-2.5">
           <div>
-            <p className="text-[10px] text-gray-500 mb-1.5">Font</p>
+            <p className="text-[10px] text-gray-500 mb-1">Font</p>
             <FontPicker role="Body" value={fontBody} options={BODY_FONTS as readonly BodyFont[]} onChange={setFontBody} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-gray-500">Size</span>
-                <span className="text-[9px] font-mono text-gray-700">{bodySize}px</span>
+                <span className="text-[9px] font-mono text-gray-700 tabular-nums">{bodySize}px</span>
               </div>
               <Slider value={bodySize} min={12} max={24} step={1} onChange={setBodySize} ariaLabel="Body size" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-gray-500">Line ht.</span>
-                <span className="text-[9px] font-mono text-gray-700">{bodyLineHeight.toFixed(2)}</span>
+                <span className="text-[9px] font-mono text-gray-700 tabular-nums">{bodyLineHeight.toFixed(2)}</span>
               </div>
               <Slider value={bodyLineHeight} min={1.2} max={2} step={0.05} onChange={setBodyLineHeight} ariaLabel="Body line height" />
             </div>
@@ -579,22 +579,22 @@ function GlobalStylesSection({
     <div className="space-y-4">
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Corner radius</span>
-          <span className="text-xs font-mono text-gray-700 tabular-nums">{cornerRadius}px</span>
+          <span className="text-[10px] text-gray-500">Corner radius</span>
+          <span className="text-[9px] font-mono text-gray-700 tabular-nums">{cornerRadius}px</span>
         </div>
         <Slider value={cornerRadius} min={0} max={24} step={1} onChange={setCornerRadius} ariaLabel="Corner radius" />
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Document padding</span>
-          <span className="text-xs font-mono text-gray-700 tabular-nums">{docPadding}px</span>
+          <span className="text-[10px] text-gray-500">Document padding</span>
+          <span className="text-[9px] font-mono text-gray-700 tabular-nums">{docPadding}px</span>
         </div>
         <Slider value={docPadding} min={0} max={48} step={1} onChange={setDocPadding} ariaLabel="Document padding" />
       </div>
 
       <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Link colour</p>
+        <p className="text-[10px] text-gray-500 mb-1.5">Link colour</p>
         <div className="flex items-center gap-2">
           <ColorPopover
             value={linkColor}
@@ -617,14 +617,14 @@ function GlobalStylesSection({
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Button style</p>
         <div className="space-y-2">
           <div>
-            <p className="text-[10px] text-gray-500 mb-1.5">Variant</p>
+            <p className="text-[10px] text-gray-500 mb-1">Variant</p>
             <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
               {(['fill', 'outline'] as const).map((v) => (
                 <button
                   key={v}
                   type="button"
                   onClick={() => setButtonVariant(v)}
-                  className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+                  className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
                     buttonVariant === v ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -634,14 +634,14 @@ function GlobalStylesSection({
             </div>
           </div>
           <div>
-            <p className="text-[10px] text-gray-500 mb-1.5">Size</p>
+            <p className="text-[10px] text-gray-500 mb-1">Size</p>
             <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
               {(['sm', 'md', 'lg'] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setButtonSize(s)}
-                  className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+                  className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
                     buttonSize === s ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -653,7 +653,7 @@ function GlobalStylesSection({
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] text-gray-500">Radius</span>
-              <span className="text-[9px] font-mono text-gray-700">{buttonRadius}px</span>
+              <span className="text-[9px] font-mono text-gray-700 tabular-nums">{buttonRadius}px</span>
             </div>
             <Slider value={buttonRadius} min={0} max={16} step={1} onChange={setButtonRadius} ariaLabel="Button radius" />
           </div>
@@ -662,8 +662,8 @@ function GlobalStylesSection({
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Section spacing</span>
-          <span className="text-xs font-mono text-gray-700 tabular-nums">{sectionSpacing}px</span>
+          <span className="text-[10px] text-gray-500">Section spacing</span>
+          <span className="text-[9px] font-mono text-gray-700 tabular-nums">{sectionSpacing}px</span>
         </div>
         <Slider value={sectionSpacing} min={8} max={64} step={2} onChange={setSectionSpacing} ariaLabel="Section spacing" />
       </div>
