@@ -54,8 +54,8 @@ export function PreviewPdf({ doc, surface = 'proposal' }: PreviewPdfProps) {
   }, [branding]);
 
   const html = useMemo(
-    () => buildPdfHtml(toPdfDoc(doc), brandingOpts),
-    [doc, brandingOpts],
+    () => buildPdfHtml(toPdfDoc(doc), brandingOpts, branding ?? undefined),
+    [doc, brandingOpts, branding],
   );
 
   return (

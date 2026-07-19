@@ -147,6 +147,7 @@ export default function PublicContractPage() {
       },
       // Pass the contract's branding directly (it extends PublicBranding).
       publicBrandingToPdfOpts(contract),
+      contract,
     );
   };
 

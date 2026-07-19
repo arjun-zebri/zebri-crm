@@ -439,6 +439,7 @@ export function ContractBuilderModal({
         mcSignatureName: contract.mc_signature_name,
       },
       pdfBranding,
+      branding,
     );
   };
 
