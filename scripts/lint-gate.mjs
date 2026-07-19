@@ -157,7 +157,9 @@ const ERROR_BUDGET = 64;
 // Lint cleanup (getTextColor imports + dead destructured variables): removing 8 unused
 // imports and destructured variables + fixing import-order violations across
 // public-blocks files → 299 → 279.
-const WARNING_BUDGET = 279;
+// Task 7 strip default block baked styles: removing four TextStyle constants and
+// their four uses in the invoice default tree → 279 → 278.
+const WARNING_BUDGET = 278;
 
 function runEslintJson() {
   try {

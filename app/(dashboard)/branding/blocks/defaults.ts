@@ -1,4 +1,4 @@
-import type { Block, BlockType, TextStyle } from './types'
+import type { Block, BlockType } from './types'
 
 let counter = 0
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`
@@ -54,38 +54,6 @@ export function blockTemplate(type: BlockType): Block {
   }
 }
 
-// ── Curated styles ────────────────────────────────────────────────────────────
-// Intentional overrides that give the starter template a designed feel.
-// Kept minimal so theme/font changes still flow through cleanly.
-
-const HERO_SUBTITLE: TextStyle = {
-  fontSize: 12,
-  color: '#9CA3AF',
-  letterSpacing: 0.08,
-  lineHeight: 1.4,
-}
-
-const FORMAL_TITLE: TextStyle = {
-  fontSize: 38,
-  fontWeight: 500,
-  letterSpacing: -0.015,
-  lineHeight: 1.1,
-}
-
-const EMPHASIZED_TOTAL: TextStyle = {
-  fontSize: 22,
-  fontWeight: 700,
-  letterSpacing: -0.01,
-}
-
-const SOFT_MESSAGE: TextStyle = {
-  fontSize: 13,
-  lineHeight: 1.7,
-  color: '#4B5563',
-}
-
-const SOFT_DIVIDER = { thickness: 1, color: '#E5E7EB' } as const
-
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
@@ -122,8 +90,6 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
         showRef: true,
         showExpires: true,
         showAbn: true,
-        titleStyle: FORMAL_TITLE,
-        subtitleStyle: HERO_SUBTITLE,
       },
       { id: newId('li'), type: 'lineItems', colSpread: true },
       {
@@ -131,14 +97,12 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
         type: 'totals',
         taxRate: 10,
         showSubtotal: true,
-        totalStyle: EMPHASIZED_TOTAL,
       },
       { id: newId('ps'), type: 'paymentSchedule', locked: true },
       {
         id: newId('tx'),
         type: 'text',
         text: 'Payment due within 14 days. Pay by card, or by bank transfer using the details below.',
-        textStyle: SOFT_MESSAGE,
       },
       { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' },
       { id: newId('ac'), type: 'action', primary: 'Pay with card', secondary: null },
