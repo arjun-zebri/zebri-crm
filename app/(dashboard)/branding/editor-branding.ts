@@ -38,7 +38,7 @@ export function publicBrandingFromEditorState(state: BrandPreviewState): PublicB
     font_body: state.fontBody,
     font_weight: state.fontWeight,
     font_body_weight: state.fontBodyWeight,
-    font_scale: state.fontScale,
+    font_scale: 1, // Dormant: retired from proposals, kept for DB schema compatibility
     density: state.density,
     corner_radius: state.cornerRadius,
     doc_padding: state.docPadding,

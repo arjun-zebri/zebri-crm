@@ -358,7 +358,6 @@ export default function BrandingPage() {
             fontBody: sanitizeBody(metadata?.font_body),
             fontWeight: sanitizeWeight(metadata?.font_weight, fallback.headingWeight),
             fontBodyWeight: sanitizeWeight(metadata?.font_body_weight, fallback.bodyWeight),
-            fontScale: typeof metadata?.font_scale === 'number' ? metadata.font_scale : fallback.scale,
             density: metadata?.density ?? fallback.density,
             cornerRadius: typeof metadata?.corner_radius === 'number' ? metadata.corner_radius : fallback.radius,
             docPadding: typeof metadata?.doc_padding === 'number' ? metadata.doc_padding : 12,

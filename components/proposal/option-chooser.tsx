@@ -54,6 +54,9 @@ export function ProposalOptionChooser({
   const radius = Math.min(branding.radius, 12);
   const sectionLabelDefaults = roleDefaults(publicBranding, 'sectionLabel');
   const bodyDefaults = roleDefaults(publicBranding, 'body');
+  const finePrintDefaults = roleDefaults(publicBranding, 'finePrint');
+  const sectionHeadingDefaults = roleDefaults(publicBranding, 'sectionHeading');
+  const totalDefaults = roleDefaults(publicBranding, 'total');
   return (
     <div role="radiogroup" aria-label="Choose your package">
       <EditableLabel
@@ -120,8 +123,14 @@ export function ProposalOptionChooser({
             <div key={option.id} className="relative">
               {popular ? (
                 <span
-                  className="absolute -top-2.5 left-5 z-10 rounded-full px-3 py-1 text-[0.625em] font-semibold uppercase tracking-[0.12em]"
-                  style={{ backgroundColor: accent, color: getTextColor(accent) }}
+                  className="absolute -top-2.5 left-5 z-10 rounded-full px-3 py-1 font-semibold uppercase tracking-[0.12em]"
+                  style={{
+                    // Chip affordance (visual UI element, not document text):
+                    // keeps uppercase + tracking for visual distinction.
+                    fontSize: `${sectionLabelDefaults.fontSize}px`,
+                    backgroundColor: accent,
+                    color: getTextColor(accent),
+                  }}
                 >
                   Most popular
                 </span>
@@ -159,8 +168,9 @@ export function ProposalOptionChooser({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-4">
                       <span
-                        className="min-w-0 text-[1.25em]"
+                        className="min-w-0"
                         style={{
+                          fontSize: `${sectionHeadingDefaults.fontSize}px`,
                           color: headingColor,
                           fontFamily: headingFontFamily,
                           fontWeight: headingWeight,
@@ -170,8 +180,9 @@ export function ProposalOptionChooser({
                       </span>
                       <span className="shrink-0 text-right">
                         <span
-                          className="block text-[1.5em] tabular-nums"
+                          className="block tabular-nums"
                           style={{
+                            fontSize: `${totalDefaults.fontSize}px`,
                             color: headingColor,
                             fontFamily: headingFontFamily,
                             fontWeight: headingWeight,
@@ -179,18 +190,18 @@ export function ProposalOptionChooser({
                         >
                           {formatCurrency(Number(option.subtotal))}
                         </span>
-                        <span className="block text-[0.75em]" style={{ color: mutedColor }}>
+                        <span className="block" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: mutedColor }}>
                           base price
                         </span>
                       </span>
                     </div>
                     {option.description ? (
-                      <p className="mt-1 text-[0.875em]" style={{ color: subheadingColor }}>
+                      <p className="mt-1" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: subheadingColor }}>
                         {option.description}
                       </p>
                     ) : null}
                     {summary ? (
-                      <p className="mt-3 text-[0.875em]" style={{ color: subheadingColor }}>
+                      <p className="mt-3" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: subheadingColor }}>
                         {summary}
                       </p>
                     ) : null}

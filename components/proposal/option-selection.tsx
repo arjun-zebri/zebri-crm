@@ -77,6 +77,9 @@ export function ProposalSelection({
     branding;
   const sectionLabelDefaults = roleDefaults(publicBranding, 'sectionLabel');
   const bodyDefaults = roleDefaults(publicBranding, 'body');
+  const finePrintDefaults = roleDefaults(publicBranding, 'finePrint');
+  const sectionHeadingDefaults = roleDefaults(publicBranding, 'sectionHeading');
+  const totalDefaults = roleDefaults(publicBranding, 'total');
   const base = baseItems(option);
   const addOns = addOnItems(option);
   const ticked = addOns.filter((item) => !!selection[item.id]);
@@ -121,13 +124,18 @@ export function ProposalSelection({
           }}
         />
         <h2
-          className="mt-2 text-[1.5em]"
-          style={{ color: headingColor, fontFamily: headingFontFamily, fontWeight: headingWeight }}
+          className="mt-2"
+          style={{
+            fontSize: `${sectionHeadingDefaults.fontSize}px`,
+            color: headingColor,
+            fontFamily: headingFontFamily,
+            fontWeight: headingWeight,
+          }}
         >
           {option.title}
         </h2>
         {option.description ? (
-          <p className="mt-1 text-[0.875em]" style={{ color: subheadingColor }}>
+          <p className="mt-1" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: subheadingColor }}>
             {option.description}
           </p>
         ) : null}
@@ -138,11 +146,11 @@ export function ProposalSelection({
               className="flex items-baseline justify-between gap-4 py-3"
               style={{ borderBottom: `1px solid ${branding.borderColor}` }}
             >
-              <span className="flex min-w-0 items-start gap-2.5 text-[0.875em]" style={{ color: textColor }}>
+              <span className="flex min-w-0 items-start gap-2.5" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: textColor }}>
                 <Check size={14} strokeWidth={2} className="mt-[3px] shrink-0" style={{ color: brand }} />
                 <span className="min-w-0">{item.description}</span>
               </span>
-              <span className="shrink-0 text-[0.875em] tabular-nums" style={{ color: mutedColor }}>
+              <span className="shrink-0 tabular-nums" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: mutedColor }}>
                 {formatCurrency(Number(item.amount))}
               </span>
             </li>
@@ -225,10 +233,10 @@ export function ProposalSelection({
                     className="h-4 w-4 shrink-0 cursor-pointer rounded disabled:cursor-not-allowed"
                     style={{ accentColor: brand, borderColor: branding.borderColor }}
                   />
-                  <span className="min-w-0 flex-1 text-[0.875em]" style={{ color: textColor }}>
+                  <span className="min-w-0 flex-1" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: textColor }}>
                     {item.description}
                   </span>
-                  <span className="shrink-0 text-[0.875em] tabular-nums" style={{ color: mutedColor }}>
+                  <span className="shrink-0 tabular-nums" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: mutedColor }}>
                     +{formatCurrency(Number(item.amount))}
                   </span>
                 </label>
@@ -243,15 +251,15 @@ export function ProposalSelection({
         className="p-5"
         style={{ borderRadius: radius, backgroundColor: branding.secondaryColor }}
       >
-        <div className="flex items-baseline justify-between gap-4 text-[0.875em]" style={{ color: panelText }}>
+        <div className="flex items-baseline justify-between gap-4" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: panelText }}>
           <span className="min-w-0 truncate">{option.title}</span>
           <span className="shrink-0 tabular-nums">{formatCurrency(baseTotal)}</span>
         </div>
         {ticked.map((item) => (
           <div
             key={item.id}
-            className="mt-1.5 flex items-baseline justify-between gap-4 text-[0.875em]"
-            style={{ color: panelMuted }}
+            className="mt-1.5 flex items-baseline justify-between gap-4"
+            style={{ fontSize: `${bodyDefaults.fontSize}px`, color: panelMuted }}
           >
             <span className="min-w-0 truncate">{item.description}</span>
             <span className="shrink-0 tabular-nums">+{formatCurrency(Number(item.amount))}</span>
@@ -261,21 +269,26 @@ export function ProposalSelection({
           className="mt-4 flex items-baseline justify-between gap-4 pt-3"
           style={{ borderTop: `1px solid color-mix(in srgb, ${panelText} 18%, transparent)` }}
         >
-          <span className="text-[0.875em] font-semibold" style={{ color: panelText }}>
+          <span className="font-semibold" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: panelText }}>
             Total{' '}
             <span className="font-normal" style={{ color: panelMuted }}>
               {option.gst_inclusive ? 'GST incl.' : '+ GST'}
             </span>
           </span>
           <span
-            className="text-[1.875em] tabular-nums"
-            style={{ color: panelText, fontFamily: headingFontFamily, fontWeight: headingWeight }}
+            className="tabular-nums"
+            style={{
+              fontSize: `${totalDefaults.fontSize}px`,
+              color: panelText,
+              fontFamily: headingFontFamily,
+              fontWeight: headingWeight,
+            }}
           >
             {formatCurrency(total)}
           </span>
         </div>
         {option.deposit_percent || !option.gst_inclusive ? (
-          <p className="mt-2 text-[0.75em]" style={{ color: panelMuted }}>
+          <p className="mt-2" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: panelMuted }}>
             {option.deposit_percent
               ? `${formatCurrency((total * Number(option.deposit_percent)) / 100)} deposit reserves your date`
               : ''}

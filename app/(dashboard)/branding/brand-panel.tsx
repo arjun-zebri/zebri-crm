@@ -67,8 +67,6 @@ interface BrandPanelProps {
   setFontWeight: (v: FontWeight) => void
   fontBodyWeight: FontWeight
   setFontBodyWeight: (v: FontWeight) => void
-  fontScale: number
-  setFontScale: (v: number) => void
   headingSize: number
   setHeadingSize: (v: number) => void
   bodySize: number
@@ -390,7 +388,6 @@ function FontSection({
   fontBody, setFontBody,
   fontWeight, setFontWeight,
   fontBodyWeight, setFontBodyWeight,
-  fontScale, setFontScale,
   headingSize, setHeadingSize,
   bodySize, setBodySize,
   headingCase, setHeadingCase,
@@ -456,14 +453,6 @@ function FontSection({
         </div>
       </div>
 
-      <div className="pt-1 border-t border-gray-100">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Overall scale</span>
-          <span className="text-xs font-mono text-gray-700 tabular-nums">{Math.round(fontScale * 100)}%</span>
-        </div>
-        <Slider value={fontScale} min={0.85} max={1.2} step={0.01} onChange={setFontScale} ariaLabel="Font scale" />
-        <p className="text-[10px] text-gray-400 mt-1">Multiplies all text sizes on every document.</p>
-      </div>
     </div>
   )
 }

@@ -226,8 +226,8 @@ function PagePreview({
             state="active"
             chosenId={chosen?.id ?? null}
             selection={selection}
-            renderAccept={({ style, view }) => (
-              <StaticAcceptCta expiresAt={expiresAt ?? null} branding={view} style={style} />
+            renderAccept={({ style, view, publicBranding }) => (
+              <StaticAcceptCta expiresAt={expiresAt ?? null} branding={view} publicBranding={publicBranding} style={style} />
             )}
           />
         </div>

@@ -143,8 +143,6 @@ export interface ProposalViewBranding {
   headingFontFamily: string | undefined;
   bodyFontFamily: string | undefined;
   headingWeight: number;
-  /** Multiplies every text size on the page (0.85–1.2). */
-  fontScale: number;
   /** Extra horizontal inset (px) on top of the surface's base padding. */
   docPadding: number;
   logoUrl: string | null;

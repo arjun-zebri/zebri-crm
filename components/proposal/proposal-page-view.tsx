@@ -16,11 +16,9 @@
  * section wording ({@link ProposalViewBranding.labels}). Text sizes,
  * case and tracking come from the user's global brand settings via
  * `roleDefaults()` applied to roles like `sectionLabel`, `body`, and
- * `finePrint`; the root sets `font-size: {fontScale}rem`, so the
- * Font-scale control scales every label. `docPadding` adds horizontal
- * inset. The section ORDER and structure are fixed by design (a block
- * tree can't express the option chooser) — only the wording + tokens
- * are editable.
+ * `finePrint`. `docPadding` adds horizontal inset. The section ORDER
+ * and structure are fixed by design (a block tree can't express the
+ * option chooser) — only the wording + tokens are editable.
  *
  * @module components/proposal/proposal-page-view
  */
@@ -67,7 +65,6 @@ export function viewBranding(b: PublicBranding): ProposalViewBranding {
     headingFontFamily: FONT_STACKS[b.font_heading],
     bodyFontFamily: FONT_STACKS[b.font_body],
     headingWeight: b.font_weight ?? 600,
-    fontScale: typeof b.font_scale === 'number' ? b.font_scale : 1,
     docPadding: typeof b.doc_padding === 'number' ? b.doc_padding : 0,
     logoUrl: b.logo_url,
     headerImageUrl: b.header_image_url,
@@ -138,12 +135,11 @@ export function ProposalPageView({
   // Role defaults for global type scale integration.
   const docTitleDefaults = roleDefaults(publicBranding, 'docTitle');
   const sectionLabelDefaults = roleDefaults(publicBranding, 'sectionLabel');
+  const bodyDefaults = roleDefaults(publicBranding, 'body');
   const finePrintDefaults = roleDefaults(publicBranding, 'finePrint');
 
-  // Font-scale: root font-size drives every `em` text size below.
   // docPadding: extra horizontal inset on top of the surface's base.
   const rootStyle: CSSProperties = {
-    fontSize: `${branding.fontScale}rem`,
     paddingLeft: branding.docPadding || undefined,
     paddingRight: branding.docPadding || undefined,
   };
@@ -271,8 +267,12 @@ export function ProposalPageView({
             }}
           />
           <p
-            className="mt-2 text-[1.125em] italic leading-relaxed whitespace-pre-wrap"
-            style={{ color: textColor, fontFamily: headingFontFamily }}
+            className="mt-2 italic leading-relaxed whitespace-pre-wrap"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: textColor,
+              fontFamily: headingFontFamily,
+            }}
           >
             {notes}
           </p>
@@ -307,7 +307,7 @@ export function ProposalPageView({
           onEditLabel={onEditLabel}
         />
       ) : options.length > 1 ? (
-        <p className="text-[0.875em]" style={{ color: mutedColor }}>
+        <p style={{ fontSize: `${bodyDefaults.fontSize}px`, color: mutedColor }}>
           Select a package above to see what&apos;s included.
         </p>
       ) : null}
@@ -344,17 +344,21 @@ export function ProposalPageView({
 export function StaticAcceptCta({
   expiresAt,
   branding,
+  publicBranding,
   onEditLabel,
   style,
 }: {
   expiresAt: string | null;
   branding: ProposalViewBranding;
+  publicBranding: PublicBranding;
   onEditLabel?: ProposalLabelEdit | undefined;
   style?:
     | { color?: string; radius?: number; primaryLabel?: string; secondaryLabel?: string | null }
     | undefined;
 }) {
   const labels = resolveProposalLabels(branding.labels);
+  const bodyDefaults = roleDefaults(publicBranding, 'body');
+  const finePrintDefaults = roleDefaults(publicBranding, 'finePrint');
   const buttonColor = style?.color ?? branding.brand;
   const buttonRadius = Math.min(style?.radius ?? branding.radius, 14);
   const acceptLabel = style?.primaryLabel || labels.accept.text;
@@ -366,14 +370,15 @@ export function StaticAcceptCta({
         value={acceptLabel}
         onCommit={onEditLabel && ((v) => onEditLabel('accept', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.accept.text}
-        className="w-full py-3.5 text-center text-[0.9375em] font-medium"
+        className="w-full py-3.5 text-center font-medium"
         style={{
+          fontSize: `${bodyDefaults.fontSize}px`,
           backgroundColor: buttonColor,
           color: getTextColor(buttonColor),
           borderRadius: buttonRadius,
           ...resolveTextStyle(labels.accept.style, {
             fontFamily: 'work_sans',
-            fontSize: 15,
+            fontSize: bodyDefaults.fontSize,
             fontWeight: 500,
             color: getTextColor(buttonColor),
             align: 'center',
@@ -383,7 +388,7 @@ export function StaticAcceptCta({
         }}
       />
       {expiresAt ? (
-        <p className="mt-2.5 text-center text-[0.75em]" style={{ color: branding.mutedColor }}>
+        <p className="mt-2.5 text-center" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: branding.mutedColor }}>
           This proposal is held for you until {formatDate(expiresAt)}
         </p>
       ) : null}
@@ -392,12 +397,13 @@ export function StaticAcceptCta({
           value={declineLabel}
           onCommit={onEditLabel && ((v) => onEditLabel('decline', v))}
           placeholder={PROPOSAL_LABEL_DEFAULTS.decline.text}
-          className="text-[0.75em] underline underline-offset-2"
+          className="underline underline-offset-2"
           style={{
+            fontSize: `${finePrintDefaults.fontSize}px`,
             color: branding.mutedColor,
             ...resolveTextStyle(labels.decline.style, {
               fontFamily: 'work_sans',
-              fontSize: 12,
+              fontSize: finePrintDefaults.fontSize,
               fontWeight: 400,
               color: branding.mutedColor,
               align: 'center',

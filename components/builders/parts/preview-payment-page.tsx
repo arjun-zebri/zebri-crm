@@ -102,7 +102,6 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
         className="mx-auto"
         style={{
           maxWidth: 640,
-          fontSize: `${(branding.font_scale ?? 1) * 16}px`,
           fontFamily: headingFontFamily(branding),
         }}
       >

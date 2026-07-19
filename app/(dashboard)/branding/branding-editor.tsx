@@ -62,7 +62,6 @@ interface BrandingEditorProps {
     fontBody: BodyFont
     fontWeight: FontWeight
     fontBodyWeight: FontWeight
-    fontScale: number
     density: Density
     cornerRadius: number
     docPadding: number
@@ -117,7 +116,6 @@ export interface EditorState {
   fontBody: BodyFont
   fontWeight: FontWeight
   fontBodyWeight: FontWeight
-  fontScale: number
   density: Density
   cornerRadius: number
   docPadding: number
@@ -170,7 +168,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       fontBody: initialData.fontBody,
       fontWeight: initialData.fontWeight,
       fontBodyWeight: initialData.fontBodyWeight,
-      fontScale: initialData.fontScale,
       density: initialData.density,
       cornerRadius: initialData.cornerRadius,
       docPadding: initialData.docPadding,
@@ -285,7 +282,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         font_body: value.fontBody,
         font_weight: value.fontWeight,
         font_body_weight: value.fontBodyWeight,
-        font_scale: value.fontScale,
         density: value.density,
         corner_radius: value.cornerRadius,
         doc_padding: value.docPadding,
@@ -348,7 +344,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         fontBody: prev.fontBody,
         fontWeight: prev.fontWeight,
         fontBodyWeight: prev.fontBodyWeight,
-        fontScale: prev.fontScale,
         density: prev.density,
         cornerRadius: prev.cornerRadius,
         docPadding: prev.docPadding,
@@ -371,7 +366,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         current.fontBody === next.fontBody &&
         current.fontWeight === next.fontWeight &&
         current.fontBodyWeight === next.fontBodyWeight &&
-        current.fontScale === next.fontScale &&
         current.density === next.density &&
         current.cornerRadius === next.cornerRadius &&
         current.docPadding === next.docPadding &&
@@ -400,7 +394,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     state.fontBody,
     state.fontWeight,
     state.fontBodyWeight,
-    state.fontScale,
     state.density,
     state.cornerRadius,
     state.docPadding,
@@ -432,7 +425,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         fontBodyWeight: p.bodyWeight,
         density: p.density,
         cornerRadius: p.radius,
-        fontScale: p.scale,
       }),
       { commit: true }
     )
@@ -725,7 +717,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         fontBody: kit.fontBody,
         fontWeight: kit.fontWeight,
         fontBodyWeight: kit.fontBodyWeight,
-        fontScale: kit.fontScale,
         density: kit.density,
         cornerRadius: kit.cornerRadius,
         docPadding: kit.docPadding ?? prev.docPadding,
@@ -770,7 +761,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       fontBody: preset.bodyFont,
       fontWeight: preset.headingWeight,
       fontBodyWeight: preset.bodyWeight,
-      fontScale: preset.scale,
       density: preset.density,
       cornerRadius: preset.radius,
       docPadding: 12,
@@ -797,7 +787,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         fontBody: kit.fontBody,
         fontWeight: kit.fontWeight,
         fontBodyWeight: kit.fontBodyWeight,
-        fontScale: kit.fontScale,
         density: kit.density,
         cornerRadius: kit.cornerRadius,
         docPadding: 12,
@@ -850,7 +839,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           fontBody: next.fontBody,
           fontWeight: next.fontWeight,
           fontBodyWeight: next.fontBodyWeight,
-          fontScale: next.fontScale,
           density: next.density,
           cornerRadius: next.cornerRadius,
           docPadding: next.docPadding ?? prev.docPadding,
@@ -899,7 +887,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     fontBody: state.fontBody,
     fontWeight: state.fontWeight,
     fontBodyWeight: state.fontBodyWeight,
-    fontScale: state.fontScale,
     density: state.density,
     cornerRadius: state.cornerRadius,
     docPadding: state.docPadding,
@@ -988,8 +975,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setFontWeight={(v) => setEditor({ fontWeight: v })}
           fontBodyWeight={state.fontBodyWeight}
           setFontBodyWeight={(v) => setEditor({ fontBodyWeight: v })}
-          fontScale={state.fontScale}
-          setFontScale={(v) => setEditor({ fontScale: v })}
           headingSize={state.headingSize}
           setHeadingSize={(v) => setEditor({ headingSize: v })}
           bodySize={state.bodySize}
@@ -1169,7 +1154,6 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
   fontBody: new Set(['tagline', 'lineItems', 'text', 'action', 'footer']),
   fontWeight: new Set(['businessName', 'title', 'totals']),
   fontBodyWeight: new Set(['tagline', 'lineItems', 'text', 'action', 'footer']),
-  fontScale: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text', 'action', 'footer']),
   density: new Set(['businessName', 'title', 'tagline', 'lineItems', 'totals', 'text', 'action', 'divider', 'footer']),
   cornerRadius: new Set(['action', 'headerBanner', 'businessName']),
   headerImageUrl: new Set(['headerBanner', 'businessName']),

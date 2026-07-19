@@ -32,7 +32,6 @@ export interface BrandPreviewState {
   fontBody: BodyFont
   fontWeight: FontWeight
   fontBodyWeight: FontWeight
-  fontScale: number
   density: Density
   cornerRadius: number
   docPadding: number
@@ -94,7 +93,6 @@ export interface BrandKit {
   fontBody: BodyFont
   fontWeight: FontWeight
   fontBodyWeight: FontWeight
-  fontScale: number
   density: Density
   cornerRadius: number
   docPadding?: number

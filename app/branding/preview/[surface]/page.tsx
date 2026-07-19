@@ -230,8 +230,8 @@ function ProposalPreview({
             state="active"
             chosenId={chosen.id}
             selection={selection}
-            renderAccept={({ view, style }) => (
-              <StaticAcceptCta expiresAt={sample.expiresAt} branding={view} style={style} />
+            renderAccept={({ view, style, publicBranding }) => (
+              <StaticAcceptCta expiresAt={sample.expiresAt} branding={view} publicBranding={publicBranding} style={style} />
             )}
           />
         </div>

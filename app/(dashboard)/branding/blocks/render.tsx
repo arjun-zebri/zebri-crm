@@ -1100,7 +1100,6 @@ function proposalBranding(state: BrandPreviewState): ProposalViewBranding {
     headingFontFamily: FONT_STACKS[state.fontHeading],
     bodyFontFamily: FONT_STACKS[state.fontBody],
     headingWeight: state.fontWeight,
-    fontScale: state.fontScale ?? 1,
     docPadding: 0, // the block-renderer already applies doc padding
     logoUrl: null, // logo lives in its own block on this surface
     headerImageUrl: null, // header banner is its own block

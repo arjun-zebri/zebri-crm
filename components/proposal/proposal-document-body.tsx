@@ -74,7 +74,7 @@ export interface ProposalDocumentBodyProps {
    * public page's interactive accept, or the preview's static CTA).
    */
   renderAccept?:
-    | ((ctx: { style: ProposalActionStyle; view: ProposalViewBranding }) => ReactNode)
+    | ((ctx: { style: ProposalActionStyle; view: ProposalViewBranding; publicBranding: PublicBranding }) => ReactNode)
     | undefined
 }
 
@@ -112,7 +112,7 @@ export function ProposalDocumentBody({
   // The accept slot only shows on an active proposal; the accepted /
   // expired / declined views pin to the recorded state with no CTA.
   const accept =
-    state === 'active' ? renderAccept?.({ style: actionStyle, view }) ?? null : null
+    state === 'active' ? renderAccept?.({ style: actionStyle, view, publicBranding: branding }) ?? null : null
 
   const core = (
     <ProposalPageView
