@@ -143,8 +143,8 @@ export default function PublicInvoicePage() {
   // Falls back to brand color and corner radius when not customised.
   const actionStyle = invoice
     ? findActionStyle(repairedBlocks, {
-        brandColor: invoice.brand_color || '#A7F3D0',
-        cornerRadius: invoice.corner_radius ?? 16,
+        brandColor: invoice.brand_color,
+        cornerRadius: invoice.corner_radius,
       })
     : null;
 
