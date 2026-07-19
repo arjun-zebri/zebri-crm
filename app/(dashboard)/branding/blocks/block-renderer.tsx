@@ -198,6 +198,28 @@ export function BlockRenderer({
           onDragCancel={() => setActiveId(null)}
         >
           <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+            {/* Insert above the first block. Every block carries an "add below"
+                affordance, which leaves the very top of the document as the one
+                place nothing can be inserted. This is its counterpart, and it
+                reuses the same null target the empty-state button uses. */}
+            <div className="group relative h-0">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  requestAddAfter(null)
+                }}
+                aria-label="Add block above"
+                title="Add block above"
+                className="absolute left-1/2 -translate-x-1/2 -top-3 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer"
+              >
+                <Plus size={12} strokeWidth={2} />
+              </button>
+              {/* Hover target: the button itself is 24px in a zero-height row,
+                  so this widens the area that reveals it to the full width of
+                  the document. */}
+              <div aria-hidden className="absolute inset-x-0 -top-4 h-8" />
+            </div>
             {blocks.map((block) => {
               if (
                 block.type === 'couplePortal' ||
