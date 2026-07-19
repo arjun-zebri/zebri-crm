@@ -43,7 +43,10 @@ export function RenderTitle({
   return (
     <div className={p.blockY}>
       <div className={p.docX}>
-        <h1 className="leading-tight tracking-tight" style={titleCss}>
+        {/* No leading or tracking classes: resolveTextStyle always emits both
+            inline from the global settings, so utilities here would be dead
+            CSS that reads as if it were in charge. */}
+        <h1 style={titleCss}>
           {slots?.title ?? doc.title}
         </h1>
         {slots?.subtitle ? (
