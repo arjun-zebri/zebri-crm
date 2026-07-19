@@ -95,6 +95,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
         id: newId('tt'),
         type: 'title',
         title: 'Invoice',
+        subtitle: '',
         showRef: true,
         showExpires: true,
         showAbn: true,

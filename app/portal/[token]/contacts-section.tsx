@@ -583,7 +583,17 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
 
 // ── Person row ────────────────────────────────────────────────────────────────
 
-function PersonRow({ person, onEdit }: { person: PortalPerson; onEdit: () => void }) {
+function PersonRow({
+  person,
+  onEdit,
+  branding,
+}: {
+  person: PortalPerson
+  onEdit: () => void
+  branding: PublicBranding
+}) {
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+
   return (
     <div
       className="flex items-center gap-3 border border-border rounded-card px-4 py-3 bg-surface hover:border-border-strong hover:bg-surface-muted transition cursor-pointer"
@@ -654,7 +664,7 @@ function PeopleGroup({ label, addLabel, people, onAdd, onEdit, branding }: Peopl
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {people.map((p) => (
-              <PersonRow key={p.id} person={p} onEdit={() => onEdit(p)} />
+              <PersonRow key={p.id} person={p} onEdit={() => onEdit(p)} branding={branding} />
             ))}
           </div>
           <button
