@@ -9,7 +9,27 @@ exports[`buildPdfHtml with branding > renders contract without branding (snapsho
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&display=swap" rel="stylesheet" />
   
   <style>
-    
+    :root {
+    --pdf-doc-title: 32px;
+    --pdf-section-heading: 20px;
+    --pdf-total: 18px;
+    --pdf-subtitle: 15px;
+    --pdf-body: 15px;
+    --pdf-fine-print: 12px;
+    --pdf-section-label: 11px;
+    --pdf-doc-title-color: #111827;
+    --pdf-section-heading-color: #111827;
+    --pdf-total-color: #111827;
+    --pdf-subtitle-color: #111827;
+    --pdf-section-label-color: #111827;
+    --pdf-body-color: #6B7280;
+    --pdf-fine-print-color: #6B7280;
+    --pdf-border: #E5E7EB;
+    --pdf-audit-bg: #F0FDF4;
+    --pdf-audit-border: #BBEDD5;
+    --pdf-audit-text: #16A34A;
+    --pdf-bank-bg: #FAFAFA;
+  }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px; color: #111111; max-width: 720px; margin: 0 auto; line-height: 1.6; }
     h1, h2, h3 { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #111111; }
@@ -63,7 +83,27 @@ exports[`buildPdfHtml with branding > renders invoice without branding (snapshot
   <title>Invoice INV-001</title>
   
   <style>
-    
+    :root {
+    --pdf-doc-title: 32px;
+    --pdf-section-heading: 20px;
+    --pdf-total: 18px;
+    --pdf-subtitle: 15px;
+    --pdf-body: 15px;
+    --pdf-fine-print: 12px;
+    --pdf-section-label: 11px;
+    --pdf-doc-title-color: #111827;
+    --pdf-section-heading-color: #111827;
+    --pdf-total-color: #111827;
+    --pdf-subtitle-color: #111827;
+    --pdf-section-label-color: #111827;
+    --pdf-body-color: #6B7280;
+    --pdf-fine-print-color: #6B7280;
+    --pdf-border: #E5E7EB;
+    --pdf-audit-bg: #F0FDF4;
+    --pdf-audit-border: #BBEDD5;
+    --pdf-audit-text: #16A34A;
+    --pdf-bank-bg: #FAFAFA;
+  }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px; color: #111111; max-width: 700px; margin: 0 auto; }
     h1, h2, h3, .heading { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }

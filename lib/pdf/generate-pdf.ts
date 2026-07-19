@@ -1,5 +1,5 @@
 import { FONT_STACKS, googleFontsHref } from '@/lib/branding/fonts'
-import type { PublicBranding } from '@/lib/branding/public-branding'
+import { buildPublicBranding, type PublicBranding } from '@/lib/branding/public-branding'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { pdfTypeCss } from '@/lib/pdf/pdf-styles'
 
@@ -105,7 +105,11 @@ function generateContractHtml(
       </div>`
     : ''
 
-  const typeCss = brandingObj ? pdfTypeCss(brandingObj) : ''
+  // The template references var(--pdf-*) throughout, so the :root block has
+  // to be emitted even when no branding was passed. Skipping it would leave
+  // every custom property undefined and each size would silently fall back
+  // to the browser default, which is the exact drift this module prevents.
+  const typeCss = pdfTypeCss(brandingObj ?? buildPublicBranding({}))
 
   return `<!DOCTYPE html>
 <html>
@@ -347,7 +351,11 @@ export function buildPdfHtml(
       </div>`
     : ''
 
-  const typeCss = brandingObj ? pdfTypeCss(brandingObj) : ''
+  // The template references var(--pdf-*) throughout, so the :root block has
+  // to be emitted even when no branding was passed. Skipping it would leave
+  // every custom property undefined and each size would silently fall back
+  // to the browser default, which is the exact drift this module prevents.
+  const typeCss = pdfTypeCss(brandingObj ?? buildPublicBranding({}))
 
   const html = `<!DOCTYPE html>
 <html>
