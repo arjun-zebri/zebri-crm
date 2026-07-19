@@ -5,8 +5,10 @@ import { Plus, Mail, Phone, Mic, Play, Trash2, Loader2, Pencil, ChevronDown } fr
 import { useState, useRef, useCallback, useEffect } from 'react'
 
 import { Modal } from '@/components/ui/modal'
+import { getRgb, getTextColor } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS, CATEGORIES } from '@/types/contact'
@@ -24,6 +26,29 @@ const FAMILY_ROLES = [
   'Grandparent', 'Sibling', 'Other',
 ]
 const OTHER_ROLES = ['Officiant', 'Celebrant', 'Photographer', 'Videographer', 'Performer', 'Speaker', 'Guest', 'Other']
+
+/**
+ * Soft wash behind the mic button while recording. Composited from the fixed
+ * error colour via getRgb because a hex inside rgba() is invalid CSS and the
+ * declaration would be dropped silently.
+ */
+const RECORDING_TINT = (() => {
+  const rgb = getRgb(STATUS_COLORS.error)
+  return rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.1)` : 'transparent'
+})()
+
+/**
+ * Playback affordance styling. Success is a status, not a brand colour, so the
+ * fill and border are composited from the fixed success value.
+ */
+const PLAY_BUTTON_STYLE = (() => {
+  const rgb = getRgb(STATUS_COLORS.success)
+  return {
+    color: STATUS_COLORS.success,
+    backgroundColor: rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.1)` : 'transparent',
+    borderColor: rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3)` : STATUS_COLORS.success,
+  }
+})()
 
 /**
  * Generate branding-aware input field styles. Borders and focus states inherit
@@ -188,13 +213,16 @@ function AudioRecorder({
             stroke="currentColor"
             strokeDasharray={RING_CIRCUMFERENCE}
             strokeDashoffset={RING_CIRCUMFERENCE * (1 - progress)}
-            className={recording ? 'text-danger' : 'text-transparent'}
+            style={{ color: recording ? STATUS_COLORS.error : 'transparent' }}
           />
         </svg>
         <span
           className={`absolute inset-[5px] rounded-full flex items-center justify-center transition ${
-            recording ? 'bg-danger/10 text-danger' : 'bg-surface-muted text-text-muted'
+            recording ? '' : 'bg-surface-muted text-text-muted'
           }`}
+          // Recording is a status, not a brand state, so it uses the fixed
+          // error colour with a soft tint composited from the same value.
+          style={recording ? { color: STATUS_COLORS.error, backgroundColor: RECORDING_TINT } : undefined}
         >
           {uploading
             ? <Loader2 size={18} strokeWidth={1.5} className="animate-spin" />
@@ -217,7 +245,8 @@ function AudioRecorder({
             <button
               type="button"
               onClick={() => (document.getElementById(`audio-modal-${personId}`) as HTMLAudioElement)?.play()}
-              className="flex items-center gap-1 text-caption text-success border border-success/30 bg-success/10 rounded-control px-2.5 py-1 hover:bg-success/20 transition cursor-pointer"
+              className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1 transition cursor-pointer hover:opacity-80"
+              style={PLAY_BUTTON_STYLE}
             >
               <Play size={12} strokeWidth={2} />
               Play
@@ -518,7 +547,13 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
             <button
               type="button"
               onClick={onClose}
-              className="text-sm text-gray-500 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+              className="border rounded-xl px-3 py-1.5 transition cursor-pointer hover:opacity-70"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                color: branding.text_color,
+                borderColor: branding.border_color,
+              }}
             >
               Cancel
             </button>
@@ -526,7 +561,13 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
               type="button"
               onClick={() => onSave({ full_name: fullName, role: role || null, audio_url: audioUrl, notes: notes || null, email: email || null, phone: phone || null })}
               disabled={saving || !fullName.trim()}
-              className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50"
+              className="rounded-xl px-3 py-1.5 transition cursor-pointer hover:opacity-90 disabled:opacity-50"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                backgroundColor: branding.brand_color,
+                color: getTextColor(branding.brand_color),
+              }}
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
@@ -560,7 +601,8 @@ function PersonRow({ person, onEdit }: { person: PortalPerson; onEdit: () => voi
           <audio src={person.audio_url} className="hidden" id={`audio-row-${person.id}`} />
           <button
             onClick={() => (document.getElementById(`audio-row-${person.id}`) as HTMLAudioElement)?.play()}
-            className="flex items-center gap-1 text-caption text-success border border-success/30 bg-success/10 rounded-control px-2.5 py-1.5 hover:bg-success/20 transition cursor-pointer"
+            className="flex items-center gap-1 text-caption border rounded-control px-2.5 py-1.5 transition cursor-pointer hover:opacity-80"
+            style={PLAY_BUTTON_STYLE}
           >
             <Play size={12} strokeWidth={2} />
             Play

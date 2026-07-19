@@ -6,6 +6,7 @@ import { FONT_STACKS, googleFontsHref, type BodyFont } from '@/lib/branding/font
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
 
 import {
@@ -49,7 +50,6 @@ export default async function VendorPage({
   const pageBg = branding.surface_color
   const textColor = branding.text_color
   const mutedColor = branding.text_color
-  const headingColor = branding.heading_color
   const bodyFont = (branding.font_body || 'inter') as BodyFont
   const bodyStack = FONT_STACKS[bodyFont]
 
@@ -88,8 +88,23 @@ export default async function VendorPage({
         style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
       >
         <Image src="/zebri-logo.svg" alt="Zebri" width={80} height={29} />
-        <p className="text-sm" style={{ color: mutedColor }}>No event scheduled yet.</p>
-        <p className="text-xs text-center max-w-xs" style={{ color: mutedColor }}>
+        <p
+          style={{
+            color: mutedColor,
+            fontSize: `${roleDefaults(branding, 'body').fontSize}px`,
+            fontFamily: FONT_STACKS[roleDefaults(branding, 'body').fontFamily as never],
+          }}
+        >
+          No event scheduled yet.
+        </p>
+        <p
+          className="text-center max-w-xs"
+          style={{
+            color: mutedColor,
+            fontSize: `${roleDefaults(branding, 'finePrint').fontSize}px`,
+            fontFamily: FONT_STACKS[roleDefaults(branding, 'finePrint').fontFamily as never],
+          }}
+        >
           The run sheet will appear here once the MC adds an event for this couple.
         </p>
       </div>

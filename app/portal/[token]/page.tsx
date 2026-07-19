@@ -15,6 +15,7 @@ import {
 import { buildPublicBranding } from '@/lib/branding/public-branding'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
 
 
@@ -367,7 +368,15 @@ export default async function PortalPage({
           >
             {portal.couple_name}
           </h1>
-          <p className="mt-3 text-sm" style={{ color: mutedColor }}>
+          <p
+            className="mt-3"
+            style={{
+              color: mutedColor,
+              fontSize: `${roleDefaults(branding, 'body').fontSize}px`,
+              fontFamily: FONT_STACKS[roleDefaults(branding, 'body').fontFamily as never],
+              lineHeight: roleDefaults(branding, 'body').lineHeight,
+            }}
+          >
             Fill in your details below. Everything saves automatically. You can come back anytime.
           </p>
         </div>

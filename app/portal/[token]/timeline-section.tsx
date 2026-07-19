@@ -20,8 +20,10 @@ import { Plus, ChevronDown, GripVertical } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 
 import { Modal } from "@/components/ui/modal";
+import { getRgb } from "@/lib/branding/contrast";
 import { FONT_STACKS } from "@/lib/branding/fonts";
 import type { PublicBranding } from "@/lib/branding/public-surface";
+import { STATUS_COLORS } from "@/lib/branding/status-colors";
 import { roleDefaults } from "@/lib/branding/type-defaults";
 
 import type { PortalEvent, PortalTimelineItem } from "./page";
@@ -42,6 +44,36 @@ function formatTimeDisplay(t: string): string {
 }
 
 const ALL_TIMES: string[] = [];
+
+/**
+ * Delete affordance colours. Destructive is a status, not a brand state, so
+ * these come from the fixed error value and are composited via getRgb because
+ * a hex inside rgba() is invalid CSS.
+ */
+const DELETE_TINT = (() => {
+  const rgb = getRgb(STATUS_COLORS.error);
+  return {
+    border: rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3)` : STATUS_COLORS.error,
+  };
+})();
+
+/** Unapproved timeline card: warning outline plus a soft wash of the same value. */
+const PENDING_CARD = (() => {
+  const rgb = getRgb(STATUS_COLORS.warning);
+  return {
+    borderColor: STATUS_COLORS.warning,
+    backgroundColor: rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.1)` : "transparent",
+  };
+})();
+
+/** Pending-review pill, from the fixed warning value. */
+const PENDING_PILL = (() => {
+  const rgb = getRgb(STATUS_COLORS.warning);
+  return {
+    color: STATUS_COLORS.warning,
+    backgroundColor: rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.2)` : "transparent",
+  };
+})();
 for (let h = 0; h < 24; h++) {
   for (let m = 0; m < 60; m += 15) {
     ALL_TIMES.push(
@@ -248,11 +280,12 @@ function ItemModal({
                   onDelete();
                 }}
                 disabled={loading}
-                className={`text-sm px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 ${
+                className="text-sm px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 border hover:opacity-90"
+                style={
                   deleteConfirm
-                    ? "bg-danger text-text-inverse hover:opacity-90"
-                    : "text-danger border border-danger/30 hover:bg-danger/5"
-                }`}
+                    ? { backgroundColor: STATUS_COLORS.error, color: "#FFFFFF", borderColor: STATUS_COLORS.error }
+                    : { color: STATUS_COLORS.error, borderColor: DELETE_TINT.border }
+                }
               >
                 {deleteConfirm ? "Confirm delete" : "Delete"}
               </button>
@@ -394,16 +427,16 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
       <div
         onClick={() => onEdit(item)}
         className={`flex-1 rounded-card border bg-surface hover:shadow-sm transition-all cursor-pointer mb-3 ${
-          approved
-            ? "border-border hover:border-border-strong"
-            : "border-warning hover:border-warning bg-warning/10"
+          approved ? "border-border hover:border-border-strong" : ""
         }`}
+        // An unapproved item is a status, so its outline and wash come from the
+        // fixed warning value rather than the brand palette.
+        style={approved ? undefined : PENDING_CARD}
       >
         <div className="flex h-full">
           <div
-            className={`w-[3px] rounded-full my-3 ml-3 shrink-0 ${
-              approved ? "bg-brand-fg" : "bg-warning"
-            }`}
+            className={`w-[3px] rounded-full my-3 ml-3 shrink-0 ${approved ? "bg-brand-fg" : ""}`}
+            style={approved ? undefined : { backgroundColor: STATUS_COLORS.warning }}
           />
           <div className="flex-1 pl-3 pr-4 py-3 flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
@@ -422,7 +455,10 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
               )}
             </div>
             {item.pending_review && (
-              <span className="shrink-0 text-caption font-medium px-2 py-1 rounded-pill bg-warning/20 text-warning whitespace-nowrap">
+              <span
+                className="shrink-0 text-caption font-medium px-2 py-1 rounded-pill whitespace-nowrap"
+                style={PENDING_PILL}
+              >
                 Pending
               </span>
             )}

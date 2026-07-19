@@ -161,7 +161,9 @@ const ERROR_BUDGET = 64;
 // their four uses in the invoice default tree → 279 → 278.
 // Task 14 branding conversion: portal vendor-timeline, contacts-section, timeline-section,
 // portal-shell, page.tsx converted to use branding; 278 → 271.
-const WARNING_BUDGET = 271;
+// Portal status tokens (text-danger/bg-success/bg-warning) moved to
+// STATUS_COLORS constants, dropping one more warning (271 -> 270).
+const WARNING_BUDGET = 270;
 
 function runEslintJson() {
   try {
