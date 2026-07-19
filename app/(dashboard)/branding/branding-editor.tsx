@@ -944,7 +944,13 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         }
       />
 
-      <SurfaceTabs surface={surface} setSurface={setSurface} state={previewState} enabledSurfaces={state.enabledSurfaces} />
+      <SurfaceTabs
+        surface={surface}
+        setSurface={setSurface}
+        state={previewState}
+        enabledSurfaces={state.enabledSurfaces}
+        onToggleSurface={onToggleSurface}
+      />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <BrandPanel
@@ -1027,6 +1033,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
           <CanvasScopeBar
             surface={surface}
+            onResetLayout={resetSurfaceToDefault}
             onClearBlocks={
               visibleBlocks.length > 0
                 ? () => {

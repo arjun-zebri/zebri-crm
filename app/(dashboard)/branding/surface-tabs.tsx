@@ -1,15 +1,20 @@
 'use client'
 
-import { Clock, FileSignature, FileText, MessageSquare, Receipt, Users2 } from 'lucide-react'
+import * as Popover from '@radix-ui/react-popover'
+import { Clock, FileSignature, FileText, MessageSquare, Receipt, Settings2, Users2 } from 'lucide-react'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { SurfaceTab, BrandPreviewState } from '@/types/branding-preview'
+
+import { DocumentsSection } from './documents-section'
 
 interface SurfaceTabsProps {
   surface: SurfaceTab
   setSurface: (s: SurfaceTab) => void
   state: BrandPreviewState
   enabledSurfaces: SurfaceTab[]
+  /** Turns a document on or off. Reached through the settings popover. */
+  onToggleSurface: (surface: SurfaceTab, enabled: boolean) => void
 }
 
 const TABS: { id: SurfaceTab; label: string; icon: typeof FileText; subtitle: string }[] = [
@@ -21,10 +26,16 @@ const TABS: { id: SurfaceTab; label: string; icon: typeof FileText; subtitle: st
   { id: 'questionnaire', label: 'Questionnaire', subtitle: 'Inquiry form', icon: MessageSquare },
 ]
 
-export function SurfaceTabs({ surface, setSurface, state, enabledSurfaces }: SurfaceTabsProps) {
+export function SurfaceTabs({
+  surface,
+  setSurface,
+  state,
+  enabledSurfaces,
+  onToggleSurface,
+}: SurfaceTabsProps) {
   return (
-    <div className="flex-shrink-0 border-b border-gray-100 bg-white">
-      <div className="flex items-center gap-2 px-3 py-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    <div className="flex-shrink-0 border-b border-gray-100 bg-white flex items-center">
+      <div className="flex items-center gap-2 px-3 py-2 overflow-x-auto flex-1 min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {TABS.filter((tab) => enabledSurfaces.includes(tab.id)).map((tab) => {
           const active = surface === tab.id
           return (
@@ -50,6 +61,31 @@ export function SurfaceTabs({ surface, setSurface, state, enabledSurfaces }: Sur
           )
         })}
       </div>
+
+      {/* Which documents exist belongs to the tab strip, not to the brand rail:
+          the rail is scoped to styling that applies to every document. */}
+      <Popover.Root>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            title="Choose which documents you use"
+            aria-label="Choose which documents you use"
+            className="shrink-0 mr-3 ml-1 inline-flex items-center justify-center h-8 w-8 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 cursor-pointer transition"
+          >
+            <Settings2 size={14} strokeWidth={1.75} />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            align="end"
+            sideOffset={6}
+            className="z-[60] w-[290px] rounded-xl border border-gray-200 bg-white p-3 shadow-xl animate-modal-in"
+          >
+            <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Your documents</p>
+            <DocumentsSection enabledSurfaces={enabledSurfaces} onToggleSurface={onToggleSurface} />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import * as Popover from '@radix-ui/react-popover'
 import {
   ChevronDown, Check, RotateCcw, Paintbrush, Type as TypeIcon,
-  Layout, Globe, LayoutTemplate,
+  Layout, Globe,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -33,8 +33,6 @@ import type { SurfaceTab } from '@/types/branding-preview'
 
 import { BusinessSection } from './business-section'
 import { Slider } from './components/slider'
-import { DocumentsSection } from './documents-section'
-import { ResetLayoutButton } from './templates-section'
 
 
 interface BrandPanelProps {
@@ -122,13 +120,11 @@ interface BrandPanelProps {
 
 }
 
-type SectionId = 'business' | 'documents' | 'templates' | 'colors' | 'fonts' | 'globalStyles'
+type SectionId = 'business' | 'colors' | 'fonts' | 'globalStyles'
 
 export function BrandPanel(props: BrandPanelProps) {
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
     business: true,
-    documents: false,
-    templates: false,
     colors: false,
     fonts: false,
     globalStyles: false,
@@ -188,25 +184,10 @@ export function BrandPanel(props: BrandPanelProps) {
           />
         </Accordion>
 
-        <Accordion
-          icon={<LayoutTemplate size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Documents"
-          subtitle="Manage which surfaces are active"
-          open={open.documents}
-          onToggle={() => toggle('documents')}
-        >
-          <DocumentsSection enabledSurfaces={props.enabledSurfaces} onToggleSurface={props.onToggleSurface} />
-        </Accordion>
-
-        <Accordion
-          icon={<RotateCcw size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Reset layout"
-          subtitle="Restore default document structure"
-          open={open.templates}
-          onToggle={() => toggle('templates')}
-        >
-          <ResetLayoutButton onReset={props.resetSurfaceToDefault} />
-        </Accordion>
+        {/* Choosing which documents you use now sits behind the settings button
+            on the tab strip, and Reset layout sits in the canvas scope bar.
+            Both are per-document, whereas this rail is the brand kit that
+            applies to every document. */}
 
         <Accordion
           icon={<Paintbrush size={13} strokeWidth={1.75} className="text-gray-500" />}
