@@ -5,8 +5,8 @@
  * there's one truth.
  *
  * The "Paid" check next to a stage uses STATUS_COLORS.success;
- * brand colours flow through the PayWithCardButton via brandColor
- * and radius props.
+ * brand colours flow through the PayWithCardButton via the
+ * branding prop.
  *
  * @module app/invoice/[token]/_components/invoice-payment-schedule
  */
@@ -30,9 +30,6 @@ export interface InvoicePaymentScheduleProps {
   showFinalButton: boolean;
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding;
-  /** Brand colour for the Pay-with-card button. */
-  buttonColor: string;
-  buttonRadius: number;
 }
 
 export function InvoicePaymentSchedule({
@@ -42,8 +39,6 @@ export function InvoicePaymentSchedule({
   showDepositButton,
   showFinalButton,
   branding,
-  buttonColor,
-  buttonRadius,
 }: InvoicePaymentScheduleProps) {
   const bodyDefaults = roleDefaults(branding, 'body');
   const finePrintDefaults = roleDefaults(branding, 'finePrint');
@@ -122,8 +117,7 @@ export function InvoicePaymentSchedule({
             <PayWithCardButton
               invoiceId={invoice.id}
               shareToken={invoice.share_token}
-              brandColor={buttonColor}
-              radius={buttonRadius}
+              branding={branding}
               paymentType="deposit"
               label="Pay deposit"
             />
@@ -196,8 +190,7 @@ export function InvoicePaymentSchedule({
             <PayWithCardButton
               invoiceId={invoice.id}
               shareToken={invoice.share_token}
-              brandColor={buttonColor}
-              radius={buttonRadius}
+              branding={branding}
               paymentType="final"
               label="Pay balance"
             />

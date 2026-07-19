@@ -36,7 +36,6 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { findActionStyle } from '@/lib/branding/public-renderer';
 import {
   bodyFontFamily,
   DENSITY_PAD,
@@ -112,14 +111,6 @@ export default function PublicInvoicePage() {
   const radius = invoice?.corner_radius ?? 16;
   const bodyStack = invoice ? bodyFontFamily(invoice) : undefined;
   const pad = DENSITY_PAD[invoice?.density ?? 'cozy'];
-  // Action-style: the brand-customised colour + radius for the Pay
-  // buttons. Read from the saved action block (if any) so the MC's
-  // customisation flows through even though we hide the action
-  // block itself in the renderer.
-  const actionStyle = findActionStyle(invoice?.branding_blocks, {
-    brandColor: invoice?.brand_color || '#000000',
-    cornerRadius: invoice?.corner_radius ?? 16,
-  });
 
   // Repair block tree when present, then split at the `paymentSchedule` marker.
   // Anything before it renders the invoice body (header + items + totals),
@@ -202,8 +193,6 @@ export default function PublicInvoicePage() {
               showFullButton={showFullButton}
               showDepositButton={showDepositButton}
               showFinalButton={showFinalButton}
-              buttonColor={actionStyle.color}
-              buttonRadius={actionStyle.radius}
               branding={invoice}
               radius={radius}
             />
@@ -219,8 +208,6 @@ export default function PublicInvoicePage() {
               showFullButton={showFullButton}
               showDepositButton={showDepositButton}
               showFinalButton={showFinalButton}
-              buttonColor={actionStyle.color}
-              buttonRadius={actionStyle.radius}
               branding={invoice}
               radius={radius}
             />

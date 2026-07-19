@@ -39,8 +39,6 @@ export interface InvoiceBrandedCardProps {
   showFullButton: boolean;
   showDepositButton: boolean;
   showFinalButton: boolean;
-  buttonColor: string;
-  buttonRadius: number;
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding;
   radius: number;
@@ -56,8 +54,6 @@ export function InvoiceBrandedCard({
   showFullButton,
   showDepositButton,
   showFinalButton,
-  buttonColor,
-  buttonRadius,
   branding,
   radius,
 }: InvoiceBrandedCardProps) {
@@ -115,8 +111,6 @@ export function InvoiceBrandedCard({
             showDepositButton={showDepositButton}
             showFinalButton={showFinalButton}
             branding={branding}
-            buttonColor={buttonColor}
-            buttonRadius={buttonRadius}
           />
         </div>
       ) : null}
@@ -126,8 +120,7 @@ export function InvoiceBrandedCard({
           <PayWithCardButton
             invoiceId={invoice.id}
             shareToken={invoice.share_token}
-            brandColor={buttonColor}
-            radius={buttonRadius}
+            branding={branding}
           />
         </div>
       ) : null}

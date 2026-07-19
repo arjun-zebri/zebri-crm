@@ -37,8 +37,6 @@ export interface InvoiceFallbackCardProps {
   showFullButton: boolean;
   showDepositButton: boolean;
   showFinalButton: boolean;
-  buttonColor: string;
-  buttonRadius: number;
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding;
   radius: number;
@@ -55,8 +53,6 @@ export function InvoiceFallbackCard({
   showFullButton,
   showDepositButton,
   showFinalButton,
-  buttonColor,
-  buttonRadius,
   branding,
   radius,
 }: InvoiceFallbackCardProps) {
@@ -399,8 +395,6 @@ export function InvoiceFallbackCard({
             finalAmount={finalAmount}
             showDepositButton={showDepositButton}
             showFinalButton={showFinalButton}
-            buttonColor={buttonColor}
-            buttonRadius={buttonRadius}
           />
         </div>
       ) : null}
@@ -593,8 +587,7 @@ export function InvoiceFallbackCard({
           <PayWithCardButton
             invoiceId={invoice.id}
             shareToken={invoice.share_token}
-            brandColor={buttonColor}
-            radius={buttonRadius}
+            branding={branding}
           />
         </div>
       ) : null}
