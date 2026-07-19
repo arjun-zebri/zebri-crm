@@ -3,11 +3,12 @@
 import type { ReactNode } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
-import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { PaymentDetailsBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
+import { roleDefaults } from '../type-defaults'
 
 import { Html } from './html'
 import { pad } from './shared'
@@ -35,33 +36,9 @@ export function RenderPaymentDetails({
   chrome?: ReactNode
 }) {
   const p = pad(branding)
-  const headingDefaults: TextStyleDefaults = {
-    fontFamily: branding.font_heading,
-    fontSize: 16,
-    fontWeight: branding.font_weight,
-    color: branding.heading_color || '#111827',
-    align: 'left',
-    lineHeight: 1.3,
-    letterSpacing: 0,
-  }
-  const labelDefaults: TextStyleDefaults = {
-    fontFamily: branding.font_body,
-    fontSize: 12,
-    fontWeight: 500,
-    color: branding.muted_color || '#6B7280',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
-  const valueDefaults: TextStyleDefaults = {
-    fontFamily: branding.font_body,
-    fontSize: 14,
-    fontWeight: 500,
-    color: branding.text_color || '#111827',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
+  const headingDefaults = roleDefaults(branding, 'sectionHeading')
+  const labelDefaults = roleDefaults(branding, 'sectionLabel')
+  const valueDefaults = roleDefaults(branding, 'body')
 
   const headingCss = resolveTextStyle(block.headingStyle, headingDefaults)
   const labelCss = resolveTextStyle(block.labelStyle, labelDefaults)

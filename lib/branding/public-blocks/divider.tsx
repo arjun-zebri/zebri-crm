@@ -20,7 +20,7 @@ export function RenderDivider({
 }) {
   const p = pad(branding)
   const thickness = block.thickness ?? 1
-  const color = block.color ?? '#E5E7EB'
+  const color = block.color ?? branding.border_color
   const lineStyle = block.lineStyle ?? 'solid'
   const widthPct = block.widthPct ?? 100
   return (

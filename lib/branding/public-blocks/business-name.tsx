@@ -3,12 +3,13 @@
 import type { ReactNode } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
-import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { BusinessNameBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import { FONT_STACKS } from '../fonts'
 import type { PublicBranding } from '../public-surface'
+import { roleDefaults } from '../type-defaults'
 
 import { Html } from './html'
 import { pad } from './shared'
@@ -52,15 +53,7 @@ export function RenderBusinessName({
   const logoCap = Math.round(logoHeight * 3.5)
   const align = block.nameStyle?.align ?? 'left'
 
-  const nameDefaults: TextStyleDefaults = {
-    fontFamily: branding.font_heading,
-    fontSize: 16,
-    fontWeight: 600,
-    color: branding.heading_color || '#111827',
-    align: 'left',
-    lineHeight: 1.3,
-    letterSpacing: 0,
-  }
+  const nameDefaults = roleDefaults(branding, 'sectionHeading')
 
   // Logo node: editor slot renders if provided, else static fallback.
   const logoNode = slots?.logo !== undefined ? (

@@ -3,11 +3,12 @@
 import type { CSSProperties } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
-import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { TotalsBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
+import { roleDefaults } from '../type-defaults'
 
 import { fmt, pad, type PublicDocData } from './shared'
 
@@ -52,24 +53,8 @@ export function RenderTotals({
   const tax = taxableAmount * (doc.taxRate / 100)
   const total = taxableAmount + tax
 
-  const rowDefaults: TextStyleDefaults = {
-    fontFamily: branding.font_body,
-    fontSize: 13,
-    fontWeight: 400,
-    color: branding.muted_color || '#6B7280',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-  const totalDefaults: TextStyleDefaults = {
-    fontFamily: branding.font_heading,
-    fontSize: 18,
-    fontWeight: branding.font_weight,
-    color: branding.heading_color || '#111827',
-    align: 'left',
-    lineHeight: 1.2,
-    letterSpacing: 0,
-  }
+  const rowDefaults = roleDefaults(branding, 'body')
+  const totalDefaults = roleDefaults(branding, 'total')
   const subtotalCss = resolveTextStyle(block.subtotalStyle, rowDefaults)
   const taxCss = resolveTextStyle(block.taxStyle, rowDefaults)
   const totalCss = resolveTextStyle(block.totalStyle, totalDefaults)
@@ -77,7 +62,7 @@ export function RenderTotals({
 
   return (
     <div className={`${p.docX} ${p.blockY} relative`}>
-      <div className="space-y-1.5 pt-3 border-t border-gray-200">
+      <div className="space-y-1.5 pt-3 border-t" style={{ borderTopColor: branding.border_color }} data-testid="totals-rule">
         {block.showSubtotal && (
           <div className="pt-2">
             <Row label="Subtotal" value={fmt(subtotal)} css={subtotalCss} spread={spread} />
@@ -94,7 +79,7 @@ export function RenderTotals({
         {doc.taxRate > 0 && (block.showTax ?? true) && (
           <Row label={`GST (${doc.taxRate}%)`} value={fmt(tax)} css={taxCss} spread={spread} />
         )}
-        <div className="pt-3 mt-2 border-t border-gray-200">
+        <div className="pt-3 mt-2 border-t" style={{ borderTopColor: branding.border_color }}>
           <Row label="Total" value={fmt(total)} css={totalCss} spread={spread} />
         </div>
       </div>

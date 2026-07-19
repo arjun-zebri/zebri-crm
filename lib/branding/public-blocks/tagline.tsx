@@ -3,11 +3,12 @@
 import { ReactNode } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
-import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { TaglineBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
+import { roleDefaults } from '../type-defaults'
 
 import { Html } from './html'
 import { pad } from './shared'
@@ -30,15 +31,7 @@ export function RenderTagline({
 }) {
   if (!branding.tagline && !slots?.text) return null
   const p = pad(branding)
-  const defaults: TextStyleDefaults = {
-    fontFamily: branding.font_body,
-    fontSize: 14,
-    fontWeight: branding.font_body_weight,
-    color: branding.muted_color || '#6B7280',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
+  const defaults = roleDefaults(branding, 'subtitle')
   return (
     <div className={`${p.docX} ${p.blockY}`}>
       <p style={resolveTextStyle(block.textStyle, defaults)}>

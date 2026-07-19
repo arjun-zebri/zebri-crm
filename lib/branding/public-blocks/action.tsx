@@ -129,7 +129,7 @@ export function RenderAction({
             // Mirror the editor: the secondary button keeps its secondaryBg fill
             // regardless of variant, and uses secondaryBg as the border on outline.
             background: secondaryBg,
-            borderColor: variant === 'outline' ? secondaryBg : '#E5E7EB',
+            borderColor: variant === 'outline' ? secondaryBg : branding.border_color,
             paddingTop: sizeConfig.padY,
             paddingBottom: sizeConfig.padY,
             paddingLeft: '1.5rem',
