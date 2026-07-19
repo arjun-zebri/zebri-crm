@@ -70,8 +70,11 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
     // MC adds chrome (banner, logo, footer, custom text) around it and
     // retypes its section labels inline. Lean scaffold so nobody
     // fights pre-canned structure, matching the contract surface.
+    //
+    // No header banner by default: it is the heaviest element on the page
+    // and most proposals read calmer without one. It stays in the block
+    // palette for anyone who wants it back.
     return [
-      { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       { id: newId('pb'), type: 'proposalBody', locked: true },
       { id: newId('ac'), type: 'action', primary: 'Accept & reserve our date', secondary: 'Decline' },
