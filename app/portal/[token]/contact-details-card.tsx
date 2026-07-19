@@ -54,7 +54,7 @@ export function ContactDetailsCard({ label, value, onSave, branding }: ContactDe
           fontWeight: labelDefaults.fontWeight,
           lineHeight: labelDefaults.lineHeight,
           letterSpacing: `${labelDefaults.letterSpacing}px`,
-          textTransform: labelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+          textTransform: labelDefaults.textTransform,
           marginBottom: '0.25rem',
         }}
       >

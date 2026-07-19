@@ -102,7 +102,7 @@ export function InvoiceBrandedCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: sectionLabelDefaults.textTransform,
             }}
           >
             Payment schedule

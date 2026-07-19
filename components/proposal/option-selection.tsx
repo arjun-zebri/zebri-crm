@@ -112,7 +112,7 @@ export function ProposalSelection({
             fontWeight: sectionLabelDefaults.fontWeight,
             lineHeight: sectionLabelDefaults.lineHeight,
             letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-            textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+            textTransform: sectionLabelDefaults.textTransform,
             ...resolveTextStyle(headingLabel?.style, {
               fontFamily: 'work_sans',
               fontSize: sectionLabelDefaults.fontSize,
@@ -176,7 +176,7 @@ export function ProposalSelection({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: sectionLabelDefaults.textTransform,
               ...resolveTextStyle(labels.addOns.style, {
                 fontFamily: 'work_sans',
                 fontSize: sectionLabelDefaults.fontSize,
@@ -203,7 +203,7 @@ export function ProposalSelection({
                 fontWeight: bodyDefaults.fontWeight,
                 lineHeight: bodyDefaults.lineHeight,
                 letterSpacing: `${bodyDefaults.letterSpacing}px`,
-                textTransform: bodyDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+                textTransform: bodyDefaults.textTransform,
                 ...resolveTextStyle(labels.addOnsHint.style, {
                   fontFamily: 'work_sans',
                   fontSize: bodyDefaults.fontSize,

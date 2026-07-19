@@ -172,7 +172,7 @@ export function ProposalPageView({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: sectionLabelDefaults.textTransform,
               ...resolveTextStyle(labels.eyebrow.style, {
                 fontFamily: 'work_sans',
                 fontSize: sectionLabelDefaults.fontSize,
@@ -209,7 +209,7 @@ export function ProposalPageView({
             fontWeight: docTitleDefaults.fontWeight,
             lineHeight: docTitleDefaults.lineHeight,
             letterSpacing: `${docTitleDefaults.letterSpacing}px`,
-            textTransform: docTitleDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+            textTransform: docTitleDefaults.textTransform,
           }}
         >
           {coupleName}
@@ -256,7 +256,7 @@ export function ProposalPageView({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: sectionLabelDefaults.textTransform,
               ...resolveTextStyle(labels.note.style, {
                 fontFamily: 'work_sans',
                 fontSize: sectionLabelDefaults.fontSize,

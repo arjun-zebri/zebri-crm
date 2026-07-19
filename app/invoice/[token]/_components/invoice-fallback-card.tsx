@@ -106,7 +106,7 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: sectionLabelDefaults.textTransform,
             }}
           >
             <Html value={invoice.business_name} allowLists={false} />
@@ -135,7 +135,7 @@ export function InvoiceFallbackCard({
             fontWeight: docTitleDefaults.fontWeight,
             lineHeight: docTitleDefaults.lineHeight,
             letterSpacing: `${docTitleDefaults.letterSpacing}px`,
-            textTransform: docTitleDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+            textTransform: docTitleDefaults.textTransform,
           }}
         >
           {invoice.title}
@@ -206,7 +206,7 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: sectionLabelDefaults.textTransform,
             }}
           >
             Description
@@ -219,7 +219,7 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: sectionLabelDefaults.textTransform,
             }}
           >
             Amount
@@ -386,7 +386,7 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: sectionLabelDefaults.textTransform,
             }}
           >
             Payment schedule
@@ -418,7 +418,7 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: sectionLabelDefaults.textTransform,
             }}
           >
             Payment instructions

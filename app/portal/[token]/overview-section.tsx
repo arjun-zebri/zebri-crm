@@ -124,7 +124,7 @@ export function OverviewSection({ token, primary, secondary, events, branding }:
               fontWeight: labelDefaults.fontWeight,
               lineHeight: labelDefaults.lineHeight,
               letterSpacing: `${labelDefaults.letterSpacing}px`,
-              textTransform: labelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: labelDefaults.textTransform,
             }}
           >
             Your details
@@ -151,7 +151,7 @@ export function OverviewSection({ token, primary, secondary, events, branding }:
               fontWeight: labelDefaults.fontWeight,
               lineHeight: labelDefaults.lineHeight,
               letterSpacing: `${labelDefaults.letterSpacing}px`,
-              textTransform: labelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+              textTransform: labelDefaults.textTransform,
             }}
             className="group-hover:opacity-75 transition"
           >

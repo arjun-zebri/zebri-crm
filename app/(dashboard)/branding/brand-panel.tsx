@@ -324,7 +324,7 @@ function ContrastWarnings({
           {c.label} <span className="font-mono">{c.ratio.toFixed(2)}:1</span>
         </p>
       ))}
-      <p className="text-[10px] text-amber-700/80 pt-0.5">Aim for at least 4.5 for body text.</p>
+      <p className="text-[11px] text-amber-700/80 pt-0.5">Aim for at least 4.5 for body text.</p>
     </div>
   )
 }
@@ -360,7 +360,7 @@ function ColorRow({
       />
       <div className="flex-1 min-w-0">
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">{label}</p>
-        <p className="text-[10px] text-gray-500">{description}</p>
+        <p className="text-[11px] text-gray-500">{description}</p>
         <p className="text-xs font-mono text-gray-700 truncate">{value}</p>
       </div>
     </div>
@@ -387,21 +387,21 @@ function FontSection({
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Heading</p>
         <div className="space-y-2.5">
           <div>
-            <p className="text-[10px] text-gray-500 mb-1">Font</p>
+            <p className="text-[11px] text-gray-500 mb-1">Font</p>
             <FontPicker role="Heading" value={fontHeading} options={HEADING_FONTS as readonly HeadingFont[]} onChange={setFontHeading} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-gray-500">Size</span>
-                <span className="text-[9px] font-mono text-gray-700 tabular-nums">{headingSize}px</span>
+                <span className="text-[11px] text-gray-500">Size</span>
+                <span className="text-[11px] font-mono text-gray-700 tabular-nums">{headingSize}px</span>
               </div>
               <Slider value={headingSize} min={16} max={64} step={1} onChange={setHeadingSize} ariaLabel="Heading size" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-gray-500">Letter sp.</span>
-                <span className="text-[9px] font-mono text-gray-700 tabular-nums">{headingLetterSpacing.toFixed(2)}</span>
+                <span className="text-[11px] text-gray-500">Letter sp.</span>
+                <span className="text-[11px] font-mono text-gray-700 tabular-nums">{headingLetterSpacing.toFixed(2)}</span>
               </div>
               <Slider value={headingLetterSpacing} min={-0.05} max={0.1} step={0.01} onChange={setHeadingLetterSpacing} ariaLabel="Heading letter spacing" />
             </div>
@@ -415,21 +415,21 @@ function FontSection({
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Body</p>
         <div className="space-y-2.5">
           <div>
-            <p className="text-[10px] text-gray-500 mb-1">Font</p>
+            <p className="text-[11px] text-gray-500 mb-1">Font</p>
             <FontPicker role="Body" value={fontBody} options={BODY_FONTS as readonly BodyFont[]} onChange={setFontBody} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-gray-500">Size</span>
-                <span className="text-[9px] font-mono text-gray-700 tabular-nums">{bodySize}px</span>
+                <span className="text-[11px] text-gray-500">Size</span>
+                <span className="text-[11px] font-mono text-gray-700 tabular-nums">{bodySize}px</span>
               </div>
               <Slider value={bodySize} min={12} max={24} step={1} onChange={setBodySize} ariaLabel="Body size" />
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-gray-500">Line ht.</span>
-                <span className="text-[9px] font-mono text-gray-700 tabular-nums">{bodyLineHeight.toFixed(2)}</span>
+                <span className="text-[11px] text-gray-500">Line ht.</span>
+                <span className="text-[11px] font-mono text-gray-700 tabular-nums">{bodyLineHeight.toFixed(2)}</span>
               </div>
               <Slider value={bodyLineHeight} min={1.2} max={2} step={0.05} onChange={setBodyLineHeight} ariaLabel="Body line height" />
             </div>
@@ -446,7 +446,7 @@ function FontSection({
 function WeightPills({ label, value, onChange, compact }: { label: string; value: FontWeight; onChange: (v: FontWeight) => void; compact?: boolean }) {
   return (
     <div>
-      <p className={`mb-1 ${compact ? 'text-[10px] text-gray-500' : 'text-[11px] text-gray-400'}`}>{label}</p>
+      <p className={`mb-1 ${compact ? 'text-[11px] text-gray-500' : 'text-[11px] text-gray-400'}`}>{label}</p>
       <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
         {FONT_WEIGHTS.map((w) => (
           <button
@@ -477,7 +477,7 @@ function CasePills({ label, value, onChange }: { label: string; value: 'none' | 
   ]
   return (
     <div>
-      <p className="text-[10px] text-gray-500 mb-1">{label}</p>
+      <p className="text-[11px] text-gray-500 mb-1">{label}</p>
       <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
         {cases.map((c) => (
           <button
@@ -580,16 +580,16 @@ function GlobalStylesSection({
     <div className="space-y-4">
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] text-gray-500">Corner radius</span>
-          <span className="text-[9px] font-mono text-gray-700 tabular-nums">{cornerRadius}px</span>
+          <span className="text-[11px] text-gray-500">Corner radius</span>
+          <span className="text-[11px] font-mono text-gray-700 tabular-nums">{cornerRadius}px</span>
         </div>
         <Slider value={cornerRadius} min={0} max={24} step={1} onChange={setCornerRadius} ariaLabel="Corner radius" />
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] text-gray-500">Document padding</span>
-          <span className="text-[9px] font-mono text-gray-700 tabular-nums">{docPadding}px</span>
+          <span className="text-[11px] text-gray-500">Document padding</span>
+          <span className="text-[11px] font-mono text-gray-700 tabular-nums">{docPadding}px</span>
         </div>
         <Slider value={docPadding} min={0} max={48} step={1} onChange={setDocPadding} ariaLabel="Document padding" />
       </div>
@@ -598,7 +598,7 @@ function GlobalStylesSection({
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Button style</p>
         <div className="space-y-2">
           <div>
-            <p className="text-[10px] text-gray-500 mb-1">Variant</p>
+            <p className="text-[11px] text-gray-500 mb-1">Variant</p>
             <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
               {(['fill', 'outline'] as const).map((v) => (
                 <button
@@ -615,7 +615,7 @@ function GlobalStylesSection({
             </div>
           </div>
           <div>
-            <p className="text-[10px] text-gray-500 mb-1">Size</p>
+            <p className="text-[11px] text-gray-500 mb-1">Size</p>
             <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
               {(['sm', 'md', 'lg'] as const).map((s) => (
                 <button
@@ -633,8 +633,8 @@ function GlobalStylesSection({
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-gray-500">Radius</span>
-              <span className="text-[9px] font-mono text-gray-700 tabular-nums">{buttonRadius}px</span>
+              <span className="text-[11px] text-gray-500">Radius</span>
+              <span className="text-[11px] font-mono text-gray-700 tabular-nums">{buttonRadius}px</span>
             </div>
             <Slider value={buttonRadius} min={0} max={16} step={1} onChange={setButtonRadius} ariaLabel="Button radius" />
           </div>

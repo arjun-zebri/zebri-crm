@@ -73,7 +73,7 @@ export function ProposalOptionChooser({
           fontWeight: sectionLabelDefaults.fontWeight,
           lineHeight: sectionLabelDefaults.lineHeight,
           letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-          textTransform: sectionLabelDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+          textTransform: sectionLabelDefaults.textTransform,
           ...resolveTextStyle(labels.choose.style, {
             fontFamily: 'work_sans',
             fontSize: sectionLabelDefaults.fontSize,
@@ -99,7 +99,7 @@ export function ProposalOptionChooser({
           fontWeight: bodyDefaults.fontWeight,
           lineHeight: bodyDefaults.lineHeight,
           letterSpacing: `${bodyDefaults.letterSpacing}px`,
-          textTransform: bodyDefaults.textTransform === 'uppercase' ? 'uppercase' : undefined,
+          textTransform: bodyDefaults.textTransform,
           ...resolveTextStyle(labels.chooseHint.style, {
             fontFamily: 'work_sans',
             fontSize: bodyDefaults.fontSize,
