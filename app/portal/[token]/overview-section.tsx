@@ -5,8 +5,8 @@ import { useCallback, useState } from 'react'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
-import { roleDefaults } from '@/lib/branding/type-defaults'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { createClient } from '@/lib/supabase/client'
 
 import { ContactDetailsCard, type ContactTriple } from './contact-details-card'

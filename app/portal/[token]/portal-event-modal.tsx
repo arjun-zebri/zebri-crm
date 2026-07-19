@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 
+import { DatePicker } from '@/components/ui/date-picker'
+import { Modal } from '@/components/ui/modal'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { roleDefaults } from '@/lib/branding/type-defaults'
-import { DatePicker } from '@/components/ui/date-picker'
-import { Modal } from '@/components/ui/modal'
 
 import type { PortalEvent } from './page'
 

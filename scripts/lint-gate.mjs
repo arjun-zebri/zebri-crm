@@ -159,7 +159,9 @@ const ERROR_BUDGET = 64;
 // public-blocks files → 299 → 279.
 // Task 7 strip default block baked styles: removing four TextStyle constants and
 // their four uses in the invoice default tree → 279 → 278.
-const WARNING_BUDGET = 278;
+// Task 14 branding conversion: portal vendor-timeline, contacts-section, timeline-section,
+// portal-shell, page.tsx converted to use branding; 278 → 271.
+const WARNING_BUDGET = 271;
 
 function runEslintJson() {
   try {

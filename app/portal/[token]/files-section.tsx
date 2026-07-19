@@ -1,13 +1,13 @@
 'use client'
 
+import { createBrowserClient } from '@supabase/ssr'
 import { Upload, FileText, Trash2, Loader2, Download, Image } from 'lucide-react'
 import { useState, useRef } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
-import { roleDefaults } from '@/lib/branding/type-defaults'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 
 import type { PortalFile } from './page'
 

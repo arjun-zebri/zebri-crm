@@ -1,14 +1,15 @@
 'use client'
 
+import { createBrowserClient } from '@supabase/ssr'
 import { Plus, Trash2, Music, Pencil, ChevronDown } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
 
+import { Modal } from '@/components/ui/modal'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
-import { roleDefaults } from '@/lib/branding/type-defaults'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
-import { Modal } from '@/components/ui/modal'
+import { roleDefaults } from '@/lib/branding/type-defaults'
+
 import type { PortalSong, PortalSongCategory } from './page'
 
 function anonSupabase() {

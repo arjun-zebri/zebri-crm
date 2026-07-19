@@ -3,8 +3,10 @@
 import { LayoutDashboard, Users2, Clock, Music, FileText, FileSignature, Receipt, Heart, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
 
-import type { PublicBranding } from '@/lib/branding/public-surface'
 import { PortalSectionNav } from '@/app/(dashboard)/couples/portal-section-nav'
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 
 import { ContactsSection } from './contacts-section'
 import { ContractsSection } from './contracts-section'
@@ -37,6 +39,10 @@ interface PortalShellProps {
 }
 
 export function PortalShell({ token, initialData, branding }: PortalShellProps) {
+  // Type scale from branding.
+  const sectionHeadingDefaults = roleDefaults(branding, 'sectionHeading')
+  const bodyDefaults = roleDefaults(branding, 'body')
+
   const enabledSections = initialData.enabled_sections
   // Questionnaires is a newer section, so it won't appear in an MC's saved
   // enabled-sections list yet. Surface it whenever the couple actually has one
@@ -78,8 +84,30 @@ export function PortalShell({ token, initialData, branding }: PortalShellProps) 
 
       <div className="flex-1 min-w-0">
         <div className="mb-5">
-          <h2 className="text-lg font-semibold text-text">{active.label}</h2>
-          <p className="text-sm text-text-muted mt-0.5">{active.subtitle}</p>
+          <h2
+            className="font-semibold"
+            style={{
+              fontSize: `${sectionHeadingDefaults.fontSize}px`,
+              color: sectionHeadingDefaults.color,
+              fontFamily: FONT_STACKS[sectionHeadingDefaults.fontFamily as never],
+              fontWeight: sectionHeadingDefaults.fontWeight,
+              lineHeight: sectionHeadingDefaults.lineHeight,
+            }}
+          >
+            {active.label}
+          </h2>
+          <p
+            className="mt-0.5"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: bodyDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: bodyDefaults.fontWeight,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
+          >
+            {active.subtitle}
+          </p>
         </div>
 
         {activeSection === 'overview' && (

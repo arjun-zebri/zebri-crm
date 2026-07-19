@@ -1,22 +1,22 @@
 import { createServerClient } from '@supabase/ssr'
-import Image from 'next/image'
 import { headers } from 'next/headers'
+import Image from 'next/image'
 import { notFound } from 'next/navigation'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { ipOfHeaders } from '@/lib/api/rate-limit'
 import { recordInvalidTokenAttempt } from '@/lib/api/public-token-limiter'
+import { ipOfHeaders } from '@/lib/api/rate-limit'
 import { DENSITY_PADDING } from '@/lib/branding/density'
 import {
   FONT_STACKS,
   type BodyFont,
   type HeadingFont,
 } from '@/lib/branding/fonts'
+import { buildPublicBranding } from '@/lib/branding/public-branding'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
 
-import { buildPublicBranding } from '@/lib/branding/public-branding'
 
 import { BrandingHead } from './branding-head'
 import { PortalShell } from './portal-shell'
@@ -292,15 +292,25 @@ export default async function PortalPage({
                 <img
                   src={branding.logo_url}
                   alt={branding.business_name || 'Logo'}
-                  className="object-contain rounded-lg bg-white shrink-0"
-                  style={{ width: 48, height: 48 }}
+                  className="object-contain rounded-lg shrink-0"
+                  style={{
+                    width: 48,
+                    height: 48,
+                    backgroundColor: branding.surface_color,
+                    borderRadius: branding.corner_radius,
+                  }}
                 />
               ) : branding?.favicon_url ? (
                 <img
                   src={branding.favicon_url}
                   alt={branding.business_name || 'Logo'}
-                  className="object-contain rounded-lg bg-white shrink-0"
-                  style={{ width: 48, height: 48 }}
+                  className="object-contain shrink-0"
+                  style={{
+                    width: 48,
+                    height: 48,
+                    backgroundColor: branding.surface_color,
+                    borderRadius: branding.corner_radius,
+                  }}
                 />
               ) : (
                 <div
@@ -327,7 +337,16 @@ export default async function PortalPage({
                     {branding.business_name}
                   </p>
                   {branding.tagline && (
-                    <p className="text-sm truncate" style={{ color: mutedColor }}>
+                    <p
+                      className="truncate"
+                      style={{
+                        fontSize: '0.875rem',
+                        color: mutedColor,
+                        fontFamily: bodyStack,
+                        fontWeight: 400,
+                        lineHeight: '1.5',
+                      }}
+                    >
                       {branding.tagline}
                     </p>
                   )}
@@ -338,7 +357,10 @@ export default async function PortalPage({
         )}
 
         {/* Hero */}
-        <div className={`${docX} pt-8 pb-8 border-b border-border`}>
+        <div
+          className={`${docX} pt-8 pb-8 border-b`}
+          style={{ borderColor: branding.border_color, borderBottomWidth: 1 }}
+        >
           <h1
             className="text-3xl mb-1"
             style={{ color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}

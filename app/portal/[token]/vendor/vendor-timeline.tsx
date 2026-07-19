@@ -2,7 +2,10 @@
 
 import { ChevronDown, Clock } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+
+import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 
 export interface VendorTimelineItem {
   id: string
@@ -77,7 +80,7 @@ function dayLabel(day: VendorDay): string {
 }
 
 /**
- * Per-day dropdown for the run sheet.
+ * Per-day dropdown for the run sheet. Applies branding colors for border and text.
  *
  * @param days - List of distinct days with their events and venues
  * @param value - Currently selected date (YYYY-MM-DD)
@@ -105,6 +108,7 @@ function DaySelector({
   // Default to the original gray palette when colours are not provided.
   const border = borderColor ?? '#E5E7EB'
   const text = textColor ?? '#111827'
+  const softBg = borderColor ? `${borderColor}10` : '#F9FAFB'
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -121,17 +125,29 @@ function DaySelector({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none"
-        style={{ borderColor: border, borderWidth: 1, color: text }}
+        className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm transition cursor-pointer focus:outline-none hover:opacity-75"
+        style={{
+          borderColor: border,
+          borderWidth: 1,
+          color: text,
+          backgroundColor: '#ffffff',
+        }}
       >
         <span className="font-medium">
           {active ? dayLabel(active) : formatEventDate(value)}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#9CA3AF' }} />
+        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: text }} />
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 min-w-full bg-white rounded-xl shadow-lg overflow-hidden py-1" style={{ borderColor: border, borderWidth: 1 }}>
+        <div
+          className="absolute z-50 mt-1 min-w-full rounded-xl shadow-lg overflow-hidden py-1"
+          style={{
+            borderColor: border,
+            borderWidth: 1,
+            backgroundColor: '#ffffff',
+          }}
+        >
           {days.map((d) => (
             <button
               key={d.date}
@@ -140,10 +156,12 @@ function DaySelector({
                 onChange(d.date)
                 setOpen(false)
               }}
-              className={`block w-full text-left px-3 py-2 text-sm whitespace-nowrap transition hover:bg-gray-50 cursor-pointer ${
-                d.date === value ? 'bg-gray-50 font-medium' : ''
-              }`}
-              style={{ color: d.date === value ? text : '#6B7280' }}
+              className="block w-full text-left px-3 py-2 text-sm whitespace-nowrap transition cursor-pointer"
+              style={{
+                color: d.date === value ? text : '#6B7280',
+                backgroundColor: d.date === value ? softBg : 'transparent',
+                fontWeight: d.date === value ? 500 : 400,
+              }}
             >
               {dayLabel(d)}
             </button>
@@ -181,18 +199,44 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
   const dayEventIds = new Set(activeDay?.eventIds ?? [])
   const dayItems = items.filter((i) => dayEventIds.has(i.event_id))
 
-  // Derived colors from branding.
+  // Type scale from branding.
+  const docTitleDefaults = roleDefaults(branding, 'docTitle')
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+  const sectionLabelDefaults = roleDefaults(branding, 'sectionLabel')
+
+  // Derived colors from branding; helper for softened variants.
   const hCol = branding.heading_color
   const borderCol = branding.brand_color + '20'
   const mutedCol = branding.text_color
+  const softBorder = branding.border_color
 
   return (
     <>
       {/* Header */}
-      <div className="pt-8 pb-8" style={{ borderColor: '#F3F4F6', borderBottomWidth: 1 }}>
-        <h1 className="text-2xl font-semibold mb-1" style={{ color: hCol }}>Run Sheet</h1>
+      <div className="pt-8 pb-8" style={{ borderColor: softBorder, borderBottomWidth: 1 }}>
+        <h1
+          className="font-semibold mb-1"
+          style={{
+            fontSize: `${docTitleDefaults.fontSize}px`,
+            color: hCol,
+            fontFamily: FONT_STACKS[docTitleDefaults.fontFamily as never],
+            fontWeight: docTitleDefaults.fontWeight,
+            lineHeight: docTitleDefaults.lineHeight,
+          }}
+        >
+          Run Sheet
+        </h1>
         {selectedDay && (
-          <p className="text-sm" style={{ color: mutedCol }}>
+          <p
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: mutedCol,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: finePrintDefaults.fontWeight,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
             {formatEventDate(selectedDay)}
             {activeDay && activeDay.venues.length > 0
               ? ` · ${activeDay.venues.join(', ').replace(/\s*-\s*/g, ', ')}`
@@ -203,7 +247,19 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
 
       {days.length > 1 && selectedDay && (
         <div className="pt-6 flex items-center gap-2">
-          <span className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Day</span>
+          <span
+            style={{
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              fontWeight: sectionLabelDefaults.fontWeight,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              lineHeight: sectionLabelDefaults.lineHeight,
+              textTransform: sectionLabelDefaults.textTransform,
+              letterSpacing: sectionLabelDefaults.letterSpacing,
+            }}
+          >
+            Day
+          </span>
           <DaySelector days={days} value={selectedDay} onChange={setPickedDay} borderColor={borderCol} textColor={hCol} />
         </div>
       )}
@@ -211,7 +267,18 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
       {/* Timeline */}
       <div className="pt-8 space-y-2">
         {dayItems.length === 0 ? (
-          <p className="text-sm py-4" style={{ color: '#9CA3AF' }}>No items yet.</p>
+          <p
+            className="py-4"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: bodyDefaults.fontWeight,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
+          >
+            No items yet.
+          </p>
         ) : (
           dayItems.map((item) => (
             <div
@@ -219,32 +286,86 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
               className="flex items-start gap-4 rounded-xl px-4 py-3"
               style={{
                 borderWidth: 1,
-                borderColor: item.pending_review ? '#FCD34D' : '#F3F4F6',
-                backgroundColor: item.pending_review ? 'rgba(254, 243, 199, 0.3)' : '#ffffff',
+                borderColor: item.pending_review ? '#FCD34D' : softBorder,
+                backgroundColor: item.pending_review ? 'rgba(254, 243, 199, 0.3)' : branding.surface_color,
+                borderRadius: branding.corner_radius,
               }}
             >
-              <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
-                <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
+              <div className="flex items-center gap-1.5 w-20 shrink-0 pt-0.5" style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+              }}>
+                <Clock
+                  size={11}
+                  strokeWidth={1.5}
+                  style={{ color: finePrintDefaults.color }}
+                />
                 <span
                   className="font-medium tabular-nums"
                   style={{
-                    color: item.start_time ? '#4B5563' : '#D1D5DB',
+                    color: item.start_time ? bodyDefaults.color : finePrintDefaults.color,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
                   }}
                 >
                   {formatTime(item.start_time)}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium" style={{ color: hCol }}>{item.title}</p>
+                <p
+                  className="font-medium"
+                  style={{
+                    fontSize: `${bodyDefaults.fontSize}px`,
+                    color: hCol,
+                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                    fontWeight: bodyDefaults.fontWeight,
+                    lineHeight: bodyDefaults.lineHeight,
+                  }}
+                >
+                  {item.title}
+                </p>
                 {item.description && (
-                  <p className="text-xs mt-0.5" style={{ color: mutedCol }}>{item.description}</p>
+                  <p
+                    className="mt-0.5"
+                    style={{
+                      fontSize: `${finePrintDefaults.fontSize}px`,
+                      color: mutedCol,
+                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                      fontWeight: finePrintDefaults.fontWeight,
+                      lineHeight: finePrintDefaults.lineHeight,
+                    }}
+                  >
+                    {item.description}
+                  </p>
                 )}
                 {item.duration_min && (
-                  <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{item.duration_min} min</p>
+                  <p
+                    className="mt-0.5"
+                    style={{
+                      fontSize: `${finePrintDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                      fontWeight: finePrintDefaults.fontWeight,
+                      lineHeight: finePrintDefaults.lineHeight,
+                    }}
+                  >
+                    {item.duration_min} min
+                  </p>
                 )}
               </div>
               {item.pending_review && (
-                <span className="text-xs border rounded-full px-2 py-0.5 shrink-0" style={{ borderColor: '#FCD34D', backgroundColor: 'rgba(254, 243, 199, 0.5)', color: '#D97706' }}>
+                <span
+                  className="border rounded-full px-2 py-0.5 shrink-0"
+                  style={{
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                    borderColor: '#FCD34D',
+                    backgroundColor: 'rgba(254, 243, 199, 0.5)',
+                    color: '#D97706',
+                  }}
+                >
                   Provisional
                 </span>
               )}
@@ -254,8 +375,16 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
       </div>
 
       {/* Footer note */}
-      <div className="mt-12 pt-6" style={{ borderColor: '#F3F4F6', borderTopWidth: 1 }}>
-        <p className="text-xs" style={{ color: '#9CA3AF' }}>
+      <div className="mt-12 pt-6" style={{ borderColor: softBorder, borderTopWidth: 1 }}>
+        <p
+          style={{
+            fontSize: `${finePrintDefaults.fontSize}px`,
+            color: finePrintDefaults.color,
+            fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+            fontWeight: finePrintDefaults.fontWeight,
+            lineHeight: finePrintDefaults.lineHeight,
+          }}
+        >
           Items marked "Provisional" are awaiting MC confirmation. This run sheet
           may be updated. Check back for the latest version.
         </p>

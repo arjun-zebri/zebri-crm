@@ -4,8 +4,8 @@ import { ExternalLink } from 'lucide-react'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
-import { roleDefaults } from '@/lib/branding/type-defaults'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { isPastDue } from '@/lib/utils'
 
 import { PortalProposal, PortalInvoice } from './page'

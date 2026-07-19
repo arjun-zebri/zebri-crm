@@ -1,7 +1,5 @@
 "use client";
 
-import { Plus, ChevronDown, GripVertical } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -18,10 +16,14 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createBrowserClient } from "@supabase/ssr";
+import { Plus, ChevronDown, GripVertical } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+
+import { Modal } from "@/components/ui/modal";
 import { FONT_STACKS } from "@/lib/branding/fonts";
 import type { PublicBranding } from "@/lib/branding/public-surface";
 import { roleDefaults } from "@/lib/branding/type-defaults";
-import { Modal } from "@/components/ui/modal";
+
 import type { PortalEvent, PortalTimelineItem } from "./page";
 
 function anonSupabase() {
@@ -162,6 +164,8 @@ interface ItemModalProps {
   onDelete?: () => void;
   item?: PortalTimelineItem | null;
   loading: boolean;
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding;
 }
 
 function ItemModal({
@@ -171,7 +175,11 @@ function ItemModal({
   onDelete,
   item,
   loading,
+  branding,
 }: ItemModalProps) {
+  // Type scale from branding.
+  const bodyDefaults = roleDefaults(branding, 'body')
+
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [title, setTitle] = useState("");
@@ -272,7 +280,16 @@ function ItemModal({
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-end gap-3">
           <div>
-            <label className="block text-caption font-medium text-text-subtle mb-1.5">
+            <label
+              className="block font-medium mb-1.5"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: 500,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
+            >
               From
             </label>
             <TimePicker value={startTime} onChange={handleStartChange} />
@@ -547,6 +564,10 @@ export function TimelineSection({
   hasEvent,
   branding,
 }: TimelineSectionProps) {
+  // Type scale from branding.
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+
   const [items, setItems] = useState<PortalTimelineItem[]>(initialItems);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PortalTimelineItem | null>(
@@ -674,18 +695,62 @@ export function TimelineSection({
 
   return (
     <div className="space-y-4">
-      <div className="border border-border bg-surface rounded-card px-5 py-3.5">
-        <p className="text-body text-text-muted mb-2">
+      <div
+        className="px-5 py-3.5 border"
+        style={{
+          borderColor: branding.border_color,
+          backgroundColor: branding.surface_color,
+          borderRadius: branding.corner_radius,
+          borderWidth: 1,
+        }}
+      >
+        <p
+          className="mb-2"
+          style={{
+            fontSize: `${bodyDefaults.fontSize}px`,
+            color: finePrintDefaults.color,
+            fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+            fontWeight: bodyDefaults.fontWeight,
+            lineHeight: bodyDefaults.lineHeight,
+          }}
+        >
           Add moments to suggest timing for your event. Moments you add will be reviewed by your MC before appearing on the official timeline.
         </p>
-        <p className="text-caption text-text-subtle">
-          <strong className="text-text-muted">Pending</strong> means your MC is reviewing your suggestion.
+        <p
+          style={{
+            fontSize: `${finePrintDefaults.fontSize}px`,
+            color: finePrintDefaults.color,
+            fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+            fontWeight: finePrintDefaults.fontWeight,
+            lineHeight: finePrintDefaults.lineHeight,
+          }}
+        >
+          <strong
+            style={{
+              color: finePrintDefaults.color,
+              fontWeight: 600,
+            }}
+          >
+            Pending
+          </strong>{' '}
+          means your MC is reviewing your suggestion.
         </p>
       </div>
 
       {days.length > 1 && selectedDay && (
         <div className="flex items-center gap-2">
-          <span className="text-caption font-medium text-text-subtle">Day</span>
+          <span
+            className="font-medium"
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: 500,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
+            Day
+          </span>
           <DaySelector
             days={days}
             value={selectedDay}
@@ -706,11 +771,23 @@ export function TimelineSection({
           >
             <div className="relative pl-8">
               {/* Vertical line behind everything */}
-              <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
+              <div
+                className="absolute left-0 top-0 bottom-0 w-px"
+                style={{ backgroundColor: branding.border_color }}
+              />
 
               <div className="space-y-2">
                 {mcItems.length > 0 && (
-                  <p className="text-body font-medium text-text-muted pl-8">
+                  <p
+                    className="font-medium pl-8"
+                    style={{
+                      fontSize: `${bodyDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                      fontWeight: 500,
+                      lineHeight: bodyDefaults.lineHeight,
+                    }}
+                  >
                     Added by your MC
                   </p>
                 )}
@@ -722,7 +799,16 @@ export function TimelineSection({
                   />
                 ))}
                 {pendingItems.length > 0 && (
-                  <p className="text-body font-medium text-text-muted pl-8 mt-6">
+                  <p
+                    className="font-medium pl-8 mt-6"
+                    style={{
+                      fontSize: `${bodyDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                      fontWeight: 500,
+                      lineHeight: bodyDefaults.lineHeight,
+                    }}
+                  >
                     Your suggestions
                   </p>
                 )}
@@ -741,9 +827,20 @@ export function TimelineSection({
 
       <button
         onClick={handleOpenAdd}
-        className="w-full text-body text-text-muted border border-dashed border-border rounded-card py-3 hover:border-border-strong hover:bg-surface-muted transition cursor-pointer flex items-center justify-center gap-1.5"
+        className="w-full border border-dashed py-3 flex items-center justify-center gap-1.5 transition cursor-pointer hover:opacity-75"
+        style={{
+          fontSize: `${bodyDefaults.fontSize}px`,
+          color: finePrintDefaults.color,
+          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+          fontWeight: bodyDefaults.fontWeight,
+          lineHeight: bodyDefaults.lineHeight,
+          borderColor: branding.border_color,
+          backgroundColor: `${branding.border_color}10`,
+          borderRadius: branding.corner_radius,
+          borderWidth: 1,
+        }}
       >
-        <Plus size={14} strokeWidth={1.5} />
+        <Plus size={14} strokeWidth={1.5} style={{ color: finePrintDefaults.color }} />
         Add moment
       </button>
 
@@ -754,6 +851,7 @@ export function TimelineSection({
         onDelete={editingItem ? handleDelete : undefined}
         item={editingItem}
         loading={saving}
+        branding={branding}
       />
     </div>
   );

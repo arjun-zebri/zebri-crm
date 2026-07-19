@@ -4,10 +4,10 @@ import * as Popover from '@radix-ui/react-popover'
 import { Plus, Mail, Phone, Mic, Play, Trash2, Loader2, Pencil, ChevronDown } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from 'react'
 
+import { Modal } from '@/components/ui/modal'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { roleDefaults } from '@/lib/branding/type-defaults'
-import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS, CATEGORIES } from '@/types/contact'
 
@@ -25,7 +25,30 @@ const FAMILY_ROLES = [
 ]
 const OTHER_ROLES = ['Officiant', 'Celebrant', 'Photographer', 'Videographer', 'Performer', 'Speaker', 'Guest', 'Other']
 
-const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition'
+/**
+ * Generate branding-aware input field styles. Borders and focus states inherit
+ * from the branding colour scheme.
+ */
+function getInputStyles(branding: PublicBranding) {
+  return {
+    borderColor: branding.border_color,
+    backgroundColor: branding.surface_color,
+  }
+}
+
+/**
+ * Generate branding-aware label styles for form fields.
+ */
+function getLabelStyles(branding: PublicBranding) {
+  const defaults = roleDefaults(branding, 'finePrint')
+  return {
+    fontSize: `${defaults.fontSize}px`,
+    fontFamily: FONT_STACKS[defaults.fontFamily as never],
+    fontWeight: defaults.fontWeight,
+    color: defaults.color,
+    lineHeight: defaults.lineHeight,
+  }
+}
 
 // ── Audio recorder ────────────────────────────────────────────────────────────
 
@@ -216,14 +239,16 @@ interface PersonModalProps {
   roleOptions: string[]
   token: string
   saving: boolean
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
 /**
  * Add / edit modal for a wedding-party person. Mounted fresh on each open by
  * the parent (conditional render), so state initialises straight from props -
- * no re-seeding effect needed.
+ * no re-seeding effect needed. Applies branding colours and typography.
  */
-function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, saving }: PersonModalProps) {
+function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, saving, branding }: PersonModalProps) {
   const [fullName, setFullName] = useState(person?.full_name ?? '')
   const [role, setRole] = useState(person?.role ?? '')
   const [audioUrl, setAudioUrl] = useState(person?.audio_url ?? null)
@@ -233,49 +258,93 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
 
+  // Type scale from branding.
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+
   return (
     <Modal isOpen onClose={onClose} title={person ? 'Edit person' : 'Add person'}>
       <div className="space-y-4">
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Full name</label>
+              <label className="block mb-1" style={getLabelStyles(branding)}>Full name</label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="e.g. Siobhan Murphy"
-                className={inputClass}
+                style={{
+                  ...getInputStyles(branding),
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  color: bodyDefaults.color,
+                  lineHeight: bodyDefaults.lineHeight,
+                  borderWidth: 1,
+                  borderRadius: branding.corner_radius,
+                  padding: '0.5rem 0.75rem',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                }}
+                className="w-full"
                 autoFocus
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Role</label>
+              <label className="block mb-1" style={getLabelStyles(branding)}>Role</label>
               <Popover.Root open={roleOpen} onOpenChange={setRoleOpen}>
                 <Popover.Trigger asChild>
                   <button
                     type="button"
-                    className="w-full flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2 text-sm hover:border-gray-300 transition cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 py-2 transition cursor-pointer"
+                    style={{
+                      ...getInputStyles(branding),
+                      fontSize: `${bodyDefaults.fontSize}px`,
+                      fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                      fontWeight: bodyDefaults.fontWeight,
+                      color: role ? bodyDefaults.color : finePrintDefaults.color,
+                      lineHeight: bodyDefaults.lineHeight,
+                      borderWidth: 1,
+                      borderColor: branding.border_color,
+                      borderRadius: branding.corner_radius,
+                      outline: 'none',
+                    }}
                   >
-                    <span className={role ? 'text-gray-900' : 'text-gray-400'}>
-                      {role || 'No role'}
-                    </span>
-                    <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                    <span>{role || 'No role'}</span>
+                    <ChevronDown
+                      size={14}
+                      strokeWidth={1.5}
+                      style={{ color: finePrintDefaults.color }}
+                      className="shrink-0"
+                    />
                   </button>
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content
-                    className="bg-white border border-gray-200 rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
-                    style={{ width: 'var(--radix-popover-trigger-width)' }}
+                    className="rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
+                    style={{
+                      width: 'var(--radix-popover-trigger-width)',
+                      backgroundColor: branding.surface_color,
+                      borderWidth: 1,
+                      borderColor: branding.border_color,
+                      borderRadius: branding.corner_radius,
+                    }}
                     sideOffset={4}
                     align="start"
                   >
                     <button
                       type="button"
                       onClick={() => { setRole(''); setRoleOpen(false) }}
-                      className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                        !role ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500 hover:bg-gray-50'
-                      }`}
+                      className="w-full text-left px-3 py-1.5 transition cursor-pointer"
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: !role ? 500 : bodyDefaults.fontWeight,
+                        color: !role ? bodyDefaults.color : finePrintDefaults.color,
+                        backgroundColor: !role ? `${branding.brand_color}10` : 'transparent',
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
                     >
                       No role
                     </button>
@@ -284,9 +353,15 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
                         key={r}
                         type="button"
                         onClick={() => { setRole(r); setRoleOpen(false) }}
-                        className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                          role === r ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'
-                        }`}
+                        className="w-full text-left px-3 py-1.5 transition cursor-pointer"
+                        style={{
+                          fontSize: `${bodyDefaults.fontSize}px`,
+                          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                          fontWeight: role === r ? 500 : bodyDefaults.fontWeight,
+                          color: role === r ? bodyDefaults.color : finePrintDefaults.color,
+                          backgroundColor: role === r ? `${branding.brand_color}10` : 'transparent',
+                          lineHeight: bodyDefaults.lineHeight,
+                        }}
                       >
                         {r}
                       </button>
@@ -298,16 +373,54 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" className={inputClass} />
+              <label className="block mb-1" style={getLabelStyles(branding)}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
+                style={{
+                  ...getInputStyles(branding),
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  color: bodyDefaults.color,
+                  lineHeight: bodyDefaults.lineHeight,
+                  borderWidth: 1,
+                  borderRadius: branding.corner_radius,
+                  padding: '0.5rem 0.75rem',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                }}
+                className="w-full"
+              />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Phone</label>
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+61 400 000 000" className={inputClass} />
+              <label className="block mb-1" style={getLabelStyles(branding)}>Phone</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+61 400 000 000"
+                style={{
+                  ...getInputStyles(branding),
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  color: bodyDefaults.color,
+                  lineHeight: bodyDefaults.lineHeight,
+                  borderWidth: 1,
+                  borderRadius: branding.corner_radius,
+                  padding: '0.5rem 0.75rem',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                }}
+                className="w-full"
+              />
             </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">Name pronunciation</label>
+            <label className="block mb-1.5" style={getLabelStyles(branding)}>Name pronunciation</label>
             <AudioRecorder
               audioUrl={audioUrl}
               personId={person?.id ?? 'new'}
@@ -316,33 +429,67 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Notes</label>
+            <label className="block mb-1" style={getLabelStyles(branding)}>Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Any notes for the MC..."
               rows={3}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition resize-none"
+              style={{
+                ...getInputStyles(branding),
+                fontSize: `${bodyDefaults.fontSize}px`,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                color: bodyDefaults.color,
+                lineHeight: bodyDefaults.lineHeight,
+                borderWidth: 1,
+                borderRadius: branding.corner_radius,
+                padding: '0.5rem 0.75rem',
+                outline: 'none',
+                transition: 'all 0.2s',
+                resize: 'none',
+              }}
+              className="w-full"
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+        <div
+          className="flex items-center justify-between pt-2"
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: branding.border_color,
+          }}
+        >
           {person && onDelete ? (
             confirmDelete ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">Remove this person?</span>
+                <span style={getLabelStyles(branding)}>Remove this person?</span>
                 <button
                   type="button"
                   onClick={async () => { await onDelete(); setConfirmDelete(false) }}
-                  className="text-xs text-red-500 hover:text-red-600 transition cursor-pointer"
+                  className="transition cursor-pointer hover:opacity-75"
+                  style={{
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    fontWeight: 500,
+                    color: '#DC2626',
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    lineHeight: finePrintDefaults.lineHeight,
+                  }}
                 >
                   Yes, remove
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(false)}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                  className="transition cursor-pointer hover:opacity-75"
+                  style={{
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    color: finePrintDefaults.color,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                  }}
                 >
                   Cancel
                 </button>
@@ -351,7 +498,14 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 transition cursor-pointer"
+                className="flex items-center gap-1 transition cursor-pointer hover:opacity-75"
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: finePrintDefaults.color,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }}
               >
                 <Trash2 size={13} strokeWidth={1.5} />
                 Remove
@@ -479,6 +633,10 @@ interface ContactsSectionProps {
 
 export function ContactsSection({ token, initialContacts, initialPeople, branding }: ContactsSectionProps) {
   const supabase = createClient()
+
+  // Type scale from branding.
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
 
   // Wedding party state
   const [people, setPeople] = useState<PortalPerson[]>(initialPeople)
@@ -668,14 +826,58 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
       {/* Vendors */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-body font-medium text-text-muted">Vendors <span className="text-caption font-normal text-text-subtle">({contacts.length})</span></p>
+          <p
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              fontWeight: 500,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              lineHeight: bodyDefaults.lineHeight,
+            }}
+          >
+            Vendors{' '}
+            <span
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                fontWeight: finePrintDefaults.fontWeight,
+                color: finePrintDefaults.color,
+              }}
+            >
+              ({contacts.length})
+            </span>
+          </p>
         </div>
         {contacts.length === 0 && (
-          <div className="border border-dashed border-border rounded-card p-4 text-center bg-surface-muted/50">
-            <p className="text-caption text-text-subtle mb-2.5">No vendors yet</p>
+          <div
+            className="border border-dashed text-center p-4"
+            style={{
+              borderColor: branding.border_color,
+              backgroundColor: `${branding.border_color}10`,
+              borderRadius: branding.corner_radius,
+            }}
+          >
+            <p
+              className="mb-2.5"
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                fontWeight: finePrintDefaults.fontWeight,
+                lineHeight: finePrintDefaults.lineHeight,
+              }}
+            >
+              No vendors yet
+            </p>
             <button
               onClick={() => { setVendorForm({ name: '', category: '', email: '', phone: '' }); setVendorError(null); setVendorModalOpen(true) }}
-              className="text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
+              className="transition cursor-pointer hover:opacity-75"
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                fontWeight: 500,
+                color: branding.brand_color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                lineHeight: finePrintDefaults.lineHeight,
+              }}
             >
               Add vendor
             </button>
@@ -685,27 +887,75 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               {contacts.map((contact) => (
-                <div key={contact.id} className="bg-surface border border-border rounded-card p-4">
+                <div
+                  key={contact.id}
+                  className="border p-4"
+                  style={{
+                    backgroundColor: branding.surface_color,
+                    borderColor: branding.border_color,
+                    borderRadius: branding.corner_radius,
+                    borderWidth: 1,
+                  }}
+                >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-body font-medium text-text">{contact.name}</p>
+                      <p
+                        className="font-medium"
+                        style={{
+                          fontSize: `${bodyDefaults.fontSize}px`,
+                          color: bodyDefaults.color,
+                          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                          fontWeight: 500,
+                          lineHeight: bodyDefaults.lineHeight,
+                        }}
+                      >
+                        {contact.name}
+                      </p>
                       {contact.category && (
-                        <span className="inline-block text-caption font-medium px-2 py-1 rounded-pill bg-surface-muted text-text-muted mt-1.5">
+                        <span
+                          className="inline-block px-2 py-1 mt-1.5 font-medium"
+                          style={{
+                            fontSize: `${finePrintDefaults.fontSize}px`,
+                            color: finePrintDefaults.color,
+                            fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                            fontWeight: 500,
+                            lineHeight: finePrintDefaults.lineHeight,
+                            backgroundColor: `${branding.border_color}15`,
+                            borderRadius: branding.corner_radius,
+                          }}
+                        >
                           {CATEGORY_LABELS[contact.category as keyof typeof CATEGORY_LABELS] || contact.category}
                         </span>
                       )}
                     </div>
                   </div>
                   {(contact.email || contact.phone) && (
-                    <div className="flex flex-col gap-1.5 mt-2.5 text-caption text-text-muted">
+                    <div
+                      className="flex flex-col gap-1.5 mt-2.5"
+                      style={{
+                        fontSize: `${finePrintDefaults.fontSize}px`,
+                        color: finePrintDefaults.color,
+                        fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                        fontWeight: finePrintDefaults.fontWeight,
+                        lineHeight: finePrintDefaults.lineHeight,
+                      }}
+                    >
                       {contact.email && (
-                        <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 hover:text-text transition">
+                        <a
+                          href={`mailto:${contact.email}`}
+                          className="flex items-center gap-1.5 hover:opacity-75 transition"
+                          style={{ color: finePrintDefaults.color }}
+                        >
                           <Mail size={14} strokeWidth={1.5} />
                           <span className="truncate">{contact.email}</span>
                         </a>
                       )}
                       {contact.phone && (
-                        <a href={`tel:${contact.phone}`} className="flex items-center gap-1.5 hover:text-text transition">
+                        <a
+                          href={`tel:${contact.phone}`}
+                          className="flex items-center gap-1.5 hover:opacity-75 transition"
+                          style={{ color: finePrintDefaults.color }}
+                        >
                           <Phone size={14} strokeWidth={1.5} />
                           <span>{contact.phone}</span>
                         </a>
@@ -717,7 +967,17 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
             </div>
             <button
               onClick={() => { setVendorForm({ name: '', category: '', email: '', phone: '' }); setVendorError(null); setVendorModalOpen(true) }}
-              className="w-full flex items-center justify-center gap-1.5 text-caption font-medium text-text-muted border border-dashed border-border rounded-card py-2.5 hover:bg-surface-muted transition cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 border border-dashed py-2.5 transition cursor-pointer hover:opacity-75"
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                fontWeight: 500,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                lineHeight: finePrintDefaults.lineHeight,
+                borderColor: branding.border_color,
+                backgroundColor: `${branding.border_color}10`,
+                borderRadius: branding.corner_radius,
+              }}
             >
               <Plus size={14} strokeWidth={1.5} />
               Add vendor
@@ -735,41 +995,97 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
           roleOptions={modalRoleOptions}
           token={token}
           saving={saving}
+          branding={branding}
         />
       )}
 
       <Modal isOpen={vendorModalOpen} onClose={() => setVendorModalOpen(false)} title="Add vendor contact" size="lg">
         <div className="space-y-3">
-          {vendorError && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{vendorError}</div>}
+          {vendorError && (
+            <div
+              className="p-3"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                backgroundColor: '#FEE2E2',
+                color: '#DC2626',
+                borderRadius: branding.corner_radius,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
+            >
+              {vendorError}
+            </div>
+          )}
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Name <span className="text-red-400">*</span></label>
+            <label className="block mb-1" style={getLabelStyles(branding)}>
+              Name <span style={{ color: '#DC2626' }}>*</span>
+            </label>
             <input
               type="text"
               value={vendorForm.name}
               onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })}
               placeholder="Business or contact name"
               autoFocus
-              className={inputClass}
+              style={{
+                ...getInputStyles(branding),
+                fontSize: `${bodyDefaults.fontSize}px`,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                color: bodyDefaults.color,
+                lineHeight: bodyDefaults.lineHeight,
+                borderWidth: 1,
+                borderRadius: branding.corner_radius,
+                padding: '0.5rem 0.75rem',
+                outline: 'none',
+                transition: 'all 0.2s',
+              }}
+              className="w-full"
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Category <span className="text-red-400">*</span></label>
+            <label className="block mb-1" style={getLabelStyles(branding)}>
+              Category <span style={{ color: '#DC2626' }}>*</span>
+            </label>
             <Popover.Root open={categoryOpen} onOpenChange={setCategoryOpen}>
               <Popover.Trigger asChild>
                 <button
                   type="button"
-                  className="w-full flex items-center justify-between border border-gray-200 rounded-xl px-3 py-2 text-sm hover:border-gray-300 transition cursor-pointer"
+                  className="w-full flex items-center justify-between px-3 py-2 transition cursor-pointer"
+                  style={{
+                    ...getInputStyles(branding),
+                    fontSize: `${bodyDefaults.fontSize}px`,
+                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                    fontWeight: bodyDefaults.fontWeight,
+                    color: vendorForm.category ? bodyDefaults.color : finePrintDefaults.color,
+                    lineHeight: bodyDefaults.lineHeight,
+                    borderWidth: 1,
+                    borderColor: branding.border_color,
+                    borderRadius: branding.corner_radius,
+                    outline: 'none',
+                  }}
                 >
-                  <span className={vendorForm.category ? 'text-gray-900' : 'text-gray-400'}>
+                  <span>
                     {vendorForm.category ? CATEGORY_LABELS[vendorForm.category as keyof typeof CATEGORY_LABELS] : 'Select category'}
                   </span>
-                  <ChevronDown size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                  <ChevronDown
+                    size={14}
+                    strokeWidth={1.5}
+                    style={{ color: finePrintDefaults.color }}
+                    className="shrink-0"
+                  />
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
                 <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
-                  style={{ width: 'var(--radix-popover-trigger-width)' }}
+                  className="rounded-xl shadow-lg z-[90] py-1 max-h-60 overflow-y-auto"
+                  style={{
+                    width: 'var(--radix-popover-trigger-width)',
+                    backgroundColor: branding.surface_color,
+                    borderWidth: 1,
+                    borderColor: branding.border_color,
+                    borderRadius: branding.corner_radius,
+                  }}
                   sideOffset={4}
                   align="start"
                 >
@@ -778,11 +1094,15 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
                       key={cat}
                       type="button"
                       onClick={() => { setVendorForm({ ...vendorForm, category: cat }); setCategoryOpen(false) }}
-                      className={`w-full text-left px-3 py-1.5 text-sm transition cursor-pointer ${
-                        vendorForm.category === cat
-                          ? 'bg-gray-100 text-gray-900 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
+                      className="w-full text-left px-3 py-1.5 transition cursor-pointer"
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: vendorForm.category === cat ? 500 : bodyDefaults.fontWeight,
+                        color: vendorForm.category === cat ? bodyDefaults.color : bodyDefaults.color,
+                        backgroundColor: vendorForm.category === cat ? `${branding.brand_color}10` : 'transparent',
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
                     >
                       {CATEGORY_LABELS[cat]}
                     </button>
@@ -792,30 +1112,69 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
             </Popover.Root>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Email</label>
+            <label className="block mb-1" style={getLabelStyles(branding)}>Email</label>
             <input
               type="email"
               value={vendorForm.email}
               onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
               placeholder="email@example.com"
-              className={inputClass}
+              style={{
+                ...getInputStyles(branding),
+                fontSize: `${bodyDefaults.fontSize}px`,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                color: bodyDefaults.color,
+                lineHeight: bodyDefaults.lineHeight,
+                borderWidth: 1,
+                borderRadius: branding.corner_radius,
+                padding: '0.5rem 0.75rem',
+                outline: 'none',
+                transition: 'all 0.2s',
+              }}
+              className="w-full"
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Phone</label>
+            <label className="block mb-1" style={getLabelStyles(branding)}>Phone</label>
             <input
               type="tel"
               value={vendorForm.phone}
               onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
               placeholder="+61 400 000 000"
-              className={inputClass}
+              style={{
+                ...getInputStyles(branding),
+                fontSize: `${bodyDefaults.fontSize}px`,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                color: bodyDefaults.color,
+                lineHeight: bodyDefaults.lineHeight,
+                borderWidth: 1,
+                borderRadius: branding.corner_radius,
+                padding: '0.5rem 0.75rem',
+                outline: 'none',
+                transition: 'all 0.2s',
+              }}
+              className="w-full"
             />
           </div>
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+          <div
+            className="flex items-center justify-end gap-2 pt-2"
+            style={{
+              borderTopWidth: 1,
+              borderTopColor: branding.border_color,
+            }}
+          >
             <button
               type="button"
               onClick={() => setVendorModalOpen(false)}
-              className="text-sm text-gray-500 px-3 py-1.5 hover:text-gray-700 transition cursor-pointer"
+              className="px-3 py-1.5 transition cursor-pointer hover:opacity-75"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
             >
               Cancel
             </button>
@@ -823,7 +1182,18 @@ export function ContactsSection({ token, initialContacts, initialPeople, brandin
               type="button"
               onClick={handleAddVendor}
               disabled={vendorLoading}
-              className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 transition cursor-pointer"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: '#ffffff',
+                backgroundColor: branding.brand_color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: 500,
+                lineHeight: bodyDefaults.lineHeight,
+                borderRadius: branding.corner_radius,
+                opacity: vendorLoading ? 0.5 : 1,
+                cursor: vendorLoading ? 'not-allowed' : 'pointer',
+              }}
             >
               {vendorLoading ? 'Adding...' : 'Add'}
             </button>
