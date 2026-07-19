@@ -103,6 +103,7 @@ export function ProposalSelection({
           value={heading}
           onCommit={headingKey && onEditLabel ? (v) => onEditLabel(headingKey, v) : undefined}
           placeholder={headingDefaultText}
+          cornerRadius={branding.cornerRadius}
           className="font-semibold"
           style={{
             fontSize: `${sectionLabelDefaults.fontSize}px`,
@@ -166,6 +167,7 @@ export function ProposalSelection({
             value={labels.addOns.text}
             onCommit={onEditLabel && ((v) => onEditLabel('addOns', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.addOns.text}
+            cornerRadius={branding.cornerRadius}
             className="font-semibold"
             style={{
               fontSize: `${sectionLabelDefaults.fontSize}px`,
@@ -192,6 +194,7 @@ export function ProposalSelection({
               value={labels.addOnsHint.text}
               onCommit={onEditLabel && ((v) => onEditLabel('addOnsHint', v))}
               placeholder={PROPOSAL_LABEL_DEFAULTS.addOnsHint.text}
+              cornerRadius={branding.cornerRadius}
               className="mt-1"
               style={{
                 fontSize: `${bodyDefaults.fontSize}px`,

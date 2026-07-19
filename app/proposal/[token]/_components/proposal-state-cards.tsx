@@ -12,6 +12,19 @@ import { STATUS_COLORS } from '@/lib/branding/status-colors';
 
 import { formatDate } from './public-proposal';
 
+/**
+ * Status banner for the public proposal page (accepted/declined/expired states).
+ * All branding colors are required to ensure consistent styling from the MC's kit.
+ *
+ * @param kind - Which state to render (accepted, declined, or expired)
+ * @param acceptedAt - ISO date string when the proposal was accepted
+ * @param expiresAt - ISO date string when the proposal expires
+ * @param businessName - MC's business name (plain text, already sanitized)
+ * @param mutedColor - MC's muted text color from branding
+ * @param borderColor - MC's border color from branding
+ * @param cornerRadius - MC's corner radius from branding
+ * @param surfaceColor - MC's surface color from branding
+ */
 export function ProposalStatusBanner({
   kind,
   acceptedAt,
@@ -26,10 +39,10 @@ export function ProposalStatusBanner({
   acceptedAt?: string | null;
   expiresAt?: string | null;
   businessName?: string | null;
-  mutedColor?: string;
-  borderColor?: string;
-  cornerRadius?: number;
-  surfaceColor?: string;
+  mutedColor: string;
+  borderColor: string;
+  cornerRadius: number;
+  surfaceColor: string;
 }) {
   if (kind === 'accepted') {
     const datePart =
@@ -61,9 +74,9 @@ export function ProposalStatusBanner({
       <div
         className="mb-3 px-5 py-3"
         style={{
-          borderRadius: cornerRadius ?? 8,
-          backgroundColor: surfaceColor || '#f3f4f6',
-          border: `1px solid ${borderColor || '#e5e7eb'}`,
+          borderRadius: cornerRadius,
+          backgroundColor: surfaceColor,
+          border: `1px solid ${borderColor}`,
         }}
       >
         <p className="text-sm" style={{ color: mutedColor }}>
@@ -93,6 +106,15 @@ export function ProposalStatusBanner({
   );
 }
 
+/**
+ * Loading skeleton for the proposal page while data fetches.
+ * All branding colors are required to ensure consistent styling from the MC's kit.
+ *
+ * @param radius - MC's corner radius from branding
+ * @param surfaceColor - MC's surface color from branding
+ * @param borderColor - MC's border color from branding
+ * @param mutedColor - MC's muted text color from branding
+ */
 export function ProposalLoading({
   radius,
   surfaceColor,
@@ -100,33 +122,33 @@ export function ProposalLoading({
   mutedColor,
 }: {
   radius: number;
-  surfaceColor?: string;
-  borderColor?: string;
-  mutedColor?: string;
+  surfaceColor: string;
+  borderColor: string;
+  mutedColor: string;
 }) {
   return (
     <div
       className="shadow-sm p-8 space-y-4"
       style={{
         borderRadius: radius,
-        backgroundColor: surfaceColor || '#fff',
-        border: `1px solid ${borderColor || '#e5e7eb'}`,
+        backgroundColor: surfaceColor,
+        border: `1px solid ${borderColor}`,
       }}
     >
       <div
         className="h-5 w-24 rounded animate-pulse"
-        style={{ backgroundColor: mutedColor || '#e5e7eb' }}
+        style={{ backgroundColor: mutedColor }}
       />
       <div
         className="h-7 w-64 rounded animate-pulse"
-        style={{ backgroundColor: mutedColor || '#e5e7eb' }}
+        style={{ backgroundColor: mutedColor }}
       />
       <div className="space-y-2 pt-4">
         {[1, 2, 3].map((i) => (
           <div
             key={i}
             className="h-10 rounded animate-pulse"
-            style={{ backgroundColor: mutedColor || '#e5e7eb' }}
+            style={{ backgroundColor: mutedColor }}
           />
         ))}
       </div>
@@ -134,6 +156,16 @@ export function ProposalLoading({
   );
 }
 
+/**
+ * Card shown when the proposal token is invalid or unavailable.
+ * All branding colors are required to ensure consistent styling from the MC's kit.
+ *
+ * @param radius - MC's corner radius from branding
+ * @param textColor - MC's text color from branding
+ * @param mutedColor - MC's muted text color from branding
+ * @param surfaceColor - MC's surface color from branding
+ * @param borderColor - MC's border color from branding
+ */
 export function ProposalUnavailable({
   radius,
   textColor,
@@ -144,16 +176,16 @@ export function ProposalUnavailable({
   radius: number;
   textColor: string;
   mutedColor: string;
-  surfaceColor?: string;
-  borderColor?: string;
+  surfaceColor: string;
+  borderColor: string;
 }) {
   return (
     <div
       className="shadow-sm p-10 text-center"
       style={{
         borderRadius: radius,
-        backgroundColor: surfaceColor || '#fff',
-        border: `1px solid ${borderColor || '#e5e7eb'}`,
+        backgroundColor: surfaceColor,
+        border: `1px solid ${borderColor}`,
       }}
     >
       <p className="text-sm font-medium mb-1" style={{ color: textColor }}>

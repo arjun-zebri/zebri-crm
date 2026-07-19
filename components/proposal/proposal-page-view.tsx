@@ -163,6 +163,7 @@ export function ProposalPageView({
             value={labels.eyebrow.text}
             onCommit={onEditLabel && ((v) => onEditLabel('eyebrow', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.eyebrow.text}
+            cornerRadius={branding.cornerRadius}
             className="font-semibold"
             style={{
               fontSize: `${sectionLabelDefaults.fontSize}px`,
@@ -246,6 +247,7 @@ export function ProposalPageView({
             value={labels.note.text}
             onCommit={onEditLabel && ((v) => onEditLabel('note', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.note.text}
+            cornerRadius={branding.cornerRadius}
             className="font-semibold"
             style={{
               fontSize: `${sectionLabelDefaults.fontSize}px`,
@@ -370,6 +372,7 @@ export function StaticAcceptCta({
         value={acceptLabel}
         onCommit={onEditLabel && ((v) => onEditLabel('accept', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.accept.text}
+        cornerRadius={branding.cornerRadius}
         className="w-full py-3.5 text-center font-medium"
         style={{
           fontSize: `${bodyDefaults.fontSize}px`,
@@ -397,6 +400,7 @@ export function StaticAcceptCta({
           value={declineLabel}
           onCommit={onEditLabel && ((v) => onEditLabel('decline', v))}
           placeholder={PROPOSAL_LABEL_DEFAULTS.decline.text}
+          cornerRadius={branding.cornerRadius}
           className="underline underline-offset-2"
           style={{
             fontSize: `${finePrintDefaults.fontSize}px`,

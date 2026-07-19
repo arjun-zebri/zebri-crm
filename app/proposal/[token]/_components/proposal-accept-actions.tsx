@@ -34,8 +34,10 @@ export interface ProposalAcceptActionsProps {
   radius: number;
   textColor: string;
   mutedColor: string;
-  borderColor?: string;
-  surfaceColor?: string;
+  /** MC's border color from branding. */
+  borderColor: string;
+  /** MC's surface color from branding. */
+  surfaceColor: string;
   /** The MC's editable accept/decline wording. */
   labels?: ProposalLabels;
 }
@@ -97,13 +99,13 @@ export function ProposalAcceptActions({
               style={{
                 borderRadius: buttonRadius,
                 color: textColor,
-                border: `1px solid ${borderColor || '#e5e7eb'}`,
+                border: `1px solid ${borderColor}`,
                 backgroundColor: 'transparent',
               }}
               className="flex-1 py-3 text-sm font-medium hover:opacity-80 transition cursor-pointer disabled:opacity-50"
               onMouseEnter={(e) => {
                 if (!actionLoading) {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = surfaceColor || '#f3f4f6';
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = surfaceColor;
                 }
               }}
               onMouseLeave={(e) => {

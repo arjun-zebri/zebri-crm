@@ -64,6 +64,7 @@ export function ProposalOptionChooser({
         value={labels.choose.text}
         onCommit={onEditLabel && ((v) => onEditLabel('choose', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.choose.text}
+        cornerRadius={branding.cornerRadius}
         className="font-semibold"
         style={{
           fontSize: `${sectionLabelDefaults.fontSize}px`,
@@ -89,6 +90,7 @@ export function ProposalOptionChooser({
         value={labels.chooseHint.text}
         onCommit={onEditLabel && ((v) => onEditLabel('chooseHint', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.chooseHint.text}
+        cornerRadius={branding.cornerRadius}
         className="mt-1 mb-4"
         style={{
           fontSize: `${bodyDefaults.fontSize}px`,

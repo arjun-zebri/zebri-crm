@@ -158,6 +158,8 @@ export default function PublicProposalPage() {
         radius={style.radius}
         textColor={branding.textColor}
         mutedColor={branding.mutedColor}
+        borderColor={branding.borderColor}
+        surfaceColor={branding.pageBg}
         labels={{
           ...branding.labels,
           accept: style.primaryLabel ? { text: style.primaryLabel } : branding.labels.accept,
@@ -176,28 +178,55 @@ export default function PublicProposalPage() {
       }}
     >
       <div className="max-w-xl mx-auto @container/doc">
-        {proposal && pageState === 'accepted' ? (
+        {proposal && pageState === 'accepted' && branding ? (
           <ProposalStatusBanner
             kind="accepted"
             acceptedAt={proposal.accepted_at}
             businessName={proposal.business_name}
+            mutedColor={branding.mutedColor}
+            borderColor={branding.borderColor}
+            cornerRadius={branding.cornerRadius}
+            surfaceColor={branding.pageBg}
           />
         ) : null}
-        {proposal && pageState === 'declined' ? (
-          <ProposalStatusBanner kind="declined" mutedColor={branding!.mutedColor} />
+        {proposal && pageState === 'declined' && branding ? (
+          <ProposalStatusBanner
+            kind="declined"
+            mutedColor={branding.mutedColor}
+            borderColor={branding.borderColor}
+            cornerRadius={branding.cornerRadius}
+            surfaceColor={branding.pageBg}
+          />
         ) : null}
-        {proposal && pageState === 'expired' ? (
+        {proposal && pageState === 'expired' && branding ? (
           <ProposalStatusBanner
             kind="expired"
             expiresAt={proposal.expires_at}
             businessName={proposal.business_name}
+            mutedColor={branding.mutedColor}
+            borderColor={branding.borderColor}
+            cornerRadius={branding.cornerRadius}
+            surfaceColor={branding.pageBg}
           />
         ) : null}
 
-        {pageState === 'loading' ? <ProposalLoading radius={16} /> : null}
+        {pageState === 'loading' && branding ? (
+          <ProposalLoading
+            radius={branding.radius}
+            surfaceColor={branding.pageBg}
+            borderColor={branding.borderColor}
+            mutedColor={branding.mutedColor}
+          />
+        ) : null}
 
-        {pageState === 'not_found' ? (
-          <ProposalUnavailable radius={16} textColor="#111827" mutedColor="#6B7280" />
+        {pageState === 'not_found' && branding ? (
+          <ProposalUnavailable
+            radius={branding.radius}
+            textColor={branding.textColor}
+            mutedColor={branding.mutedColor}
+            surfaceColor={branding.pageBg}
+            borderColor={branding.borderColor}
+          />
         ) : null}
 
         {proposal && branding && pageState !== 'not_found' && pageState !== 'loading' ? (
