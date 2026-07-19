@@ -10,6 +10,7 @@
  */
 
 import { bodyFontFamily, headingFontFamily, type PublicBranding } from '@/lib/branding/public-surface'
+import { roleSizePx } from '@/lib/branding/type-scale'
 
 /** Resolved branding values consumed by the questionnaire renderers. */
 export interface QuestionnaireTheme {
@@ -33,8 +34,16 @@ export interface QuestionnaireTheme {
   /** Resolved CSS font stacks; undefined falls back to the app font. */
   headingStack: string | undefined
   bodyStack: string | undefined
-  /** Default body text size in pixels. */
+  /**
+   * Role sizes in pixels, derived from the MC's global heading_size and
+   * body_size through the shared type scale. The questionnaire renders from
+   * this theme rather than PublicBranding directly, so the sizes have to
+   * arrive here or its text cannot inherit at all.
+   */
+  docTitleFontSize: number
+  headingFontSize: number
   bodyFontSize: number
+  finePrintFontSize: number
   logoUrl: string | null
   businessName: string
 }
@@ -53,6 +62,8 @@ export type ThemeSource = Partial<
     | 'corner_radius'
     | 'font_heading'
     | 'font_body'
+    | 'heading_size'
+    | 'body_size'
     | 'logo_url'
     | 'business_name'
   >
@@ -65,6 +76,8 @@ export type ThemeSource = Partial<
 export function themeFromBranding(branding: ThemeSource | undefined): QuestionnaireTheme {
   const textColor = branding?.text_color || '#111827'
   const mutedColor = branding?.muted_color || '#6B7280'
+  const headingSize = branding?.heading_size ?? 32
+  const bodySize = branding?.body_size ?? 15
   return {
     brand: branding?.brand_color || '#A7F3D0',
     pageBg: branding?.surface_color || '#fafafa',
@@ -76,7 +89,12 @@ export function themeFromBranding(branding: ThemeSource | undefined): Questionna
     radius: branding?.corner_radius ?? 16,
     headingStack: branding?.font_heading ? headingFontFamily({ font_heading: branding.font_heading }) : undefined,
     bodyStack: branding?.font_body ? bodyFontFamily({ font_body: branding.font_body }) : undefined,
-    bodyFontSize: 16, // Default body text size; inherited from branding-driven type scale.
+    // Same scale the web and PDF renderers use, so the questionnaire cannot
+    // drift from the other surfaces.
+    docTitleFontSize: roleSizePx('docTitle', headingSize, bodySize),
+    headingFontSize: roleSizePx('sectionHeading', headingSize, bodySize),
+    bodyFontSize: roleSizePx('body', headingSize, bodySize),
+    finePrintFontSize: roleSizePx('finePrint', headingSize, bodySize),
     logoUrl: branding?.logo_url ?? null,
     businessName: branding?.business_name || 'Your celebrant',
   }

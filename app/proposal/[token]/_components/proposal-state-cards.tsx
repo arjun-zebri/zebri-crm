@@ -7,8 +7,10 @@
  *
  * @module app/proposal/[token]/_components/proposal-state-cards
  */
+import type { PublicBranding } from '@/lib/branding/public-branding';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
 import { STATUS_COLORS } from '@/lib/branding/status-colors';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 
 import { formatDate } from './public-proposal';
 
@@ -26,6 +28,7 @@ import { formatDate } from './public-proposal';
  * @param surfaceColor - MC's surface color from branding
  */
 export function ProposalStatusBanner({
+  branding,
   kind,
   acceptedAt,
   expiresAt,
@@ -35,6 +38,8 @@ export function ProposalStatusBanner({
   cornerRadius,
   surfaceColor,
 }: {
+  /** Global branding, for the shared type scale. */
+  branding: PublicBranding;
   kind: 'accepted' | 'declined' | 'expired';
   acceptedAt?: string | null;
   expiresAt?: string | null;
@@ -44,6 +49,8 @@ export function ProposalStatusBanner({
   cornerRadius: number;
   surfaceColor: string;
 }) {
+  const bodyDefaults = roleDefaults(branding, 'body');
+
   if (kind === 'accepted') {
     const datePart =
       acceptedAt && acceptedAt.split('T')[0]
@@ -58,10 +65,10 @@ export function ProposalStatusBanner({
           border: `1px solid ${STATUS_COLORS.success}33`,
         }}
       >
-        <p className="font-semibold mb-1" style={{ fontSize: '14px', color: STATUS_COLORS.success }}>
+        <p className="font-semibold mb-1" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: STATUS_COLORS.success }}>
           Proposal accepted{datePart}.
         </p>
-        <p style={{ fontSize: '14px', color: STATUS_COLORS.success + 'cc' }}>
+        <p style={{ fontSize: `${bodyDefaults.fontSize}px`, color: STATUS_COLORS.success + 'cc' }}>
           {businessName ? `${htmlToPlainText(businessName)} will` : 'Your MC will'} be in touch to
           confirm the details.
         </p>
@@ -79,7 +86,7 @@ export function ProposalStatusBanner({
           border: `1px solid ${borderColor}`,
         }}
       >
-        <p style={{ fontSize: '14px', color: mutedColor }}>
+        <p style={{ fontSize: `${bodyDefaults.fontSize}px`, color: mutedColor }}>
           You declined this proposal.
         </p>
       </div>
@@ -95,7 +102,7 @@ export function ProposalStatusBanner({
         border: `1px solid ${STATUS_COLORS.warning}33`,
       }}
     >
-      <p style={{ fontSize: '14px', color: STATUS_COLORS.warning }}>
+      <p style={{ fontSize: `${bodyDefaults.fontSize}px`, color: STATUS_COLORS.warning }}>
         This proposal expired
         {expiresAt ? ` on ${formatDate(expiresAt)}` : ''}.
         {businessName
@@ -179,6 +186,9 @@ export function ProposalUnavailable({
   surfaceColor: string;
   borderColor: string;
 }) {
+  // This renders when the token does not resolve, so there is no proposal and
+  // therefore no branding to inherit. Fixed sizes are correct here, the same
+  // call the portal and invoice unavailable states make.
   return (
     <div
       className="shadow-sm p-10 text-center"
@@ -188,9 +198,11 @@ export function ProposalUnavailable({
         border: `1px solid ${borderColor}`,
       }}
     >
+      {/* gate-allow: pre-branding state */}
       <p className="font-medium mb-1" style={{ fontSize: '14px', color: textColor }}>
         This proposal is no longer available
       </p>
+      {/* gate-allow: pre-branding state */}
       <p style={{ fontSize: '14px', color: mutedColor }}>
         The link may have been disabled or replaced. Please contact your MC for a new one.
       </p>

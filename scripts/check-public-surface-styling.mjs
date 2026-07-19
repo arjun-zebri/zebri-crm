@@ -76,6 +76,17 @@ const PATTERNS = [
   // The correct pattern is rgba(r, g, b, a) where RGB are separate numbers. Hex values or
   // color variables must be decomposed via getRgb().
   { name: 'rgba(hex)', regex: /rgba\(\s*#/, reason: 'invalid CSS: rgba() with hex literal inside; use getRgb() to decompose the color' },
+
+  // Hardcoded pixel type sizes in inline styles.
+  //
+  // This exists because the obvious way to silence the bare-size-class rules
+  // above is to rewrite `className="text-sm"` as `style={{ fontSize: '14px' }}`.
+  // That passes a class-name grep while still refusing to inherit from the
+  // MC's branding, so it is strictly worse than the violation it replaces:
+  // the size is still fixed, and the gate can no longer see it. It happened
+  // in 34 places on a single commit. Sizes come from roleDefaults(), which
+  // derives them from heading_size and body_size.
+  { name: "fontSize: 'Npx'", regex: /fontSize:\s*['"`]\d+px['"`]/, reason: 'hardcoded type size; use roleDefaults(branding, role).fontSize' },
 ];
 
 /**
@@ -157,21 +168,31 @@ function findViolations(filePath, src) {
   // Paths are relative from repo root (e.g. app/portal/[token]/page.tsx).
   const isPortalFile = filePath.startsWith('app/portal/');
 
-  // Check if this is an inline-exemption file (portal page.tsx files).
-  // Paths are relative from repo root (e.g. app/portal/[token]/page.tsx).
-  const hasInlineExemptionPossibility = /app\/portal\/\[token\]\/(page|vendor\/page)\.tsx$/.test(filePath);
-
-  for (const { lineNum, text } of lines) {
-    // Skip lines already marked with inline exemption.
-    if (hasInlineExemptionPossibility && hasInlineExemption(text)) {
+  for (let idx = 0; idx < lines.length; idx++) {
+    const { lineNum, text } = lines[idx];
+    // An explicit `gate-allow: pre-branding state` marker exempts the next
+    // line, in any file. These states render before the RPC resolves or when
+    // it returns nothing, so there is no branding to inherit and a fixed
+    // value is the only option. The marker is deliberately visible in review:
+    // an exemption someone had to type and justify beats a path pattern that
+    // silently covers a whole file.
+    const previous = idx > 0 ? lines[idx - 1].text : '';
+    if (hasInlineExemption(text) || hasInlineExemption(previous)) {
       continue;
     }
 
     for (const pattern of PATTERNS) {
       if (!pattern.regex.test(text)) continue;
 
-      // Portal exemption: allow app-chrome tokens ONLY on portal interactive controls.
-      // Interactive controls are detected by interactive signals in surrounding context.
+      // Portal exemption: app-chrome tokens and bare size classes are allowed
+      // ONLY on portal interactive controls, detected from interactive signals
+      // in the surrounding context.
+      //
+      // The size classes are included for the same reason as the colour
+      // tokens: the portal is an interactive app couples log into, not a
+      // static document, so a dropdown's label is UI furniture exactly like
+      // its background. Document text on the portal is NOT covered and is
+      // still flagged.
       if (isPortalFile && [
         'border-border',
         'bg-surface-muted',
@@ -180,6 +201,10 @@ function findViolations(filePath, src) {
         'border-border-strong',
         'bg-surface',
         'text-text',
+        'text-xs',
+        'text-sm',
+        'text-base',
+        'text-lg',
       ].includes(pattern.name)) {
         // This is a portal file and the pattern is an app-chrome token.
         // Only allow it if the line is part of an interactive control.

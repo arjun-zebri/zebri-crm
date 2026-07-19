@@ -333,7 +333,7 @@ export default async function PortalPage({
                 <div className="min-w-0">
                   <p
                     className="font-semibold truncate"
-                    style={{ fontSize: '16px', color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
+                    style={{ fontSize: `${roleDefaults(branding, 'sectionHeading').fontSize}px`, color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
                   >
                     {branding.business_name}
                   </p>
@@ -364,7 +364,7 @@ export default async function PortalPage({
         >
           <h1
             className="mb-1"
-            style={{ fontSize: '30px', color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
+            style={{ fontSize: `${roleDefaults(branding, 'docTitle').fontSize}px`, color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
           >
             {portal.couple_name}
           </h1>

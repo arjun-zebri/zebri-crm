@@ -414,7 +414,7 @@ function SortableRow({ item, onEdit, branding }: SortableRowProps) {
         <div
           className="font-medium tabular-nums px-2 py-1 rounded-pill whitespace-nowrap"
           style={{
-            fontSize: '11px',
+            fontSize: `${roleDefaults(branding, 'finePrint').fontSize}px`,
             ...(item.start_time
               ? approved
                 ? { backgroundColor: '#e5e7eb', color: '#111827' }

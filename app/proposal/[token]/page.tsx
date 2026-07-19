@@ -147,6 +147,7 @@ export default function PublicProposalPage() {
   const renderAccept = ({ style }: { style: ProposalActionStyle }) =>
     proposal && branding ? (
       <ProposalAcceptActions
+        branding={proposal}
         chosenOptionTitle={chosen?.title ?? null}
         totalLabel={totalLabel}
         expiresAt={proposal.expires_at}
@@ -180,6 +181,7 @@ export default function PublicProposalPage() {
       <div className="max-w-xl mx-auto @container/doc">
         {proposal && pageState === 'accepted' && branding ? (
           <ProposalStatusBanner
+            branding={proposal}
             kind="accepted"
             acceptedAt={proposal.accepted_at}
             businessName={proposal.business_name}
@@ -191,6 +193,7 @@ export default function PublicProposalPage() {
         ) : null}
         {proposal && pageState === 'declined' && branding ? (
           <ProposalStatusBanner
+            branding={proposal}
             kind="declined"
             mutedColor={branding.mutedColor}
             borderColor={branding.borderColor}
@@ -200,6 +203,7 @@ export default function PublicProposalPage() {
         ) : null}
         {proposal && pageState === 'expired' && branding ? (
           <ProposalStatusBanner
+            branding={proposal}
             kind="expired"
             expiresAt={proposal.expires_at}
             businessName={proposal.business_name}

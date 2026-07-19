@@ -117,7 +117,7 @@ export function QuestionField({ question, value, onChange, onAutoAdvance, autoFo
                 style={{ borderRadius: radius, borderColor: isSel ? brand : borderColor, background: isSel ? `${brand}22` : pageBg, color: textColor, fontSize: `${bodyFontSize}px` }}
               >
                 <span className="grid h-5 w-5 shrink-0 place-items-center rounded border" style={{ borderColor: isSel ? brand : borderColor, background: isSel ? brand : pageBg }}>
-                  {isSel && <span style={{ fontSize: '11px', color: readableTextOn(brand) }}>✓</span>}
+                  {isSel && <span style={{ fontSize: `${theme.finePrintFontSize}px`, color: readableTextOn(brand) }}>✓</span>}
                 </span>
                 {opt}
               </button>

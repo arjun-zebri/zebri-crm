@@ -130,10 +130,10 @@ export function FillSection({
           </div>
         )}
 
-        <h1 className="mb-1.5 font-semibold" style={{ fontSize: '30px', color: theme.textColor, fontFamily: theme.headingStack }}>
+        <h1 className="mb-1.5 font-semibold" style={{ fontSize: `${theme.docTitleFontSize}px`, color: theme.textColor, fontFamily: theme.headingStack }}>
           {questionnaire.title}
         </h1>
-        <p className="mb-8" style={{ fontSize: '14px', color: theme.mutedColor }}>
+        <p className="mb-8" style={{ fontSize: `${theme.bodyFontSize}px`, color: theme.mutedColor }}>
           {questionCount} question{questionCount === 1 ? '' : 's'} · your answers save as you go
         </p>
 
@@ -155,10 +155,10 @@ export function FillSection({
   // Typeform mode (no welcome screen): just the questions.
   return (
     <div className="flex min-h-0 flex-1 flex-col py-6">
-      <h1 className="mb-1.5 shrink-0 font-semibold" style={{ fontSize: '30px', color: theme.textColor, fontFamily: theme.headingStack }}>
+      <h1 className="mb-1.5 shrink-0 font-semibold" style={{ fontSize: `${theme.docTitleFontSize}px`, color: theme.textColor, fontFamily: theme.headingStack }}>
         {questionnaire.title}
       </h1>
-      <p className="mb-8 shrink-0" style={{ fontSize: '14px', color: theme.mutedColor }}>
+      <p className="mb-8 shrink-0" style={{ fontSize: `${theme.bodyFontSize}px`, color: theme.mutedColor }}>
         {questionCount} question{questionCount === 1 ? '' : 's'} · your answers save as you go
       </p>
       {/* No wrapper around the typeform flow: its root carries `flex-1` so it

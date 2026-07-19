@@ -17,11 +17,15 @@ import { useState } from 'react';
 
 import { getTextColor } from '@/lib/branding/contrast';
 import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabels } from '@/lib/branding/proposal-labels';
+import type { PublicBranding } from '@/lib/branding/public-branding';
 import { STATUS_COLORS } from '@/lib/branding/status-colors';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 
 import { formatDate } from './public-proposal';
 
 export interface ProposalAcceptActionsProps {
+  /** Global branding, for the shared type scale. */
+  branding: PublicBranding;
   /** Null while a multi-option proposal has no choice yet. */
   chosenOptionTitle: string | null;
   totalLabel: string;
@@ -50,6 +54,7 @@ export function ProposalAcceptActions({
   onDecline,
   actionLoading,
   actionError,
+  branding,
   brand,
   radius,
   textColor,
@@ -58,6 +63,9 @@ export function ProposalAcceptActions({
   surfaceColor,
   labels = PROPOSAL_LABEL_DEFAULTS,
 }: ProposalAcceptActionsProps) {
+  const bodyDefaults = roleDefaults(branding, 'body');
+  const finePrintDefaults = roleDefaults(branding, 'finePrint');
+  const subtitleDefaults = roleDefaults(branding, 'subtitle');
   const [confirming, setConfirming] = useState(false);
   const canAccept = !!chosenOptionTitle;
   const buttonRadius = Math.min(radius, 14);
@@ -65,17 +73,17 @@ export function ProposalAcceptActions({
   return (
     <div>
       {actionError ? (
-        <p className="mb-4" style={{ fontSize: '14px', color: STATUS_COLORS.error }}>
+        <p className="mb-4" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: STATUS_COLORS.error }}>
           {actionError}
         </p>
       ) : null}
 
       {confirming && canAccept ? (
         <div>
-          <p className="mb-1 font-medium" style={{ fontSize: '14px', color: textColor }}>
+          <p className="mb-1 font-medium" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: textColor }}>
             Accept “{chosenOptionTitle}” for {totalLabel}?
           </p>
-          <p className="mb-4" style={{ fontSize: '12px', color: mutedColor }}>
+          <p className="mb-4" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: mutedColor }}>
             By accepting you confirm your package choice and the extras selected above.
           </p>
           <div className="flex gap-3">
@@ -84,7 +92,7 @@ export function ProposalAcceptActions({
               onClick={() => void onAccept()}
               disabled={actionLoading}
               style={{
-                fontSize: '14px',
+                fontSize: `${bodyDefaults.fontSize}px`,
                 fontWeight: 500,
                 backgroundColor: brand,
                 color: getTextColor(brand),
@@ -99,7 +107,7 @@ export function ProposalAcceptActions({
               onClick={() => setConfirming(false)}
               disabled={actionLoading}
               style={{
-                fontSize: '14px',
+                fontSize: `${bodyDefaults.fontSize}px`,
                 fontWeight: 500,
                 borderRadius: buttonRadius,
                 color: textColor,
@@ -123,7 +131,7 @@ export function ProposalAcceptActions({
       ) : (
         <div>
           {!canAccept ? (
-            <p className="mb-3 text-center" style={{ fontSize: '12px', color: mutedColor }}>
+            <p className="mb-3 text-center" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: mutedColor }}>
               Choose a package above to accept.
             </p>
           ) : null}
@@ -131,13 +139,13 @@ export function ProposalAcceptActions({
             type="button"
             onClick={() => setConfirming(true)}
             disabled={actionLoading || !canAccept}
-            style={{ fontSize: '15px', fontWeight: 500, backgroundColor: brand, color: getTextColor(brand), borderRadius: buttonRadius }}
+            style={{ fontSize: `${subtitleDefaults.fontSize}px`, fontWeight: 500, backgroundColor: brand, color: getTextColor(brand), borderRadius: buttonRadius }}
             className="w-full py-3.5 hover:opacity-90 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {labels.accept.text}
           </button>
           {expiresAt ? (
-            <p className="mt-2.5 text-center" style={{ fontSize: '12px', color: mutedColor }}>
+            <p className="mt-2.5 text-center" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: mutedColor }}>
               This proposal is held for you until {formatDate(expiresAt)}
             </p>
           ) : null}
@@ -146,7 +154,7 @@ export function ProposalAcceptActions({
               type="button"
               onClick={() => void onDecline()}
               disabled={actionLoading}
-              style={{ fontSize: '12px', color: mutedColor, textDecoration: 'underline', textUnderlineOffset: '2px' }}
+              style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: mutedColor, textDecoration: 'underline', textUnderlineOffset: '2px' }}
               className="hover:opacity-80 transition cursor-pointer disabled:opacity-50"
             >
               {labels.decline.text}

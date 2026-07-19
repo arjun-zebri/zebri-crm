@@ -37,7 +37,7 @@ export function QuestionnaireExperiencePreview({ title, questions, displayMode, 
   const onAnswer = (questionId: string, value: Answer) => setResponses((r) => ({ ...r, [questionId]: value }))
 
   if (questions.length === 0) {
-    return <p style={{ fontSize: '14px', color: theme.mutedColor }}>Add questions to see them here.</p>
+    return <p style={{ fontSize: `${theme.bodyFontSize}px`, color: theme.mutedColor }}>Add questions to see them here.</p>
   }
 
   // Hold a quiet skeleton until the MC's branding resolves — rendering the
@@ -66,12 +66,12 @@ export function QuestionnaireExperiencePreview({ title, questions, displayMode, 
             // eslint-disable-next-line @next/next/no-img-element
             <img src={theme.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
           ) : null}
-          <span style={{ fontSize: '14px', fontWeight: 500, color: theme.mutedColor }}>
+          <span style={{ fontSize: `${theme.bodyFontSize}px`, fontWeight: 500, color: theme.mutedColor }}>
             {theme.businessName}
           </span>
         </div>
 
-        <h1 className="mb-8 font-semibold" style={{ fontSize: '30px', color: theme.textColor, fontFamily: theme.headingStack }}>
+        <h1 className="mb-8 font-semibold" style={{ fontSize: `${theme.docTitleFontSize}px`, color: theme.textColor, fontFamily: theme.headingStack }}>
           {title || 'Untitled questionnaire'}
         </h1>
 
