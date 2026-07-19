@@ -4,6 +4,9 @@ import * as Popover from '@radix-ui/react-popover'
 import { Plus, Mail, Phone, Mic, Play, Trash2, Loader2, Pencil, ChevronDown } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from 'react'
 
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { Modal } from '@/components/ui/modal'
 import { createClient } from '@/lib/supabase/client'
 import { CATEGORY_LABELS, CATEGORIES } from '@/types/contact'
@@ -97,7 +100,7 @@ function AudioRecorder({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       // Pointer released (or component unmounted) while the mic permission
-      // prompt was up — don't start a recording nobody is holding.
+      // prompt was up - don't start a recording nobody is holding.
       if (!holdingRef.current) {
         stream.getTracks().forEach((t) => t.stop())
         return
@@ -178,9 +181,9 @@ function AudioRecorder({
       <div className="min-w-0 space-y-1">
         <p className="text-caption text-text-subtle">
           {recording
-            ? 'Recording… release to finish'
+            ? 'Recording... release to finish'
             : uploading
-              ? 'Uploading audio…'
+              ? 'Uploading audio...'
               : audioUrl
                 ? 'Hold to re-record (up to 10 seconds)'
                 : 'Press and hold to record (up to 10 seconds)'}
@@ -217,7 +220,7 @@ interface PersonModalProps {
 
 /**
  * Add / edit modal for a wedding-party person. Mounted fresh on each open by
- * the parent (conditional render), so state initialises straight from props —
+ * the parent (conditional render), so state initialises straight from props -
  * no re-seeding effect needed.
  */
 function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, saving }: PersonModalProps) {
@@ -371,7 +374,7 @@ function PersonModal({ onClose, onSave, onDelete, person, roleOptions, token, sa
               disabled={saving || !fullName.trim()}
               className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50"
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
@@ -419,7 +422,7 @@ function PersonRow({ person, onEdit }: { person: PortalPerson; onEdit: () => voi
 
 interface PeopleGroupProps {
   label: string
-  /** Singular noun for the "Add …" button — group labels can't be singularised mechanically ("Couple", "Other"). */
+  /** Singular noun for the "Add ..." button - group labels can't be singularised mechanically ("Couple", "Other"). */
   addLabel: string
   people: PortalPerson[]
   roleOptions: string[]
@@ -470,9 +473,11 @@ interface ContactsSectionProps {
   token: string
   initialContacts: PortalContact[]
   initialPeople: PortalPerson[]
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
-export function ContactsSection({ token, initialContacts, initialPeople }: ContactsSectionProps) {
+export function ContactsSection({ token, initialContacts, initialPeople, branding }: ContactsSectionProps) {
   const supabase = createClient()
 
   // Wedding party state
@@ -517,7 +522,7 @@ export function ContactsSection({ token, initialContacts, initialPeople }: Conta
         p_category: merged.category,
         p_full_name: merged.full_name,
         // Supabase type-gen types nullable text RPC params as `string`;
-        // these SQL params accept null at runtime — behaviour unchanged,
+        // these SQL params accept null at runtime - behaviour unchanged,
         // the `as string` only bridges the generated-type imprecision.
         p_phonetic: (merged.phonetic ?? null) as string,
         p_role: (merged.role ?? null) as string,

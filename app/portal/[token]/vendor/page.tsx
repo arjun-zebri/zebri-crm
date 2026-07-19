@@ -3,6 +3,7 @@ import Image from 'next/image'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import { FONT_STACKS, googleFontsHref, type BodyFont } from '@/lib/branding/fonts'
+import { buildPublicBranding } from '@/lib/branding/public-branding'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
@@ -40,13 +41,16 @@ export default async function VendorPage({
   const { data } = await supabase.rpc('get_vendor_timeline', { token })
   const vendorData = data as VendorData | null
 
-  // Derive branding colours and fonts from the user's branding or defaults.
-  const branding = vendorData?.branding
-  const pageBg = branding?.page_background ?? branding?.surface_color ?? '#ffffff'
-  const textColor = branding?.text_color ?? '#111827'
-  const mutedColor = branding?.muted_color ?? '#6B7280'
-  const headingColor = branding?.heading_color ?? textColor
-  const bodyFont = (branding?.font_body || 'inter') as BodyFont
+  // Resolve branding once at the page boundary. vendorData.branding comes from
+  // get_vendor_timeline which always returns a fully populated PublicBranding
+  // (coalesced to Minimal defaults server-side). The null-coalesce here is
+  // defensive: in normal operation it is never null.
+  const branding: PublicBranding = vendorData?.branding ?? buildPublicBranding({})
+  const pageBg = branding.surface_color
+  const textColor = branding.text_color
+  const mutedColor = branding.text_color
+  const headingColor = branding.heading_color
+  const bodyFont = (branding.font_body || 'inter') as BodyFont
   const bodyStack = FONT_STACKS[bodyFont]
 
   // Repair block tree when present; split at vendorTimelineBody marker.
@@ -59,7 +63,7 @@ export default async function VendorPage({
   const preBlocks = vtbIdx >= 0 ? allBlocks.slice(0, vtbIdx) : allBlocks
   const postBlocks = vtbIdx >= 0 ? allBlocks.slice(vtbIdx + 1) : []
 
-  // Empty PublicDocData — used to render blocks without document-specific context.
+  // Empty PublicDocData - used to render blocks without document-specific context.
   const VENDOR_DOC: PublicDocData = { title: '', refNumber: '', expiresAt: null, items: [], subtotal: 0, taxRate: 0 }
 
   if (!vendorData) {
@@ -119,8 +123,7 @@ export default async function VendorPage({
         <VendorTimeline
           events={vendorData.events}
           items={vendorData.timeline_items}
-          headingColor={headingColor}
-          accentColor={branding?.brand_color}
+          branding={branding}
         />
 
         {/* Post-blocks: render below the timeline. */}

@@ -16,6 +16,8 @@ import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-r
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
 
+import { buildPublicBranding } from '@/lib/branding/public-branding'
+
 import { BrandingHead } from './branding-head'
 import { PortalShell } from './portal-shell'
 
@@ -148,15 +150,15 @@ export interface PortalData {
   viewer: 'primary' | 'spouse'
   /** Primary partner's display name (for vow labels / the partner note). */
   primary_name: string | null
-  /** Primary partner's email — editable from the Overview tab. */
+  /** Primary partner's email - editable from the Overview tab. */
   primary_email: string | null
-  /** Primary partner's phone — editable from the Overview tab. */
+  /** Primary partner's phone - editable from the Overview tab. */
   primary_phone: string | null
   /** Secondary partner's display name. */
   secondary_name: string | null
-  /** Secondary partner's email — editable from the Overview tab. */
+  /** Secondary partner's email - editable from the Overview tab. */
   secondary_email: string | null
-  /** Secondary partner's phone — editable from the Overview tab. */
+  /** Secondary partner's phone - editable from the Overview tab. */
   secondary_phone: string | null
   event: { id: string; date: string; venue: string } | null
   events: PortalEvent[]
@@ -198,7 +200,7 @@ export default async function PortalPage({
   const portal = data as PortalData | null
 
   if (!portal) {
-    // Token-attempt limiter — record this invalid attempt by IP so
+    // Token-attempt limiter - record this invalid attempt by IP so
     // bursts (10+ in 60s) fire a Slack alert and sustained scanning
     // (60+ in an hour) starts returning notFound() instead of the
     // friendly "not active" copy. Same protection model as
@@ -225,22 +227,26 @@ export default async function PortalPage({
   const { data: qData } = await supabase.rpc('get_portal_questionnaires', { token })
   portal.questionnaires = (qData as PortalQuestionnaire[] | null) ?? []
 
-  const branding = portal.branding
-  const pageBg = branding?.surface_color || '#ffffff'
-  const textColor = branding?.text_color || '#111827'
-  const mutedColor = branding?.muted_color || '#6B7280'
-  const headingFont = (branding?.font_heading || 'inter') as HeadingFont
-  const bodyFont = (branding?.font_body || 'inter') as BodyFont
+  // Resolve branding once at the page boundary. portal.branding comes from
+  // get_portal_data which always returns a fully populated PublicBranding
+  // (coalesced to Minimal defaults server-side). The null-coalesce here is
+  // defensive: in normal operation it is never null.
+  const branding: PublicBranding = portal.branding ?? buildPublicBranding({})
+  const pageBg = branding.surface_color
+  const textColor = branding.text_color
+  const mutedColor = branding.text_color
+  const headingFont = (branding.font_heading || 'inter') as HeadingFont
+  const bodyFont = (branding.font_body || 'inter') as BodyFont
   const headingStack = FONT_STACKS[headingFont]
   const bodyStack = FONT_STACKS[bodyFont]
-  const headingWeight = branding?.font_weight ?? 600
+  const headingWeight = branding.font_weight ?? 600
   // The businessName block renders with this horizontal padding; match it on the
   // hero so the couple name lines up with the logo/business name above it.
-  const docX = (DENSITY_PADDING[branding?.density ?? 'cozy'] ?? DENSITY_PADDING.cozy).docX
+  const docX = (DENSITY_PADDING[branding.density ?? 'cozy'] ?? DENSITY_PADDING.cozy).docX
 
   // The couplePortal block is a placeholder for the real portal (hero + section
   // nav). Split the saved blocks around it so blocks the MC placed above it
-  // render before the portal and blocks placed below render after — matching
+  // render before the portal and blocks placed below render after - matching
   // the branding editor's order. No couplePortal marker (legacy) → all blocks
   // render before the portal.
   const allBlocks = portal.branding_blocks && portal.branding_blocks.length > 0
@@ -344,12 +350,13 @@ export default async function PortalPage({
           </p>
         </div>
 
-        {/* Portal sections — same horizontal padding as the blocks/hero so the
+        {/* Portal sections - same horizontal padding as the blocks/hero so the
             Overview nav lines up with the logo, couple name and intro. */}
         <div className={docX}>
           <PortalShell
             token={token}
             initialData={portal}
+            branding={branding}
           />
         </div>
 

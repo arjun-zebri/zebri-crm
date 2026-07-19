@@ -2,6 +2,7 @@
 
 import { ChevronDown, Clock } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { PublicBranding } from '@/lib/branding/public-surface'
 
 export interface VendorTimelineItem {
   id: string
@@ -156,25 +157,16 @@ function DaySelector({
 interface VendorTimelineProps {
   events: VendorEvent[]
   items: VendorTimelineItem[]
-  /**
-   * Optional colour for headings. When not provided, defaults to gray-900.
-   * Applied to the "Run Sheet" title, day label, and item titles.
-   */
-  headingColor?: string
-  /**
-   * Optional accent colour for the day selector border and active states.
-   * When not provided, defaults to gray-200 for borders and gray-900 for text.
-   */
-  accentColor?: string
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
 /**
  * Vendor-facing run sheet. Lists the couple's events as a per-day selector
  * and shows the merged, time-ordered moments for the chosen day. Read-only.
- * Optional branding colors tint headings and accents; when not provided,
- * the component renders identically to the original unbranded layout.
+ * Branding colors tint headings and accents.
  */
-export function VendorTimeline({ events, items, headingColor, accentColor }: VendorTimelineProps) {
+export function VendorTimeline({ events, items, branding }: VendorTimelineProps) {
   const days = useMemo(() => buildDays(events), [events])
   const [pickedDay, setPickedDay] = useState<string | null>(null)
 
@@ -189,10 +181,10 @@ export function VendorTimeline({ events, items, headingColor, accentColor }: Ven
   const dayEventIds = new Set(activeDay?.eventIds ?? [])
   const dayItems = items.filter((i) => dayEventIds.has(i.event_id))
 
-  // Derived colors — default to grays so unbranded output is byte-identical.
-  const hCol = headingColor ?? '#111827'
-  const borderCol = accentColor ? accentColor + '20' : '#F3F4F6'
-  const mutedCol = '#6B7280'
+  // Derived colors from branding.
+  const hCol = branding.heading_color
+  const borderCol = branding.brand_color + '20'
+  const mutedCol = branding.text_color
 
   return (
     <>

@@ -2,6 +2,10 @@
 
 import { ExternalLink } from 'lucide-react'
 
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { isPastDue } from '@/lib/utils'
 
 import { PortalProposal, PortalInvoice } from './page'
@@ -10,30 +14,32 @@ interface PaymentsSectionProps {
   payments: {
     proposals?: PortalProposal[]
     /** Legacy key the RPC keeps returning until the quotes drop
-     *  migration deploys — ignored by this component. */
+     *  migration deploys - ignored by this component. */
     quotes?: unknown[]
     invoices: PortalInvoice[]
   }
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
-function getStatusColor(status: string) {
+function getStatusColor(status: string): { bg: string; fg: string } {
   switch (status) {
     case 'draft':
-      return 'bg-surface-muted text-text-muted'
+      return { bg: `${STATUS_COLORS.warning}20`, fg: STATUS_COLORS.warning }
     case 'sent':
-      return 'bg-info/10 text-info'
+      return { bg: `${STATUS_COLORS.warning}20`, fg: STATUS_COLORS.warning }
     case 'accepted':
-      return 'bg-success/10 text-success'
+      return { bg: `${STATUS_COLORS.success}20`, fg: STATUS_COLORS.success }
     case 'declined':
-      return 'bg-danger/10 text-danger'
+      return { bg: `${STATUS_COLORS.error}20`, fg: STATUS_COLORS.error }
     case 'expired':
-      return 'bg-warning/10 text-warning'
+      return { bg: `${STATUS_COLORS.warning}20`, fg: STATUS_COLORS.warning }
     case 'paid':
-      return 'bg-success/10 text-success'
+      return { bg: `${STATUS_COLORS.success}20`, fg: STATUS_COLORS.success }
     case 'overdue':
-      return 'bg-danger/10 text-danger'
+      return { bg: `${STATUS_COLORS.error}20`, fg: STATUS_COLORS.error }
     default:
-      return 'bg-surface-muted text-text-muted'
+      return { bg: `${STATUS_COLORS.warning}20`, fg: STATUS_COLORS.warning }
   }
 }
 
@@ -46,15 +52,33 @@ function formatAUD(value: number): string {
 
 const isOverdue = isPastDue
 
-export function PaymentsSection({ payments }: PaymentsSectionProps) {
+export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
   const proposals = payments.proposals ?? []
   const hasProposals = proposals.length > 0
   const hasInvoices = payments.invoices.length > 0
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
 
   if (!hasProposals && !hasInvoices) {
     return (
-      <div className="border border-border rounded-card p-6 text-center">
-        <p className="text-body text-text-muted">Nothing here yet. Your MC will send proposals and invoices here.</p>
+      <div
+        className="rounded-card p-6 text-center"
+        style={{
+          border: `1px solid ${branding.border_color}`,
+          backgroundColor: branding.surface_color,
+        }}
+      >
+        <p
+          style={{
+            fontSize: `${bodyDefaults.fontSize}px`,
+            color: finePrintDefaults.color,
+            fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+            fontWeight: bodyDefaults.fontWeight,
+            lineHeight: bodyDefaults.lineHeight,
+          }}
+        >
+          Nothing here yet. Your MC will send proposals and invoices here.
+        </p>
       </div>
     )
   }
@@ -72,21 +96,102 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
       {(totalProposals > 0 || totalInvoices > 0) && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {totalProposals > 0 && (
-            <div className="bg-surface border border-border rounded-card p-3">
-              <p className="text-caption text-text-subtle">Total proposals</p>
-              <p className="text-section font-semibold text-text mt-1">{formatAUD(totalProposals)}</p>
+            <div
+              className="rounded-card p-3"
+              style={{
+                border: `1px solid ${branding.border_color}`,
+                backgroundColor: branding.surface_color,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: finePrintDefaults.color,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }}
+              >
+                Total proposals
+              </p>
+              <p
+                className="mt-1 font-semibold"
+                style={{
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  color: bodyDefaults.color,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  lineHeight: bodyDefaults.lineHeight,
+                }}
+              >
+                {formatAUD(totalProposals)}
+              </p>
             </div>
           )}
           {totalInvoices > 0 && (
-            <div className="bg-surface border border-border rounded-card p-3">
-              <p className="text-caption text-text-subtle">Total invoices</p>
-              <p className="text-section font-semibold text-text mt-1">{formatAUD(totalInvoices)}</p>
+            <div
+              className="rounded-card p-3"
+              style={{
+                border: `1px solid ${branding.border_color}`,
+                backgroundColor: branding.surface_color,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: finePrintDefaults.color,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }}
+              >
+                Total invoices
+              </p>
+              <p
+                className="mt-1 font-semibold"
+                style={{
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  color: bodyDefaults.color,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  lineHeight: bodyDefaults.lineHeight,
+                }}
+              >
+                {formatAUD(totalInvoices)}
+              </p>
             </div>
           )}
           {overdueInvoices.length > 0 && (
-            <div className="bg-danger/10 border border-danger/30 rounded-card p-3">
-              <p className="text-caption text-danger">Overdue</p>
-              <p className="text-section font-semibold text-danger mt-1">{overdueInvoices.length}</p>
+            <div
+              className="rounded-card p-3"
+              style={{
+                border: `1px solid ${STATUS_COLORS.error}20`,
+                backgroundColor: `${STATUS_COLORS.error}10`,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: STATUS_COLORS.error,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }}
+              >
+                Overdue
+              </p>
+              <p
+                className="mt-1 font-semibold"
+                style={{
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  color: STATUS_COLORS.error,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  lineHeight: bodyDefaults.lineHeight,
+                }}
+              >
+                {overdueInvoices.length}
+              </p>
             </div>
           )}
         </div>
@@ -95,34 +200,116 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
       {/* Proposals */}
       {hasProposals && (
         <div>
-          <h3 className="text-body font-medium text-text-muted mb-3">Proposals</h3>
+          <h3
+            className="font-medium mb-3"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: 500,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
+          >
+            Proposals
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {proposals.map((proposal) => (
-              <div key={proposal.id} className="bg-surface border border-border rounded-card p-4 flex flex-col">
-                <div className="flex items-start justify-between gap-3 mb-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-body font-medium text-text">{proposal.title}</p>
-                    <p className="text-caption text-text-subtle mt-0.5">Proposal #{proposal.proposal_number}</p>
-                  </div>
-                  <span className={`shrink-0 text-caption font-medium px-2 py-1 rounded-pill capitalize ${getStatusColor(proposal.status)}`}>
-                    {proposal.status}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mt-auto pt-3">
-                  <p className="text-body font-semibold text-text">{formatAUD(proposal.subtotal)}</p>
-                  {proposal.share_token_enabled && proposal.share_token ? (
-                    <a
-                      href={`/proposal/${proposal.share_token}`}
-                      className="inline-flex items-center gap-1.5 text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
+            {proposals.map((proposal) => {
+              const statusColor = getStatusColor(proposal.status)
+              return (
+                <div
+                  key={proposal.id}
+                  className="rounded-card p-4 flex flex-col"
+                  style={{
+                    border: `1px solid ${branding.border_color}`,
+                    backgroundColor: branding.surface_color,
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="font-medium"
+                        style={{
+                          fontSize: `${bodyDefaults.fontSize}px`,
+                          color: bodyDefaults.color,
+                          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                          fontWeight: 500,
+                          lineHeight: bodyDefaults.lineHeight,
+                        }}
+                      >
+                        {proposal.title}
+                      </p>
+                      <p
+                        className="mt-0.5"
+                        style={{
+                          fontSize: `${finePrintDefaults.fontSize}px`,
+                          color: finePrintDefaults.color,
+                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                          fontWeight: finePrintDefaults.fontWeight,
+                          lineHeight: finePrintDefaults.lineHeight,
+                        }}
+                      >
+                        Proposal #{proposal.proposal_number}
+                      </p>
+                    </div>
+                    <span
+                      className="shrink-0 font-medium px-2 py-1 capitalize"
+                      style={{
+                        fontSize: `${finePrintDefaults.fontSize}px`,
+                        color: statusColor.fg,
+                        backgroundColor: statusColor.bg,
+                        fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                        fontWeight: 500,
+                        lineHeight: finePrintDefaults.lineHeight,
+                        borderRadius: branding.corner_radius,
+                      }}
                     >
-                      View <ExternalLink size={13} strokeWidth={1.5} />
-                    </a>
-                  ) : (
-                    <span className="text-caption text-text-subtle">Not yet shared</span>
-                  )}
+                      {proposal.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-auto pt-3">
+                    <p
+                      className="font-semibold"
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        color: bodyDefaults.color,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: 600,
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
+                    >
+                      {formatAUD(proposal.subtotal)}
+                    </p>
+                    {proposal.share_token_enabled && proposal.share_token ? (
+                      <a
+                        href={`/proposal/${proposal.share_token}`}
+                        className="inline-flex items-center gap-1.5 font-medium transition cursor-pointer hover:opacity-75"
+                        style={{
+                          fontSize: `${finePrintDefaults.fontSize}px`,
+                          color: branding.brand_color,
+                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                          fontWeight: 500,
+                          lineHeight: finePrintDefaults.lineHeight,
+                        }}
+                      >
+                        View <ExternalLink size={13} strokeWidth={1.5} />
+                      </a>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: `${finePrintDefaults.fontSize}px`,
+                          color: finePrintDefaults.color,
+                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                          fontWeight: finePrintDefaults.fontWeight,
+                          lineHeight: finePrintDefaults.lineHeight,
+                        }}
+                      >
+                        Not yet shared
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -130,46 +317,127 @@ export function PaymentsSection({ payments }: PaymentsSectionProps) {
       {/* Invoices */}
       {hasInvoices && (
         <div>
-          <h3 className="text-body font-medium text-text-muted mb-3">Invoices</h3>
+          <h3
+            className="font-medium mb-3"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: 500,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
+          >
+            Invoices
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {payments.invoices.map((invoice) => {
               const overdue = invoice.status !== 'paid' && invoice.status !== 'cancelled' && isOverdue(invoice.due_date)
               return (
                 <div
                   key={invoice.id}
-                  className={`border rounded-card p-4 flex flex-col ${
-                    overdue
-                      ? 'bg-danger/10 border-danger/30'
-                      : 'bg-surface border-border hover:border-border-strong'
-                  }`}
+                  className="rounded-card p-4 flex flex-col"
+                  style={{
+                    border: `1px solid ${overdue ? STATUS_COLORS.error : branding.border_color}30`,
+                    backgroundColor: overdue ? `${STATUS_COLORS.error}10` : branding.surface_color,
+                  }}
                 >
                   <div className="flex items-start justify-between gap-3 mb-2.5">
                     <div className="min-w-0 flex-1">
-                      <p className={`text-body font-medium ${overdue ? 'text-danger' : 'text-text'}`}>{invoice.title}</p>
-                      <p className="text-caption text-text-subtle mt-0.5">Invoice #{invoice.invoice_number}</p>
+                      <p
+                        className="font-medium"
+                        style={{
+                          fontSize: `${bodyDefaults.fontSize}px`,
+                          color: overdue ? STATUS_COLORS.error : bodyDefaults.color,
+                          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                          fontWeight: 500,
+                          lineHeight: bodyDefaults.lineHeight,
+                        }}
+                      >
+                        {invoice.title}
+                      </p>
+                      <p
+                        className="mt-0.5"
+                        style={{
+                          fontSize: `${finePrintDefaults.fontSize}px`,
+                          color: finePrintDefaults.color,
+                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                          fontWeight: finePrintDefaults.fontWeight,
+                          lineHeight: finePrintDefaults.lineHeight,
+                        }}
+                      >
+                        Invoice #{invoice.invoice_number}
+                      </p>
                     </div>
                     {overdue && (
-                      <span className="shrink-0 text-caption font-medium px-2 py-1 rounded-pill bg-danger text-text-inverse">
+                      <span
+                        className="shrink-0 font-medium px-2 py-1"
+                        style={{
+                          fontSize: `${finePrintDefaults.fontSize}px`,
+                          color: 'white',
+                          backgroundColor: STATUS_COLORS.error,
+                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                          fontWeight: 500,
+                          lineHeight: finePrintDefaults.lineHeight,
+                          borderRadius: branding.corner_radius,
+                        }}
+                      >
                         Overdue
                       </span>
                     )}
                   </div>
                   {invoice.due_date && (
-                    <p className={`text-caption mb-3 ${overdue ? 'text-danger font-medium' : 'text-text-subtle'}`}>
+                    <p
+                      className="mb-3"
+                      style={{
+                        fontSize: `${finePrintDefaults.fontSize}px`,
+                        color: overdue ? STATUS_COLORS.error : finePrintDefaults.color,
+                        fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                        fontWeight: overdue ? 500 : finePrintDefaults.fontWeight,
+                        lineHeight: finePrintDefaults.lineHeight,
+                      }}
+                    >
                       Due {new Date(invoice.due_date + 'T00:00:00').toLocaleDateString('en-AU')}
                     </p>
                   )}
                   <div className="flex items-center justify-between mt-auto">
-                    <p className="text-body font-semibold text-text">{formatAUD(invoice.subtotal)}</p>
+                    <p
+                      className="font-semibold"
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        color: bodyDefaults.color,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: 600,
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
+                    >
+                      {formatAUD(invoice.subtotal)}
+                    </p>
                     {invoice.share_token_enabled && invoice.share_token ? (
                       <a
                         href={`/invoice/${invoice.share_token}`}
-                        className="inline-flex items-center gap-1.5 text-caption font-medium text-brand-fg hover:text-text-muted transition cursor-pointer"
+                        className="inline-flex items-center gap-1.5 font-medium transition cursor-pointer hover:opacity-75"
+                        style={{
+                          fontSize: `${finePrintDefaults.fontSize}px`,
+                          color: branding.brand_color,
+                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                          fontWeight: 500,
+                          lineHeight: finePrintDefaults.lineHeight,
+                        }}
                       >
                         View <ExternalLink size={13} strokeWidth={1.5} />
                       </a>
                     ) : (
-                      <span className="text-caption text-text-subtle">Not yet shared</span>
+                      <span
+                        style={{
+                          fontSize: `${finePrintDefaults.fontSize}px`,
+                          color: finePrintDefaults.color,
+                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                          fontWeight: finePrintDefaults.fontWeight,
+                          lineHeight: finePrintDefaults.lineHeight,
+                        }}
+                      >
+                        Not yet shared
+                      </span>
                     )}
                   </div>
                 </div>

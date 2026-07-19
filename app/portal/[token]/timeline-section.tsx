@@ -18,6 +18,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createBrowserClient } from "@supabase/ssr";
+import { FONT_STACKS } from "@/lib/branding/fonts";
+import type { PublicBranding } from "@/lib/branding/public-surface";
+import { roleDefaults } from "@/lib/branding/type-defaults";
 import { Modal } from "@/components/ui/modal";
 import type { PortalEvent, PortalTimelineItem } from "./page";
 
@@ -413,7 +416,7 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
   );
 }
 
-/** "Saturday, 22 April" — the day a run sheet belongs to. */
+/** "Saturday, 22 April" - the day a run sheet belongs to. */
 function formatDayLabel(date: string): string {
   return new Date(date + "T00:00:00").toLocaleDateString("en-AU", {
     weekday: "long",
@@ -446,7 +449,7 @@ function buildDays(events: PortalEvent[]): PortalDay[] {
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** "Sunday 21 June · Park Hyatt Sydney" — date plus the day's venue(s). */
+/** "Sunday 21 June · Park Hyatt Sydney" - date plus the day's venue(s). */
 function dayLabel(day: PortalDay): string {
   const date = formatDayLabel(day.date);
   return day.venues.length > 0 ? `${date} · ${day.venues.join(", ")}` : date;
@@ -533,6 +536,8 @@ interface TimelineSectionProps {
   initialItems: PortalTimelineItem[];
   events: PortalEvent[];
   hasEvent: boolean;
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding;
 }
 
 export function TimelineSection({
@@ -540,6 +545,7 @@ export function TimelineSection({
   initialItems,
   events,
   hasEvent,
+  branding,
 }: TimelineSectionProps) {
   const [items, setItems] = useState<PortalTimelineItem[]>(initialItems);
   const [modalOpen, setModalOpen] = useState(false);
@@ -660,7 +666,7 @@ export function TimelineSection({
     );
   }
 
-  // Only the moments for the day in view — a couple with several events
+  // Only the moments for the day in view - a couple with several events
   // (including more than one on the same day) sees one run sheet at a time.
   const dayItems = items.filter((i) => dayEventIds.has(i.event_id));
   const mcItems = dayItems.filter((i) => !i.pending_review);

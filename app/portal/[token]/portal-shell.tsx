@@ -3,6 +3,7 @@
 import { LayoutDashboard, Users2, Clock, Music, FileText, FileSignature, Receipt, Heart, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
 
+import type { PublicBranding } from '@/lib/branding/public-surface'
 import { PortalSectionNav } from '@/app/(dashboard)/couples/portal-section-nav'
 
 import { ContactsSection } from './contacts-section'
@@ -31,9 +32,11 @@ const ALL_SECTIONS = [
 interface PortalShellProps {
   token: string
   initialData: PortalData
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
-export function PortalShell({ token, initialData }: PortalShellProps) {
+export function PortalShell({ token, initialData, branding }: PortalShellProps) {
   const enabledSections = initialData.enabled_sections
   // Questionnaires is a newer section, so it won't appear in an MC's saved
   // enabled-sections list yet. Surface it whenever the couple actually has one
@@ -93,6 +96,7 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
               phone: initialData.secondary_phone ?? '',
             }}
             events={initialData.events}
+            branding={branding}
           />
         )}
         {activeSection === 'timeline' && (
@@ -101,25 +105,26 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
             initialItems={initialData.timeline_items}
             events={initialData.events}
             hasEvent={!!initialData.event}
+            branding={branding}
           />
         )}
         {activeSection === 'contacts' && (
-          <ContactsSection token={token} initialContacts={initialData.contacts} initialPeople={initialData.people} />
+          <ContactsSection token={token} initialContacts={initialData.contacts} initialPeople={initialData.people} branding={branding} />
         )}
         {activeSection === 'payments' && (
-          <PaymentsSection payments={initialData.payments} />
+          <PaymentsSection payments={initialData.payments} branding={branding} />
         )}
         {activeSection === 'contracts' && (
-          <ContractsSection contracts={initialData.contracts ?? []} />
+          <ContractsSection contracts={initialData.contracts ?? []} branding={branding} />
         )}
         {activeSection === 'questionnaires' && (
-          <QuestionnairesSection questionnaires={initialData.questionnaires ?? []} />
+          <QuestionnairesSection questionnaires={initialData.questionnaires ?? []} branding={branding} />
         )}
         {activeSection === 'songs' && (
-          <SongsSection token={token} initialSongs={initialData.songs} initialCategories={initialData.song_categories} />
+          <SongsSection token={token} initialSongs={initialData.songs} initialCategories={initialData.song_categories} branding={branding} />
         )}
         {activeSection === 'files' && (
-          <FilesSection token={token} initialFiles={initialData.files} />
+          <FilesSection token={token} initialFiles={initialData.files} branding={branding} />
         )}
         {activeSection === 'vows' && (
           <VowsSection
@@ -128,6 +133,7 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
             viewer={initialData.viewer}
             primaryName={initialData.primary_name}
             secondaryName={initialData.secondary_name}
+            branding={branding}
           />
         )}
       </div>

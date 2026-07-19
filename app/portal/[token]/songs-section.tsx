@@ -4,6 +4,10 @@ import { Plus, Trash2, Music, Pencil, ChevronDown } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { Modal } from '@/components/ui/modal'
 import type { PortalSong, PortalSongCategory } from './page'
 
@@ -24,8 +28,6 @@ const DEFAULT_SONG_CATEGORIES: { key: string; label: string; description: string
   { key: 'avoid', label: 'Do Not Play', description: "Songs you definitely don't want played" },
 ]
 
-const inputClass = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition'
-
 interface SongModalProps {
   isOpen: boolean
   onClose: () => void
@@ -34,13 +36,16 @@ interface SongModalProps {
   song: PortalSong | null
   categoryLabel: string
   saving: boolean
+  branding: PublicBranding
 }
 
-function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, saving }: SongModalProps) {
+function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, saving, branding }: SongModalProps) {
   const [title, setTitle] = useState(song?.title ?? '')
   const [artist, setArtist] = useState(song?.artist ?? '')
   const [notes, setNotes] = useState(song?.notes ?? '')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+  const bodyDefaults = roleDefaults(branding, 'body')
 
   useEffect(() => {
     if (isOpen) {
@@ -64,54 +69,150 @@ function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, sav
       <div className="space-y-4">
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Song title</label>
+            <label
+              className="block mb-1"
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                fontWeight: finePrintDefaults.fontWeight,
+                lineHeight: finePrintDefaults.lineHeight,
+              }}
+            >
+              Song title
+            </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Can't Help Falling in Love"
-              className={inputClass}
+              style={{
+                width: '100%',
+                border: `1px solid ${branding.border_color}`,
+                borderRadius: `${branding.corner_radius}px`,
+                padding: '0.5rem 0.75rem',
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+                outline: 'none',
+              }}
+              className="transition"
               autoFocus
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Artist (optional)</label>
+            <label
+              className="block mb-1"
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                fontWeight: finePrintDefaults.fontWeight,
+                lineHeight: finePrintDefaults.lineHeight,
+              }}
+            >
+              Artist (optional)
+            </label>
             <input
               type="text"
               value={artist}
               onChange={(e) => setArtist(e.target.value)}
               placeholder="e.g. Elvis Presley"
-              className={inputClass}
+              style={{
+                width: '100%',
+                border: `1px solid ${branding.border_color}`,
+                borderRadius: `${branding.corner_radius}px`,
+                padding: '0.5rem 0.75rem',
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+                outline: 'none',
+              }}
+              className="transition"
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Notes (optional)</label>
+            <label
+              className="block mb-1"
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                fontWeight: finePrintDefaults.fontWeight,
+                lineHeight: finePrintDefaults.lineHeight,
+              }}
+            >
+              Notes (optional)
+            </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Start from the chorus"
-              className={inputClass}
+              style={{
+                width: '100%',
+                border: `1px solid ${branding.border_color}`,
+                borderRadius: `${branding.corner_radius}px`,
+                padding: '0.5rem 0.75rem',
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+                outline: 'none',
+              }}
+              className="transition"
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+        <div
+          className="flex items-center justify-between pt-2"
+          style={{ borderTop: `1px solid ${branding.border_color}` }}
+        >
           {song && onDelete ? (
             confirmDelete ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">Remove this song?</span>
+                <span
+                  style={{
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    color: finePrintDefaults.color,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                  }}
+                >
+                  Remove this song?
+                </span>
                 <button
                   type="button"
                   onClick={async () => { await onDelete(); setConfirmDelete(false) }}
-                  className="text-xs text-red-500 hover:text-red-600 transition cursor-pointer"
+                  className="transition cursor-pointer hover:opacity-80"
+                  style={{
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    color: STATUS_COLORS.error,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                  }}
                 >
                   Yes, remove
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(false)}
-                  className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                  className="transition cursor-pointer hover:opacity-80"
+                  style={{
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    color: finePrintDefaults.color,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                  }}
                 >
                   Cancel
                 </button>
@@ -120,7 +221,14 @@ function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, sav
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 transition cursor-pointer"
+                className="flex items-center gap-1 transition cursor-pointer hover:opacity-80"
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: finePrintDefaults.color,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                }}
               >
                 <Trash2 size={13} strokeWidth={1.5} />
                 Remove
@@ -133,7 +241,16 @@ function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, sav
             <button
               type="button"
               onClick={onClose}
-              className="text-sm text-gray-500 border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
+              className="px-3 py-1.5 transition cursor-pointer hover:opacity-75"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+                border: `1px solid ${branding.border_color}`,
+                borderRadius: `${branding.corner_radius}px`,
+              }}
             >
               Cancel
             </button>
@@ -141,9 +258,18 @@ function SongModal({ isOpen, onClose, onSave, onDelete, song, categoryLabel, sav
               type="button"
               onClick={handleSubmit}
               disabled={saving || !title.trim()}
-              className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50"
+              className="rounded-xl px-3 py-1.5 transition cursor-pointer disabled:opacity-50 hover:opacity-90"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: 'white',
+                backgroundColor: branding.brand_color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+                borderRadius: `${branding.corner_radius}px`,
+              }}
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>
@@ -157,37 +283,66 @@ interface CategoryGroupProps {
   songs: PortalSong[]
   onAdd: () => void
   onEdit: (song: PortalSong) => void
+  branding: PublicBranding
 }
 
-function CategoryGroup({ category, songs, onAdd, onEdit }: CategoryGroupProps) {
+function CategoryGroup({ category, songs, onAdd, onEdit, branding }: CategoryGroupProps) {
   const categorySongs = songs.filter((s) => s.category === category.key)
   const [expanded, setExpanded] = useState(categorySongs.length > 0)
   const isAvoidCategory = category.key === 'avoid'
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
 
   return (
     <div className="space-y-2.5">
       <button
         onClick={() => setExpanded(!expanded)}
-        className={`w-full flex items-center justify-between p-0 transition cursor-pointer ${isAvoidCategory ? 'hover:opacity-80' : ''}`}
+        className="w-full flex items-center justify-between p-0 transition cursor-pointer hover:opacity-80"
       >
         <div className="flex-1 text-left">
-          <p className={`text-body font-medium ${isAvoidCategory ? 'text-danger' : 'text-text-muted'}`}>
+          <p
+            className="font-medium"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: isAvoidCategory ? STATUS_COLORS.error : finePrintDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: 500,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
+          >
             {category.label}
           </p>
           {category.description && (
-            <p className={`text-caption ${isAvoidCategory ? 'text-danger/70' : 'text-text-subtle'}`}>
+            <p
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                color: isAvoidCategory ? STATUS_COLORS.error : finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                fontWeight: finePrintDefaults.fontWeight,
+                lineHeight: finePrintDefaults.lineHeight,
+                opacity: 0.7,
+              }}
+            >
               {category.description}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-caption ${isAvoidCategory ? 'text-danger' : 'text-text-subtle'}`}>
+          <span
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: isAvoidCategory ? STATUS_COLORS.error : finePrintDefaults.color,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: finePrintDefaults.fontWeight,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
             {categorySongs.length}
           </span>
           <ChevronDown
             size={16}
             strokeWidth={1.5}
-            className={`text-text-muted transition-transform ${expanded ? '' : '-rotate-90'}`}
+            style={{ color: finePrintDefaults.color, transform: expanded ? '' : 'rotate(-90deg)', transition: 'transform 0.2s' }}
           />
         </div>
       </button>
@@ -195,9 +350,28 @@ function CategoryGroup({ category, songs, onAdd, onEdit }: CategoryGroupProps) {
       {expanded && (
         <>
           {categorySongs.length === 0 ? (
-            <div className={`border border-dashed rounded-card py-3.5 flex items-center justify-center gap-1.5 ${isAvoidCategory ? 'border-danger/30 bg-danger/5' : 'border-border bg-surface-muted'}`}>
-              <Music size={14} strokeWidth={1.5} className={isAvoidCategory ? 'text-danger/50' : 'text-text-subtle'} />
-              <span className={`text-caption ${isAvoidCategory ? 'text-danger/70' : 'text-text-subtle'}`}>
+            <div
+              className="border border-dashed rounded-card py-3.5 flex items-center justify-center gap-1.5"
+              style={{
+                borderColor: isAvoidCategory ? STATUS_COLORS.error : branding.border_color,
+                backgroundColor: isAvoidCategory ? `${STATUS_COLORS.error}10` : branding.surface_color,
+              }}
+            >
+              <Music
+                size={14}
+                strokeWidth={1.5}
+                style={{ color: isAvoidCategory ? STATUS_COLORS.error : finePrintDefaults.color, opacity: 0.5 }}
+              />
+              <span
+                style={{
+                  fontSize: `${finePrintDefaults.fontSize}px`,
+                  color: isAvoidCategory ? STATUS_COLORS.error : finePrintDefaults.color,
+                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                  fontWeight: finePrintDefaults.fontWeight,
+                  lineHeight: finePrintDefaults.lineHeight,
+                  opacity: 0.7,
+                }}
+              >
                 No songs yet
               </span>
             </div>
@@ -206,22 +380,44 @@ function CategoryGroup({ category, songs, onAdd, onEdit }: CategoryGroupProps) {
               {categorySongs.map((s) => (
                 <div
                   key={s.id}
-                  className={`flex items-center gap-3 border rounded-card px-5 py-3.5 transition cursor-pointer ${
-                    isAvoidCategory
-                      ? 'bg-danger/5 border-danger/20 hover:border-danger/40'
-                      : 'bg-surface border-border hover:border-border-strong hover:bg-surface-muted'
-                  }`}
+                  className="flex items-center gap-3 rounded-card px-5 py-3.5 transition cursor-pointer hover:opacity-90"
+                  style={{
+                    border: `1px solid ${isAvoidCategory ? STATUS_COLORS.error : branding.border_color}30`,
+                    backgroundColor: isAvoidCategory ? `${STATUS_COLORS.error}10` : branding.surface_color,
+                  }}
                   onClick={() => onEdit(s)}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className={`text-body font-medium ${isAvoidCategory ? 'text-danger' : 'text-text'}`}>
+                    <p
+                      className="font-medium"
+                      style={{
+                        fontSize: `${bodyDefaults.fontSize}px`,
+                        color: isAvoidCategory ? STATUS_COLORS.error : bodyDefaults.color,
+                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                        fontWeight: 500,
+                        lineHeight: bodyDefaults.lineHeight,
+                      }}
+                    >
                       {s.title}
                     </p>
-                    <p className={`text-caption ${isAvoidCategory ? 'text-danger/70' : 'text-text-muted'}`}>
-                      {[s.artist, s.notes].filter(Boolean).join(' · ')}
+                    <p
+                      style={{
+                        fontSize: `${finePrintDefaults.fontSize}px`,
+                        color: isAvoidCategory ? STATUS_COLORS.error : finePrintDefaults.color,
+                        fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                        fontWeight: finePrintDefaults.fontWeight,
+                        lineHeight: finePrintDefaults.lineHeight,
+                        opacity: 0.75,
+                      }}
+                    >
+                      {[s.artist, s.notes].filter(Boolean).join(' - ')}
                     </p>
                   </div>
-                  <Pencil size={13} strokeWidth={1.5} className={isAvoidCategory ? 'text-danger/50' : 'text-text-subtle'} />
+                  <Pencil
+                    size={13}
+                    strokeWidth={1.5}
+                    style={{ color: isAvoidCategory ? STATUS_COLORS.error : finePrintDefaults.color, opacity: 0.5 }}
+                  />
                 </div>
               ))}
             </div>
@@ -229,11 +425,17 @@ function CategoryGroup({ category, songs, onAdd, onEdit }: CategoryGroupProps) {
           {categorySongs.length >= 0 && (
             <button
               onClick={onAdd}
-              className={`w-full text-caption font-medium rounded-control px-3 py-2 transition cursor-pointer ${
-                isAvoidCategory
-                  ? 'text-danger border border-dashed border-danger/30 hover:bg-danger/5'
-                  : 'text-text-muted border border-dashed border-border hover:bg-surface-muted'
-              }`}
+              className="w-full font-medium rounded-xl px-3 py-2 transition cursor-pointer border border-dashed hover:opacity-80"
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                color: isAvoidCategory ? STATUS_COLORS.error : finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                fontWeight: 500,
+                lineHeight: finePrintDefaults.lineHeight,
+                borderColor: isAvoidCategory ? STATUS_COLORS.error : branding.border_color,
+                backgroundColor: isAvoidCategory ? `${STATUS_COLORS.error}10` : branding.surface_color,
+                borderRadius: `${branding.corner_radius}px`,
+              }}
             >
               <Plus size={13} strokeWidth={1.5} className="inline mr-1" />
               Add song
@@ -249,9 +451,11 @@ interface SongsSectionProps {
   token: string
   initialSongs: PortalSong[]
   initialCategories: PortalSongCategory[]
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
-export function SongsSection({ token, initialSongs, initialCategories }: SongsSectionProps) {
+export function SongsSection({ token, initialSongs, initialCategories, branding }: SongsSectionProps) {
   const categories = initialCategories.length > 0 ? initialCategories : DEFAULT_SONG_CATEGORIES
   const [songs, setSongs] = useState<PortalSong[]>(initialSongs)
   const [modalOpen, setModalOpen] = useState(false)
@@ -327,14 +531,15 @@ export function SongsSection({ token, initialSongs, initialCategories }: SongsSe
   }, [editingSong, token])
 
   return (
-    <div className="space-y-4 divide-y divide-border">
+    <div style={{ borderColor: branding.border_color }} className="space-y-4 divide-y">
       {categories.map((cat, i) => (
-        <div key={cat.key} className={i > 0 ? 'pt-4' : ''}>
+        <div key={cat.key} style={{ paddingTop: i > 0 ? '1rem' : undefined }}>
           <CategoryGroup
             category={cat}
             songs={songs}
             onAdd={() => openAdd(cat)}
             onEdit={openEdit}
+            branding={branding}
           />
         </div>
       ))}
@@ -347,6 +552,7 @@ export function SongsSection({ token, initialSongs, initialCategories }: SongsSe
         song={editingSong}
         categoryLabel={modalCategory.label}
         saving={saving}
+        branding={branding}
       />
     </div>
   )
