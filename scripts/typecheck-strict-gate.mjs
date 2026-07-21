@@ -52,7 +52,9 @@ import { execSync } from 'node:child_process';
 // Branding role-colour model removed 2 further strict errors (290 -> 288).
 // Contract surface global styles: retiring the optional `headingStack` prop
 // removed its exactOptionalPropertyTypes violation (288 -> 287).
-const STRICT_BUDGET = 287;
+// Extracting the branding onboarding gate into lib/branding/onboarding-gate.ts
+// resolved two more inference sites on the branding page (287 -> 285).
+const STRICT_BUDGET = 285;
 
 function runTscStrict() {
   try {

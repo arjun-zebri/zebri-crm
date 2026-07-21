@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
+import { shouldShowOnboarding } from '@/lib/branding/onboarding-gate'
 import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
+import type { TextCase } from '@/lib/branding/text-case'
 import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
 import { repairBlocks } from '@/lib/branding/validate-blocks'
 import { createClient } from '@/lib/supabase/client'
@@ -49,8 +51,11 @@ interface UserMetadata {
   active_kit_id?: string | null
   heading_size?: number
   body_size?: number
-  heading_case?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
-  body_case?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  heading_case?: TextCase
+  body_case?: TextCase
+  subheading_size?: number
+  subheading_weight?: number
+  subheading_case?: TextCase
   heading_letter_spacing?: number
   body_line_height?: number
   link_color?: string
@@ -93,9 +98,14 @@ interface UserBrandingRow {
 
 const fontsHref = googleFontsHref([...HEADING_FONTS, ...BODY_FONTS])
 
-/** localStorage key caching whether this user finished branding onboarding,
- *  so the wizard modal can paint instantly on the next visit instead of
- *  waiting for the first fetch to say whether it is needed. */
+/** localStorage key caching whether the last account seen in this browser
+ *  finished branding onboarding, so the wizard frame can paint instantly
+ *  instead of waiting for the first fetch.
+ *
+ *  Strictly a paint hint. The key is per-browser, not per-account, so it goes
+ *  stale on account switch; `shouldShowOnboarding` therefore discards it as
+ *  soon as the authoritative `onboarded_at` lands. Never gate the modal on
+ *  this value alone. */
 const ONBOARDED_CACHE_KEY = 'zebri:branding-onboarded'
 
 export default function BrandingPage() {
@@ -103,9 +113,10 @@ export default function BrandingPage() {
   const [branding, setBranding] = useState<UserBrandingRow | null>(null)
   const [loading, setLoading] = useState(true)
   const [wizardError, setWizardError] = useState<string | null>(null)
-  // True when the cache says this user has NOT completed onboarding (or we
-  // have never seen them): the modal skeleton shows immediately while the
-  // fetch runs. Onboarded users skip it, so they never see a modal flash.
+  // True when the cache says the last account in this browser had NOT
+  // completed onboarding (or we have never seen one): the modal skeleton shows
+  // immediately while the fetch runs, so onboarded users never see a flash.
+  // Only consulted while `loading` — see `shouldShowOnboarding`.
   // Set post-hydration: reading localStorage during the first render makes
   // the server and client trees differ and breaks hydration.
   // Bumped whenever page data is re-fetched after onboarding completes;
@@ -330,6 +341,11 @@ export default function BrandingPage() {
   }
   const enabledSrc = (branding?.enabled_surfaces ?? defaultEnabledSurfaces) as Record<string, boolean>
   const onboardedAt = branding?.onboarded_at ?? null
+  const showOnboarding = shouldShowOnboarding({
+    loading,
+    cacheSaysNeedsOnboarding: likelyNeedsOnboarding,
+    onboardedAt,
+  })
 
   return (
     <>
@@ -337,7 +353,7 @@ export default function BrandingPage() {
           h-full passes the layout container's height through to the editor so
           its h-full root resolves; without it the editor grows to content
           height inside the overflow-hidden layout and its panels can't scroll. */}
-      <div className="h-full" inert={onboardedAt === null ? true : undefined}>
+      <div className="h-full" inert={showOnboarding ? true : undefined}>
         <BrandingEditor
           key={dataVersion}
           initialData={{
@@ -394,6 +410,15 @@ export default function BrandingPage() {
             bodySize: typeof metadata?.body_size === 'number' ? metadata.body_size : 15,
             headingCase: metadata?.heading_case ?? 'none',
             bodyCase: metadata?.body_case ?? 'none',
+            // Subheading (section-label) type. Unset falls back to the values the
+            // role used to derive, so existing documents look unchanged: size
+            // ≈ 0.73× body, weight = body weight, case = heading case.
+            subheadingSize:
+              typeof metadata?.subheading_size === 'number'
+                ? metadata.subheading_size
+                : Math.max(9, Math.round((typeof metadata?.body_size === 'number' ? metadata.body_size : 15) * 0.73)),
+            subheadingWeight: sanitizeWeight(metadata?.subheading_weight, sanitizeWeight(metadata?.font_body_weight, 400)),
+            subheadingCase: metadata?.subheading_case ?? metadata?.heading_case ?? 'none',
             headingLetterSpacing: typeof metadata?.heading_letter_spacing === 'number' ? metadata.heading_letter_spacing : 0,
             bodyLineHeight: typeof metadata?.body_line_height === 'number' ? metadata.body_line_height : 1.5,
             linkColor: metadata?.link_color ?? brandColor,
@@ -412,7 +437,7 @@ export default function BrandingPage() {
           then fills with the wizard, so the hand-off is continuous rather than
           a second modal popping in at a different size. */}
       <OnboardingModal
-        isOpen={likelyNeedsOnboarding && onboardedAt === null}
+        isOpen={showOnboarding}
         loading={loading}
         initial={{
           businessName: metadata?.business_name,

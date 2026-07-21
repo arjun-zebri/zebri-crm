@@ -12,6 +12,7 @@
  * @module app/contract/[token]/_components/contract-fallback-card
  */
 import { getTextColor } from '@/lib/branding/contrast';
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import { Html } from '@/lib/branding/public-blocks/html';
 import { DENSITY_PAD } from '@/lib/branding/public-surface';
@@ -112,10 +113,10 @@ export function ContractFallbackCard({
             fontSize: `${labelDefaults.fontSize}px`,
             fontWeight: labelDefaults.fontWeight,
             letterSpacing: labelDefaults.letterSpacing,
-            textTransform: labelDefaults.textTransform,
+            textTransform: cssTextTransform(labelDefaults.textTransform),
           }}
         >
-          Contract {contract.contract_number}
+          {applyCase(`Contract ${contract.contract_number}`, labelDefaults.textTransform)}
         </p>
         <h1
           style={{

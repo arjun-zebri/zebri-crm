@@ -4,6 +4,7 @@ import { ChevronDown, Clock } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { getRgb } from '@/lib/branding/contrast'
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
@@ -274,11 +275,11 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
               color: sectionLabelDefaults.color,
               fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
               lineHeight: sectionLabelDefaults.lineHeight,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
               letterSpacing: sectionLabelDefaults.letterSpacing,
             }}
           >
-            Day
+            {applyCase('Day', sectionLabelDefaults.textTransform)}
           </span>
           <DaySelector days={days} value={selectedDay} onChange={setPickedDay} borderColor={borderCol} textColor={hCol} />
         </div>

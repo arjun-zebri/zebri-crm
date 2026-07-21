@@ -45,6 +45,9 @@ const createMockBranding = (overrides: Partial<PublicBranding> = {}): PublicBran
   body_size: 15,
   heading_case: 'none',
   body_case: 'none',
+  subheading_size: 11,
+  subheading_weight: 400,
+  subheading_case: 'none',
   heading_letter_spacing: 0,
   body_line_height: 1.5,
   link_color: '#0066CC',
@@ -130,10 +133,13 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     expect(subtitleEl).toHaveStyle({ fontSize: '22px' })
   })
 
-  it('renders section labels (meta labels in title block) at body size x 0.73', () => {
+  it('renders section labels (meta labels in title block) at the subheading size', () => {
+    // The sectionLabel role IS the subheading control: its size comes from
+    // subheading_size, independent of body_size (13 here, not 22 x 0.73).
     const branding = createMockBranding({
       heading_size: 50,
       body_size: 22,
+      subheading_size: 13,
     })
     const blocks: Block[] = [
       {
@@ -151,7 +157,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     )
 
     const labelEl = screen.getByText('Ref')
-    expect(labelEl).toHaveStyle({ fontSize: '16px' })
+    expect(labelEl).toHaveStyle({ fontSize: '13px' })
   })
 
   it('renders section heading (businessName block) at heading size x 0.625', () => {
@@ -234,10 +240,11 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     expect(contactLineEl).toHaveStyle({ fontSize: '18px' })
   })
 
-  it('renders section labels (lineItems headers) at body size x 0.73', () => {
+  it('renders section labels (lineItems headers) at the subheading size', () => {
     const branding = createMockBranding({
       heading_size: 50,
       body_size: 22,
+      subheading_size: 13,
     })
     const blocks: Block[] = [
       {
@@ -261,7 +268,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     )
 
     const descriptionHeaderEl = screen.getByText('Description')
-    expect(descriptionHeaderEl).toHaveStyle({ fontSize: '16px' })
+    expect(descriptionHeaderEl).toHaveStyle({ fontSize: '13px' })
   })
 
   it('renders fine print (lineItems quantity sub-line) at body size x 0.8', () => {
@@ -348,7 +355,8 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
 
     expect(docTitleBaseline).toHaveStyle({ fontSize: '50px' })
     expect(subtitleBaseline).toHaveStyle({ fontSize: '22px' })
-    expect(sectionLabelBaseline).toHaveStyle({ fontSize: '16px' })
+    // sectionLabel follows subheading_size (11 by default here), not heading size.
+    expect(sectionLabelBaseline).toHaveStyle({ fontSize: '11px' })
     expect(sectionHeadingBaseline).toHaveStyle({ fontSize: '31px' })
     expect(totalBaseline).toHaveStyle({ fontSize: '28px' })
 
@@ -364,7 +372,8 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
 
     expect(docTitleAlt).toHaveStyle({ fontSize: '60px' })
     expect(subtitleAlt).toHaveStyle({ fontSize: '22px' })
-    expect(sectionLabelAlt).toHaveStyle({ fontSize: '16px' })
+    // Unchanged: subheading_size did not change, so the label size holds.
+    expect(sectionLabelAlt).toHaveStyle({ fontSize: '11px' })
     expect(sectionHeadingAlt).toHaveStyle({ fontSize: '38px' })
     expect(totalAlt).toHaveStyle({ fontSize: '34px' })
   })
@@ -432,7 +441,9 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     expect(docTitleBaseline).toHaveStyle({ fontSize: '50px' })
     expect(subtitleBaseline).toHaveStyle({ fontSize: '22px' })
     expect(bodyBaseline).toHaveStyle({ fontSize: '22px' })
-    expect(descriptionHeaderBaseline).toHaveStyle({ fontSize: '16px' })
+    // descriptionHeader is a sectionLabel: it follows subheading_size (11 here),
+    // no longer body_size, so it stays put when body_size changes below.
+    expect(descriptionHeaderBaseline).toHaveStyle({ fontSize: '11px' })
     expect(contactLineBaseline).toHaveStyle({ fontSize: '18px' })
 
     rerender(
@@ -448,8 +459,26 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     expect(docTitleAlt).toHaveStyle({ fontSize: '50px' })
     expect(subtitleAlt).toHaveStyle({ fontSize: '30px' })
     expect(bodyAlt).toHaveStyle({ fontSize: '30px' })
-    expect(descriptionHeaderAlt).toHaveStyle({ fontSize: '22px' })
+    // Held at subheading_size while body_size moved 22 -> 30.
+    expect(descriptionHeaderAlt).toHaveStyle({ fontSize: '11px' })
     expect(contactLineAlt).toHaveStyle({ fontSize: '24px' })
+  })
+
+  it('subheading size change moves section labels (the subheading control)', () => {
+    const blocks: Block[] = [
+      { id: '1', type: 'title', text: 'Test', showRef: true, hidden: false } as never,
+    ]
+    const doc = { title: 'Test', refNumber: 'TEST-001', expiresAt: '2026-12-31', items: [], subtotal: 0, taxRate: 0 }
+
+    const { rerender } = render(
+      <PublicBlockRenderer blocks={blocks} branding={createMockBranding({ subheading_size: 10 })} doc={doc} />,
+    )
+    expect(screen.getByText('Ref')).toHaveStyle({ fontSize: '10px' })
+
+    rerender(
+      <PublicBlockRenderer blocks={blocks} branding={createMockBranding({ subheading_size: 18 })} doc={doc} />,
+    )
+    expect(screen.getByText('Ref')).toHaveStyle({ fontSize: '18px' })
   })
 
   it('draws hairlines in the border colour', () => {

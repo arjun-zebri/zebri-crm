@@ -19,6 +19,7 @@
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
 import { EditableLabel } from '@/components/proposal/editable-label';
 import { getTextColor } from '@/lib/branding/contrast';
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import { PROPOSAL_LABEL_DEFAULTS, type ProposalLabelEdit } from '@/lib/branding/proposal-labels';
 import type { PublicBranding } from '@/lib/branding/public-surface';
@@ -61,7 +62,7 @@ export function ProposalOptionChooser({
     <div role="radiogroup" aria-label="Choose your package">
       <EditableLabel
         as="p"
-        value={labels.choose.text}
+        value={applyCase(labels.choose.text, sectionLabelDefaults.textTransform)}
         onCommit={onEditLabel && ((v) => onEditLabel('choose', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.choose.text}
         cornerRadius={branding.cornerRadius}
@@ -73,7 +74,7 @@ export function ProposalOptionChooser({
           fontWeight: sectionLabelDefaults.fontWeight,
           lineHeight: sectionLabelDefaults.lineHeight,
           letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-          textTransform: sectionLabelDefaults.textTransform,
+          textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
           ...resolveTextStyle(labels.choose.style, {
             fontFamily: 'work_sans',
             fontSize: sectionLabelDefaults.fontSize,
@@ -87,7 +88,7 @@ export function ProposalOptionChooser({
       />
       <EditableLabel
         as="p"
-        value={labels.chooseHint.text}
+        value={applyCase(labels.chooseHint.text, bodyDefaults.textTransform)}
         onCommit={onEditLabel && ((v) => onEditLabel('chooseHint', v))}
         placeholder={PROPOSAL_LABEL_DEFAULTS.chooseHint.text}
         cornerRadius={branding.cornerRadius}
@@ -99,7 +100,7 @@ export function ProposalOptionChooser({
           fontWeight: bodyDefaults.fontWeight,
           lineHeight: bodyDefaults.lineHeight,
           letterSpacing: `${bodyDefaults.letterSpacing}px`,
-          textTransform: bodyDefaults.textTransform,
+          textTransform: cssTextTransform(bodyDefaults.textTransform),
           ...resolveTextStyle(labels.chooseHint.style, {
             fontFamily: 'work_sans',
             fontSize: bodyDefaults.fontSize,

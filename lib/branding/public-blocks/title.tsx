@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
-import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { TitleBlock } from '@/app/(dashboard)/branding/blocks/types'
 
@@ -47,7 +47,7 @@ export function RenderTitle({
             inline from the global settings, so utilities here would be dead
             CSS that reads as if it were in charge. */}
         <h1 style={titleCss}>
-          {slots?.title ?? doc.title}
+          {slots?.title ?? caseText(doc.title, block.titleStyle, titleDefaults)}
         </h1>
         {slots?.subtitle ? (
           <p className="mt-2" style={subtitleCss}>
@@ -86,8 +86,8 @@ function Meta({ label, value, branding }: { label: string; value: ReactNode; bra
 
   return (
     <div className="flex items-baseline gap-2">
-      <span style={labelCss}>{label}</span>
-      <span style={valueCss}>{value}</span>
+      <span style={labelCss}>{caseText(label, {}, labelDefaults)}</span>
+      <span style={valueCss}>{typeof value === 'string' ? caseText(value, {}, valueDefaults) : value}</span>
     </div>
   )
 }

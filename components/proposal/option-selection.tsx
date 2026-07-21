@@ -22,6 +22,7 @@ import { Check } from 'lucide-react';
 import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style';
 import { EditableLabel } from '@/components/proposal/editable-label';
 import { getTextColor } from '@/lib/branding/contrast';
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import {
   PROPOSAL_LABEL_DEFAULTS,
@@ -100,7 +101,7 @@ export function ProposalSelection({
       <section>
         <EditableLabel
           as="p"
-          value={heading}
+          value={applyCase(heading, sectionLabelDefaults.textTransform)}
           onCommit={headingKey && onEditLabel ? (v) => onEditLabel(headingKey, v) : undefined}
           placeholder={headingDefaultText}
           cornerRadius={branding.cornerRadius}
@@ -112,7 +113,7 @@ export function ProposalSelection({
             fontWeight: sectionLabelDefaults.fontWeight,
             lineHeight: sectionLabelDefaults.lineHeight,
             letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-            textTransform: sectionLabelDefaults.textTransform,
+            textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
             ...resolveTextStyle(headingLabel?.style, {
               fontFamily: 'work_sans',
               fontSize: sectionLabelDefaults.fontSize,
@@ -164,7 +165,7 @@ export function ProposalSelection({
         <section>
           <EditableLabel
             as="p"
-            value={labels.addOns.text}
+            value={applyCase(labels.addOns.text, sectionLabelDefaults.textTransform)}
             onCommit={onEditLabel && ((v) => onEditLabel('addOns', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.addOns.text}
             cornerRadius={branding.cornerRadius}
@@ -176,7 +177,7 @@ export function ProposalSelection({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
               ...resolveTextStyle(labels.addOns.style, {
                 fontFamily: 'work_sans',
                 fontSize: sectionLabelDefaults.fontSize,
@@ -191,7 +192,7 @@ export function ProposalSelection({
           {!locked || onEditLabel ? (
             <EditableLabel
               as="p"
-              value={labels.addOnsHint.text}
+              value={applyCase(labels.addOnsHint.text, bodyDefaults.textTransform)}
               onCommit={onEditLabel && ((v) => onEditLabel('addOnsHint', v))}
               placeholder={PROPOSAL_LABEL_DEFAULTS.addOnsHint.text}
               cornerRadius={branding.cornerRadius}
@@ -203,7 +204,7 @@ export function ProposalSelection({
                 fontWeight: bodyDefaults.fontWeight,
                 lineHeight: bodyDefaults.lineHeight,
                 letterSpacing: `${bodyDefaults.letterSpacing}px`,
-                textTransform: bodyDefaults.textTransform,
+                textTransform: cssTextTransform(bodyDefaults.textTransform),
                 ...resolveTextStyle(labels.addOnsHint.style, {
                   fontFamily: 'work_sans',
                   fontSize: bodyDefaults.fontSize,

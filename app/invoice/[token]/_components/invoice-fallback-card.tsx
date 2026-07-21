@@ -19,6 +19,7 @@ import type { PublicBranding } from '@/lib/branding/public-branding';
 import { DENSITY_PAD } from '@/lib/branding/public-surface';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
 import { STATUS_COLORS } from '@/lib/branding/status-colors';
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { roleDefaults } from '@/lib/branding/type-defaults';
 
 import { PayWithCardButton } from '../pay-with-card-button';
@@ -106,7 +107,7 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
             }}
           >
             <Html value={invoice.business_name} allowLists={false} />
@@ -135,10 +136,10 @@ export function InvoiceFallbackCard({
             fontWeight: docTitleDefaults.fontWeight,
             lineHeight: docTitleDefaults.lineHeight,
             letterSpacing: `${docTitleDefaults.letterSpacing}px`,
-            textTransform: docTitleDefaults.textTransform,
+            textTransform: cssTextTransform(docTitleDefaults.textTransform),
           }}
         >
-          {invoice.title}
+          {applyCase(invoice.title, docTitleDefaults.textTransform)}
         </h1>
         <p
           style={{
@@ -206,10 +207,10 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
             }}
           >
-            Description
+            {applyCase('Description', sectionLabelDefaults.textTransform)}
           </span>
           <span
             style={{
@@ -219,10 +220,10 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
             }}
           >
-            Amount
+            {applyCase('Amount', sectionLabelDefaults.textTransform)}
           </span>
         </div>
 
@@ -386,10 +387,10 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
             }}
           >
-            Payment schedule
+            {applyCase('Payment schedule', sectionLabelDefaults.textTransform)}
           </p>
           <InvoicePaymentSchedule
             invoice={invoice}
@@ -418,10 +419,10 @@ export function InvoiceFallbackCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
             }}
           >
-            Payment instructions
+            {applyCase('Payment instructions', sectionLabelDefaults.textTransform)}
           </p>
           <div className="space-y-3">
             {invoice.notes ? (
@@ -451,14 +452,16 @@ export function InvoiceFallbackCard({
                   <div>
                     <span
                       style={{
-                        fontSize: `${bodyDefaults.fontSize}px`,
-                        color: bodyDefaults.color,
-                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                        fontWeight: bodyDefaults.fontWeight,
-                        lineHeight: bodyDefaults.lineHeight,
+                        fontSize: `${sectionLabelDefaults.fontSize}px`,
+                        color: sectionLabelDefaults.color,
+                        fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+                        fontWeight: sectionLabelDefaults.fontWeight,
+                        lineHeight: sectionLabelDefaults.lineHeight,
+                        letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+                        textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
                       }}
                     >
-                      Account name:
+                      {applyCase('Account name:', sectionLabelDefaults.textTransform)}
                     </span>
                     <span
                       className="ml-2"
@@ -478,14 +481,16 @@ export function InvoiceFallbackCard({
                   <div>
                     <span
                       style={{
-                        fontSize: `${bodyDefaults.fontSize}px`,
-                        color: bodyDefaults.color,
-                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                        fontWeight: bodyDefaults.fontWeight,
-                        lineHeight: bodyDefaults.lineHeight,
+                        fontSize: `${sectionLabelDefaults.fontSize}px`,
+                        color: sectionLabelDefaults.color,
+                        fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+                        fontWeight: sectionLabelDefaults.fontWeight,
+                        lineHeight: sectionLabelDefaults.lineHeight,
+                        letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+                        textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
                       }}
                     >
-                      BSB:
+                      {applyCase('BSB:', sectionLabelDefaults.textTransform)}
                     </span>
                     <span
                       className="ml-2 font-mono"
@@ -505,14 +510,16 @@ export function InvoiceFallbackCard({
                   <div>
                     <span
                       style={{
-                        fontSize: `${bodyDefaults.fontSize}px`,
-                        color: bodyDefaults.color,
-                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                        fontWeight: bodyDefaults.fontWeight,
-                        lineHeight: bodyDefaults.lineHeight,
+                        fontSize: `${sectionLabelDefaults.fontSize}px`,
+                        color: sectionLabelDefaults.color,
+                        fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+                        fontWeight: sectionLabelDefaults.fontWeight,
+                        lineHeight: sectionLabelDefaults.lineHeight,
+                        letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+                        textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
                       }}
                     >
-                      Account:
+                      {applyCase('Account:', sectionLabelDefaults.textTransform)}
                     </span>
                     <span
                       className="ml-2 font-mono"

@@ -16,13 +16,26 @@ import {
   type BodyFont,
   type FontWeight,
 } from '@/lib/branding/fonts'
+import type { TextCase } from '@/lib/branding/text-case'
 
 import { Select, type SelectOption } from '../components/select'
 import { Slider } from '../components/slider'
 
 
+
 import { TEXT_COLOR_PRESETS, type TextStyleDefaults } from './text-style'
-import type { TextStyle, TextAlign } from './types'
+import type { TextStyle } from './types'
+
+/** Case options for the block-level toolbar, sharing the rail's glyph +
+ *  wording so the two capitalisation controls read identically. 'None' keeps
+ *  a per-block escape hatch (unlike the global rail, which has no as-typed). */
+const CASE_OPTIONS: Array<{ id: TextCase; glyph: string; tooltip: string }> = [
+  { id: 'none', glyph: 'As', tooltip: 'As typed' },
+  { id: 'sentence', glyph: 'Aa', tooltip: 'Capitalise first letter' },
+  { id: 'capitalize', glyph: 'Ab', tooltip: 'Capitalise each word' },
+  { id: 'uppercase', glyph: 'AA', tooltip: 'Uppercase' },
+  { id: 'lowercase', glyph: 'aa', tooltip: 'Lowercase' },
+]
 
 interface TextStyleControlsProps {
   style: TextStyle | undefined
@@ -206,21 +219,19 @@ export function TextStyleControls({
           />
           <Divider />
           <div className="inline-flex items-center bg-gray-50 rounded-md border border-gray-200">
-            {(['none', 'uppercase', 'capitalize'] as const).map((t) => (
-              <Tooltip key={t} label={`Text ${t}`}>
+            {CASE_OPTIONS.map((t) => (
+              <Tooltip key={t.id} label={t.tooltip}>
                 <button
                   type="button"
-                  onClick={() => onChange({ textTransform: t })}
-                  aria-label={`Text ${t}`}
+                  onClick={() => onChange({ textTransform: t.id })}
+                  aria-label={t.tooltip}
                   className={`px-2 py-1 text-xs transition cursor-pointer ${
-                    eff.textTransform === t
+                    eff.textTransform === t.id
                       ? 'bg-white text-gray-900 shadow-sm rounded-md m-0.5 font-medium'
                       : 'text-gray-500 hover:text-gray-900'
                   }`}
                 >
-                  {t === 'none' && 'None'}
-                  {t === 'uppercase' && 'UPPER'}
-                  {t === 'capitalize' && 'Title'}
+                  {t.glyph}
                 </button>
               </Tooltip>
             ))}

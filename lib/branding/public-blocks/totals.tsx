@@ -3,7 +3,7 @@
 import type { CSSProperties } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
-import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { TotalsBlock } from '@/app/(dashboard)/branding/blocks/types'
 
@@ -65,22 +65,22 @@ export function RenderTotals({
       <div className="space-y-1.5 pt-3 border-t" style={{ borderTopColor: branding.border_color }} data-testid="totals-rule">
         {block.showSubtotal && (
           <div className="pt-2">
-            <Row label="Subtotal" value={fmt(subtotal)} css={subtotalCss} spread={spread} />
+            <Row label={caseText('Subtotal', block.subtotalStyle, rowDefaults)} value={fmt(subtotal)} css={subtotalCss} spread={spread} />
           </div>
         )}
         {discountAmt > 0 && (
           <Row
-            label={`Discount${doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}`}
+            label={caseText(`Discount${doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}`, {}, rowDefaults)}
             value={`-${fmt(discountAmt)}`}
             css={rowDefaults}
             spread={spread}
           />
         )}
         {doc.taxRate > 0 && (block.showTax ?? true) && (
-          <Row label={`GST (${doc.taxRate}%)`} value={fmt(tax)} css={taxCss} spread={spread} />
+          <Row label={caseText(`GST (${doc.taxRate}%)`, block.taxStyle, rowDefaults)} value={fmt(tax)} css={taxCss} spread={spread} />
         )}
         <div className="pt-3 mt-2 border-t" style={{ borderTopColor: branding.border_color }}>
-          <Row label="Total" value={fmt(total)} css={totalCss} spread={spread} />
+          <Row label={caseText('Total', block.totalStyle, totalDefaults)} value={fmt(total)} css={totalCss} spread={spread} />
         </div>
       </div>
       {chrome}

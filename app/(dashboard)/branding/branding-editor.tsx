@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useToast } from '@/components/ui/toast'
 import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import type { ProposalLabels } from '@/lib/branding/proposal-labels'
+import type { TextCase } from '@/lib/branding/text-case'
 import {
   THEME_PRESETS,
   type ThemeId,
@@ -78,8 +79,11 @@ interface BrandingEditorProps {
     proposalLabels: ProposalLabels
     headingSize: number
     bodySize: number
-    headingCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
-    bodyCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+    headingCase: TextCase
+    bodyCase: TextCase
+    subheadingSize: number
+    subheadingWeight: FontWeight
+    subheadingCase: TextCase
     headingLetterSpacing: number
     bodyLineHeight: number
     linkColor: string
@@ -127,8 +131,11 @@ export interface EditorState {
   proposalLabels: ProposalLabels
   headingSize: number
   bodySize: number
-  headingCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
-  bodyCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  headingCase: TextCase
+  bodyCase: TextCase
+  subheadingSize: number
+  subheadingWeight: FontWeight
+  subheadingCase: TextCase
   headingLetterSpacing: number
   bodyLineHeight: number
   linkColor: string
@@ -181,6 +188,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       bodySize: initialData.bodySize,
       headingCase: initialData.headingCase,
       bodyCase: initialData.bodyCase,
+      subheadingSize: initialData.subheadingSize,
+      subheadingWeight: initialData.subheadingWeight,
+      subheadingCase: initialData.subheadingCase,
       headingLetterSpacing: initialData.headingLetterSpacing,
       bodyLineHeight: initialData.bodyLineHeight,
       linkColor: initialData.linkColor,
@@ -292,6 +302,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         body_size: value.bodySize,
         heading_case: value.headingCase,
         body_case: value.bodyCase,
+        subheading_size: value.subheadingSize,
+        subheading_weight: value.subheadingWeight,
+        subheading_case: value.subheadingCase,
         heading_letter_spacing: value.headingLetterSpacing,
         body_line_height: value.bodyLineHeight,
         link_color: value.linkColor,
@@ -894,6 +907,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     bodySize: state.bodySize,
     headingCase: state.headingCase,
     bodyCase: state.bodyCase,
+    subheadingSize: state.subheadingSize,
+    subheadingWeight: state.subheadingWeight,
+    subheadingCase: state.subheadingCase,
     headingLetterSpacing: state.headingLetterSpacing,
     bodyLineHeight: state.bodyLineHeight,
     linkColor: state.linkColor,
@@ -1000,6 +1016,12 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setHeadingCase={(v) => setEditor({ headingCase: v })}
           bodyCase={state.bodyCase}
           setBodyCase={(v) => setEditor({ bodyCase: v })}
+          subheadingSize={state.subheadingSize}
+          setSubheadingSize={(v) => setEditor({ subheadingSize: v })}
+          subheadingWeight={state.subheadingWeight}
+          setSubheadingWeight={(v) => setEditor({ subheadingWeight: v })}
+          subheadingCase={state.subheadingCase}
+          setSubheadingCase={(v) => setEditor({ subheadingCase: v })}
           headingLetterSpacing={state.headingLetterSpacing}
           setHeadingLetterSpacing={(v) => setEditor({ headingLetterSpacing: v })}
           bodyLineHeight={state.bodyLineHeight}

@@ -20,8 +20,10 @@ import {
   type HeadingFont,
 } from './fonts'
 import { resolveProposalLabels, type ProposalLabels } from './proposal-labels'
+import type { TextCase } from './text-case'
 import type { Density } from './themes'
 import { THEME_PRESETS } from './themes'
+import { roleSizePx } from './type-scale'
 
 /** The resolved branding shape every branded surface renders from. */
 export interface PublicBranding {
@@ -31,8 +33,16 @@ export interface PublicBranding {
   brand_color: string
   /** Primary heading colour. */
   heading_color: string
-  /** Secondary heading / subtitle colour. */
+  /** Secondary heading / subtitle colour. Governs the subheading text role. */
   subheading_color: string
+  /** Subheading (section-label) font size in px. Drives the `sectionLabel`
+   *  role — invoice "Ref"/"Expires", "Account name"/"BSB"/"Account number", and
+   *  every other small label. Defaults to a derived fraction of body size. */
+  subheading_size: number
+  /** Subheading font weight. Defaults to the body weight. */
+  subheading_weight: FontWeight
+  /** Subheading text transform. Defaults to the heading case. */
+  subheading_case: TextCase
   accent_color: string
   surface_color: string
   text_color: string
@@ -75,10 +85,10 @@ export interface PublicBranding {
   heading_size: number
   /** Global body text font size in pixels. */
   body_size: number
-  /** Global heading text transform (none, uppercase, capitalize). */
-  heading_case: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
-  /** Global body text transform (none, uppercase, capitalize). */
-  body_case: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  /** Global heading text transform (none, uppercase, lowercase, capitalize, sentence). */
+  heading_case: TextCase
+  /** Global body text transform (none, uppercase, lowercase, capitalize, sentence). */
+  body_case: TextCase
   /** Global heading letter spacing in pixels. */
   heading_letter_spacing: number
   /** Global body line height (unitless multiplier). */
@@ -107,6 +117,9 @@ export interface UserMetadata {
   brand_color?: string
   heading_color?: string
   subheading_color?: string
+  subheading_size?: number
+  subheading_weight?: number
+  subheading_case?: TextCase
   accent_color?: string
   surface_color?: string
   text_color?: string
@@ -139,8 +152,8 @@ export interface UserMetadata {
   email_shell_show_accent?: boolean
   heading_size?: number
   body_size?: number
-  heading_case?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
-  body_case?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  heading_case?: TextCase
+  body_case?: TextCase
   heading_letter_spacing?: number
   body_line_height?: number
   link_color?: string
@@ -178,6 +191,14 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
   const brandColor = metadata.brand_color ?? fallback.color
   const surfaceColor = metadata.surface_color ?? fallback.surface
 
+  // Resolved once so the subheading role can fall back to the values it used to
+  // derive from before it became its own control (keeps existing documents
+  // looking identical until the MC actually touches the subheading settings).
+  const headingSize = typeof metadata.heading_size === 'number' ? metadata.heading_size : 32
+  const bodySize = typeof metadata.body_size === 'number' ? metadata.body_size : 15
+  const headingCase = metadata.heading_case ?? 'none'
+  const bodyWeight = sanitizeWeight(metadata.font_body_weight, fallback.bodyWeight)
+
   return {
     logo_url: metadata.logo_url ?? null,
     favicon_url: metadata.favicon_url ?? null,
@@ -188,6 +209,12 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
     surface_color: surfaceColor,
     heading_color: metadata.heading_color ?? fallback.heading,
     subheading_color: metadata.subheading_color ?? fallback.subheading,
+    subheading_size:
+      typeof metadata.subheading_size === 'number'
+        ? metadata.subheading_size
+        : roleSizePx('sectionLabel', headingSize, bodySize),
+    subheading_weight: sanitizeWeight(metadata.subheading_weight, bodyWeight),
+    subheading_case: metadata.subheading_case ?? headingCase,
     text_color: metadata.text_color ?? fallback.text,
     // muted_color is no longer a control; it aliases body text_color.
     muted_color: metadata.text_color ?? fallback.text,

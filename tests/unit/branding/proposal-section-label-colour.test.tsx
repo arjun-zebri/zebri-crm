@@ -52,6 +52,9 @@ const brandingFixture = (overrides?: Partial<PublicBranding>): PublicBranding =>
   body_size: 15,
   heading_case: 'none',
   body_case: 'none',
+  subheading_size: 11,
+  subheading_weight: 400,
+  subheading_case: 'none',
   heading_letter_spacing: 0,
   body_line_height: 1.5,
   link_color: '#00FF52',
@@ -117,8 +120,9 @@ describe('proposal text sizes follow the global type scale', () => {
     expect(screen.getByText('Alex & Jordan')).toHaveStyle({ fontSize: '50px' })
   })
 
-  it('renders section labels at the derived label size', () => {
-    renderProposal({ heading_size: 50, body_size: 22 })
-    expect(screen.getByText(PROPOSAL_LABEL_DEFAULTS.eyebrow.text)).toHaveStyle({ fontSize: '16px' })
+  it('renders section labels at the subheading size', () => {
+    // sectionLabel size is the subheading control, independent of body_size.
+    renderProposal({ heading_size: 50, body_size: 22, subheading_size: 13 })
+    expect(screen.getByText(PROPOSAL_LABEL_DEFAULTS.eyebrow.text)).toHaveStyle({ fontSize: '13px' })
   })
 })

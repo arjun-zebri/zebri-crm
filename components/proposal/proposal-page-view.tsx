@@ -31,6 +31,7 @@ import { EditableLabel } from '@/components/proposal/editable-label';
 import { ProposalOptionChooser } from '@/components/proposal/option-chooser';
 import { ProposalSelection } from '@/components/proposal/option-selection';
 import { getTextColor } from '@/lib/branding/contrast';
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import {
   PROPOSAL_LABEL_DEFAULTS,
@@ -160,7 +161,7 @@ export function ProposalPageView({
         <div className="flex items-baseline justify-between gap-4">
           <EditableLabel
             as="p"
-            value={labels.eyebrow.text}
+            value={applyCase(labels.eyebrow.text, sectionLabelDefaults.textTransform)}
             onCommit={onEditLabel && ((v) => onEditLabel('eyebrow', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.eyebrow.text}
             cornerRadius={branding.cornerRadius}
@@ -172,7 +173,7 @@ export function ProposalPageView({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
               ...resolveTextStyle(labels.eyebrow.style, {
                 fontFamily: 'work_sans',
                 fontSize: sectionLabelDefaults.fontSize,
@@ -209,10 +210,10 @@ export function ProposalPageView({
             fontWeight: docTitleDefaults.fontWeight,
             lineHeight: docTitleDefaults.lineHeight,
             letterSpacing: `${docTitleDefaults.letterSpacing}px`,
-            textTransform: docTitleDefaults.textTransform,
+            textTransform: cssTextTransform(docTitleDefaults.textTransform),
           }}
         >
-          {coupleName}
+          {applyCase(coupleName, docTitleDefaults.textTransform)}
         </h1>
         {branding.businessName && !core ? (
           <p
@@ -244,7 +245,7 @@ export function ProposalPageView({
         <section>
           <EditableLabel
             as="p"
-            value={labels.note.text}
+            value={applyCase(labels.note.text, sectionLabelDefaults.textTransform)}
             onCommit={onEditLabel && ((v) => onEditLabel('note', v))}
             placeholder={PROPOSAL_LABEL_DEFAULTS.note.text}
             cornerRadius={branding.cornerRadius}
@@ -256,7 +257,7 @@ export function ProposalPageView({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
               ...resolveTextStyle(labels.note.style, {
                 fontFamily: 'work_sans',
                 fontSize: sectionLabelDefaults.fontSize,

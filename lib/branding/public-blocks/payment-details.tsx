@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
-import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { PaymentDetailsBlock } from '@/app/(dashboard)/branding/blocks/types'
 
@@ -57,15 +57,15 @@ export function RenderPaymentDetails({
       </p>
       <div className="space-y-1.5">
         <div className="flex flex-col gap-0.5 @sm/doc:flex-row @sm/doc:items-baseline @sm/doc:gap-3">
-          <span className="shrink-0 @sm/doc:w-28" style={labelCss}>Account name</span>
+          <span className="shrink-0 @sm/doc:w-28" style={labelCss}>{caseText('Account name', block.labelStyle, labelDefaults)}</span>
           <span className="flex-1" style={valueCss}>{slots?.accountName ?? <Html value={accountName} allowLists={false} />}</span>
         </div>
         <div className="flex flex-col gap-0.5 @sm/doc:flex-row @sm/doc:items-baseline @sm/doc:gap-3">
-          <span className="shrink-0 @sm/doc:w-28" style={labelCss}>BSB</span>
+          <span className="shrink-0 @sm/doc:w-28" style={labelCss}>{caseText('BSB', block.labelStyle, labelDefaults)}</span>
           <span className="flex-1" style={valueCss}>{slots?.bsb ?? <Html value={bsb} allowLists={false} />}</span>
         </div>
         <div className="flex flex-col gap-0.5 @sm/doc:flex-row @sm/doc:items-baseline @sm/doc:gap-3">
-          <span className="shrink-0 @sm/doc:w-28" style={labelCss}>Account number</span>
+          <span className="shrink-0 @sm/doc:w-28" style={labelCss}>{caseText('Account number', block.labelStyle, labelDefaults)}</span>
           <span className="flex-1" style={valueCss}>{slots?.accountNumber ?? <Html value={accountNumber} allowLists={false} />}</span>
         </div>
       </div>

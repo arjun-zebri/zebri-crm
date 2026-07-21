@@ -3,6 +3,7 @@
 import { Pencil } from 'lucide-react'
 import { useState } from 'react'
 
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { roleDefaults } from '@/lib/branding/type-defaults'
@@ -54,11 +55,11 @@ export function ContactDetailsCard({ label, value, onSave, branding }: ContactDe
           fontWeight: labelDefaults.fontWeight,
           lineHeight: labelDefaults.lineHeight,
           letterSpacing: `${labelDefaults.letterSpacing}px`,
-          textTransform: labelDefaults.textTransform,
+          textTransform: cssTextTransform(labelDefaults.textTransform),
           marginBottom: '0.25rem',
         }}
       >
-        {label}
+        {applyCase(label, labelDefaults.textTransform)}
       </h4>
       <EditableRow label="Name" type="text" value={triple.name} placeholder="Full name"
         onChange={(v) => setTriple((t) => ({ ...t, name: v }))} onCommit={commit} branding={branding} />

@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
-import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { BusinessNameBlock } from '@/app/(dashboard)/branding/blocks/types'
 
@@ -91,7 +91,7 @@ export function RenderBusinessName({
       ) : businessName ? (
         <Html value={businessName} allowLists={false} />
       ) : (
-        'Your business name'
+        caseText('Your business name', block.nameStyle, nameDefaults)
       )}
     </p>
   )

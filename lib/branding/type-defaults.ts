@@ -14,6 +14,7 @@ import type { TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-s
 
 import type { HeadingFont, BodyFont, FontWeight } from './fonts'
 import type { PublicBranding } from './public-branding'
+import type { TextCase } from './text-case'
 import { roleSizePx, type TypeRole } from './type-scale'
 
 /** Text alignment values used in styled type roles. */
@@ -34,8 +35,8 @@ export interface RoleType {
   color: string
   /** Text alignment (left, center, right). */
   align: TextAlign
-  /** Text transform: none, uppercase, or capitalize. */
-  textTransform: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  /** Text transform: none, uppercase, lowercase, capitalize, or sentence. */
+  textTransform: TextCase
   /** Letter spacing in pixels. */
   letterSpacing: number
   /** Line height as a unitless multiplier. */
@@ -117,10 +118,23 @@ export function roleDefaults(b: PublicBranding, role: TypeRole): TextStyleDefaul
     : src.colour === 'subheading' ? b.subheading_color
     : b.text_color
 
-  // Section labels use heading case and letter spacing globally, ensuring that
-  // global type controls reach all roles uniformly. The label's identity comes
-  // from its size and color, not special typography overrides.
-  const usesHeadingTypography = isHeadingFont || role === 'sectionLabel'
+  // The sectionLabel role IS the "Subheading" global style — invoice
+  // "Ref"/"Expires", "Account name"/"BSB"/"Account number", and every other
+  // small label. It draws its size, weight, and case from the dedicated
+  // subheading_* controls (which default to the values it used to derive, so
+  // untouched documents are unchanged) rather than from the heading/body scale.
+  if (role === 'sectionLabel') {
+    return {
+      fontFamily: b.font_body,
+      fontSize: b.subheading_size,
+      fontWeight: b.subheading_weight,
+      color: b.subheading_color,
+      align: 'left',
+      lineHeight: b.body_line_height,
+      letterSpacing: b.heading_letter_spacing,
+      textTransform: b.subheading_case,
+    }
+  }
 
   return {
     fontFamily: isHeadingFont ? b.font_heading : b.font_body,
@@ -129,7 +143,7 @@ export function roleDefaults(b: PublicBranding, role: TypeRole): TextStyleDefaul
     color: colour,
     align: 'left',
     lineHeight: b.body_line_height,
-    letterSpacing: usesHeadingTypography ? b.heading_letter_spacing : 0,
-    textTransform: usesHeadingTypography ? b.heading_case : b.body_case,
+    letterSpacing: isHeadingFont ? b.heading_letter_spacing : 0,
+    textTransform: isHeadingFont ? b.heading_case : b.body_case,
   }
 }

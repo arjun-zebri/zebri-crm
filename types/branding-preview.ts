@@ -11,6 +11,7 @@
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
 import type { ProposalLabels } from '@/lib/branding/proposal-labels'
+import type { TextCase } from '@/lib/branding/text-case'
 import type { Density } from '@/lib/branding/themes'
 
 export interface BrandPreviewState {
@@ -46,8 +47,12 @@ export interface BrandPreviewState {
    */
   headingSize: number
   bodySize: number
-  headingCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
-  bodyCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  headingCase: TextCase
+  bodyCase: TextCase
+  /** Subheading (section-label) type controls — size, weight, case. */
+  subheadingSize: number
+  subheadingWeight: FontWeight
+  subheadingCase: TextCase
   headingLetterSpacing: number
   bodyLineHeight: number
   linkColor: string

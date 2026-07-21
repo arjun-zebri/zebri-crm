@@ -3,7 +3,7 @@
 import { ReactNode } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
-import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
 // eslint-disable-next-line no-restricted-imports
 import type { FooterBlock } from '@/app/(dashboard)/branding/blocks/types'
 
@@ -54,8 +54,8 @@ export function RenderFooter({
           <p className="flex flex-wrap gap-x-3 gap-y-1 justify-center" style={contactCss}>
             {contactParts.map((part, i) => (
               <span key={i}>
-                {i > 0 && <span style={contactCss}> · </span>}
-                <span className="whitespace-nowrap">{part}</span>
+                {i > 0 && <span style={contactCss}>{caseText(' · ', block.contactStyle, contactDefaults)}</span>}
+                <span className="whitespace-nowrap">{caseText(part, block.contactStyle, contactDefaults)}</span>
               </span>
             ))}
           </p>

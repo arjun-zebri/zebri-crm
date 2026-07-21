@@ -106,7 +106,19 @@ export function InlineText({
         el.blur()
       }
     },
-    className: `outline-none cursor-text caret-current transition-colors empty:before:content-[attr(data-placeholder)] empty:before:opacity-40 ${className}`,
+    // Placeholder handling for an empty field. Unfocused, it shows the ghost
+    // text at 40% opacity. Focused, it drops to 0 opacity rather than being
+    // removed (`content-none` would collapse the pseudo-element's line box and
+    // yank every block below upward). Keeping it present-but-invisible holds the
+    // field's height, so clicking in gives you an empty box to type into with no
+    // layout shift; the placeholder only truly vanishes once you type (`:empty`
+    // no longer matches).
+    //
+    // `inline-block` (single-line fields only) is what makes the caret appear:
+    // Chrome renders no caret in an EMPTY inline contentEditable, but does for
+    // an inline-block one. Multiline fields stay in normal flow so their text
+    // still wraps at the container edge.
+    className: `outline-none cursor-text caret-current transition-colors ${multiline ? '' : 'inline-block'} empty:before:content-[attr(data-placeholder)] empty:before:opacity-40 empty:focus:before:opacity-0 ${className}`,
     style,
   }
 

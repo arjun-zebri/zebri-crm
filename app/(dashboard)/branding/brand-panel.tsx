@@ -8,6 +8,7 @@ import {
 import { useState } from 'react'
 
 import { ColorPopover } from '@/components/ui/color-popover'
+import { Tooltip } from '@/components/ui/tooltip'
 import { getContrastRatio, getWcagLevel } from '@/lib/branding/contrast'
 import {
   HEADING_FONTS,
@@ -20,6 +21,7 @@ import {
   type BodyFont,
   type FontWeight,
 } from '@/lib/branding/fonts'
+import type { TextCase } from '@/lib/branding/text-case'
 import {
   COLOR_PALETTE,
   SURFACE_PALETTE,
@@ -69,10 +71,16 @@ interface BrandPanelProps {
   setHeadingSize: (v: number) => void
   bodySize: number
   setBodySize: (v: number) => void
-  headingCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
-  setHeadingCase: (v: 'none' | 'uppercase' | 'lowercase' | 'capitalize') => void
-  bodyCase: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
-  setBodyCase: (v: 'none' | 'uppercase' | 'lowercase' | 'capitalize') => void
+  headingCase: TextCase
+  setHeadingCase: (v: TextCase) => void
+  bodyCase: TextCase
+  setBodyCase: (v: TextCase) => void
+  subheadingSize: number
+  setSubheadingSize: (v: number) => void
+  subheadingWeight: FontWeight
+  setSubheadingWeight: (v: FontWeight) => void
+  subheadingCase: TextCase
+  setSubheadingCase: (v: TextCase) => void
   headingLetterSpacing: number
   setHeadingLetterSpacing: (v: number) => void
   bodyLineHeight: number
@@ -123,8 +131,11 @@ interface BrandPanelProps {
 type SectionId = 'business' | 'colors' | 'fonts' | 'globalStyles'
 
 export function BrandPanel(props: BrandPanelProps) {
+  // Every section starts collapsed. Landing straight out of onboarding used to
+  // open "Your business", which read as clutter on first entry; a fully
+  // collapsed rail lets the preview breathe and the MC choose where to start.
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
-    business: true,
+    business: false,
     colors: false,
     fonts: false,
     globalStyles: false,
@@ -378,6 +389,9 @@ function FontSection({
   bodySize, setBodySize,
   headingCase, setHeadingCase,
   bodyCase, setBodyCase,
+  subheadingSize, setSubheadingSize,
+  subheadingWeight, setSubheadingWeight,
+  subheadingCase, setSubheadingCase,
   headingLetterSpacing, setHeadingLetterSpacing,
   bodyLineHeight, setBodyLineHeight,
 }: BrandPanelProps) {
@@ -408,6 +422,26 @@ function FontSection({
           </div>
           <WeightPills label="Weight" value={fontWeight} onChange={setFontWeight} compact />
           <CasePills label="Case" value={headingCase} onChange={setHeadingCase} />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Subheading</p>
+        {/* The small labels across every document: invoice "Ref"/"Expires",
+            "Account name"/"BSB"/"Account number", and the like. Sits between
+            heading and body because that is its visual weight. Colour is set in
+            Brand colours (Subheading); size, weight and case live here. */}
+        <p className="text-[11px] text-gray-500 mb-2 leading-snug">Labels like Ref, Expires and bank details. Colour is under Brand colours.</p>
+        <div className="space-y-2.5">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] text-gray-500">Size</span>
+              <span className="text-[11px] font-mono text-gray-700 tabular-nums">{subheadingSize}px</span>
+            </div>
+            <Slider value={subheadingSize} min={8} max={24} step={1} onChange={setSubheadingSize} ariaLabel="Subheading size" />
+          </div>
+          <WeightPills label="Weight" value={subheadingWeight} onChange={setSubheadingWeight} compact />
+          <CasePills label="Case" value={subheadingCase} onChange={setSubheadingCase} />
         </div>
       </div>
 
@@ -466,31 +500,38 @@ function WeightPills({ label, value, onChange, compact }: { label: string; value
   )
 }
 
-function CasePills({ label, value, onChange }: { label: string; value: 'none' | 'uppercase' | 'lowercase' | 'capitalize'; onChange: (v: 'none' | 'uppercase' | 'lowercase' | 'capitalize') => void }) {
-  // Word labels rather than glyphs: "none" and "capitalize" both preview as
-  // "Aa", so a glyph row could not tell them apart.
-  const cases: Array<{ id: 'none' | 'uppercase' | 'lowercase' | 'capitalize'; label: string; preview: string }> = [
-    { id: 'none', label: 'As typed', preview: 'Aa' },
+function CasePills({ label, value, onChange }: { label: string; value: TextCase; onChange: (v: TextCase) => void }) {
+  // Glyph previews double as the behaviour: "Aa" = sentence case (first letter
+  // only), "Ab" = every word, "AA"/"aa" = upper/lower. The tooltip spells each
+  // one out. There's no "As typed" pill any more: sentence case took the "Aa"
+  // slot because that is what MCs reach for, and a stored 'none' just shows no
+  // active pill (harmless) until the MC picks one.
+  const cases: Array<{ id: TextCase; label: string; preview: string }> = [
+    { id: 'sentence', label: 'Capitalise first letter', preview: 'Aa' },
+    { id: 'capitalize', label: 'Capitalise each word', preview: 'Ab' },
     { id: 'uppercase', label: 'Uppercase', preview: 'AA' },
     { id: 'lowercase', label: 'Lowercase', preview: 'aa' },
-    { id: 'capitalize', label: 'Capitalise Each Word', preview: 'Ab' },
   ]
   return (
     <div>
       <p className="text-[11px] text-gray-500 mb-1">{label}</p>
       <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
         {cases.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => onChange(c.id)}
-            className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
-              value === c.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
-            }`}
-            title={c.label}
-          >
-            {c.preview}
-          </button>
+          // Shared Tooltip rather than the native `title` attribute: title
+          // tooltips are slow to appear and fire inconsistently. This one shows
+          // instantly on hover/focus. flex-1 on the wrapper keeps pills equal.
+          <Tooltip key={c.id} label={c.label} className="flex-1">
+            <button
+              type="button"
+              onClick={() => onChange(c.id)}
+              aria-label={c.label}
+              className={`w-full px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
+                value === c.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {c.preview}
+            </button>
+          </Tooltip>
         ))}
       </div>
     </div>

@@ -12,8 +12,9 @@ export interface TextStyle {
   letterSpacing?: number  // em
   italic?: boolean
   underline?: boolean
-  /** Text transformation: none, uppercase, or capitalize. Defaults to 'none'. */
-  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+  /** Text transformation. 'sentence' capitalises the first letter only (no CSS
+   *  equivalent — applied as a string transform at render time). Defaults to 'none'. */
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize' | 'sentence'
 }
 
 export type BlockType =

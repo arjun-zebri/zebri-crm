@@ -18,6 +18,7 @@
  */
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 import { getRgb } from '@/lib/branding/contrast';
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import type { PublicBranding } from '@/lib/branding/public-branding';
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer';
@@ -102,10 +103,10 @@ export function InvoiceBrandedCard({
               fontWeight: sectionLabelDefaults.fontWeight,
               lineHeight: sectionLabelDefaults.lineHeight,
               letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
-              textTransform: sectionLabelDefaults.textTransform,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
             }}
           >
-            Payment schedule
+            {applyCase('Payment schedule', sectionLabelDefaults.textTransform)}
           </p>
           <InvoicePaymentSchedule
             invoice={invoice}

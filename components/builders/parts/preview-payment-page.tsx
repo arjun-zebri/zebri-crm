@@ -74,7 +74,12 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
   };
 
   const padding = DENSITY_PAD[branding.density];
-  const bg = branding.secondary_color || branding.surface_color;
+  // The page background is the surface colour (aliased as page_background),
+  // exactly what the public /invoice/[token] page paints. The old expression
+  // read `secondary_color || surface_color`, but secondary_color always
+  // defaults to a grey, so the fallback never fired and every preview showed
+  // grey regardless of the MC's chosen background.
+  const bg = branding.page_background || branding.surface_color;
 
   // Contract surface — split the block tree at the contractBody
   // marker. Pre-blocks render above the contract HTML body +

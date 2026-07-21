@@ -69,6 +69,18 @@ export default function PublicInvoicePage() {
         token: params.token,
       });
       if (error || !data) {
+        // Distinguish the two "not available" causes so a real report is
+        // actionable: an `error` means the RPC itself failed (missing function
+        // / column on this database — usually an undeployed migration), while
+        // no error + no data means the token matched no invoice with sharing
+        // enabled (wrong DB for this link, share disabled, or no such invoice).
+        // Logged as a single string via console.warn (not console.error, which
+        // trips the Next dev error overlay and renders the detail object as
+        // an unreadable `{}`).
+        const reason = error ? 'rpc-error' : 'no-row-or-sharing-disabled';
+        console.warn(
+          `[public-invoice] not available — reason=${reason} token=${params.token ?? '(none)'} rpcError=${error?.message ?? 'none'}`,
+        );
         setPageState('not_found');
         return;
       }

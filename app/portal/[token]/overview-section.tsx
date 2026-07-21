@@ -3,6 +3,7 @@
 import { Check, Loader2, Plus } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
@@ -124,10 +125,10 @@ export function OverviewSection({ token, primary, secondary, events, branding }:
               fontWeight: labelDefaults.fontWeight,
               lineHeight: labelDefaults.lineHeight,
               letterSpacing: `${labelDefaults.letterSpacing}px`,
-              textTransform: labelDefaults.textTransform,
+              textTransform: cssTextTransform(labelDefaults.textTransform),
             }}
           >
-            Your details
+            {applyCase('Your details', labelDefaults.textTransform)}
           </h3>
           <SaveIndicator status={status} branding={branding} />
         </div>
@@ -144,6 +145,7 @@ export function OverviewSection({ token, primary, secondary, events, branding }:
           className="group flex items-center gap-1.5 mb-4 cursor-pointer"
         >
           <h3
+            className="group-hover:opacity-75 transition"
             style={{
               fontSize: `${labelDefaults.fontSize}px`,
               color: labelColor,
@@ -151,11 +153,10 @@ export function OverviewSection({ token, primary, secondary, events, branding }:
               fontWeight: labelDefaults.fontWeight,
               lineHeight: labelDefaults.lineHeight,
               letterSpacing: `${labelDefaults.letterSpacing}px`,
-              textTransform: labelDefaults.textTransform,
+              textTransform: cssTextTransform(labelDefaults.textTransform),
             }}
-            className="group-hover:opacity-75 transition"
           >
-            Events
+            {applyCase('Events', labelDefaults.textTransform)}
           </h3>
           <Plus size={13} strokeWidth={1.5} style={{ color: labelColor }} className="group-hover:opacity-75 transition" />
         </button>
