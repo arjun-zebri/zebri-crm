@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { StepDetails, type WelcomeProfile } from './steps/step-details'
 import { StepFounder } from './steps/step-founder'
 import { StepLinks } from './steps/step-links'
+import { StepPreview } from './steps/step-preview'
 import { StepWelcome } from './steps/step-welcome'
 import { WizardChrome, TOTAL_STEPS, type WelcomeStep } from './wizard-chrome'
 
@@ -67,7 +68,7 @@ export function WelcomeWizard({ initial, email, onSaveProfile, onExit }: Welcome
         {step === 2 && <StepDetails value={profile} email={email} onChange={setProfile} />}
         {step === 3 && <StepLinks value={profile} onChange={setProfile} />}
         {step >= 4 && step <= 7 && (
-          <div data-testid="preview-slot" className="h-full" />
+          <StepPreview step={step as 4 | 5 | 6 | 7} active />
         )}
         {step === 8 && <StepFounder />}
 
