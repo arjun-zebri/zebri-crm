@@ -101,6 +101,8 @@ export function Modal({
         onClick={handleBackdropClick}
       />
       <div
+        role="dialog"
+        aria-modal="true"
         className={`fixed inset-0 flex items-center justify-center p-4 ${nested ? 'z-[80]' : 'z-[60]'}`}
         onMouseDown={handleBackdropMouseDown}
         onClick={handleBackdropClick}
