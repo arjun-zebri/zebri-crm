@@ -1,0 +1,50 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+
+/** Options for {@link usePreviewScript}. */
+export interface PreviewScriptOptions {
+  /** Total number of beats in the sequence. */
+  beats: number
+  /** True when this preview's step is on screen. */
+  active: boolean
+  /** True when the user prefers reduced motion. */
+  reducedMotion: boolean
+  /** Milliseconds per beat. Default 1200. */
+  beatMs?: number
+}
+
+/**
+ * Drives a preview's animation as a monotonic beat counter.
+ *
+ * Beats advance while the step is active and then rest on the final frame.
+ * There is no looping: a looping animation behind a Next button competes
+ * with the button for attention.
+ */
+export function usePreviewScript({
+  beats,
+  active,
+  reducedMotion,
+  beatMs = 1200,
+}: PreviewScriptOptions): number {
+  const [beat, setBeat] = useState(0)
+  // Replay contract: reactivation restarts from beat 0. Resetting during
+  // render (not in an effect) avoids a cascading second render pass.
+  const [prevActive, setPrevActive] = useState(active)
+  if (active !== prevActive) {
+    setPrevActive(active)
+    setBeat(0)
+  }
+
+  useEffect(() => {
+    if (!active || reducedMotion) return
+    const id = setInterval(() => {
+      setBeat((b) => (b >= beats - 1 ? b : b + 1))
+    }, beatMs)
+    return () => clearInterval(id)
+  }, [active, reducedMotion, beats, beatMs])
+
+  if (!active) return 0
+  if (reducedMotion) return beats - 1
+  return beat
+}

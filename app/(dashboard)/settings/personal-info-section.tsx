@@ -4,6 +4,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 
+import { AddressAutocomplete, type AddressValue } from '@/components/ui/address-autocomplete'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -20,11 +21,6 @@ function parseBusinessTypes(value: string | string[]): string[] {
   if (Array.isArray(value)) return value
   if (!value) return []
   return [value]
-}
-
-interface AddressSuggestion {
-  placeId: string
-  text: string
 }
 
 interface PersonalInfoSectionProps {
@@ -58,9 +54,6 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [addressText, setAddressText] = useState(initialData.addressText)
   const [addressLat, setAddressLat] = useState<number | null>(initialData.addressLat)
   const [addressLng, setAddressLng] = useState<number | null>(initialData.addressLng)
-  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([])
-  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
-  const addressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   // Bumping this requests a save *after* the next render, used by the
   // programmatic changes (business-type picker, address selection) so
@@ -104,50 +97,6 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       addressLat !== s.addressLat ||
       addressLng !== s.addressLng
     )
-  }
-
-  const handleAddressChange = (value: string) => {
-    setAddressText(value)
-    setAddressLat(null)
-    setAddressLng(null)
-    if (addressDebounceRef.current) clearTimeout(addressDebounceRef.current)
-    if (value.trim().length < 2) {
-      setAddressSuggestions([])
-      setShowAddressSuggestions(false)
-      return
-    }
-    addressDebounceRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/places/address-autocomplete?input=${encodeURIComponent(value)}`)
-        const data = await res.json()
-        const suggestions: AddressSuggestion[] = (data.suggestions ?? []).map((s: { placePrediction: { placeId: string; text: { text: string } } }) => ({
-          placeId: s.placePrediction?.placeId,
-          text: s.placePrediction?.text?.text,
-        })).filter((s: AddressSuggestion) => s.placeId && s.text)
-        setAddressSuggestions(suggestions)
-        setShowAddressSuggestions(suggestions.length > 0)
-      } catch {
-        setAddressSuggestions([])
-      }
-    }, 300)
-  }
-
-  const handleAddressSelect = async (suggestion: AddressSuggestion) => {
-    setAddressText(suggestion.text)
-    setShowAddressSuggestions(false)
-    setAddressSuggestions([])
-    try {
-      const res = await fetch(`/api/places/details?place_id=${suggestion.placeId}`)
-      const data = await res.json()
-      if (data.location) {
-        setAddressLat(data.location.latitude)
-        setAddressLng(data.location.longitude)
-      }
-    } catch {
-      // lat/lng optional - address text is still saved
-    }
-    // Persist the chosen address (+ coords) after this render commits.
-    setSaveSignal((n) => n + 1)
   }
 
   // Persist on blur / selection change. No-op when nothing changed
@@ -421,33 +370,24 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
             )}
           </div>
 
-          <div className="sm:col-span-2 relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Home address</label>
-            <input
-              type="text"
+          <div className="sm:col-span-2">
+            <AddressAutocomplete
               value={addressText}
-              onChange={(e) => handleAddressChange(e.target.value)}
-              onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 150)}
-              className={inputClass}
-              placeholder="Start typing your address..."
-              autoComplete="off"
+              help="Used to calculate drive time to each event."
+              onChange={(next: AddressValue) => {
+                setAddressText(next.text)
+                setAddressLat(next.lat)
+                setAddressLng(next.lng)
+              }}
+              onSelect={(next: AddressValue) => {
+                setAddressText(next.text)
+                setAddressLat(next.lat)
+                setAddressLng(next.lng)
+                // Persist after this render commits so autoSave reads the
+                // freshly-set coordinates rather than a stale closure.
+                setSaveSignal((n) => n + 1)
+              }}
             />
-            <p className="text-xs text-gray-400 mt-1.5">
-              Used to calculate drive time to each event.
-            </p>
-            {showAddressSuggestions && addressSuggestions.length > 0 && (
-              <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-1 max-h-48 overflow-y-auto">
-                {addressSuggestions.map((s) => (
-                  <li
-                    key={s.placeId}
-                    onMouseDown={() => handleAddressSelect(s)}
-                    className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
-                  >
-                    {s.text}
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         </div>
 
