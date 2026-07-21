@@ -1,24 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
+
+const QUERY = '(prefers-reduced-motion: reduce)'
+
+function subscribe(onStoreChange: () => void): () => void {
+  if (typeof window.matchMedia !== 'function') return () => {}
+  const query = window.matchMedia(QUERY)
+  query.addEventListener('change', onStoreChange)
+  return () => query.removeEventListener('change', onStoreChange)
+}
+
+function getSnapshot(): boolean {
+  // jsdom has no matchMedia; defaulting to false keeps previews testable.
+  return typeof window.matchMedia === 'function' && window.matchMedia(QUERY).matches
+}
 
 /**
  * True when the user has asked for reduced motion.
  *
- * Defaults to false so the animation runs in environments without
- * matchMedia (jsdom), which keeps the previews testable.
+ * Defaults to false in environments without matchMedia (jsdom), which
+ * keeps the previews testable.
  */
 export function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false)
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReduced(query.matches)
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches)
-    query.addEventListener('change', onChange)
-    return () => query.removeEventListener('change', onChange)
-  }, [])
-
-  return reduced
+  return useSyncExternalStore(subscribe, getSnapshot, () => false)
 }

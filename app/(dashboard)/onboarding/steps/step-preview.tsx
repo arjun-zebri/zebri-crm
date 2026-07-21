@@ -1,10 +1,10 @@
 'use client'
 
-import { useReducedMotion } from '../use-reduced-motion'
 import { ScriptAutomation } from '../previews/script-automation'
 import { ScriptCouple } from '../previews/script-couple'
 import { ScriptSend } from '../previews/script-send'
 import { ScriptTemplate } from '../previews/script-template'
+import { useReducedMotion } from '../use-reduced-motion'
 
 /** Props for {@link StepPreview}. */
 export interface StepPreviewProps {

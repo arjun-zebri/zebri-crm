@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
 
-import { WelcomeModal, WELCOME_CACHE_KEY } from './welcome-modal'
 import type { WelcomeProfile } from './steps/step-details'
+import { WelcomeModal, WELCOME_CACHE_KEY } from './welcome-modal'
 import type { SaveResult } from './welcome-wizard'
 
 function toProfile(user: User): WelcomeProfile {

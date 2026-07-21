@@ -28,22 +28,23 @@ export function usePreviewScript({
   beatMs = 1200,
 }: PreviewScriptOptions): number {
   const [beat, setBeat] = useState(0)
+  // Replay contract: reactivation restarts from beat 0. Resetting during
+  // render (not in an effect) avoids a cascading second render pass.
+  const [prevActive, setPrevActive] = useState(active)
+  if (active !== prevActive) {
+    setPrevActive(active)
+    setBeat(0)
+  }
 
   useEffect(() => {
-    if (!active) {
-      setBeat(0)
-      return
-    }
-    if (reducedMotion) {
-      setBeat(beats - 1)
-      return
-    }
-    setBeat(0)
+    if (!active || reducedMotion) return
     const id = setInterval(() => {
       setBeat((b) => (b >= beats - 1 ? b : b + 1))
     }, beatMs)
     return () => clearInterval(id)
   }, [active, reducedMotion, beats, beatMs])
 
+  if (!active) return 0
+  if (reducedMotion) return beats - 1
   return beat
 }

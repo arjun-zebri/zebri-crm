@@ -2,8 +2,8 @@
 
 import { Modal } from '@/components/ui/modal'
 
-import { WelcomeWizard, type SaveResult } from './welcome-wizard'
 import type { WelcomeProfile } from './steps/step-details'
+import { WelcomeWizard, type SaveResult } from './welcome-wizard'
 
 /** localStorage hint that stops the modal flashing on a slow hydrate. */
 export const WELCOME_CACHE_KEY = 'zebri:welcome-onboarded'

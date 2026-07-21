@@ -2,8 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 
-import { WelcomeWizard } from '@/app/(dashboard)/onboarding/welcome-wizard'
 import type { WelcomeProfile } from '@/app/(dashboard)/onboarding/steps/step-details'
+import { WelcomeWizard } from '@/app/(dashboard)/onboarding/welcome-wizard'
 
 const INITIAL: WelcomeProfile = {
   displayName: 'Sam Reed', businessName: 'Reed MC', phone: '',

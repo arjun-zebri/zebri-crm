@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 
-import { WelcomeModal } from '@/app/(dashboard)/onboarding/welcome-modal'
 import type { WelcomeProfile } from '@/app/(dashboard)/onboarding/steps/step-details'
+import { WelcomeModal } from '@/app/(dashboard)/onboarding/welcome-modal'
 
 const INITIAL: WelcomeProfile = {
   displayName: 'Sam Reed', businessName: 'Reed MC', phone: '',
