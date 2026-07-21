@@ -59,3 +59,4 @@ next-env.d.ts
 # Never track; regenerate locally with `npm run scrape:celebrants`.
 scripts/celebrants/.cache/
 scripts/celebrants/out/
+.claude/worktrees/
