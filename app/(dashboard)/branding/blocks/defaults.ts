@@ -54,7 +54,7 @@ export function blockTemplate(type: BlockType): Block {
     case 'vendorTimelineBody':
       return { id: newId('vt'), type: 'vendorTimelineBody', locked: true }
     case 'questionnaireBody':
-      return { id: newId('qb'), type: 'questionnaireBody', locked: true }
+      return { id: newId('qb'), type: 'questionnaireBody', locked: true, mode: 'form' }
     case 'image':
       return { id: newId('im'), type: 'image', fit: 'cover', heightPx: 160 }
     case 'spacer':
@@ -72,19 +72,13 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
     ]
   }
   if (surface === 'proposal') {
-    // The proposal core (chooser + priced detail + accept) is a fixed
-    // `proposalBody` marker — its structure can't be a block tree. The
-    // MC adds chrome (banner, logo, footer, custom text) around it and
-    // retypes its section labels inline. Lean scaffold so nobody
-    // fights pre-canned structure, matching the contract surface.
-    //
-    // No header banner by default: it is the heaviest element on the page
-    // and most proposals read calmer without one. It stays in the block
-    // palette for anyone who wants it back.
     return [
       { id: newId('bn'), type: 'businessName' },
-      { id: newId('pb'), type: 'proposalBody', locked: true },
-      { id: newId('ac'), type: 'action', primary: 'Accept & reserve our date', secondary: 'Decline' },
+      { id: newId('ph'), type: 'packageHeader' },
+      { id: newId('pd2'), type: 'packageDetails' },
+      { id: newId('pi'), type: 'packageInclusions' },
+      { id: newId('pt'), type: 'packageTotals' },
+      { id: newId('ac'), type: 'action', primary: 'Accept & reserve our date', secondary: null },
       { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.' },
     ]
   }
@@ -118,6 +112,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
       { id: newId('ps'), type: 'paymentSchedule', locked: true },
       { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' },
       { id: newId('ac'), type: 'action', primary: 'Pay with card', secondary: null },
+      { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.' },
     ]
   }
   if (surface === 'vendorTimeline') {
@@ -129,7 +124,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
   if (surface === 'questionnaire') {
     return [
       { id: newId('bn'), type: 'businessName' },
-      { id: newId('qb'), type: 'questionnaireBody', locked: true },
+      blockTemplate('questionnaireBody'),
     ]
   }
   // contract — minimal chrome scaffold. The contract body is
