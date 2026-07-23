@@ -6,15 +6,15 @@
  */
 'use client'
 
-import type { PackageTotalsBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { formatCurrency, selectionTotal } from '@/lib/payments/proposal-view'
+
 import { useProposalBlock } from './proposal-block-context'
 
 /**
  * Renders the live-recalculating price summary for the chosen option +
  * current add-on selection: subtotal, GST (if applicable), and total.
  */
-export function PackageTotals({ block }: { block: PackageTotalsBlock }) {
+export function PackageTotals() {
   const { options, chosenId, selection } = useProposalBlock()
 
   const chosen = options.find((o) => o.id === chosenId) ?? options[0]

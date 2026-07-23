@@ -9,12 +9,19 @@
  * @module lib/branding/readiness
  */
 
-import type { SurfaceTab } from '@/types/branding-preview'
-import type { Block, BlockType, QuestionnaireBodyBlock } from '@/app/(dashboard)/branding/blocks/types'
-import { BLOCK_LABELS } from '@/app/(dashboard)/branding/blocks/types'
+// The block policy helpers + type definitions live under app/(dashboard)/branding/
+// because they're consumed primarily by the editor surface there.
+// This module is the one acceptable bridge that pulls them into a lib-level
+// readiness evaluator. Layering exception noted in `.claude/docs/component-library.md`.
+// eslint-disable-next-line no-restricted-imports
 import {
   requiredTypesForSurface, atLeastOneForSurface,
 } from '@/app/(dashboard)/branding/blocks/policy'
+// eslint-disable-next-line no-restricted-imports
+import type { Block, QuestionnaireBodyBlock } from '@/app/(dashboard)/branding/blocks/types'
+// eslint-disable-next-line no-restricted-imports
+import { BLOCK_LABELS } from '@/app/(dashboard)/branding/blocks/types'
+import type { SurfaceTab } from '@/types/branding-preview'
 
 /** Readiness state of the MC's account: which gating features are enabled or configured. */
 export interface AccountReadiness {

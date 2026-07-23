@@ -5,14 +5,13 @@
  */
 'use client'
 
-import type { PackageDetailsBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { useProposalBlock } from './proposal-block-context'
 
 /**
  * Renders the chosen option's description if available.
  * Renders nothing if description is null.
  */
-export function PackageDetails({ block }: { block: PackageDetailsBlock }) {
+export function PackageDetails() {
   const { options, chosenId } = useProposalBlock()
 
   const chosen = options.find((o) => o.id === chosenId) ?? options[0]

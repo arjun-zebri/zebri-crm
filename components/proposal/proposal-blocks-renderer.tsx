@@ -13,15 +13,15 @@
 import { ReactNode } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type { PublicBranding } from '@/lib/branding/public-branding'
+import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
 
-import { ProposalBlockProvider } from './proposal-block-context'
 import { PackageDetails } from './package-details'
 import { PackageHeader } from './package-header'
 import { PackageInclusions } from './package-inclusions'
 import { PackageTotals } from './package-totals'
+import { ProposalBlockProvider } from './proposal-block-context'
 
 /**
  * Props for the proposal block renderer.
@@ -118,13 +118,13 @@ interface BlockSwitchProps {
 function BlockSwitch({ block, branding, view, renderAccept }: BlockSwitchProps) {
   switch (block.type) {
     case 'packageHeader':
-      return <PackageHeader block={block} />
+      return <PackageHeader />
     case 'packageDetails':
-      return <PackageDetails block={block} />
+      return <PackageDetails />
     case 'packageInclusions':
-      return <PackageInclusions block={block} />
+      return <PackageInclusions />
     case 'packageTotals':
-      return <PackageTotals block={block} />
+      return <PackageTotals />
     case 'action':
       if (renderAccept) {
         return (

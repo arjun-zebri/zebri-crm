@@ -5,9 +5,9 @@
  */
 'use client'
 
-import type { PackageInclusionsBlock } from '@/app/(dashboard)/branding/blocks/types'
-import { addOnItems, formatCurrency } from '@/lib/payments/proposal-view'
 import { Checkbox } from '@/components/ui/checkbox'
+import { addOnItems, formatCurrency } from '@/lib/payments/proposal-view'
+
 import { useProposalBlock } from './proposal-block-context'
 
 /**
@@ -15,7 +15,7 @@ import { useProposalBlock } from './proposal-block-context'
  * Each add-on is a checkbox bound to the selection state; toggling calls
  * onToggle. Renders nothing when there are no add-ons.
  */
-export function PackageInclusions({ block }: { block: PackageInclusionsBlock }) {
+export function PackageInclusions() {
   const { options, chosenId, selection, onToggle } = useProposalBlock()
 
   const chosen = options.find((o) => o.id === chosenId) ?? options[0]

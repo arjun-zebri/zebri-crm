@@ -7,8 +7,9 @@
 'use client'
 
 import { useState } from 'react'
-import type { PackageHeaderBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import { Button } from '@/components/ui/button'
+
 import { useProposalBlock } from './proposal-block-context'
 
 /**
@@ -16,7 +17,7 @@ import { useProposalBlock } from './proposal-block-context'
  * When multiple options are available, shows a subtle text button to
  * toggle the package chooser.
  */
-export function PackageHeader({ block }: { block: PackageHeaderBlock }) {
+export function PackageHeader() {
   const { options, chosenId, onChoose } = useProposalBlock()
   const [showChooser, setShowChooser] = useState(false)
 

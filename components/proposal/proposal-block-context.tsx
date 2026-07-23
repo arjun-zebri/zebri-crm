@@ -9,8 +9,8 @@
 
 import { createContext, ReactNode, useContext } from 'react'
 
-import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
 import type { PublicBranding } from '@/lib/branding/public-branding'
+import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
 
 /**
  * The proposal block context carries the state and handlers all
