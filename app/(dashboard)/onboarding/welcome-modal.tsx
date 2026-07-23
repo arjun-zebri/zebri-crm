@@ -8,6 +8,14 @@ import { WelcomeWizard, type SaveResult } from './welcome-wizard'
 /** localStorage hint that stops the modal flashing on a slow hydrate. */
 export const WELCOME_CACHE_KEY = 'zebri:welcome-onboarded'
 
+/**
+ * Window event that replays the wizard on demand, bypassing the gate.
+ *
+ * Temporary testing hook (2026-07-23) fired by the sidebar's "Welcome
+ * tour" control. Remove both together before production release.
+ */
+export const WELCOME_REPLAY_EVENT = 'zebri:welcome-replay'
+
 /** Props for {@link WelcomeModal}. */
 export interface WelcomeModalProps {
   isOpen: boolean
@@ -39,7 +47,10 @@ export function WelcomeModal({
 }: WelcomeModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onDismiss} size="xl">
-      <div className="h-[560px] sm:h-[680px] max-h-full flex flex-col">
+      {/* The cap subtracts the Modal's ~4rem close-button header from its
+          85vh panel limit. Without it, short viewports clip the top of the
+          wizard (the step title) instead of shrinking the frame. */}
+      <div className="h-[560px] sm:h-[680px] max-h-[calc(85vh-4rem)] flex flex-col">
         <WelcomeWizard
           initial={initial}
           email={email}

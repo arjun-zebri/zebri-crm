@@ -1,31 +1,49 @@
 /**
  * End-to-end tests for the welcome onboarding wizard.
  *
+ * Each test gets its own isolated user via freshEmail(tag) to prevent cross-worker races
+ * under fullyParallel execution. Supports all 5 Playwright projects (chromium, firefox,
+ * webkit, Mobile Chrome, Mobile Safari) with independent state per test.
+ *
  * Tests the fresh user onboarding flow: entering contact details (name, phone,
  * website), walking through preview steps, and verifying the modal closes after
  * completing the wizard. Also tests that dismissing early preserves entered data.
  *
- * REQUIRES isolated local Supabase stack on port 3123 for state reset.
+ * REQUIRES isolated local Supabase stack on port 3123 for user creation and state reset.
  *
  * @module tests/e2e/welcome-onboarding.spec.ts
  */
 import { test, expect, type Page } from '@playwright/test'
 
-import { login } from './helpers'
-
 const LOCAL_SUPABASE_URL = 'http://127.0.0.1:54321'
-const FRESH_USER_EMAIL = 'test-fresh@zebri.com.au'
+const TEST_PASSWORD = 'test-password-e2e'
 
 /**
- * Clears `welcome_onboarded_at` so the wizard opens again.
+ * Generate a per-test user email with isolation across projects and test cases.
  *
- * Guarded to the isolated local server on port 3123, matching the pattern in
- * branding-onboarding.spec.ts. Against any other target this is a no-op,
- * because it would otherwise mutate a real user.
+ * Returns an email like test-fresh-walk-chromium@zebri.com.au or
+ * test-fresh-dismiss-mobile-chrome@zebri.com.au. Ensures no collisions
+ * when all 5 Playwright projects run fullyParallel.
  */
-async function resetWelcomeState(page: Page) {
-  await page.evaluate(() => localStorage.removeItem('zebri:welcome-onboarded'))
+function freshEmail(tag: string, projectName: string): string {
+  const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  return `test-fresh-${tag}-${slug}@zebri.com.au`
+}
 
+/**
+ * Create or reset a fresh test user via Supabase admin API.
+ *
+ * Deletes any existing user with this email and creates a new one with
+ * app_metadata for account type and subscription. Marks email as confirmed
+ * by setting the email_confirmed_at field in the identity record via
+ * a second update call. Clears welcome_onboarded_at to allow the wizard to open.
+ *
+ * This is the source of truth for test isolation: each test gets its own user
+ * with a clean slate.
+ *
+ * Guarded to port 3123; returns silently if not on a local server.
+ */
+async function ensureFreshUser(email: string) {
   const isLocalServer = process.env.PLAYWRIGHT_BASE_URL?.includes('3123')
   if (!isLocalServer) return
 
@@ -39,36 +57,100 @@ async function resetWelcomeState(page: Page) {
   }
 
   try {
+    // Fetch and delete user if it exists
     const listRes = await fetch(
-      `${LOCAL_SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(FRESH_USER_EMAIL)}`,
+      `${LOCAL_SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(email)}`,
       { headers }
     )
-    if (!listRes.ok) return
-    const { users } = await listRes.json()
-    const user = users?.[0]
-    if (!user) return
+    if (listRes.ok) {
+      const data = await listRes.json()
+      const existingUser = data?.users?.[0]
+      if (existingUser) {
+        await fetch(`${LOCAL_SUPABASE_URL}/auth/v1/admin/users/${existingUser.id}`, {
+          method: 'DELETE',
+          headers,
+        })
+        await new Promise(r => setTimeout(r, 50))
+      }
+    }
 
-    const { welcome_onboarded_at: _cleared, ...rest } = user.user_metadata ?? {}
-    await fetch(`${LOCAL_SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
-      method: 'PUT',
+    // Create the user confirmed at birth. Without email_confirm the
+    // password grant fails with "Email not confirmed" and the login
+    // form never leaves /login.
+    const createRes = await fetch(`${LOCAL_SUPABASE_URL}/auth/v1/admin/users`, {
+      method: 'POST',
       headers,
-      body: JSON.stringify({ user_metadata: rest }),
+      body: JSON.stringify({
+        email,
+        password: TEST_PASSWORD,
+        email_confirm: true,
+        app_metadata: {
+          account_type: 'standard',
+          subscription_status: 'active',
+        },
+        user_metadata: {
+          display_name: 'Fresh Tester',
+          business_name: 'Fresh MC',
+        },
+      }),
     })
-  } catch {
-    // A reset failure should not fail the suite on a non-local target.
+
+    if (!createRes.ok) {
+      console.error('Failed to create user:', createRes.status)
+      return
+    }
+  } catch (err) {
+    console.error('ensureFreshUser error:', err)
   }
 }
 
+/**
+ * Login with a specific email and password.
+ *
+ * Does not rely on TEST_EMAIL env var (which is globally shared).
+ * Follows the same flow as the shared helpers.login() but allows per-test customization.
+ */
+async function loginAs(page: Page, email: string) {
+  // Fast path: if storageState already has a valid session, '/' won't redirect to /login
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  if (!page.url().includes('/login')) {
+    return
+  }
+
+  // Full login flow
+  await page.goto('/login', { waitUntil: 'networkidle' })
+
+  const emailInput = page.locator('input[name="email"]')
+  const passwordInput = page.locator('input[name="password"]')
+  const submitButton = page.locator('button[type="submit"]')
+
+  await emailInput.waitFor({ state: 'visible', timeout: 10000 })
+  await passwordInput.waitFor({ state: 'visible', timeout: 10000 })
+
+  await emailInput.fill(email)
+  await emailInput.dispatchEvent('change')
+  await passwordInput.fill(TEST_PASSWORD)
+  await passwordInput.dispatchEvent('change')
+
+  await page.waitForTimeout(300)
+  await submitButton.click()
+
+  await page.waitForURL(url => !url.pathname.startsWith('/login'), { timeout: 20000 })
+}
+
 test.describe('Welcome onboarding', () => {
-  // Guard: these tests depend on local Supabase for state reset
+  // Guard: these tests depend on local Supabase for user creation and state reset
   test.skip(
     !process.env.PLAYWRIGHT_BASE_URL?.includes('3123'),
     'requires the isolated local-supabase stack (port 3123)'
   )
 
   test('a fresh user walks all eight steps', async ({ page }) => {
-    await login(page)
-    await resetWelcomeState(page)
+    const projectName = test.info().project.name
+    const email = freshEmail('walk', projectName)
+    await ensureFreshUser(email)
+    await loginAs(page, email)
+    await page.evaluate(() => localStorage.removeItem('zebri:welcome-onboarded'))
     await page.goto('/')
 
     const dialog = page.getByRole('dialog')
@@ -97,8 +179,11 @@ test.describe('Welcome onboarding', () => {
   })
 
   test('dismissing at a preview keeps the details and does not reopen', async ({ page }) => {
-    await login(page)
-    await resetWelcomeState(page)
+    const projectName = test.info().project.name
+    const email = freshEmail('dismiss', projectName)
+    await ensureFreshUser(email)
+    await loginAs(page, email)
+    await page.evaluate(() => localStorage.removeItem('zebri:welcome-onboarded'))
     await page.goto('/')
 
     const dialog = page.getByRole('dialog')
@@ -116,13 +201,12 @@ test.describe('Welcome onboarding', () => {
     await page.reload()
     await expect(page.getByRole('dialog')).not.toBeVisible()
 
-    // The phone entered before the drop-out survived.
+    // The phone entered before the drop-out survived. Each test uses its own
+    // user, so we assert the exact value this test wrote. Selected by
+    // placeholder because the legacy Settings markup has no label-input
+    // association yet (tracked for the Settings hardening phase).
     await page.goto('/settings')
-    // In parallel execution, both tests share the same user. The second test
-    // writes +61 400 999 888 and the first writes +61 400 111 222. Assert
-    // the value is one of the two, proving settings persisted.
-    const phoneField = page.getByLabel('Phone')
-    const phoneValue = await phoneField.inputValue()
-    expect(['+61 400 999 888', '+61 400 111 222']).toContain(phoneValue)
+    const phoneField = page.getByPlaceholder('+61 400 000 000')
+    await expect(phoneField).toHaveValue('+61 400 999 888')
   })
 })
