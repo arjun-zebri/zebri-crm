@@ -14,8 +14,8 @@ describe('readiness', () => {
     const result = evaluateSurface('proposal', blocks, account)
     expect(result.ready).toBe(false)
     expect(result.issues).toHaveLength(1)
-    expect(result.issues[0].kind).toBe('missing-required')
-    expect(result.issues[0].message).toContain('Package totals')
+    expect(result.issues[0]!.kind).toBe('missing-required')
+    expect(result.issues[0]!.message).toContain('Package totals')
   })
 
   it('invoice with neither paymentDetails nor action raises need-at-least-one issue', () => {
@@ -28,7 +28,7 @@ describe('readiness', () => {
     const result = evaluateSurface('invoice', blocks, account)
     expect(result.ready).toBe(false)
     expect(result.issues).toHaveLength(1)
-    expect(result.issues[0].kind).toBe('need-at-least-one')
+    expect(result.issues[0]!.kind).toBe('need-at-least-one')
   })
 
   it('invoice with action block but stripeConnected:false raises account issue', () => {
@@ -42,8 +42,8 @@ describe('readiness', () => {
     const result = evaluateSurface('invoice', blocks, account)
     expect(result.ready).toBe(true) // Layer A passes
     expect(result.issues).toHaveLength(1)
-    expect(result.issues[0].kind).toBe('account')
-    expect(result.issues[0].message).toContain('Connect Stripe to accept card payments')
+    expect(result.issues[0]!.kind).toBe('account')
+    expect(result.issues[0]!.message).toContain('Connect Stripe to accept card payments')
   })
 
   it('questionnaire with questionnaireBody lacking mode raises questionnaire-mode issue', () => {
@@ -54,7 +54,7 @@ describe('readiness', () => {
     const result = evaluateSurface('questionnaire', blocks, account)
     expect(result.ready).toBe(false)
     expect(result.issues).toHaveLength(1)
-    expect(result.issues[0].kind).toBe('questionnaire-mode')
+    expect(result.issues[0]!.kind).toBe('questionnaire-mode')
   })
 
   it('fully-seeded proposal with good account is ready with no issues', () => {
@@ -82,7 +82,7 @@ describe('readiness', () => {
     const result = evaluateSurface('proposal', blocks, account)
     expect(result.ready).toBe(true) // Layer A passes, Layer B account issues don't flip it
     expect(result.issues).toHaveLength(1)
-    expect(result.issues[0].kind).toBe('account')
-    expect(result.issues[0].message).toContain('Add your bank details')
+    expect(result.issues[0]!.kind).toBe('account')
+    expect(result.issues[0]!.message).toContain('Add your bank details')
   })
 })

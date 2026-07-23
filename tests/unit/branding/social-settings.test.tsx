@@ -84,7 +84,7 @@ describe('PersonalInfoSection social settings', () => {
 
     // Get the most recent call (in case there were multiple calls)
     const lastCall = mockUpdateUser.mock.calls.length - 1
-    const updateUserCall = mockUpdateUser.mock.calls[lastCall][0]
+    const updateUserCall = mockUpdateUser.mock.calls[lastCall]![0]
     expect(updateUserCall.data.twitter_url).toBe('https://twitter.com/testhandle')
     expect(updateUserCall.data.pinterest_url).toBe('https://pinterest.com/testprofile')
   })
