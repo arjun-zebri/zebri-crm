@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { getAccountReadiness } from '@/lib/branding/account-readiness'
 import type { EntitlementSource } from '@/lib/auth/entitlements'
+import type { Database } from '@/types/database'
 
 describe('getAccountReadiness', () => {
   it('returns all true when stripe connected + all three bank fields + contract template exists', async () => {
@@ -23,7 +25,7 @@ describe('getAccountReadiness', () => {
       }),
     }
 
-    const result = await getAccountReadiness(mockSupabase as any, mockUser)
+    const result = await getAccountReadiness(mockSupabase as unknown as SupabaseClient<Database>, mockUser)
 
     expect(result).toEqual({
       stripeConnected: true,
@@ -51,7 +53,7 @@ describe('getAccountReadiness', () => {
       }),
     }
 
-    const result = await getAccountReadiness(mockSupabase as any, mockUser)
+    const result = await getAccountReadiness(mockSupabase as unknown as SupabaseClient<Database>, mockUser)
 
     expect(result).toEqual({
       stripeConnected: false,
@@ -79,7 +81,7 @@ describe('getAccountReadiness', () => {
       }),
     }
 
-    const result = await getAccountReadiness(mockSupabase as any, mockUser)
+    const result = await getAccountReadiness(mockSupabase as unknown as SupabaseClient<Database>, mockUser)
 
     expect(result.bankDetailsFilled).toBe(false)
   })
@@ -103,7 +105,7 @@ describe('getAccountReadiness', () => {
       }),
     }
 
-    const result = await getAccountReadiness(mockSupabase as any, mockUser)
+    const result = await getAccountReadiness(mockSupabase as unknown as SupabaseClient<Database>, mockUser)
 
     expect(result.bankDetailsFilled).toBe(false)
   })
@@ -127,7 +129,7 @@ describe('getAccountReadiness', () => {
       }),
     }
 
-    const result = await getAccountReadiness(mockSupabase as any, mockUser)
+    const result = await getAccountReadiness(mockSupabase as unknown as SupabaseClient<Database>, mockUser)
 
     expect(result.bankDetailsFilled).toBe(false)
   })
@@ -151,7 +153,7 @@ describe('getAccountReadiness', () => {
       }),
     }
 
-    const result = await getAccountReadiness(mockSupabase as any, mockUser)
+    const result = await getAccountReadiness(mockSupabase as unknown as SupabaseClient<Database>, mockUser)
 
     expect(result.contractTemplateExists).toBe(false)
   })
