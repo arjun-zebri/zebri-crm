@@ -44,6 +44,7 @@ import type {
   PackageDetailsBlock,
   PackageInclusionsBlock,
   PackageTotalsBlock,
+  QuestionnaireBodyBlock,
 } from './types'
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
@@ -1523,21 +1524,20 @@ export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }
 }
 
 /**
- * Placeholder block shown in the branding editor where the questionnaire
- * will render on the public page. The MC can never edit the questionnaire
- * here: the structure and content are fixed. Same model as
- * `RenderContractBody` and `RenderPaymentSchedule`.
+ * Editor wrapper for questionnaireBody block. Shows a preview of the
+ * questionnaire in either form or one-at-a-time mode (persisted on the block).
+ * The mode toggle writes to the block, not preview state.
  *
  * Renders with a dashed border + muted "Fixed steps" badge so it is
  * visually unambiguous this block is not editable on the branding surface.
- * The sample renders in form or typeform mode based on a preview-only toggle.
+ * The sample renders in form or oneAtATime mode based on the block's mode field.
  */
 export function RenderQuestionnaireBody({
+  block,
   state,
-  setPreviewMode,
-}: {
-  state: BrandPreviewState
-  setPreviewMode?: ((mode: 'form' | 'typeform') => void) | undefined
+  updateBlock,
+}: RenderProps<QuestionnaireBodyBlock> & {
+  updateBlock: <X extends Block>(id: string, patch: Partial<X>) => void
 }) {
   const pad = PAD(state)
   const muted = state.textColor || '#6B7280'
@@ -1545,7 +1545,7 @@ export function RenderQuestionnaireBody({
   const surface = state.surfaceColor || '#FFFFFF'
   const radius = state.cornerRadius || 16
   const brand = state.brandColor || '#A7F3D0'
-  const mode = state.questionnairePreviewMode ?? 'form'
+  const mode = block.mode ?? 'form'
 
   return (
     <div className="border-t border-gray-100">
@@ -1569,13 +1569,13 @@ export function RenderQuestionnaireBody({
                 Preview
               </span>
               <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
-                {(['form', 'typeform'] as const).map((m) => (
+                {(['form', 'oneAtATime'] as const).map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
-                      setPreviewMode?.(m)
+                      updateBlock<QuestionnaireBodyBlock>(block.id, { mode: m })
                     }}
                     className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition cursor-pointer ${
                       mode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
@@ -1626,8 +1626,8 @@ export function RenderQuestionnaireBody({
             </div>
           )}
 
-          {/* Typeform mode: one large question + progress bar. */}
-          {mode === 'typeform' && (
+          {/* One at a time mode: one large question + progress bar. */}
+          {mode === 'oneAtATime' && (
             <div className="space-y-6 max-w-prose opacity-60 select-none pointer-events-none">
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold" style={{ color: text }}>

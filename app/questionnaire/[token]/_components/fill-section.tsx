@@ -2,7 +2,7 @@
  * The active fill experience on the public questionnaire page: wires the
  * loaded questionnaire into {@link useQuestionnaireFill} and renders the
  * right renderer for its display mode (one question at a time or classic
- * form), with optional welcome screen in typeform mode and pre/post blocks
+ * form), with optional welcome screen in one-at-a-time mode and pre/post blocks
  * from the MC's branding.
  *
  * Mounted only once the questionnaire has loaded, so the hook starts
@@ -34,6 +34,8 @@ interface FillSectionProps {
   preBlocks?: Block[]
   postBlocks?: Block[]
   showWelcome?: boolean
+  /** Display mode from the questionnaire block. Defaults to 'form'. */
+  displayMode?: 'form' | 'oneAtATime'
 }
 
 /** Empty doc data for rendering pre/post blocks. */
@@ -54,12 +56,13 @@ export function FillSection({
   preBlocks = [],
   postBlocks = [],
   showWelcome = false,
+  displayMode = 'form',
 }: FillSectionProps) {
   const fill = useQuestionnaireFill(token, questionnaire.responses ?? null, onCompleted)
   const questionCount = buildSteps(questionnaire.questions).length
-  const isTypeform = questionnaire.display_mode === 'typeform'
+  const isTypeform = displayMode === 'oneAtATime'
 
-  // Typeform welcome screen: shown before the first question.
+  // One-at-a-time welcome screen: shown before the first question.
   const [welcomeComplete, setWelcomeComplete] = useState(!showWelcome)
 
   const Renderer = isTypeform ? TypeformFlow : ClassicForm
@@ -80,7 +83,7 @@ export function FillSection({
     branding: questionnaire,
   }
 
-  // Typeform welcome screen (pre-blocks + Start button).
+  // One-at-a-time welcome screen (pre-blocks + Start button).
   if (isTypeform && showWelcome && !welcomeComplete) {
     const startButtonBg = readableTextOn(theme.brand)
     return (

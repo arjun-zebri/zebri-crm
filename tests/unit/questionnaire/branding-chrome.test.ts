@@ -18,7 +18,7 @@ function mockBlock(type: Block['type'], id: string = type): Block {
 describe('questionnaireChrome', () => {
   describe('empty blocks', () => {
     it('returns empty pre/post, no welcome, no businessName', () => {
-      const result = questionnaireChrome([], 'typeform')
+      const result = questionnaireChrome([], 'oneAtATime')
       expect(result).toEqual({
         preBlocks: [],
         postBlocks: [],
@@ -51,9 +51,9 @@ describe('questionnaireChrome', () => {
   })
 
   describe('lone businessName pre-block (no welcome)', () => {
-    it('returns businessName as pre-block, no welcome in typeform', () => {
+    it('returns businessName as pre-block, no welcome in oneAtATime', () => {
       const blocks: Block[] = [mockBlock('businessName'), mockBlock('questionnaireBody')]
-      const result = questionnaireChrome(blocks, 'typeform')
+      const result = questionnaireChrome(blocks, 'oneAtATime')
       expect(result.preBlocks).toEqual([blocks[0]])
       expect(result.postBlocks).toEqual([])
       expect(result.showWelcome).toBe(false)
@@ -61,27 +61,27 @@ describe('questionnaireChrome', () => {
     })
   })
 
-  describe('pre-blocks with more than businessName (welcome in typeform)', () => {
-    it('shows welcome in typeform when pre-blocks contain text + businessName', () => {
+  describe('pre-blocks with more than businessName (welcome in oneAtATime)', () => {
+    it('shows welcome in oneAtATime when pre-blocks contain text + businessName', () => {
       const blocks: Block[] = [
         mockBlock('businessName'),
         mockBlock('text', 'intro'),
         mockBlock('questionnaireBody'),
       ]
-      const result = questionnaireChrome(blocks, 'typeform')
+      const result = questionnaireChrome(blocks, 'oneAtATime')
       expect(result.preBlocks).toEqual([blocks[0], blocks[1]])
       expect(result.postBlocks).toEqual([])
       expect(result.showWelcome).toBe(true)
       expect(result.hasBusinessName).toBe(true)
     })
 
-    it('shows welcome in typeform when pre-blocks contain multiple text blocks', () => {
+    it('shows welcome in oneAtATime when pre-blocks contain multiple text blocks', () => {
       const blocks: Block[] = [
         mockBlock('text', 'intro1'),
         mockBlock('text', 'intro2'),
         mockBlock('questionnaireBody'),
       ]
-      const result = questionnaireChrome(blocks, 'typeform')
+      const result = questionnaireChrome(blocks, 'oneAtATime')
       expect(result.preBlocks).toEqual([blocks[0], blocks[1]])
       expect(result.postBlocks).toEqual([])
       expect(result.showWelcome).toBe(true)
@@ -139,7 +139,7 @@ describe('questionnaireChrome', () => {
     it('renders exactly as legacy (empty tree => no chrome, legacy header shows)', () => {
       // Simulate repair seeding a marker-only tree.
       const blocks: Block[] = [mockBlock('questionnaireBody')]
-      const result = questionnaireChrome(blocks, 'typeform')
+      const result = questionnaireChrome(blocks, 'oneAtATime')
       // No pre-blocks beyond marker → no welcome.
       expect(result.preBlocks).toEqual([])
       expect(result.postBlocks).toEqual([])

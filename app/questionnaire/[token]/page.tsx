@@ -76,7 +76,10 @@ export default function PublicQuestionnairePage() {
   const allBlocks = questionnaire?.branding_blocks && questionnaire.branding_blocks.length > 0
     ? repairBlocks('questionnaire', questionnaire.branding_blocks)
     : []
-  const chrome = questionnaireChrome(allBlocks, (questionnaire?.display_mode as 'typeform' | 'form') || 'form')
+  // Extract the questionnaire mode from the questionnaireBody block.
+  const questionnaireBodyBlock = allBlocks.find((b) => b.type === 'questionnaireBody')
+  const displayMode = (questionnaireBodyBlock?.type === 'questionnaireBody' ? questionnaireBodyBlock.mode : undefined) ?? 'form'
+  const chrome = questionnaireChrome(allBlocks, displayMode as 'form' | 'oneAtATime')
 
   return (
     <div className="min-h-screen" style={{ background: theme.pageBg, color: theme.textColor, fontFamily: theme.bodyStack }}>
@@ -128,6 +131,7 @@ export default function PublicQuestionnairePage() {
               preBlocks={chrome.preBlocks}
               postBlocks={chrome.postBlocks}
               showWelcome={chrome.showWelcome}
+              displayMode={displayMode}
             />
           )}
 

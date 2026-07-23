@@ -79,9 +79,6 @@ export interface BrandPreviewState {
   /** Preview-only: show the proposalBody core with one package (no
    *  chooser) or several (with chooser). Not persisted. */
   proposalPreviewMode?: 'single' | 'multi'
-  /** Preview-only: show the questionnaireBody sample in form or typeform mode.
-   *  Not persisted. */
-  questionnairePreviewMode?: 'form' | 'typeform'
 }
 
 export interface BrandPreviewActions {
