@@ -523,7 +523,7 @@ DELETE (sampled clean across the migrations).
 | `portal_song_categories` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-songs.test.ts` (Phase 4D) | Client Portal |
 | `stripe_customers` | ✅ (RLS enabled, no policy — service-role only) | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
-| `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) | Branding |
+| `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) + `tests/integration/branding/user-branding-rls.test.ts` (cross-tenant denial + RPC scoping, 4 tests) | Branding |
 | `user_public_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/user-public-settings.test.ts` (5 tests — cross-tenant read/update/insert denial incl. encrypted OAuth tokens + global subdomain uniqueness) | Settings — Public Page |
 | `automations` | ✅ | `user_id` | ✅ `tests/integration/automations/run-now.test.ts` (cross-tenant: cannot manually run another MC's automation) | Automations |
 | `automation_events` | ✅ (SELECT-only; writes via SECURITY DEFINER RPC + service-role) | `user_id` | ✅ exercised by `run-now.test.ts` (manual-fire event opens only the owner's run) | Automations |
