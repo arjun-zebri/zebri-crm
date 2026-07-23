@@ -41,18 +41,22 @@ export const AT_LEAST_ONE_BY_SURFACE: Readonly<Partial<Record<SurfaceTab, readon
   invoice: ['paymentDetails', 'action'],
 }
 
+/** Check if a block type is a render-split marker. */
 export function isMarker(type: BlockType): boolean {
   return MARKER_TYPES.has(type)
 }
 
+/** Check if a block type has content sourced from live document data. */
 export function isDataBound(type: BlockType): boolean {
   return DATA_BOUND.has(type)
 }
 
+/** Get the list of required block types for a surface. */
 export function requiredTypesForSurface(surface: SurfaceTab): BlockType[] {
   return [...(REQUIRED_BY_SURFACE[surface] ?? [])]
 }
 
+/** Get the at-least-one block constraint for a surface, or null if none apply. */
 export function atLeastOneForSurface(surface: SurfaceTab): BlockType[] | null {
   const set = AT_LEAST_ONE_BY_SURFACE[surface]
   return set ? [...set] : null
