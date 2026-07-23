@@ -1,23 +1,17 @@
 /**
- * The proposal document interior — the block chrome wrapped around the
- * fixed core — shared by the public page and the composer preview so
- * the two can never drift.
+ * The proposal document interior — renders either a full block tree via
+ * {@link ProposalBlocksRenderer} when package blocks are present, or
+ * falls back to a self-contained {@link ProposalPageView} when no blocks
+ * exist.
  *
- * The couple's page and the composer preview used to render the couple
- * page two different ways: the public page block-renders the MC's saved
- * tree (header banner, custom text, styled Accept action, footer/ABN)
- * around the fixed `proposalBody` core, while the composer preview drew
- * the older self-contained `standalone` layout with a generic CTA. An MC
- * who customised their proposal blocks therefore previewed something the
- * couple never received. This component is the single split-at-marker
- * renderer both now use.
+ * When the proposal tree contains package blocks (packageHeader,
+ * packageDetails, packageInclusions, packageTotals), the entire tree is
+ * delegated to ProposalBlocksRenderer, which handles routing of proposal-
+ * specific blocks and generic block rendering. When blocks are empty or
+ * undefined, the fallback renders the self-contained standalone layout.
  *
- * Split model (same as the public invoice/contract pages): everything
- * before the `proposalBody` marker is pre-chrome, the marker is replaced
- * by the fixed core, and the remainder splits at the `action` block into
- * "between" chrome, the accept slot, and "post" chrome (footer). The
- * accept UI itself differs per caller (interactive accept/decline vs a
- * static preview CTA), so it comes in through {@link renderAccept}.
+ * The accept UI itself differs per caller (interactive accept/decline vs
+ * a static preview CTA), so it comes in through {@link renderAccept}.
  *
  * @module components/proposal/proposal-document-body
  */
@@ -32,9 +26,8 @@ import {
   ProposalPageView,
   viewBranding,
 } from '@/components/proposal/proposal-page-view'
-import { DENSITY_PADDING as DENSITY_PAD } from '@/lib/branding/density'
+import { ProposalBlocksRenderer } from '@/components/proposal/proposal-blocks-renderer'
 import type { PublicBranding } from '@/lib/branding/public-branding'
-import { findActionStyle, PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type {
   ProposalViewBranding,
   PublicProposalOption,
@@ -79,8 +72,9 @@ export interface ProposalDocumentBodyProps {
 }
 
 /**
- * Render the proposal document body — block chrome + fixed core + accept
- * slot when a tree exists, else the standalone fallback.
+ * Render the proposal document body — routes to ProposalBlocksRenderer
+ * when package blocks are present, else falls back to the self-contained
+ * standalone layout.
  */
 export function ProposalDocumentBody({
   blocks,
@@ -99,67 +93,35 @@ export function ProposalDocumentBody({
   renderAccept,
 }: ProposalDocumentBodyProps) {
   const view = viewBranding(branding)
-  const pad = DENSITY_PAD[branding.density]
 
   const list = blocks ?? null
-  const pbIdx = list?.findIndex((b) => b.type === 'proposalBody') ?? -1
-  const useBlocks = !!list && list.length > 0 && pbIdx >= 0
+  // Detect if blocks contain any package-specific block types
+  const hasPackageBlocks =
+    !!list && list.length > 0 && list.some((b) =>
+      ['packageHeader', 'packageDetails', 'packageInclusions', 'packageTotals'].includes(b.type)
+    )
 
-  const actionStyle = findActionStyle(list, {
-    brandColor: view.brand,
-    cornerRadius: view.radius,
-  })
   // The accept slot only shows on an active proposal; the accepted /
   // expired / declined views pin to the recorded state with no CTA.
   const accept =
-    state === 'active' ? renderAccept?.({ style: actionStyle, view, publicBranding: branding }) ?? null : null
+    state === 'active' ? renderAccept?.({ style: { color: view.brand, radius: view.cornerRadius }, view, publicBranding: branding }) ?? null : null
 
-  const core = (
-    <ProposalPageView
-      variant="blockCore"
-      coupleName={coupleName}
-      proposalNumber={proposalNumber}
-      notes={notes}
-      expiresAt={expiresAt}
-      options={options}
-      // Declined has no distinct core layout; it reads like expired.
-      state={state === 'accepted' ? 'accepted' : state === 'active' ? 'active' : 'expired'}
-      publicBranding={branding}
-      branding={view}
-      chosenId={chosenId}
-      selection={selection}
-      onChoose={onChoose}
-      onToggle={onToggle}
-    />
-  )
-
-  if (useBlocks) {
-    const preBlocks = list!.slice(0, pbIdx)
-    const rest = list!.slice(pbIdx + 1)
-    const actIdx = rest.findIndex((b) => b.type === 'action')
-    const betweenBlocks = actIdx >= 0 ? rest.slice(0, actIdx) : rest
-    const postBlocks = actIdx >= 0 ? rest.slice(actIdx + 1) : []
-    const doc = {
-      title,
-      refNumber: proposalNumber,
-      expiresAt,
-      items: [],
-      subtotal: 0,
-      taxRate: 0,
-    }
-
+  // When package blocks are present, render the full tree via ProposalBlocksRenderer.
+  if (hasPackageBlocks) {
     return (
-      <div className="overflow-hidden" style={{ borderRadius: view.radius }}>
-        <PublicBlockRenderer blocks={preBlocks} branding={branding} doc={doc} hideAction />
-        <div className={pad.cardSection}>{core}</div>
-        {betweenBlocks.length > 0 ? (
-          <PublicBlockRenderer blocks={betweenBlocks} branding={branding} doc={doc} hideAction />
-        ) : null}
-        {accept ? <div className={pad.cardSection}>{accept}</div> : null}
-        {postBlocks.length > 0 ? (
-          <PublicBlockRenderer blocks={postBlocks} branding={branding} doc={doc} hideAction />
-        ) : null}
-      </div>
+      <ProposalBlocksRenderer
+        blocks={list!}
+        branding={branding}
+        view={view}
+        options={options}
+        chosenId={chosenId ?? (options.length === 1 ? options[0]!.id : '')}
+        selection={selection}
+        state={state}
+        expiresAt={expiresAt}
+        onChoose={onChoose}
+        onToggle={onToggle}
+        renderAccept={renderAccept}
+      />
     )
   }
 
