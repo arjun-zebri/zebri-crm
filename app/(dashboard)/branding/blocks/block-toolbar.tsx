@@ -193,7 +193,9 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
       return null
     case 'contractBody':
       return null
-    case 'proposalBody':
+    case 'vendorTimelineBody':
+      return null
+    case 'questionnaireBody':
       return null
   }
 }

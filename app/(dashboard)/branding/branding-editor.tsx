@@ -214,9 +214,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const [surface, setSurface] = useState<SurfaceTab>('proposal')
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [zoom, setZoom] = useState(1)
-  // Preview-only: whether the proposal core previews one package or the
-  // multi-package chooser. Not persisted.
-  const [proposalPreviewMode, setProposalPreviewMode] = useState<'single' | 'multi'>('multi')
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
@@ -941,8 +938,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     facebookUrl: state.facebookUrl,
     portalSections: state.portalSections,
     proposalLabels: state.proposalLabels,
-    proposalPreviewMode,
-  }), [state, proposalPreviewMode])
+  }), [state])
 
   // Null-safe: state persisted or hot-reloaded from before the six-surface
   // rollout can lack the newer keys until the next save normalizes it.
@@ -1146,7 +1142,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             onEditProposalLabel={(key, val) =>
               setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
             }
-            setProposalPreviewMode={setProposalPreviewMode}
           />
         </CanvasFrame>
       </div>

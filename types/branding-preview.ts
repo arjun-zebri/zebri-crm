@@ -76,9 +76,6 @@ export interface BrandPreviewState {
   }
   /** Editable proposal section wording — drives the proposalBody block. */
   proposalLabels?: ProposalLabels
-  /** Preview-only: show the proposalBody core with one package (no
-   *  chooser) or several (with chooser). Not persisted. */
-  proposalPreviewMode?: 'single' | 'multi'
 }
 
 export interface BrandPreviewActions {

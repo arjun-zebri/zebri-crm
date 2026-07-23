@@ -47,7 +47,6 @@ import {
   RenderPackageTotals,
   RenderPaymentDetails,
   RenderPaymentSchedule,
-  RenderProposalBody,
   RenderQuestionnaireBody,
   RenderTitle,
   RenderTotals,
@@ -78,8 +77,6 @@ interface BlockRendererProps {
   removeImage?: (blockId: string) => void | Promise<void>
   /** Proposal surface only: edit the fixed core's section labels. */
   onEditProposalLabel?: ProposalLabelEdit
-  /** Proposal surface only: toggle the single/multi package preview. */
-  setProposalPreviewMode?: (mode: 'single' | 'multi') => void
 }
 
 export function BlockRenderer({
@@ -103,7 +100,6 @@ export function BlockRenderer({
   uploadImage,
   removeImage,
   onEditProposalLabel,
-  setProposalPreviewMode,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -246,7 +242,6 @@ export function BlockRenderer({
                   <div key={block.id} aria-label={fixedLabel} className="group relative">
                     {renderBlock(block, state, updateBlock, {
                       onEditProposalLabel,
-                      setProposalPreviewMode,
                     }, surface)}
                     <button
                       type="button"
@@ -334,7 +329,6 @@ interface RenderExtras {
   uploadImage?: (file: File, blockId: string) => Promise<void>
   removeImage?: (blockId: string) => void | Promise<void>
   onEditProposalLabel?: ProposalLabelEdit | undefined
-  setProposalPreviewMode?: ((mode: 'single' | 'multi') => void) | undefined
 }
 
 interface SpacerWithResizeProps {
@@ -493,14 +487,6 @@ function renderBlock(
       return <RenderPaymentSchedule state={state} />
     case 'contractBody':
       return <RenderContractBody state={state} />
-    case 'proposalBody':
-      return (
-        <RenderProposalBody
-          state={state}
-          onEditLabel={extras.onEditProposalLabel}
-          setPreviewMode={extras.setProposalPreviewMode}
-        />
-      )
     case 'vendorTimelineBody':
       return <RenderVendorTimelineBody state={state} />
     case 'questionnaireBody':
