@@ -14,8 +14,9 @@
 create or replace function _user_branding(p_user_id uuid)
 returns jsonb
 language sql
-security definer
 stable
+security definer
+set search_path = public, auth
 as $$
   select jsonb_build_object(
     'logo_url',                  raw_user_meta_data->>'logo_url',
@@ -91,5 +92,4 @@ as $$
   where id = p_user_id;
 $$;
 
-set search_path = public, auth;
 revoke all on function _user_branding(uuid) from public, anon, authenticated;
