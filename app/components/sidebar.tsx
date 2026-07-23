@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Paintbrush,
   Sparkles,
+  PlayCircle,
   FileStack,
   BookOpen,
 } from "lucide-react";
@@ -23,7 +24,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
+import { WELCOME_REPLAY_EVENT } from "@/app/(dashboard)/onboarding/welcome-modal";
 import { clearShadowCookies } from "@/app/admin/actions";
+import { Button } from "@/components/ui/button";
 import { isAdmin } from "@/lib/auth/entitlements";
 import { createClient } from "@/lib/supabase/client";
 
@@ -144,6 +147,21 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
 
         <div className="px-3 pb-4">
           <div className="border-t border-gray-200 pt-3 space-y-2">
+            {/* Temporary testing control (2026-07-23): replays the welcome
+                wizard on demand so it can be exercised without a fresh
+                account. Remove with WELCOME_REPLAY_EVENT before release. */}
+            <Button
+              variant="ghost"
+              onClick={() =>
+                window.dispatchEvent(new Event(WELCOME_REPLAY_EVENT))
+              }
+              className="w-full justify-start gap-3 px-[10px] py-3 md:py-2.5 rounded-xl text-gray-800 hover:bg-gray-50 hover:text-gray-900 font-normal"
+            >
+              <PlayCircle size={18} strokeWidth={1.5} className="flex-shrink-0" />
+              <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
+                Welcome tour
+              </span>
+            </Button>
             {[
               ...bottomItems,
               // Admin link visibility goes through the entitlements

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 import type { WelcomeProfile } from './steps/step-details'
-import { WelcomeModal, WELCOME_CACHE_KEY } from './welcome-modal'
+import { WelcomeModal, WELCOME_CACHE_KEY, WELCOME_REPLAY_EVENT } from './welcome-modal'
 import type { SaveResult } from './welcome-wizard'
 
 function toProfile(user: User): WelcomeProfile {
@@ -57,6 +57,23 @@ export function WelcomeGate() {
       setOpen(true)
     })()
     return () => { cancelled = true }
+  }, [])
+
+  // Temporary testing hook (2026-07-23): the sidebar's "Welcome tour"
+  // control replays the wizard on demand, bypassing the once-only gate,
+  // so the flow can be exercised without creating a fresh account.
+  // Remove together with the sidebar control before production release.
+  useEffect(() => {
+    const onReplay = () => {
+      void (async () => {
+        const { data } = await createClient().auth.getUser()
+        if (!data.user) return
+        setUser(data.user)
+        setOpen(true)
+      })()
+    }
+    window.addEventListener(WELCOME_REPLAY_EVENT, onReplay)
+    return () => window.removeEventListener(WELCOME_REPLAY_EVENT, onReplay)
   }, [])
 
   if (!user) return null

@@ -26,19 +26,19 @@ export function ScriptTemplate({ active, reducedMotion }: PreviewScriptProps) {
       <div className="flex flex-col h-full gap-2">
         <div className="flex items-center justify-between pb-2 border-b border-border">
           <span className="text-xl font-semibold text-text">Templates</span>
-          <button
+          <span
             className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-300 cursor-pointer ${
-              show(2) ? 'bg-black text-white' : 'border border-border text-text-subtle'
+              show(2) ? 'bg-brand-fg text-text-inverse' : 'border border-border text-text-subtle'
             }`}
           >
             <Plus size={12} strokeWidth={1.5} />
             <span className="hidden sm:inline">New template</span>
-          </button>
+          </span>
         </div>
 
         {show(2) && (
           <div className="flex gap-2 border-b border-border pb-1 animate-fade-in">
-            <span className="text-xs font-medium text-text border-b-2 border-black pb-1">Emails</span>
+            <span className="text-xs font-medium text-text border-b-2 border-brand-fg pb-1">Emails</span>
             <span className="text-xs text-text-subtle">Packages</span>
             <span className="text-xs text-text-subtle">Invoices</span>
           </div>

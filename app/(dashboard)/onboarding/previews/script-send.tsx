@@ -58,14 +58,14 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
 
         {show(3) && !show(5) && (
           <div className="flex justify-end pt-2 animate-fade-in">
-            <button
+            <span
               className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-300 cursor-pointer ${
-                show(4) ? 'bg-black text-white' : 'border border-border text-text-subtle'
+                show(4) ? 'bg-brand-fg text-text-inverse' : 'border border-border text-text-subtle'
               }`}
             >
               <Mail size={12} strokeWidth={1.5} />
               <span className="hidden sm:inline">Send email</span>
-            </button>
+            </span>
           </div>
         )}
 
@@ -103,7 +103,7 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
                 <span className="text-xs text-text-subtle cursor-pointer">Cancel</span>
                 <span
                   className={`rounded-lg px-3 py-1 text-xs transition-colors duration-300 cursor-pointer ${
-                    show(6) ? 'bg-black text-white' : 'bg-surface-muted text-text-subtle'
+                    show(6) ? 'bg-brand-fg text-text-inverse' : 'bg-surface-muted text-text-subtle'
                   }`}
                 >
                   Send email
@@ -115,7 +115,7 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
 
         {show(7) && (
           <div className="flex-1 flex flex-col justify-center animate-fade-in">
-            <div className="rounded-xl border border-border bg-white p-3 space-y-1.5">
+            <div className="rounded-xl border border-border bg-card p-3 space-y-1.5">
               <p className="text-xs font-semibold text-text">Enquiry reply</p>
               <p className="text-[10px] text-text-subtle">to ellie@example.com</p>
               <div className="flex justify-end pt-1">

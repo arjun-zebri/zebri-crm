@@ -30,14 +30,14 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
             <span className="text-xl font-semibold text-text">Couples</span>
             <span className="text-xs text-text-muted ml-2">1 total</span>
           </div>
-          <button
+          <span
             className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-300 cursor-pointer ${
-              show(2) ? 'bg-black text-white' : 'border border-border text-text-subtle'
+              show(2) ? 'bg-brand-fg text-text-inverse' : 'border border-border text-text-subtle'
             }`}
           >
             <Plus size={12} strokeWidth={1.5} />
-            <span className="hidden sm:inline">Add couple</span>
-          </button>
+            <span className="hidden sm:inline">New couple</span>
+          </span>
         </div>
 
         {show(2) && !show(3) && (
@@ -53,14 +53,14 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
 
         {show(3) && !show(7) && (
           <div className="rounded-xl border border-border bg-card p-3 space-y-2 animate-fade-in">
-            <p className="text-xs font-medium text-text">Add couple</p>
+            <p className="text-xs font-medium text-text">Add Couple</p>
             <MockField label="Name" value={show(4) ? 'Ellie & Tom' : ''} />
             <MockField label="Wedding date" value={show(5) ? '14 Mar 2027' : ''} />
             <div className="flex justify-end gap-2 pt-1">
               <span className="text-xs text-text-muted cursor-pointer">Cancel</span>
               <span
                 className={`rounded-lg px-3 py-1 text-xs transition-colors duration-300 cursor-pointer ${
-                  show(6) ? 'bg-black text-white' : 'bg-surface-muted text-text-subtle'
+                  show(6) ? 'bg-brand-fg text-text-inverse' : 'bg-surface-muted text-text-subtle'
                 }`}
               >
                 Save
@@ -79,7 +79,7 @@ export function ScriptCouple({ active, reducedMotion }: PreviewScriptProps) {
                   </span>
                   <span className="text-[11px] text-text-subtle">1</span>
                 </div>
-                <div className="rounded-xl border border-border bg-white p-3 space-y-2">
+                <div className="rounded-xl border border-border bg-card p-3 space-y-2">
                   <p className="text-xs font-semibold text-text">Ellie &amp; Tom</p>
                   <div className="flex items-center gap-1 text-[10px] text-text-subtle">
                     <Mail size={12} strokeWidth={1.5} />

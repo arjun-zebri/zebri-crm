@@ -38,7 +38,7 @@ async function capturePreview(stepNum, desktopWidth = 1280) {
     }
 
     // Wait for the animations on this step to complete
-    await page.waitForTimeout(2000)
+    await page.waitForTimeout(12000)
 
     // Take screenshot
     const filename = `mock-${stepNum}${desktopWidth === 393 ? '-mobile' : ''}.png`

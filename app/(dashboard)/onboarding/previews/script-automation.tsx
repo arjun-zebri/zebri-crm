@@ -26,7 +26,7 @@ export function ScriptAutomation({ active, reducedMotion }: PreviewScriptProps) 
     <PreviewFrame activeNav="automations" navClicked={show(1)}>
       <div className="h-full flex flex-col">
         {show(2) && (
-          <div className="flex items-center justify-between pb-2 border-b border-border animate-fade-in">
+          <div className="hidden sm:flex items-center justify-between pb-2 border-b border-border animate-fade-in">
             <div className="flex items-center gap-2">
               <ChevronLeft size={16} strokeWidth={1.5} className="text-text-subtle cursor-pointer" />
               <span className="text-sm font-semibold text-text">Enquiry auto-reply</span>
@@ -46,14 +46,14 @@ export function ScriptAutomation({ active, reducedMotion }: PreviewScriptProps) 
         )}
 
         {show(2) && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 pt-4">
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-4 pt-1 sm:pt-4">
             {show(2) && (
               <div className="animate-fade-in">
-                <p className="text-[10px] font-bold text-text-subtle uppercase tracking-wider mb-3">
+                <p className="text-[10px] font-bold text-text-subtle uppercase tracking-wider mb-1.5 sm:mb-3">
                   Trigger
                 </p>
-                <div className={`w-48 rounded-xl bg-white border-2 px-3 py-2 flex items-start gap-2 transition-colors duration-300 ${
-                  show(3) ? 'border-black' : 'border-dashed border-border'
+                <div className={`w-48 rounded-xl bg-card border-2 px-3 py-2 flex items-start gap-2 transition-colors duration-300 ${
+                  show(3) ? 'border-brand-fg' : 'border-dashed border-border'
                 }`}>
                   <UserPlus size={14} strokeWidth={1.5} className="text-text shrink-0 mt-0.5" />
                   <div className="min-w-0">
@@ -66,19 +66,18 @@ export function ScriptAutomation({ active, reducedMotion }: PreviewScriptProps) 
 
             {show(2) && show(4) && (
               <div
-                className="w-px bg-border transition-all duration-500"
-                style={{ height: show(4) ? '20px' : '0px' }}
+                className={`w-px bg-border transition-all duration-500 ${show(4) ? 'h-3 sm:h-5' : 'h-0'}`}
                 aria-hidden
               />
             )}
 
             {show(4) && (
               <div className="animate-fade-in">
-                <p className="text-[10px] font-bold text-text-subtle uppercase tracking-wider mb-3">
+                <p className="text-[10px] font-bold text-text-subtle uppercase tracking-wider mb-1.5 sm:mb-3">
                   Action
                 </p>
-                <div className={`w-48 rounded-xl bg-white border-2 px-3 py-2 flex items-start gap-2 transition-colors duration-300 ${
-                  show(5) ? 'border-black' : 'border-dashed border-border'
+                <div className={`w-48 rounded-xl bg-card border-2 px-3 py-2 flex items-start gap-2 transition-colors duration-300 ${
+                  show(5) ? 'border-brand-fg' : 'border-dashed border-border'
                 }`}>
                   <Mail size={14} strokeWidth={1.5} className="text-text shrink-0 mt-0.5" />
                   <div className="min-w-0">
@@ -90,9 +89,9 @@ export function ScriptAutomation({ active, reducedMotion }: PreviewScriptProps) 
             )}
 
             {show(6) && (
-              <div className="flex items-center gap-1.5 pt-2 animate-fade-in">
+              <div className="flex items-center gap-1.5 pt-0 sm:pt-2 animate-fade-in">
                 <span className="h-3.5 w-6 rounded-full bg-green-600 flex items-center justify-end px-0.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-white" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-card" />
                 </span>
                 <span className="text-xs text-text font-medium">Active</span>
               </div>
