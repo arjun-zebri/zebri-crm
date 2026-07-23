@@ -4,24 +4,22 @@ import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import { repairBlocks, repairAllSurfaces, type BlocksByDoc } from '@/lib/branding/validate-blocks'
 
 describe('repairBlocks', () => {
-  it('re-inserts deleted required blocks on invoices', () => {
+  it('does NOT re-insert deleted required blocks (readiness flags absence)', () => {
     const repaired = repairBlocks('invoice', [
       { id: 'a', type: 'headerBanner' },
     ])
     const types = repaired.map((b) => b.type)
-    expect(types).toContain('lineItems')
-    expect(types).toContain('totals')
-    expect(types).toContain('paymentDetails')
-    expect(types).toContain('paymentSchedule')
+    // headerBanner migrates to image; required blocks stay deleted
+    expect(types).toEqual(['image'])
   })
 
-  it('dedupes doubled markers, keeping the first', () => {
-    const repaired = repairBlocks('proposal', [
-      { id: 'p1', type: 'proposalBody', locked: true },
-      { id: 'p2', type: 'proposalBody', locked: true },
+  it('dedupes doubled render-split markers, keeping the first', () => {
+    const repaired = repairBlocks('contract', [
+      { id: 'c1', type: 'contractBody', locked: true },
+      { id: 'c2', type: 'contractBody', locked: true },
     ])
-    expect(repaired.filter((b) => b.type === 'proposalBody')).toHaveLength(1)
-    expect(repaired[0]?.id).toBe('p1')
+    expect(repaired.filter((b) => b.type === 'contractBody')).toHaveLength(1)
+    expect(repaired[0]?.id).toBe('c1')
   })
 
   it('drops unknown block types instead of crashing', () => {
@@ -37,27 +35,24 @@ describe('repairBlocks', () => {
     expect(repairBlocks('invoice', once)).toEqual(once)
   })
 
-  it('leaves a healthy tree untouched (same references)', () => {
+  it('migrates legacy shapes and preserves current ones', () => {
     const input: Block[] = [
       { id: 'h', type: 'headerBanner' },
       { id: 'cb', type: 'contractBody', locked: true },
     ]
     const repaired = repairBlocks('contract', input)
-    expect(repaired[0]).toBe(input[0])
+    // headerBanner gets migrated to image
+    expect(repaired[0]?.type).toBe('image')
+    expect(repaired[0]?.id).toBe('h')
+    // contractBody (a marker) is preserved
     expect(repaired[1]).toBe(input[1])
   })
 
-  it('inserts invoice financial blocks in document order', () => {
+  it('migrates legacy shapes without inserting required blocks', () => {
     const repaired = repairBlocks('invoice', [{ id: 'a', type: 'headerBanner' }])
     const types = repaired.map((b) => b.type)
-    const lineItemsIdx = types.indexOf('lineItems')
-    const totalsIdx = types.indexOf('totals')
-    const paymentDetailsIdx = types.indexOf('paymentDetails')
-    const paymentScheduleIdx = types.indexOf('paymentSchedule')
-
-    expect(paymentScheduleIdx).toBeLessThan(lineItemsIdx)
-    expect(lineItemsIdx).toBeLessThan(totalsIdx)
-    expect(totalsIdx).toBeLessThan(paymentDetailsIdx)
+    // headerBanner migrates to image; required blocks are NOT inserted
+    expect(types).toEqual(['image'])
   })
 })
 
@@ -82,7 +77,7 @@ describe('repairAllSurfaces', () => {
     ])
   })
 
-  it('preserves empty arrays without resurrecting required blocks', () => {
+  it('preserves empty arrays; non-empty trees migrate but do not auto-insert required blocks', () => {
     const input: Partial<BlocksByDoc> = {
       proposal: [],
       invoice: [{ id: 'i', type: 'headerBanner' }],
@@ -94,20 +89,18 @@ describe('repairAllSurfaces', () => {
     expect(result.proposal).toEqual([])
     expect(result.contract).toEqual([])
 
-    // Non-empty invoice tree gets repaired with required blocks.
-    expect(result.invoice.map((b) => b.type)).toContain('paymentSchedule')
-    expect(result.invoice.map((b) => b.type)).toContain('lineItems')
-    expect(result.invoice.map((b) => b.type)).toContain('totals')
+    // Non-empty invoice tree migrates headerBanner->image but does NOT auto-insert required.
+    expect(result.invoice.map((b) => b.type)).toEqual(['image'])
   })
 
-  it('repairs non-empty trees and inserts required blocks', () => {
+  it('repairs non-empty trees (migrates legacy) without auto-inserting required', () => {
     const input: Partial<BlocksByDoc> = {
       proposal: [{ id: 'h', type: 'headerBanner' }],
     }
     const result = repairAllSurfaces(input)
 
-    // Proposal tree should be repaired with proposalBody marker.
-    expect(result.proposal.map((b) => b.type)).toContain('proposalBody')
+    // Proposal tree migrates headerBanner->image; proposalBody is NOT auto-inserted.
+    expect(result.proposal.map((b) => b.type)).toEqual(['image'])
   })
 
   it('seeds missing keys as empty arrays for lossless round-trip', () => {
@@ -124,10 +117,18 @@ describe('repairAllSurfaces', () => {
     expect(result.vendorTimeline).toEqual([])
     expect(result.questionnaire).toEqual([])
 
-    // Existing surfaces should be preserved.
-    expect(result.proposal[0]?.id).toBe('p')
+    // Existing surfaces: proposalBody expands to 4 package blocks, others preserved.
+    expect(result.proposal.map((b) => b.type)).toEqual([
+      'packageHeader',
+      'packageDetails',
+      'packageInclusions',
+      'packageTotals',
+    ])
     expect(result.invoice[0]?.id).toBe('i')
+    expect(result.invoice[0]?.type).toBe('paymentSchedule')
     expect(result.contract[0]?.id).toBe('c')
+    expect(result.contract[0]?.type).toBe('contractBody')
     expect(result.portal[0]?.id).toBe('pt')
+    expect(result.portal[0]?.type).toBe('couplePortal')
   })
 })

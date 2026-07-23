@@ -150,6 +150,11 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
     .map((raw): Block | null => {
       if (!raw || typeof raw !== 'object') return null
       const b = raw as Record<string, unknown> & { type?: string }
+      if (b.type === 'headerBanner') {
+        // Spec §6: banner block is deleted; migrate to an image block, keeping
+        // whatever image/positioning fields it carried.
+        return stripDashes({ ...(b as object), type: 'image' } as unknown as Block)
+      }
       if (b.type === 'message') {
         const { style: _style, ...rest } = b as Record<string, unknown>
         void _style
@@ -241,45 +246,10 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
     }
   }
 
-  // Proposal surface migration: the proposal core moved to the fixed
-  // `proposalBody` marker (chooser + priced detail + accept). The old
-  // proposal default was a quote-style doc (title / lineItems / totals
-  // / action) that no longer applies. If there's no marker, drop those
-  // obsolete body blocks and inject one, keeping real chrome (banner,
-  // business name, custom text, footer). Idempotent.
+  // Proposal surface migration: expand any surviving `proposalBody` marker
+  // into the four real package blocks (header, details, inclusions, totals).
   if (surface === 'proposal') {
-    const hasMarker = migrated.some((b) => b.type === 'proposalBody')
-    if (!hasMarker) {
-      // Drop the obsolete quote-style body blocks; KEEP the action
-      // block (accept/decline) — it's now the editable CTA that sits
-      // below the core — plus real chrome (banner, business, text,
-      // footer).
-      const chrome = migrated.filter(
-        (b) => !['lineItems', 'totals', 'title', 'paymentDetails'].includes(b.type),
-      )
-      const businessIdx = chrome.findIndex((b) => b.type === 'businessName')
-      const insertAt = businessIdx >= 0 ? businessIdx + 1 : 0
-      const marker: Block = {
-        id: `pb_${Math.random().toString(36).slice(2, 9)}`,
-        type: 'proposalBody',
-        locked: true,
-      }
-      migrated = [...chrome.slice(0, insertAt), marker, ...chrome.slice(insertAt)]
-    }
-    // Ensure an Accept action block exists (older proposal defaults
-    // seeded [banner, business, proposalBody, footer] with no action).
-    // Insert it right after the marker so the CTA sits under the core.
-    if (!migrated.some((b) => b.type === 'action')) {
-      const markerIdx = migrated.findIndex((b) => b.type === 'proposalBody')
-      const action: Block = {
-        id: `ac_${Math.random().toString(36).slice(2, 9)}`,
-        type: 'action',
-        primary: 'Accept & reserve our date',
-        secondary: 'Decline',
-      }
-      const at = markerIdx >= 0 ? markerIdx + 1 : migrated.length
-      migrated = [...migrated.slice(0, at), action, ...migrated.slice(at)]
-    }
+    migrated = expandProposalBody(migrated)
   }
 
   return migrated
@@ -309,4 +279,25 @@ function stripDashes(block: Block): Block {
     default:
       return block
   }
+}
+
+/**
+ * Spec §6: expand a legacy `proposalBody` marker into the four real package
+ * blocks (header, details, optional inclusions, totals) in place. The Accept
+ * CTA is the existing `action` block that already sits after the marker; we do
+ * not synthesise one here (readiness flags its absence). Idempotent: a tree
+ * with no `proposalBody` is returned unchanged.
+ */
+export function expandProposalBody(blocks: Block[]): Block[] {
+  const idx = blocks.findIndex((b) => b.type === 'proposalBody')
+  if (idx < 0) return blocks
+  const pkg: Block[] = [
+    blockTemplate('packageHeader'),
+    blockTemplate('packageDetails'),
+    blockTemplate('packageInclusions'),
+    blockTemplate('packageTotals'),
+  ]
+  // Drop the marker and any duplicate proposalBody markers further down.
+  const rest = blocks.filter((b) => b.type !== 'proposalBody')
+  return [...rest.slice(0, idx), ...pkg, ...rest.slice(idx)]
 }
