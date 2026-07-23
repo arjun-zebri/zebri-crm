@@ -198,6 +198,16 @@ export interface FooterBlock extends BaseBlock {
   closingNote?: string
   noteStyle?: TextStyle
   contactStyle?: TextStyle
+  /** Show Facebook social icon when URL is present. */
+  showFacebook?: boolean
+  /** Show Instagram social icon when URL is present. */
+  showInstagram?: boolean
+  /** Show Twitter social icon when URL is present. */
+  showTwitter?: boolean
+  /** Show Pinterest social icon when URL is present. */
+  showPinterest?: boolean
+  /** Show website link icon when URL is present. */
+  showWebsite?: boolean
 }
 
 /**

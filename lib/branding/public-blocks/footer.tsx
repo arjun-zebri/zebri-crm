@@ -1,6 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
+import { Facebook, Instagram, Twitter, Pin, Globe } from 'lucide-react'
 
 // eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
@@ -42,6 +43,17 @@ export function RenderFooter({
     branding.abn ? `ABN ${branding.abn}` : null,
   ].filter(Boolean) as string[]
 
+  // Social networks: render icons for toggled-on networks with URLs.
+  // Pin is used for Pinterest since Lucide has no Pinterest glyph.
+  const NETWORKS = [
+    { key: 'showFacebook' as const, url: branding.facebook_url, Icon: Facebook, label: 'Facebook' },
+    { key: 'showInstagram' as const, url: branding.instagram_url, Icon: Instagram, label: 'Instagram' },
+    { key: 'showTwitter' as const, url: branding.twitter_url, Icon: Twitter, label: 'Twitter' },
+    { key: 'showPinterest' as const, url: branding.pinterest_url, Icon: Pin, label: 'Pinterest' },
+    { key: 'showWebsite' as const, url: branding.website_url, Icon: Globe, label: 'Website' },
+  ] as const
+  const socialLinks = NETWORKS.filter((n) => block[n.key] && n.url)
+
   return (
     <div className={`${p.docX} ${p.blockY} mt-6 border-t pt-5`} style={{ borderTopColor: branding.border_color }}>
       <div className="space-y-1">
@@ -59,6 +71,22 @@ export function RenderFooter({
               </span>
             ))}
           </p>
+        )}
+        {socialLinks.length > 0 && (
+          <div className="mt-3 flex items-center gap-3 justify-center">
+            {socialLinks.map(({ url, Icon, label }) => (
+              <a
+                key={label}
+                href={url!}
+                aria-label={label}
+                target="_blank"
+                rel="noreferrer"
+                className="text-text-muted hover:text-text cursor-pointer"
+              >
+                <Icon size={18} strokeWidth={1.5} />
+              </a>
+            ))}
+          </div>
         )}
       </div>
       {chrome}

@@ -1394,7 +1394,7 @@ function DividerControls({
 
 // ── Footer ────────────────────────────────────────────────────────────────────
 
-type FooterTarget = 'note' | 'contact'
+type FooterTarget = 'note' | 'contact' | 'social'
 
 function FooterControls({
   block,
@@ -1408,6 +1408,10 @@ function FooterControls({
   expanded?: boolean
 }) {
   const [target, setTarget] = useState<FooterTarget>('note')
+
+  if (target === 'social') {
+    return <FooterSocialToggles block={block} updateBlock={updateBlock} />
+  }
 
   const isNote = target === 'note'
   const style = isNote ? block.noteStyle : block.contactStyle
@@ -1443,10 +1447,51 @@ function FooterControls({
         options={[
           { value: 'note', label: 'Note' },
           { value: 'contact', label: 'Contact' },
+          { value: 'social', label: 'Social' },
         ]}
       />
       <Divider />
       <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} />
+    </div>
+  )
+}
+
+function FooterSocialToggles({
+  block,
+  updateBlock,
+}: {
+  block: FooterBlock
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-semibold text-gray-600">Social icons:</span>
+      <Divider />
+      <Toggle
+        label="Facebook"
+        active={block.showFacebook ?? false}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { showFacebook: v })}
+      />
+      <Toggle
+        label="Instagram"
+        active={block.showInstagram ?? false}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { showInstagram: v })}
+      />
+      <Toggle
+        label="Twitter"
+        active={block.showTwitter ?? false}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { showTwitter: v })}
+      />
+      <Toggle
+        label="Pinterest"
+        active={block.showPinterest ?? false}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { showPinterest: v })}
+      />
+      <Toggle
+        label="Website"
+        active={block.showWebsite ?? false}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { showWebsite: v })}
+      />
     </div>
   )
 }

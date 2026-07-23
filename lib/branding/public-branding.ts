@@ -56,6 +56,9 @@ export interface PublicBranding {
   website: string | null
   instagram_url: string | null
   facebook_url: string | null
+  twitter_url: string | null
+  pinterest_url: string | null
+  website_url: string | null
   show_contact_on_documents: boolean
   /** Real bank settings (present on the invoice surface). The paymentDetails
    *  block prefers these over its own placeholder values when available. */
@@ -133,6 +136,9 @@ export interface UserMetadata {
   website?: string
   instagram_url?: string
   facebook_url?: string
+  twitter_url?: string
+  pinterest_url?: string
+  website_url?: string
   show_contact_on_documents?: boolean
   font_heading?: string
   font_body?: string
@@ -228,6 +234,9 @@ export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
     website: metadata.website ?? null,
     instagram_url: metadata.instagram_url ?? null,
     facebook_url: metadata.facebook_url ?? null,
+    twitter_url: metadata.twitter_url ?? null,
+    pinterest_url: metadata.pinterest_url ?? null,
+    website_url: metadata.website_url ?? null,
     show_contact_on_documents: metadata.show_contact_on_documents ?? true,
     bank_account_name: metadata.bank_account_name ?? null,
     bank_bsb: metadata.bank_bsb ?? null,
