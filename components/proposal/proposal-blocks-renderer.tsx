@@ -118,23 +118,23 @@ interface BlockSwitchProps {
 function BlockSwitch({ block, branding, view, renderAccept }: BlockSwitchProps) {
   switch (block.type) {
     case 'packageHeader':
-      return <PackageHeader block={block as any} />
+      return <PackageHeader block={block} />
     case 'packageDetails':
-      return <PackageDetails block={block as any} />
+      return <PackageDetails block={block} />
     case 'packageInclusions':
-      return <PackageInclusions block={block as any} />
+      return <PackageInclusions block={block} />
     case 'packageTotals':
-      return <PackageTotals block={block as any} />
+      return <PackageTotals block={block} />
     case 'action':
       if (renderAccept) {
         return (
           <>
             {renderAccept({
               style: {
-                color: (block as any).buttonColor ?? view.brand,
-                radius: (block as any).buttonRadius ?? view.cornerRadius,
-                primaryLabel: (block as any).primary,
-                secondaryLabel: (block as any).secondary,
+                color: block.buttonColor ?? view.brand,
+                radius: block.buttonRadius ?? view.cornerRadius,
+                primaryLabel: block.primary,
+                secondaryLabel: block.secondary,
               },
               view,
               publicBranding: branding,

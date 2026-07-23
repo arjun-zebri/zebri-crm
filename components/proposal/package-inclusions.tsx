@@ -7,6 +7,7 @@
 
 import type { PackageInclusionsBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { addOnItems, formatCurrency } from '@/lib/payments/proposal-view'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useProposalBlock } from './proposal-block-context'
 
 /**
@@ -27,23 +28,20 @@ export function PackageInclusions({ block }: { block: PackageInclusionsBlock }) 
     <div data-testid="package-inclusions" className="space-y-3">
       <h3 className="text-sm font-semibold text-text">Optional add-ons</h3>
       {addOns.map((item) => (
-        <label
+        <div
           key={item.id}
-          className="flex items-center gap-3 p-2 rounded border border-border hover:bg-surface-muted transition-colors cursor-pointer"
+          className="flex items-center gap-3 p-2 rounded-xl border border-border hover:bg-surface-muted transition-colors"
         >
-          <input
-            type="checkbox"
+          <Checkbox
             checked={selection[item.id] ?? false}
-            onChange={(e) => onToggle?.(item.id, e.target.checked)}
-            className="cursor-pointer"
+            onChange={(checked) => onToggle?.(item.id, checked)}
+            label={item.description}
           />
-          <div className="flex-1">
-            <div className="text-sm text-text">{item.description}</div>
-          </div>
+          <div className="flex-1" />
           <div className="text-sm font-semibold text-text whitespace-nowrap">
             {formatCurrency(item.amount)}
           </div>
-        </label>
+        </div>
       ))}
     </div>
   )

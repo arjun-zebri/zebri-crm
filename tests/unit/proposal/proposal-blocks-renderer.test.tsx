@@ -229,8 +229,8 @@ describe('ProposalBlocksRenderer', () => {
     // Click to open chooser
     await user.click(seeOtherButton)
 
-    // Should show radio list with both options
-    const silverOption = screen.getByRole('radio', { name: /silver package/i })
+    // Should show button list with both options
+    const silverOption = screen.getByRole('button', { name: /silver package/i })
     expect(silverOption).toBeInTheDocument()
 
     // Select the other option
@@ -276,7 +276,7 @@ describe('ProposalBlocksRenderer', () => {
     expect(screen.queryByText('Photography')).not.toBeInTheDocument()
     expect(screen.queryByText('Videography')).not.toBeInTheDocument()
 
-    // Toggle first add-on
+    // Toggle first add-on via checkbox
     const checkbox1 = screen.getByRole('checkbox', { name: /drone shots/i })
     await user.click(checkbox1)
 

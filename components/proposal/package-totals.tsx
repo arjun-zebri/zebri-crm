@@ -15,7 +15,7 @@ import { useProposalBlock } from './proposal-block-context'
  * current add-on selection: subtotal, GST (if applicable), and total.
  */
 export function PackageTotals({ block }: { block: PackageTotalsBlock }) {
-  const { options, chosenId, selection, view } = useProposalBlock()
+  const { options, chosenId, selection } = useProposalBlock()
 
   const chosen = options.find((o) => o.id === chosenId) ?? options[0]
   if (!chosen) return null

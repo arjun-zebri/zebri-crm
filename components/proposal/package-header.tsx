@@ -8,7 +8,7 @@
 
 import { useState } from 'react'
 import type { PackageHeaderBlock } from '@/app/(dashboard)/branding/blocks/types'
-import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import { Button } from '@/components/ui/button'
 import { useProposalBlock } from './proposal-block-context'
 
 /**
@@ -30,37 +30,37 @@ export function PackageHeader({ block }: { block: PackageHeaderBlock }) {
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-xl font-semibold">{chosen.title}</h2>
         {hasMultipleOptions && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowChooser(!showChooser)}
-            className="text-text-muted text-sm cursor-pointer hover:text-text transition-colors"
           >
             See other packages
-          </button>
+          </Button>
         )}
       </div>
 
       {showChooser && hasMultipleOptions && (
         <div className="mt-4 space-y-2">
           {options.map((option) => (
-            <label key={option.id} className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="package-chooser"
-                value={option.id}
-                checked={option.id === chosenId}
-                onChange={() => {
+            <div key={option.id} className="flex items-center gap-2">
+              <Button
+                variant={option.id === chosenId ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => {
                   onChoose?.(option.id)
                   setShowChooser(false)
                 }}
-                className="cursor-pointer"
-              />
-              <span className="text-sm">{option.title}</span>
+                className="justify-start flex-1"
+              >
+                {option.title}
+              </Button>
               {option.is_popular && (
-                <span className="text-xs font-semibold bg-brand text-white px-2 py-1 rounded">
+                <span className="text-xs font-semibold bg-brand text-white px-2 py-1 rounded-xl">
                   Most popular
                 </span>
               )}
-            </label>
+            </div>
           ))}
         </div>
       )}
