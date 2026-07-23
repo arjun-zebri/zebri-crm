@@ -4,6 +4,8 @@ import { Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { useToast } from '@/components/ui/toast'
+import { getAccountReadiness } from '@/lib/branding/account-readiness'
+import { evaluateSurface, type AccountReadiness } from '@/lib/branding/readiness'
 import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import type { ProposalLabels } from '@/lib/branding/proposal-labels'
 import type { TextCase } from '@/lib/branding/text-case'
@@ -29,6 +31,7 @@ import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
 import { CanvasScopeBar } from './canvas-scope-bar'
 import { EditorTopbar } from './editor-topbar'
+import { NotReadyPanel } from './not-ready-panel'
 import { PortalSectionsBar } from './portal-preview'
 import { SurfaceTabs } from './surface-tabs'
 import { uploadBrandAsset } from './upload-brand-asset'
@@ -220,6 +223,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [insertAfterId, setInsertAfterId] = useState<string | null>(null)
+  const [accountReadiness, setAccountReadiness] = useState<AccountReadiness | null>(null)
   const { status, retry } = useAutosave(state, async (value) => {
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
@@ -321,6 +325,22 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   useEffect(() => {
     if (status === 'error') toast('Could not save changes', 'error')
   }, [status, toast])
+
+  // Fetch account readiness once on mount (before autosave loads user).
+  useEffect(() => {
+    const fetchReadiness = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      try {
+        const readiness = await getAccountReadiness(supabase, user)
+        setAccountReadiness(readiness)
+      } catch (err) {
+        console.error('[account readiness fetch]', err)
+      }
+    }
+    fetchReadiness()
+  }, [])
 
   // Switch to the first enabled surface if the active surface becomes disabled.
   useEffect(() => {
@@ -932,6 +952,16 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   // rollout can lack the newer keys until the next save normalizes it.
   const visibleBlocks = state.blocks[docSurface] ?? []
 
+  // Compute readiness for the active surface. Account readiness starts as null
+  // (in-flight); treat unknown account state as "all false" so issues appear only
+  // once the account check completes.
+  const surfaceReadiness = useMemo(() => {
+    if (!accountReadiness) {
+      return { ready: true, issues: [] }
+    }
+    return evaluateSurface(surface, visibleBlocks, accountReadiness)
+  }, [surface, visibleBlocks, accountReadiness])
+
   return (
     <div className="flex flex-col h-full bg-white overflow-hidden">
       <EditorTopbar
@@ -1096,6 +1126,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               }
             />
           )}
+          <NotReadyPanel readiness={surfaceReadiness} />
           <BlockRenderer
             blocks={visibleBlocks}
             setBlocks={setBlocksForCurrent}
