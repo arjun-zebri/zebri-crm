@@ -124,6 +124,23 @@ supabase migration list --linked   # should show clean
 
 After that, CI's `supabase db push` runs cleanly.
 
+### 6. One-time: branding blocks repair sweep (Task 7)
+
+After the branding block hardening migrations deploy to production, run the
+idempotent repair sweep to upgrade existing `user_branding` rows from legacy
+block shapes (pre-Task-6: `headerBanner`, `proposalBody` markers) to the current
+format (package block trees, image blocks).
+
+```bash
+# Against production (with service-role credentials)
+export SUPABASE_URL=https://your-prod-ref.supabase.co
+export SUPABASE_SERVICE_ROLE_KEY=...
+tsx scripts/repair-branding-blocks.ts
+```
+
+The sweep is **idempotent** — it compares JSON before/after repair and skips
+writes if unchanged. Safe to re-run. It logs a summary: `X/Y rows changed`.
+
 ---
 
 ## What each workflow does
