@@ -7,6 +7,7 @@ import { ProposalPageView } from '@/components/proposal/proposal-page-view'
 import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import { resolveProposalLabels, type ProposalLabelEdit } from '@/lib/branding/proposal-labels'
+import { formatCurrency } from '@/lib/payments/proposal-view'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
 import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
@@ -39,6 +40,10 @@ import type {
   ContractBodyBlock,
   ProposalBodyBlock,
   ImageBlock,
+  PackageHeaderBlock,
+  PackageDetailsBlock,
+  PackageInclusionsBlock,
+  PackageTotalsBlock,
 } from './types'
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
@@ -1251,6 +1256,174 @@ export function RenderProposalBody({
           selection={selection}
           onEditLabel={onEditLabel}
         />
+      </div>
+    </div>
+  )
+}
+
+// ── Package blocks (proposal decomposed) ───────────────────────────────
+
+/**
+ * Editor preview for packageHeader block. Shows the chosen package title
+ * with a subtle non-functional "See other packages" button (preview hint)
+ * and a small "sample only" note.
+ */
+export function RenderPackageHeader({
+  block,
+  state,
+  updateBlock,
+}: RenderProps<PackageHeaderBlock>) {
+  const chosen = PROPOSAL_SAMPLE_MULTI[1]!
+  const hasMultiple = PROPOSAL_SAMPLE_MULTI.length > 1
+  const text = state.textColor || '#111827'
+  const muted = state.textColor || '#6B7280'
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xl font-semibold" style={{ color: text }}>
+          {chosen.title}
+        </h2>
+        {hasMultiple && (
+          <button
+            type="button"
+            className="text-sm text-brand hover:text-brand/80 font-medium cursor-pointer transition"
+            title="Preview only"
+            disabled
+          >
+            See other packages
+          </button>
+        )}
+      </div>
+      <p className="text-[11px]" style={{ color: muted }}>
+        Sample only. Real package names are set when building a proposal in Payments.
+      </p>
+    </div>
+  )
+}
+
+/**
+ * Editor preview for packageDetails block. Shows the chosen package
+ * description as read-only sample text.
+ */
+export function RenderPackageDetails({
+  block,
+  state,
+}: RenderProps<PackageDetailsBlock>) {
+  const chosen = PROPOSAL_SAMPLE_MULTI[1]!
+  const text = state.textColor || '#111827'
+
+  if (!chosen.description) {
+    return (
+      <div className="text-sm italic" style={{ color: state.textColor || '#6B7280' }}>
+        (no description)
+      </div>
+    )
+  }
+
+  return (
+    <div className="text-sm" style={{ color: text }}>
+      {chosen.description}
+    </div>
+  )
+}
+
+/**
+ * Editor preview for packageInclusions block. Shows optional add-ons as
+ * non-interactive checkbox rows with sample data.
+ */
+export function RenderPackageInclusions({
+  block,
+  state,
+}: RenderProps<PackageInclusionsBlock>) {
+  const chosen = PROPOSAL_SAMPLE_MULTI[1]!
+  const text = state.textColor || '#111827'
+  const border = state.borderColor || '#E5E7EB'
+  const addOns = chosen.items.filter((item) => item.is_addon)
+
+  if (addOns.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold" style={{ color: text }}>
+        Optional add-ons
+      </h3>
+      {addOns.map((item) => (
+        <div
+          key={item.id}
+          className="flex items-center gap-3 p-2 rounded-xl border transition-colors"
+          style={{ borderColor: border }}
+        >
+          <input
+            type="checkbox"
+            defaultChecked={item.default_included}
+            disabled
+            className="w-4 h-4 cursor-not-allowed"
+          />
+          <div className="flex-1">
+            <p className="text-sm" style={{ color: text }}>
+              {item.description}
+            </p>
+          </div>
+          <div className="text-sm font-semibold whitespace-nowrap" style={{ color: text }}>
+            {formatCurrency(item.amount)}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Editor preview for packageTotals block. Shows price summary (subtotal,
+ * GST, total) for the chosen package with sample add-on selection.
+ */
+export function RenderPackageTotals({
+  block,
+  state,
+}: RenderProps<PackageTotalsBlock>) {
+  const chosen = PROPOSAL_SAMPLE_MULTI[1]!
+  const text = state.textColor || '#111827'
+  const muted = state.textColor || '#6B7280'
+  const border = state.borderColor || '#E5E7EB'
+  const brand = state.brandColor || '#111827'
+  const surface = state.surfaceColor || '#FFFFFF'
+
+  const baseTotal = chosen.subtotal
+  const addOnTotal = chosen.items
+    .filter((item) => item.is_addon && item.default_included)
+    .reduce((sum, item) => sum + item.amount, 0)
+  const subtotal = baseTotal + addOnTotal
+  const gstAmount = chosen.gst_inclusive ? 0 : Math.round(subtotal * 0.1)
+  const grandTotal = subtotal + gstAmount
+
+  return (
+    <div className="space-y-2 p-3 rounded-lg border" style={{ backgroundColor: surface, borderColor: border }}>
+      <div className="flex justify-between text-sm">
+        <span style={{ color: muted }}>Subtotal</span>
+        <span className="font-semibold" style={{ color: text }}>
+          {formatCurrency(subtotal)}
+        </span>
+      </div>
+
+      {!chosen.gst_inclusive && gstAmount > 0 && (
+        <div className="flex justify-between text-sm">
+          <span style={{ color: muted }}>GST (10%)</span>
+          <span className="font-semibold" style={{ color: text }}>
+            {formatCurrency(gstAmount)}
+          </span>
+        </div>
+      )}
+
+      <div className="border-t pt-2 flex justify-between" style={{ borderColor: border }}>
+        <span className="font-semibold" style={{ color: text }}>
+          Total
+        </span>
+        <span className="font-semibold text-lg" style={{ color: brand }}>
+          {formatCurrency(grandTotal)}
+        </span>
       </div>
     </div>
   )

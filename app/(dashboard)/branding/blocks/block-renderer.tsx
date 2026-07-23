@@ -41,6 +41,10 @@ import {
   RenderHeaderBanner,
   RenderImage,
   RenderLineItems,
+  RenderPackageDetails,
+  RenderPackageHeader,
+  RenderPackageInclusions,
+  RenderPackageTotals,
   RenderPaymentDetails,
   RenderPaymentSchedule,
   RenderProposalBody,
@@ -506,6 +510,14 @@ function renderBlock(
       return <RenderVendorTimelineBody state={state} />
     case 'questionnaireBody':
       return <RenderQuestionnaireBody state={state} />
+    case 'packageHeader':
+      return <RenderPackageHeader block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'packageDetails':
+      return <RenderPackageDetails block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'packageInclusions':
+      return <RenderPackageInclusions block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'packageTotals':
+      return <RenderPackageTotals block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'image':
       return (
         <RenderImage
