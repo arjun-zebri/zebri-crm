@@ -77,6 +77,71 @@ Redirects to `/login` on success.
 
 ---
 
+# Welcome Onboarding Wizard
+
+Route: Modal overlay during application (no standalone route).
+
+Route group: `(dashboard)` — authenticated, displays after login on first interaction.
+
+Purpose: Streamlined eight-step welcome wizard for new users to configure their MC profile, business setup, appearance preferences, and default templates.
+
+## Gate
+
+The wizard is shown once per user, gated on `user_metadata.welcome_onboarded_at` timestamp. A soft gate using localStorage (key `WELCOME_ONBOARDED`) acts as an offline hint to skip the fetch. Every user, regardless of age, has never been stamped on this field, so all existing accounts see the modal once after deploy. A backfill of the gate is the lever to suppress it for old users if needed.
+
+## Eight Steps
+
+1. **Welcome** — Greeting, brief copy, user's display name + email read-only, "Next" CTA.
+2. **Business** — Couple of fields about the MC's business (e.g. "What's your business name?"), "Next" CTA.
+3. **Look** — Visual brand setup: business name input + logo upload, primary colour picker, brand tone toggle (minimal / modern / bold). **This step auto-saves** the branding choices to `user_metadata` so if the user skips the wizard, their brand is persisted. "Next" CTA.
+4. **Documents** — Explanation of contracts, templates, and quotes; "Browse templates" link or "Next" CTA.
+5. **Preview: Couples** — High-fidelity mock of the couples kanban board with sample couple cards, read-only (rendered via `PreviewFrame`).
+6. **Preview: Templates** — Two-pane template editor mock: left pane shows the shared LineItemsTable + controls, right pane shows a sample email template rendering. Read-only.
+7. **Preview: Emails** — Mock of the couple-profile Emails tab with a contact picker, "Send email" button, and sent-history list. Read-only.
+8. **Preview: Automations** — Mock automation canvas with sample triggers and actions. Read-only. Placeholder body text (to be replaced with real copy or flagged per brief). "Done" CTA.
+
+All steps except 8 have "Next" buttons; step 8 has "Done" (closes the modal, stamps `user_metadata.welcome_onboarded_at`).
+
+Each step dismisses with a modal close (×), which also stamps the gate timestamp (users do not re-see the wizard if they close early).
+
+## File Structure
+
+```
+app/(dashboard)/@modal/(.)welcome/
+  page.tsx                              — orchestrator, step dispatcher
+  welcome-gate.tsx                      — gate logic (localStorage + metadata read, timestamp check)
+  welcome-modal.tsx                     — modal wrapper, step navigation
+  steps/
+    welcome-step.tsx                    — step 1 (greeting)
+    business-step.tsx                   — step 2 (business details)
+    look-step.tsx                       — step 3 (branding setup, auto-save)
+    documents-step.tsx                  — step 4 (documents overview)
+    preview-couples-step.tsx            — step 5 (couples board mock)
+    preview-templates-step.tsx          — step 6 (templates editor mock)
+    preview-emails-step.tsx             — step 7 (emails tab mock)
+    preview-automations-step.tsx        — step 8 (automations canvas mock)
+  previews/
+    preview-frame.tsx                   — shared nav + content renderer
+    preview-couples.tsx                 — couples kanban board mock
+    preview-templates.tsx               — two-pane template editor mock
+    preview-emails.tsx                  — emails tab mock
+    preview-automations.tsx             — automations canvas mock
+  use-preview-script.ts                 — hook for frame timing + reduced-motion detection
+  use-reduced-motion.ts                 — system prefers-reduced-motion hook
+```
+
+Shared primitives for previews: `AddressAutocomplete` (in `components/ui/`), `Modal` with `role="dialog"`.
+
+## Temporary Testing Control
+
+A "Welcome tour" button in the sidebar (above Branding) fires the `WELCOME_REPLAY_EVENT` ('zebri:welcome-replay'). The `WelcomeGate` component listens for this event and re-opens the wizard, bypassing the once-only gate. **To be removed before production release.**
+
+## Rollout Note
+
+Existing accounts have never been stamped, so every existing user sees the modal once after deploy. A backfill of `welcome_onboarded_at` via admin API or bulk-update script is the lever to suppress the modal for specific users or cohorts if feedback warrants it.
+
+---
+
 # Dashboard
 
 Route: `/dashboard` or `/` (landing page after login)

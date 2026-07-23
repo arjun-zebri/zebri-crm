@@ -54,7 +54,9 @@ import { execSync } from 'node:child_process';
 // removed its exactOptionalPropertyTypes violation (288 -> 287).
 // Extracting the branding onboarding gate into lib/branding/onboarding-gate.ts
 // resolved two more inference sites on the branding page (287 -> 285).
-const STRICT_BUDGET = 285;
+// Welcome onboarding wizard: extracted usePreviewScript, useReducedMotion, and
+// preview shape utilities into pure modules (286 -> 286). Locking in at 286.
+const STRICT_BUDGET = 286;
 
 function runTscStrict() {
   try {

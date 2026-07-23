@@ -163,7 +163,9 @@ const ERROR_BUDGET = 64;
 // portal-shell, page.tsx converted to use branding; 278 → 271.
 // Portal status tokens (text-danger/bg-success/bg-warning) moved to
 // STATUS_COLORS constants, dropping one more warning (271 -> 270).
-const WARNING_BUDGET = 270;
+// Welcome onboarding wizard: pure utility modules + component extraction cleared
+// unused-import warnings across preview files (270 -> 267).
+const WARNING_BUDGET = 267;
 
 function runEslintJson() {
   try {

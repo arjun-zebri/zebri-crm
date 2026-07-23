@@ -77,6 +77,12 @@ Three new e2e specs for the branding overhaul:
 
 **Isolated-stack guard:** These tests require either `BRANDING_E2E=1` OR `PLAYWRIGHT_BASE_URL` including `3123` (local Supabase on port 3123). Skip guard prevents running on remote dev server. Test helpers in `tests/e2e/helpers.ts`.
 
+### Welcome onboarding e2e specs (Phase 14, metadata-gated features)
+
+E2E tests for the welcome wizard use per-test users created via the local GoTrue admin API with `email_confirm: true`. The once-only gate is reset by sending a user metadata update with `{"user_metadata": {"welcome_onboarded_at": null}}` (GoTrue admin update MERGES metadata; keys are deleted only by explicit null). Tests are guarded to the isolated server on port 3123 (local Supabase); they do not run on the remote dev server.
+
+Environment variable: `LOCAL_SUPABASE_SERVICE_ROLE_KEY` — the service role key for admin API calls. Injected by the test harness when running on `:3123`. See `tests/e2e/welcome-onboarding.spec.ts`.
+
 ### Grant repair after local DB reset
 
 After `supabase db reset` locally (Supabase CLI v2.65.5 + PG17), DML grants on auth schema tables may be stale. If integration tests fail with "permission denied," run:
@@ -189,6 +195,12 @@ One file per feature area. Do not create test files for sub-features  -  add to 
 | Delete (2-click) | `button:has-text("Delete")` → `button:has-text("Click again to confirm")` |
 | Board view label | "Board" (not "Kanban") |
 | Profile tabs | `button:has-text("Overview\|Events\|Vendors\|Tasks")` |
+| Welcome wizard dialog | `[role="dialog"]` (inside the modal) |
+| Wizard step heading | `h2:has-text("Welcome\|Business\|Look\|Documents\|Previews...")` |
+| Preview nav active item | `[data-active="true"]` (on sidebar nav buttons inside PreviewFrame) |
+| Wizard "Next" button | `button:has-text("Next")` (context-specific inside modal) |
+| Wizard "Done" button | `button:has-text("Done")` (step 8 close action) |
+| Settings phone input | `input[placeholder="Phone"]` (placeholder selector; label association pending Settings hardening) |
 
 ## Helpers
 

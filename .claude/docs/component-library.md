@@ -40,6 +40,18 @@ spec (emerald fill + white checkmark when checked) — never a native
 and an optional clickable `label`. Always visible (form variant);
 table rows keep their own hover-reveal selection checkbox.
 
+### `<AddressAutocomplete />` — `@/components/ui/address-autocomplete` (Phase 14, onboarding)
+
+Address search + autocomplete using Google Places API. Extracted from Settings page during onboarding wizard work. Props:
+
+- `value: string` — current search input text
+- `onChange: (v: string) => void` — fires on every keystroke (with `null` coordinates during typing)
+- `onSelect: (place: PlacePrediction) => void` — fires when user picks a place from the dropdown (includes resolved lat/lng)
+- `placeholder?: string` — input placeholder text
+- `className?: string` — wrapper class override
+
+Internal state mirrors the value so it survives parent re-renders during async coordinate resolution. The Places API call happens on `onSelect` (per-place); coordinate resolution completes asynchronously and does not block the `onSelect` callback.
+
 Conventions:
 - All of the above use design tokens only — no raw hex / arbitrary values.
 - Unit-tested in `tests/unit/components/ui/{button,input,select,checkbox}.test.tsx`.
@@ -300,9 +312,9 @@ Variants (Vendor category):
 
 ## Modal
 
-Centered modal dialog. `rounded-2xl shadow-xl max-w-lg max-h-[85vh]`, centered with `flex items-center justify-center`. Footer has `rounded-b-2xl bg-gray-50`.
+Centered modal dialog. `rounded-2xl shadow-xl max-w-lg max-h-[85vh]`, centered with `flex items-center justify-center`. Footer has `rounded-b-2xl bg-gray-50`. All modals now have `role="dialog"` for accessibility (app-wide change in Phase 14).
 
-Used for: - create couple - create task - edit vendor
+Used for: - create couple - create task - edit vendor - welcome onboarding
 
 Features: overlay background escape to close click outside to close
 
@@ -426,3 +438,51 @@ Contracts):
 
 All use semantic tokens (`bg-card`, `text-text`, `border-border`,
 `bg-brand`) and the shared primitives — no ad-hoc colours.
+
+## Onboarding preview components — `app/(dashboard)/@modal/(.)welcome/previews/*` (Phase 14)
+
+High-fidelity mocks of real screens used in the welcome wizard steps 5–8. Mocks are hand-built and held to a resemblance bar by review against running-app screenshots side-by-side; there is no drift-detection mechanism, so when a real screen changes materially, the matching preview must be manually updated.
+
+### `PreviewFrame` — `preview-frame.tsx`
+
+Renders a mock app frame with the real sidebar nav (Dashboard through Templates) and active-state marking. Props:
+
+- `children: ReactNode` — content to render in the main pane
+- `activeNav?: string` — marks the nav item with `data-active="true"` after the click beat
+- `className?: string` — wrapper class override
+
+The active nav item is marked via a `data-active` attribute on the nav button, allowing tests to verify navigation state (see testing.md selectors).
+
+### Preview script hook — `usePreviewScript`
+
+Hook that manages preview-specific timing and reduced-motion detection. Props:
+
+- `onReady?: () => void` — fires when the preview is ready to animate (reduced-motion respected)
+- `delayMs?: number` — stagger animation start (default 100ms)
+
+Returns an object with `isReady`, `prefersReducedMotion`. Used by step 5–8 previews to coordinate entrance animations.
+
+### Reduced-motion detection — `useReducedMotion`
+
+Hook that reads `window.matchMedia('(prefers-reduced-motion: reduce)')` and returns a boolean. Used by preview scripts to respect system accessibility settings — when true, skip entrance animations and show all content immediately.
+
+### Preview content components
+
+- `preview-couples.tsx` — Kanban board mock with sample couple cards (name, status pill, event date, venue)
+- `preview-templates.tsx` — Two-pane layout: left pane shows LineItemsTable + controls, right pane shows sample email template render
+- `preview-emails.tsx` — Couple-profile Emails tab mock: contact picker + "Send email" button + sent-history list
+- `preview-automations.tsx` — Automation canvas mock with sample triggers and actions (placeholder copy to be replaced per brief)
+
+All previews use the design system primitives and tokens; none are pixel-perfect renders, but all are visually recognisable as analogues of their real counterparts.
+
+### `PreviewScriptProps` contract
+
+Type definition for preview script configuration:
+
+```typescript
+type PreviewScriptProps = {
+  onReady?: () => void;
+  delayMs?: number;
+  prefersReducedMotion?: boolean;
+};
+```
