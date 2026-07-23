@@ -1,7 +1,7 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical, Package, ListChecks, Calculator } from 'lucide-react'
+import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical, Package, ListChecks, Calculator, LayoutDashboard, FileSignature, CalendarClock, Clock, ClipboardList } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { SurfaceTab } from '@/types/branding-preview'
@@ -27,6 +27,11 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   packageDetails: AlignLeft,
   packageInclusions: ListChecks,
   packageTotals: Calculator,
+  couplePortal: LayoutDashboard,
+  contractBody: FileSignature,
+  paymentSchedule: CalendarClock,
+  vendorTimelineBody: Clock,
+  questionnaireBody: ClipboardList,
 }
 
 interface AddBlockPaletteProps {
@@ -164,7 +169,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                       }`}
                     >
                       <span className="w-9 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                        <Icon size={15} strokeWidth={1.75} className="text-gray-500" />
+                        <Icon size={15} strokeWidth={1.5} className="text-gray-500" />
                       </span>
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm font-medium text-gray-900">{BLOCK_LABELS[type]}</span>
