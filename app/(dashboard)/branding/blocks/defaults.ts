@@ -43,6 +43,14 @@ export function blockTemplate(type: BlockType): Block {
       return { id: newId('cb'), type: 'contractBody', locked: true }
     case 'proposalBody':
       return { id: newId('pb'), type: 'proposalBody', locked: true }
+    case 'packageHeader':
+      return { id: newId('ph'), type: 'packageHeader' }
+    case 'packageDetails':
+      return { id: newId('pd2'), type: 'packageDetails' }
+    case 'packageInclusions':
+      return { id: newId('pi'), type: 'packageInclusions' }
+    case 'packageTotals':
+      return { id: newId('pt'), type: 'packageTotals' }
     case 'vendorTimelineBody':
       return { id: newId('vt'), type: 'vendorTimelineBody', locked: true }
     case 'questionnaireBody':

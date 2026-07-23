@@ -18,7 +18,7 @@ export interface TextStyle {
 }
 
 export type BlockType =
-  | 'headerBanner'
+  | 'headerBanner'        // deprecated: migrated to image; kept for repair
   | 'businessName'
   | 'tagline'
   | 'title'
@@ -32,7 +32,11 @@ export type BlockType =
   | 'couplePortal'
   | 'paymentSchedule'
   | 'contractBody'
-  | 'proposalBody'
+  | 'proposalBody'        // deprecated: decomposed into the four package blocks; kept for repair
+  | 'packageHeader'
+  | 'packageDetails'
+  | 'packageInclusions'
+  | 'packageTotals'
   | 'vendorTimelineBody'
   | 'questionnaireBody'
   | 'image'
@@ -258,6 +262,34 @@ export interface ProposalBodyBlock extends BaseBlock {
   type: 'proposalBody'
 }
 
+/** Proposal package name + (when several packages were sent) a subtle in-block
+ *  "switch package" control. Renders the chosen option's title. */
+export interface PackageHeaderBlock extends BaseBlock {
+  type: 'packageHeader'
+  titleStyle?: TextStyle
+}
+
+/** Proposal package description / marketing copy for the chosen option. */
+export interface PackageDetailsBlock extends BaseBlock {
+  type: 'packageDetails'
+  bodyStyle?: TextStyle
+}
+
+/** Optional add-on inclusions for the chosen option, as couple-toggleable rows. */
+export interface PackageInclusionsBlock extends BaseBlock {
+  type: 'packageInclusions'
+  headingStyle?: TextStyle
+  itemStyle?: TextStyle
+}
+
+/** Live-recalculating price summary (subtotal, GST, total) for the chosen
+ *  option + current add-on selection. */
+export interface PackageTotalsBlock extends BaseBlock {
+  type: 'packageTotals'
+  subtotalStyle?: TextStyle
+  totalStyle?: TextStyle
+}
+
 /**
  * Marker block represents the position where the vendor run sheet
  * (live timeline data) will appear. The MC can drag chrome blocks above
@@ -278,6 +310,10 @@ export interface VendorTimelineBodyBlock extends BaseBlock {
  */
 export interface QuestionnaireBodyBlock extends BaseBlock {
   type: 'questionnaireBody'
+  /** Presentation mode for the couple-facing questionnaire. 'form' shows all
+   *  questions on one page; 'oneAtATime' is Typeform-style one-per-step.
+   *  Defaults to 'form' when absent. */
+  mode?: 'form' | 'oneAtATime'
 }
 
 export type Block =
@@ -296,6 +332,10 @@ export type Block =
   | PaymentScheduleBlock
   | ContractBodyBlock
   | ProposalBodyBlock
+  | PackageHeaderBlock
+  | PackageDetailsBlock
+  | PackageInclusionsBlock
+  | PackageTotalsBlock
   | VendorTimelineBodyBlock
   | QuestionnaireBodyBlock
   | ImageBlock
@@ -319,6 +359,10 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   paymentSchedule: 'Payment schedule',
   contractBody: 'Contract body',
   proposalBody: 'Proposal',
+  packageHeader: 'Package header',
+  packageDetails: 'Package details',
+  packageInclusions: 'Package optional inclusions',
+  packageTotals: 'Package totals',
   vendorTimelineBody: 'Run sheet',
   questionnaireBody: 'Questionnaire',
   image: 'Image',
@@ -341,6 +385,10 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   paymentSchedule: 'Deposit & final balance (live invoice data)',
   contractBody: 'The contract body (fixed — edited per couple)',
   proposalBody: 'Packages, chooser and accept (fixed)',
+  packageHeader: 'Package name and chooser',
+  packageDetails: 'Package description',
+  packageInclusions: 'Optional add-ons the couple can toggle',
+  packageTotals: 'Subtotal, GST and total',
   vendorTimelineBody: 'The vendor run sheet (live timeline data)',
   questionnaireBody: 'The questionnaire steps (fixed)',
   image: 'An uploaded image',
