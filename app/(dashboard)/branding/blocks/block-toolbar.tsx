@@ -14,7 +14,7 @@ import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 import { Slider } from '../components/slider'
 import { publicBrandingFromEditorState } from '../editor-branding'
 
-import { isDataBound, isDeletable } from './policy'
+import { isDataBound, isDeletable, isRequired } from './policy'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'
 import type {
@@ -48,6 +48,7 @@ interface BlockToolbarProps {
 export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, onDelete, onResetBlock }: BlockToolbarProps) {
   const canDelete = isDeletable(block, surface)
   const hasLiveData = isDataBound(block.type)
+  const isBlockRequired = isRequired(block.type, surface)
 
   return (
     <div
@@ -59,11 +60,13 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
       <div className="flex items-center gap-2 px-3 pt-2 pb-1">
         <span className="text-xs font-medium text-gray-600 capitalize">{block.type}</span>
         <div className="flex items-center gap-1 ml-auto">
-          {!canDelete && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-text-muted bg-surface-muted px-2 py-0.5 rounded-full">
-              <Lock size={10} strokeWidth={1.5} />
-              Required
-            </span>
+          {isBlockRequired && (
+            <Tooltip label="Required to send. You can remove it, but the document will show as not ready until you add it back.">
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-text-muted bg-surface-muted px-2 py-0.5 rounded-full">
+                <Lock size={10} strokeWidth={1.5} />
+                Required
+              </span>
+            </Tooltip>
           )}
           {hasLiveData && (
             <span className="text-[10px] font-medium text-text-muted bg-surface-muted px-1.5 py-0.5 rounded-full">

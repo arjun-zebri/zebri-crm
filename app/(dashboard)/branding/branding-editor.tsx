@@ -638,9 +638,9 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     const idx = list.findIndex(b => b.id === id)
     if (idx < 0) return
     const original = list[idx]
-    // Don't allow duplicating required blocks (markers or other required
-    // types): a duplicated copy isn't deletable, so it's trapped in the tree.
-    if (isMarker(original.type) || isRequired(original.type, surface)) return
+    // Don't allow duplicating hard-locked markers: they are undeletable render-split
+    // barriers. Required, data-bound, and CTA blocks may be duplicated.
+    if (original.locked) return
     const cloned = { ...original, id: `${original.type}-${Date.now().toString(36)}` } as Block
     const next = [...list]
     next.splice(idx + 1, 0, cloned)
