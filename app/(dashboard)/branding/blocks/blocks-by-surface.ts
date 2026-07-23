@@ -1,107 +1,42 @@
 /**
- * Per-surface block availability map.
- *
- * Defines which block types are addable (non-fixed) on each document surface.
- * Fixed marker blocks (proposalBody, paymentSchedule, contractBody, couplePortal)
- * are seeded by defaults and not included in this map.
+ * Per-surface block availability, split into two palette groups: General blocks
+ * (usable on every document) and Document-specific blocks (only on their own
+ * document). Order within each group is expected frequency of use.
  *
  * @module app/(dashboard)/branding/blocks/blocks-by-surface
  */
-
 import type { SurfaceTab } from '@/types/branding-preview'
-
 import type { BlockType } from './types'
 
-/**
- * Maps each surface to its set of addable block types.
- *
- * - **proposal**: Structure, content, and actions for a service proposal.
- * - **invoice**: Payment document with line items, totals, and payment details.
- * - **contract**: E-signature document with title and content sections.
- * - **portal**: Couple-facing portal display (structural only, no actions).
- * - **vendorTimeline**: Vendor run sheet (live timeline data).
- * - **questionnaire**: Couple inquiry questionnaire (fixed steps).
- */
-export const BLOCKS_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
-  proposal: [
-    'headerBanner',
-    'businessName',
-    'tagline',
-    'text',
-    'divider',
-    'spacer',
-    'image',
-    'footer',
-    'action',
-  ],
-  invoice: [
-    'headerBanner',
-    'businessName',
-    'tagline',
-    'text',
-    'divider',
-    'spacer',
-    'image',
-    'footer',
-    'title',
-    'lineItems',
-    'totals',
-    'paymentDetails',
-    'action',
-  ],
-  contract: [
-    'headerBanner',
-    'businessName',
-    'tagline',
-    'text',
-    'divider',
-    'spacer',
-    'image',
-    'footer',
-    'title',
-    'action',
-  ],
-  portal: [
-    'headerBanner',
-    'businessName',
-    'tagline',
-    'text',
-    'divider',
-    'spacer',
-    'image',
-    'footer',
-  ],
-  vendorTimeline: [
-    'headerBanner',
-    'businessName',
-    'tagline',
-    'text',
-    'divider',
-    'spacer',
-    'image',
-    'footer',
-  ],
-  questionnaire: [
-    'businessName',
-    'tagline',
-    'text',
-    'divider',
-    'spacer',
-    'image',
-    'footer',
-  ],
+/** General blocks, most-used first (spec §2.1). Available on every surface. */
+export const GENERAL_BLOCKS: BlockType[] = [
+  'text', 'divider', 'spacer', 'businessName', 'image', 'tagline', 'footer',
+]
+
+/** Document-specific blocks per surface (spec §2.2). */
+export const DOC_SPECIFIC_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
+  proposal: ['packageHeader', 'packageDetails', 'packageInclusions', 'packageTotals', 'action'],
+  invoice: ['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action'],
+  contract: ['title', 'contractBody', 'action'],
+  portal: ['couplePortal'],
+  vendorTimeline: ['vendorTimelineBody'],
+  questionnaire: ['questionnaireBody'],
 }
 
-/**
- * Returns the set of addable block types for a given surface.
- *
- * @param surface - The document surface ('proposal', 'invoice', 'contract', or 'portal').
- * @returns Array of BlockType values that can be added on this surface.
- *
- * @example
- * const blocks = blocksForSurface('invoice')
- * // returns ['headerBanner', 'businessName', ..., 'paymentDetails', 'action']
- */
+export interface PaletteGroup {
+  label: 'General' | 'Document-specific'
+  types: BlockType[]
+}
+
+/** Two labelled palette groups for a surface (General first). */
+export function paletteGroupsForSurface(surface: SurfaceTab): PaletteGroup[] {
+  return [
+    { label: 'General', types: GENERAL_BLOCKS },
+    { label: 'Document-specific', types: DOC_SPECIFIC_BY_SURFACE[surface] ?? [] },
+  ]
+}
+
+/** Flat list of addable block types for a surface. */
 export function blocksForSurface(surface: SurfaceTab): BlockType[] {
-  return BLOCKS_BY_SURFACE[surface] ?? []
+  return [...GENERAL_BLOCKS, ...(DOC_SPECIFIC_BY_SURFACE[surface] ?? [])]
 }

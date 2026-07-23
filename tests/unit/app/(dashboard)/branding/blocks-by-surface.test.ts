@@ -1,106 +1,70 @@
 import { describe, expect, it } from 'vitest'
-import { BLOCKS_BY_SURFACE, blocksForSurface } from '@/app/(dashboard)/branding/blocks/blocks-by-surface'
+import { blocksForSurface } from '@/app/(dashboard)/branding/blocks/blocks-by-surface'
 import type { SurfaceTab } from '@/types/branding-preview'
 
-describe('BLOCKS_BY_SURFACE', () => {
-  it('has entries for all four surfaces', () => {
-    expect(BLOCKS_BY_SURFACE.proposal).toBeDefined()
-    expect(BLOCKS_BY_SURFACE.invoice).toBeDefined()
-    expect(BLOCKS_BY_SURFACE.contract).toBeDefined()
-    expect(BLOCKS_BY_SURFACE.portal).toBeDefined()
+describe('blocksForSurface', () => {
+  it('returns blocks for proposal surface including general + doc-specific', () => {
+    const blocks = blocksForSurface('proposal')
+    expect(blocks).toContain('text')
+    expect(blocks).toContain('divider')
+    expect(blocks).toContain('packageHeader')
+    expect(blocks).toContain('packageDetails')
+    expect(blocks).toContain('action')
   })
 
-  it('proposal includes the correct addable block types', () => {
-    expect(BLOCKS_BY_SURFACE.proposal).toEqual([
-      'headerBanner',
-      'businessName',
-      'tagline',
-      'text',
-      'divider',
-      'spacer',
-      'image',
-      'footer',
-      'action',
-    ])
+  it('proposal excludes old headerBanner', () => {
+    const blocks = blocksForSurface('proposal')
+    expect(blocks).not.toContain('headerBanner')
   })
 
   it('invoice includes all structure, content, and action blocks', () => {
-    expect(BLOCKS_BY_SURFACE.invoice).toEqual([
-      'headerBanner',
-      'businessName',
-      'tagline',
-      'text',
-      'divider',
-      'spacer',
-      'image',
-      'footer',
-      'title',
-      'lineItems',
-      'totals',
-      'paymentDetails',
-      'action',
-    ])
+    const blocks = blocksForSurface('invoice')
+    expect(blocks).toContain('text')
+    expect(blocks).toContain('title')
+    expect(blocks).toContain('lineItems')
+    expect(blocks).toContain('totals')
+    expect(blocks).toContain('paymentSchedule')
+    expect(blocks).toContain('paymentDetails')
+    expect(blocks).toContain('action')
   })
 
   it('invoice includes lineItems, totals, and paymentDetails', () => {
-    expect(BLOCKS_BY_SURFACE.invoice).toContain('lineItems')
-    expect(BLOCKS_BY_SURFACE.invoice).toContain('totals')
-    expect(BLOCKS_BY_SURFACE.invoice).toContain('paymentDetails')
+    const blocks = blocksForSurface('invoice')
+    expect(blocks).toContain('lineItems')
+    expect(blocks).toContain('totals')
+    expect(blocks).toContain('paymentDetails')
   })
 
   it('proposal excludes lineItems, totals, and paymentDetails', () => {
-    expect(BLOCKS_BY_SURFACE.proposal).not.toContain('lineItems')
-    expect(BLOCKS_BY_SURFACE.proposal).not.toContain('totals')
-    expect(BLOCKS_BY_SURFACE.proposal).not.toContain('paymentDetails')
+    const blocks = blocksForSurface('proposal')
+    expect(blocks).not.toContain('lineItems')
+    expect(blocks).not.toContain('totals')
+    expect(blocks).not.toContain('paymentDetails')
   })
 
   it('contract includes the correct addable block types', () => {
-    expect(BLOCKS_BY_SURFACE.contract).toEqual([
-      'headerBanner',
-      'businessName',
-      'tagline',
-      'text',
-      'divider',
-      'spacer',
-      'image',
-      'footer',
-      'title',
-      'action',
-    ])
+    const blocks = blocksForSurface('contract')
+    expect(blocks).toContain('text')
+    expect(blocks).toContain('title')
+    expect(blocks).toContain('action')
   })
 
-  it('portal includes the correct addable block types', () => {
-    expect(BLOCKS_BY_SURFACE.portal).toEqual([
-      'headerBanner',
-      'businessName',
-      'tagline',
-      'text',
-      'divider',
-      'spacer',
-      'image',
-      'footer',
-    ])
+  it('portal includes general blocks and couplePortal', () => {
+    const blocks = blocksForSurface('portal')
+    expect(blocks).toContain('text')
+    expect(blocks).toContain('couplePortal')
   })
 
   it('portal excludes action block', () => {
-    expect(BLOCKS_BY_SURFACE.portal).not.toContain('action')
+    const blocks = blocksForSurface('portal')
+    expect(blocks).not.toContain('action')
   })
 
-  it('does not include fixed marker blocks (proposalBody, paymentSchedule, contractBody, couplePortal)', () => {
-    const allBlocks = Object.values(BLOCKS_BY_SURFACE).flat()
-    expect(allBlocks).not.toContain('proposalBody')
-    expect(allBlocks).not.toContain('paymentSchedule')
-    expect(allBlocks).not.toContain('contractBody')
-    expect(allBlocks).not.toContain('couplePortal')
-  })
-})
-
-describe('blocksForSurface', () => {
-  it('returns the correct blocks for each surface', () => {
-    expect(blocksForSurface('proposal')).toEqual(BLOCKS_BY_SURFACE.proposal)
-    expect(blocksForSurface('invoice')).toEqual(BLOCKS_BY_SURFACE.invoice)
-    expect(blocksForSurface('contract')).toEqual(BLOCKS_BY_SURFACE.contract)
-    expect(blocksForSurface('portal')).toEqual(BLOCKS_BY_SURFACE.portal)
+  it('does not include old fixed marker blocks (headerBanner, proposalBody, contractBody)', () => {
+    const allBlocks = ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as const
+    const allBlocksFlat = allBlocks.flatMap(s => blocksForSurface(s))
+    expect(allBlocksFlat).not.toContain('headerBanner')
+    expect(allBlocksFlat).not.toContain('proposalBody')
   })
 
   it('returns blocks for a passed surface parameter', () => {

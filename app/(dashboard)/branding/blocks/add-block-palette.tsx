@@ -1,12 +1,12 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical } from 'lucide-react'
+import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical, Package, ListChecks, Calculator } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { SurfaceTab } from '@/types/branding-preview'
 
-import { blocksForSurface } from './blocks-by-surface'
+import { paletteGroupsForSurface } from './blocks-by-surface'
 import { BLOCK_LABELS, BLOCK_DESCRIPTIONS, type BlockType } from './types'
 
 const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
@@ -23,23 +23,11 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   image: Image,
   spacer: MoveVertical,
   footer: PanelBottom,
+  packageHeader: Package,
+  packageDetails: AlignLeft,
+  packageInclusions: ListChecks,
+  packageTotals: Calculator,
 }
-
-// Blocks are grouped by intent (Structure / Content / Action) so the
-// palette reads like Canva's insert menu: scannable categories instead
-// of one long list. The flat BLOCK_ORDER + GROUP_OF derive from this so
-// search + keyboard nav stay index-based against a single ordered list.
-const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
-  { label: 'Structure', types: ['headerBanner', 'businessName', 'tagline', 'divider', 'spacer', 'image', 'footer'] },
-  { label: 'Content', types: ['title', 'text', 'lineItems', 'totals', 'paymentDetails'] },
-  { label: 'Action', types: ['action'] },
-]
-
-const BLOCK_ORDER: BlockType[] = BLOCK_GROUPS.flatMap((g) => g.types)
-
-const GROUP_OF: Partial<Record<BlockType, string>> = Object.fromEntries(
-  BLOCK_GROUPS.flatMap((g) => g.types.map((t) => [t, g.label] as const)),
-)
 
 interface AddBlockPaletteProps {
   open: boolean
@@ -55,20 +43,30 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const allowedBlocks = blocksForSurface(surface)
+  const groups = paletteGroupsForSurface(surface)
 
-  const filtered = BLOCK_ORDER.filter((type) => {
-    // First check if this block type is available for the current surface
-    if (!allowedBlocks.includes(type)) return false
+  // Build flat list of filtered blocks and track which group each belongs to
+  const flatBlocks: { type: BlockType; group: string }[] = []
+  const groupHeaders: Map<string, number> = new Map() // group name -> first index in flatBlocks
 
+  for (const group of groups) {
     const q = query.toLowerCase().trim()
-    if (!q) return true
-    return (
-      BLOCK_LABELS[type].toLowerCase().includes(q) ||
-      BLOCK_DESCRIPTIONS[type].toLowerCase().includes(q) ||
-      type.toLowerCase().includes(q)
-    )
-  })
+    const filteredTypes = group.types.filter((type) => {
+      if (!q) return true
+      return (
+        BLOCK_LABELS[type].toLowerCase().includes(q) ||
+        BLOCK_DESCRIPTIONS[type].toLowerCase().includes(q) ||
+        type.toLowerCase().includes(q)
+      )
+    })
+
+    if (filteredTypes.length > 0) {
+      groupHeaders.set(group.label, flatBlocks.length)
+      for (const type of filteredTypes) {
+        flatBlocks.push({ type, group: group.label })
+      }
+    }
+  }
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
@@ -87,25 +85,25 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveIndex(prev => {
-      if (filtered.length > 0 && prev >= filtered.length) {
+      if (flatBlocks.length > 0 && prev >= flatBlocks.length) {
         return 0
       }
       return prev
     })
-  }, [filtered.length])
+  }, [flatBlocks.length])
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setActiveIndex(i => Math.min(i + 1, filtered.length - 1))
+      setActiveIndex(i => Math.min(i + 1, flatBlocks.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActiveIndex(i => Math.max(i - 1, 0))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      const picked = filtered[activeIndex]
+      const picked = flatBlocks[activeIndex]
       if (picked) {
-        onAdd(picked)
+        onAdd(picked.type)
         onOpenChange(false)
       }
     } else if (e.key === 'Escape') {
@@ -139,18 +137,17 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
           </div>
 
           <div className="max-h-[320px] overflow-y-auto p-1">
-            {filtered.length === 0 ? (
+            {flatBlocks.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">No matching blocks</p>
             ) : (
-              filtered.map((type, idx) => {
+              flatBlocks.map(({ type, group }, idx) => {
                 const Icon = BLOCK_ICONS[type] ?? Type
                 const active = idx === activeIndex
-                const group = GROUP_OF[type]
                 // Header before the first item of each group present.
-                const showHeader = idx === 0 || GROUP_OF[filtered[idx - 1]!] !== group
+                const showHeader = idx === 0 || flatBlocks[idx - 1]?.group !== group
                 return (
                   <div key={type}>
-                    {showHeader && group ? (
+                    {showHeader ? (
                       <p className="px-2.5 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-gray-400">
                         {group}
                       </p>
