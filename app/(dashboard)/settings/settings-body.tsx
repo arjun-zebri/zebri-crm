@@ -46,6 +46,8 @@ export interface UserMetadata {
   website?: string;
   instagram_url?: string;
   facebook_url?: string;
+  twitter_url?: string;
+  pinterest_url?: string;
   business_type?: string | string[];
   email_preferences?: EmailPreferencesData;
   bank_account_name?: string;
@@ -111,6 +113,8 @@ export function SettingsBody({ activeTab, data }: SettingsBodyProps) {
               website: metadata?.website || '',
               instagramUrl: metadata?.instagram_url || '',
               facebookUrl: metadata?.facebook_url || '',
+              twitterUrl: metadata?.twitter_url || '',
+              pinterestUrl: metadata?.pinterest_url || '',
               businessType: metadata?.business_type || '',
               mcSignatureName: metadata?.mc_signature_name || '',
               addressText: metadata?.address_text || '',

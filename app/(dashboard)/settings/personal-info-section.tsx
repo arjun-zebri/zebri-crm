@@ -31,6 +31,8 @@ interface PersonalInfoSectionProps {
     website: string
     instagramUrl: string
     facebookUrl: string
+    twitterUrl: string
+    pinterestUrl: string
     businessType: string | string[]
     mcSignatureName: string
     addressText: string
@@ -48,6 +50,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [phone, setPhone] = useState(initialData.phone)
   const [instagramUrl, setInstagramUrl] = useState(initialData.instagramUrl)
   const [facebookUrl, setFacebookUrl] = useState(initialData.facebookUrl)
+  const [twitterUrl, setTwitterUrl] = useState(initialData.twitterUrl)
+  const [pinterestUrl, setPinterestUrl] = useState(initialData.pinterestUrl)
   const [businessTypes, setBusinessTypes] = useState<string[]>(parseBusinessTypes(initialData.businessType))
   const [businessTypeOpen, setBusinessTypeOpen] = useState(false)
   const [mcSignatureName, setMcSignatureName] = useState(initialData.mcSignatureName)
@@ -74,6 +78,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     website: initialData.website,
     instagramUrl: initialData.instagramUrl,
     facebookUrl: initialData.facebookUrl,
+    twitterUrl: initialData.twitterUrl,
+    pinterestUrl: initialData.pinterestUrl,
     businessTypes: initialBusinessTypes,
     mcSignatureName: initialData.mcSignatureName,
     addressText: initialData.addressText,
@@ -91,6 +97,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       website !== s.website ||
       instagramUrl !== s.instagramUrl ||
       facebookUrl !== s.facebookUrl ||
+      twitterUrl !== s.twitterUrl ||
+      pinterestUrl !== s.pinterestUrl ||
       JSON.stringify([...businessTypes].sort()) !== JSON.stringify([...s.businessTypes].sort()) ||
       mcSignatureName !== s.mcSignatureName ||
       addressText !== s.addressText ||
@@ -138,6 +146,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
         website,
         instagram_url: instagramUrl,
         facebook_url: facebookUrl,
+        twitter_url: twitterUrl,
+        pinterest_url: pinterestUrl,
         business_type: businessTypes,
         mc_signature_name: mcSignatureName,
         address_text: addressText,
@@ -174,6 +184,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       website,
       instagramUrl,
       facebookUrl,
+      twitterUrl,
+      pinterestUrl,
       businessTypes,
       mcSignatureName,
       addressText,
@@ -345,6 +357,28 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
               onChange={(e) => setFacebookUrl(e.target.value)}
               className={inputClass}
               placeholder="https://facebook.com/yourpage"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Twitter</label>
+            <input
+              type="url"
+              value={twitterUrl}
+              onChange={(e) => setTwitterUrl(e.target.value)}
+              className={inputClass}
+              placeholder="https://twitter.com/yourhandle"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pinterest</label>
+            <input
+              type="url"
+              value={pinterestUrl}
+              onChange={(e) => setPinterestUrl(e.target.value)}
+              className={inputClass}
+              placeholder="https://pinterest.com/yourprofile"
             />
           </div>
 
