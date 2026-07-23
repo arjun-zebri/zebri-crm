@@ -1,11 +1,11 @@
 /**
- * Block tree repair: ensures block trees contain all required blocks,
- * dedup markers, and drop unknown types. Idempotent: safe to run on
- * every load and save.
+ * Block tree repair: migrates legacy block shapes (headerBanner to image,
+ * proposalBody marker to package blocks), dedups render-split markers, and
+ * drops unknown block types. Idempotent: safe to run on every load and save.
  *
- * The product rule: users can restyle and rearrange, but cannot delete
- * structural markers or required blocks (a payment schedule must keep
- * line items, totals, payment details, and the marker).
+ * Does NOT enforce or auto-insert required blocks. Required blocks are now
+ * deletable, and their absence is surfaced by the readiness layer
+ * (lib/branding/readiness.ts), not repaired here.
  *
  * @module lib/branding/validate-blocks
  */
