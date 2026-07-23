@@ -73,7 +73,7 @@ Surface-level reset: setting a surface's block tree to an empty array disables p
 | `proposal_labels` | jsonb | `{}` | Stylable proposal section labels (string or {text, style}) |
 | `theme_preset` | text | `minimal` | Theme key (for legacy compatibility) |
 
-These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`.
+These extend the existing fields `business_name`, `phone`, `website`, `instagram_url`, `facebook_url`, and new social fields `twitter_url`, `pinterest_url` (read from `auth.users.raw_user_meta_data` at render time by `_user_branding()` RPC; users edit them in Settings). Added migration `20260723000000_branding_social_urls.sql` extended the function to expose these three URLs for footer social-link rendering.
 
 **Email fields (stored in `user_metadata`, user-owned):**
 

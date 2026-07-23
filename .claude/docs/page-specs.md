@@ -83,54 +83,52 @@ Route: Modal overlay during application (no standalone route).
 
 Route group: `(dashboard)` — authenticated, displays after login on first interaction.
 
-Purpose: Streamlined eight-step welcome wizard for new users to configure their MC profile, business setup, appearance preferences, and default templates.
+Purpose: Eight-step welcome wizard for new users — capture their profile details, then walk them through the core loop (couple → template → send → automation) as animated previews, closing on a personal founder note.
 
 ## Gate
 
-The wizard is shown once per user, gated on `user_metadata.welcome_onboarded_at` timestamp. A soft gate using localStorage (key `WELCOME_ONBOARDED`) acts as an offline hint to skip the fetch. Every user, regardless of age, has never been stamped on this field, so all existing accounts see the modal once after deploy. A backfill of the gate is the lever to suppress it for old users if needed.
+The wizard is shown once per user, gated on `user_metadata.welcome_onboarded_at` timestamp. A soft gate using localStorage (key `zebri:welcome-onboarded`) acts as an offline hint to skip the fetch. Every user, regardless of age, has never been stamped on this field, so all existing accounts see the modal once after deploy. A backfill of the gate is the lever to suppress it for old users if needed.
+
+The modal uses `size="2xl"` with `floatingClose` (headerless — the step title sits flush at the top). It is dismissible on every exit path (Finish, Escape, ×, backdrop), each of which stamps the gate.
 
 ## Eight Steps
 
-1. **Welcome** — Greeting, brief copy, user's display name + email read-only, "Next" CTA.
-2. **Business** — Couple of fields about the MC's business (e.g. "What's your business name?"), "Next" CTA.
-3. **Look** — Visual brand setup: business name input + logo upload, primary colour picker, brand tone toggle (minimal / modern / bold). **This step auto-saves** the branding choices to `user_metadata` so if the user skips the wizard, their brand is persisted. "Next" CTA.
-4. **Documents** — Explanation of contracts, templates, and quotes; "Browse templates" link or "Next" CTA.
-5. **Preview: Couples** — High-fidelity mock of the couples kanban board with sample couple cards, read-only (rendered via `PreviewFrame`).
-6. **Preview: Templates** — Two-pane template editor mock: left pane shows the shared LineItemsTable + controls, right pane shows a sample email template rendering. Read-only.
-7. **Preview: Emails** — Mock of the couple-profile Emails tab with a contact picker, "Send email" button, and sent-history list. Read-only.
-8. **Preview: Automations** — Mock automation canvas with sample triggers and actions. Read-only. Placeholder body text (to be replaced with real copy or flagged per brief). "Done" CTA.
+1. **Welcome** — What Zebri is, in a breath, over a bento grid of wedding-photo tiles that pop in one by one (grey placeholders until the real photos land). Zebri wordmark above the heading. "Next" CTA.
+2. **Details** — Name, email (read-only, with an info-glyph tooltip explaining why), business name, phone, signature name, address (`AddressAutocomplete`). Icon-labelled inputs. Prefilled from signup.
+3. **Links** — Website, Instagram, Facebook with icon labels. **Advancing from step 3 is the single save point** (writes `user_metadata` via `auth.updateUser`); a failed write never blocks the flow. On steps 2-3 a **Skip** button closes the whole tour (the dismiss path stamps the gate).
+4. **Preview: Add a couple** — Blank frame → sidebar click → New couple → Add manually → Add Couple modal (dark backdrop, underline fields, one caret at a time, typewriter) → Save → the couple lands on the Kanban board.
+5. **Preview: Create a template** — New template opens the editor modal (Template name + Category, Subject/Body with green `{{token}}` highlights and Insert-variable chips, editor toolbar) → Attach file → PDF lands. Modal opens at final size; content fades in without reflow.
+6. **Preview: Send it in two clicks** — Starts inside the couple profile overlay (vertical tab nav). Emails tab → Send email → template picker popover → compose modal with resolved plain-text subject/body (couple addressed by first name) → Send → the button flips to a green Sent and the animation rests on the composed email.
+7. **Preview: Let it run itself** — Automation canvas: Add trigger → anchored dropdown → New enquiry; Add action → Send email (card lands complete with `Template · Enquiry reply`); Activate flips the header pill to Active.
+8. **Founder note** — Real headshot (`public/headshot.jpeg`), personal note (why Zebri exists, one-tool-for-all vision, community emphasis), real signature (`public/signature.png`). "Finish" CTA.
 
-All steps except 8 have "Next" buttons; step 8 has "Done" (closes the modal, stamps `user_metadata.welcome_onboarded_at`).
-
-Each step dismisses with a modal close (×), which also stamps the gate timestamp (users do not re-see the wizard if they close early).
+The previews share a beat-clock animation system: a fake cursor measured onto real elements (`data-cursor` attributes), a trailing content clock so effects land only after the pointer arrives (`useSettledBeat`), one-shot click ripples, and a no-loop rest on the final frame. Reduced motion jumps straight to each preview's finished state.
 
 ## File Structure
 
 ```
-app/(dashboard)/@modal/(.)welcome/
-  page.tsx                              — orchestrator, step dispatcher
-  welcome-gate.tsx                      — gate logic (localStorage + metadata read, timestamp check)
-  welcome-modal.tsx                     — modal wrapper, step navigation
-  steps/
-    welcome-step.tsx                    — step 1 (greeting)
-    business-step.tsx                   — step 2 (business details)
-    look-step.tsx                       — step 3 (branding setup, auto-save)
-    documents-step.tsx                  — step 4 (documents overview)
-    preview-couples-step.tsx            — step 5 (couples board mock)
-    preview-templates-step.tsx          — step 6 (templates editor mock)
-    preview-emails-step.tsx             — step 7 (emails tab mock)
-    preview-automations-step.tsx        — step 8 (automations canvas mock)
-  previews/
-    preview-frame.tsx                   — shared nav + content renderer
-    preview-couples.tsx                 — couples kanban board mock
-    preview-templates.tsx               — two-pane template editor mock
-    preview-emails.tsx                  — emails tab mock
-    preview-automations.tsx             — automations canvas mock
-  use-preview-script.ts                 — hook for frame timing + reduced-motion detection
+app/(dashboard)/onboarding/
+  welcome-gate.tsx                      — gate logic (localStorage hint + metadata read) + replay listener
+  welcome-modal.tsx                     — Modal shell (2xl, floatingClose, fixed-height wrapper)
+  welcome-wizard.tsx                    — step state, single save point, footer chrome host
+  wizard-chrome.tsx                     — progress bar + Skip/Back/Next/Finish
   use-reduced-motion.ts                 — system prefers-reduced-motion hook
+  steps/
+    step-welcome.tsx                    — step 1
+    step-details.tsx                    — step 2 (owns the WelcomeProfile type)
+    step-links.tsx                      — step 3
+    step-preview.tsx                    — steps 4-7 host (title + copy + script)
+    step-founder.tsx                    — step 8
+  previews/
+    preview-frame.tsx                   — mini app chassis: sidebar rail, cursor engine, overlay slot
+    preview-modal.tsx                   — Backdrop + PreviewModal + EditorToolbar minis
+    typewriter.tsx                      — character-by-character reveal with caret
+    use-preview-script.ts               — beat clock + trailing settled-beat clock
+    script-couple.tsx                   — step 4 script
+    script-template.tsx                 — step 5 script
+    script-send.tsx                     — step 6 script
+    script-automation.tsx               — step 7 script
 ```
-
-Shared primitives for previews: `AddressAutocomplete` (in `components/ui/`), `Modal` with `role="dialog"`.
 
 ## Temporary Testing Control
 
@@ -1170,18 +1168,30 @@ Slots always render (no conditional gating). Editor slot classes (`edit-mode-*` 
 
 "Preview" button opens `/branding/preview/[surface]` in a new tab via the public block renderers, exactly as customers see it. Device toggle allows mobile (<md) testing. Requires the surface to be enabled.
 
-## Lock Model
+## Block Palette & Model
 
-Required blocks cannot be deleted (e.g., line-items on invoice). Locked blocks show a "Required" chip in their toolbar. Required markers vary by surface (invoice requires Title + LineItems + Totals; contract requires Title + ContractBody).
+The block palette has two labeled groups:
+
+**General blocks** (available on all documents): Text, Divider, Spacer, My details, Image, Tagline, Footer. The Footer block includes per-network toggles (Facebook, Instagram, Twitter, Pinterest, Website) that control whether each social link renders in the public footer. URLs come from account branding settings (not entered per block).
+
+**Document-specific blocks** (surface-only): each document has explicit required and optional blocks. Required blocks can be deleted; deleting one raises a "Not ready to send" flag (a calm NotReadyPanel in the editor listing what is missing in plain language) until the block is re-added. A "Required" chip is informational.
+
+**Deletable-required model**: the editor validates per-surface via two layers. Layer A (template validity) checks required blocks present, invoice at-least-one of Bank details/Pay CTA, and questionnaire mode chosen. Layer B (account prerequisites) checks Stripe Connect (for Pay CTA), bank details in settings (for Bank details), and contract template created (for Contract body). Layer B flags never block editing, only sending.
+
+**Proposal decomposition**: the monolithic `proposalBody` marker was split into five editable blocks: Package header, Package details, Package optional inclusions, Package totals, and Accept CTA (the shared action block). A subtle in-block "See other packages" switcher appears in the Package header when multiple packages were sent.
+
+**Questionnaire mode**: the Questionnaire body block now persists `mode: 'form' | 'oneAtATime'` (replacing the preview-only toggle); public rendering reads this to show regular-form vs one-at-a-time.
+
+**Payment schedule**: now optional on Invoice. `proposalBody` and `headerBanner` remain only in migration code.
 
 ## Six Surfaces
 
-- **Quote** — Proposal block tree (fixed core + chrome)
-- **Invoice** — Title, Line items, Totals, Payment details (fixed core + chrome)
-- **Contract** — Title, Contract body (fixed core + chrome)
-- **Proposal** — ProposalBody block (fixed core + chrome)
-- **Vendor Timeline** — Vendor run-sheet blocks (vendorTimeline fixed core)
-- **Questionnaire** — Questionnaire form blocks (questionnaire fixed core)
+- **Proposal** — Package header, Package details, Package optional inclusions (optional), Package totals, Accept CTA
+- **Invoice** — Invoice header, Invoice line items, Invoice totals, Payment schedule (optional), Bank details (required—at least one of Bank details/Pay CTA), Pay CTA (required—at least one)
+- **Contract** — Contract header, Contract body, Sign CTA
+- **Client Portal** — Portal body
+- **Vendor Timeline** — Run sheet body
+- **Questionnaire** — Questionnaire body with mode toggle (form | oneAtATime)
 
 ## File Structure
 

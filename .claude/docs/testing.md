@@ -68,14 +68,30 @@ seed). The integration project runs serially in one process (shared DB).
   connected summary, persisted subdomain) from seeded rows once the
   migration is on the e2e DB.
 
-### Branding E2E specs (Phase 11, isolated-stack guard)
+### Branding E2E specs (Phase 11 + Document Blocks Phase C)
 
-Three new e2e specs for the branding overhaul:
+**Phase 11 (stable):**
 - `tests/e2e/branding-onboarding.spec.ts` — first-run wizard flow: fresh user sees wizard → completes business/look/documents steps → editor shows tabs + no wizard on reload.
 - `tests/e2e/branding-editor-locks.spec.ts` — lock model: required blocks cannot be deleted (line-items on invoice, etc.); non-required text blocks can be deleted with undo.
 - `tests/e2e/branding-mobile-overflow.spec.ts` — mobile responsive: canvas scales at <md breakpoint, toolbar scrolls without overflow.
 
-**Isolated-stack guard:** These tests require either `BRANDING_E2E=1` OR `PLAYWRIGHT_BASE_URL` including `3123` (local Supabase on port 3123). Skip guard prevents running on remote dev server. Test helpers in `tests/e2e/helpers.ts`.
+**Document Blocks Phase C (deferred to CI):**
+- `tests/e2e/branding-proposal-blocks.spec.ts` — proposal decomposition: Package header, details, optional inclusions, totals, Accept CTA blocks render; in-block package chooser appears when multiple packages present.
+- `tests/e2e/branding-block-readiness.spec.ts` — readiness validation: deleting a required block shows "Not ready to send" panel with plain-language missing items; panel clears when block is re-added.
+- `tests/integration/branding/blocks-repair.test.ts` — repair/migration: `repairBlocks` maps legacy `headerBanner` → Image, old `action` → CTA blocks, and `proposalBody` → five proposal blocks; sweep migrates all user rows idempotently.
+- `tests/integration/branding/account-readiness.test.ts` — Layer B validation: Stripe Connect, bank details, contract template prerequisites gate "ready to send" per surface.
+- `tests/integration/branding/social-urls-rpc.test.ts` — `_user_branding()` exposes twitter_url, pinterest_url, website_url from `raw_user_meta_data`.
+
+**New key selectors for blocks:**
+| Element | Selector |
+|---------|----------|
+| "Not ready to send" panel | `text=/Not ready to send/` |
+| Block "Required" chip | `text=/Required/` |
+| Package header block | `text=/Package header/` |
+| Package chooser switcher | `text=/See other packages/` |
+| Footer social toggle (Facebook) | `input[aria-label*="Facebook"]` |
+
+**Isolated-stack guard:** Phase 11 tests require either `BRANDING_E2E=1` OR `PLAYWRIGHT_BASE_URL` including `3123` (local Supabase on port 3123). Phase C tests (integration + new e2e) require `supabase start` locally; they are skipped on the remote dev server. Test helpers in `tests/e2e/helpers.ts`.
 
 ### Welcome onboarding e2e specs (Phase 14, metadata-gated features)
 
