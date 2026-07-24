@@ -43,10 +43,15 @@ export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
       >
         <AlertTriangle size={13} strokeWidth={1.5} className="shrink-0 text-amber-500" />
         <span className="text-xs font-semibold text-amber-900">Not ready to send</span>
+        {/* Desktop has hover, so show a hint; touch has no hover, so show the
+            chevron and let a tap toggle the details. */}
+        <span className="hidden text-[10px] font-medium text-amber-600 md:inline">
+          hover to see more
+        </span>
         <ChevronDown
           size={13}
           strokeWidth={1.5}
-          className={`shrink-0 text-amber-500 transition-transform group-hover:rotate-180 ${
+          className={`shrink-0 text-amber-500 transition-transform md:hidden ${
             open ? 'rotate-180' : ''
           }`}
         />
