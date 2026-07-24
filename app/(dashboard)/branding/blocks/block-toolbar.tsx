@@ -99,7 +99,9 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
         )}
         {block.type !== 'action' && block.type !== 'spacer' && (
           <>
-            <PaddingControl block={block} updateBlock={updateBlock} />
+            {block.type !== 'businessName' && (
+              <PaddingControl block={block} updateBlock={updateBlock} />
+            )}
             {block.type !== 'text' && (
               <WidthAlignControl block={block} updateBlock={updateBlock} />
             )}
@@ -1924,13 +1926,12 @@ function WidthAlignControl({
   block: Block
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }) {
-  const maxWidth = block.maxWidthPx
   const align = block.align ?? 'left'
-  const active = maxWidth !== undefined
+  const active = align !== 'left'
 
   return (
     <Popover.Root>
-      <Tooltip label="Width &amp; alignment">
+      <Tooltip label="Alignment">
         <Popover.Trigger asChild>
           <button
             type="button"
@@ -1940,8 +1941,7 @@ function WidthAlignControl({
                 : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
             }`}
           >
-            <Equal size={12} strokeWidth={1.75} />
-            {active && <span className="font-mono text-[10px] opacity-80">{maxWidth}px</span>}
+            <AlignCenter size={12} strokeWidth={1.75} />
           </button>
         </Popover.Trigger>
       </Tooltip>
@@ -1951,20 +1951,6 @@ function WidthAlignControl({
           sideOffset={6}
           className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
         >
-          <div className="mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Max width</span>
-              <span className="text-xs font-mono text-gray-700 tabular-nums">{maxWidth ?? 'none'}px</span>
-            </div>
-            <Slider
-              value={maxWidth ?? 0}
-              min={0}
-              max={1200}
-              step={10}
-              onChange={(v) => updateBlock(block.id, { maxWidthPx: v || undefined } as Partial<Block>)}
-              ariaLabel="Block max width"
-            />
-          </div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Align</span>
           </div>
