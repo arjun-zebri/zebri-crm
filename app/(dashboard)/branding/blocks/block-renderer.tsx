@@ -153,17 +153,28 @@ export function BlockRenderer({
 
   if (blocks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <p className="text-sm font-semibold text-gray-800">No blocks yet</p>
-        <p className="text-xs text-gray-500 mt-1 mb-4">Build your document layout block by block</p>
-        <button
-          type="button"
-          onClick={() => requestAddAfter(null)}
-          className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black cursor-pointer transition shadow-sm"
-        >
-          <Plus size={14} strokeWidth={2} />
-          Add your first element
-        </button>
+      <div className="relative min-h-[60vh]">
+        {/* Render the same white document page a real document sits on, so an
+            empty surface reads as a clean blank page rather than bare canvas. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 border border-gray-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]"
+          style={{
+            background: state.surfaceColor || '#FFFFFF',
+            borderRadius: state.cornerRadius,
+          }}
+        />
+        <div className="relative flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
+          <p className="text-xs text-gray-500 mb-4">This document is empty</p>
+          <button
+            type="button"
+            onClick={() => requestAddAfter(null)}
+            className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black cursor-pointer transition shadow-sm"
+          >
+            <Plus size={14} strokeWidth={2} />
+            Add your first block
+          </button>
+        </div>
       </div>
     )
   }
