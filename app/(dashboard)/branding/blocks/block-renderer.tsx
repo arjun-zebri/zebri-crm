@@ -180,7 +180,9 @@ export function BlockRenderer({
   }
 
   return (
-    <div className="relative">
+    // Same min height as the empty state so the page never shrinks when the
+    // first block lands; it only grows once content exceeds this minimum.
+    <div className="relative min-h-[60vh]">
       <div
         aria-hidden
         className="absolute inset-0 border border-gray-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]"
