@@ -1576,11 +1576,11 @@ function FooterGapControl({
         <Popover.Content
           align="center"
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-2.5 z-[60] w-[200px] animate-modal-in"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Space below note</span>
-            <span className="text-xs font-mono text-gray-700 tabular-nums">{gap}px</span>
+            <span className="text-[10px] text-gray-400 uppercase tracking-[0.08em]">Space below note</span>
+            <span className="text-[10px] font-mono text-gray-700 tabular-nums">{gap}px</span>
           </div>
           <Slider
             value={gap}
