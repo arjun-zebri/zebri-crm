@@ -459,7 +459,7 @@ function renderBlock(
               <InlineText
                 value={block.text}
                 onChange={(v) => updateBlock(block.id, { text: v })}
-                placeholder="Add text..."
+                placeholder="Add a note to your client."
                 multiline
                 as="div"
                 className="whitespace-pre-wrap break-words"

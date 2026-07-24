@@ -26,7 +26,9 @@ export function blockTemplate(type: BlockType): Block {
     case 'totals':
       return { id: newId('to'), type: 'totals', taxRate: 10, showSubtotal: true, colSpread: true }
     case 'text':
-      return { id: newId('tx'), type: 'text', text: 'Add a note to your client.' }
+      // Empty by default so the prompt shows as editor placeholder only and
+      // an untouched text block renders nothing on the public document.
+      return { id: newId('tx'), type: 'text', text: '' }
     case 'action':
       return { id: newId('ac'), type: 'action', primary: 'Submit', secondary: null }
     case 'divider':
