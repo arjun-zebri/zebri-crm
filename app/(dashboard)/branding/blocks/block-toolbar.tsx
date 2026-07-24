@@ -76,9 +76,14 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
         </div>
       </div>
 
-      {/* Row 1: block-type-specific controls */}
+      {/* Row 1: block-type-specific controls + background, so the background
+          colour sits beside the block's text/colour controls rather than down
+          in the structural row. */}
       <div className="flex items-center gap-1 px-1 pt-1">
         <BlockSpecificControls block={block} state={state} updateBlock={updateBlock} />
+        {block.type !== 'action' && (
+          <BackgroundControl block={block} updateBlock={updateBlock} />
+        )}
       </div>
 
       {/* Row 2: structural controls + actions */}
@@ -92,7 +97,6 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
         {block.type !== 'action' && block.type !== 'spacer' && (
           <>
             <PaddingControl block={block} updateBlock={updateBlock} />
-            <BackgroundControl block={block} updateBlock={updateBlock} />
             <WidthAlignControl block={block} updateBlock={updateBlock} />
             <SpacingControl block={block} updateBlock={updateBlock} />
             <Divider />
@@ -102,7 +106,6 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
         {block.type === 'spacer' && (
           <>
             <PaddingControl block={block} updateBlock={updateBlock} />
-            <BackgroundControl block={block} updateBlock={updateBlock} />
             <WidthAlignControl block={block} updateBlock={updateBlock} />
             <SpacingControl block={block} updateBlock={updateBlock} />
             <Divider />
