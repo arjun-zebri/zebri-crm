@@ -72,9 +72,12 @@ export function RenderImage({
         className="block w-full h-full select-none"
         style={{
           objectFit: fit,
-          objectPosition: `${imageX}% ${imageY}%`,
+          // Cover crops, so the pan (imageX/imageY) picks which part shows.
+          // Contain shows the whole image, so centre it regardless of any pan
+          // left over from cover mode.
+          objectPosition: fit === 'contain' ? '50% 50%' : `${imageX}% ${imageY}%`,
           transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
-          transformOrigin: `${imageX}% ${imageY}%`,
+          transformOrigin: fit === 'contain' ? '50% 50%' : `${imageX}% ${imageY}%`,
         }}
       />
       {chrome}
