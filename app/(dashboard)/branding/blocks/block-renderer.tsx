@@ -375,13 +375,15 @@ function SpacerWithResize({ block, branding, heightPx, updateBlock }: SpacerWith
   }
 
   return (
-    <div className="group relative w-full bg-gradient-to-b from-gray-100 to-gray-50 flex items-center justify-center" style={{ height: heightPx, borderRadius: 4 }}>
+    <div className="group relative w-full flex items-center justify-center" style={{ height: heightPx }}>
       <PublicRenderSpacer
         block={block}
         branding={branding}
         chrome={
           <>
-            <span className="text-[10px] text-gray-400 font-medium">{heightPx}px</span>
+            {/* Idle spacer is just blank space; the size label and resize grip
+                only appear on hover so it reads as empty spacing, not a box. */}
+            <span className="text-[10px] text-gray-400 font-medium opacity-0 group-hover:opacity-100 transition">{heightPx}px</span>
             <ResizeHandle onMouseDown={startResize} active={resizing} />
           </>
         }
