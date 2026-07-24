@@ -42,8 +42,22 @@ export function InlineText({
     if (!el) return
     if (document.activeElement === el) return
     const sanitized = sanitizeHtml(value ?? '', { allowLists: lists })
-    if (el.innerHTML !== sanitized) {
-      el.innerHTML = sanitized
+    if (el.innerHTML === sanitized) return
+    // Snapshot the document selection before replacing content. Assigning
+    // innerHTML to a contentEditable can move the selection onto this
+    // (unfocused) element, which flashes a highlight on every keystroke when
+    // the value is being driven from another field showing the same value
+    // (e.g. editing the business name reflects into every business-name block).
+    // Restore the prior selection, or clear the stray one, so nothing else
+    // highlights.
+    const sel = window.getSelection()
+    const saved = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null
+    el.innerHTML = sanitized
+    if (sel && sel.anchorNode && el.contains(sel.anchorNode)) {
+      sel.removeAllRanges()
+      if (saved && saved.startContainer && !el.contains(saved.startContainer)) {
+        sel.addRange(saved)
+      }
     }
   }, [value, lists])
 
