@@ -99,7 +99,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
         )}
         {block.type !== 'action' && block.type !== 'spacer' && (
           <>
-            {block.type !== 'businessName' && (
+            {block.type !== 'businessName' && block.type !== 'image' && (
               <PaddingControl block={block} updateBlock={updateBlock} />
             )}
             {block.type !== 'text' && (
