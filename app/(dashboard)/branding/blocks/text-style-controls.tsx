@@ -81,11 +81,12 @@ export function TextStyleControls({
   return (
     <div className="flex items-center gap-1">
       {/* Font family */}
-      <div className="w-[140px] shrink-0">
+      <div className="w-[120px] shrink-0">
         <Select<HeadingFont | BodyFont>
           value={eff.fontFamily}
           options={fontOptions}
           onChange={(v) => onChange({ fontFamily: v })}
+          size="xs"
         />
       </div>
 
@@ -298,7 +299,7 @@ function NumberStepper({
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - step))}
-        className="w-6 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-sm"
+        className="w-5 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-xs"
         aria-label="Decrease"
       >
         −
@@ -314,12 +315,12 @@ function NumberStepper({
           if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)))
         }}
         aria-label={ariaLabel}
-        className="w-10 h-full text-xs text-center bg-transparent text-gray-900 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-8 h-full text-xs text-center bg-transparent text-gray-900 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + step))}
-        className="w-6 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-sm"
+        className="w-5 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-xs"
         aria-label="Increase"
       >
         +
