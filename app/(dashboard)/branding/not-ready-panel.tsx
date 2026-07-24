@@ -45,7 +45,7 @@ export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
         <span className="text-xs font-semibold text-amber-900">Not ready to send</span>
         {/* Desktop has hover, so show a hint; touch has no hover, so show the
             chevron and let a tap toggle the details. */}
-        <span className="hidden text-[10px] font-medium text-amber-600 md:inline">
+        <span className="hidden text-xs font-medium text-amber-600 md:inline">
           hover to see more
         </span>
         <ChevronDown
