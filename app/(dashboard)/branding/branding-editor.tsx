@@ -666,7 +666,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     const list = state.blocks[docSurface] ?? []
     const target = list.find((b) => b.id === id)
     if (!target) return
-    const cleared = clearStyleOverrides(target)
+    // Clear both the type-specific style overrides and the shared per-block
+    // overrides (padding, background, width, alignment, spacing, border) so the
+    // block falls all the way back to the theme defaults.
+    const cleared = stripSharedOverrides(clearStyleOverrides(target))
     setBlocksForCurrent(list.map((b) => (b.id === id ? cleared : b)))
   }
 
@@ -1197,6 +1200,22 @@ function clearStyleOverrides(block: Block): Block {
     default:
       return { ...block, borderWidth: 0, blockRadius: undefined } as Block
   }
+}
+
+/** Shared per-block style-override fields (from BaseBlock). "Reset to theme
+ *  defaults" strips these so padding, background, width, alignment, spacing and
+ *  border all fall back to the kit, for every block type. Keeps id/type plus
+ *  content and locked/hidden flags. */
+const SHARED_OVERRIDE_KEYS = [
+  'borderWidth', 'borderColor', 'blockRadius', 'blockHeightPx', 'blockVAlign',
+  'padTop', 'padRight', 'padBottom', 'padLeft', 'bgColor', 'maxWidthPx',
+  'align', 'spaceAbove', 'spaceBelow',
+] as const
+
+function stripSharedOverrides(block: Block): Block {
+  const rest = { ...block } as Record<string, unknown>
+  for (const k of SHARED_OVERRIDE_KEYS) delete rest[k]
+  return rest as unknown as Block
 }
 
 // ── Affected-block feedback ──────────────────────────────────────────────────
