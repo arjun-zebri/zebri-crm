@@ -206,6 +206,8 @@ export interface FooterBlock extends BaseBlock {
   showContactWebsite?: boolean
   /** Show the ABN in the contact line. Defaults to shown. */
   showAbn?: boolean
+  /** Vertical gap (px) between the closing note and the contact/social block. Defaults to 12. */
+  noteGap?: number
   /** Show Facebook social icon when URL is present. */
   showFacebook?: boolean
   /** Show Instagram social icon when URL is present. */
@@ -214,8 +216,6 @@ export interface FooterBlock extends BaseBlock {
   showTwitter?: boolean
   /** Show Pinterest social icon when URL is present. */
   showPinterest?: boolean
-  /** Show website link icon when URL is present. */
-  showWebsite?: boolean
 }
 
 /**

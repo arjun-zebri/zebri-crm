@@ -1,7 +1,7 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw, Minus, AlignLeft, AlignCenter, AlignRight, Equal, Lock, Facebook, Instagram, Twitter, Pin, Globe } from 'lucide-react'
+import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw, Minus, AlignLeft, AlignCenter, AlignRight, Equal, Lock, Facebook, Instagram, Twitter, Pin } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
 import { ColorPopover } from '@/components/ui/color-popover'
@@ -1456,93 +1456,143 @@ function FooterControls({
       />
       <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />} />
       <Divider />
-      <FooterContactToggles block={block} updateBlock={updateBlock} />
-      <Divider />
-      <FooterSocialToggles block={block} updateBlock={updateBlock} />
+      <FooterIncludeDropdown block={block} updateBlock={updateBlock} />
+      <FooterGapControl block={block} updateBlock={updateBlock} />
     </div>
   )
 }
 
 /**
- * Visibility toggles for the individual items on the footer contact line
- * (business name, phone, website, ABN). Each defaults to shown, so turning one
- * off is an opt-out. Distinct from the social-icon toggles below.
+ * Single multi-select dropdown for everything the footer can show: the contact
+ * line items (business name, phone, website, ABN, each shown by default) and the
+ * social icons (off by default, rendered when a matching profile URL is set).
+ * Collapsing these into one dropdown keeps the toolbar narrow.
  */
-function FooterContactToggles({
+function FooterIncludeDropdown({
   block,
   updateBlock,
 }: {
   block: FooterBlock
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-xs font-semibold text-gray-600">Show:</span>
-      <Toggle
-        label="Business name"
-        active={block.showBusinessName ?? true}
-        onChange={(v) => updateBlock<FooterBlock>(block.id, { showBusinessName: v })}
-      />
-      <Toggle
-        label="Phone"
-        active={block.showPhone ?? true}
-        onChange={(v) => updateBlock<FooterBlock>(block.id, { showPhone: v })}
-      />
-      <Toggle
-        label="Website"
-        active={block.showContactWebsite ?? true}
-        onChange={(v) => updateBlock<FooterBlock>(block.id, { showContactWebsite: v })}
-      />
-      <Toggle
-        label="ABN"
-        active={block.showAbn ?? true}
-        onChange={(v) => updateBlock<FooterBlock>(block.id, { showAbn: v })}
-      />
-    </div>
-  )
-}
-
-/**
- * Compact icon toggles for the footer's social links. Each chip shows the
- * network's icon; active (filled) means the icon renders on the document when a
- * matching profile URL is set. Explicit per-network handlers avoid computed-key
- * typing on the partial patch.
- */
-function FooterSocialToggles({
-  block,
-  updateBlock,
-}: {
-  block: FooterBlock
-  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
-}) {
-  const networks = [
-    { label: 'Facebook', Icon: Facebook, active: block.showFacebook ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showFacebook: v }) },
-    { label: 'Instagram', Icon: Instagram, active: block.showInstagram ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showInstagram: v }) },
-    { label: 'Twitter', Icon: Twitter, active: block.showTwitter ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showTwitter: v }) },
-    { label: 'Pinterest', Icon: Pin, active: block.showPinterest ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showPinterest: v }) },
-    { label: 'Website', Icon: Globe, active: block.showWebsite ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showWebsite: v }) },
+  const groups = [
+    {
+      title: 'Contact details',
+      rows: [
+        { label: 'Business name', active: block.showBusinessName ?? true, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showBusinessName: v }) },
+        { label: 'Phone', active: block.showPhone ?? true, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showPhone: v }) },
+        { label: 'Website', active: block.showContactWebsite ?? true, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showContactWebsite: v }) },
+        { label: 'ABN', active: block.showAbn ?? true, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showAbn: v }) },
+      ],
+    },
+    {
+      title: 'Social icons',
+      rows: [
+        { label: 'Facebook', Icon: Facebook, active: block.showFacebook ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showFacebook: v }) },
+        { label: 'Instagram', Icon: Instagram, active: block.showInstagram ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showInstagram: v }) },
+        { label: 'Twitter', Icon: Twitter, active: block.showTwitter ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showTwitter: v }) },
+        { label: 'Pinterest', Icon: Pin, active: block.showPinterest ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showPinterest: v }) },
+      ],
+    },
   ]
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-xs font-semibold text-gray-600">Social:</span>
-      {networks.map(({ label, Icon, active, set }) => (
-        <Tooltip key={label} label={label}>
+    <Popover.Root>
+      <Tooltip label="Show or hide footer items">
+        <Popover.Trigger asChild>
           <button
             type="button"
-            onClick={() => set(!active)}
-            aria-label={label}
-            aria-pressed={active}
-            className={`inline-flex items-center justify-center w-8 h-8 rounded-md border cursor-pointer transition ${
-              active
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-500 border-gray-200 hover:text-gray-900'
-            }`}
+            className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-md text-xs hover:bg-gray-100 cursor-pointer border border-gray-200 text-gray-700 shrink-0"
           >
-            <Icon size={15} strokeWidth={1.5} />
+            <span className="text-gray-900 font-medium">Include</span>
+            <ChevronDown size={10} strokeWidth={2} className="text-gray-400" />
           </button>
-        </Tooltip>
-      ))}
-    </div>
+        </Popover.Trigger>
+      </Tooltip>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-2 z-[60] w-[220px] animate-modal-in"
+        >
+          {groups.map((group, gi) => (
+            <div key={group.title} className={gi > 0 ? 'mt-2 pt-2 border-t border-gray-100' : ''}>
+              <div className="px-2 pb-1 text-[10px] uppercase tracking-[0.08em] text-gray-400">{group.title}</div>
+              {group.rows.map((row) => {
+                const RowIcon = 'Icon' in row ? row.Icon : undefined
+                return (
+                  <button
+                    key={row.label}
+                    type="button"
+                    onClick={() => row.set(!row.active)}
+                    aria-pressed={row.active}
+                    className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+                  >
+                    <span
+                      className={`inline-flex items-center justify-center w-4 h-4 rounded border shrink-0 ${
+                        row.active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-300 text-transparent'
+                      }`}
+                    >
+                      <Check size={11} strokeWidth={3} />
+                    </span>
+                    {RowIcon && <RowIcon size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />}
+                    <span>{row.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
+
+/**
+ * Slider controlling the vertical gap between the footer's closing note and the
+ * contact/social block beneath it. Defaults to 12px.
+ */
+function FooterGapControl({
+  block,
+  updateBlock,
+}: {
+  block: FooterBlock
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const gap = block.noteGap ?? 12
+  return (
+    <Popover.Root>
+      <Tooltip label="Space below note">
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 bg-white text-gray-600 border-gray-200 hover:text-gray-900"
+          >
+            <Minus size={12} strokeWidth={1.75} className="rotate-90" />
+            <span className="font-mono text-[10px] opacity-80">{gap}px</span>
+          </button>
+        </Popover.Trigger>
+      </Tooltip>
+      <Popover.Portal>
+        <Popover.Content
+          align="center"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Space below note</span>
+            <span className="text-xs font-mono text-gray-700 tabular-nums">{gap}px</span>
+          </div>
+          <Slider
+            value={gap}
+            min={0}
+            max={48}
+            step={1}
+            onChange={(v) => updateBlock<FooterBlock>(block.id, { noteGap: v })}
+            ariaLabel="Space below note"
+          />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 

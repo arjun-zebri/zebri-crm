@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
-import { Facebook, Instagram, Twitter, Pin, Globe } from 'lucide-react'
+import { Facebook, Instagram, Twitter, Pin } from 'lucide-react'
 
 // eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
@@ -52,49 +52,51 @@ export function RenderFooter({
     { key: 'showInstagram' as const, url: branding.instagram_url, Icon: Instagram, label: 'Instagram' },
     { key: 'showTwitter' as const, url: branding.twitter_url, Icon: Twitter, label: 'Twitter' },
     { key: 'showPinterest' as const, url: branding.pinterest_url, Icon: Pin, label: 'Pinterest' },
-    { key: 'showWebsite' as const, url: branding.website_url, Icon: Globe, label: 'Website' },
   ] as const
   const socialLinks = NETWORKS.filter((n) => block[n.key] && n.url)
 
-  // When a closing note is shown, give the contact line a clear gap beneath it
-  // (matching the social row's rhythm) so the note reads as its own line.
+  // When a closing note is shown, separate it from the contact/social block by a
+  // configurable gap (default 12px) so the note reads as its own line.
   const showNote = Boolean(slots?.note || block.closingNote)
+  const noteGap = block.noteGap ?? 12
 
   return (
     <div className={`${p.docX} ${p.blockY} mt-6 border-t pt-5`} style={{ borderTopColor: branding.border_color }}>
-      <div className="space-y-1">
-        {slots?.note ? <p style={noteCss}>{slots.note}</p> : block.closingNote ? (
-          <p style={noteCss}>
-            <Html value={block.closingNote} allowLists={false} />
-          </p>
-        ) : null}
-        {contactParts.length > 0 && (
-          <p className={`${showNote ? 'mt-3' : ''} flex flex-wrap gap-x-3 gap-y-1 justify-center`} style={contactCss}>
-            {contactParts.map((part, i) => (
-              <span key={i}>
-                {i > 0 && <span style={contactCss}>{caseText(' · ', block.contactStyle, contactDefaults)}</span>}
-                <span className="whitespace-nowrap">{caseText(part, block.contactStyle, contactDefaults)}</span>
-              </span>
-            ))}
-          </p>
-        )}
-        {socialLinks.length > 0 && (
-          <div className="mt-3 flex items-center gap-3 justify-center">
-            {socialLinks.map(({ url, Icon, label }) => (
-              <a
-                key={label}
-                href={url!}
-                aria-label={label}
-                target="_blank"
-                rel="noreferrer"
-                className="text-text-muted hover:text-text cursor-pointer"
-              >
-                <Icon size={18} strokeWidth={1.5} />
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
+      {slots?.note ? <p style={noteCss}>{slots.note}</p> : block.closingNote ? (
+        <p style={noteCss}>
+          <Html value={block.closingNote} allowLists={false} />
+        </p>
+      ) : null}
+      {(contactParts.length > 0 || socialLinks.length > 0) && (
+        <div className="space-y-3" style={showNote ? { marginTop: noteGap } : undefined}>
+          {contactParts.length > 0 && (
+            <p className="flex flex-wrap gap-x-3 gap-y-1 justify-center" style={contactCss}>
+              {contactParts.map((part, i) => (
+                <span key={i}>
+                  {i > 0 && <span style={contactCss}>{caseText(' · ', block.contactStyle, contactDefaults)}</span>}
+                  <span className="whitespace-nowrap">{caseText(part, block.contactStyle, contactDefaults)}</span>
+                </span>
+              ))}
+            </p>
+          )}
+          {socialLinks.length > 0 && (
+            <div className="flex items-center gap-3 justify-center">
+              {socialLinks.map(({ url, Icon, label }) => (
+                <a
+                  key={label}
+                  href={url!}
+                  aria-label={label}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-text-muted hover:text-text cursor-pointer"
+                >
+                  <Icon size={18} strokeWidth={1.5} />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {chrome}
     </div>
   )
