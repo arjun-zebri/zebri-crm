@@ -100,7 +100,9 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
         {block.type !== 'action' && block.type !== 'spacer' && (
           <>
             <PaddingControl block={block} updateBlock={updateBlock} />
-            <WidthAlignControl block={block} updateBlock={updateBlock} />
+            {block.type !== 'text' && (
+              <WidthAlignControl block={block} updateBlock={updateBlock} />
+            )}
             <SpacingControl block={block} updateBlock={updateBlock} />
             <Divider />
             <BorderControl block={block} updateBlock={updateBlock} />
