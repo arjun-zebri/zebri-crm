@@ -53,6 +53,7 @@ export function BlockFrame({
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [resizing, setResizing] = useState(false)
+  const [editing, setEditing] = useState(false)
   const blockRef = useRef<HTMLDivElement>(null)
 
   const selectionColor = state.brandColor || '#111827'
@@ -70,6 +71,34 @@ export function BlockFrame({
       return () => el.removeEventListener('zebri:text-focus', onTextFocus)
     }
   }, [selected, onSelect])
+
+  // Track whether an editable field inside this block has focus, so the green
+  // selection outline can hide while editing (it otherwise obscures the very
+  // background/colours the user is adjusting).
+  useEffect(() => {
+    const el = blockRef.current
+    if (!el) return
+    const isEditable = (n: EventTarget | null) => {
+      const t = n as HTMLElement | null
+      return !!t && (t.isContentEditable || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')
+    }
+    const onFocusIn = (e: FocusEvent) => {
+      if (isEditable(e.target)) setEditing(true)
+    }
+    const onFocusOut = () => {
+      // Let focus settle, then keep editing true only if it stayed on an
+      // editable field within this block.
+      requestAnimationFrame(() => {
+        setEditing(el.contains(document.activeElement) && isEditable(document.activeElement))
+      })
+    }
+    el.addEventListener('focusin', onFocusIn)
+    el.addEventListener('focusout', onFocusOut)
+    return () => {
+      el.removeEventListener('focusin', onFocusIn)
+      el.removeEventListener('focusout', onFocusOut)
+    }
+  }, [])
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -139,13 +168,17 @@ export function BlockFrame({
         aria-hidden
         className={`absolute inset-0 pointer-events-none rounded-md transition`}
         style={{
-          borderWidth: selected || multiSelected ? 2 : 1,
+          borderWidth: !editing && (selected || multiSelected) ? 2 : 1,
           borderStyle: 'solid',
-          borderColor: selected
-            ? selectionColor
-            : multiSelected
-              ? `${selectionColor}99`
-              : 'transparent',
+          // While editing an inner field, drop the brand-coloured outline so it
+          // does not obscure the block's own background/colours.
+          borderColor: editing
+            ? 'transparent'
+            : selected
+              ? selectionColor
+              : multiSelected
+                ? `${selectionColor}99`
+                : 'transparent',
         }}
       />
       <div
