@@ -175,18 +175,9 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
   // ran on every load, so deleting the banner caused it to reappear on
   // refresh. New users still get a banner via defaultBlocksFor.)
 
-  // Ensure a single businessName sits right after the header banner. Older
-  // invoice templates dropped it at the end of the document; normalise.
-  const businessIdxs = migrated
-    .map((b, i) => (b.type === 'businessName' ? i : -1))
-    .filter((i) => i >= 0)
-  if (businessIdxs.length > 0) {
-    const first = migrated[businessIdxs[0]]
-    const without = migrated.filter((b) => b.type !== 'businessName')
-    const bannerIdx = without.findIndex((b) => b.type === 'headerBanner')
-    const insertAt = bannerIdx >= 0 ? bannerIdx + 1 : 0
-    migrated = [...without.slice(0, insertAt), first, ...without.slice(insertAt)]
-  }
+  // (Removed: previous code force-moved businessName to the top on every load,
+  // so the "My details" block jumped to the top on refresh. Blocks now keep
+  // whatever order the user arranged.)
 
   // Contract surface migration (Phase 3.1):
   // Old default for the contract surface inserted ~13 text blocks
