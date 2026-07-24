@@ -97,23 +97,18 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
             <Divider />
           </>
         )}
-        {block.type !== 'action' && block.type !== 'spacer' && (
+        {block.type !== 'action' && (
           <>
-            {block.type !== 'businessName' && block.type !== 'image' && block.type !== 'tagline' && (
-              <PaddingControl block={block} updateBlock={updateBlock} />
-            )}
             <SpacingControl block={block} updateBlock={updateBlock} />
+            <RadiusControl block={block} updateBlock={updateBlock} />
             <Divider />
             <BorderControl block={block} updateBlock={updateBlock} />
           </>
         )}
-        {block.type === 'spacer' && (
-          <>
-            <PaddingControl block={block} updateBlock={updateBlock} />
-            <SpacingControl block={block} updateBlock={updateBlock} />
-            <Divider />
-            <BorderControl block={block} updateBlock={updateBlock} />
-          </>
+        {/* Action is a CTA button with its own styling, so it only takes the
+            block-level radius control (no spacing/border chrome). */}
+        {block.type === 'action' && (
+          <RadiusControl block={block} updateBlock={updateBlock} />
         )}
         <div className="ml-auto flex items-center gap-0.5 shrink-0">
           <Tooltip label="Reset to theme defaults">
@@ -1451,7 +1446,7 @@ function FooterControls({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <TargetSwitcher
         target={target}
         setTarget={setTarget}
@@ -1462,7 +1457,52 @@ function FooterControls({
         ]}
       />
       <Divider />
+      {target === 'contact' && (
+        <>
+          <FooterContactToggles block={block} updateBlock={updateBlock} />
+          <Divider />
+        </>
+      )}
       <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />} />
+    </div>
+  )
+}
+
+/**
+ * Visibility toggles for the individual items on the footer contact line
+ * (business name, phone, website, ABN). Each defaults to shown, so turning one
+ * off is an opt-out. Distinct from the social-icon toggles below.
+ */
+function FooterContactToggles({
+  block,
+  updateBlock,
+}: {
+  block: FooterBlock
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-xs font-semibold text-gray-600">Show:</span>
+      <Toggle
+        label="Business name"
+        active={block.showBusinessName ?? true}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { showBusinessName: v })}
+      />
+      <Toggle
+        label="Phone"
+        active={block.showPhone ?? true}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { showPhone: v })}
+      />
+      <Toggle
+        label="Website"
+        active={block.showContactWebsite ?? true}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { showContactWebsite: v })}
+      />
+      <Toggle
+        label="ABN"
+        active={block.showAbn ?? true}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { showAbn: v })}
+      />
     </div>
   )
 }
@@ -1690,9 +1730,68 @@ function NumberField({
   )
 }
 
-function RadiusInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+/**
+ * Corner-radius control shown on every block's toolbar. Overrides the theme's
+ * default corner radius for this block only; `undefined` (the default) inherits
+ * the theme radius. The rounded-square glyph distinguishes it from the border
+ * control's square glyph.
+ */
+function RadiusControl({
+  block,
+  updateBlock,
+}: {
+  block: Block
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const radius = block.blockRadius
+  const active = radius !== undefined
   return (
-    <NumberField label="Radius" value={value} min={0} max={32} step={1} onChange={onChange} />
+    <Popover.Root>
+      <Tooltip label="Corner radius">
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 ${
+              active
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
+            }`}
+          >
+            <span className="w-3 h-3 rounded-[4px] border-[1.5px] border-current" />
+            {active && <span className="font-mono text-[10px] opacity-80">{radius}px</span>}
+          </button>
+        </Popover.Trigger>
+      </Tooltip>
+      <Popover.Portal>
+        <Popover.Content
+          align="center"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Corner radius</span>
+            <span className="text-xs font-mono text-gray-700 tabular-nums">{radius ?? 'theme'}</span>
+          </div>
+          <Slider
+            value={radius ?? 0}
+            min={0}
+            max={32}
+            step={1}
+            onChange={(v) => updateBlock(block.id, { blockRadius: v } as Partial<Block>)}
+            ariaLabel="Corner radius"
+          />
+          {active && (
+            <button
+              type="button"
+              onClick={() => updateBlock(block.id, { blockRadius: undefined } as Partial<Block>)}
+              className="mt-3 w-full text-[11px] text-gray-500 hover:text-gray-900 cursor-pointer"
+            >
+              Reset to theme
+            </button>
+          )}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 
@@ -1787,102 +1886,6 @@ function SpacerControls({
         </Popover.Portal>
       </Popover.Root>
     </div>
-  )
-}
-
-function PaddingControl({
-  block,
-  updateBlock,
-}: {
-  block: Block
-  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
-}) {
-  const padTop = block.padTop ?? 0
-  const padRight = block.padRight ?? 0
-  const padBottom = block.padBottom ?? 0
-  const padLeft = block.padLeft ?? 0
-  const active = padTop > 0 || padRight > 0 || padBottom > 0 || padLeft > 0
-
-  return (
-    <Popover.Root>
-      <Tooltip label="Padding">
-        <Popover.Trigger asChild>
-          <button
-            type="button"
-            className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 ${
-              active
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
-            }`}
-          >
-            <Square size={12} strokeWidth={1.75} />
-            {active && <span className="font-mono text-[10px] opacity-80">P</span>}
-          </button>
-        </Popover.Trigger>
-      </Tooltip>
-      <Popover.Portal>
-        <Popover.Content
-          align="center"
-          sideOffset={6}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
-        >
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <NumberField
-                label="T"
-                value={padTop}
-                min={0}
-                max={100}
-                step={1}
-                onChange={(v) => updateBlock(block.id, { padTop: v } as Partial<Block>)}
-              />
-              <NumberField
-                label="R"
-                value={padRight}
-                min={0}
-                max={100}
-                step={1}
-                onChange={(v) => updateBlock(block.id, { padRight: v } as Partial<Block>)}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <NumberField
-                label="B"
-                value={padBottom}
-                min={0}
-                max={100}
-                step={1}
-                onChange={(v) => updateBlock(block.id, { padBottom: v } as Partial<Block>)}
-              />
-              <NumberField
-                label="L"
-                value={padLeft}
-                min={0}
-                max={100}
-                step={1}
-                onChange={(v) => updateBlock(block.id, { padLeft: v } as Partial<Block>)}
-              />
-            </div>
-          </div>
-          {active && (
-            <button
-              type="button"
-              onClick={() =>
-                updateBlock(block.id, {
-                  padTop: undefined,
-                  padRight: undefined,
-                  padBottom: undefined,
-                  padLeft: undefined,
-                } as Partial<Block>)
-              }
-              className="mt-3 w-full text-[11px] text-gray-500 hover:text-gray-900 cursor-pointer"
-            >
-              Clear padding
-            </button>
-          )}
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
   )
 }
 
@@ -2008,7 +2011,6 @@ function BorderControl({
 }) {
   const width = block.borderWidth ?? 0
   const color = block.borderColor || '#E5E7EB'
-  const radius = block.blockRadius
   const active = width > 0
   return (
     <Popover.Root>
@@ -2066,22 +2068,10 @@ function BorderControl({
               }
             />
           </div>
-          <div className="mt-3 flex items-center justify-between mb-2">
-            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Radius</span>
-            <span className="text-xs font-mono text-gray-700 tabular-nums">{radius ?? 'theme'}</span>
-          </div>
-          <Slider
-            value={radius ?? 0}
-            min={0}
-            max={24}
-            step={1}
-            onChange={(v) => updateBlock(block.id, { blockRadius: v } as Partial<Block>)}
-            ariaLabel="Block corner radius"
-          />
-          {(width > 0 || radius !== undefined) && (
+          {width > 0 && (
             <button
               type="button"
-              onClick={() => updateBlock(block.id, { borderWidth: 0, blockRadius: undefined } as Partial<Block>)}
+              onClick={() => updateBlock(block.id, { borderWidth: 0 } as Partial<Block>)}
               className="mt-3 w-full text-[11px] text-gray-500 hover:text-gray-900 cursor-pointer"
             >
               Clear border

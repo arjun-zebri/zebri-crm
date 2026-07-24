@@ -198,6 +198,14 @@ export interface FooterBlock extends BaseBlock {
   closingNote?: string
   noteStyle?: TextStyle
   contactStyle?: TextStyle
+  /** Show the business name in the contact line. Defaults to shown. */
+  showBusinessName?: boolean
+  /** Show the phone number in the contact line. Defaults to shown. */
+  showPhone?: boolean
+  /** Show the website in the contact line. Defaults to shown. */
+  showContactWebsite?: boolean
+  /** Show the ABN in the contact line. Defaults to shown. */
+  showAbn?: boolean
   /** Show Facebook social icon when URL is present. */
   showFacebook?: boolean
   /** Show Instagram social icon when URL is present. */

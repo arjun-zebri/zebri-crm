@@ -59,7 +59,9 @@ export function RenderImage({
       className={`relative w-full max-w-full overflow-hidden ${cursorClass}`}
       style={{
         height: heightPx,
-        borderRadius: branding.corner_radius,
+        // The image clips itself (overflow-hidden), so its own radius must honour
+        // the per-block override; fall back to the theme's default corner radius.
+        borderRadius: block.blockRadius ?? branding.corner_radius,
       }}
       onMouseDown={imageInteraction?.onMouseDown}
     >

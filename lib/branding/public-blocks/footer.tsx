@@ -36,11 +36,13 @@ export function RenderFooter({
   const noteCss = resolveTextStyle(block.noteStyle, noteDefaults)
   const contactCss = resolveTextStyle(block.contactStyle, contactDefaults)
 
+  // Each contact-line item is individually toggleable from the footer toolbar.
+  // Undefined defaults to shown, so existing footers keep their full contact line.
   const contactParts = [
-    branding.business_name,
-    branding.phone,
-    branding.website,
-    branding.abn ? `ABN ${branding.abn}` : null,
+    (block.showBusinessName ?? true) ? branding.business_name : null,
+    (block.showPhone ?? true) ? branding.phone : null,
+    (block.showContactWebsite ?? true) ? branding.website : null,
+    (block.showAbn ?? true) && branding.abn ? `ABN ${branding.abn}` : null,
   ].filter(Boolean) as string[]
 
   // Social networks: render icons for toggled-on networks with URLs.
@@ -54,6 +56,10 @@ export function RenderFooter({
   ] as const
   const socialLinks = NETWORKS.filter((n) => block[n.key] && n.url)
 
+  // When a closing note is shown, give the contact line a clear gap beneath it
+  // (matching the social row's rhythm) so the note reads as its own line.
+  const showNote = Boolean(slots?.note || block.closingNote)
+
   return (
     <div className={`${p.docX} ${p.blockY} mt-6 border-t pt-5`} style={{ borderTopColor: branding.border_color }}>
       <div className="space-y-1">
@@ -63,7 +69,7 @@ export function RenderFooter({
           </p>
         ) : null}
         {contactParts.length > 0 && (
-          <p className="flex flex-wrap gap-x-3 gap-y-1 justify-center" style={contactCss}>
+          <p className={`${showNote ? 'mt-3' : ''} flex flex-wrap gap-x-3 gap-y-1 justify-center`} style={contactCss}>
             {contactParts.map((part, i) => (
               <span key={i}>
                 {i > 0 && <span style={contactCss}>{caseText(' · ', block.contactStyle, contactDefaults)}</span>}
