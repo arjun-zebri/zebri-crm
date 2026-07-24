@@ -81,9 +81,12 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
           in the structural row. */}
       <div className="flex items-center gap-1 px-1 pt-1">
         <BlockSpecificControls block={block} state={state} updateBlock={updateBlock} />
-        {block.type !== 'action' && (
-          <BackgroundControl block={block} updateBlock={updateBlock} />
-        )}
+        {/* Text-content blocks render Background inside their controls, right
+            next to the text colour (via bgSlot). The rest show it here. */}
+        {block.type !== 'action' &&
+          !['title', 'text', 'businessName', 'tagline', 'footer'].includes(block.type) && (
+            <BackgroundControl block={block} updateBlock={updateBlock} />
+          )}
       </div>
 
       {/* Row 2: structural controls + actions */}
@@ -290,7 +293,7 @@ function TitleControls({
         ]}
       />
       <Divider />
-      <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} />
+      <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />} />
     </div>
   )
 }
@@ -322,6 +325,7 @@ function TextControls({
           updateBlock<TextBlock>(block.id, { textStyle: { ...(block.textStyle ?? {}), ...patch } })
         }
         {...(expanded !== undefined ? { expanded } : {})}
+        bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />}
       />
     </div>
   )
@@ -746,6 +750,7 @@ function BusinessNameControls({
               updateBlock<BusinessNameBlock>(block.id, { nameStyle: { ...(block.nameStyle ?? {}), ...patch } })
             }
             {...(expanded !== undefined ? { expanded } : {})}
+            bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />}
           />
         </>
       )}
@@ -779,6 +784,7 @@ function TaglineControls({
           updateBlock<TaglineBlock>(block.id, { textStyle: { ...(block.textStyle ?? {}), ...patch } })
         }
         {...(expanded !== undefined ? { expanded } : {})}
+        bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />}
       />
     </div>
   )
@@ -1456,7 +1462,7 @@ function FooterControls({
         ]}
       />
       <Divider />
-      <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} />
+      <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />} />
     </div>
   )
 }

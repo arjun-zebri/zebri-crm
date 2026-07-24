@@ -2,6 +2,7 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { AlignLeft, AlignCenter, AlignRight, Italic, Underline, Type, ChevronDown } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { ColorPopover } from '@/components/ui/color-popover'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -43,6 +44,9 @@ interface TextStyleControlsProps {
   onChange: (patch: TextStyle) => void
   fontKind?: 'heading' | 'body' | 'all'
   expanded?: boolean
+  /** Optional control rendered immediately after the text colour picker (e.g.
+   *  the block background colour), so the two colour controls sit together. */
+  bgSlot?: ReactNode
 }
 
 export function TextStyleControls({
@@ -51,6 +55,7 @@ export function TextStyleControls({
   onChange,
   fontKind = 'all',
   expanded = false,
+  bgSlot,
 }: TextStyleControlsProps) {
   const eff = {
     fontFamily: style?.fontFamily ?? defaults.fontFamily,
@@ -173,6 +178,8 @@ export function TextStyleControls({
           </button>
         }
       />
+
+      {bgSlot}
 
       <Divider />
 
