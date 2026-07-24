@@ -457,7 +457,6 @@ export function RenderImage({
 export function RenderBusinessName({
   block,
   state,
-  updateBlock,
   setBusinessName,
   uploadLogo,
   removeLogo,
@@ -469,33 +468,6 @@ export function RenderBusinessName({
   const branding = publicBrandingFromEditorState(state)
   const { logoUrl, businessName } = state
   const logoHeight = block.logoHeightPx ?? 40
-
-  const startResizeLogo = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const startY = e.clientY
-    const startHeight = logoHeight
-    const onMove = (ev: MouseEvent) => {
-      const dy = ev.clientY - startY
-      const next = Math.max(24, Math.min(160, startHeight + dy))
-      updateBlock<BusinessNameBlock>(block.id, { logoHeightPx: Math.round(next) })
-    }
-    const onUp = () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
-
-  // Chrome element: resize grip positioned absolutely, rendered within the public component's relative container
-  const chrome = (
-    <div
-      onMouseDown={startResizeLogo}
-      title="Drag to resize"
-      className="absolute -right-1 -bottom-1 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-ns-resize opacity-0 group-hover:opacity-100 transition z-20"
-    />
-  )
 
   // Logo slot: wraps the logo with InlineAsset for upload overlay (selectableWhenEmpty=false)
   const logoSlot = uploadLogo ? (
@@ -549,7 +521,6 @@ export function RenderBusinessName({
           logo: logoSlot,
           name: nameSlot,
         }}
-        chrome={chrome}
       />
     </div>
   )
