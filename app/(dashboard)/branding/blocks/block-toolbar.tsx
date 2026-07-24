@@ -82,9 +82,10 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
       <div className="flex items-center gap-1 px-1 pt-1">
         <BlockSpecificControls block={block} state={state} updateBlock={updateBlock} />
         {/* Text-content blocks render Background inside their controls, right
-            next to the text colour (via bgSlot). The rest show it here. */}
+            next to the text colour (via bgSlot); the divider renders it beside
+            its line colour. The rest show it here. */}
         {block.type !== 'action' &&
-          !['title', 'text', 'businessName', 'tagline', 'footer'].includes(block.type) && (
+          !['title', 'text', 'businessName', 'tagline', 'footer', 'divider'].includes(block.type) && (
             <BackgroundControl block={block} updateBlock={updateBlock} />
           )}
       </div>
@@ -1341,23 +1342,26 @@ function DividerControls({
         </Popover.Portal>
       </Popover.Root>
       <Divider />
-      <ColorPopover
-        value={block.color ?? '#E5E7EB'}
-        onChange={(v) => updateBlock<DividerBlock>(block.id, { color: v })}
-        swatches={['#E5E7EB', '#9CA3AF', '#374151', '#111827']}
-        trigger={
-          <button
-            type="button"
-            className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
-            title="Line color"
-          >
-            <span
-              className="w-4 h-4 rounded ring-1 ring-black/10"
-              style={{ background: block.color ?? '#E5E7EB' }}
-            />
-          </button>
-        }
-      />
+      <Tooltip label="Line colour">
+        <ColorPopover
+          value={block.color ?? '#E5E7EB'}
+          onChange={(v) => updateBlock<DividerBlock>(block.id, { color: v })}
+          swatches={['#E5E7EB', '#9CA3AF', '#374151', '#111827']}
+          trigger={
+            <button
+              type="button"
+              className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+            >
+              <span
+                className="w-4 h-4 rounded ring-1 ring-black/10"
+                style={{ background: block.color ?? '#E5E7EB' }}
+              />
+            </button>
+          }
+        />
+      </Tooltip>
+      {/* Background colour sits right beside the line colour. */}
+      <BackgroundControl block={block} updateBlock={updateBlock} />
       <Divider />
       <Popover.Root>
         <Tooltip label="Width">
@@ -1946,24 +1950,25 @@ function BackgroundControl({
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }) {
   return (
-    <ColorPopover
-      value={block.bgColor || '#FFFFFF'}
-      onChange={(v) => updateBlock(block.id, { bgColor: v } as Partial<Block>)}
-      swatches={COLOR_PALETTE}
-      trigger={
-        // Plain button as the direct trigger: Radix Popover.Trigger `asChild`
-        // forwards its open-onClick onto this child. Wrapping it in <Tooltip>
-        // (which does not forward props) swallowed the click, so the popover
-        // never opened. `title` still gives a native hover label.
-        <button
-          type="button"
-          className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
-          title="Background color"
-        >
-          <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: block.bgColor || '#FFFFFF' }} />
-        </button>
-      }
-    />
+    // Tooltip wraps the whole ColorPopover (its span sits outside Popover.Root),
+    // so the hover label works without breaking the trigger's open-onClick. The
+    // button itself must stay the direct child of Popover.Trigger `asChild` —
+    // wrapping the button in <Tooltip> would swallow the click.
+    <Tooltip label="Background colour">
+      <ColorPopover
+        value={block.bgColor || '#FFFFFF'}
+        onChange={(v) => updateBlock(block.id, { bgColor: v } as Partial<Block>)}
+        swatches={COLOR_PALETTE}
+        trigger={
+          <button
+            type="button"
+            className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+          >
+            <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: block.bgColor || '#FFFFFF' }} />
+          </button>
+        }
+      />
+    </Tooltip>
   )
 }
 

@@ -161,24 +161,26 @@ export function TextStyleControls({
         </>
       )}
 
-      {/* Color */}
-      <ColorPopover
-        value={eff.color}
-        onChange={(v) => onChange({ color: v })}
-        swatches={TEXT_COLOR_PRESETS}
-        trigger={
-          <button
-            type="button"
-            title="Text color"
-            className="inline-flex items-center gap-1 px-1.5 h-8 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
-          >
-            <span
-              className="w-4 h-4 rounded ring-1 ring-black/10"
-              style={{ background: eff.color }}
-            />
-          </button>
-        }
-      />
+      {/* Color — Tooltip wraps the whole ColorPopover so the hover label works
+          without breaking the trigger's open-onClick. */}
+      <Tooltip label="Text colour">
+        <ColorPopover
+          value={eff.color}
+          onChange={(v) => onChange({ color: v })}
+          swatches={TEXT_COLOR_PRESETS}
+          trigger={
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 px-1.5 h-8 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+            >
+              <span
+                className="w-4 h-4 rounded ring-1 ring-black/10"
+                style={{ background: eff.color }}
+              />
+            </button>
+          }
+        />
+      </Tooltip>
 
       {bgSlot}
 
