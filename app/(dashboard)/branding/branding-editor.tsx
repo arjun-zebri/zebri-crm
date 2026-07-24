@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { useToast } from '@/components/ui/toast'
 import { getAccountReadiness } from '@/lib/branding/account-readiness'
-import { evaluateSurface, type AccountReadiness } from '@/lib/branding/readiness'
 import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
 import type { ProposalLabels } from '@/lib/branding/proposal-labels'
+import { evaluateSurface, type AccountReadiness } from '@/lib/branding/readiness'
 import type { TextCase } from '@/lib/branding/text-case'
 import {
   THEME_PRESETS,
@@ -25,7 +25,7 @@ import type { Json } from '@/types/database'
 import { AddBlockPalette } from './blocks/add-block-palette'
 import { BlockRenderer } from './blocks/block-renderer'
 import { blockTemplate, defaultBlocksFor } from './blocks/defaults'
-import { isDeletable, isMarker, isRequired } from './blocks/policy'
+import { isDeletable, isMarker } from './blocks/policy'
 import type { Block, ImageBlock } from './blocks/types'
 import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
@@ -1098,15 +1098,12 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             onClearBlocks={
               visibleBlocks.length > 0
                 ? () => {
-                    // Keep the fixed marker blocks (they can't be removed).
+                    // Keep only the render-split marker (portal / contract /
+                    // run sheet / questionnaire body). Everything else clears,
+                    // including paymentSchedule, which is now an optional block
+                    // rather than a fixed marker.
                     setBlocksForCurrent(
-                      (state.blocks[docSurface] ?? []).filter(
-                        (b) =>
-                          b.type === 'couplePortal' ||
-                          b.type === 'paymentSchedule' ||
-                          b.type === 'contractBody' ||
-                          b.type === 'proposalBody',
-                      ),
+                      (state.blocks[docSurface] ?? []).filter((b) => isMarker(b.type)),
                     )
                     setSelectedBlockIds([])
                   }

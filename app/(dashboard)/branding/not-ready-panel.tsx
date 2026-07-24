@@ -23,20 +23,22 @@ export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
     return null
   }
 
+  // Compact always-visible pill so it never covers the document; the specific
+  // missing items reveal on hover just beneath it.
   return (
-    <div className="absolute top-4 right-4 z-20 max-w-[280px] rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 shadow-sm">
-      <div className="flex items-start gap-2">
-        <AlertTriangle size={15} strokeWidth={1.5} className="shrink-0 mt-0.5 text-amber-500" />
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-amber-900">Not ready to send</p>
-          <ul className="mt-1 space-y-0.5">
-            {readiness.issues.map((issue, idx) => (
-              <li key={idx} className="text-xs leading-snug text-amber-800">
-                {issue.message}
-              </li>
-            ))}
-          </ul>
-        </div>
+    <div className="group absolute top-3 right-3 z-20 flex flex-col items-end">
+      <div className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 shadow-sm cursor-help">
+        <AlertTriangle size={13} strokeWidth={1.5} className="shrink-0 text-amber-500" />
+        <span className="text-xs font-semibold text-amber-900">Not ready to send</span>
+      </div>
+      <div className="pointer-events-none mt-1.5 w-64 max-w-[80vw] rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100">
+        <ul className="space-y-0.5">
+          {readiness.issues.map((issue, idx) => (
+            <li key={idx} className="text-xs leading-snug text-amber-800">
+              {issue.message}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   )
