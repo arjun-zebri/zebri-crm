@@ -1890,15 +1890,17 @@ function BackgroundControl({
       onChange={(v) => updateBlock(block.id, { bgColor: v } as Partial<Block>)}
       swatches={COLOR_PALETTE}
       trigger={
-        <Tooltip label="Background">
-          <button
-            type="button"
-            className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
-            title="Background color"
-          >
-            <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: block.bgColor || '#FFFFFF' }} />
-          </button>
-        </Tooltip>
+        // Plain button as the direct trigger: Radix Popover.Trigger `asChild`
+        // forwards its open-onClick onto this child. Wrapping it in <Tooltip>
+        // (which does not forward props) swallowed the click, so the popover
+        // never opened. `title` still gives a native hover label.
+        <button
+          type="button"
+          className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+          title="Background color"
+        >
+          <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: block.bgColor || '#FFFFFF' }} />
+        </button>
       }
     />
   )
