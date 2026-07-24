@@ -99,11 +99,8 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
         )}
         {block.type !== 'action' && block.type !== 'spacer' && (
           <>
-            {block.type !== 'businessName' && block.type !== 'image' && (
+            {block.type !== 'businessName' && block.type !== 'image' && block.type !== 'tagline' && (
               <PaddingControl block={block} updateBlock={updateBlock} />
-            )}
-            {block.type !== 'text' && (
-              <WidthAlignControl block={block} updateBlock={updateBlock} />
             )}
             <SpacingControl block={block} updateBlock={updateBlock} />
             <Divider />
@@ -113,7 +110,6 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
         {block.type === 'spacer' && (
           <>
             <PaddingControl block={block} updateBlock={updateBlock} />
-            <WidthAlignControl block={block} updateBlock={updateBlock} />
             <SpacingControl block={block} updateBlock={updateBlock} />
             <Divider />
             <BorderControl block={block} updateBlock={updateBlock} />
@@ -1916,68 +1912,6 @@ function BackgroundControl({
         </button>
       }
     />
-  )
-}
-
-function WidthAlignControl({
-  block,
-  updateBlock,
-}: {
-  block: Block
-  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
-}) {
-  const align = block.align ?? 'left'
-  const active = align !== 'left'
-
-  return (
-    <Popover.Root>
-      <Tooltip label="Alignment">
-        <Popover.Trigger asChild>
-          <button
-            type="button"
-            className={`inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 ${
-              active
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200 hover:text-gray-900'
-            }`}
-          >
-            <AlignCenter size={12} strokeWidth={1.75} />
-          </button>
-        </Popover.Trigger>
-      </Tooltip>
-      <Popover.Portal>
-        <Popover.Content
-          align="center"
-          sideOffset={6}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[60] w-[240px] animate-modal-in"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Align</span>
-          </div>
-          <div className="inline-flex items-center bg-gray-50 rounded-md border border-gray-200 w-full justify-center gap-0">
-            {([
-              { value: 'left', Icon: AlignLeft, label: 'Align left' },
-              { value: 'center', Icon: AlignCenter, label: 'Align center' },
-              { value: 'right', Icon: AlignRight, label: 'Align right' },
-            ] as const).map(({ value, Icon, label }) => {
-              const isActive = align === value
-              return (
-                <Tooltip key={value} label={label}>
-                  <button
-                    type="button"
-                    onClick={() => updateBlock(block.id, { align: value } as Partial<Block>)}
-                    aria-label={label}
-                    className={`p-1.5 transition cursor-pointer flex-1 ${isActive ? 'bg-white text-gray-900 shadow-sm rounded-md m-0.5' : 'text-gray-500 hover:text-gray-900'}`}
-                  >
-                    <Icon size={12} strokeWidth={1.75} />
-                  </button>
-                </Tooltip>
-              )
-            })}
-          </div>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
   )
 }
 
