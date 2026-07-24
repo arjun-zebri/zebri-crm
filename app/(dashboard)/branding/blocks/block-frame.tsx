@@ -115,10 +115,10 @@ export function BlockFrame({
         borderStyle: (borderWidth || outerStyle.borderWidth) ? 'solid' : undefined,
         borderColor: (borderWidth || outerStyle.borderWidth) ? borderColor : undefined,
         borderRadius: blockRadius ?? (borderWidth ? state.cornerRadius : outerStyle.borderRadius),
-        minHeight: block.type !== 'headerBanner' && block.type !== 'image' && block.blockHeightPx ? block.blockHeightPx : undefined,
-        display: block.type !== 'headerBanner' && block.type !== 'image' && block.blockHeightPx ? 'flex' : undefined,
-        flexDirection: block.type !== 'headerBanner' && block.type !== 'image' && block.blockHeightPx ? 'column' : undefined,
-        justifyContent: block.type !== 'headerBanner' && block.type !== 'image' && block.blockHeightPx
+        minHeight: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx ? block.blockHeightPx : undefined,
+        display: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx ? 'flex' : undefined,
+        flexDirection: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx ? 'column' : undefined,
+        justifyContent: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx
           ? (block.blockVAlign === 'top' ? 'flex-start' : block.blockVAlign === 'bottom' ? 'flex-end' : 'center')
           : undefined,
       }}
@@ -173,11 +173,11 @@ export function BlockFrame({
 
       {children}
 
-      {/* Block resize handle — shown for all block types except headerBanner
-          and image, which each carry their own resize handle. Giving those two
-          a second (block-frame) handle also stamped a minHeight floor that
-          fought their own resize, so the container could not shrink. */}
-      {block.type !== 'headerBanner' && block.type !== 'image' && (
+      {/* Block resize handle — shown for all block types except headerBanner,
+          image, and spacer, which each carry their own resize handle. Giving
+          those a second (block-frame) handle also stamped a minHeight floor
+          that fought their own resize, so the container could not shrink. */}
+      {block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && (
         <BlockResizeHandle onMouseDown={startResize} active={resizing} />
       )}
 

@@ -374,17 +374,21 @@ function SpacerWithResize({ block, heightPx, updateBlock }: SpacerWithResizeProp
 
   return (
     <div className="group relative w-full" style={{ height: heightPx }}>
-      {/* One grip at the bottom edge: drag it to resize, and it shows the
-          height. Hover-only, so an idle spacer is just blank space. */}
+      {/* Height readout centred inside the spacer, hover-only. */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span className="text-[10px] text-gray-400 font-medium opacity-0 group-hover:opacity-100 transition">
+          {heightPx}px
+        </span>
+      </div>
+      {/* The single resize control: a grip on the bottom edge. */}
       <div
         onMouseDown={startResize}
         title="Drag to resize"
-        className={`absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 cursor-ns-resize transition ${
+        className={`absolute inset-x-0 bottom-0 h-3 flex items-end justify-center pb-0.5 cursor-ns-resize transition ${
           resizing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
         }`}
       >
-        <div className="h-1 w-10 rounded-full bg-gray-900/40 ring-1 ring-white/80 shadow-sm" />
-        <span className="text-[10px] text-gray-400 font-medium">{heightPx}px</span>
+        <div className="h-1 w-10 rounded-full bg-gray-900/50 ring-1 ring-white/80 shadow-sm" />
       </div>
     </div>
   )
