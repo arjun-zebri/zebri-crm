@@ -11,6 +11,10 @@ interface CanvasFrameProps {
   setZoom: (v: number) => void
   wide?: boolean
   children: React.ReactNode
+  /** Floating overlay pinned inside the canvas (e.g. the readiness badge). It
+   *  positions itself; render it as a sibling of the scroll area so it stays
+   *  put while the document scrolls, like the zoom widget. */
+  overlay?: React.ReactNode
 }
 
 const ZOOM_MIN = 0.5
@@ -21,7 +25,7 @@ function clampZoom(v: number): number {
   return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(v * 100) / 100))
 }
 
-export function CanvasFrame({ device, zoom, setZoom, wide, children }: CanvasFrameProps) {
+export function CanvasFrame({ device, zoom, setZoom, wide, children, overlay }: CanvasFrameProps) {
   // Portal uses a wider surface (it's a real-app dashboard preview); documents
   // stay narrower and identical across quote / invoice / contract.
   const desktopWidth = wide ? 920 : 720
@@ -197,6 +201,8 @@ export function CanvasFrame({ device, zoom, setZoom, wide, children }: CanvasFra
           </div>
         </div>
       </div>
+
+      {overlay}
 
       <ZoomWidget zoom={zoom} setZoom={(v) => setZoom(clampZoom(v))} />
     </div>

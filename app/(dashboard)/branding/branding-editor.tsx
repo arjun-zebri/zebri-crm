@@ -1085,7 +1085,13 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setFacebookUrl={(v) => setEditor({ facebookUrl: v }, false)}
         />
 
-        <CanvasFrame device={device} zoom={zoom} setZoom={setZoom} wide={surface === 'portal'}>
+        <CanvasFrame
+          device={device}
+          zoom={zoom}
+          setZoom={setZoom}
+          wide={surface === 'portal'}
+          overlay={<NotReadyPanel readiness={surfaceReadiness} />}
+        >
           <CanvasScopeBar
             surface={surface}
             onResetLayout={resetSurfaceToDefault}
@@ -1118,7 +1124,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               }
             />
           )}
-          <NotReadyPanel readiness={surfaceReadiness} />
           <BlockRenderer
             blocks={visibleBlocks}
             setBlocks={setBlocksForCurrent}
