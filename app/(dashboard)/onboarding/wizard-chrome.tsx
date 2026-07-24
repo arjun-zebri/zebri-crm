@@ -75,7 +75,6 @@ export function WizardChrome({ step, saving, onBack, onSkip, onNext, onFinish }:
           onClick={isLast ? onFinish : onNext}
           disabled={saving}
           loading={saving}
-          className="rounded-xl"
         >
           {isLast ? 'Finish' : 'Next'}
           {!isLast && <ChevronRight size={14} strokeWidth={1.5} />}

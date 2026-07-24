@@ -59,11 +59,17 @@ export function WelcomeWizard({ initial, email, onSaveProfile, onExit }: Welcome
   }
 
   const handleBack = () => goTo(Math.max(step - 1, 1) as WelcomeStep)
-  const handleSkip = () => goTo((step === 2 ? 3 : 4) as WelcomeStep)
+  // Skip is an exit, not a fast-forward: it closes the whole tour (and the
+  // dismiss path stamps the gate, so it does not reopen).
+  const handleSkip = () => onExit()
+
+  // Preview and bookend steps own their full height (the frame stretches to
+  // the footer); the two form steps stay scrollable for short viewports.
+  const fills = step === 1 || (step >= 4 && step <= 8)
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto px-1 py-2">
+      <div className={`flex-1 min-h-0 px-1 ${fills ? 'overflow-hidden' : 'overflow-y-auto py-1'}`}>
         {step === 1 && <StepWelcome />}
         {step === 2 && <StepDetails value={profile} email={email} onChange={setProfile} />}
         {step === 3 && <StepLinks value={profile} onChange={setProfile} />}
@@ -71,14 +77,16 @@ export function WelcomeWizard({ initial, email, onSaveProfile, onExit }: Welcome
           <StepPreview step={step as 4 | 5 | 6 | 7} active />
         )}
         {step === 8 && <StepFounder />}
-
-        {saveError && (
-          <p className="mt-4 text-sm text-text-muted">
-            We could not save your details just now ({saveError}). You can add
-            them any time in Settings.
-          </p>
-        )}
       </div>
+
+      {/* Pinned above the footer so the fill steps' overflow-hidden frame
+          can never clip it. */}
+      {saveError && (
+        <p className="px-1 pt-2 text-sm text-text-muted">
+          We could not save your details just now ({saveError}). You can add
+          them any time in Settings.
+        </p>
+      )}
 
       <div className="border-t border-border pt-4 mt-2">
         <WizardChrome

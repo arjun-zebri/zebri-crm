@@ -46,11 +46,11 @@ export function WelcomeModal({
   onDismiss,
 }: WelcomeModalProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onDismiss} size="xl">
-      {/* The cap subtracts the Modal's ~4rem close-button header from its
-          85vh panel limit. Without it, short viewports clip the top of the
-          wizard (the step title) instead of shrinking the frame. */}
-      <div className="h-[560px] sm:h-[680px] max-h-[calc(85vh-4rem)] flex flex-col">
+    <Modal isOpen={isOpen} onClose={onDismiss} size="2xl" floatingClose>
+      {/* floatingClose removes the header band, so the step title sits flush
+          at the top. The height caps to the viewport (less a little breathing
+          room) so short screens shrink the frame instead of clipping it. */}
+      <div className="h-[600px] sm:h-[720px] max-h-[82vh] flex flex-col">
         <WelcomeWizard
           initial={initial}
           email={email}

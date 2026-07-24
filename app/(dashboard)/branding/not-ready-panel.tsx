@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { AlertTriangle, ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { AlertTriangle, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 
-import type { SurfaceReadiness } from '@/lib/branding/readiness'
+import type { SurfaceReadiness } from '@/lib/branding/readiness';
 
 /**
  * A yellow warning badge pinned to the top-right of the canvas, naming what is
@@ -22,11 +22,11 @@ import type { SurfaceReadiness } from '@/lib/branding/readiness'
  */
 export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
   // Tap-to-toggle for touch devices, which have no hover.
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   // Render nothing when fully ready.
   if (readiness.ready && readiness.issues.length === 0) {
-    return null
+    return null;
   }
 
   // Compact always-visible pill so it never covers the document. The details
@@ -46,7 +46,7 @@ export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
         {/* Desktop has hover, so show the hint in the same style; touch has no
             hover, so show the chevron and let a tap toggle the details. */}
         <span className="hidden text-xs font-semibold text-amber-900 md:inline">
-          Hover to see details
+          Hover to see details.
         </span>
         <ChevronDown
           size={13}
@@ -70,5 +70,5 @@ export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
         </ul>
       </div>
     </div>
-  )
+  );
 }

@@ -1,132 +1,240 @@
 'use client'
 
-import { Mail } from 'lucide-react'
+import {
+  Check,
+  CheckSquare,
+  Clock,
+  FileText,
+  FlaskConical,
+  LayoutDashboard,
+  Mail,
+  Sparkles,
+  Users,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { PreviewFrame, type PreviewScriptProps } from './preview-frame'
-import { usePreviewScript } from './use-preview-script'
+import { Backdrop, EditorToolbar, PreviewModal } from './preview-modal'
+import { usePreviewScript, useSettledBeat } from './use-preview-script'
 
 /**
- * Beats: 0 idle, 1 sidebar click, 2 couple opened, 3 Emails tab,
- * 4 Send email pressed, 5 template picked, 6 send modal, 7 sent row.
+ * Beats: 0 the couple profile is already open (Overview), 1 Emails tab
+ * clicked, 2 Send email clicked — the template picker opens on the same
+ * beat, 3 pointer reaches Enquiry reply, 4 it is picked and the compose
+ * modal opens immediately, 5 pointer reaches Send, 6 Send pressed,
+ * 7 the button flips to a green Sent and the animation rests there —
+ * the composed email is the closing frame.
  */
 const BEATS = 8
+
+const CURSOR: ({ target: string; click?: boolean } | null)[] = [
+  null,
+  { target: 'pnav-emails', click: true },
+  { target: 'send-email', click: true },
+  { target: 'pick-template' },
+  { target: 'pick-template', click: true },
+  { target: 'send' },
+  { target: 'send', click: true },
+  null,
+]
+
+// The real profile's tab set (couple-profile.tsx navItems), trimmed to the
+// rows that fit the miniature. Emails is the one this preview clicks.
+const PROFILE_NAV: { key: string; label: string; Icon: LucideIcon }[] = [
+  { key: 'overview', label: 'Overview', Icon: LayoutDashboard },
+  { key: 'tasks', label: 'Tasks', Icon: CheckSquare },
+  { key: 'contacts', label: 'Contacts', Icon: Users },
+  { key: 'timeline', label: 'Timeline', Icon: Clock },
+  { key: 'automations', label: 'Automations', Icon: Sparkles },
+  { key: 'emails', label: 'Emails', Icon: Mail },
+]
 
 /**
  * Preview for step 6: sending the template to the couple.
  *
- * Reuses the names from previews 4 and 5 on purpose. Seeing "Ellie & Tom"
- * receive "Enquiry reply" is what makes the four previews one story rather
- * than four disconnected demos.
+ * Mirrors the real flow — the profile overlay's Emails tab, the template
+ * picker under the Send email button, then the "Email Ellie & Tom" compose
+ * modal with the subject and body resolved to plain text, addressed to
+ * Ellie by first name. The animation ends here, on the sent email.
  */
 export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
   const beat = usePreviewScript({ beats: BEATS, active, reducedMotion })
-  const show = (from: number) => beat >= from
+  const view = useSettledBeat(beat)
+  const show = (from: number) => view >= from
+  const c = CURSOR[beat]
+  const clicking = !!c?.click && view === beat
+  const emailsTab = show(1)
 
-  return (
-    <PreviewFrame activeNav="couples" navClicked={show(1)}>
-      <div className="relative h-full flex flex-col">
-        {show(2) && (
-          <div className="animate-fade-in pb-2 border-b border-border">
-            <div className="flex items-center gap-2 mb-1">
-              <p className="text-sm font-semibold text-text">Ellie &amp; Tom</p>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-medium">
-                New
-              </span>
+  const overlay = (
+    <>
+      <Backdrop>
+        {/* The couple profile overlay, scaled down: header, vertical tab
+            nav on the left, tab body on the right. */}
+        <div className="w-[96%] h-[94%] rounded-xl border border-border bg-card shadow-xl overflow-hidden flex flex-col animate-modal-in">
+          <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border">
+            <span className="text-sm font-semibold text-text">Ellie &amp; Tom</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 font-medium">New</span>
+            <X size={13} strokeWidth={1.5} className="ml-auto text-text-subtle" />
+          </div>
+          <div className="flex flex-1 min-h-0">
+            <nav className="w-24 sm:w-28 shrink-0 border-r border-border px-1.5 py-2 space-y-0.5">
+              {PROFILE_NAV.map(({ key, label, Icon }) => {
+                const on = key === (emailsTab ? 'emails' : 'overview')
+                return (
+                  <span
+                    key={key}
+                    data-cursor={key === 'emails' ? 'pnav-emails' : undefined}
+                    className={`flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[10px] transition-colors duration-300 ${
+                      on ? 'bg-surface-muted text-text font-medium' : 'text-text-subtle'
+                    }`}
+                  >
+                    <Icon size={12} strokeWidth={1.5} className="shrink-0" />
+                    <span className="hidden sm:inline truncate">{label}</span>
+                  </span>
+                )
+              })}
+            </nav>
+
+            <div className="flex-1 min-w-0 p-2.5 relative flex flex-col">
+              {!emailsTab ? (
+                <div className="space-y-2 pt-1" aria-hidden>
+                  <p className="text-xs font-semibold text-text">Overview</p>
+                  <div className="h-1.5 w-1/2 rounded bg-surface-muted" />
+                  <div className="h-1.5 w-2/3 rounded bg-surface-muted" />
+                  <div className="h-1.5 w-1/3 rounded bg-surface-muted" />
+                </div>
+              ) : (
+                <div className="animate-fade-in flex flex-col flex-1 min-h-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-xs font-semibold text-text">Emails</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] border border-border text-text">
+                        <FlaskConical size={10} strokeWidth={1.5} /> Test
+                      </span>
+                      <span
+                        data-cursor="send-email"
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] border border-brand-fg bg-brand-fg text-text-inverse"
+                      >
+                        <Mail size={10} strokeWidth={1.5} /> Send email
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 flex items-center justify-center">
+                    <p className="text-[10px] text-text-subtle text-center">
+                      No emails sent yet
+                      <br />
+                      <span className="text-[9px]">Send this couple a template above.</span>
+                    </p>
+                  </div>
+
+                  {/* Template picker — opens the moment Send email is
+                      clicked, anchored right under the button. */}
+                  {show(2) && !show(4) && (
+                    <div className="absolute right-1 top-8 z-10 w-44 rounded-xl border border-border bg-card shadow-lg py-1 animate-fade-in">
+                      <p className="px-2.5 py-1 text-[9px] text-text-subtle">Pick a template to send this couple</p>
+                      <p
+                        data-cursor="pick-template"
+                        className={`mx-1 px-1.5 py-1.5 rounded text-[11px] text-text transition-colors duration-300 ${
+                          show(3) ? 'bg-surface-muted font-medium' : ''
+                        }`}
+                      >
+                        Enquiry reply
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
+      </Backdrop>
 
-        {show(3) && (
-          <div className="flex gap-1 border-b border-border py-2 animate-fade-in">
-            <span
-              className={`text-xs px-2 py-1 rounded transition-colors ${
-                show(3) ? 'text-text-subtle' : ''
-              }`}
-            >
-              Overview
-            </span>
-            <span
-              className={`text-xs px-2 py-1 rounded transition-colors ${
-                show(3) ? 'bg-surface-muted text-text font-medium' : 'text-text-subtle'
-              }`}
-            >
-              Emails
-            </span>
-            <span className="text-xs px-2 py-1 rounded text-text-subtle">Tasks</span>
-          </div>
-        )}
-
-        {show(3) && !show(5) && (
-          <div className="flex justify-end pt-2 animate-fade-in">
-            <span
-              className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs transition-colors duration-300 cursor-pointer ${
-                show(4) ? 'bg-brand-fg text-text-inverse' : 'border border-border text-text-subtle'
-              }`}
-            >
-              <Mail size={12} strokeWidth={1.5} />
-              <span className="hidden sm:inline">Send email</span>
-            </span>
-          </div>
-        )}
-
-        {show(4) && !show(5) && (
-          <div className="absolute right-4 top-24 z-10 w-56 rounded-lg border border-border bg-card shadow-sm p-3 animate-fade-in">
-            <p className="text-[10px] text-text-subtle mb-2">Pick a template to send this couple</p>
-            <p className="text-xs text-text font-medium cursor-pointer hover:bg-surface-muted p-2 rounded">
-              Enquiry reply
-            </p>
-          </div>
-        )}
-
-        {show(5) && !show(7) && (
-          <div className="flex-1 flex flex-col gap-2 pt-2 animate-fade-in">
-            {!show(7) && (
-              <div className="text-[10px] text-text-subtle">No emails sent yet</div>
-            )}
-
-            <div className="rounded-lg border border-border bg-card p-3 space-y-2 mt-auto">
-              <p className="text-xs font-medium text-text">Email Ellie &amp; Tom</p>
-              <div>
-                <p className="text-[10px] text-text-subtle mb-1">Subject</p>
-                <input
-                  type="text"
-                  placeholder="Thanks for getting in touch"
-                  className="w-full px-2 py-1 text-xs rounded border border-border bg-surface text-text placeholder-text-subtle"
-                  readOnly
-                />
-              </div>
-              <div className="space-y-1 h-6 overflow-hidden">
-                <div className="h-1.5 w-full rounded bg-surface-muted" />
-                <div className="h-1.5 w-4/5 rounded bg-surface-muted" />
-              </div>
-              <div className="flex justify-between pt-1">
-                <span className="text-xs text-text-subtle cursor-pointer">Cancel</span>
+      {/* The compose modal — the closing frame of this preview. Subject and
+          body are resolved to plain text, addressed to Ellie by first name. */}
+      {show(4) && (
+        <Backdrop>
+          <PreviewModal
+            title="Email Ellie & Tom"
+            footer={
+              <>
+                <span className="text-xs px-3 py-1 rounded-md text-text-muted">Cancel</span>
+                {/* Black from the moment it appears — never greyed. The only
+                    change is the flip to a green Sent once the send lands. */}
                 <span
-                  className={`rounded-lg px-3 py-1 text-xs transition-colors duration-300 cursor-pointer ${
-                    show(6) ? 'bg-brand-fg text-text-inverse' : 'bg-surface-muted text-text-subtle'
+                  data-cursor="send"
+                  className={`inline-flex items-center justify-center gap-1 rounded-md px-3 py-1 text-xs border min-w-[92px] transition-colors duration-300 ${
+                    show(7)
+                      ? 'bg-success border-transparent text-text-inverse'
+                      : 'bg-brand-fg border-brand-fg text-text-inverse'
                   }`}
                 >
-                  Send email
+                  {show(7) ? (
+                    <>
+                      <Check size={11} strokeWidth={2} /> Sent
+                    </>
+                  ) : (
+                    <>
+                      <Mail size={11} strokeWidth={1.5} /> Send email
+                    </>
+                  )}
                 </span>
+              </>
+            }
+          >
+            <Boxed label="Subject">Thanks for reaching out, Ellie</Boxed>
+            <div>
+              <p className="text-[10px] text-text-subtle font-medium mb-1">Email</p>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <EditorToolbar />
+                <div className="px-2.5 py-2 space-y-1.5 text-[11px] text-text leading-relaxed">
+                  <p>Hi Ellie,</p>
+                  <p>
+                    Thank you so much for getting in touch about your wedding! I would love to hear more about your
+                    day and how I can help.
+                  </p>
+                  <p>Warm regards,</p>
+                  <p>Jordan · Jordan Weddings Co</p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+            <div className="flex items-center gap-1.5 text-[11px] text-text">
+              <span className="h-3 w-3 rounded-sm border border-border bg-brand-fg flex items-center justify-center">
+                <Check size={9} strokeWidth={2.5} className="text-text-inverse" />
+              </span>
+              <FileText size={12} strokeWidth={1.5} className="text-text-subtle" />
+              Wedding-packages.pdf
+            </div>
+          </PreviewModal>
+        </Backdrop>
+      )}
+    </>
+  )
 
-        {show(7) && (
-          <div className="flex-1 flex flex-col justify-center animate-fade-in">
-            <div className="rounded-xl border border-border bg-card p-3 space-y-1.5">
-              <p className="text-xs font-semibold text-text">Enquiry reply</p>
-              <p className="text-[10px] text-text-subtle">to ellie@example.com</p>
-              <div className="flex justify-end pt-1">
-                <span className="text-[10px] px-2 py-0.5 rounded bg-surface-muted text-text-muted font-medium">
-                  Sent
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+  return (
+    <PreviewFrame
+      activeNav="couples"
+      navClicked
+      cursorTarget={c?.target ?? null}
+      clicking={clicking}
+      cursorRevision={beat * 100 + view}
+      overlay={overlay}
+    >
+      {/* The dashboard behind the profile overlay — barely visible, like
+          the real app behind the real profile. */}
+      <div className="h-full" />
     </PreviewFrame>
+  )
+}
+
+/** A labelled, bordered value box mirroring the compose form's inputs. */
+function Boxed({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] text-text-subtle font-medium mb-1">{label}</p>
+      <div className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-[11px] text-text">{children}</div>
+    </div>
   )
 }

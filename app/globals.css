@@ -53,6 +53,13 @@
      the builder discount / tax pills so the state change feels
      deliberate rather than abrupt. */
   --animate-chip-expand: chip-expand 200ms ease-out;
+  /* Slow, calm fade for the welcome tour's photo tiles — no movement,
+     just presence. ease-in-out (not ease-out) is what keeps it subtle:
+     opacity builds gradually instead of jumping in the first frames.
+     `backwards` keeps each tile invisible until its per-tile
+     animation-delay elapses, which is what makes the staggered entrance
+     read. */
+  --animate-tile-in: tile-in 2000ms ease-in-out backwards;
 
   /* Colour utilities reference the runtime CSS vars above so the same
      class name resolves to the right value per theme automatically. */
@@ -122,6 +129,15 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes tile-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
