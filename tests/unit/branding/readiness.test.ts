@@ -43,7 +43,7 @@ describe('readiness', () => {
     expect(result.ready).toBe(true) // Layer A passes
     expect(result.issues).toHaveLength(1)
     expect(result.issues[0]!.kind).toBe('account')
-    expect(result.issues[0]!.message).toContain('Connect Stripe to accept card payments')
+    expect(result.issues[0]!.message).toContain('Stripe')
   })
 
   it('questionnaire with questionnaireBody lacking mode raises questionnaire-mode issue', () => {
@@ -83,6 +83,6 @@ describe('readiness', () => {
     expect(result.ready).toBe(true) // Layer A passes, Layer B account issues don't flip it
     expect(result.issues).toHaveLength(1)
     expect(result.issues[0]!.kind).toBe('account')
-    expect(result.issues[0]!.message).toContain('Add your bank details')
+    expect(result.issues[0]!.message).toContain('Bank details')
   })
 })

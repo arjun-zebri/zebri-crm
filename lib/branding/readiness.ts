@@ -83,15 +83,11 @@ export function evaluateSurface(
 
   if (missing.length > 0) {
     layerAReady = false
-    // Compose human-readable message using BLOCK_LABELS, joined with "and".
-    const labels = missing.map((type) => BLOCK_LABELS[type])
-    const joined = labels.length === 1
-      ? labels[0]
-      : labels.slice(0, -1).join(', ') + ' and ' + labels[labels.length - 1]
-    issues.push({
-      kind: 'missing-required',
-      message: `Add ${joined} to finish this ${surface}.`,
-    })
+    // One issue per missing block, labelled with its human name, so the panel
+    // can render them as a bulleted list of the blocks that are still needed.
+    for (const type of missing) {
+      issues.push({ kind: 'missing-required', message: BLOCK_LABELS[type] })
+    }
   }
 
   // Layer A: At-least-one constraint (invoice only)
@@ -102,7 +98,7 @@ export function evaluateSurface(
       layerAReady = false
       issues.push({
         kind: 'need-at-least-one',
-        message: `Add payment details or a payment action to this ${surface}.`,
+        message: 'Payment details or a payment action',
       })
     }
   }
@@ -114,7 +110,7 @@ export function evaluateSurface(
       layerAReady = false
       issues.push({
         kind: 'questionnaire-mode',
-        message: 'Choose a questionnaire presentation mode.',
+        message: 'A questionnaire mode',
       })
     }
   }
@@ -125,7 +121,7 @@ export function evaluateSurface(
   if (blockTypes.has('paymentDetails') && !account.bankDetailsFilled) {
     issues.push({
       kind: 'account',
-      message: 'Add your bank details in Settings.',
+      message: 'Bank details (add in Settings)',
     })
   }
 
@@ -133,7 +129,7 @@ export function evaluateSurface(
   if (surface === 'invoice' && blockTypes.has('action') && !account.stripeConnected) {
     issues.push({
       kind: 'account',
-      message: 'Connect Stripe to accept card payments.',
+      message: 'Stripe connection for card payments',
     })
   }
 
@@ -141,7 +137,7 @@ export function evaluateSurface(
   if (surface === 'contract' && !account.contractTemplateExists) {
     issues.push({
       kind: 'account',
-      message: 'Create your contract to send it.',
+      message: 'A contract template',
     })
   }
 

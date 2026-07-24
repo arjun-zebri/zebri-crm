@@ -46,7 +46,7 @@ export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
         {/* Desktop has hover, so show the hint in the same style; touch has no
             hover, so show the chevron and let a tap toggle the details. */}
         <span className="hidden text-xs font-semibold text-amber-900 md:inline">
-          Hover to see details.
+          Hover to see a list of missing blocks.
         </span>
         <ChevronDown
           size={13}
@@ -61,7 +61,7 @@ export function NotReadyPanel({ readiness }: { readiness: SurfaceReadiness }) {
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
       >
-        <ul className="space-y-0.5">
+        <ul className="list-disc space-y-0.5 pl-4 marker:text-amber-500">
           {readiness.issues.map((issue, idx) => (
             <li key={idx} className="text-xs leading-snug text-amber-800">
               {issue.message}
