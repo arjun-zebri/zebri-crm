@@ -24,7 +24,6 @@ import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import { RenderDivider as PublicRenderDivider } from '@/lib/branding/public-blocks/divider'
 import { RenderFooter as PublicRenderFooter } from '@/lib/branding/public-blocks/footer'
-import { RenderSpacer as PublicRenderSpacer } from '@/lib/branding/public-blocks/spacer'
 import { RenderTagline as PublicRenderTagline } from '@/lib/branding/public-blocks/tagline'
 import { RenderText as PublicRenderText } from '@/lib/branding/public-blocks/text'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
@@ -51,7 +50,6 @@ import {
   RenderTitle,
   RenderTotals,
   RenderVendorTimelineBody,
-  ResizeHandle,
 } from './render'
 import type { Block, SpacerBlock } from './types'
 
@@ -351,7 +349,7 @@ interface SpacerWithResizeProps {
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }
 
-function SpacerWithResize({ block, branding, heightPx, updateBlock }: SpacerWithResizeProps) {
+function SpacerWithResize({ block, heightPx, updateBlock }: SpacerWithResizeProps) {
   const [resizing, setResizing] = useState(false)
 
   const startResize = (e: React.MouseEvent) => {
@@ -375,19 +373,19 @@ function SpacerWithResize({ block, branding, heightPx, updateBlock }: SpacerWith
   }
 
   return (
-    <div className="group relative w-full flex items-center justify-center" style={{ height: heightPx }}>
-      <PublicRenderSpacer
-        block={block}
-        branding={branding}
-        chrome={
-          <>
-            {/* Idle spacer is just blank space; the size label and resize grip
-                only appear on hover so it reads as empty spacing, not a box. */}
-            <span className="text-[10px] text-gray-400 font-medium opacity-0 group-hover:opacity-100 transition">{heightPx}px</span>
-            <ResizeHandle onMouseDown={startResize} active={resizing} />
-          </>
-        }
-      />
+    <div className="group relative w-full" style={{ height: heightPx }}>
+      {/* One grip at the bottom edge: drag it to resize, and it shows the
+          height. Hover-only, so an idle spacer is just blank space. */}
+      <div
+        onMouseDown={startResize}
+        title="Drag to resize"
+        className={`absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 cursor-ns-resize transition ${
+          resizing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
+      >
+        <div className="h-1 w-10 rounded-full bg-gray-900/40 ring-1 ring-white/80 shadow-sm" />
+        <span className="text-[10px] text-gray-400 font-medium">{heightPx}px</span>
+      </div>
     </div>
   )
 }
