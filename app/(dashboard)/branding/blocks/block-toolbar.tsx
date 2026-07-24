@@ -1,7 +1,7 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw, Minus, AlignLeft, AlignCenter, AlignRight, Equal, Lock } from 'lucide-react'
+import { ChevronDown, Check, Copy, Trash2, Square, RotateCcw, Minus, AlignLeft, AlignCenter, AlignRight, Equal, Lock, Facebook, Instagram, Twitter, Pin, Globe } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
 import { ColorPopover } from '@/components/ui/color-popover'
@@ -1400,7 +1400,7 @@ function DividerControls({
 
 // ── Footer ────────────────────────────────────────────────────────────────────
 
-type FooterTarget = 'note' | 'contact' | 'social'
+type FooterTarget = 'note' | 'contact'
 
 function FooterControls({
   block,
@@ -1413,11 +1413,10 @@ function FooterControls({
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   expanded?: boolean
 }) {
+  // The switcher only chooses which text element to style (note vs contact
+  // line). Visibility toggles live inline and are always shown, so nothing is
+  // hidden behind a separate view.
   const [target, setTarget] = useState<FooterTarget>('note')
-
-  if (target === 'social') {
-    return <FooterSocialToggles block={block} updateBlock={updateBlock} />
-  }
 
   const isNote = target === 'note'
   const style = isNote ? block.noteStyle : block.contactStyle
@@ -1447,23 +1446,19 @@ function FooterControls({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <TargetSwitcher
-        target={target}
-        setTarget={setTarget}
+      <PillToggle
         options={[
           { value: 'note', label: 'Note' },
           { value: 'contact', label: 'Contact' },
-          { value: 'social', label: 'Social' },
         ]}
+        value={target}
+        onChange={setTarget}
       />
-      <Divider />
-      {target === 'contact' && (
-        <>
-          <FooterContactToggles block={block} updateBlock={updateBlock} />
-          <Divider />
-        </>
-      )}
       <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />} />
+      <Divider />
+      <FooterContactToggles block={block} updateBlock={updateBlock} />
+      <Divider />
+      <FooterSocialToggles block={block} updateBlock={updateBlock} />
     </div>
   )
 }
@@ -1507,6 +1502,12 @@ function FooterContactToggles({
   )
 }
 
+/**
+ * Compact icon toggles for the footer's social links. Each chip shows the
+ * network's icon; active (filled) means the icon renders on the document when a
+ * matching profile URL is set. Explicit per-network handlers avoid computed-key
+ * typing on the partial patch.
+ */
 function FooterSocialToggles({
   block,
   updateBlock,
@@ -1514,35 +1515,33 @@ function FooterSocialToggles({
   block: FooterBlock
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }) {
+  const networks = [
+    { label: 'Facebook', Icon: Facebook, active: block.showFacebook ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showFacebook: v }) },
+    { label: 'Instagram', Icon: Instagram, active: block.showInstagram ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showInstagram: v }) },
+    { label: 'Twitter', Icon: Twitter, active: block.showTwitter ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showTwitter: v }) },
+    { label: 'Pinterest', Icon: Pin, active: block.showPinterest ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showPinterest: v }) },
+    { label: 'Website', Icon: Globe, active: block.showWebsite ?? false, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showWebsite: v }) },
+  ]
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs font-semibold text-gray-600">Social icons:</span>
-      <Divider />
-      <Toggle
-        label="Facebook"
-        active={block.showFacebook ?? false}
-        onChange={(v) => updateBlock<FooterBlock>(block.id, { showFacebook: v })}
-      />
-      <Toggle
-        label="Instagram"
-        active={block.showInstagram ?? false}
-        onChange={(v) => updateBlock<FooterBlock>(block.id, { showInstagram: v })}
-      />
-      <Toggle
-        label="Twitter"
-        active={block.showTwitter ?? false}
-        onChange={(v) => updateBlock<FooterBlock>(block.id, { showTwitter: v })}
-      />
-      <Toggle
-        label="Pinterest"
-        active={block.showPinterest ?? false}
-        onChange={(v) => updateBlock<FooterBlock>(block.id, { showPinterest: v })}
-      />
-      <Toggle
-        label="Website"
-        active={block.showWebsite ?? false}
-        onChange={(v) => updateBlock<FooterBlock>(block.id, { showWebsite: v })}
-      />
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs font-semibold text-gray-600">Social:</span>
+      {networks.map(({ label, Icon, active, set }) => (
+        <Tooltip key={label} label={label}>
+          <button
+            type="button"
+            onClick={() => set(!active)}
+            aria-label={label}
+            aria-pressed={active}
+            className={`inline-flex items-center justify-center w-8 h-8 rounded-md border cursor-pointer transition ${
+              active
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-500 border-gray-200 hover:text-gray-900'
+            }`}
+          >
+            <Icon size={15} strokeWidth={1.5} />
+          </button>
+        </Tooltip>
+      ))}
     </div>
   )
 }
