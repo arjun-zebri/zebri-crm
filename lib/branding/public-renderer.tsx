@@ -1,23 +1,32 @@
 'use client'
 
 import { type ReactNode } from 'react'
+
+// eslint-disable-next-line no-restricted-imports -- Block is the canonical block-tree type, authored in the branding editor
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import type { PublicBranding } from './public-surface'
+
+import { blockOuterStyle, hasOuterStyle, HPAD_EXEMPT_TYPES } from './block-outer-style'
+import { RenderAction } from './public-blocks/action'
+import { RenderBusinessName } from './public-blocks/business-name'
+import { RenderDivider } from './public-blocks/divider'
+import { RenderFooter } from './public-blocks/footer'
+import { RenderHeaderBanner } from './public-blocks/header-banner'
+import { RenderImage } from './public-blocks/image'
+import { RenderLineItems } from './public-blocks/line-items'
+import { RenderPaymentDetails } from './public-blocks/payment-details'
+import { RenderPaymentSchedule } from './public-blocks/payment-schedule'
 import {
+  pad,
   type PublicDocData,
   type ActionSlotProps,
 } from './public-blocks/shared'
-import { RenderHeaderBanner } from './public-blocks/header-banner'
-import { RenderBusinessName } from './public-blocks/business-name'
+import { RenderSpacer } from './public-blocks/spacer'
 import { RenderTagline } from './public-blocks/tagline'
-import { RenderTitle } from './public-blocks/title'
-import { RenderLineItems } from './public-blocks/line-items'
-import { RenderTotals } from './public-blocks/totals'
-import { RenderPaymentDetails } from './public-blocks/payment-details'
 import { RenderText } from './public-blocks/text'
-import { RenderAction } from './public-blocks/action'
-import { RenderDivider } from './public-blocks/divider'
-import { RenderFooter } from './public-blocks/footer'
+import { RenderTitle } from './public-blocks/title'
+import { RenderTotals } from './public-blocks/totals'
+import { buildVariableValues } from './public-blocks/variable-values'
+import type { PublicBranding } from './public-surface'
 
 export type { PublicDocItem, PublicDocData } from './public-blocks/shared'
 
@@ -29,7 +38,10 @@ interface PublicRendererProps extends ActionSlotProps {
 
 export function PublicBlockRenderer(props: PublicRendererProps) {
   return (
-    <>
+    <div
+      style={{ ['--doc-link' as string]: props.branding.link_color }}
+      className="[&_a]:[color:var(--doc-link)]"
+    >
       {props.blocks
         .filter((b) => !b.hidden)
         .map((b) => (
@@ -37,11 +49,17 @@ export function PublicBlockRenderer(props: PublicRendererProps) {
             <BlockBody block={b} {...props} />
           </BlockOuter>
         ))}
-    </>
+    </div>
   )
 }
 
-function BlockOuter({
+/**
+ * Wrap a block in its per-block outer styles (padding, background, border,
+ * radius, alignment, spacing). Exported so surfaces that render blocks outside
+ * {@link PublicBlockRenderer} (the proposal renderer, which substitutes its own
+ * package blocks) apply the exact same outer treatment and can't drift.
+ */
+export function BlockOuter({
   block,
   branding,
   children,
@@ -50,21 +68,25 @@ function BlockOuter({
   branding: PublicBranding
   children: ReactNode
 }) {
-  const width = block.borderWidth ?? 0
-  if (width === 0 && block.blockRadius === undefined) return <>{children}</>
-  const color = block.borderColor || '#E5E7EB'
-  const radius = block.blockRadius ?? branding.corner_radius
+  // Horizontal document padding lives here, in one place, not in each block.
+  // Every block is inset by the shared docX except the full-bleed types, which
+  // render edge-to-edge. Vertical rhythm (blockY) stays inside each block.
+  const inner = HPAD_EXEMPT_TYPES.has(block.type) ? (
+    children
+  ) : (
+    <div className={pad(branding).docX}>{children}</div>
+  )
+
+  // Fast path: if no outer style is set, skip the style wrapper.
+  if (!hasOuterStyle(block)) return <>{inner}</>
+
+  const style = blockOuterStyle(block, { cornerRadius: branding.corner_radius })
   return (
     <div
-      style={{
-        borderWidth: width || undefined,
-        borderColor: width ? color : undefined,
-        borderStyle: width ? 'solid' : undefined,
-        borderRadius: radius,
-        overflow: 'hidden',
-      }}
+      style={style}
+      className={style.borderRadius !== undefined || block.borderWidth ? 'overflow-hidden' : ''}
     >
-      {children}
+      {inner}
     </div>
   )
 }
@@ -78,8 +100,8 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'title':        return <RenderTitle block={block} branding={branding} doc={doc} />
     case 'lineItems':    return <RenderLineItems block={block} branding={branding} doc={doc} />
     case 'totals':       return <RenderTotals block={block} branding={branding} doc={doc} />
-    case 'paymentDetails': return <RenderPaymentDetails block={block} branding={branding} />
-    case 'text':         return <RenderText block={block} branding={branding} />
+    case 'paymentDetails': return <RenderPaymentDetails block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
+    case 'text':         return <RenderText block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
     case 'action':       return (
       <RenderAction
         block={block}
@@ -94,10 +116,15 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
       />
     )
     case 'divider':      return <RenderDivider block={block} branding={branding} />
-    case 'footer':       return <RenderFooter block={block} branding={branding} />
+    case 'footer':       return <RenderFooter block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
+    case 'spacer':       return <RenderSpacer block={block} branding={branding} />
     case 'couplePortal': return null
-    case 'paymentSchedule': return null
+    case 'paymentSchedule': return <RenderPaymentSchedule block={block} branding={branding} doc={doc} />
     case 'contractBody': return null
+    case 'proposalBody': return null
+    case 'vendorTimelineBody': return null
+    case 'questionnaireBody': return null
+    case 'image': return <RenderImage block={block} branding={branding} />
   }
 }
 

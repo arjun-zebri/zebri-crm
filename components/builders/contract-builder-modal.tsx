@@ -6,7 +6,7 @@
  * parts (`contract-body-editor`, `contract-quote-link`,
  * `contract-signature-display`, `contract-preview-pane`).
  *
- * Mirrors the post-2C.2 quote/invoice modal shape:
+ * Mirrors the post-2C.2 proposal/invoice modal shape:
  * - `BuilderModalShell` provides the modal frame, hero title input,
  *   state pill, overflow menu, trash icon.
  * - Right-pane preview shows the rendered contract HTML (live JSON
@@ -50,9 +50,9 @@ import {
 import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-pane';
 import { ContractBodyEditor } from '@/components/builders/parts/contract-body-editor';
 import {
-  ContractQuoteLink,
-  type ContractQuoteLinkOption,
-} from '@/components/builders/parts/contract-quote-link';
+  ContractProposalLink,
+  type ContractProposalLinkOption,
+} from '@/components/builders/parts/contract-proposal-link';
 import { ContractSignatureDisplay } from '@/components/builders/parts/contract-signature-display';
 import type { JSONContent } from '@/components/builders/parts/contract-types';
 import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
@@ -60,11 +60,12 @@ import { ShareAndSend } from '@/components/builders/parts/share-and-send';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
+import { buildPublicBranding, type UserMetadata } from '@/lib/branding/public-branding';
 import {
   buildContractVariables,
   renderContractHtml,
 } from '@/lib/contracts/contract-variables';
-import { generateAndPrintPdf } from '@/lib/pdf/generate-pdf';
+import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
 
 interface Contract {
@@ -76,7 +77,8 @@ interface Contract {
   expires_at: string | null;
   share_token: string;
   share_token_enabled: boolean;
-  quote_id: string | null;
+  /** Linked accepted proposal — drives {{total_amount}} / {{deposit_amount}}. */
+  proposal_id?: string | null;
   couple_id: string;
   signed_at: string | null;
   signer_name: string | null;
@@ -101,9 +103,8 @@ interface FirstEventRow {
   venue: string | null;
 }
 
-interface LinkedQuoteRow {
+interface LinkedProposalRow {
   subtotal: number;
-  tax_rate: number | null;
   discount_type: 'percentage' | 'fixed' | null;
   discount_value: number | null;
 }
@@ -165,7 +166,7 @@ export function ContractBuilderModal({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState<JSONContent>(DEFAULT_TEMPLATE);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [quoteId, setQuoteId] = useState<string | null>(null);
+  const [linkedProposalId, setLinkedProposalId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
@@ -186,18 +187,27 @@ export function ContractBuilderModal({
     },
   });
 
-  const { data: quotes } = useQuery({
-    queryKey: ['couple-accepted-quotes', coupleId],
+  // Linkable money sources for {{total_amount}} / {{deposit_amount}}:
+  // the couple's ACCEPTED proposals.
+  const { data: proposals } = useQuery({
+    queryKey: ['couple-accepted-proposals', coupleId],
     enabled: isOpen && !!coupleId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('quotes')
-        .select('id, quote_number, title, status, subtotal')
+        .from('proposals')
+        .select('id, proposal_number, title, status, subtotal')
         .eq('couple_id', coupleId)
-        .in('status', ['accepted', 'sent'])
-        .order('created_at', { ascending: false });
+        .eq('status', 'accepted')
+        .order('accepted_at', { ascending: false });
       if (error) throw error;
-      return (data as ContractQuoteLinkOption[]) || [];
+      const options: ContractProposalLinkOption[] = (data ?? []).map((p) => ({
+        id: p.id,
+        proposal_number: p.proposal_number,
+        title: p.title,
+        status: p.status,
+        subtotal: Number(p.subtotal),
+      }));
+      return options;
     },
   });
 
@@ -231,19 +241,29 @@ export function ContractBuilderModal({
     },
   });
 
-  // Optional: the linked quote — used to substitute the
-  // `{{total_amount}}` / `{{deposit_amount}}` mentions.
-  const { data: linkedQuote } = useQuery({
-    queryKey: ['contract-linked-quote', quoteId],
-    enabled: isOpen && !!quoteId,
+  // Optional: the linked ACCEPTED proposal — its recorded subtotal +
+  // the accepted option's deposit rule feed the same variables.
+  const { data: linkedProposal } = useQuery({
+    queryKey: ['contract-linked-proposal', linkedProposalId],
+    enabled: isOpen && !!linkedProposalId,
     queryFn: async () => {
-      if (!quoteId) return null;
+      if (!linkedProposalId) return null;
       const { data } = await supabase
-        .from('quotes')
-        .select('subtotal, tax_rate, discount_type, discount_value')
-        .eq('id', quoteId)
+        .from('proposals')
+        .select(
+          'subtotal, proposal_options!proposals_accepted_option_id_fkey(deposit_percent)',
+        )
+        .eq('id', linkedProposalId)
         .maybeSingle();
-      return (data as LinkedQuoteRow | null) ?? null;
+      if (!data) return null;
+      const option = Array.isArray(data.proposal_options)
+        ? data.proposal_options[0]
+        : data.proposal_options;
+      return {
+        total: Number(data.subtotal),
+        depositPercent:
+          option?.deposit_percent != null ? Number(option.deposit_percent) : null,
+      };
     },
   });
 
@@ -257,7 +277,7 @@ export function ContractBuilderModal({
         : DEFAULT_TEMPLATE,
     );
     setExpiresAt(contract.expires_at);
-    setQuoteId(contract.quote_id);
+    setLinkedProposalId(contract.proposal_id ?? null);
     setDirty(false);
   }, [contract?.id]);
 
@@ -295,12 +315,12 @@ export function ContractBuilderModal({
     const vars = buildContractVariables({
       couple: { name: coupleName, email: null },
       firstEvent: firstEvent ?? null,
-      quote: linkedQuote ?? null,
+      proposal: linkedProposal ?? null,
       userMeta,
       depositPercent,
     });
     return renderContractHtml(content, vars);
-  }, [canEdit, contract?.locked_content_html, content, coupleName, firstEvent, linkedQuote, userMeta]);
+  }, [canEdit, contract?.locked_content_html, content, coupleName, firstEvent, linkedProposal, userMeta]);
 
   /* ─── mutations ─────────────────────────────────────────────── */
   const save = useMutation({
@@ -310,7 +330,7 @@ export function ContractBuilderModal({
         title: title || `Contract for ${coupleName}`,
         content,
         expiresAt: expiresAt,
-        quoteId,
+        proposalId: linkedProposalId,
       };
       const result = await saveContractAction(input);
       if (!result.ok) throw new Error(result.error);
@@ -395,23 +415,32 @@ export function ContractBuilderModal({
   /* ─── PDF download ──────────────────────────────────────────── */
   const downloadPdf = () => {
     if (!contract) return;
-    generateAndPrintPdf({
-      type: 'contract',
-      documentNumber: contract.contract_number,
-      title: contract.title,
-      status: contract.status,
-      coupleName,
-      businessName: (userMeta.business_name as string | undefined) ?? '',
-      items: [],
-      subtotal: 0,
-      total: 0,
-      contractHtml: previewHtml,
-      signerName: contract.signer_name,
-      signedAt: contract.signed_at,
-      signerIp: contract.signer_ip,
-      signerUserAgent: contract.signer_user_agent,
-      mcSignatureName: contract.mc_signature_name,
-    });
+    // Convert user metadata to PublicBranding, then to PDF options.
+    // This ensures the PDF uses the same branded styling as the web preview.
+    const branding = buildPublicBranding(userMeta as UserMetadata);
+    const pdfBranding = publicBrandingToPdfOpts(branding);
+
+    generateAndPrintPdf(
+      {
+        type: 'contract',
+        documentNumber: contract.contract_number,
+        title: contract.title,
+        status: contract.status,
+        coupleName,
+        businessName: (userMeta.business_name as string | undefined) ?? '',
+        items: [],
+        subtotal: 0,
+        total: 0,
+        contractHtml: previewHtml,
+        signerName: contract.signer_name,
+        signedAt: contract.signed_at,
+        signerIp: contract.signer_ip,
+        signerUserAgent: contract.signer_user_agent,
+        mcSignatureName: contract.mc_signature_name,
+      },
+      pdfBranding,
+      branding,
+    );
   };
 
   /* ─── chrome wiring ─────────────────────────────────────────── */
@@ -524,15 +553,15 @@ export function ContractBuilderModal({
           canEdit={canEdit}
         />
 
-        {/* Linked-quote picker — separate row since it needs more
+        {/* Linked-proposal picker — separate row since it needs more
             width than the meta-row's date / terms slots. */}
         <div className="mt-3">
-          <ContractQuoteLink
-            selectedQuoteId={quoteId}
-            options={quotes ?? []}
+          <ContractProposalLink
+            selectedProposalId={linkedProposalId}
+            options={proposals ?? []}
             canEdit={canEdit}
             onSelect={(id) => {
-              setQuoteId(id);
+              setLinkedProposalId(id);
               setDirty(true);
             }}
           />

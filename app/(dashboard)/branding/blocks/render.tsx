@@ -1,57 +1,88 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
 import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { PackageDetails } from '@/components/proposal/package-details'
+import { PackageHeader } from '@/components/proposal/package-header'
+import { PackageInclusions } from '@/components/proposal/package-inclusions'
+import { PackageLineItems } from '@/components/proposal/package-line-items'
+import { PackageTotals } from '@/components/proposal/package-totals'
+import {
+  ProposalBlockProvider,
+  type ProposalBlockContextValue,
+} from '@/components/proposal/proposal-block-context'
+import { PROPOSAL_SAMPLE_MULTI } from '@/components/proposal/proposal-sample-data'
 import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import type { BrandPreviewState } from '@/types/branding-preview'
+import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
+import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
+import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
+import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
+import { RenderImage as PublicRenderImage, type ImageInteraction } from '@/lib/branding/public-blocks/image'
+import { RenderLineItems as PublicRenderLineItems } from '@/lib/branding/public-blocks/line-items'
+import { RenderPaymentDetails as PublicRenderPaymentDetails, type PaymentDetailsSlots } from '@/lib/branding/public-blocks/payment-details'
+import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
+import { RenderTitle as PublicRenderTitle, type TitleSlots } from '@/lib/branding/public-blocks/title'
+import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks/totals'
+import { VarChip } from '@/lib/branding/public-blocks/var-chip'
+import { htmlToPlainText } from '@/lib/branding/sanitize'
+import { roleDefaults } from '@/lib/branding/type-defaults'
+import { defaultSelection } from '@/lib/payments/proposal-view'
+import type { ProposalViewBranding } from '@/lib/payments/proposal-view'
 import { DENSITY_PADDING } from '@/types/branding-preview'
-import { resolveTextStyle, type TextStyleDefaults } from './text-style'
-import { InlineText } from './inline-text'
+import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
+
+
+import { publicBrandingFromEditorState } from '../editor-branding'
+
 import { InlineAsset } from './inline-asset'
+import { InlineText } from './inline-text'
+import { RichText } from './rich-text/rich-text'
+import { SAMPLE_DOC_BY_SURFACE } from './sample-doc'
+import { resolveTextStyle } from './text-style'
 import type {
   Block,
   HeaderBannerBlock,
   BusinessNameBlock,
-  TaglineBlock,
   TitleBlock,
   LineItemsBlock,
   TotalsBlock,
   PaymentDetailsBlock,
-  TextBlock,
   ActionBlock,
-  DividerBlock,
-  FooterBlock,
-  CouplePortalBlock,
+  ImageBlock,
+  PackageHeaderBlock,
+  PackageDetailsBlock,
+  PackageLineItemsBlock,
+  PackageInclusionsBlock,
+  PackageTotalsBlock,
+  QuestionnaireBodyBlock,
   PaymentScheduleBlock,
 } from './types'
-
-function fmt(n: number) {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
-}
-
-const PLACEHOLDER_ITEMS = [
-  { description: 'Full Day MC Services', amount: 2500 },
-  { description: 'Pre-Wedding Consultation', amount: 200 },
-  { description: 'Travel & Setup', amount: 180 },
-]
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
 
 interface RenderProps<B extends Block> {
   block: B
   state: BrandPreviewState
+  surface?: SurfaceTab
   updateBlock: <X extends Block>(id: string, patch: Partial<X>) => void
 }
 
 // ── Header banner ─────────────────────────────────────────────────────────────
 
-const HEADER_HEIGHTS: Record<NonNullable<HeaderBannerBlock['height']>, number> = {
-  sm: 80,
-  md: 128,
-  lg: 192,
-}
-
+/**
+ * Editor wrapper for headerBanner block. Manages pan/zoom/resize state and renders
+ * the image through the public RenderHeaderBanner component with editor-only chrome
+ * (upload overlay via InlineAsset, drag-resize handle, zoom percentage display).
+ * The image element itself is owned by the public component; this wrapper injects
+ * interactivity and handles the upload flow.
+ *
+ * Exception: headerBanner retains its own editor implementation instead of rendering
+ * through a pure public component slot because the combination of overlay color +
+ * height customization + pan/zoom requires too many interaction props to cleanly
+ * abstract. This is a bounded exception documented here and in the public component.
+ */
 export function RenderHeaderBanner({
   block,
   state,
@@ -62,17 +93,17 @@ export function RenderHeaderBanner({
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
 }) {
+  const branding = publicBrandingFromEditorState(state)
   const { headerImageUrl } = state
-  const heightPx = block.heightPx ?? HEADER_HEIGHTS[block.height ?? 'md']
-  const fit = block.fit ?? 'cover'
-  const imageX = block.imageX ?? 50
-  const imageY = block.imageY ?? 50
+  const heightPx = block.heightPx ?? 128
   const imageScale = block.imageScale ?? 1
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [panning, setPanning] = useState(false)
   const [resizing, setResizing] = useState(false)
 
+  // Pan/zoom control via mouse wheel (ctrl+scroll to zoom); attached via addEventListener
+  // for passive: false support, which React.onWheel cannot provide.
   useEffect(() => {
     const el = containerRef.current
     if (!el || !headerImageUrl) return
@@ -96,8 +127,8 @@ export function RenderHeaderBanner({
     if (!rect) return
     const startX = e.clientX
     const startY = e.clientY
-    const startImageX = imageX
-    const startImageY = imageY
+    const imageX = block.imageX ?? 50
+    const imageY = block.imageY ?? 50
     let dragged = false
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX
@@ -107,8 +138,8 @@ export function RenderHeaderBanner({
       setPanning(true)
       // Drag-the-image semantics: moving right reveals more of the LEFT side,
       // so object-position X decreases as the cursor moves right.
-      const nextX = Math.max(0, Math.min(100, startImageX - (dx / rect.width) * 100))
-      const nextY = Math.max(0, Math.min(100, startImageY - (dy / rect.height) * 100))
+      const nextX = Math.max(0, Math.min(100, imageX - (dx / rect.width) * 100))
+      const nextY = Math.max(0, Math.min(100, imageY - (dy / rect.height) * 100))
       updateBlock<HeaderBannerBlock>(block.id, {
         imageX: Math.round(nextX),
         imageY: Math.round(nextY),
@@ -131,7 +162,7 @@ export function RenderHeaderBanner({
     setResizing(true)
     const onMove = (ev: MouseEvent) => {
       const dy = ev.clientY - startY
-      const next = Math.max(60, Math.min(480, startHeight + dy))
+      const next = Math.max(24, Math.min(480, startHeight + dy))
       updateBlock<HeaderBannerBlock>(block.id, { heightPx: Math.round(next) })
     }
     const onUp = () => {
@@ -143,6 +174,7 @@ export function RenderHeaderBanner({
     window.addEventListener('mouseup', onUp)
   }
 
+  // Empty state: no image uploaded yet
   if (!headerImageUrl) {
     return (
       <div
@@ -159,7 +191,7 @@ export function RenderHeaderBanner({
             className="w-full h-full"
             emptyState={
               <div
-                className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+                className="w-full h-full border-2 border-dashed border-gray-200 bg-gray-50/40 flex items-center justify-center"
                 style={{ borderRadius: state.cornerRadius }}
               >
                 <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
@@ -181,61 +213,55 @@ export function RenderHeaderBanner({
     )
   }
 
-  const imageNode = (
-    <div
-      className="w-full h-full overflow-hidden"
-      style={{
-        borderTopLeftRadius: state.cornerRadius,
-        borderTopRightRadius: state.cornerRadius,
-      }}
-    >
-      <img
-        src={headerImageUrl}
-        alt=""
-        draggable={false}
-        onMouseDown={startPan}
-        className={`block w-full h-full select-none ${panning ? 'cursor-grabbing' : 'cursor-grab'}`}
-        style={{
-          objectFit: fit,
-          objectPosition: `${imageX}% ${imageY}%`,
-          transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
-          transformOrigin: `${imageX}% ${imageY}%`,
-        }}
-      />
-    </div>
-  )
-
-  return (
-    <div
-      ref={containerRef}
-      className="group relative w-full"
-      style={{ height: heightPx }}
-    >
-      {uploadHeader ? (
-        <InlineAsset
-          value={headerImageUrl}
-          onUpload={uploadHeader}
-          onClear={removeHeader}
-          label="Replace header banner"
-          className="w-full h-full"
-          emptyState={null}
-        >
-          {imageNode}
-        </InlineAsset>
-      ) : (
-        imageNode
-      )}
+  // Image populated: render through public component with editor chrome
+  const chrome = (
+    <>
       {imageScale > 1 && (
         <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
           {Math.round(imageScale * 100)}%
         </div>
       )}
       <ResizeHandle onMouseDown={startResize} active={resizing} />
+    </>
+  )
+
+  const imageInteraction: HeaderBannerInteraction = {
+    ref: containerRef,
+    onMouseDown: startPan,
+    panning,
+  }
+
+  return (
+    <div className="group">
+      {uploadHeader ? (
+        <InlineAsset
+          value={headerImageUrl}
+          onUpload={uploadHeader}
+          {...(removeHeader !== undefined ? { onClear: removeHeader } : {})}
+          label="Replace header banner"
+          className="w-full h-full"
+          emptyState={null}
+        >
+          <PublicRenderHeaderBanner
+            block={block}
+            branding={branding}
+            chrome={chrome}
+            imageInteraction={imageInteraction}
+          />
+        </InlineAsset>
+      ) : (
+        <PublicRenderHeaderBanner
+          block={block}
+          branding={branding}
+          chrome={chrome}
+          imageInteraction={imageInteraction}
+        />
+      )}
     </div>
   )
 }
 
-function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.MouseEvent) => void; active: boolean }) {
+export function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.MouseEvent) => void; active: boolean }) {
   return (
     <div
       onMouseDown={onMouseDown}
@@ -249,47 +275,76 @@ function ResizeHandle({ onMouseDown, active }: { onMouseDown: (e: React.MouseEve
   )
 }
 
-// ── Business name ─────────────────────────────────────────────────────────────
+// ── Image ─────────────────────────────────────────────────────────────────────
 
-export function RenderBusinessName({
+/**
+ * Editor wrapper for image block. Manages pan/zoom/resize state and renders
+ * the image through the public RenderImage component with editor-only chrome
+ * (upload overlay via InlineAsset, drag-resize handle, zoom percentage display).
+ * The image element itself is owned by the public component; this wrapper injects
+ * interactivity and handles the upload flow.
+ */
+export function RenderImage({
   block,
   state,
   updateBlock,
-  setBusinessName,
-  uploadLogo,
-  removeLogo,
-}: RenderProps<BusinessNameBlock> & {
-  setBusinessName?: (v: string) => void
-  uploadLogo?: (file: File) => Promise<void>
-  removeLogo?: () => void | Promise<void>
+  uploadImage,
+  removeImage,
+}: RenderProps<ImageBlock> & {
+  uploadImage?: (file: File, blockId: string) => Promise<void>
+  removeImage?: (blockId: string) => void | Promise<void>
 }) {
-  const { logoUrl, businessName } = state
-  const pad = PAD(state)
-  const layout = block.layout ?? 'row'
-  const logoHeight = block.logoHeightPx ?? 48
-  const align = block.nameStyle?.align ?? 'left'
+  const branding = publicBrandingFromEditorState(state)
+  const heightPx = block.heightPx ?? 160
+  const imageScale = block.imageScale ?? 1
 
-  const nameDefaults: TextStyleDefaults = {
-    fontFamily: state.fontHeading,
-    fontSize: 16,
-    fontWeight: 600,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.3,
-    letterSpacing: 0,
-  }
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [panning, setPanning] = useState(false)
+  const [resizing, setResizing] = useState(false)
 
-  const startResizeLogo = (e: React.MouseEvent) => {
+  // Pan/zoom control via mouse wheel (ctrl+scroll to zoom); attached via addEventListener
+  // for passive: false support, which React.onWheel cannot provide.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || !block.url) return
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      e.preventDefault()
+      e.stopPropagation()
+      const delta = -e.deltaY * 0.003
+      const next = Math.max(1, Math.min(4, imageScale + delta))
+      updateBlock<ImageBlock>(block.id, { imageScale: parseFloat(next.toFixed(2)) })
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [block.url, imageScale, block.id, updateBlock])
+
+  const startPan = (e: React.MouseEvent) => {
+    if (!block.url) return
     e.preventDefault()
     e.stopPropagation()
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const startX = e.clientX
     const startY = e.clientY
-    const startHeight = logoHeight
+    const imageX = block.imageX ?? 50
+    const imageY = block.imageY ?? 50
+    let dragged = false
     const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX
       const dy = ev.clientY - startY
-      const next = Math.max(24, Math.min(160, startHeight + dy))
-      updateBlock<BusinessNameBlock>(block.id, { logoHeightPx: Math.round(next) })
+      if (!dragged && Math.abs(dx) + Math.abs(dy) < 3) return
+      dragged = true
+      setPanning(true)
+      const nextX = Math.max(0, Math.min(100, imageX - (dx / rect.width) * 100))
+      const nextY = Math.max(0, Math.min(100, imageY - (dy / rect.height) * 100))
+      updateBlock<ImageBlock>(block.id, {
+        imageX: Math.round(nextX),
+        imageY: Math.round(nextY),
+      })
     }
     const onUp = () => {
+      setPanning(false)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
@@ -297,396 +352,381 @@ export function RenderBusinessName({
     window.addEventListener('mouseup', onUp)
   }
 
-  const resizeGrip = (
-    <div
-      onMouseDown={startResizeLogo}
-      title="Drag to resize"
-      className="absolute -right-1 -bottom-1 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-ns-resize opacity-0 group-hover/logo:opacity-100 transition z-20"
-    />
-  )
-
-  const logoImage = (
-    <img
-      src={logoUrl}
-      alt={businessName || 'Logo'}
-      draggable={false}
-      className="block h-full w-auto object-contain select-none"
-    />
-  )
-
-  const logoPlaceholder = (
-    <div
-      className="flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
-      style={{
-        width: logoHeight,
-        height: logoHeight,
-        borderRadius: Math.min(state.cornerRadius, 12),
-      }}
-    >
-      <ImageIcon size={Math.max(12, Math.round(logoHeight * 0.3))} strokeWidth={1.5} className="text-gray-300" />
-    </div>
-  )
-
-  const logoNode = (
-    <div className="group/logo relative shrink-0" style={{ height: logoHeight }}>
-      {uploadLogo ? (
-        <InlineAsset
-          value={logoUrl || null}
-          onUpload={uploadLogo}
-          onClear={logoUrl ? removeLogo : undefined}
-          label={logoUrl ? 'Replace logo' : 'Upload logo'}
-          overlayPosition="center"
-          className="h-full"
-          style={logoUrl ? undefined : { width: logoHeight }}
-          emptyState={logoPlaceholder}
-        >
-          {logoImage}
-        </InlineAsset>
-      ) : (
-        logoUrl ? logoImage : logoPlaceholder
-      )}
-      {resizeGrip}
-    </div>
-  )
-
-  const nameNode = (
-    <p style={resolveTextStyle(block.nameStyle, nameDefaults)}>
-      {setBusinessName ? (
-        <InlineText
-          value={businessName ?? ''}
-          onChange={setBusinessName}
-          placeholder="Your business name"
-          as="span"
-        />
-      ) : (
-        <span className="truncate">{businessName || 'Your business name'}</span>
-      )}
-    </p>
-  )
-
-  const justify =
-    align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'
-  const items =
-    align === 'center' ? 'items-center' : align === 'right' ? 'items-end' : 'items-start'
-
-  if (layout === 'logo') {
-    return <div className={`${pad.docX} ${pad.blockY} flex ${justify}`}>{logoNode}</div>
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = heightPx
+    setResizing(true)
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(24, Math.min(480, startHeight + dy))
+      updateBlock<ImageBlock>(block.id, { heightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      setResizing(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
   }
-  if (layout === 'name') {
-    return <div className={`${pad.docX} ${pad.blockY} flex ${justify}`}>{nameNode}</div>
-  }
-  if (layout === 'stacked') {
+
+  // Empty state: no image uploaded yet
+  if (!block.url) {
     return (
-      <div className={`${pad.docX} ${pad.blockY} flex flex-col gap-2 ${items}`}>
-        {logoNode}
-        {nameNode}
+      <div
+        ref={containerRef}
+        className="group relative w-full"
+        style={{ height: heightPx, borderRadius: state.cornerRadius }}
+      >
+        {uploadImage ? (
+          <InlineAsset
+            value={null}
+            onUpload={(file) => uploadImage(file, block.id)}
+            label="Upload image"
+            overlayPosition="center"
+            selectableWhenEmpty
+            className="w-full h-full"
+            emptyState={
+              <div
+                className="w-full h-full border-2 border-dashed border-gray-200 bg-gray-50/40"
+                style={{ borderRadius: state.cornerRadius }}
+              />
+            }
+          >
+            {null}
+          </InlineAsset>
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+            style={{ borderRadius: state.cornerRadius }}
+          >
+            <ImageIcon size={24} strokeWidth={1.25} className="text-gray-300" />
+          </div>
+        )}
+        <ResizeHandle onMouseDown={startResize} active={resizing} />
       </div>
     )
   }
+
+  // Image populated: render through public component with editor chrome
+  const chrome = (
+    <>
+      {imageScale > 1 && (
+        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-gray-900/70 text-white text-[10px] font-mono pointer-events-none">
+          {Math.round(imageScale * 100)}%
+        </div>
+      )}
+      <ResizeHandle onMouseDown={startResize} active={resizing} />
+    </>
+  )
+
+  const imageInteraction: ImageInteraction = {
+    ref: containerRef,
+    onMouseDown: startPan,
+    panning,
+  }
+
   return (
-    <div className={`${pad.docX} ${pad.blockY} flex items-center gap-4 ${justify}`}>
-      {logoNode}
-      {nameNode}
+    <div className="group">
+      {uploadImage ? (
+        <InlineAsset
+          value={block.url}
+          onUpload={(file) => uploadImage(file, block.id)}
+          {...(removeImage ? { onClear: () => removeImage(block.id) } : {})}
+          label="Replace image"
+          className="w-full h-full"
+          emptyState={null}
+        >
+          <PublicRenderImage
+            block={block}
+            branding={branding}
+            chrome={chrome}
+            imageInteraction={imageInteraction}
+          />
+        </InlineAsset>
+      ) : (
+        <PublicRenderImage
+          block={block}
+          branding={branding}
+          chrome={chrome}
+          imageInteraction={imageInteraction}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Spacer ────────────────────────────────────────────────────────────────────
+// Rendered via the public RenderSpacer component with editor chrome in block-renderer.tsx
+
+// ── Business name ─────────────────────────────────────────────────────────────
+
+/**
+ * Editor wrapper for businessName block. Provides interactive slots for logo
+ * upload and name editing, plus a drag grip that resizes the logo height.
+ *
+ * The business name here is a block-local override (`block.name`): editing it
+ * writes to this block only and never mutates the shared brand name. The logo
+ * slot carries its own hover/selected highlight and a corner resize grip so the
+ * mark reads as a directly editable, resizable object.
+ */
+export function RenderBusinessName({
+  block,
+  state,
+  updateBlock,
+  uploadLogo,
+  removeLogo,
+}: RenderProps<BusinessNameBlock> & {
+  uploadLogo?: (file: File) => Promise<void>
+  removeLogo?: () => void | Promise<void>
+}) {
+  const branding = publicBrandingFromEditorState(state)
+  const { logoUrl, businessName } = state
+  const logoHeight = block.logoHeightPx ?? 40
+  const [resizing, setResizing] = useState(false)
+
+  // Drag the corner grip to set the logo height. Mirrors the header/image
+  // resize gesture (vertical drag) but drives logoHeightPx, matching the
+  // toolbar's Logo size slider bounds (24–160px).
+  const startLogoResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = logoHeight
+    setResizing(true)
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(24, Math.min(160, startHeight + dy))
+      updateBlock<BusinessNameBlock>(block.id, { logoHeightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      setResizing(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  // Logo slot: the InlineAsset handles upload/replace/remove; the wrapper adds a
+  // grey hover ring and the resize grip. Clicking the logo highlights it via the
+  // shared `data-subtarget` mechanism (BlockFrame outlines the clicked part in
+  // the brand colour and clears it when you click elsewhere), so selecting the
+  // block no longer lights up the logo on its own. The grip lives on the
+  // wrapper, not inside InlineAsset, so it works for the empty state too.
+  const logoSlot = uploadLogo ? (
+    <div
+      data-subtarget="logo"
+      className="group/logo relative h-full rounded-md ring-inset ring-0 hover:ring-1 hover:ring-gray-300 transition"
+    >
+      <InlineAsset
+        value={logoUrl || null}
+        onUpload={uploadLogo}
+        {...(logoUrl && removeLogo ? { onClear: removeLogo } : {})}
+        label={logoUrl ? 'Replace logo' : 'Upload logo'}
+        compact
+        className="h-full"
+        style={logoUrl ? undefined : { width: logoHeight }}
+        selectableWhenEmpty={false}
+        emptyState={
+          <div
+            className="flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+            style={{
+              width: logoHeight,
+              height: logoHeight,
+              borderRadius: Math.min(state.cornerRadius, 12),
+            }}
+          >
+            <ImageIcon size={Math.max(12, Math.round(logoHeight * 0.3))} strokeWidth={1.5} className="text-gray-300" />
+          </div>
+        }
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- user-supplied logo URL, not a Next-optimised static asset */}
+        <img
+          src={logoUrl}
+          alt={businessName || 'Logo'}
+          draggable={false}
+          className="block h-full w-auto max-w-full object-contain select-none"
+        />
+      </InlineAsset>
+
+      {/* Corner resize grip: visible on hover or while the block is selected. */}
+      <div
+        onMouseDown={startLogoResize}
+        title="Drag to resize logo"
+        className={`absolute -bottom-1 -right-1 z-10 w-3.5 h-3.5 flex items-center justify-center cursor-nwse-resize transition ${
+          resizing ? 'opacity-100' : 'opacity-0 group-hover/logo:opacity-100'
+        }`}
+      >
+        <div className="w-2.5 h-2.5 rounded-sm bg-gray-900/70 ring-1 ring-white/80 shadow-sm" />
+      </div>
+    </div>
+  ) : undefined
+
+  // Name slot: block-local override. Shows the global brand name until edited,
+  // then persists onto this block so it never writes back to the shared field.
+  const nameSlot = (
+    <InlineText
+      value={block.name ?? businessName ?? ''}
+      onChange={(v) => updateBlock<BusinessNameBlock>(block.id, { name: v })}
+      placeholder="Your business name"
+      as="span"
+    />
+  )
+
+  return (
+    <div className="group relative">
+      <PublicRenderBusinessName
+        block={block}
+        branding={branding}
+        slots={{
+          logo: logoSlot,
+          name: nameSlot,
+        }}
+      />
     </div>
   )
 }
 
 // ── Tagline ───────────────────────────────────────────────────────────────────
 
-export function RenderTagline({
-  block,
-  state,
-  setTagline,
-}: RenderProps<TaglineBlock> & { setTagline?: (v: string) => void }) {
-  const { tagline } = state
-  const pad = PAD(state)
-  const defaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-  const textStyle = resolveTextStyle(block.textStyle, defaults)
-  return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      {setTagline ? (
-        <p style={textStyle}>
-          <InlineText
-            value={tagline ?? ''}
-            onChange={setTagline}
-            placeholder="Your tagline"
-            as="span"
-          />
-        </p>
-      ) : (
-        <p className="truncate" style={textStyle}>
-          {tagline || 'Your tagline'}
-        </p>
-      )}
-    </div>
-  )
-}
+// ── Tagline ───────────────────────────────────────────────────────────────────
+// Rendered via the public RenderTagline component with editor slots in block-renderer.tsx
 
 // ── Title ─────────────────────────────────────────────────────────────────────
 
-export function RenderTitle({ block, state, updateBlock }: RenderProps<TitleBlock>) {
-  const pad = PAD(state)
-  const titleDefaults: TextStyleDefaults = {
-    fontFamily: state.fontHeading,
-    fontSize: 36,
-    fontWeight: state.fontWeight,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.1,
-    letterSpacing: -0.01,
+export function RenderTitle({ block, state, surface, updateBlock }: RenderProps<TitleBlock>) {
+  const branding = publicBrandingFromEditorState(state)
+  const isInvoice = surface === 'invoice'
+
+  // Dummy doc for editor preview; meta row displays placeholder values.
+  // Invoices label the date row "Due" (they fall due, not expire) to mirror the
+  // public surface; other surfaces default to "Expires". The date is an ISO
+  // (YYYY-MM-DD) string so `fmtDate` parses it — a display string like
+  // "30 April 2026" would render "Invalid Date" in the preview.
+  const dummyDoc: PublicDocData = {
+    title: '', // Replaced by slot
+    refNumber: 'PR-001',
+    coupleName: 'Sarah & James',
+    expiresAt: '2026-04-30',
+    expiresLabel: isInvoice ? 'Due' : 'Expires',
+    items: [],
+    subtotal: 0,
+    taxRate: 0,
   }
-  const subtitleDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
+
+  // On invoices the reference is mandatory (the public surface forces it on and
+  // the Ref toggle is hidden), so keep the preview in step by forcing it here.
+  const previewBlock = isInvoice ? { ...block, showRef: true } : block
+
+  const slots: TitleSlots = {
+    title: (
+      <InlineText
+        value={block.title}
+        onChange={(v) => updateBlock<TitleBlock>(block.id, { title: v })}
+        placeholder="Document title"
+        as="span"
+      />
+    ),
   }
-  const titleCss = resolveTextStyle(block.titleStyle, titleDefaults)
-  const subtitleCss = resolveTextStyle(block.subtitleStyle, subtitleDefaults)
-  const metaAlign = block.titleStyle?.align ?? 'left'
 
   return (
-    <div className={`${pad.blockY}`}>
-      <div className={`${pad.docX}`}>
-        <h1 className="leading-tight tracking-tight" style={titleCss}>
-          <InlineText
-            value={block.title}
-            onChange={(v) => updateBlock<TitleBlock>(block.id, { title: v })}
-            placeholder="Document title"
-            as="span"
-          />
-        </h1>
-        <p className="mt-2" style={subtitleCss}>
-          <InlineText
-            value={block.subtitle}
-            onChange={(v) => updateBlock<TitleBlock>(block.id, { subtitle: v })}
-            placeholder="Subtitle"
-            as="span"
-          />
-        </p>
-      </div>
-      {(block.showRef || block.showExpires || block.showAbn) && (
-        <div
-          className={`${pad.docX} mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2`}
-          style={{ justifyContent: metaAlign === 'center' ? 'center' : metaAlign === 'right' ? 'flex-end' : 'flex-start' }}
-        >
-          {block.showRef && <Meta label="Ref" value="QU-001" />}
-          {block.showExpires && <Meta label="Expires" value="Expires 30 April 2026" />}
-          {block.showAbn && state.abn && <Meta label="Abn" value={state.abn} />}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Meta({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{label}</span>
-      <span className="text-sm text-gray-700">{value}</span>
-    </div>
+    <PublicRenderTitle
+      block={previewBlock}
+      branding={branding}
+      doc={dummyDoc}
+      slots={slots}
+      variablePreview
+    />
   )
 }
 
 // ── Line items ────────────────────────────────────────────────────────────────
 
-export function RenderLineItems({ block, state }: RenderProps<LineItemsBlock>) {
-  const pad = PAD(state)
-  const showHeader = block.showHeader ?? true
-  const rowStyle = block.rowStyle ?? 'lines'
-  const headerDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 11,
-    fontWeight: 500,
-    color: state.mutedColor || '#9CA3AF',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0.06,
-  }
-  const itemDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-  const headerCss = resolveTextStyle(block.headerStyle, headerDefaults)
-  const itemCss = resolveTextStyle(block.itemStyle, itemDefaults)
-
-  const rowBorder = rowStyle === 'lines'
-    ? 'border-b border-gray-100 last:border-b-0'
-    : ''
-  const rowBg = (i: number) =>
-    rowStyle === 'stripes' && i % 2 === 1 ? 'bg-gray-50/60 -mx-2 px-2 rounded-md' : ''
+export function RenderLineItems({ block, state, surface }: RenderProps<LineItemsBlock>) {
+  const branding = publicBrandingFromEditorState(state)
+  const sampleDoc = SAMPLE_DOC_BY_SURFACE[surface || 'invoice']
 
   return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      {showHeader && (
-        <div className="flex items-center pb-3 border-b border-gray-200">
-          <span className="flex-1 uppercase" style={{ ...headerCss, textTransform: 'uppercase' }}>Description</span>
-          <span className={block.colSpread ? 'shrink-0' : 'flex-1'} style={{ ...headerCss, textTransform: 'uppercase', ...(block.colSpread ? { textAlign: 'right' } : {}) }}>Amount</span>
-        </div>
-      )}
-      {PLACEHOLDER_ITEMS.map((item, i) => (
-        <div
-          key={i}
-          className={`flex items-center ${pad.rowY} ${rowBorder} ${rowBg(i)}`}
-        >
-          <span className="flex-1" style={itemCss}>{item.description}</span>
-          <span className={`tabular-nums ${block.colSpread ? 'shrink-0 ml-4' : 'flex-1'}`} style={{ ...itemCss, ...(block.colSpread ? { textAlign: 'right' } : {}), fontWeight: (itemCss.fontWeight as number ?? 400) + 100 }}>
-            {fmt(item.amount)}
-          </span>
-        </div>
-      ))}
-    </div>
+    <PublicRenderLineItems
+      block={block}
+      branding={branding}
+      doc={sampleDoc}
+      variablePreview
+    />
   )
 }
 
 // ── Totals ────────────────────────────────────────────────────────────────────
 
-export function RenderTotals({ block, state }: RenderProps<TotalsBlock>) {
-  const pad = PAD(state)
-  const subtotal = PLACEHOLDER_ITEMS.reduce((s, i) => s + i.amount, 0)
-  const tax = subtotal * (block.taxRate / 100)
-  const total = subtotal + tax
-  const spread = block.colSpread ?? true
-
-  const rowDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 13,
-    fontWeight: 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-  const totalDefaults: TextStyleDefaults = {
-    fontFamily: state.fontHeading,
-    fontSize: 18,
-    fontWeight: state.fontWeight,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.2,
-    letterSpacing: 0,
-  }
-
-  const subtotalCss = resolveTextStyle(block.subtotalStyle, rowDefaults)
-  const taxCss = resolveTextStyle(block.taxStyle, rowDefaults)
-  const totalCss = resolveTextStyle(block.totalStyle, totalDefaults)
-
-  const Row = ({ label, value, css }: { label: string; value: string; css: React.CSSProperties }) => (
-    <div className="flex items-center">
-      <span className="flex-1" style={css}>{label}</span>
-      <span className={`tabular-nums ${spread ? 'shrink-0 ml-4' : 'flex-1'}`} style={{ ...css, ...(spread ? { textAlign: 'right' } : {}) }}>{value}</span>
-    </div>
-  )
+export function RenderTotals({ block, state, surface }: RenderProps<TotalsBlock>) {
+  const branding = publicBrandingFromEditorState(state)
+  const sampleDoc = SAMPLE_DOC_BY_SURFACE[surface || 'invoice']
 
   return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      <div className="space-y-1.5 pt-3 border-t border-gray-200">
-        {block.showSubtotal && (
-          <div className="pt-2">
-            <Row label="Subtotal" value={fmt(subtotal)} css={subtotalCss} />
-          </div>
-        )}
-        {(block.showTax ?? true) && (
-          <Row label={`GST (${block.taxRate}%)`} value={fmt(tax)} css={taxCss} />
-        )}
-        <div className="pt-3 mt-2 border-t border-gray-200">
-          <Row label="Total" value={fmt(total)} css={totalCss} />
-        </div>
-      </div>
-    </div>
+    <PublicRenderTotals
+      block={block}
+      branding={branding}
+      doc={sampleDoc}
+      variablePreview
+    />
   )
 }
 
 // ── Text ──────────────────────────────────────────────────────────────────────
 
-export function RenderText({ block, state, updateBlock }: RenderProps<TextBlock>) {
-  const pad = PAD(state)
-  const defaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.6,
-    letterSpacing: 0,
-  }
-  const css = resolveTextStyle(block.textStyle, defaults)
-
-  return (
-    <div className={`${pad.docX} ${pad.blockY}`} style={css}>
-      <InlineText
-        value={block.text}
-        onChange={(v) => updateBlock<TextBlock>(block.id, { text: v })}
-        placeholder="Add text…"
-        multiline
-        as="div"
-        className="whitespace-pre-wrap"
-      />
-    </div>
-  )
-}
+// ── Text ──────────────────────────────────────────────────────────────────────
+// Rendered via the public RenderText component with editor slots in block-renderer.tsx
 
 // ── Action ────────────────────────────────────────────────────────────────────
 
+/**
+ * Editor wrapper for action block. Manages resize state for button customization
+ * and renders real but non-interactive buttons via the public component.
+ */
 export function RenderAction({
-  block,
+  block: rawBlock,
   state,
+  surface,
   updateBlock,
   selected,
 }: RenderProps<ActionBlock> & { selected?: boolean }) {
-  const pad = PAD(state)
-  const buttonColor = block.buttonColor ?? state.brandColor
-  const secondaryBg = block.secondaryColor ?? state.secondaryColor
-  const radius = block.buttonRadius ?? Math.min(state.cornerRadius, 12)
-  const primaryPadY = block.primaryPaddingY ?? 14
-  const secondaryPadY = block.secondaryPaddingY ?? 14
-
-  const primaryDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: 500,
-    color: getTextColor(buttonColor),
-    align: 'center',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-  const secondaryDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: 500,
-    color: state.secondaryTextColor || '#374151',
-    align: 'center',
-    lineHeight: 1.4,
-    letterSpacing: 0,
-  }
-
+  const branding = publicBrandingFromEditorState(state)
+  // Invoices are paid, not declined, so they never carry a secondary button —
+  // suppress it here so it disappears immediately (migrateBlocks also strips the
+  // stored value on the next load/save).
+  const block: ActionBlock = surface === 'invoice' && rawBlock.secondary !== null
+    ? { ...rawBlock, secondary: null }
+    : rawBlock
   const primaryRef = useRef<HTMLButtonElement>(null)
   const secondaryRef = useRef<HTMLButtonElement>(null)
 
-  const makeResizeHandler = (
-    ref: React.RefObject<HTMLButtonElement | null>,
+  // Size presets matching public component.
+  const sizeMap = {
+    sm: { padY: 8 },
+    md: { padY: 14 },
+    lg: { padY: 16 },
+  }
+  const size = block.size ?? 'md'
+  const sizeConfig = sizeMap[size]
+  const primaryPadY = block.primaryPaddingY ?? sizeConfig.padY
+  const secondaryPadY = block.secondaryPaddingY ?? sizeConfig.padY
+
+  /**
+   * Create a resize handler for either primary or secondary button.
+   * Tracks both width and vertical padding changes via mouse drag.
+   */
+  const makeResizeHandler = useCallback((
+    whichButton: 'primary' | 'secondary',
     widthKey: 'primaryWidthPx' | 'secondaryWidthPx',
     paddingKey: 'primaryPaddingY' | 'secondaryPaddingY',
     startPadY: number,
   ) => (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    const ref = whichButton === 'primary' ? primaryRef : secondaryRef
     const startX = e.clientX
     const startY = e.clientY
     const startW = (block[widthKey] ?? ref.current?.getBoundingClientRect().width) ?? 160
@@ -701,221 +741,132 @@ export function RenderAction({
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
+  }, [block, updateBlock])
+
+  /**
+   * Create slots with InlineText for live button label editing.
+   * The public component renders these without any onClick handlers
+   * (non-interactive in the editor).
+   */
+  const slots: ActionSlots = {
+    note: (
+      <InlineText
+        value={block.note ?? ''}
+        onChange={(v) => updateBlock<ActionBlock>(block.id, { note: v })}
+        placeholder={
+          surface === 'invoice'
+            ? 'Add a note above the button, e.g. how to pay…'
+            : surface === 'proposal'
+              ? 'Add a note above the button, e.g. what happens next…'
+              : 'Add a note above the button…'
+        }
+        as="span"
+      />
+    ),
+    primary: (
+      <InlineText
+        value={block.primary}
+        onChange={(v) => updateBlock<ActionBlock>(block.id, { primary: v })}
+        placeholder="Primary"
+        as="span"
+      />
+    ),
+    secondary: block.secondary !== null ? (
+      <InlineText
+        value={block.secondary}
+        onChange={(v) => updateBlock<ActionBlock>(block.id, { secondary: v })}
+        placeholder="Secondary"
+        as="span"
+      />
+    ) : undefined,
   }
 
-  const hasPrimaryW = block.primaryWidthPx !== undefined
-  const hasSecondaryW = block.secondaryWidthPx !== undefined
-  const justifyClass = { start: 'justify-start', center: 'justify-center', end: 'justify-end' }[block.buttonJustify ?? 'start']
-
   return (
-    <div className={`group ${pad.docX} ${pad.blockY}`}>
-      <div className={`relative flex gap-3 items-stretch w-full ${justifyClass}`}>
+    <div className="group relative">
+      <PublicRenderAction
+        block={block}
+        branding={branding}
+        slots={slots}
+      />
+      {/* Resize grips as absolute-positioned overlays */}
+      <div
+        onMouseDown={makeResizeHandler('primary', 'primaryWidthPx', 'primaryPaddingY', primaryPadY)}
+        title="Drag to resize primary button"
+        className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/pbtn:opacity-100 transition z-20 pointer-events-auto"
+        style={{ left: 'auto', top: 'auto' }}
+      />
+      {block.secondary !== null && (
+        <div
+          onMouseDown={makeResizeHandler('secondary', 'secondaryWidthPx', 'secondaryPaddingY', secondaryPadY)}
+          title="Drag to resize secondary button"
+          className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/sbtn:opacity-100 transition z-20 pointer-events-auto"
+          style={{ left: 'auto', top: 'auto' }}
+        />
+      )}
+      {surface !== 'invoice' && block.secondary === null && (
         <button
-          ref={primaryRef}
           type="button"
-          tabIndex={-1}
-          className={`relative group/pbtn transition cursor-text ${hasPrimaryW ? 'shrink-0' : 'px-6'}`}
-          style={{
-            borderRadius: radius,
-            background: buttonColor,
-            paddingTop: primaryPadY,
-            paddingBottom: primaryPadY,
-            ...(hasPrimaryW ? { width: block.primaryWidthPx } : {}),
-            ...resolveTextStyle(block.primaryStyle, primaryDefaults),
+          onClick={(e) => {
+            e.stopPropagation()
+            updateBlock<ActionBlock>(block.id, {
+              secondary: surface === 'proposal' ? 'Decline' : 'Secondary',
+            })
           }}
-          onClick={(e) => e.preventDefault()}
+          className={`absolute left-1/2 -translate-x-1/2 mt-2 px-4 border border-dashed border-text-muted rounded-md text-xs text-text-muted hover:text-text hover:border-text cursor-pointer transition ${
+            selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          }`}
+          title="Add secondary button"
         >
-          <InlineText
-            value={block.primary}
-            onChange={(v) => updateBlock<ActionBlock>(block.id, { primary: v })}
-            placeholder="Primary"
-            as="span"
-          />
-          <div
-            onMouseDown={makeResizeHandler(primaryRef, 'primaryWidthPx', 'primaryPaddingY', primaryPadY)}
-            title="Drag to resize"
-            className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/pbtn:opacity-100 transition z-20"
-          />
+          + Add secondary
         </button>
-        {block.secondary !== null ? (
-          <button
-            ref={secondaryRef}
-            type="button"
-            tabIndex={-1}
-            className={`relative group/sbtn border border-gray-200 transition cursor-text ${hasSecondaryW ? 'shrink-0' : 'px-6'}`}
-            style={{
-              borderRadius: radius,
-              background: secondaryBg,
-              paddingTop: secondaryPadY,
-              paddingBottom: secondaryPadY,
-              ...(hasSecondaryW ? { width: block.secondaryWidthPx } : {}),
-              ...resolveTextStyle(block.secondaryStyle, secondaryDefaults),
-            }}
-            onClick={(e) => e.preventDefault()}
-          >
-            <InlineText
-              value={block.secondary}
-              onChange={(v) => updateBlock<ActionBlock>(block.id, { secondary: v })}
-              placeholder="Secondary"
-              as="span"
-            />
-            <div
-              onMouseDown={makeResizeHandler(secondaryRef, 'secondaryWidthPx', 'secondaryPaddingY', secondaryPadY)}
-              title="Drag to resize"
-              className="absolute -right-1.5 -bottom-1.5 w-3 h-3 rounded-sm bg-gray-900 ring-2 ring-white cursor-nwse-resize opacity-0 group-hover/sbtn:opacity-100 transition z-20"
-            />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              updateBlock<ActionBlock>(block.id, { secondary: 'Secondary' })
-            }}
-            className={`px-4 border border-dashed border-gray-300 rounded-md text-xs text-gray-400 hover:text-gray-700 hover:border-gray-400 cursor-pointer transition ${
-              selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-            }`}
-            style={{
-              borderRadius: radius,
-              paddingTop: secondaryPadY,
-              paddingBottom: secondaryPadY,
-            }}
-            title="Add secondary button"
-          >
-            + Add secondary
-          </button>
-        )}
-      </div>
+      )}
     </div>
   )
 }
 
 // ── Divider ───────────────────────────────────────────────────────────────────
 
-export function RenderDivider({ block, state }: RenderProps<DividerBlock>) {
-  const pad = PAD(state)
-  const thickness = block.thickness ?? 1
-  const color = block.color ?? '#E5E7EB'
-  const lineStyle = block.lineStyle ?? 'solid'
-  return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      <hr style={{ borderTopWidth: thickness, borderTopColor: color, borderTopStyle: lineStyle, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }} />
-    </div>
-  )
-}
+// ── Divider ───────────────────────────────────────────────────────────────────
+// Rendered via the public RenderDivider component in block-renderer.tsx
 
 // ── Footer ────────────────────────────────────────────────────────────────────
-
-export function RenderFooter({ block, state, updateBlock }: RenderProps<FooterBlock>) {
-  const pad = PAD(state)
-  const noteDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 12,
-    fontWeight: state.fontBodyWeight ?? 400,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
-  const contactDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 11,
-    fontWeight: 400,
-    color: state.mutedColor || '#9CA3AF',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
-  const noteCss = resolveTextStyle(block.noteStyle, noteDefaults)
-  const contactCss = resolveTextStyle(block.contactStyle, contactDefaults)
-
-  const contactParts = [
-    state.businessName,
-    state.phone,
-    state.website,
-    state.abn ? `ABN ${state.abn}` : null,
-  ].filter(Boolean) as string[]
-
-  return (
-    <div className={`${pad.docX} ${pad.blockY} mt-6 border-t border-gray-100 pt-5`}>
-      <div className="space-y-1">
-        <p style={noteCss}>
-          <InlineText
-            value={block.closingNote ?? ''}
-            onChange={(v) => updateBlock<FooterBlock>(block.id, { closingNote: v })}
-            placeholder="Closing line"
-            as="span"
-          />
-        </p>
-        {contactParts.length > 0 && (
-          <p
-            style={contactCss}
-            title="Contact details come from your business info — update them in the side panel"
-          >
-            {contactParts.join('  ·  ')}
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}
+// Rendered via the public RenderFooter component with editor slots in block-renderer.tsx
 
 // ── Payment Details ───────────────────────────────────────────────────────────
 
-export function RenderPaymentDetails({ block, state, updateBlock }: RenderProps<PaymentDetailsBlock>) {
-  const pad = PAD(state)
-  const headingDefaults: TextStyleDefaults = {
-    fontFamily: state.fontHeading,
-    fontSize: 16,
-    fontWeight: state.fontWeight,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.3,
-    letterSpacing: 0,
-  }
-  const labelDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 12,
-    fontWeight: 500,
-    color: state.mutedColor || '#6B7280',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
-  const valueDefaults: TextStyleDefaults = {
-    fontFamily: state.fontBody,
-    fontSize: 14,
-    fontWeight: 500,
-    color: state.textColor || '#111827',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
+export function RenderPaymentDetails({ block, state, surface, updateBlock }: RenderProps<PaymentDetailsBlock>) {
+  const branding = publicBrandingFromEditorState(state)
 
-  const headingCss = resolveTextStyle(block.headingStyle, headingDefaults)
-  const labelCss = resolveTextStyle(block.labelStyle, labelDefaults)
-  const valueCss = resolveTextStyle(block.valueStyle, valueDefaults)
+  // Only the heading is block-editable. The account name / BSB / number are the
+  // MC's real bank details from Settings → Payments, so they're not edited here:
+  // the public component shows the real value when set, or a mint placeholder.
+  const slots: PaymentDetailsSlots = {
+    heading: (
+      <RichText
+        value={block.heading}
+        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { heading: v })}
+        surface={surface ?? 'invoice'}
+        placeholder="Heading"
+        singleLine
+      />
+    ),
+    note: (
+      <InlineText
+        value={block.note ?? ''}
+        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { note: v })}
+        placeholder="Add a note for the couple, e.g. how to pay…"
+        as="span"
+      />
+    ),
+  }
 
   return (
-    <div className={`${pad.docX} ${pad.blockY}`}>
-      <p className="mb-3" style={headingCss}>
-        <InlineText value={block.heading} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { heading: v })} placeholder="Heading" as="span" />
-      </p>
-      <div className="space-y-1.5">
-        <div className="flex items-baseline gap-3">
-          <span className="w-28 shrink-0" style={labelCss}>Account name</span>
-          <span className="flex-1" style={valueCss}><InlineText value={block.accountName} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountName: v })} placeholder="Account name" as="span" /></span>
-        </div>
-        <div className="flex items-baseline gap-3">
-          <span className="w-28 shrink-0" style={labelCss}>BSB</span>
-          <span className="flex-1" style={valueCss}><InlineText value={block.bsb} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { bsb: v })} placeholder="BSB" as="span" /></span>
-        </div>
-        <div className="flex items-baseline gap-3">
-          <span className="w-28 shrink-0" style={labelCss}>Account number</span>
-          <span className="flex-1" style={valueCss}><InlineText value={block.accountNumber} onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountNumber: v })} placeholder="Account number" as="span" /></span>
-        </div>
-      </div>
-    </div>
+    <PublicRenderPaymentDetails
+      block={block}
+      branding={branding}
+      slots={slots}
+      variablePreview
+    />
   )
 }
 
@@ -935,7 +886,7 @@ const PORTAL_SECTIONS: Array<{ label: string; icon: typeof LayoutDashboard; coun
 
 export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
   const fontHeading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
-  const muted = state.mutedColor || '#6B7280'
+  const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
   const surface = state.surfaceColor || '#FFFFFF'
   const visibleSections = PORTAL_SECTIONS.filter(
@@ -987,8 +938,8 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
                 Fill in your details below. Everything saves automatically. You can come back anytime.
               </p>
             </div>
-            <div className="flex gap-8 px-2 py-6 min-h-[420px]">
-              <nav className="w-52 shrink-0 border-r border-gray-100 pr-4 space-y-0.5">
+            <div className="flex flex-col @md/doc:flex-row gap-8 px-2 py-6 min-h-[420px]">
+              <nav className="hidden @md/doc:flex w-52 shrink-0 border-r border-gray-100 pr-4 space-y-0.5">
                 {visibleSections.map((s) => {
                   const Icon = s.icon
                   return (
@@ -1000,7 +951,7 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
                   )
                 })}
               </nav>
-              <div className="flex-1 min-w-0 space-y-6">
+              <div className="w-full @md/doc:flex-1 @md/doc:min-w-0 space-y-6">
                 <div>
                   <h2 className="text-2xl font-semibold text-gray-900" style={fontHeading}>Overview</h2>
                   <p className="text-sm text-gray-500 mt-1">Your details and upcoming events</p>
@@ -1020,7 +971,7 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
                         <p className="text-base font-medium text-gray-900">Saturday, 14 September 2026</p>
                         <p className="text-sm text-gray-500 mt-0.5">The Glasshouse, Sydney</p>
                       </div>
-                      <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-full whitespace-nowrap" style={{ background: `${state.accentColor || state.brandColor}26`, color: pillForeground(state.accentColor, state.brandColor, state.surfaceColor || '#FFFFFF') }}>127 days away</span>
+                      <span className="shrink-0 text-xs px-2.5 py-1 font-medium rounded-full whitespace-nowrap" style={{ background: `${state.brandColor || state.brandColor}26`, color: pillForeground(state.brandColor, state.brandColor, state.surfaceColor || '#FFFFFF') }}>127 days away</span>
                     </div>
                   </div>
                 </div>
@@ -1043,25 +994,79 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
   )
 }
 
-export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
+/**
+ * Placeholder block shown in the branding editor where the automatic
+ * payment schedule will render on the public invoice. The MC can never
+ * edit the schedule here, it flows from couple data and deposit percent
+ * settings. Same model as `RenderCouplePortal` + `RenderContractBody`.
+ *
+ * Renders with a dashed border + muted "Live data" badge so it's
+ * visually unambiguous this block isn't editable on the branding surface.
+ */
+/**
+ * Editor render for the invoice payment schedule. The subheading and the two line
+ * labels (deposit, final balance) are editable text stored on the block and
+ * click-to-style targets; the amounts and due dates are per-invoice data filled
+ * when the invoice is sent, so they render as mint `{{ … }}` chips (the line-items
+ * idiom). Public rendering of the schedule is deferred (the public renderer omits
+ * this block), so this is editor-only chrome.
+ */
+export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps<PaymentScheduleBlock>) {
+  const branding = publicBrandingFromEditorState(state)
   const pad = PAD(state)
-  const muted = state.mutedColor || '#6B7280'
-  const text = state.textColor || '#111827'
+  const headingDefaults = roleDefaults(branding, 'sectionHeading')
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const headingCss = resolveTextStyle(block.headingStyle, headingDefaults)
+  const lineCss = resolveTextStyle(block.lineStyle, bodyDefaults)
+  // Amount + due date default to the body role (larger than fine print) and share
+  // one style target so they can be resized together.
+  const valueCss = resolveTextStyle(block.valueStyle, bodyDefaults)
+
+  const stages = [
+    {
+      value: block.depositLabel ?? 'Deposit',
+      placeholder: 'Deposit',
+      onChange: (v: string) => updateBlock<PaymentScheduleBlock>(block.id, { depositLabel: v }),
+      dueHint: "The deposit's due date, from the invoice.",
+    },
+    {
+      value: block.finalLabel ?? 'Final balance',
+      placeholder: 'Final balance',
+      onChange: (v: string) => updateBlock<PaymentScheduleBlock>(block.id, { finalLabel: v }),
+      dueHint: "The final balance's due date, from the invoice.",
+    },
+  ]
+
   return (
-    <div className="border-t border-gray-100">
-      <div className={`${pad.docX} ${pad.blockY}`}>
-        <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: muted }}>Payment schedule</p>
-        <div className="space-y-2">
-          <div className="py-2.5 border-b border-gray-50 flex items-center justify-between">
-            <span className="text-sm" style={{ color: text }}>Deposit (50%)</span>
-            <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
+    <div className={pad.blockY}>
+      <p data-subtarget="heading" className="mb-3" style={headingCss}>
+        <InlineText
+          value={block.heading ?? 'Payment schedule'}
+          onChange={(v) => updateBlock<PaymentScheduleBlock>(block.id, { heading: v })}
+          placeholder="Payment schedule"
+          as="span"
+        />
+      </p>
+      {stages.map((stage, i) => (
+        <div
+          key={i}
+          className="flex justify-between items-baseline gap-4 py-2.5 border-b last:border-b-0"
+          style={{ borderBottomColor: branding.border_color }}
+        >
+          {/* Label + due date sit on one line (due date beside, not under). */}
+          <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
+            <span data-subtarget="line" style={lineCss}>
+              <InlineText value={stage.value} onChange={stage.onChange} placeholder={stage.placeholder} as="span" />
+            </span>
+            <span data-subtarget="value" style={valueCss}>
+              <VarChip label="Due date" hint={stage.dueHint} />
+            </span>
           </div>
-          <div className="py-2.5 flex items-center justify-between">
-            <span className="text-sm" style={{ color: text }}>Final balance (50%)</span>
-            <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
-          </div>
+          <span className="shrink-0" data-subtarget="value" style={valueCss}>
+            <VarChip label="Amount" hint="Filled from the invoice's deposit percent and total." />
+          </span>
         </div>
-      </div>
+      ))}
     </div>
   )
 }
@@ -1079,13 +1084,13 @@ export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
  */
 export function RenderContractBody({ state }: { state: BrandPreviewState }) {
   const pad = PAD(state)
-  const muted = state.mutedColor || '#6B7280'
+  const muted = state.textColor || '#6B7280'
   const text = state.textColor || '#111827'
   const surface = state.surfaceColor || '#FFFFFF'
   const heading = { fontFamily: FONT_STACKS[state.fontHeading], fontWeight: state.fontWeight }
   return (
     <div className="border-t border-gray-100">
-      <div className={`${pad.docX} ${pad.blockY}`}>
+      <div className={pad.blockY}>
         {/* Locked-slot affordance — dashed border + muted "Locked"
             badge make it clear at a glance that this block isn't
             editable on the branding surface. */}
@@ -1136,6 +1141,366 @@ export function RenderContractBody({ state }: { state: BrandPreviewState }) {
             <p className="text-xs" style={{ color: muted }}>
               The contract body itself can&apos;t be edited here — you write it per couple inside the contract modal under{' '}
               <span style={{ color: text, fontWeight: 500 }}>Payments → Contracts</span>. You can drag other blocks (text intros, dividers, signature notes) above or below this slot to wrap the body with extra chrome.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Proposal body (fixed core) ────────────────────────────────────────────────
+
+/** Map the editor's preview state onto the proposal view's branding. */
+function proposalBranding(state: BrandPreviewState): ProposalViewBranding {
+  return {
+    pageBg: state.surfaceColor || '#FFFFFF',
+    textColor: state.textColor || '#111827',
+    mutedColor: state.textColor || '#6B7280',
+    brand: state.brandColor || '#111827',
+    accent: state.brandColor || state.brandColor || '#111827',
+    secondaryColor: state.secondaryColor || '#FFFFFF',
+    secondaryTextColor: getTextColor(state.secondaryColor || '#FFFFFF'),
+    headingColor: state.textColor || '#111827',
+    subheadingColor: state.textColor || '#6B7280',
+    radius: state.cornerRadius ?? 16,
+    borderColor: state.borderColor || '#E5E7EB',
+    cornerRadius: state.cornerRadius ?? 8,
+    headingFontFamily: FONT_STACKS[state.fontHeading],
+    bodyFontFamily: FONT_STACKS[state.fontBody],
+    headingWeight: state.fontWeight,
+    docPadding: 0, // the block-renderer already applies doc padding
+    logoUrl: null, // logo lives in its own block on this surface
+    headerImageUrl: null, // header banner is its own block
+    businessName: state.businessName ? htmlToPlainText(state.businessName) : null,
+    tagline: state.tagline ? htmlToPlainText(state.tagline) : null,
+    abn: state.abn || null,
+    labels: resolveProposalLabels(state.proposalLabels),
+  }
+}
+
+
+
+// ── Package blocks (proposal decomposed) ───────────────────────────────
+//
+// The editor previews render the exact same public package components the
+// public proposal page uses, wrapped in a sample block context. This is the
+// same reuse pattern the line-items / totals previews follow, so the editor
+// and the sent document can never drift in styling or padding.
+
+/**
+ * Build a sample proposal block context for the editor preview: the "Full Day"
+ * sample option with its default add-on selection, non-interactive (no choose /
+ * toggle handlers), styled from the editor's live branding state.
+ */
+function sampleProposalContext(state: BrandPreviewState): ProposalBlockContextValue {
+  const chosen = PROPOSAL_SAMPLE_MULTI[1]!
+  return {
+    options: PROPOSAL_SAMPLE_MULTI,
+    chosenId: chosen.id,
+    selection: defaultSelection(chosen),
+    onChoose: undefined,
+    onToggle: undefined,
+    branding: publicBrandingFromEditorState(state),
+    view: proposalBranding(state),
+    expiresAt: null,
+    state: 'active',
+  }
+}
+
+/** Editor preview for the packageHeader block. */
+export function RenderPackageHeader({ block, state }: RenderProps<PackageHeaderBlock>) {
+  return (
+    <ProposalBlockProvider value={sampleProposalContext(state)}>
+      <PackageHeader block={block} variablePreview />
+    </ProposalBlockProvider>
+  )
+}
+
+/** Editor preview for the packageDetails block. */
+export function RenderPackageDetails({ block, state }: RenderProps<PackageDetailsBlock>) {
+  return (
+    <ProposalBlockProvider value={sampleProposalContext(state)}>
+      <PackageDetails block={block} variablePreview />
+    </ProposalBlockProvider>
+  )
+}
+
+/** Editor preview for the packageLineItems block. */
+export function RenderPackageLineItems({ block, state, updateBlock }: RenderProps<PackageLineItemsBlock>) {
+  return (
+    <ProposalBlockProvider value={sampleProposalContext(state)}>
+      <PackageLineItems
+        block={block}
+        variablePreview
+        headingSlot={
+          <InlineText
+            value={block.heading || 'Included services'}
+            onChange={(v) => updateBlock<PackageLineItemsBlock>(block.id, { heading: v })}
+            placeholder="Included services"
+            as="span"
+          />
+        }
+      />
+    </ProposalBlockProvider>
+  )
+}
+
+/** Editor preview for the packageInclusions block. */
+export function RenderPackageInclusions({ block, state }: RenderProps<PackageInclusionsBlock>) {
+  return (
+    <ProposalBlockProvider value={sampleProposalContext(state)}>
+      <PackageInclusions block={block} variablePreview />
+    </ProposalBlockProvider>
+  )
+}
+
+/** Editor preview for the packageTotals block. */
+export function RenderPackageTotals({ block, state }: RenderProps<PackageTotalsBlock>) {
+  return (
+    <ProposalBlockProvider value={sampleProposalContext(state)}>
+      <PackageTotals block={block} variablePreview />
+    </ProposalBlockProvider>
+  )
+}
+
+/**
+ * Placeholder block shown in the branding editor where the vendor run sheet
+ * (live timeline data) will render on the public page. The MC can never edit
+ * the run sheet here: it flows from event data in real time. Same model
+ * as `RenderContractBody` and `RenderPaymentSchedule`.
+ *
+ * Renders with a dashed border + muted "Live data - run sheet" badge so it is
+ * visually unambiguous this block is not editable on the branding surface.
+ * The sample shows event title and three static timeline rows styled to match
+ * vendor-timeline.tsx row rendering.
+ */
+export function RenderVendorTimelineBody({ state }: { state: BrandPreviewState }) {
+  const pad = PAD(state)
+  const muted = state.textColor || '#6B7280'
+  const text = state.textColor || '#111827'
+  const surface = state.surfaceColor || '#FFFFFF'
+  return (
+    <div className="border-t border-gray-100">
+      <div className={pad.blockY}>
+        {/* Locked-slot affordance: dashed border + muted "Live data - run sheet"
+            badge make it clear at a glance that this block is not
+            editable on the branding surface. */}
+        <div
+          className="rounded-xl border-2 border-dashed p-5"
+          style={{
+            borderColor: muted + '60',
+            backgroundColor: surface,
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <p
+              className="text-xs font-medium uppercase tracking-wider"
+              style={{ color: muted }}
+            >
+              Run sheet
+            </p>
+            <span
+              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: muted + '20',
+                color: muted,
+              }}
+            >
+              Live data - run sheet
+            </span>
+          </div>
+
+          <div className="space-y-3 opacity-60 select-none pointer-events-none">
+            <p className="text-sm font-semibold mb-4" style={{ color: text }}>
+              Alex & Jordan - Reception
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
+                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
+                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
+                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>5:00 PM</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: text }}>Guest arrival</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
+                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
+                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
+                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>6:30 PM</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: text }}>Entrance</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4 rounded-xl px-4 py-3" style={{ borderWidth: 1, borderColor: '#F3F4F6', backgroundColor: '#ffffff' }}>
+                <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
+                  <Clock size={11} strokeWidth={1.5} style={{ color: '#D1D5DB' }} />
+                  <span className="font-medium tabular-nums" style={{ color: '#4B5563' }}>9:45 PM</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: text }}>Farewell circle</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
+            <p className="text-xs" style={{ color: muted }}>
+              The run sheet is driven by your event timeline and updates in real time. You cannot edit it here. You can drag other blocks above or below this slot to add headings or notes.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Editor wrapper for questionnaireBody block. Shows a preview of the
+ * questionnaire in either form or one-at-a-time mode (persisted on the block).
+ * The mode toggle writes to the block, not preview state.
+ *
+ * Renders with a dashed border + muted "Fixed steps" badge so it is
+ * visually unambiguous this block is not editable on the branding surface.
+ * The sample renders in form or oneAtATime mode based on the block's mode field.
+ */
+export function RenderQuestionnaireBody({
+  block,
+  state,
+  updateBlock,
+}: RenderProps<QuestionnaireBodyBlock> & {
+  updateBlock: <X extends Block>(id: string, patch: Partial<X>) => void
+}) {
+  const pad = PAD(state)
+  const muted = state.textColor || '#6B7280'
+  const text = state.textColor || '#111827'
+  const surface = state.surfaceColor || '#FFFFFF'
+  const radius = state.cornerRadius || 16
+  const brand = state.brandColor || '#A7F3D0'
+  const mode = block.mode ?? 'form'
+
+  return (
+    <div className="border-t border-gray-100">
+      <div className={pad.blockY}>
+        <div
+          className="rounded-xl border-2 border-dashed p-5"
+          style={{
+            borderColor: muted + '60',
+            backgroundColor: surface,
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <p
+              className="text-xs font-medium uppercase tracking-wider"
+              style={{ color: muted }}
+            >
+              Questionnaire
+            </p>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                Preview
+              </span>
+              <div className="flex items-center rounded-lg bg-gray-100 p-0.5">
+                {(['form', 'oneAtATime'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      updateBlock<QuestionnaireBodyBlock>(block.id, { mode: m })
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition cursor-pointer ${
+                      mode === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    {m === 'form' ? 'Form' : 'One at a time'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Form mode: two stacked labelled inputs. */}
+          {mode === 'form' && (
+            <div className="space-y-4 max-w-prose opacity-60 select-none pointer-events-none">
+              <div>
+                <label className="text-sm font-medium mb-2 block" style={{ color: text }}>
+                  What is the date of your wedding?
+                </label>
+                <input
+                  type="text"
+                  placeholder="DD/MM/YYYY"
+                  disabled
+                  className="w-full px-4 py-3 border text-sm"
+                  style={{
+                    borderColor: muted + '40',
+                    borderRadius: radius,
+                    backgroundColor: '#fafafa',
+                  }}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block" style={{ color: text }}>
+                  How many guests are you expecting?
+                </label>
+                <input
+                  type="text"
+                  placeholder="Type your answer…"
+                  disabled
+                  className="w-full px-4 py-3 border text-sm"
+                  style={{
+                    borderColor: muted + '40',
+                    borderRadius: radius,
+                    backgroundColor: '#fafafa',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* One at a time mode: one large question + progress bar. */}
+          {mode === 'oneAtATime' && (
+            <div className="space-y-6 max-w-prose opacity-60 select-none pointer-events-none">
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold" style={{ color: text }}>
+                  What is the date of your wedding?
+                </h2>
+                <input
+                  type="text"
+                  placeholder="DD/MM/YYYY"
+                  disabled
+                  className="w-full px-4 py-3 border text-lg"
+                  style={{
+                    borderColor: brand + '40',
+                    borderRadius: radius,
+                    backgroundColor: '#fafafa',
+                  }}
+                />
+              </div>
+
+              {/* Progress bar. */}
+              <div className="space-y-2">
+                <div
+                  className="h-1 rounded-full"
+                  style={{ background: muted + '20' }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: '33%', background: brand }}
+                  />
+                </div>
+                <p className="text-xs" style={{ color: muted }}>
+                  Question 1 of 3
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
+            <p className="text-xs" style={{ color: muted }}>
+              The questionnaire structure is fixed and cannot be edited here. You can drag other blocks above or below this slot to add custom intros or additional sections.
             </p>
           </div>
         </div>

@@ -3,27 +3,31 @@
 import { CreditCard } from 'lucide-react'
 import { useState } from 'react'
 
-function isLightColor(hex: string): boolean {
-  const c = hex.replace('#', '')
-  const r = parseInt(c.slice(0, 2), 16)
-  const g = parseInt(c.slice(2, 4), 16)
-  const b = parseInt(c.slice(4, 6), 16)
-  // Perceived luminance (WCAG formula)
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.55
-}
+import { getTextColor } from '@/lib/branding/contrast'
+import type { PublicBranding } from '@/lib/branding/public-branding'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 
+/**
+ * Pay-with-card button for the public invoice surface.
+ *
+ * Uses branding to resolve button colors, corner radius, and text styles.
+ * The button background comes from the action block override (if present) or
+ * the MC's brand colour. The text color is derived from contrast analysis, and
+ * the error message uses STATUS_COLORS.error (red is never brand-tinted).
+ */
 interface PayWithCardButtonProps {
   invoiceId: string
   shareToken: string
-  brandColor?: string
-  /** Override the button's corner radius (defaults to ~12px to match `rounded-xl`). */
-  radius?: number
+  /** The resolved branding kit for this invoice. */
+  branding: PublicBranding
+  /** Action block overrides for button color and radius. Required. */
+  actionStyle: { color: string; radius: number }
   paymentType?: 'full' | 'deposit' | 'final'
   label?: string
 }
 
-export function PayWithCardButton({ invoiceId, shareToken, brandColor, radius, paymentType = 'full', label = 'Pay with card' }: PayWithCardButtonProps) {
+export function PayWithCardButton({ invoiceId, shareToken, branding, actionStyle, paymentType = 'full', label = 'Pay with card' }: PayWithCardButtonProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,21 +53,42 @@ export function PayWithCardButton({ invoiceId, shareToken, brandColor, radius, p
     }
   }
 
-  const bg = brandColor || '#000000'
-  const textColor = isLightColor(bg) ? '#111111' : '#ffffff'
+  const bg = actionStyle.color
+  const textColor = getTextColor(bg)
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
 
   return (
     <div>
       <button
         onClick={handleClick}
         disabled={loading}
-        style={{ backgroundColor: bg, color: textColor, borderRadius: radius ?? 12 }}
-        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+        style={{
+          backgroundColor: bg,
+          color: textColor,
+          borderRadius: actionStyle.radius,
+          fontSize: `${bodyDefaults.fontSize}px`,
+          fontWeight: bodyDefaults.fontWeight,
+          lineHeight: bodyDefaults.lineHeight,
+        }}
+        className="flex items-center gap-2 px-4 py-2.5 font-medium hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer"
       >
-        <CreditCard className="w-4 h-4" />
+        <CreditCard className="w-4 h-4" strokeWidth={1.5} />
         {loading ? 'Redirecting...' : label}
       </button>
-      {error && <p className="mt-2 text-xs text-red-500">{error}</p>}
+      {error && (
+        <p
+          className="mt-2"
+          style={{
+            fontSize: `${finePrintDefaults.fontSize}px`,
+            color: STATUS_COLORS.error,
+            fontWeight: finePrintDefaults.fontWeight,
+            lineHeight: finePrintDefaults.lineHeight,
+          }}
+        >
+          {error}
+        </p>
+      )}
     </div>
   )
 }

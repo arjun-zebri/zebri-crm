@@ -1,3 +1,8 @@
+import { FONT_STACKS, googleFontsHref } from '@/lib/branding/fonts'
+import { buildPublicBranding, type PublicBranding } from '@/lib/branding/public-branding'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { pdfTypeCss } from '@/lib/pdf/pdf-styles'
+
 export interface PdfLineItem {
   description: string
   amount?: number
@@ -6,7 +11,7 @@ export interface PdfLineItem {
 }
 
 export interface PdfDocumentData {
-  type: 'quote' | 'invoice' | 'contract'
+  type: 'invoice' | 'contract'
   documentNumber: string
   title: string
   status: string
@@ -47,7 +52,23 @@ function formatDate(dateStr: string) {
   })
 }
 
-function generateContractHtml(doc: PdfDocumentData): string {
+/**
+ * Render contract HTML with optional branding.
+ *
+ * When branding is provided, the contract adopts the sender's brand
+ * color on headings, logo at the top, and custom fonts. Without
+ * branding, renders in legacy black-and-white.
+ *
+ * @param doc      The contract document data.
+ * @param branding Optional branding to derive from (colours, fonts, logo).
+ * @param brandingObj The full PublicBranding object for CSS custom properties.
+ * @returns        The HTML string ready for print or inline preview.
+ */
+function generateContractHtml(
+  doc: PdfDocumentData,
+  branding?: PdfBrandingOpts,
+  brandingObj?: PublicBranding,
+): string {
   const signatureCursive = "Caveat, 'Brush Script MT', cursive"
   const mcSig = doc.mcSignatureName || doc.businessName || ''
   const signedOn = doc.signedAt
@@ -56,15 +77,39 @@ function generateContractHtml(doc: PdfDocumentData): string {
       })
     : null
 
+  // Resolve branding with safe defaults (same pattern as invoices).
+  const brandColor = branding?.brandColor ?? '#111111'
+  const textColor = branding?.textColor ?? '#111111'
+  const mutedColor = branding?.mutedColor ?? '#666666'
+  const headingColor = branding?.headingColor ?? textColor
+  const headingFont =
+    branding?.headingFontFamily ??
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  const bodyFont =
+    branding?.bodyFontFamily ??
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  const fontsLink = branding?.fontsHref
+    ? `<link rel="stylesheet" href="${branding.fontsHref}" />`
+    : ''
+  const logoTag = branding?.logoUrl
+    ? `<img src="${branding.logoUrl}" alt="" style="max-height:48px;max-width:200px;display:block;margin-bottom:12px" />`
+    : ''
+
   const auditBlock = signedOn
-    ? `<div style="margin-top:40px;padding:18px;background:#f5f9f6;border:1px solid #d1e4d7;border-radius:8px">
-        <p style="font-size:11px;font-weight:600;color:#0f766e;margin:0 0 6px;text-transform:uppercase;letter-spacing:0.06em">Audit trail</p>
-        <p style="font-size:12px;color:#333;margin:2px 0">Signed by ${doc.signerName || '-'}</p>
-        <p style="font-size:12px;color:#333;margin:2px 0">On ${signedOn}</p>
-        ${doc.signerIp ? `<p style="font-size:12px;color:#555;margin:2px 0">From IP ${doc.signerIp}</p>` : ''}
-        ${doc.signerUserAgent ? `<p style="font-size:11px;color:#777;margin:2px 0;word-break:break-all">${doc.signerUserAgent}</p>` : ''}
+    ? `<div style="margin-top:40px;padding:18px;background:var(--pdf-audit-bg);border:1px solid var(--pdf-audit-border);border-radius:8px">
+        <p style="font-size:var(--pdf-fine-print);font-weight:600;color:var(--pdf-audit-text);margin:0 0 6px;text-transform:uppercase;letter-spacing:0.06em">Audit trail</p>
+        <p style="font-size:var(--pdf-body);color:${textColor};margin:2px 0">Signed by ${doc.signerName || '-'}</p>
+        <p style="font-size:var(--pdf-body);color:${textColor};margin:2px 0">On ${signedOn}</p>
+        ${doc.signerIp ? `<p style="font-size:var(--pdf-body);color:${mutedColor};margin:2px 0">From IP ${doc.signerIp}</p>` : ''}
+        ${doc.signerUserAgent ? `<p style="font-size:var(--pdf-fine-print);color:${mutedColor};margin:2px 0;word-break:break-all">${doc.signerUserAgent}</p>` : ''}
       </div>`
     : ''
+
+  // The template references var(--pdf-*) throughout, so the :root block has
+  // to be emitted even when no branding was passed. Skipping it would leave
+  // every custom property undefined and each size would silently fall back
+  // to the browser default, which is the exact drift this module prevents.
+  const typeCss = pdfTypeCss(brandingObj ?? buildPublicBranding({}))
 
   return `<!DOCTYPE html>
 <html>
@@ -72,14 +117,17 @@ function generateContractHtml(doc: PdfDocumentData): string {
   <meta charset="utf-8" />
   <title>Contract ${doc.documentNumber}</title>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500&display=swap" rel="stylesheet" />
+  ${fontsLink}
   <style>
+    ${typeCss}
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 48px; color: #111; max-width: 720px; margin: 0 auto; line-height: 1.6; }
-    h1 { font-size: 22px; margin: 24px 0 10px; color: #111; }
-    h2 { font-size: 16px; margin: 20px 0 6px; color: #111; }
-    h3 { font-size: 14px; margin: 16px 0 4px; color: #111; }
-    p { margin: 6px 0; color: #333; font-size: 14px; }
-    ul, ol { margin: 6px 0 6px 22px; color: #333; font-size: 14px; }
+    body { font-family: ${bodyFont}; padding: 48px; color: ${textColor}; max-width: 720px; margin: 0 auto; line-height: 1.6; }
+    h1, h2, h3 { font-family: ${headingFont}; color: ${headingColor}; }
+    h1 { font-size: var(--pdf-doc-title); margin: 24px 0 10px; }
+    h2 { font-size: var(--pdf-section-heading); margin: 20px 0 6px; }
+    h3 { font-size: var(--pdf-body); margin: 16px 0 4px; }
+    p { margin: 6px 0; color: ${textColor}; font-size: var(--pdf-body); }
+    ul, ol { margin: 6px 0 6px 22px; color: ${textColor}; font-size: var(--pdf-body); }
     li { margin: 2px 0; }
     li > p { margin: 0; }
     li > p + ul, li > p + ol { margin-top: 2px; }
@@ -89,30 +137,31 @@ function generateContractHtml(doc: PdfDocumentData): string {
 <body>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px">
     <div>
-      ${doc.businessName ? `<p style="font-size:20px;font-weight:700;color:#111;margin-bottom:4px">${doc.businessName}</p>` : ''}
-      <p style="font-size:14px;color:#666">For ${doc.coupleName}</p>
+      ${logoTag}
+      ${doc.businessName ? `<p style="font-size:var(--pdf-subtitle);font-weight:700;color:${textColor};margin-bottom:4px;margin-top:${logoTag ? '8px' : '0'}">${doc.businessName}</p>` : ''}
+      <p style="font-size:var(--pdf-body);color:${mutedColor}">For ${doc.coupleName}</p>
     </div>
     <div style="text-align:right">
-      <p style="font-size:22px;font-weight:700;color:#111">Contract</p>
-      <p style="font-size:14px;color:#888;margin-top:4px">#${doc.documentNumber}</p>
+      <p style="font-size:var(--pdf-doc-title);font-weight:700;color:${brandColor}">Contract</p>
+      <p style="font-size:var(--pdf-body);color:${mutedColor};margin-top:4px">#${doc.documentNumber}</p>
     </div>
   </div>
 
-  ${doc.title ? `<h1 style="font-size:22px;font-weight:600;color:#111;margin-bottom:24px">${doc.title}</h1>` : ''}
+  ${doc.title ? `<h1 style="font-size:var(--pdf-doc-title);font-weight:600;margin-bottom:24px">${doc.title}</h1>` : ''}
 
-  <div style="color:#333;font-size:14px">${doc.contractHtml || ''}</div>
+  <div style="color:${textColor};font-size:var(--pdf-body)">${doc.contractHtml || ''}</div>
 
-  <div style="margin-top:40px;padding-top:24px;border-top:1px solid #e5e5e5;display:flex;gap:40px;flex-wrap:wrap">
+  <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--pdf-border);display:flex;gap:40px;flex-wrap:wrap">
     <div style="flex:1;min-width:220px">
-      <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Signed by MC</p>
-      <p style="font-size:24px;font-family:${signatureCursive};color:#111">${mcSig}</p>
-      <p style="font-size:12px;color:#888;margin-top:4px">${doc.businessName || ''}</p>
+      <p style="font-size:var(--pdf-fine-print);font-weight:600;color:${mutedColor};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Signed by MC</p>
+      <p style="font-size:var(--pdf-subtitle);font-family:${signatureCursive};color:${textColor}">${mcSig}</p>
+      <p style="font-size:var(--pdf-body);color:${mutedColor};margin-top:4px">${doc.businessName || ''}</p>
     </div>
     ${doc.signerName ? `
     <div style="flex:1;min-width:220px">
-      <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Signed by Couple</p>
-      <p style="font-size:24px;font-family:${signatureCursive};color:#111">${doc.signerName}</p>
-      <p style="font-size:12px;color:#888;margin-top:4px">${signedOn || ''}</p>
+      <p style="font-size:var(--pdf-fine-print);font-weight:600;color:${mutedColor};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Signed by Couple</p>
+      <p style="font-size:var(--pdf-subtitle);font-family:${signatureCursive};color:${textColor}">${doc.signerName}</p>
+      <p style="font-size:var(--pdf-body);color:${mutedColor};margin-top:4px">${signedOn || ''}</p>
     </div>` : ''}
   </div>
 
@@ -134,6 +183,10 @@ export interface PdfBrandingOpts {
   brandColor?: string
   textColor?: string
   mutedColor?: string
+  /** CSS colour for headings. */
+  headingColor?: string
+  /** CSS colour for subheadings / section labels. */
+  subheadingColor?: string
   /** CSS font-family string for headings (e.g. `'Inter', sans-serif`). */
   headingFontFamily?: string
   /** CSS font-family string for body. */
@@ -145,6 +198,37 @@ export interface PdfBrandingOpts {
 }
 
 /**
+ * Convert PublicBranding to PdfBrandingOpts.
+ *
+ * Single adapter used by all PDF callers (public pages, dashboard,
+ * email pipelines) so branding logic lives in one place. Resolves
+ * font IDs to CSS font-family strings and generates the Google Fonts
+ * CDN href from the font names.
+ *
+ * @param branding The PublicBranding object (e.g. from RPC payload or buildPublicBranding).
+ * @returns        PdfBrandingOpts ready to pass to buildPdfHtml or generateAndPrintPdf.
+ */
+export function publicBrandingToPdfOpts(branding: PublicBranding): PdfBrandingOpts {
+  // Resolve font families using the same lookup tables as the public surfaces.
+  // This ensures print PDFs match the web preview pixel for pixel.
+  const headingFontFamily = FONT_STACKS[branding.font_heading]
+  const bodyFontFamily = FONT_STACKS[branding.font_body]
+  const fontsHref = googleFontsHref([branding.font_heading, branding.font_body])
+
+  return {
+    brandColor: branding.brand_color,
+    textColor: branding.text_color,
+    mutedColor: branding.muted_color,
+    headingColor: branding.heading_color ?? branding.text_color,
+    subheadingColor: branding.subheading_color ?? branding.muted_color,
+    headingFontFamily,
+    bodyFontFamily,
+    fontsHref,
+    logoUrl: branding.logo_url ?? undefined,
+  }
+}
+
+/**
  * Build the HTML string that `generateAndPrintPdf` would print.
  *
  * Exported separately so the Quote / Invoice builder preview pane
@@ -152,14 +236,20 @@ export interface PdfBrandingOpts {
  * without opening a new window. Same output bytes — the preview
  * and the eventual print stay in lockstep.
  *
- * @param doc      The document data (quote / invoice / contract).
- * @param branding Optional branding overrides (colours + fonts +
- *                 logo). When omitted, the PDF renders in the
- *                 legacy black-and-white style.
+ * @param doc            The document data (invoice / contract).
+ * @param branding       Optional branding overrides (colours + fonts + logo).
+ *                       When omitted, the PDF renders in the legacy
+ *                       black-and-white style.
+ * @param brandingObj    The full PublicBranding object for CSS custom properties.
+ *                       Used to derive the type scale and colours.
  */
-export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): string {
+export function buildPdfHtml(
+  doc: PdfDocumentData,
+  branding?: PdfBrandingOpts,
+  brandingObj?: PublicBranding,
+): string {
   if (doc.type === 'contract') {
-    return generateContractHtml(doc)
+    return generateContractHtml(doc, branding, brandingObj)
   }
 
   // Resolve branding with safe defaults so the templating below
@@ -167,6 +257,8 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
   const brandColor = branding?.brandColor ?? '#111111'
   const textColor = branding?.textColor ?? '#111111'
   const mutedColor = branding?.mutedColor ?? '#666666'
+  const headingColor = branding?.headingColor ?? textColor
+  const subheadingColor = branding?.subheadingColor ?? mutedColor
   const headingFont =
     branding?.headingFontFamily ??
     "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
@@ -195,16 +287,16 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
       if (doc.type === 'invoice' && item.quantity != null && item.unit_price != null) {
         return `
           <tr>
-            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor}">${item.description || '-'}</td>
-            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor};text-align:right;width:60px">${item.quantity}</td>
-            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor};text-align:right;width:100px">${formatCurrency(item.unit_price)}</td>
-            <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor};text-align:right;width:100px">${formatCurrency(item.amount ?? item.unit_price * item.quantity)}</td>
+            <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor}">${item.description || '-'}</td>
+            <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor};text-align:right;width:60px">${item.quantity}</td>
+            <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor};text-align:right;width:100px">${formatCurrency(item.unit_price)}</td>
+            <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor};text-align:right;width:100px">${formatCurrency(item.amount ?? item.unit_price * item.quantity)}</td>
           </tr>`
       }
       return `
         <tr>
-          <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor}">${item.description || '-'}</td>
-          <td style="padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:${textColor};text-align:right;width:120px">${formatCurrency(item.amount ?? 0)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor}">${item.description || '-'}</td>
+          <td style="padding:10px 0;border-bottom:1px solid var(--pdf-border);font-size:var(--pdf-body);color:${textColor};text-align:right;width:120px">${formatCurrency(item.amount ?? 0)}</td>
         </tr>`
     })
     .join('')
@@ -212,62 +304,67 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
   const headerRow =
     doc.type === 'invoice'
       ? `<tr style="border-bottom:2px solid ${brandColor}">
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:left;font-family:${headingFont}">Description</th>
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:right;width:60px;font-family:${headingFont}">Qty</th>
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:right;width:100px;font-family:${headingFont}">Unit price</th>
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:right;width:100px;font-family:${headingFont}">Amount</th>
+          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:left;font-family:${headingFont}">Description</th>
+          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:right;width:60px;font-family:${headingFont}">Qty</th>
+          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:right;width:100px;font-family:${headingFont}">Unit price</th>
+          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:right;width:100px;font-family:${headingFont}">Amount</th>
         </tr>`
       : `<tr style="border-bottom:2px solid ${brandColor}">
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:left;font-family:${headingFont}">Description</th>
-          <th style="padding:8px 0;font-size:12px;font-weight:600;color:${mutedColor};text-align:right;width:120px;font-family:${headingFont}">Amount</th>
+          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:left;font-family:${headingFont}">Description</th>
+          <th style="padding:8px 0;font-size:var(--pdf-section-label);font-weight:600;color:${mutedColor};text-align:right;width:120px;font-family:${headingFont}">Amount</th>
         </tr>`
 
   const discountRow =
     discountAmount > 0
       ? `<tr>
-          <td style="padding:6px 0;font-size:13px;color:${mutedColor}">Discount${doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}</td>
-          <td style="padding:6px 0;font-size:13px;color:#ef4444;text-align:right">-${formatCurrency(discountAmount)}</td>
+          <td style="padding:6px 0;font-size:var(--pdf-body);color:${mutedColor}">Discount${doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}</td>
+          <td style="padding:6px 0;font-size:var(--pdf-body);color:${STATUS_COLORS.error};text-align:right">-${formatCurrency(discountAmount)}</td>
         </tr>`
       : ''
 
   const taxRow =
     taxRate > 0
       ? `<tr>
-          <td style="padding:6px 0;font-size:13px;color:${mutedColor}">GST (${taxRate}%)</td>
-          <td style="padding:6px 0;font-size:13px;color:${textColor};text-align:right">${formatCurrency(tax)}</td>
+          <td style="padding:6px 0;font-size:var(--pdf-body);color:${mutedColor}">GST (${taxRate}%)</td>
+          <td style="padding:6px 0;font-size:var(--pdf-body);color:${textColor};text-align:right">${formatCurrency(tax)}</td>
         </tr>`
       : ''
 
-  const metaLine = doc.type === 'quote' && doc.expiresAt
-    ? `<p style="margin:4px 0 0;font-size:13px;color:${mutedColor}">Expires: ${formatDate(doc.expiresAt)}</p>`
-    : doc.type === 'invoice' && doc.dueDate
-    ? `<p style="margin:4px 0 0;font-size:13px;color:${mutedColor}">Due: ${formatDate(doc.dueDate)}</p>`
+  const metaLine = doc.type === 'invoice' && doc.dueDate
+    ? `<p style="margin:4px 0 0;font-size:var(--pdf-body);color:${mutedColor}">Due: ${formatDate(doc.dueDate)}</p>`
     : ''
 
   const bankDetails =
     doc.type === 'invoice' && (doc.bankAccountName || doc.bankBsb || doc.bankAccountNumber)
-      ? `<div style="margin-top:32px;padding:16px;background:#f9f9f9;border-radius:8px">
-          <p style="font-size:12px;font-weight:600;color:${mutedColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Bank transfer details</p>
-          ${doc.bankAccountName ? `<p style="font-size:13px;color:${textColor};margin:4px 0">Account name: ${doc.bankAccountName}</p>` : ''}
-          ${doc.bankBsb ? `<p style="font-size:13px;color:${textColor};margin:4px 0">BSB: ${doc.bankBsb}</p>` : ''}
-          ${doc.bankAccountNumber ? `<p style="font-size:13px;color:${textColor};margin:4px 0">Account number: ${doc.bankAccountNumber}</p>` : ''}
+      ? `<div style="margin-top:32px;padding:16px;background:var(--pdf-bank-bg);border-radius:8px">
+          <p style="font-size:var(--pdf-section-label);font-weight:600;color:${subheadingColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Bank transfer details</p>
+          ${doc.bankAccountName ? `<p style="font-size:var(--pdf-body);color:${textColor};margin:4px 0">Account name: ${doc.bankAccountName}</p>` : ''}
+          ${doc.bankBsb ? `<p style="font-size:var(--pdf-body);color:${textColor};margin:4px 0">BSB: ${doc.bankBsb}</p>` : ''}
+          ${doc.bankAccountNumber ? `<p style="font-size:var(--pdf-body);color:${textColor};margin:4px 0">Account number: ${doc.bankAccountNumber}</p>` : ''}
         </div>`
       : ''
 
   const notesSection = doc.notes
     ? `<div style="margin-top:24px">
-        <p style="font-size:12px;font-weight:600;color:${mutedColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Notes</p>
-        <p style="font-size:13px;color:${mutedColor};white-space:pre-line;line-height:1.6">${doc.notes}</p>
+        <p style="font-size:var(--pdf-section-label);font-weight:600;color:${subheadingColor};margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;font-family:${headingFont}">Notes</p>
+        <p style="font-size:var(--pdf-body);color:${mutedColor};white-space:pre-line;line-height:1.6">${doc.notes}</p>
       </div>`
     : ''
+
+  // The template references var(--pdf-*) throughout, so the :root block has
+  // to be emitted even when no branding was passed. Skipping it would leave
+  // every custom property undefined and each size would silently fall back
+  // to the browser default, which is the exact drift this module prevents.
+  const typeCss = pdfTypeCss(brandingObj ?? buildPublicBranding({}))
 
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${doc.type === 'quote' ? 'Quote' : 'Invoice'} ${doc.documentNumber}</title>
+  <title>${'Invoice'} ${doc.documentNumber}</title>
   ${fontsLink}
   <style>
+    ${typeCss}
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: ${bodyFont}; padding: 48px; color: ${textColor}; max-width: 700px; margin: 0 auto; }
     h1, h2, h3, .heading { font-family: ${headingFont}; }
@@ -281,17 +378,17 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:48px">
     <div>
       ${logoTag}
-      ${doc.businessName ? `<p class="heading" style="font-size:20px;font-weight:700;color:${textColor};margin-bottom:4px">${doc.businessName}</p>` : ''}
-      <p style="font-size:14px;color:${mutedColor}">${doc.coupleName}</p>
+      ${doc.businessName ? `<p class="heading" style="font-size:var(--pdf-subtitle);font-weight:700;color:${textColor};margin-bottom:4px">${doc.businessName}</p>` : ''}
+      <p style="font-size:var(--pdf-body);color:${mutedColor}">${doc.coupleName}</p>
     </div>
     <div style="text-align:right">
-      <p class="heading" style="font-size:22px;font-weight:700;color:${brandColor};text-transform:capitalize">${doc.type === 'quote' ? 'Quote' : 'Invoice'}</p>
-      <p style="font-size:14px;color:${mutedColor};margin-top:4px">#${doc.documentNumber}</p>
+      <p class="heading" style="font-size:var(--pdf-doc-title);font-weight:700;color:${headingColor};text-transform:capitalize">${'Invoice'}</p>
+      <p style="font-size:var(--pdf-body);color:${mutedColor};margin-top:4px">#${doc.documentNumber}</p>
       ${metaLine}
     </div>
   </div>
 
-  ${doc.title ? `<p class="heading" style="font-size:16px;font-weight:600;color:${textColor};margin-bottom:32px">${doc.title}</p>` : ''}
+  ${doc.title ? `<p class="heading" style="font-size:var(--pdf-section-heading);font-weight:600;color:${headingColor};margin-bottom:32px">${doc.title}</p>` : ''}
 
   <table style="width:100%;border-collapse:collapse">
     <thead>${headerRow}</thead>
@@ -301,14 +398,14 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
   <div style="margin-top:24px;border-top:2px solid ${brandColor};padding-top:16px">
     <table style="width:100%;border-collapse:collapse;margin-left:auto;max-width:280px">
       <tr>
-        <td style="padding:6px 0;font-size:13px;color:${mutedColor}">Subtotal</td>
-        <td style="padding:6px 0;font-size:13px;color:${textColor};text-align:right">${formatCurrency(doc.subtotal)}</td>
+        <td style="padding:6px 0;font-size:var(--pdf-body);color:${mutedColor}">Subtotal</td>
+        <td style="padding:6px 0;font-size:var(--pdf-body);color:${textColor};text-align:right">${formatCurrency(doc.subtotal)}</td>
       </tr>
       ${discountRow}
       ${taxRow}
-      <tr style="border-top:1px solid #e5e5e5">
-        <td class="heading" style="padding:10px 0 6px;font-size:15px;font-weight:700;color:${brandColor}">Total</td>
-        <td class="heading" style="padding:10px 0 6px;font-size:15px;font-weight:700;color:${brandColor};text-align:right">${formatCurrency(doc.total)}</td>
+      <tr style="border-top:1px solid var(--pdf-border)">
+        <td class="heading" style="padding:10px 0 6px;font-size:var(--pdf-total);font-weight:700;color:${headingColor}">Total</td>
+        <td class="heading" style="padding:10px 0 6px;font-size:var(--pdf-total);font-weight:700;color:${headingColor};text-align:right">${formatCurrency(doc.total)}</td>
       </tr>
     </table>
   </div>
@@ -321,8 +418,25 @@ export function buildPdfHtml(doc: PdfDocumentData, branding?: PdfBrandingOpts): 
   return html
 }
 
-export function generateAndPrintPdf(doc: PdfDocumentData) {
-  const html = buildPdfHtml(doc)
+/**
+ * Generate and print a PDF document.
+ *
+ * Opens a new print-dialog window with the HTML rendering. Accepts
+ * optional branding context — when supplied, the PDF adopts the
+ * sender's brand colours, fonts, and logo, and scales the type
+ * scale from the global typography settings.
+ *
+ * @param doc       The document data (invoice or contract).
+ * @param branding  Optional branding overrides (colours, fonts, logo).
+ * @param brandingObj The full PublicBranding object for CSS custom properties.
+ *                  Used to derive the type scale and colours.
+ */
+export function generateAndPrintPdf(
+  doc: PdfDocumentData,
+  branding?: PdfBrandingOpts,
+  brandingObj?: PublicBranding,
+) {
+  const html = buildPdfHtml(doc, branding, brandingObj)
   const win = window.open('', '_blank')
   if (!win) return
   win.document.write(html)

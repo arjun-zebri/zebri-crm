@@ -2,7 +2,7 @@
  * Integration tests for the starter-template add actions against local
  * Supabase (real schema, real RLS).
  *
- * Proves, for packages / quotes / invoices / contracts:
+ * Proves, for packages / invoices / contracts:
  * - A starter inserts the parent row flagged `is_starter = true`, plus its
  *   line items (for the line-item types), under the caller's `user_id`.
  * - Re-adding a name the MC already owns is a no-op (added: 0).
@@ -30,7 +30,6 @@ import {
   addStarterContractsAction,
   addStarterInvoiceTemplatesAction,
   addStarterPackagesAction,
-  addStarterQuoteTemplatesAction,
 } from '@/app/(dashboard)/templates/starter-actions'
 
 describe('starter-template add actions', () => {
@@ -71,22 +70,6 @@ describe('starter-template add actions', () => {
   it('ignores unknown package names', async () => {
     const res = await addStarterPackagesAction(['Definitely Not A Starter'])
     expect(res.ok && res.data.added).toBe(0)
-  })
-
-  it('adds a starter quote template with its items', async () => {
-    const res = await addStarterQuoteTemplatesAction(['Full Day Wedding'])
-    expect(res.ok && res.data.added).toBe(1)
-
-    const { data: tpl } = await user.client
-      .from('quote_templates')
-      .select('id, is_starter')
-      .eq('user_id', user.id)
-      .eq('name', 'Full Day Wedding')
-      .single()
-    expect(tpl?.is_starter).toBe(true)
-
-    const { data: items } = await user.client.from('quote_template_items').select('id').eq('template_id', tpl!.id)
-    expect(items).toHaveLength(2)
   })
 
   it('adds a starter invoice template with its items', async () => {

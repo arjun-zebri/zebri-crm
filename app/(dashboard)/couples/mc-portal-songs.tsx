@@ -1,11 +1,13 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2, Plus } from 'lucide-react'
+import { Pencil, Trash2, Plus, Music } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 
+import { CoupleTabEmpty, CoupleTabShell } from './couple-tab-shell'
 import {
   addPortalSongCategoryAction,
   deletePortalSongCategoryAction,
@@ -259,68 +261,81 @@ export function McPortalSongs({ coupleId, onEditSong, onAddSong }: McPortalSongs
     },
   })
 
-  if (isCategoriesLoading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => <div key={i} className="h-6 bg-gray-100 rounded animate-pulse" />)}
-      </div>
-    )
-  }
+  const isEmpty = !isCategoriesLoading && categories.length === 0
+
+  const actions = (
+    <Button
+      size="sm"
+      onClick={() => setShowAddCategory(true)}
+      className="cursor-pointer gap-1.5"
+    >
+      <Plus size={14} strokeWidth={1.5} />
+      Add category
+    </Button>
+  )
 
   return (
-    <div className="space-y-8">
-      {categories.map((cat) => (
-        <CategorySection
-          key={cat.id}
-          category={cat}
-          songs={songs.filter((s) => s.category === cat.key)}
-          onRename={(id, label) => renameCategory.mutate({ id, label })}
-          onDelete={(id) => deleteCategory.mutate(id)}
-          onAdd={() => onAddSong(cat.key, cat.label)}
-          onEditSong={onEditSong}
+    <CoupleTabShell
+      title="Songs"
+      stats={songs.length > 0 ? [{ label: `${songs.length} total` }] : undefined}
+      actions={actions}
+    >
+      {isCategoriesLoading ? (
+        <div className="space-y-4" aria-hidden="true">
+          {[1, 2, 3].map((i) => <div key={i} className="h-6 bg-gray-100 rounded animate-pulse" />)}
+        </div>
+      ) : isEmpty ? (
+        <CoupleTabEmpty
+          icon={Music}
+          title="No songs yet"
+          description="Create a category with the button above."
         />
-      ))}
-
-      {/* Add category */}
-      <div className="mt-2">
-        {showAddCategory ? (
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newCategoryLabel}
-              onChange={(e) => setNewCategoryLabel(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newCategoryLabel.trim()) addCategory.mutate(newCategoryLabel.trim())
-                if (e.key === 'Escape') { setShowAddCategory(false); setNewCategoryLabel('') }
-              }}
-              placeholder="Category name"
-              autoFocus
-              className="text-sm border-b border-gray-300 outline-none bg-transparent text-gray-700 placeholder:text-gray-300 w-48 pb-0.5"
+      ) : (
+        <div className="space-y-8">
+          {categories.map((cat) => (
+            <CategorySection
+              key={cat.id}
+              category={cat}
+              songs={songs.filter((s) => s.category === cat.key)}
+              onRename={(id, label) => renameCategory.mutate({ id, label })}
+              onDelete={(id) => deleteCategory.mutate(id)}
+              onAdd={() => onAddSong(cat.key, cat.label)}
+              onEditSong={onEditSong}
             />
-            <button
-              onClick={() => { if (newCategoryLabel.trim()) addCategory.mutate(newCategoryLabel.trim()) }}
-              disabled={!newCategoryLabel.trim() || addCategory.isPending}
-              className="text-xs text-gray-500 hover:text-gray-700 transition cursor-pointer disabled:opacity-40"
-            >
-              Add
-            </button>
-            <button
-              onClick={() => { setShowAddCategory(false); setNewCategoryLabel('') }}
-              className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowAddCategory(true)}
-            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
-          >
-            <Plus size={13} strokeWidth={1.5} />
-            Add category
-          </button>
-        )}
-      </div>
-    </div>
+          ))}
+
+          {/* Add category inline input */}
+          {showAddCategory ? (
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="text"
+                value={newCategoryLabel}
+                onChange={(e) => setNewCategoryLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newCategoryLabel.trim()) addCategory.mutate(newCategoryLabel.trim())
+                  if (e.key === 'Escape') { setShowAddCategory(false); setNewCategoryLabel('') }
+                }}
+                placeholder="Category name"
+                autoFocus
+                className="text-sm border-b border-gray-300 outline-none bg-transparent text-gray-700 placeholder:text-gray-300 w-48 pb-0.5"
+              />
+              <button
+                onClick={() => { if (newCategoryLabel.trim()) addCategory.mutate(newCategoryLabel.trim()) }}
+                disabled={!newCategoryLabel.trim() || addCategory.isPending}
+                className="text-xs text-gray-500 hover:text-gray-700 transition cursor-pointer disabled:opacity-40"
+              >
+                Add
+              </button>
+              <button
+                onClick={() => { setShowAddCategory(false); setNewCategoryLabel('') }}
+                className="text-xs text-gray-400 hover:text-gray-600 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </CoupleTabShell>
   )
 }

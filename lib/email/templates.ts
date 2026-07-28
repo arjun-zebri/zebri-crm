@@ -170,6 +170,30 @@ export function resolveTemplateContent(
   return fillMentions(content, ctx, overrides) ?? content
 }
 
+/** Chip styling for the read-only "template shape" preview. */
+const CHIP_CLASS = 'inline-block rounded bg-blue-50 px-1.5 py-0.5 text-sm font-medium text-blue-700'
+
+/**
+ * Render a template body as its **shape**, not a filled email: every
+ * variable becomes a labelled blue chip (e.g. "Couple names") regardless
+ * of any context. This is the read-only Templates preview pane — it shows
+ * what the template is, where the live editor preview (above) fills sample
+ * values. No context needed; mentions resolve to their human label.
+ */
+export function renderTemplateChips(content: JSONContent): string {
+  const raw = generateHTML(content, [
+    StarterKit,
+    Mention.configure({
+      HTMLAttributes: { class: CHIP_CLASS },
+      renderHTML({ node }) {
+        const id = typeof node.attrs?.id === 'string' ? node.attrs.id.trim() : ''
+        return ['span', { class: CHIP_CLASS }, variableLabel(id)]
+      },
+    }),
+  ])
+  return fillEmptyParagraphs(sanitizeHtml(raw, SANITIZE_OPTS))
+}
+
 /**
  * Render a template subject (mustache string) against a context.
  *

@@ -4,6 +4,7 @@ import * as Popover from '@radix-ui/react-popover'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 
+import { AddressAutocomplete, type AddressValue } from '@/components/ui/address-autocomplete'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 
@@ -22,11 +23,6 @@ function parseBusinessTypes(value: string | string[]): string[] {
   return [value]
 }
 
-interface AddressSuggestion {
-  placeId: string
-  text: string
-}
-
 interface PersonalInfoSectionProps {
   initialData: {
     displayName: string
@@ -35,6 +31,8 @@ interface PersonalInfoSectionProps {
     website: string
     instagramUrl: string
     facebookUrl: string
+    twitterUrl: string
+    pinterestUrl: string
     businessType: string | string[]
     mcSignatureName: string
     addressText: string
@@ -52,15 +50,14 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
   const [phone, setPhone] = useState(initialData.phone)
   const [instagramUrl, setInstagramUrl] = useState(initialData.instagramUrl)
   const [facebookUrl, setFacebookUrl] = useState(initialData.facebookUrl)
+  const [twitterUrl, setTwitterUrl] = useState(initialData.twitterUrl)
+  const [pinterestUrl, setPinterestUrl] = useState(initialData.pinterestUrl)
   const [businessTypes, setBusinessTypes] = useState<string[]>(parseBusinessTypes(initialData.businessType))
   const [businessTypeOpen, setBusinessTypeOpen] = useState(false)
   const [mcSignatureName, setMcSignatureName] = useState(initialData.mcSignatureName)
   const [addressText, setAddressText] = useState(initialData.addressText)
   const [addressLat, setAddressLat] = useState<number | null>(initialData.addressLat)
   const [addressLng, setAddressLng] = useState<number | null>(initialData.addressLng)
-  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([])
-  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
-  const addressDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   // Bumping this requests a save *after* the next render, used by the
   // programmatic changes (business-type picker, address selection) so
@@ -81,6 +78,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
     website: initialData.website,
     instagramUrl: initialData.instagramUrl,
     facebookUrl: initialData.facebookUrl,
+    twitterUrl: initialData.twitterUrl,
+    pinterestUrl: initialData.pinterestUrl,
     businessTypes: initialBusinessTypes,
     mcSignatureName: initialData.mcSignatureName,
     addressText: initialData.addressText,
@@ -98,56 +97,14 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       website !== s.website ||
       instagramUrl !== s.instagramUrl ||
       facebookUrl !== s.facebookUrl ||
+      twitterUrl !== s.twitterUrl ||
+      pinterestUrl !== s.pinterestUrl ||
       JSON.stringify([...businessTypes].sort()) !== JSON.stringify([...s.businessTypes].sort()) ||
       mcSignatureName !== s.mcSignatureName ||
       addressText !== s.addressText ||
       addressLat !== s.addressLat ||
       addressLng !== s.addressLng
     )
-  }
-
-  const handleAddressChange = (value: string) => {
-    setAddressText(value)
-    setAddressLat(null)
-    setAddressLng(null)
-    if (addressDebounceRef.current) clearTimeout(addressDebounceRef.current)
-    if (value.trim().length < 2) {
-      setAddressSuggestions([])
-      setShowAddressSuggestions(false)
-      return
-    }
-    addressDebounceRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/places/address-autocomplete?input=${encodeURIComponent(value)}`)
-        const data = await res.json()
-        const suggestions: AddressSuggestion[] = (data.suggestions ?? []).map((s: { placePrediction: { placeId: string; text: { text: string } } }) => ({
-          placeId: s.placePrediction?.placeId,
-          text: s.placePrediction?.text?.text,
-        })).filter((s: AddressSuggestion) => s.placeId && s.text)
-        setAddressSuggestions(suggestions)
-        setShowAddressSuggestions(suggestions.length > 0)
-      } catch {
-        setAddressSuggestions([])
-      }
-    }, 300)
-  }
-
-  const handleAddressSelect = async (suggestion: AddressSuggestion) => {
-    setAddressText(suggestion.text)
-    setShowAddressSuggestions(false)
-    setAddressSuggestions([])
-    try {
-      const res = await fetch(`/api/places/details?place_id=${suggestion.placeId}`)
-      const data = await res.json()
-      if (data.location) {
-        setAddressLat(data.location.latitude)
-        setAddressLng(data.location.longitude)
-      }
-    } catch {
-      // lat/lng optional - address text is still saved
-    }
-    // Persist the chosen address (+ coords) after this render commits.
-    setSaveSignal((n) => n + 1)
   }
 
   // Persist on blur / selection change. No-op when nothing changed
@@ -189,6 +146,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
         website,
         instagram_url: instagramUrl,
         facebook_url: facebookUrl,
+        twitter_url: twitterUrl,
+        pinterest_url: pinterestUrl,
         business_type: businessTypes,
         mc_signature_name: mcSignatureName,
         address_text: addressText,
@@ -225,6 +184,8 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
       website,
       instagramUrl,
       facebookUrl,
+      twitterUrl,
+      pinterestUrl,
       businessTypes,
       mcSignatureName,
       addressText,
@@ -399,6 +360,28 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Twitter</label>
+            <input
+              type="url"
+              value={twitterUrl}
+              onChange={(e) => setTwitterUrl(e.target.value)}
+              className={inputClass}
+              placeholder="https://twitter.com/yourhandle"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pinterest</label>
+            <input
+              type="url"
+              value={pinterestUrl}
+              onChange={(e) => setPinterestUrl(e.target.value)}
+              className={inputClass}
+              placeholder="https://pinterest.com/yourprofile"
+            />
+          </div>
+
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Signature name</label>
             <input
@@ -421,33 +404,24 @@ export function PersonalInfoSection({ initialData, email }: PersonalInfoSectionP
             )}
           </div>
 
-          <div className="sm:col-span-2 relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Home address</label>
-            <input
-              type="text"
+          <div className="sm:col-span-2">
+            <AddressAutocomplete
               value={addressText}
-              onChange={(e) => handleAddressChange(e.target.value)}
-              onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 150)}
-              className={inputClass}
-              placeholder="Start typing your address..."
-              autoComplete="off"
+              help="Used to calculate drive time to each event."
+              onChange={(next: AddressValue) => {
+                setAddressText(next.text)
+                setAddressLat(next.lat)
+                setAddressLng(next.lng)
+              }}
+              onSelect={(next: AddressValue) => {
+                setAddressText(next.text)
+                setAddressLat(next.lat)
+                setAddressLng(next.lng)
+                // Persist after this render commits so autoSave reads the
+                // freshly-set coordinates rather than a stale closure.
+                setSaveSignal((n) => n + 1)
+              }}
             />
-            <p className="text-xs text-gray-400 mt-1.5">
-              Used to calculate drive time to each event.
-            </p>
-            {showAddressSuggestions && addressSuggestions.length > 0 && (
-              <ul className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg py-1 max-h-48 overflow-y-auto">
-                {addressSuggestions.map((s) => (
-                  <li
-                    key={s.placeId}
-                    onMouseDown={() => handleAddressSelect(s)}
-                    className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
-                  >
-                    {s.text}
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         </div>
 

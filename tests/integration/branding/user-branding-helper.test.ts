@@ -115,13 +115,15 @@ describe('_user_branding(uuid) — internal helper', () => {
     };
 
     // These constants are baked into the helper's COALESCE
-    // expressions (see migration 20260516000000). If anyone changes
-    // them, this test should fail loudly so we audit the impact on
-    // existing public surfaces.
-    expect(payload.brand_color).toBe('#A7F3D0');
+    // expressions. If anyone changes them, this test should fail loudly
+    // so we audit the impact on existing public surfaces. The brand_color
+    // default moved from the old mint (#A7F3D0) to neutral #111827 in the
+    // branding overhaul (migration 20260718100000_branding_colours).
+    expect(payload.brand_color).toBe('#111827');
     expect(payload.accent_color).toBe('#111827');
-    expect(payload.surface_color).toBe('#ffffff');
-    expect(payload.text_color).toBe('#111827');
+    expect(payload.surface_color).toBe('#FFFFFF');
+    // Body text default is now grey (#6B7280); headings stay near-black.
+    expect(payload.text_color).toBe('#6B7280');
     expect(payload.font_heading).toBe('inter');
     expect(payload.font_body).toBe('inter');
     expect(payload.density).toBe('cozy');

@@ -39,13 +39,12 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   'new_enquiry',
   'couple_stage_changed',
   'booking_cancelled',
-  // Quotes
-  'quote_created',
-  'quote_sent',
-  'quote_accepted',
-  'quote_declined',
-  'quote_due',
-  'quote_overdue',
+  // Quotes / proposals
+  'proposal_sent',
+  'proposal_accepted',
+  'proposal_declined',
+  'proposal_due',
+  'proposal_overdue',
   // Invoices / payments
   'invoice_created',
   'invoice_sent',
@@ -79,6 +78,7 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
   'couple_uploaded_file', // P1
   'couple_added_song_to_playlist', // P2
   'couple_completed_vows', // P3
+  'questionnaire_completed', // P4 — emitted by tg_couple_questionnaires_emit_completed
 ])
 
 /**
@@ -92,7 +92,7 @@ export const LAUNCH_VISIBLE_TRIGGERS: ReadonlySet<TriggerType> = new Set<Trigger
  * `update_timeline_event`, `send_onboarding_pack`,
  * `send_anniversary_message`, `update_custom_fields`,
  * `send_whatsapp`) and the to-wire stubs (`generate_run_sheet_pdf`,
- * `create_invoice_from_quote`).
+ * `create_invoice_from_proposal`).
  */
 export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionType>([
   'send_email',
@@ -105,9 +105,10 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'pause_couple_automations',
   'create_task',
   'update_task',
-  'send_quote',
+  'send_proposal',
   'send_contract',
   'send_invoice',
+  'send_couple_questionnaire',
   'trigger_payment_reminder',
   'create_timeline_event',
   'send_timeline_to_vendors',
@@ -116,7 +117,7 @@ export const LAUNCH_VISIBLE_ACTIONS: ReadonlySet<ActionType> = new Set<ActionTyp
   'send_thank_you_message',
   'request_review',
   'send_referral_request',
-  'create_invoice_from_quote', // AC2
+  'create_invoice_from_proposal', // AC3
   'generate_run_sheet_pdf', // AC1 (run-sheet link)
 ])
 

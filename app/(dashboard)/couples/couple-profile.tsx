@@ -3,8 +3,9 @@
  * drawer; see Phase 4 plan §2 decision 6a) that opens when a couple
  * is clicked in the list/kanban.
  *
- * 9 tabs nesting every per-couple feature: Overview, Pulse, Tasks,
- * Contacts, Timeline, Songs, Files, Payments, Contracts. Contracts
+ * Tabs nesting every per-couple feature: Overview, Tasks, Contacts,
+ * Timeline, Songs, Files, Vows, Payments, Contracts, Questionnaires,
+ * Automations, Emails. Contracts
  * is available on every plan; the Starter-plan cap (5 distinct
  * couples) is enforced at contract creation inside `CoupleContracts`,
  * not by hiding the tab.
@@ -20,8 +21,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Activity,
   CheckSquare,
+  ClipboardList,
   Clock,
   FileSignature,
   Heart,
@@ -33,7 +34,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { getOpenModalDepth } from '@/components/ui/modal';
@@ -44,11 +45,13 @@ import { rotateCouplePortalTokenAction } from './actions';
 import { CoupleProfileBody } from './couple-profile-body';
 import { CoupleProfileHeader } from './couple-profile-header';
 import { CoupleProfileNav } from './couple-profile-nav';
+import { orderedTabKeys, visibleTabKeys } from './couple-profile-tabs';
 import type {
   CoupleProfileNavItem,
   CoupleProfileSection,
 } from './couple-profile-types';
 import { PersonModal, SongModal } from './portal-modals';
+import { useCoupleProfileTabsConfig } from './use-couple-profile-tabs';
 import { useCoupleStatuses } from './use-couple-statuses';
 import { usePortalData } from './use-portal-data';
 
@@ -57,11 +60,6 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'overview',
     label: 'Overview',
     icon: <LayoutDashboard size={18} strokeWidth={1.5} />,
-  },
-  {
-    key: 'pulse',
-    label: 'Pulse',
-    icon: <Activity size={18} strokeWidth={1.5} />,
   },
   {
     key: 'tasks',
@@ -104,6 +102,11 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     icon: <FileSignature size={18} strokeWidth={1.5} />,
   },
   {
+    key: 'questionnaires',
+    label: 'Questionnaires',
+    icon: <ClipboardList size={18} strokeWidth={1.5} />,
+  },
+  {
     key: 'automations',
     label: 'Automations',
     icon: <Sparkles size={18} strokeWidth={1.5} />,
@@ -138,11 +141,33 @@ export function CoupleProfile({
   const { toast } = useToast();
   const { data: statuses } = useCoupleStatuses();
 
-  // Contracts is available on every plan (2026-06-03). The Starter
-  // 5-couple cap is enforced inside `CoupleContracts` at create time
-  // — hiding the tab would conceal couples that already have
-  // contracts when an MC downgrades.
-  const navItems = NAV_ITEMS;
+  // Per-user, global-across-couples tab layout (hide + reorder). `draftConfig`
+  // is the live working copy: edits in settings mode mutate it and the nav
+  // reflects them immediately (no flicker on toggling the gear). It is seeded
+  // from the saved `tabsConfig` on open and persisted when the modal closes.
+  // Contracts stays in the list on every plan — the Starter 5-couple cap is
+  // enforced inside `CoupleContracts` at create time.
+  const { config: tabsConfig, saveConfig } = useCoupleProfileTabsConfig();
+  const [settingsMode, setSettingsMode] = useState(false);
+  const [draftConfig, setDraftConfig] = useState(tabsConfig);
+
+  // Both lists derive from the draft so the live nav and the settings list
+  // stay in lock-step. `orderedNavItems` is the full set (settings mode);
+  // `navItems` drops hidden tabs (the live nav).
+  const orderedNavItems = useMemo(
+    () =>
+      orderedTabKeys(draftConfig)
+        .map((key) => NAV_ITEMS.find((item) => item.key === key))
+        .filter((item): item is CoupleProfileNavItem => Boolean(item)),
+    [draftConfig],
+  );
+  const navItems = useMemo(
+    () =>
+      visibleTabKeys(draftConfig)
+        .map((key) => NAV_ITEMS.find((item) => item.key === key))
+        .filter((item): item is CoupleProfileNavItem => Boolean(item)),
+    [draftConfig],
+  );
 
   const [activeSection, setActiveSection] =
     useState<CoupleProfileSection>(defaultTab);
@@ -165,20 +190,74 @@ export function CoupleProfile({
     onError: () => toast('Failed to rotate links'),
   });
 
-  // Reset to the default tab when the user opens a different couple,
-  // and dismiss any in-flight delete confirmation. The
-  // setState-in-effect is intentional — the source of truth for
-  // "which couple is open" lives outside this component (in the
-  // parent's selectedCouple state), and we need to react to that
-  // change.
+  // Hold the latest saved config in a ref so the open effect can seed the draft
+  // without depending on it (saving must not retrigger the open reset). Synced
+  // in its own effect — never assigned during render.
+  const tabsConfigRef = useRef(tabsConfig);
+  useEffect(() => {
+    tabsConfigRef.current = tabsConfig;
+  }, [tabsConfig]);
+
+  // Reset state when the user opens a different couple: land on the caller's
+  // tab (default Overview), dismiss any delete confirmation, leave settings
+  // mode, and reseed the draft from the saved layout. The setState-in-effect is
+  // intentional — the source of truth for "which couple is open" lives in the
+  // parent's selectedCouple state.
   useEffect(() => {
     if (couple) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveSection(defaultTab);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDeleteConfirm(false);
+      setSettingsMode(false);
+      setDraftConfig(tabsConfigRef.current);
     }
   }, [couple, defaultTab]);
+
+  // If the active tab gets hidden while editing, fall the body back to the
+  // first still-visible tab (Overview can never be hidden, so this is safe).
+  useEffect(() => {
+    const fallback = navItems[0];
+    if (fallback && !navItems.some((n) => n.key === activeSection)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveSection(fallback.key);
+    }
+  }, [navItems, activeSection]);
+
+  // Persist the draft layout if it changed since the last save. The nav reads
+  // from the draft (not the saved config), so saving never flickers the rows.
+  const persistDraft = useCallback(
+    (opts?: { toast?: boolean }) => {
+      if (JSON.stringify(draftConfig) === JSON.stringify(tabsConfig)) return;
+      saveConfig.mutate(draftConfig, {
+        onSuccess: () => {
+          if (opts?.toast) toast('Tab layout saved');
+        },
+        onError: () => toast('Could not save tab layout'),
+      });
+    },
+    [draftConfig, tabsConfig, saveConfig, toast],
+  );
+
+  // Gear toggles settings mode; exiting it persists the layout with a
+  // confirmation toast so the change clearly "lands".
+  const handleSettingsToggle = () => {
+    if (settingsMode) persistDraft({ toast: true });
+    setSettingsMode((on) => !on);
+  };
+
+  // Persist (silently) as the modal closes too — covers closing while still in
+  // settings mode. Every close path — overlay, Esc, the header ✕ — routes here.
+  const handleClose = useCallback(() => {
+    persistDraft();
+    onClose();
+  }, [persistDraft, onClose]);
+
+  // Read the latest `handleClose` from a ref so the Esc/scroll-lock effect can
+  // depend only on `couple` (a changing draft must not re-bind the listener).
+  const handleCloseRef = useRef(handleClose);
+  useEffect(() => {
+    handleCloseRef.current = handleClose;
+  }, [handleClose]);
 
   // Esc-closes-the-modal — but only when no nested modal is open
   // (the modal stack via `getOpenModalDepth()` prevents the profile
@@ -186,7 +265,7 @@ export function CoupleProfile({
   // Lock body scroll while open.
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && getOpenModalDepth() === 0) onClose();
+      if (e.key === 'Escape' && getOpenModalDepth() === 0) handleCloseRef.current();
     };
     if (couple) {
       document.addEventListener('keydown', handleEscape);
@@ -196,7 +275,7 @@ export function CoupleProfile({
         document.body.style.overflow = 'unset';
       };
     }
-  }, [couple, onClose]);
+  }, [couple]);
 
   if (!couple) return null;
 
@@ -204,12 +283,12 @@ export function CoupleProfile({
     <>
       <div
         className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 animate-fade-in"
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       <div
         className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4"
-        onClick={onClose}
+        onClick={handleClose}
       >
         <div
           data-testid="couple-profile-panel"
@@ -220,9 +299,11 @@ export function CoupleProfile({
             couple={couple}
             statuses={statuses}
             onSave={onSave}
-            onClose={onClose}
+            onClose={handleClose}
             onRotateLinks={() => setRotateConfirm(true)}
             onDeleteRequest={() => setDeleteConfirm(true)}
+            settingsMode={settingsMode}
+            onSettingsToggle={handleSettingsToggle}
           />
 
           <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
@@ -230,6 +311,10 @@ export function CoupleProfile({
               navItems={navItems}
               activeSection={activeSection}
               onSectionChange={setActiveSection}
+              settingsMode={settingsMode}
+              settingsItems={orderedNavItems}
+              draftConfig={draftConfig}
+              onDraftChange={setDraftConfig}
             />
 
             <CoupleProfileBody

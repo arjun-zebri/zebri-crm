@@ -1,13 +1,22 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { BrandingEditor } from './branding-editor'
-import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
-import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
+
 import { HEADING_FONTS, BODY_FONTS, googleFontsHref, type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
+import { shouldShowOnboarding } from '@/lib/branding/onboarding-gate'
+import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
+import type { TextCase } from '@/lib/branding/text-case'
+import { THEME_PRESETS, type ThemeIdOrCustom, type Density } from '@/lib/branding/themes'
+import { repairBlocks } from '@/lib/branding/validate-blocks'
+import { createClient } from '@/lib/supabase/client'
+import type { BrandKit, SurfaceTab } from '@/types/branding-preview'
+import type { Json } from '@/types/database'
+
+import { defaultBlocksFor, migrateBlocks } from './blocks/defaults'
 import type { Block } from './blocks/types'
-import type { BrandKit } from '@/types/branding-preview'
+import { BrandingEditor } from './branding-editor'
+import { OnboardingModal } from './onboarding/onboarding-modal'
+import type { OnboardingResult } from './onboarding/onboarding-wizard'
 
 interface UserMetadata {
   display_name?: string
@@ -16,16 +25,20 @@ interface UserMetadata {
   website?: string
   instagram_url?: string
   facebook_url?: string
+  twitter_url?: string
+  pinterest_url?: string
+  bank_account_name?: string
+  bank_bsb?: string
+  bank_account_number?: string
   logo_url?: string
   favicon_url?: string
   header_image_url?: string
   brand_color?: string
-  accent_color?: string
+  heading_color?: string
+  subheading_color?: string
   surface_color?: string
   text_color?: string
-  muted_color?: string
   secondary_color?: string
-  secondary_text_color?: string
   tagline?: string
   abn?: string
   show_contact_on_documents?: boolean
@@ -37,12 +50,29 @@ interface UserMetadata {
   density?: Density
   corner_radius?: number
   doc_padding?: number
+  proposal_labels?: Record<string, string>
   theme_preset?: ThemeIdOrCustom
   brand_kit_name?: string
   active_kit_id?: string | null
+  heading_size?: number
+  body_size?: number
+  heading_case?: TextCase
+  body_case?: TextCase
+  subheading_size?: number
+  subheading_weight?: number
+  subheading_case?: TextCase
+  heading_letter_spacing?: number
+  body_line_height?: number
+  link_color?: string
+  border_color?: string
+  button_variant?: 'fill' | 'outline'
+  button_size?: 'sm' | 'md' | 'lg'
+  button_radius?: number
+  section_spacing?: number
   // Legacy: bulky fields that used to live here. We now read from public.user_branding
   // and back-fill from these if present, so older accounts don't lose their work.
-  branding_blocks?: { quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] }
+  // `quote` is the legacy pre-proposals key; read-only fallback.
+  branding_blocks?: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] }
   brand_kits?: BrandKit[]
   portal_sections?: {
     timeline?: boolean
@@ -56,7 +86,7 @@ interface UserMetadata {
 }
 
 interface UserBrandingRow {
-  branding_blocks: { quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[] } | null
+  branding_blocks: { proposal?: Block[]; quote?: Block[]; invoice?: Block[]; contract?: Block[]; portal?: Block[]; vendorTimeline?: Block[]; questionnaire?: Block[] } | null
   brand_kits: BrandKit[] | null
   portal_sections: {
     timeline?: boolean
@@ -67,14 +97,45 @@ interface UserBrandingRow {
     files?: boolean
     vows?: boolean
   } | null
+  enabled_surfaces: Record<string, boolean> | null
+  onboarded_at: string | null
 }
 
 const fontsHref = googleFontsHref([...HEADING_FONTS, ...BODY_FONTS])
+
+/** localStorage key caching whether the last account seen in this browser
+ *  finished branding onboarding, so the wizard frame can paint instantly
+ *  instead of waiting for the first fetch.
+ *
+ *  Strictly a paint hint. The key is per-browser, not per-account, so it goes
+ *  stale on account switch; `shouldShowOnboarding` therefore discards it as
+ *  soon as the authoritative `onboarded_at` lands. Never gate the modal on
+ *  this value alone. */
+const ONBOARDED_CACHE_KEY = 'zebri:branding-onboarded'
 
 export default function BrandingPage() {
   const [metadata, setMetadata] = useState<UserMetadata | null>(null)
   const [branding, setBranding] = useState<UserBrandingRow | null>(null)
   const [loading, setLoading] = useState(true)
+  const [wizardError, setWizardError] = useState<string | null>(null)
+  // True when the cache says the last account in this browser had NOT
+  // completed onboarding (or we have never seen one): the modal skeleton shows
+  // immediately while the fetch runs, so onboarded users never see a flash.
+  // Only consulted while `loading` — see `shouldShowOnboarding`.
+  // Set post-hydration: reading localStorage during the first render makes
+  // the server and client trees differ and breaks hydration.
+  // Bumped whenever page data is re-fetched after onboarding completes;
+  // keys BrandingEditor so it remounts with the fresh state (its initial
+  // useHistory snapshot is deliberately frozen per mount).
+  const [dataVersion, setDataVersion] = useState(0)
+  const [likelyNeedsOnboarding, setLikelyNeedsOnboarding] = useState(false)
+  useEffect(() => {
+    // One-shot post-hydration cache read; the sync setState is deliberate so
+    // the skeleton appears on the very next paint (established pattern from
+    // the branding lint cleanup for mount-only reads).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLikelyNeedsOnboarding(localStorage.getItem(ONBOARDED_CACHE_KEY) !== 'true')
+  }, [])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -95,21 +156,26 @@ export default function BrandingPage() {
         setMetadata(user.user_metadata as UserMetadata)
         const { data: row } = await supabase
           .from('user_branding')
-          .select('branding_blocks, brand_kits, portal_sections')
+          .select('branding_blocks, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
           .eq('user_id', user.id)
           .maybeSingle()
-        setBranding((row as UserBrandingRow | null) ?? {
+        const resolved = (row as UserBrandingRow | null) ?? {
           branding_blocks: null,
           brand_kits: null,
           portal_sections: null,
-        })
+          enabled_surfaces: null,
+          onboarded_at: null,
+        }
+        setBranding(resolved)
+        // Keep the instant-modal cache honest for the next visit.
+        localStorage.setItem(ONBOARDED_CACHE_KEY, resolved.onboarded_at ? 'true' : 'false')
       }
       setLoading(false)
     }
     load()
   }, [])
 
-  if (loading) {
+  if (loading && !likelyNeedsOnboarding) {
     return (
       <div className="flex flex-col h-full bg-surface">
         <div className="h-12 border-b border-border px-3 flex items-center gap-2">
@@ -133,8 +199,116 @@ export default function BrandingPage() {
     )
   }
 
+  /**
+   * Wizard completion handler: (a) merge metadata, (b) upsert branding, (c) reload.
+   * CRITICAL: updateUser MUST run first; only proceed to branding upsert on success.
+   * Partial upserts preserve unprovided columns on conflict (PostgREST ON CONFLICT updates
+   * only the payload's columns; branding autosave relies on this).
+   */
+  const handleWizardComplete = async (result: OnboardingResult) => {
+    setWizardError(null)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setWizardError('Not signed in')
+      return
+    }
+
+    const existing = user.user_metadata || {}
+
+    // Step (a): Update auth metadata FIRST.
+    // If this fails, surface error and do not proceed to branding upsert.
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: {
+        ...existing,
+        business_name: result.businessName,
+        tagline: result.tagline,
+        logo_url: result.logoUrl || null,
+        heading_color: result.headingColor,
+        subheading_color: result.subheadingColor,
+        text_color: result.bodyColor,
+        surface_color: result.backgroundColor,
+        brand_color: result.primaryButtonColor,
+        secondary_color: result.secondaryButtonColor,
+        font_heading: result.fontHeading,
+        font_body: result.fontBody,
+        density: result.density,
+      },
+    })
+    if (metadataError) {
+      setWizardError(`Failed to save branding: ${metadataError.message}`)
+      return
+    }
+
+    // Step (b): Build enabled_surfaces map and blocks, then upsert user_branding.
+    const enabledSurfacesMap = result.enabledSurfaces.reduce(
+      (acc, surface) => {
+        acc[surface] = true
+        return acc
+      },
+      {} as Record<string, boolean>,
+    )
+
+    // Seed branding_blocks from the default tree for each ENABLED surface only.
+    // Disabled surfaces get empty arrays.
+    const branding_blocks: Record<string, Block[]> = {}
+    for (const surface of ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as SurfaceTab[]) {
+      branding_blocks[surface] = result.enabledSurfaces.includes(surface)
+        ? defaultBlocksFor(surface)
+        : []
+    }
+
+    // Upsert is safe with partial payloads: PostgREST ON CONFLICT only updates
+    // the columns we provide (blocks, enabled_surfaces, timestamps). Unprovided
+    // columns like brand_kits and portal_sections preserve their existing values.
+    const { error: brandingError } = await supabase
+      .from('user_branding')
+      .upsert(
+        {
+          user_id: user.id,
+          branding_blocks: branding_blocks as unknown as Json,
+          enabled_surfaces: enabledSurfacesMap as unknown as Json,
+          onboarded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      )
+    if (brandingError) {
+      setWizardError(`Failed to save branding: ${brandingError.message}`)
+      return
+    }
+
+    // Step (c): Reload page data so editor mounts with new state.
+    try {
+      const { data: { user: updatedUser } } = await supabase.auth.getUser()
+      if (updatedUser) {
+        setMetadata(updatedUser.user_metadata as UserMetadata)
+      }
+      const { data: row } = await supabase
+        .from('user_branding')
+        .select('branding_blocks, brand_kits, portal_sections, enabled_surfaces, onboarded_at')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      setBranding((row as UserBrandingRow | null) ?? {
+        branding_blocks: null,
+        brand_kits: null,
+        portal_sections: null,
+        enabled_surfaces: null,
+        onboarded_at: new Date().toISOString(),
+      })
+      localStorage.setItem(ONBOARDED_CACHE_KEY, 'true')
+      // Remount the editor so it picks up the wizard's choices immediately.
+      setDataVersion((v) => v + 1)
+    } catch (err) {
+      setWizardError(`Failed to load branding: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    }
+  }
+
   const themePreset = metadata?.theme_preset ?? 'minimal'
   const fallback = themePreset === 'custom' ? THEME_PRESETS.minimal : (THEME_PRESETS[themePreset] ?? THEME_PRESETS.minimal)
+
+  const brandColor = metadata?.brand_color || fallback.color
+  const surfaceColor = metadata?.surface_color || fallback.surface
 
   const sanitizeHeading = (v: string | undefined): HeadingFont =>
     HEADING_FONTS.includes(v as HeadingFont) ? (v as HeadingFont) : fallback.headingFont
@@ -150,65 +324,149 @@ export default function BrandingPage() {
   // Distinguish "never saved" (undefined → use defaults) from "saved empty"
   // (deliberately deleted by the user → preserve the empty array).
   const blocksSrc = branding?.branding_blocks ?? metadata?.branding_blocks ?? {}
-  const migratedQuote    = blocksSrc.quote    !== undefined ? migrateBlocks(blocksSrc.quote, 'quote')    : null
-  const migratedInvoice  = blocksSrc.invoice  !== undefined ? migrateBlocks(blocksSrc.invoice, 'invoice')  : null
-  const migratedContract = blocksSrc.contract !== undefined ? migrateBlocks(blocksSrc.contract, 'contract') : null
-  const migratedPortal   = blocksSrc.portal   !== undefined ? migrateBlocks(blocksSrc.portal, 'portal')   : null
+  // Legacy fallback: pre-rollout saves keyed the surface `quote`.
+  const proposalSrc = blocksSrc.proposal ?? blocksSrc.quote
+  const migratedProposal = proposalSrc !== undefined ? repairBlocks('proposal', migrateBlocks(proposalSrc, 'proposal')) : null
+  const migratedInvoice  = blocksSrc.invoice  !== undefined ? repairBlocks('invoice', migrateBlocks(blocksSrc.invoice, 'invoice'))  : null
+  const migratedContract = blocksSrc.contract !== undefined ? repairBlocks('contract', migrateBlocks(blocksSrc.contract, 'contract')) : null
+  const migratedPortal   = blocksSrc.portal   !== undefined ? repairBlocks('portal', migrateBlocks(blocksSrc.portal, 'portal'))   : null
+  const migratedVendorTimeline = blocksSrc.vendorTimeline !== undefined ? repairBlocks('vendorTimeline', migrateBlocks(blocksSrc.vendorTimeline, 'vendorTimeline')) : null
+  const migratedQuestionnaire = blocksSrc.questionnaire !== undefined ? repairBlocks('questionnaire', migrateBlocks(blocksSrc.questionnaire, 'questionnaire')) : null
   const kits = branding?.brand_kits ?? metadata?.brand_kits ?? []
   const portalSrc = branding?.portal_sections ?? metadata?.portal_sections ?? {}
 
+  // Default to all six surfaces enabled
+  const defaultEnabledSurfaces: Record<string, boolean> = {
+    proposal: true,
+    invoice: true,
+    contract: true,
+    portal: true,
+    vendorTimeline: true,
+    questionnaire: true,
+  }
+  const enabledSrc = (branding?.enabled_surfaces ?? defaultEnabledSurfaces) as Record<string, boolean>
+  const onboardedAt = branding?.onboarded_at ?? null
+  const showOnboarding =
+    shouldShowOnboarding({
+      loading,
+      cacheSaysNeedsOnboarding: likelyNeedsOnboarding,
+      onboardedAt,
+    })
+
   return (
-    <BrandingEditor
-      initialData={{
-        kitName: metadata?.brand_kit_name || 'My brand',
-        logoUrl: metadata?.logo_url || '',
-        faviconUrl: metadata?.favicon_url || '',
-        headerImageUrl: metadata?.header_image_url || '',
-        brandColor: metadata?.brand_color || fallback.color,
-        accentColor: metadata?.accent_color || fallback.accent,
-        surfaceColor: metadata?.surface_color || fallback.surface,
-        textColor: metadata?.text_color || fallback.text,
-        mutedColor: metadata?.muted_color || fallback.muted,
-        secondaryColor: metadata?.secondary_color || '#FFFFFF',
-        secondaryTextColor: metadata?.secondary_text_color || '#374151',
-        tagline: metadata?.tagline || '',
-        abn: metadata?.abn || '',
-        showContactOnDocuments: true,
-        fontHeading: sanitizeHeading(metadata?.font_heading),
-        fontBody: sanitizeBody(metadata?.font_body),
-        fontWeight: sanitizeWeight(metadata?.font_weight, fallback.headingWeight),
-        fontBodyWeight: sanitizeWeight(metadata?.font_body_weight, fallback.bodyWeight),
-        fontScale: typeof metadata?.font_scale === 'number' ? metadata.font_scale : fallback.scale,
-        density: metadata?.density ?? fallback.density,
-        cornerRadius: typeof metadata?.corner_radius === 'number' ? metadata.corner_radius : fallback.radius,
-        docPadding: typeof metadata?.doc_padding === 'number' ? metadata.doc_padding : 12,
-        themePreset,
-        blocks: {
-          // Only fall back to defaults when the user has never saved this
-          // surface. An empty array means they intentionally deleted everything
-          // and should see the empty state, not the defaults.
-          quote:    migratedQuote    !== null ? migratedQuote    : defaultBlocksFor('quote'),
-          invoice:  migratedInvoice  !== null ? migratedInvoice  : defaultBlocksFor('invoice'),
-          contract: migratedContract !== null ? migratedContract : defaultBlocksFor('contract'),
-          portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),
-        },
-        businessName: metadata?.business_name || '',
-        phone: metadata?.phone || '',
-        website: metadata?.website || '',
-        instagramUrl: metadata?.instagram_url || '',
-        facebookUrl: metadata?.facebook_url || '',
-        brandKits: kits,
-        activeKitId: metadata?.active_kit_id ?? null,
-        portalSections: {
-          timeline: portalSrc.timeline ?? true,
-          contacts: portalSrc.contacts ?? true,
-          payments: portalSrc.payments ?? true,
-          contracts: portalSrc.contracts ?? true,
-          songs: portalSrc.songs ?? true,
-          files: portalSrc.files ?? true,
-          vows: portalSrc.vows ?? true,
-        },
-      }}
-    />
+    <>
+      {/* Editor always renders, made inert while onboarding modal is open.
+          h-full passes the layout container's height through to the editor so
+          its h-full root resolves; without it the editor grows to content
+          height inside the overflow-hidden layout and its panels can't scroll. */}
+      <div className="h-full" inert={showOnboarding ? true : undefined}>
+        <BrandingEditor
+          key={dataVersion}
+          initialData={{
+            kitName: metadata?.brand_kit_name || 'My brand',
+            logoUrl: metadata?.logo_url || '',
+            faviconUrl: metadata?.favicon_url || '',
+            headerImageUrl: metadata?.header_image_url || '',
+            brandColor,
+            headingColor: metadata?.heading_color || fallback.heading,
+            subheadingColor: metadata?.subheading_color || fallback.subheading,
+            surfaceColor,
+            textColor: metadata?.text_color || fallback.text,
+            secondaryColor: metadata?.secondary_color || '#6B7280',
+            tagline: metadata?.tagline || '',
+            abn: metadata?.abn || '',
+            showContactOnDocuments: true,
+            fontHeading: sanitizeHeading(metadata?.font_heading),
+            fontBody: sanitizeBody(metadata?.font_body),
+            fontWeight: sanitizeWeight(metadata?.font_weight, fallback.headingWeight),
+            fontBodyWeight: sanitizeWeight(metadata?.font_body_weight, fallback.bodyWeight),
+            density: metadata?.density ?? fallback.density,
+            cornerRadius: typeof metadata?.corner_radius === 'number' ? metadata.corner_radius : fallback.radius,
+            docPadding: typeof metadata?.doc_padding === 'number' ? metadata.doc_padding : 12,
+            themePreset,
+            blocks: {
+              // Only fall back to defaults when the user has never saved this
+              // surface. An empty array means they intentionally deleted everything
+              // and should see the empty state, not the defaults.
+              proposal: migratedProposal !== null ? migratedProposal : defaultBlocksFor('proposal'),
+              invoice:  migratedInvoice  !== null ? migratedInvoice  : defaultBlocksFor('invoice'),
+              contract: migratedContract !== null ? migratedContract : defaultBlocksFor('contract'),
+              portal:   migratedPortal   !== null ? migratedPortal   : defaultBlocksFor('portal'),
+              vendorTimeline: migratedVendorTimeline !== null ? migratedVendorTimeline : defaultBlocksFor('vendorTimeline'),
+              questionnaire: migratedQuestionnaire !== null ? migratedQuestionnaire : defaultBlocksFor('questionnaire'),
+            },
+            businessName: metadata?.business_name || '',
+            phone: metadata?.phone || '',
+            website: metadata?.website || '',
+            instagramUrl: metadata?.instagram_url || '',
+            facebookUrl: metadata?.facebook_url || '',
+            twitterUrl: metadata?.twitter_url || '',
+            pinterestUrl: metadata?.pinterest_url || '',
+            bankAccountName: metadata?.bank_account_name || '',
+            bankBsb: metadata?.bank_bsb || '',
+            bankAccountNumber: metadata?.bank_account_number || '',
+            brandKits: kits,
+            activeKitId: metadata?.active_kit_id ?? null,
+            portalSections: {
+              timeline: portalSrc.timeline ?? true,
+              contacts: portalSrc.contacts ?? true,
+              payments: portalSrc.payments ?? true,
+              contracts: portalSrc.contracts ?? true,
+              songs: portalSrc.songs ?? true,
+              files: portalSrc.files ?? true,
+              vows: portalSrc.vows ?? true,
+            },
+            proposalLabels: resolveProposalLabels(metadata?.proposal_labels),
+            headingSize: typeof metadata?.heading_size === 'number' ? metadata.heading_size : 32,
+            bodySize: typeof metadata?.body_size === 'number' ? metadata.body_size : 15,
+            headingCase: metadata?.heading_case ?? 'none',
+            bodyCase: metadata?.body_case ?? 'none',
+            // Subheading (section-label) type. Unset falls back to the values the
+            // role used to derive, so existing documents look unchanged: size
+            // ≈ 0.73× body, weight = body weight, case = heading case.
+            subheadingSize:
+              typeof metadata?.subheading_size === 'number'
+                ? metadata.subheading_size
+                : Math.max(9, Math.round((typeof metadata?.body_size === 'number' ? metadata.body_size : 15) * 0.73)),
+            subheadingWeight: sanitizeWeight(metadata?.subheading_weight, sanitizeWeight(metadata?.font_body_weight, 400)),
+            subheadingCase: metadata?.subheading_case ?? metadata?.heading_case ?? 'none',
+            headingLetterSpacing: typeof metadata?.heading_letter_spacing === 'number' ? metadata.heading_letter_spacing : 0,
+            bodyLineHeight: typeof metadata?.body_line_height === 'number' ? metadata.body_line_height : 1.5,
+            linkColor: metadata?.link_color ?? brandColor,
+            borderColor: metadata?.border_color || '#E5E7EB',
+            buttonVariant: metadata?.button_variant ?? 'fill',
+            buttonSize: metadata?.button_size ?? 'md',
+            buttonRadius: typeof metadata?.button_radius === 'number' ? metadata.button_radius : 8,
+            sectionSpacing: typeof metadata?.section_spacing === 'number' ? metadata.section_spacing : 32,
+            enabledSurfaces: Object.keys(enabledSrc).filter((k) => enabledSrc[k]) as SurfaceTab[],
+            onboardedAt,
+          }}
+        />
+      </div>
+
+      {/* Onboarding modal: one frame that holds a skeleton during the load and
+          then fills with the wizard, so the hand-off is continuous rather than
+          a second modal popping in at a different size. */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        loading={loading}
+        initial={{
+          businessName: metadata?.business_name,
+          tagline: metadata?.tagline,
+          logoUrl: metadata?.logo_url,
+          headingColor: metadata?.heading_color || '#111827',
+          subheadingColor: metadata?.subheading_color || '#111827',
+          bodyColor: metadata?.text_color || '#6B7280',
+          backgroundColor: metadata?.surface_color || '#FFFFFF',
+          primaryButtonColor: metadata?.brand_color || '#111827',
+          secondaryButtonColor: metadata?.secondary_color || '#6B7280',
+          fontHeading: sanitizeHeading(metadata?.font_heading),
+          fontBody: sanitizeBody(metadata?.font_body),
+          density: metadata?.density || 'cozy',
+        }}
+        onComplete={handleWizardComplete}
+        error={wizardError}
+      />
+    </>
   )
 }

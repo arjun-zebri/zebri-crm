@@ -7,10 +7,13 @@ interface TooltipProps {
   label: string
   shortcut?: string
   side?: 'top' | 'bottom'
+  /** Extra classes for the trigger wrapper, e.g. `flex-1` so a wrapped button
+   *  keeps its width in a flex row. */
+  className?: string
   children: ReactNode
 }
 
-export function Tooltip({ label, shortcut, side = 'bottom', children }: TooltipProps) {
+export function Tooltip({ label, shortcut, side = 'bottom', className = '', children }: TooltipProps) {
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const triggerRef = useRef<HTMLSpanElement>(null)
@@ -45,7 +48,7 @@ export function Tooltip({ label, shortcut, side = 'bottom', children }: TooltipP
     <>
       <span
         ref={triggerRef}
-        className="relative inline-flex"
+        className={`relative inline-flex ${className}`}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}

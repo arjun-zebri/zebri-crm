@@ -17,7 +17,6 @@ import {
   Paintbrush,
   Sparkles,
   FileStack,
-  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -41,9 +40,6 @@ const navItems = [
 
 const bottomItems = [
   { label: "Branding", href: "/branding", icon: Paintbrush },
-  // Docs lives on the marketing site, so it navigates out of the app
-  // (rendered as a plain anchor rather than a client-side <Link>).
-  { label: "Docs", href: "https://zebri.com.au/docs", icon: BookOpen, external: true },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -107,6 +103,7 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
           onClick={onMobileClose}
           className="flex items-center hover:opacity-80 transition px-[16px] pt-4"
         >
+          {/* eslint-disable-next-line @next/next/no-img-element -- static SVG icon, nothing for next/image to optimise */}
           <img
             src="/zebri-icon.svg"
             alt="Zebri"
@@ -154,44 +151,24 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
                 ? [{ label: "Admin", href: "/admin", icon: Shield }]
                 : []),
             ].map((item) => {
-              const external = "external" in item && item.external;
-              // External items (e.g. Docs) never reflect app routes, so
-              // they're never the active item.
-              const isActive = !external && pathname.startsWith(item.href);
+              const isActive = pathname.startsWith(item.href);
               const Icon = item.icon;
-              const className = `flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-xl text-base transition whitespace-nowrap ${
-                isActive
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
-              }`;
-              const inner = (
-                <>
-                  <Icon size={18} strokeWidth={1.5} className="flex-shrink-0" />
-                  <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
-                    {item.label}
-                  </span>
-                </>
-              );
 
-              return external ? (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={onMobileClose}
-                  className={className}
-                >
-                  {inner}
-                </a>
-              ) : (
+              return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={onMobileClose}
-                  className={className}
+                  className={`flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-xl text-base transition whitespace-nowrap ${
+                    isActive
+                      ? "bg-gray-100 text-gray-900"
+                      : "text-gray-800 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
                 >
-                  {inner}
+                  <Icon size={18} strokeWidth={1.5} className="flex-shrink-0" />
+                  <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
+                    {item.label}
+                  </span>
                 </Link>
               );
             })}

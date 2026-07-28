@@ -116,8 +116,20 @@ function describe(event: AlertEvent): string {
 }
 
 /**
+ * True when running a local dev server. Local runs share the production
+ * Slack webhook via .env.local, so without this gate every dev action
+ * pings the real alerts channel. Set ALERTS_DEV_SLACK=1 to deliberately
+ * test Slack delivery from a dev server.
+ */
+function slackSuppressed(): boolean {
+  return process.env.NODE_ENV === 'development' && process.env.ALERTS_DEV_SLACK !== '1';
+}
+
+/**
  * Dispatch an alert. Sends to Slack (best-effort — never throws to caller)
- * and writes a structured log record at the matching severity.
+ * and writes a structured log record at the matching severity. On a local
+ * dev server the Slack leg is suppressed (the log record still happens);
+ * set ALERTS_DEV_SLACK=1 to override.
  */
 export async function sendAlert(event: AlertEvent): Promise<void> {
   // Structured log first — happens regardless of Slack availability.
@@ -126,6 +138,11 @@ export async function sendAlert(event: AlertEvent): Promise<void> {
   if (event.severity === 'error') logger.error(message, undefined, context);
   else if (event.severity === 'warn') logger.warn(message, context);
   else logger.info(message, context);
+
+  if (slackSuppressed()) {
+    logger.info(`alert slack suppressed (dev): ${event.type}`);
+    return;
+  }
 
   // Slack: fire-and-forget; sendSlackAlert already swallows errors.
   await sendSlackAlert(formatSlackMessage(event));

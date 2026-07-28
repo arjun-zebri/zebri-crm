@@ -33,10 +33,12 @@ export function pillForeground(accent: string, brand: string, surface: string): 
 function relativeLuminance(hex: string): number {
   const rgb = getRgb(hex)
   if (!rgb) return 0
+  // `rgb` is a fixed 3-tuple, but `.map` widens it to `number[]`; the cast
+  // restores tuple typing so the channels aren't `number | undefined`.
   const [r, g, b] = rgb.map(v => {
     const s = v / 255
     return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
-  })
+  }) as [number, number, number]
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 

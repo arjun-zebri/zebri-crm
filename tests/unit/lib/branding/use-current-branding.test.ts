@@ -12,7 +12,7 @@ describe('buildPublicBranding', () => {
   it('falls back to the Minimal theme when metadata is empty', () => {
     const result = buildPublicBranding({});
     expect(result.theme_preset).toBe('minimal');
-    expect(result.brand_color).toBe('#0F172A');
+    expect(result.brand_color).toBe('#111827');
     expect(result.font_heading).toBe('inter');
     expect(result.density).toBe('cozy');
     expect(result.show_contact_on_documents).toBe(true);

@@ -3,6 +3,11 @@
 import { Pencil } from 'lucide-react'
 import { useState } from 'react'
 
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
+
 /** A single partner's editable contact triple. */
 export interface ContactTriple {
   name: string
@@ -15,8 +20,10 @@ interface ContactDetailsCardProps {
   label: string
   /** Current persisted values (also the initial editor state). */
   value: ContactTriple
-  /** Commit handler — fired on blur only when a field actually changed. */
+  /** Commit handler - fired on blur only when a field actually changed. */
   onSave: (next: ContactTriple) => void
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
 /**
@@ -28,8 +35,9 @@ interface ContactDetailsCardProps {
  * via `onSave` only when a value actually changed, so tabbing through
  * untouched fields never triggers a redundant network write.
  */
-export function ContactDetailsCard({ label, value, onSave }: ContactDetailsCardProps) {
+export function ContactDetailsCard({ label, value, onSave, branding }: ContactDetailsCardProps) {
   const [triple, setTriple] = useState<ContactTriple>(value)
+  const labelDefaults = roleDefaults(branding, 'sectionLabel')
 
   const commit = () => {
     if (triple.name !== value.name || triple.email !== value.email || triple.phone !== value.phone) {
@@ -39,13 +47,26 @@ export function ContactDetailsCard({ label, value, onSave }: ContactDetailsCardP
 
   return (
     <div>
-      <h4 className="text-caption uppercase tracking-wider text-text-subtle mb-1">{label}</h4>
+      <h4
+        style={{
+          fontSize: `${labelDefaults.fontSize}px`,
+          color: labelDefaults.color,
+          fontFamily: FONT_STACKS[labelDefaults.fontFamily as never],
+          fontWeight: labelDefaults.fontWeight,
+          lineHeight: labelDefaults.lineHeight,
+          letterSpacing: `${labelDefaults.letterSpacing}px`,
+          textTransform: cssTextTransform(labelDefaults.textTransform),
+          marginBottom: '0.25rem',
+        }}
+      >
+        {applyCase(label, labelDefaults.textTransform)}
+      </h4>
       <EditableRow label="Name" type="text" value={triple.name} placeholder="Full name"
-        onChange={(v) => setTriple((t) => ({ ...t, name: v }))} onCommit={commit} />
+        onChange={(v) => setTriple((t) => ({ ...t, name: v }))} onCommit={commit} branding={branding} />
       <EditableRow label="Email" type="email" value={triple.email} placeholder="email@example.com"
-        onChange={(v) => setTriple((t) => ({ ...t, email: v }))} onCommit={commit} />
+        onChange={(v) => setTriple((t) => ({ ...t, email: v }))} onCommit={commit} branding={branding} />
       <EditableRow label="Phone" type="tel" value={triple.phone} placeholder="+61 400 000 000"
-        onChange={(v) => setTriple((t) => ({ ...t, phone: v }))} onCommit={commit} />
+        onChange={(v) => setTriple((t) => ({ ...t, phone: v }))} onCommit={commit} branding={branding} />
     </div>
   )
 }
@@ -57,13 +78,29 @@ interface EditableRowProps {
   placeholder: string
   onChange: (value: string) => void
   onCommit: () => void
+  branding: PublicBranding
 }
 
 /** One borderless inline field: label left, value right, hover-pencil hint. */
-function EditableRow({ label, type, value, placeholder, onChange, onCommit }: EditableRowProps) {
+function EditableRow({ label, type, value, placeholder, onChange, onCommit, branding }: EditableRowProps) {
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+
   return (
     <div className="group flex items-center justify-between py-2 -mx-2 px-2">
-      <span className="text-body text-text-muted w-20 shrink-0">{label}</span>
+      <span
+        style={{
+          fontSize: `${bodyDefaults.fontSize}px`,
+          color: finePrintDefaults.color,
+          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+          fontWeight: bodyDefaults.fontWeight,
+          lineHeight: bodyDefaults.lineHeight,
+          width: '5rem',
+          flexShrink: 0,
+        }}
+      >
+        {label}
+      </span>
       <div className="flex-1 flex items-center justify-end gap-1 min-w-0">
         <input
           type={type}
@@ -71,11 +108,28 @@ function EditableRow({ label, type, value, placeholder, onChange, onCommit }: Ed
           aria-label={label}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          onBlur={onCommit}
+          onBlur={(e) => {
+            (e.target as HTMLInputElement).style.cursor = 'pointer'
+            onCommit()
+          }}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-          className="flex-1 text-right bg-transparent outline-none border-none text-body text-text placeholder:text-text-subtle cursor-pointer focus:cursor-text"
+          style={{
+            flex: 1,
+            textAlign: 'right',
+            background: 'transparent',
+            outline: 'none',
+            border: 'none',
+            fontSize: `${bodyDefaults.fontSize}px`,
+            color: bodyDefaults.color,
+            fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+            fontWeight: bodyDefaults.fontWeight,
+            lineHeight: bodyDefaults.lineHeight,
+            cursor: 'pointer',
+          }}
+          className="focus:cursor-text"
+          onFocus={(e) => { (e.target as HTMLInputElement).style.cursor = 'text' }}
         />
-        <Pencil size={11} strokeWidth={1.5} className="shrink-0 text-text-subtle opacity-0 group-hover:opacity-60 transition" />
+        <Pencil size={11} strokeWidth={1.5} className="shrink-0 opacity-0 group-hover:opacity-60 transition" style={{ color: finePrintDefaults.color }} />
       </div>
     </div>
   )

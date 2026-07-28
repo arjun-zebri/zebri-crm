@@ -1,7 +1,5 @@
 "use client";
 
-import { Plus, ChevronDown, GripVertical } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -18,7 +16,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createBrowserClient } from "@supabase/ssr";
+import { Plus, ChevronDown, GripVertical } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+
 import { Modal } from "@/components/ui/modal";
+import { getRgb } from "@/lib/branding/contrast";
+import { FONT_STACKS } from "@/lib/branding/fonts";
+import type { PublicBranding } from "@/lib/branding/public-surface";
+import { STATUS_COLORS } from "@/lib/branding/status-colors";
+import { roleDefaults } from "@/lib/branding/type-defaults";
+
 import type { PortalEvent, PortalTimelineItem } from "./page";
 
 function anonSupabase() {
@@ -37,6 +44,36 @@ function formatTimeDisplay(t: string): string {
 }
 
 const ALL_TIMES: string[] = [];
+
+/**
+ * Delete affordance colours. Destructive is a status, not a brand state, so
+ * these come from the fixed error value and are composited via getRgb because
+ * a hex inside rgba() is invalid CSS.
+ */
+const DELETE_TINT = (() => {
+  const rgb = getRgb(STATUS_COLORS.error);
+  return {
+    border: rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.3)` : STATUS_COLORS.error,
+  };
+})();
+
+/** Unapproved timeline card: warning outline plus a soft wash of the same value. */
+const PENDING_CARD = (() => {
+  const rgb = getRgb(STATUS_COLORS.warning);
+  return {
+    borderColor: STATUS_COLORS.warning,
+    backgroundColor: rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.1)` : "transparent",
+  };
+})();
+
+/** Pending-review pill, from the fixed warning value. */
+const PENDING_PILL = (() => {
+  const rgb = getRgb(STATUS_COLORS.warning);
+  return {
+    color: STATUS_COLORS.warning,
+    backgroundColor: rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.2)` : "transparent",
+  };
+})();
 for (let h = 0; h < 24; h++) {
   for (let m = 0; m < 60; m += 15) {
     ALL_TIMES.push(
@@ -159,6 +196,8 @@ interface ItemModalProps {
   onDelete?: () => void;
   item?: PortalTimelineItem | null;
   loading: boolean;
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding;
 }
 
 function ItemModal({
@@ -168,7 +207,11 @@ function ItemModal({
   onDelete,
   item,
   loading,
+  branding,
 }: ItemModalProps) {
+  // Type scale from branding.
+  const bodyDefaults = roleDefaults(branding, 'body')
+
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [title, setTitle] = useState("");
@@ -237,11 +280,12 @@ function ItemModal({
                   onDelete();
                 }}
                 disabled={loading}
-                className={`text-sm px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 ${
+                className="text-sm px-3 py-1.5 rounded-control transition cursor-pointer disabled:opacity-50 border hover:opacity-90"
+                style={
                   deleteConfirm
-                    ? "bg-danger text-text-inverse hover:opacity-90"
-                    : "text-danger border border-danger/30 hover:bg-danger/5"
-                }`}
+                    ? { backgroundColor: STATUS_COLORS.error, color: "#FFFFFF", borderColor: STATUS_COLORS.error }
+                    : { color: STATUS_COLORS.error, borderColor: DELETE_TINT.border }
+                }
               >
                 {deleteConfirm ? "Confirm delete" : "Delete"}
               </button>
@@ -269,7 +313,16 @@ function ItemModal({
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-end gap-3">
           <div>
-            <label className="block text-caption font-medium text-text-subtle mb-1.5">
+            <label
+              className="block font-medium mb-1.5"
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: 500,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
+            >
               From
             </label>
             <TimePicker value={startTime} onChange={handleStartChange} />
@@ -318,9 +371,13 @@ function ItemModal({
 interface SortableRowProps {
   item: PortalTimelineItem;
   onEdit: (item: PortalTimelineItem) => void;
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding;
 }
 
-function SortableRow({ item, onEdit }: SortableRowProps) {
+function SortableRow({ item, onEdit, branding }: SortableRowProps) {
+  const bodyDefaults = roleDefaults(branding, 'body');
+  const finePrintDefaults = roleDefaults(branding, 'finePrint');
   const {
     attributes,
     listeners,
@@ -355,54 +412,59 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
 
         {/* Time pill */}
         <div
-          className={`text-xs font-medium tabular-nums px-2 py-1 rounded-pill whitespace-nowrap ${
-            item.start_time
+          className="font-medium tabular-nums px-2 py-1 rounded-pill whitespace-nowrap"
+          style={{
+            fontSize: `${roleDefaults(branding, 'finePrint').fontSize}px`,
+            ...(item.start_time
               ? approved
-                ? "bg-surface-muted text-text"
-                : "bg-surface-emphasis text-text-muted"
-              : "text-text-subtle"
-          }`}
+                ? { backgroundColor: '#e5e7eb', color: '#111827' }
+                : { backgroundColor: '#f3f4f6', color: '#9ca3af' }
+              : { color: '#9ca3af' })
+          }}
         >
           {item.start_time ? formatTimeDisplay(item.start_time) : ""}
         </div>
 
         {/* Connecting line (bottom half) */}
-        <div className="flex-1 w-0.5 sm:w-px bg-border mt-2" />
+        <div className="flex-1 w-0.5 sm:w-px mt-2" style={{ backgroundColor: branding.border_color }} />
       </div>
 
       {/* Right column: card */}
       <div
         onClick={() => onEdit(item)}
         className={`flex-1 rounded-card border bg-surface hover:shadow-sm transition-all cursor-pointer mb-3 ${
-          approved
-            ? "border-border hover:border-border-strong"
-            : "border-warning hover:border-warning bg-warning/10"
+          approved ? "border-border hover:border-border-strong" : ""
         }`}
+        // An unapproved item is a status, so its outline and wash come from the
+        // fixed warning value rather than the brand palette.
+        style={approved ? undefined : PENDING_CARD}
       >
         <div className="flex h-full">
           <div
-            className={`w-[3px] rounded-full my-3 ml-3 shrink-0 ${
-              approved ? "bg-brand-fg" : "bg-warning"
-            }`}
+            className={`w-[3px] rounded-full my-3 ml-3 shrink-0 ${approved ? "bg-brand-fg" : ""}`}
+            style={approved ? undefined : { backgroundColor: STATUS_COLORS.warning }}
           />
           <div className="flex-1 pl-3 pr-4 py-3 flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-body font-semibold text-text">
+              <p className="font-semibold" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: bodyDefaults.color, fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never] }}>
                 {item.title}
               </p>
               {item.description && (
-                <p className="text-caption text-text-muted mt-1 line-clamp-2">
+                <p className="mt-1 line-clamp-2" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: finePrintDefaults.color, fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never] }}>
                   {item.description}
                 </p>
               )}
               {item.duration_min && (
-                <p className="text-caption text-text-subtle mt-1">
+                <p className="mt-1" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: finePrintDefaults.color, fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never] }}>
                   {item.duration_min} min
                 </p>
               )}
             </div>
             {item.pending_review && (
-              <span className="shrink-0 text-caption font-medium px-2 py-1 rounded-pill bg-warning/20 text-warning whitespace-nowrap">
+              <span
+                className="shrink-0 text-caption font-medium px-2 py-1 rounded-pill whitespace-nowrap"
+                style={PENDING_PILL}
+              >
                 Pending
               </span>
             )}
@@ -413,7 +475,7 @@ function SortableRow({ item, onEdit }: SortableRowProps) {
   );
 }
 
-/** "Saturday, 22 April" — the day a run sheet belongs to. */
+/** "Saturday, 22 April" - the day a run sheet belongs to. */
 function formatDayLabel(date: string): string {
   return new Date(date + "T00:00:00").toLocaleDateString("en-AU", {
     weekday: "long",
@@ -446,7 +508,7 @@ function buildDays(events: PortalEvent[]): PortalDay[] {
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** "Sunday 21 June · Park Hyatt Sydney" — date plus the day's venue(s). */
+/** "Sunday 21 June · Park Hyatt Sydney" - date plus the day's venue(s). */
 function dayLabel(day: PortalDay): string {
   const date = formatDayLabel(day.date);
   return day.venues.length > 0 ? `${date} · ${day.venues.join(", ")}` : date;
@@ -533,6 +595,8 @@ interface TimelineSectionProps {
   initialItems: PortalTimelineItem[];
   events: PortalEvent[];
   hasEvent: boolean;
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding;
 }
 
 export function TimelineSection({
@@ -540,7 +604,12 @@ export function TimelineSection({
   initialItems,
   events,
   hasEvent,
+  branding,
 }: TimelineSectionProps) {
+  // Type scale from branding.
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+
   const [items, setItems] = useState<PortalTimelineItem[]>(initialItems);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PortalTimelineItem | null>(
@@ -654,13 +723,13 @@ export function TimelineSection({
 
   if (!hasEvent) {
     return (
-      <p className="text-body text-text-muted py-2">
+      <p className="py-2" style={{ fontSize: `${bodyDefaults.fontSize}px`, color: bodyDefaults.color, fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never] }}>
         Your MC will set up a timeline for your event. Check back soon.
       </p>
     );
   }
 
-  // Only the moments for the day in view — a couple with several events
+  // Only the moments for the day in view - a couple with several events
   // (including more than one on the same day) sees one run sheet at a time.
   const dayItems = items.filter((i) => dayEventIds.has(i.event_id));
   const mcItems = dayItems.filter((i) => !i.pending_review);
@@ -668,18 +737,62 @@ export function TimelineSection({
 
   return (
     <div className="space-y-4">
-      <div className="border border-border bg-surface rounded-card px-5 py-3.5">
-        <p className="text-body text-text-muted mb-2">
+      <div
+        className="px-5 py-3.5 border"
+        style={{
+          borderColor: branding.border_color,
+          backgroundColor: branding.surface_color,
+          borderRadius: branding.corner_radius,
+          borderWidth: 1,
+        }}
+      >
+        <p
+          className="mb-2"
+          style={{
+            fontSize: `${bodyDefaults.fontSize}px`,
+            color: finePrintDefaults.color,
+            fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+            fontWeight: bodyDefaults.fontWeight,
+            lineHeight: bodyDefaults.lineHeight,
+          }}
+        >
           Add moments to suggest timing for your event. Moments you add will be reviewed by your MC before appearing on the official timeline.
         </p>
-        <p className="text-caption text-text-subtle">
-          <strong className="text-text-muted">Pending</strong> means your MC is reviewing your suggestion.
+        <p
+          style={{
+            fontSize: `${finePrintDefaults.fontSize}px`,
+            color: finePrintDefaults.color,
+            fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+            fontWeight: finePrintDefaults.fontWeight,
+            lineHeight: finePrintDefaults.lineHeight,
+          }}
+        >
+          <strong
+            style={{
+              color: finePrintDefaults.color,
+              fontWeight: 600,
+            }}
+          >
+            Pending
+          </strong>{' '}
+          means your MC is reviewing your suggestion.
         </p>
       </div>
 
       {days.length > 1 && selectedDay && (
         <div className="flex items-center gap-2">
-          <span className="text-caption font-medium text-text-subtle">Day</span>
+          <span
+            className="font-medium"
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: 500,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
+            Day
+          </span>
           <DaySelector
             days={days}
             value={selectedDay}
@@ -700,11 +813,23 @@ export function TimelineSection({
           >
             <div className="relative pl-8">
               {/* Vertical line behind everything */}
-              <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
+              <div
+                className="absolute left-0 top-0 bottom-0 w-px"
+                style={{ backgroundColor: branding.border_color }}
+              />
 
               <div className="space-y-2">
                 {mcItems.length > 0 && (
-                  <p className="text-body font-medium text-text-muted pl-8">
+                  <p
+                    className="font-medium pl-8"
+                    style={{
+                      fontSize: `${bodyDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                      fontWeight: 500,
+                      lineHeight: bodyDefaults.lineHeight,
+                    }}
+                  >
                     Added by your MC
                   </p>
                 )}
@@ -713,10 +838,20 @@ export function TimelineSection({
                     key={item.id}
                     item={item}
                     onEdit={handleOpenEdit}
+                    branding={branding}
                   />
                 ))}
                 {pendingItems.length > 0 && (
-                  <p className="text-body font-medium text-text-muted pl-8 mt-6">
+                  <p
+                    className="font-medium pl-8 mt-6"
+                    style={{
+                      fontSize: `${bodyDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                      fontWeight: 500,
+                      lineHeight: bodyDefaults.lineHeight,
+                    }}
+                  >
                     Your suggestions
                   </p>
                 )}
@@ -725,6 +860,7 @@ export function TimelineSection({
                     key={item.id}
                     item={item}
                     onEdit={handleOpenEdit}
+                    branding={branding}
                   />
                 ))}
               </div>
@@ -735,9 +871,20 @@ export function TimelineSection({
 
       <button
         onClick={handleOpenAdd}
-        className="w-full text-body text-text-muted border border-dashed border-border rounded-card py-3 hover:border-border-strong hover:bg-surface-muted transition cursor-pointer flex items-center justify-center gap-1.5"
+        className="w-full border border-dashed py-3 flex items-center justify-center gap-1.5 transition cursor-pointer hover:opacity-75"
+        style={{
+          fontSize: `${bodyDefaults.fontSize}px`,
+          color: finePrintDefaults.color,
+          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+          fontWeight: bodyDefaults.fontWeight,
+          lineHeight: bodyDefaults.lineHeight,
+          borderColor: branding.border_color,
+          backgroundColor: `${branding.border_color}10`,
+          borderRadius: branding.corner_radius,
+          borderWidth: 1,
+        }}
       >
-        <Plus size={14} strokeWidth={1.5} />
+        <Plus size={14} strokeWidth={1.5} style={{ color: finePrintDefaults.color }} />
         Add moment
       </button>
 
@@ -748,6 +895,7 @@ export function TimelineSection({
         onDelete={editingItem ? handleDelete : undefined}
         item={editingItem}
         loading={saving}
+        branding={branding}
       />
     </div>
   );

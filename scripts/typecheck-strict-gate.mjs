@@ -37,7 +37,31 @@ import { execSync } from 'node:child_process';
 // Timeline internal flag + multi-day portals: 323 → 315 (deleted the
 // dead run-sheet-section.tsx, which carried several strict errors;
 // new portal/vendor day-selector code is strict-clean). Locking in.
-const STRICT_BUDGET = 315;
+// Quote/invoice templates hardening: 315 → 305 (shared manager + store
+// replaced both legacy managers; widened optional prop types on the
+// templates/payments surfaces for exactOptionalPropertyTypes; all new
+// template code is strict-clean). Locking in.
+// Proposals rollout / quotes removal: 305 → 302 (deleted quote builder,
+// public quote page and quote automations carried strict errors; all
+// proposal code is strict-clean). Locking in.
+// Branding editor redesign: net strict-clean new code + deletions (starter
+// designs, dead theme paths) reduced strict errors 302 -> 295.
+// Branding overhaul phase-a completion: fixed exactOptionalPropertyTypes
+// violations in block-toolbar.tsx and render.tsx by conditionally spreading
+// optional props instead of passing undefined (20-error reduction: 295 -> 290).
+// Branding role-colour model removed 2 further strict errors (290 -> 288).
+// Contract surface global styles: retiring the optional `headingStack` prop
+// removed its exactOptionalPropertyTypes violation (288 -> 287).
+// Extracting the branding onboarding gate into lib/branding/onboarding-gate.ts
+// resolved two more inference sites on the branding page (287 -> 285).
+// Welcome onboarding wizard: extracted usePreviewScript, useReducedMotion, and
+// preview shape utilities into pure modules (286 -> 286). Locking in at 286.
+// Proposals single/multi-package + branding batch drifted the count up to 297
+// (new proposal surfaces passed `undefined` into optional props, plus grandfathered
+// noUncheckedIndexedAccess in contrast/extract-colors). Fixed by widening the
+// proposal/action-slot optional prop types to `| undefined` and guarding the pure
+// colour helpers (297 -> 281). Locking in at 281.
+const STRICT_BUDGET = 281;
 
 function runTscStrict() {
   try {

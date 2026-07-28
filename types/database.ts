@@ -600,7 +600,7 @@ export type Database = {
           locked_content_html: string | null
           mc_signature_name: string | null
           notes: string | null
-          quote_id: string | null
+          proposal_id: string | null
           reminder_count: number
           share_token: string
           share_token_enabled: boolean
@@ -629,7 +629,7 @@ export type Database = {
           locked_content_html?: string | null
           mc_signature_name?: string | null
           notes?: string | null
-          quote_id?: string | null
+          proposal_id?: string | null
           reminder_count?: number
           share_token?: string
           share_token_enabled?: boolean
@@ -658,7 +658,7 @@ export type Database = {
           locked_content_html?: string | null
           mc_signature_name?: string | null
           notes?: string | null
-          quote_id?: string | null
+          proposal_id?: string | null
           reminder_count?: number
           share_token?: string
           share_token_enabled?: boolean
@@ -681,10 +681,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "contracts_quote_id_fkey"
-            columns: ["quote_id"]
+            foreignKeyName: "contracts_proposal_id_fkey"
+            columns: ["proposal_id"]
             isOneToOne: false
-            referencedRelation: "quotes"
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -823,6 +823,78 @@ export type Database = {
           },
         ]
       }
+      couple_questionnaires: {
+        Row: {
+          completed_at: string | null
+          couple_id: string
+          created_at: string
+          display_mode: string
+          id: string
+          questions: Json
+          responses: Json
+          sent_at: string | null
+          share_token: string
+          share_token_enabled: boolean
+          status: string
+          template_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          couple_id: string
+          created_at?: string
+          display_mode?: string
+          id?: string
+          questions?: Json
+          responses?: Json
+          sent_at?: string | null
+          share_token?: string
+          share_token_enabled?: boolean
+          status?: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          couple_id?: string
+          created_at?: string
+          display_mode?: string
+          id?: string
+          questions?: Json
+          responses?: Json
+          sent_at?: string | null
+          share_token?: string
+          share_token_enabled?: boolean
+          status?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_questionnaires_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_questionnaires_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaire_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       couple_statuses: {
         Row: {
           color: string
@@ -925,6 +997,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_template_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_template_files: {
         Row: {
           created_at: string
@@ -968,6 +1070,8 @@ export type Database = {
       }
       email_templates: {
         Row: {
+          archived_at: string | null
+          category_id: string | null
           content: Json
           created_at: string
           description: string | null
@@ -981,6 +1085,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          archived_at?: string | null
+          category_id?: string | null
           content?: Json
           created_at?: string
           description?: string | null
@@ -994,6 +1100,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          archived_at?: string | null
+          category_id?: string | null
           content?: Json
           created_at?: string
           description?: string | null
@@ -1006,7 +1114,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "email_template_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_contacts: {
         Row: {
@@ -1201,7 +1317,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "invoice_template_items_template_id_fkey"
+            foreignKeyName: "invoice_template_items_invoice_template_id_fkey"
             columns: ["invoice_template_id"]
             isOneToOne: false
             referencedRelation: "invoice_templates"
@@ -1264,7 +1380,7 @@ export type Database = {
           notes: string | null
           paid_at: string | null
           payment_terms: string | null
-          quote_id: string | null
+          proposal_id: string | null
           share_token: string
           share_token_enabled: boolean
           status: string
@@ -1293,7 +1409,7 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null
-          quote_id?: string | null
+          proposal_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -1322,7 +1438,7 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null
-          quote_id?: string | null
+          proposal_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -1349,10 +1465,146 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_quote_id_fkey"
-            columns: ["quote_id"]
+            foreignKeyName: "invoices_proposal_id_fkey"
+            columns: ["proposal_id"]
             isOneToOne: false
-            referencedRelation: "quotes"
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      package_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          optional: boolean
+          package_id: string
+          position: number
+          quantity: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          optional?: boolean
+          package_id: string
+          position: number
+          quantity?: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          optional?: boolean
+          package_id?: string
+          position?: number
+          quantity?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_items_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packages: {
+        Row: {
+          archived_at: string | null
+          category_id: string | null
+          created_at: string
+          deposit_percent: number | null
+          description: string | null
+          gst_inclusive: boolean
+          id: string
+          is_popular: boolean
+          is_starter: boolean
+          name: string
+          notes: string | null
+          position: number
+          updated_at: string
+          user_id: string
+          weekend_loading_percent: number | null
+        }
+        Insert: {
+          archived_at?: string | null
+          category_id?: string | null
+          created_at?: string
+          deposit_percent?: number | null
+          description?: string | null
+          gst_inclusive?: boolean
+          id?: string
+          is_popular?: boolean
+          is_starter?: boolean
+          name: string
+          notes?: string | null
+          position?: number
+          updated_at?: string
+          user_id: string
+          weekend_loading_percent?: number | null
+        }
+        Update: {
+          archived_at?: string | null
+          category_id?: string | null
+          created_at?: string
+          deposit_percent?: number | null
+          description?: string | null
+          gst_inclusive?: boolean
+          id?: string
+          is_popular?: boolean
+          is_starter?: boolean
+          name?: string
+          notes?: string | null
+          position?: number
+          updated_at?: string
+          user_id?: string
+          weekend_loading_percent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packages_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "package_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -1536,259 +1788,226 @@ export type Database = {
           },
         ]
       }
-      quote_items: {
+      proposal_option_items: {
         Row: {
           amount: number
           created_at: string
+          default_included: boolean
           description: string
           id: string
+          is_addon: boolean
+          option_id: string
           position: number
-          quote_id: string
           user_id: string
         }
         Insert: {
           amount: number
           created_at?: string
+          default_included?: boolean
           description: string
           id?: string
+          is_addon?: boolean
+          option_id: string
           position: number
-          quote_id: string
           user_id: string
         }
         Update: {
           amount?: number
           created_at?: string
+          default_included?: boolean
           description?: string
           id?: string
+          is_addon?: boolean
+          option_id?: string
           position?: number
-          quote_id?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "quote_items_quote_id_fkey"
-            columns: ["quote_id"]
+            foreignKeyName: "proposal_option_items_option_id_fkey"
+            columns: ["option_id"]
             isOneToOne: false
-            referencedRelation: "quotes"
+            referencedRelation: "proposal_options"
             referencedColumns: ["id"]
           },
         ]
       }
-      package_items: {
+      proposal_options: {
         Row: {
-          amount: number
           created_at: string
-          description: string
+          deposit_percent: number | null
+          description: string | null
+          gst_inclusive: boolean
           id: string
-          package_id: string
+          is_popular: boolean
           position: number
+          proposal_id: string
+          source_package_id: string | null
+          subtotal: number
+          title: string
           user_id: string
+          weekend_loading_percent: number | null
         }
         Insert: {
-          amount: number
           created_at?: string
-          description: string
+          deposit_percent?: number | null
+          description?: string | null
+          gst_inclusive?: boolean
           id?: string
-          package_id: string
+          is_popular?: boolean
           position: number
+          proposal_id: string
+          source_package_id?: string | null
+          subtotal?: number
+          title: string
           user_id: string
+          weekend_loading_percent?: number | null
         }
         Update: {
-          amount?: number
           created_at?: string
-          description?: string
+          deposit_percent?: number | null
+          description?: string | null
+          gst_inclusive?: boolean
           id?: string
-          package_id?: string
+          is_popular?: boolean
           position?: number
+          proposal_id?: string
+          source_package_id?: string | null
+          subtotal?: number
+          title?: string
           user_id?: string
+          weekend_loading_percent?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "package_items_package_id_fkey"
-            columns: ["package_id"]
+            foreignKeyName: "proposal_options_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_options_source_package_id_fkey"
+            columns: ["source_package_id"]
             isOneToOne: false
             referencedRelation: "packages"
             referencedColumns: ["id"]
           },
         ]
       }
-      packages: {
+      proposals: {
         Row: {
-          created_at: string
-          description: string | null
-          id: string
-          is_starter: boolean
-          name: string
-          notes: string | null
-          position: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_starter?: boolean
-          name: string
-          notes?: string | null
-          position?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_starter?: boolean
-          name?: string
-          notes?: string | null
-          position?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      quote_template_items: {
-        Row: {
-          amount: number
-          created_at: string
-          description: string
-          id: string
-          position: number
-          template_id: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          description: string
-          id?: string
-          position: number
-          template_id: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          description?: string
-          id?: string
-          position?: number
-          template_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quote_template_items_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "quote_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      quote_templates: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          is_starter: boolean
-          name: string
-          notes: string | null
-          position: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_starter?: boolean
-          name: string
-          notes?: string | null
-          position?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_starter?: boolean
-          name?: string
-          notes?: string | null
-          position?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      quotes: {
-        Row: {
+          accepted_addon_selection: Json | null
           accepted_at: string | null
+          accepted_option_id: string | null
           couple_id: string
           created_at: string
-          discount_type: string | null
-          discount_value: number | null
           email_sent_at: string | null
           expires_at: string | null
           id: string
           notes: string | null
-          quote_number: string
+          proposal_number: string
           share_token: string
           share_token_enabled: boolean
           status: string
           subtotal: number
-          tax_rate: number
           title: string
+          updated_at: string
           user_id: string
         }
         Insert: {
+          accepted_addon_selection?: Json | null
           accepted_at?: string | null
+          accepted_option_id?: string | null
           couple_id: string
           created_at?: string
-          discount_type?: string | null
-          discount_value?: number | null
           email_sent_at?: string | null
           expires_at?: string | null
           id?: string
           notes?: string | null
-          quote_number: string
+          proposal_number: string
           share_token?: string
           share_token_enabled?: boolean
           status?: string
           subtotal?: number
-          tax_rate?: number
           title: string
+          updated_at?: string
           user_id: string
         }
         Update: {
+          accepted_addon_selection?: Json | null
           accepted_at?: string | null
+          accepted_option_id?: string | null
           couple_id?: string
           created_at?: string
-          discount_type?: string | null
-          discount_value?: number | null
           email_sent_at?: string | null
           expires_at?: string | null
           id?: string
           notes?: string | null
-          quote_number?: string
+          proposal_number?: string
           share_token?: string
           share_token_enabled?: boolean
           status?: string
           subtotal?: number
-          tax_rate?: number
           title?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "quotes_couple_id_fkey"
+            foreignKeyName: "proposals_accepted_option_id_fkey"
+            columns: ["accepted_option_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_couple_id_fkey"
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
             referencedColumns: ["id"]
           },
         ]
+      }
+      questionnaire_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_mode: string
+          id: string
+          is_starter: boolean
+          name: string
+          position: number
+          questions: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_mode?: string
+          id?: string
+          is_starter?: boolean
+          name: string
+          position?: number
+          questions?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_mode?: string
+          id?: string
+          is_starter?: boolean
+          name?: string
+          position?: number
+          questions?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       stripe_customers: {
         Row: {
@@ -2146,6 +2365,8 @@ export type Database = {
         Row: {
           brand_kits: Json
           branding_blocks: Json | null
+          enabled_surfaces: Json
+          onboarded_at: string | null
           portal_sections: Json | null
           updated_at: string
           user_id: string
@@ -2153,6 +2374,8 @@ export type Database = {
         Insert: {
           brand_kits?: Json
           branding_blocks?: Json | null
+          enabled_surfaces?: Json
+          onboarded_at?: string | null
           portal_sections?: Json | null
           updated_at?: string
           user_id: string
@@ -2160,6 +2383,8 @@ export type Database = {
         Update: {
           brand_kits?: Json
           branding_blocks?: Json | null
+          enabled_surfaces?: Json
+          onboarded_at?: string | null
           portal_sections?: Json | null
           updated_at?: string
           user_id?: string
@@ -2168,6 +2393,7 @@ export type Database = {
       }
       user_public_settings: {
         Row: {
+          couple_profile_tabs_config: Json
           created_at: string
           email_mode: string
           oauth_access_token_encrypted: string | null
@@ -2184,6 +2410,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          couple_profile_tabs_config?: Json
           created_at?: string
           email_mode?: string
           oauth_access_token_encrypted?: string | null
@@ -2200,6 +2427,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          couple_profile_tabs_config?: Json
           created_at?: string
           email_mode?: string
           oauth_access_token_encrypted?: string | null
@@ -2308,7 +2536,14 @@ export type Database = {
         Args: { p_surface: string; p_user_id: string }
         Returns: Json
       }
-      accept_quote: { Args: { token: string }; Returns: Json }
+      accept_proposal: {
+        Args: {
+          addon_selection?: Json
+          chosen_option_id: string
+          token: string
+        }
+        Returns: Json
+      }
       contracts_due_for_reminder: {
         Args: never
         Returns: {
@@ -2338,7 +2573,7 @@ export type Database = {
             }
             Returns: Json
           }
-      decline_quote: { Args: { token: string }; Returns: Json }
+      decline_proposal: { Args: { token: string }; Returns: Json }
       delete_portal_file: {
         Args: { p_id: string; p_token: string }
         Returns: undefined
@@ -2387,11 +2622,13 @@ export type Database = {
       expire_contracts: { Args: never; Returns: string[] }
       generate_contract_number: { Args: { p_user_id: string }; Returns: string }
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
-      generate_quote_number: { Args: { p_user_id: string }; Returns: string }
+      generate_proposal_number: { Args: { p_user_id: string }; Returns: string }
       get_portal_data: { Args: { token: string }; Returns: Json }
+      get_portal_questionnaires: { Args: { token: string }; Returns: Json }
       get_public_contract: { Args: { token: string }; Returns: Json }
       get_public_invoice: { Args: { token: string }; Returns: Json }
-      get_public_quote: { Args: { token: string }; Returns: Json }
+      get_public_proposal: { Args: { token: string }; Returns: Json }
+      get_public_questionnaire: { Args: { token: string }; Returns: Json }
       get_public_timeline: { Args: { token: string }; Returns: Json }
       get_vendor_timeline: { Args: { token: string }; Returns: Json }
       is_own_couple: { Args: { couple_id_value: string }; Returns: boolean }
@@ -2496,11 +2733,11 @@ export type Database = {
       }
       save_portal_timeline_item: {
         Args: {
-          p_description: string | null
-          p_duration_min: number | null
-          p_event_id?: string | null
+          p_description: string
+          p_duration_min: number
+          p_event_id?: string
           p_id: string
-          p_start_time: string | null
+          p_start_time: string
           p_title: string
           p_token: string
         }
@@ -2509,6 +2746,10 @@ export type Database = {
       save_portal_vow: {
         Args: { p_content: string; p_id: string; p_token: string }
         Returns: string
+      }
+      save_questionnaire_progress: {
+        Args: { p_responses: Json; token: string }
+        Returns: Json
       }
       seed_default_contract_template: {
         Args: { p_user_id: string }
@@ -2521,6 +2762,10 @@ export type Database = {
           p_signer_user_agent: string
           token: string
         }
+        Returns: Json
+      }
+      submit_questionnaire: {
+        Args: { p_responses: Json; token: string }
         Returns: Json
       }
     }

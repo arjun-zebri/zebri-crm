@@ -1,9 +1,10 @@
 "use client";
 
 import * as Popover from "@radix-ui/react-popover";
-import { Pencil } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Pencil, Plus } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   Couple,
   LEAD_SOURCE_LABELS,
@@ -11,7 +12,8 @@ import {
   LEAD_SOURCES,
 } from '@/types/couple';
 
-import { CoupleEvents } from "./couple-events";
+import { CoupleEvents, type CoupleEventsHandle } from "./couple-events";
+import { CoupleTabShell } from "./couple-tab-shell";
 
 interface CoupleOverviewProps {
   couple: Couple;
@@ -36,6 +38,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
   const [eventsLoading, setEventsLoading] = useState(true);
   const isLoading = eventsLoading;
   const handleEventsLoading = useCallback((v: boolean) => setEventsLoading(v), []);
+  const eventsRef = useRef<CoupleEventsHandle>(null);
   const [primaryName, setPrimaryName] = useState(couple.primary_name ?? "");
   const [primaryEmail, setPrimaryEmail] = useState(couple.primary_email ?? "");
   const [primaryPhone, setPrimaryPhone] = useState(couple.primary_phone ?? "");
@@ -82,7 +85,19 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
   };
 
   return (
-    <>
+    <CoupleTabShell
+      title="Overview"
+      actions={
+        <Button
+          size="sm"
+          onClick={() => eventsRef.current?.openAdd()}
+          className="cursor-pointer gap-1.5"
+        >
+          <Plus size={14} strokeWidth={1.5} />
+          Add event
+        </Button>
+      }
+    >
       {/* Skeleton - shown while events or contacts are loading */}
       {isLoading && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 animate-pulse">
@@ -104,7 +119,7 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
       )}
 
       {/* Real content - always mounted so queries fire; hidden via CSS while loading */}
-      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 h-full ${isLoading ? 'hidden' : ''}`}>
+      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 flex-1 min-h-0 ${isLoading ? 'hidden' : ''}`}>
       {/* Column 1: General Info */}
       <div className="flex flex-col">
         <div className="mb-4 flex items-center justify-between">
@@ -264,10 +279,10 @@ export function CoupleOverview({ couple, onSave }: CoupleOverviewProps) {
 
       {/* Column 2: Events */}
       <div>
-        <CoupleEvents couple={couple} onLoadingChange={handleEventsLoading} />
+        <CoupleEvents ref={eventsRef} couple={couple} onLoadingChange={handleEventsLoading} />
       </div>
     </div>
-  </>
+  </CoupleTabShell>
   );
 }
 

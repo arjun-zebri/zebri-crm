@@ -15,7 +15,7 @@ export const CONTRACT_VARIABLES: ContractVariable[] = [
   { id: 'couple_email', label: 'Couple email', description: 'Primary email on the couple record' },
   { id: 'event_date', label: 'Event date', description: 'Earliest wedding event date' },
   { id: 'venue', label: 'Venue', description: 'Earliest event venue' },
-  { id: 'total_amount', label: 'Total amount', description: 'Total from the linked quote' },
+  { id: 'total_amount', label: 'Total amount', description: 'Total from the linked proposal' },
   { id: 'deposit_amount', label: 'Deposit amount', description: 'Deposit owed (default 25% of total)' },
   { id: 'mc_business_name', label: 'Your business name', description: 'Your business name from settings' },
   { id: 'mc_signature_name', label: 'Your signature name', description: 'Your typed signature name from settings' },
@@ -53,46 +53,27 @@ function formatCurrency(n: number): string {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
 }
 
-function calcQuoteTotal(q: {
-  subtotal: number
-  tax_rate: number | null
-  discount_type: 'percentage' | 'fixed' | null
-  discount_value: number | null
-}): number {
-  const sub = Number(q.subtotal) || 0
-  const discount =
-    q.discount_type === 'percentage'
-      ? (sub * Number(q.discount_value || 0)) / 100
-      : q.discount_type === 'fixed'
-      ? Number(q.discount_value || 0)
-      : 0
-  const taxable = sub - discount
-  const tax = (taxable * Number(q.tax_rate || 0)) / 100
-  return Math.max(0, taxable + tax)
-}
-
 export function buildContractVariables(input: {
   couple: { name: string; email: string | null }
   firstEvent: { date: string | null; venue: string | null } | null
-  quote: {
-    subtotal: number
-    tax_rate: number | null
-    discount_type: 'percentage' | 'fixed' | null
-    discount_value: number | null
-  } | null
+  /** Linked ACCEPTED proposal: `total` is the recorded selection's
+   *  subtotal, `depositPercent` the accepted option's rule. */
+  proposal?: { total: number; depositPercent: number | null } | null
   userMeta: Record<string, unknown>
   depositPercent: number
 }): ContractVariableValues {
-  const total = input.quote ? calcQuoteTotal(input.quote) : 0
-  const deposit = (total * (input.depositPercent || 25)) / 100
+  const total = input.proposal ? Number(input.proposal.total) || 0 : 0
+  const effectiveDepositPct = input.proposal?.depositPercent ?? input.depositPercent ?? 25
+  const deposit = (total * (effectiveDepositPct || 25)) / 100
+  const hasMoneySource = !!input.proposal
 
   return {
     couple_name: input.couple.name || '-',
     couple_email: input.couple.email || '-',
     event_date: formatDate(input.firstEvent?.date ?? null),
     venue: input.firstEvent?.venue || '-',
-    total_amount: input.quote ? formatCurrency(total) : '-',
-    deposit_amount: input.quote ? formatCurrency(deposit) : '-',
+    total_amount: hasMoneySource ? formatCurrency(total) : '-',
+    deposit_amount: hasMoneySource ? formatCurrency(deposit) : '-',
     mc_business_name: (input.userMeta.business_name as string) || '-',
     mc_signature_name:
       (input.userMeta.mc_signature_name as string) ||

@@ -19,6 +19,7 @@ import {
   cloneTemplateAction,
   createTemplateAction,
   deleteTemplateAction,
+  setTemplateArchivedAction,
   updateTemplateAction,
   type TemplateInput,
 } from './actions'
@@ -73,6 +74,16 @@ export function useDeleteTemplate() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => unwrap(await deleteTemplateAction(id)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
+/** Archive / restore a template (soft retirement — see the action). */
+export function useSetTemplateArchived() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, archived }: { id: string; archived: boolean }) =>
+      unwrap(await setTemplateArchivedAction(id, archived)),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   })
 }

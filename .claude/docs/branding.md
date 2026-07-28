@@ -1,64 +1,104 @@
 # Zebri Custom Branding
 
-MCs customise how every public-facing surface looks to couples. Branding is one of the most visible product surfaces  -  every quote, invoice, contract, and (later) couple-portal a couple ever sees is a brand impression.
+MCs customize the look and layout of all customer-facing surfaces via a Canva-grade block-based editor. Branding flows from the editor into quotes, invoices, contracts, proposals, vendor timelines, questionnaires, emails, and PDFs.
 
-**Branded surfaces:**
+**Branded surfaces (Phase 11, 2026-07-17):**
 
-| Surface | Path | Status |
+| Surface | Public path | Status |
 |---|---|---|
 | Quote | `/quote/[token]` | shipped |
 | Invoice | `/invoice/[token]` | shipped |
 | Contract | `/contract/[token]` | shipped |
-| Couple Portal | (TBD) | preview-stub |
-| Transactional email | (Resend) | future |
+| Proposal | `/proposal/[token]` | shipped |
+| Vendor Timeline | `/vendor-timeline/[token]` | shipped |
+| Questionnaire | `/questionnaire/[token]` | shipped |
+| Email (sent docs) | Resend transactional | shipped |
+| PDF (generated docs) | Supabase Function | shipped |
 
 ------------------------------------------------------------------------
 
-# Branding Fields
+# Block-Tree Model
 
-Currently stored in Supabase Auth `user_metadata` (`logo_url`, `brand_color`, `tagline`, `abn`, `show_contact_on_documents`). Phase 2 of the redesign moves all branding to a dedicated `public.branding_settings` table to support uniqueness on `subdomain_slug` and easier joins from public RPCs.
+Branding is a per-surface block tree stored in `user_branding.branding_blocks` (jsonb, keyed by surface). Surfaces are `quote`, `invoice`, `contract`, `proposal`, `vendorTimeline`, `questionnaire`. Empty tree (`[]`) means the surface is disabled (public render returns null).
 
-| Field | Type | Default | Description | Phase |
-|---|---|---|---|---|
-| `logo_url` | text → Storage `branding/{user_id}/logo` | null | MC's primary logo (max 2 MB; PNG/JPG/SVG). | 1 |
-| `favicon_url` | text → Storage `branding/{user_id}/favicon` | null | Browser-tab icon for public pages (32×32 PNG/ICO/SVG). | 2 |
-| `header_image_url` | text → Storage `branding/{user_id}/header` | null | Optional decorative banner at top of public surfaces. | 2 |
-| `brand_color` | text (hex) | `#A7F3D0` | Accent color for buttons, header bands, and highlights. | 1 |
-| `tagline` | text, ≤ 80 chars | null | Short business tagline below logo. | 1 |
-| `footer_text` | text, ≤ 280 chars | null | Free-form footer (terms, address, signature line). Renders on quote, invoice, contract. | 2 |
-| `abn` | text, 11 digits | null | Australian Business Number on invoice header. | 1 |
-| `show_contact_on_documents` | boolean | false | Show phone, website, social links on public surfaces. | 1 |
-| `font_heading` | enum (registry) | `inter` | Heading font from curated registry. | 2 |
-| `font_body` | enum (registry) | `inter` | Body font from curated registry. | 2 |
-| `theme_preset` | enum: `minimal\|bold\|elegant\|modern\|classic\|custom` | `custom` | Currently-applied preset. Becomes `custom` after any field edit. | 2 |
-| `subdomain_slug` | text, unique, `[a-z0-9-]{3,32}` | null | Optional white-label URL: `<slug>.zebri.app`. | 3 |
+## Rich text + variables (Canva-style free text)
 
-------------------------------------------------------------------------
+Free-text block fields are **TipTap rich text** (per-range bold / italic / underline / colour / font size / highlight via a floating toolbar on selection) with inline **variable chips** (`{{ couple_name }}`, mint-green in the editor, resolved to the real value on the sent document). Design + rationale: `docs/superpowers/specs/2026-07-26-branding-rich-text-variables-design.md`.
 
-# Theme Presets
+- **Storage:** rich fields store TipTap `JSONContent` (type `RichTextValue = JSONContent | string`; legacy strings tolerated and upgraded by `migrateBlocks`). Converted fields so far: `text.text`, `footer.closingNote`, `paymentDetails.heading`. (Title text is data-driven from `doc.title`; action button labels stay plain; businessName/tagline are identity scalars — none are rich text.)
+- **Editor:** `app/(dashboard)/branding/blocks/rich-text/` — `RichText` (TipTap + `BubbleMenu`), `rich-text-bubble.tsx` (toolbar + insert-variable menu, scoped per surface), `variable-chip.tsx` (mint chip NodeView). Extension set + `Variable` node: `lib/branding/rich-text-extensions.ts`.
+- **Server render (public surfaces):** `renderRichText(json, values)` in `lib/branding/render-rich-text.ts` = `generateHTML` (controlled extensions) → `sanitizeRichHtml` (the security boundary: validates every style value, strips anything unexpected — `lib/branding/rich-text-sanitize.ts`) → `resolveVariablesInHtml` (chips → escaped real values — `lib/branding/resolve-variables.ts`). Because storage is JSON rendered through a fixed extension set, no arbitrary attribute can reach a public money page.
+- **Variables:** catalogue per surface in `lib/branding/document-variables.ts`; the id→value map is built from branding + doc by `lib/branding/public-blocks/variable-values.ts`, computed in `PublicBlockRenderer` and passed to the rich-text renderers. A missing value renders empty, never a raw `{{ }}`. `event_date` / `venue` depend on those fields being added to the public RPCs.
 
-Five starter themes  -  TypeScript const in `lib/branding/themes.ts`. Applying a preset overwrites `brand_color`, `font_heading`, `font_body`. After any subsequent field edit, `theme_preset` becomes `custom`.
+**Block types:** HeaderBanner, BusinessName, Tagline, Title, Text, LineItems, Totals, PaymentDetails, Action, Image, Spacer, Divider, Footer, ProposalBody, ContractBody, CouplePortal, VendorTimeline, Questionnaire.
 
-| Preset | Color | Heading | Body | Vibe |
-|---|---|---|---|---|
-| Minimal | `#000000` | Inter | Inter | Default. Editorial. |
-| Bold | `#FF6B35` | Space Grotesk | Inter | Confident, modern. |
-| Elegant | `#0F172A` | Playfair Display | Inter | Refined, traditional. |
-| Modern | `#A7F3D0` | DM Serif Display | DM Sans | Soft, current Zebri default. |
-| Classic | `#7C2D12` | Cormorant Garamond | Inter | Heritage. |
+**Scalar fields** (global across all surfaces, stored in `user_metadata`):
+- **Role-based colours** (user-set via onboarding + editor): `heading_color`, `subheading_color`, `text_color`, `surface_color`, `brand_color` (primary button), `secondary_color` (secondary button), `link_color` (editor-only).
+- **Derived aliases** (no longer user-set; automatically derived): `accent_color` (≡ `brand_color`), `muted_color` (≡ `text_color`), `secondary_text_color` (computed from `secondary_color`), `page_background` (≡ `surface_color`).
+- **Contact & business info**: logo_url, favicon_url, header_image_url, business_name, tagline, abn, phone, website, instagram_url, facebook_url, show_contact_on_documents.
+- **Typography**: font_heading, font_body, font_weight, font_body_weight, heading_size, body_size, heading_case, body_case, subheading_size, subheading_weight, subheading_case, heading_letter_spacing, body_line_height.
+  - **Case values**: `heading_case` / `body_case` / `subheading_case` accept `none` (as typed), `uppercase`, `lowercase`, `capitalize` (each word), and `sentence` (first letter only). Sentence case has no CSS `text-transform` and CSS `::first-letter` does not apply to the inline `<span>`s most labels render as, so it is a **string transform**: `applyCase(text, case)` in `lib/branding/text-case.ts`, surfaced to block renderers as `caseText(text, style, defaults)` in `text-style.ts`. `cssTextTransform` handles the CSS-native cases (sentence → `none`). The rail's "Case" pills map `Aa`→sentence, `Ab`→capitalize, `AA`→uppercase, `aa`→lowercase; there is no as-typed pill on the global rail (the per-block toolbar keeps one).
+  - **Subheading role** = the `sectionLabel` type role: invoice "Ref"/"Due" (contracts use "Expires"), "Account name"/"BSB"/"Account number", lineItems headers, and other small labels. It is its own global control (Typography → Subheading: size, weight, case) plus colour under Brand colours → Subheading. `roleDefaults(b, 'sectionLabel')` reads `subheading_size` / `subheading_weight` / `subheading_case` / `subheading_color`. Each `subheading_*` scalar defaults (in `buildPublicBranding` and the `_user_branding` SQL helper) to the value the role used to derive — size ≈ 0.73× body, weight = body weight, case = heading case — so documents saved before this control existed render unchanged until the MC touches it. Migration: `20260721000000_subheading_typography.sql`.
+- **Layout & UI**: button_variant, button_size, button_radius, corner_radius, section_spacing, doc_padding, density, proposal_labels, theme_preset.
 
 ------------------------------------------------------------------------
 
-# Font Registry
+# Lock Model
 
-Avoids the Google Fonts paradox of choice. Exported from `lib/branding/fonts.ts`:
+Required blocks cannot be deleted. Determined by surface:
+- Invoice requires: Title, LineItems, Totals
+- Contract requires: Title, ContractBody
+- All other surfaces: no required blocks
 
-```ts
-export const HEADING_FONTS = ['inter','playfair','dm_serif','space_grotesk','cormorant'] as const
-export const BODY_FONTS = ['inter','dm_sans'] as const
-```
+`isDeletable(block, surface)` in `lib/branding/policy.ts` returns false for required blocks. Locked blocks show a "Required" chip in the editor toolbar.
 
-Loaded via `next/font/google` in `lib/branding/load-fonts.ts`. Public pages and the settings preview share the loader.
+**Editor: click-to-style (direct manipulation).** Blocks with more than one styleable element (Title, Footer, Totals, LineItems, PaymentDetails, Action) have **no toolbar switcher**. Instead you click the element in the preview and the toolbar's style controls act on it:
+- Public renderers tag each styleable element with a `data-subtarget` attribute (`title`/`subtitle`, `note`/`contact`, `subtotal`/`tax`/`total`, `header`/`item`, `heading`/`label`/`value`, `primary`/`secondary`). Inert on the public surface, load-bearing for the editor. Locked by `tests/unit/branding/public-blocks-subtarget.test.tsx`.
+- `BlockFrame` (`block-frame.tsx`) owns the active sub-target: clicking a tagged element sets it and draws an **outline** (not a border, so the print-accurate layout never shifts) around every matching element; clicking elsewhere in the block clears to the control's default target. Selection is sticky per block; the highlight clears on deselect. The value is passed to `BlockToolbar` → each control.
+- Each control reads `activeSubTarget` (defaulting to its primary target) and shows a small non-interactive `ActiveTargetLabel` naming what's selected. Totals/LineItems/Action keep a structural default target (`rows`/`block`: layout, toggles, tax %, variant/size) that shows when you click empty block area.
+
+**Title block (shared by invoice + contract).** The block renders an editable **title** plus an optional **couple-name subtitle line** and a **meta row** (reference, date, ABN):
+- **Subtitle is the couple's real name, not free text.** It comes from `PublicDocData.coupleName` (invoice `couple_name`, contract `couple_name`), controlled by `TitleBlock.showCoupleName`, and renders only when the toggle is on *and* a name exists — so a sent document can never show placeholder text (the old free-text `subtitle` field is deprecated; `migrateBlocks` sets `showCoupleName` from whether a saved block had any subtitle text). Click the title or the couple-name line in the preview to style either.
+- **One "Include" dropdown** (footer-style, `TitleIncludeDropdown` in `block-toolbar.tsx`) holds every visibility toggle: Couple name, Reference, Date, ABN.
+
+Invoice-surface specifics (in `invoice-branded-card.tsx`):
+- **Date row labelled "Due", not "Expires".** Invoices fall due; they don't expire. The public renderer labels the row from `PublicDocData.expiresLabel` (default `'Expires'`, correct for contracts); the invoice card sets it to `'Due'`. The value maps to `invoice.due_date`. In the Include dropdown the row reads "Due date" on invoices, "Expiry date" on contracts.
+- **Reference number is mandatory.** AU tax invoices must carry an identifying number, so `showRef` is forced on at render and the **Reference** row is omitted from the Include dropdown on the invoice surface only. Contracts keep it.
+- **Due row suppressed when a payment schedule exists.** If the invoice has a schedule, the deposit + final due dates render in the schedule block below, so the card passes `expiresAt: null` to hide the header date row and avoid duplicating the same date. Simple (single-payment) invoices still show it.
+
+------------------------------------------------------------------------
+
+# Templates
+
+18 functional templates: `<surface>-classic`, `<surface>-minimal`, `<surface>-bold` for each surface. Applying a template replaces only the current surface's block tree in one undoable step. Stored in `lib/branding/templates/<surface>.ts`.
+
+------------------------------------------------------------------------
+
+# Surface Enablement & Reset
+
+`user_branding.enabled_surfaces` (text[]) tracks which surfaces the MC has customized. The editor's first-run wizard gates onboarding by this. A surface is **disabled** when its block tree is an empty array (`[]`); the `get_public_*` RPCs and email/PDF renderers check this and skip rendering (return null).
+
+**Per-surface reset:** "Reset to template" button in the Documents panel replaces the current surface's tree with a fresh template.
+
+------------------------------------------------------------------------
+
+# Container Queries
+
+Mobile responsive design via `@container` (not media queries). Block-level container queries gate the visibility and layout of nested elements, enabling responsive typography and spacing without viewport-level breaks. Editor canvas shows both desktop and mobile previews via a viewport-toggle.
+
+------------------------------------------------------------------------
+
+# Save / Load / Public Render Model
+
+Three distinct paths with clear repair semantics:
+
+1. **Save path** — MC edits form + block tree → `saveBrandingAction` → writes to `user_metadata` (logo_url, brand_color, fonts, etc.) + `user_branding.branding_blocks[surface]`. Autosave debounced 800ms after last edit + on blur.
+
+2. **Load path** — Form initialized via `getBrandingDataAction` reading from both tables. Empty block trees load as `[]` (deliberately empty, surface disabled). Required blocks are enforced by the UI when applying templates or resetting.
+
+3. **Public render path** — `get_public_quote`, `get_public_invoice`, `get_public_contract`, `get_public_proposal`, `get_vendor_timeline`, `get_public_questionnaire` RPCs merge `_user_branding(user_id)` + `_user_branding.branding_blocks[surface]`. If a surface's block tree is `[]` or null, the public renderer skips that tree and renders only fixed cores (e.g., invoice items, contract body). **Deliberately empty surface = disabled = null in public output.**
+
+Reset semantics: clicking "Reset [Surface]" saves an explicit empty array `[]` to the block tree, not a null. This flags the surface as explicitly disabled by the MC, distinct from "never customized." The first-run wizard initially populates `enabled_surfaces` with defaults; subsequent resets track explicit user choices.
 
 ------------------------------------------------------------------------
 

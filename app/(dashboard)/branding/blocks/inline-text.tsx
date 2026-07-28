@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
+
 import { sanitizeHtml } from '@/lib/branding/sanitize'
 
 type InlineTextElement = 'span' | 'div' | 'p' | 'h1' | 'h2' | 'h3'
@@ -18,6 +19,10 @@ interface InlineTextProps {
   as?: InlineTextElement
 }
 
+/**
+ * InlineText renders a contentEditable element for inline text editing within
+ * branding blocks. Supports HTML sanitization, placeholder text, and character limits.
+ */
 export function InlineText({
   value,
   onChange,
@@ -31,42 +36,56 @@ export function InlineText({
 }: InlineTextProps) {
   const ref = useRef<HTMLElement>(null)
   const lists = allowLists ?? multiline
-  const [editable, setEditable] = useState(false)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
     if (document.activeElement === el) return
     const sanitized = sanitizeHtml(value ?? '', { allowLists: lists })
-    if (el.innerHTML !== sanitized) {
-      el.innerHTML = sanitized
+    if (el.innerHTML === sanitized) return
+    // Snapshot the document selection before replacing content. Assigning
+    // innerHTML to a contentEditable can move the selection onto this
+    // (unfocused) element, which flashes a highlight on every keystroke when
+    // the value is being driven from another field showing the same value
+    // (e.g. editing the business name reflects into every business-name block).
+    // Restore the prior selection, or clear the stray one, so nothing else
+    // highlights.
+    const sel = window.getSelection()
+    const saved = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null
+    el.innerHTML = sanitized
+    if (sel && sel.anchorNode && el.contains(sel.anchorNode)) {
+      sel.removeAllRanges()
+      if (saved && saved.startContainer && !el.contains(saved.startContainer)) {
+        sel.addRange(saved)
+      }
     }
   }, [value, lists])
 
-  // Track whether the parent block is selected. React state keeps contentEditable
-  // in sync with re-renders. First click on an unselected block: editable=false →
-  // no focus, click bubbles to BlockFrame and selects. Second click: editable=true
-  // → focus and edit. MutationObserver watches data-selected on the parent block.
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const blockEl = el.closest('[data-block-id]')
-    if (!blockEl) return
-    const sync = () => setEditable(blockEl.hasAttribute('data-selected'))
-    sync()
-    const observer = new MutationObserver(sync)
-    observer.observe(blockEl, { attributes: true, attributeFilter: ['data-selected'] })
-    return () => observer.disconnect()
-  }, [])
-
   const sharedProps = {
-    contentEditable: editable,
+    contentEditable: true,
     suppressContentEditableWarning: true,
     role: 'textbox',
     'aria-label': placeholder,
     'aria-multiline': multiline,
     'data-placeholder': placeholder,
     'data-inline-text': 'true',
+    onFocus: () => {
+      // When this element receives focus, ensure the parent block is selected.
+      // Dispatch a custom event that bubbles to BlockFrame for selection handling.
+      const el = ref.current
+      if (el) {
+        const blockEl = el.closest('[data-block-id]')
+        if (blockEl && !blockEl.hasAttribute('data-selected')) {
+          const blockId = blockEl.getAttribute('data-block-id')
+          blockEl.dispatchEvent(
+            new CustomEvent('zebri:text-focus', {
+              bubbles: true,
+              detail: { blockId },
+            })
+          )
+        }
+      }
+    },
     onPaste: (e: React.ClipboardEvent) => {
       e.preventDefault()
       const text = e.clipboardData.getData('text/plain').slice(0, maxLength)
@@ -101,7 +120,19 @@ export function InlineText({
         el.blur()
       }
     },
-    className: `outline-none cursor-text caret-current transition-colors empty:before:content-[attr(data-placeholder)] empty:before:opacity-40 ${className}`,
+    // Placeholder handling for an empty field. Unfocused, it shows the ghost
+    // text at 40% opacity. Focused, it drops to 0 opacity rather than being
+    // removed (`content-none` would collapse the pseudo-element's line box and
+    // yank every block below upward). Keeping it present-but-invisible holds the
+    // field's height, so clicking in gives you an empty box to type into with no
+    // layout shift; the placeholder only truly vanishes once you type (`:empty`
+    // no longer matches).
+    //
+    // `inline-block` (single-line fields only) is what makes the caret appear:
+    // Chrome renders no caret in an EMPTY inline contentEditable, but does for
+    // an inline-block one. Multiline fields stay in normal flow so their text
+    // still wraps at the container edge.
+    className: `outline-none cursor-text caret-current transition-colors ${multiline ? '' : 'inline-block'} empty:before:content-[attr(data-placeholder)] empty:before:opacity-40 empty:focus:before:opacity-0 ${className}`,
     style,
   }
 

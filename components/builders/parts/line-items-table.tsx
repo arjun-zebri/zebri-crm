@@ -49,6 +49,12 @@ export interface LineItemsTableProps {
   onAdd: () => void;
   /** Optional slot rendered above the table (template picker on quotes). */
   headerAccessory?: React.ReactNode;
+  /** Borderless compact rendering for tables nested inside a card
+   *  (the proposal option card) — same visual language as the
+   *  Templates line-item editors: no outer box, hairline row rules,
+   *  caption-size text. Default keeps the boxed table the invoice
+   *  builder uses at the top level. */
+  compact?: boolean;
 }
 
 export function LineItemsTable({
@@ -59,6 +65,7 @@ export function LineItemsTable({
   onReorder,
   onAdd,
   headerAccessory,
+  compact = false,
 }: LineItemsTableProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -81,13 +88,55 @@ export function LineItemsTable({
           type="button"
           onClick={onAdd}
           disabled={!canEdit}
-          className="w-full rounded-card border border-dashed border-border bg-surface-muted/40 py-12 text-center transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+          className={`w-full rounded-card border border-dashed border-border bg-surface-muted/40 ${
+            compact ? 'py-8' : 'py-12'
+          } text-center transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-surface text-text-muted">
             <Plus size={18} strokeWidth={1.5} />
           </div>
-          <p className="mt-3 text-body text-text-muted">Add your first line item</p>
+          <p className={`mt-3 ${compact ? 'text-caption' : 'text-body'} text-text-muted`}>
+            Add your first line item
+          </p>
         </button>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div>
+        {headerAccessory}
+        <div className="grid grid-cols-[1fr_96px_24px] sm:grid-cols-[16px_1fr_96px_24px] items-center gap-2 pb-1 text-xs text-text-subtle">
+          <span className="hidden sm:block" />
+          <span />
+          <span className="text-right">Amount</span>
+          <span />
+        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+            {items.map((item) => (
+              <SortableRow
+                key={item.id}
+                item={item}
+                canEdit={canEdit}
+                compact
+                onUpdate={onUpdate}
+                onRemove={onRemove}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+        {canEdit ? (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="mt-1.5 flex cursor-pointer items-center gap-1 py-1 text-caption text-text-muted transition hover:text-text"
+          >
+            <Plus size={13} strokeWidth={1.5} />
+            Add item
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -141,11 +190,12 @@ export function LineItemsTable({
 interface SortableRowProps {
   item: LineItem;
   canEdit: boolean;
+  compact?: boolean;
   onUpdate: LineItemsTableProps['onUpdate'];
   onRemove: LineItemsTableProps['onRemove'];
 }
 
-function SortableRow({ item, canEdit, onUpdate, onRemove }: SortableRowProps) {
+function SortableRow({ item, canEdit, compact = false, onUpdate, onRemove }: SortableRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   });
@@ -155,12 +205,14 @@ function SortableRow({ item, canEdit, onUpdate, onRemove }: SortableRowProps) {
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const rowClass = compact
+    ? 'grid grid-cols-[1fr_96px_24px] sm:grid-cols-[16px_1fr_96px_24px] items-center gap-2 border-b border-border'
+    : 'grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 border-t border-border items-center bg-surface';
+  const textClass = compact ? 'text-caption' : 'text-body';
+  const fieldPad = compact ? 'py-1.5' : '';
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="grid grid-cols-[1fr_120px_36px] sm:grid-cols-[24px_1fr_120px_36px] gap-2 sm:gap-3 px-3 py-2 border-t border-border items-center bg-surface"
-    >
+    <div ref={setNodeRef} style={style} className={rowClass}>
       {/* Drag handle — desktop only */}
       {canEdit ? (
         <button
@@ -183,11 +235,13 @@ function SortableRow({ item, canEdit, onUpdate, onRemove }: SortableRowProps) {
         placeholder="Description"
         readOnly={!canEdit}
         disabled={!canEdit}
-        className="bg-transparent text-body text-text placeholder:text-text-subtle focus:outline-none disabled:opacity-70"
+        className={`min-w-0 bg-transparent ${fieldPad} ${textClass} text-text placeholder:text-text-subtle focus:outline-none disabled:opacity-70`}
       />
 
       <div className="relative">
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 text-body text-text-subtle pointer-events-none">
+        <span
+          className={`absolute left-0 top-1/2 -translate-y-1/2 ${textClass} text-text-subtle pointer-events-none`}
+        >
           $
         </span>
         <input
@@ -199,7 +253,7 @@ function SortableRow({ item, canEdit, onUpdate, onRemove }: SortableRowProps) {
           step="0.01"
           readOnly={!canEdit}
           disabled={!canEdit}
-          className="w-full bg-transparent pl-4 text-right text-body text-text placeholder:text-text-subtle tabular-nums focus:outline-none disabled:opacity-70 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className={`w-full bg-transparent pl-4 text-right ${fieldPad} ${textClass} text-text placeholder:text-text-subtle tabular-nums focus:outline-none disabled:opacity-70 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         />
       </div>
 
@@ -207,7 +261,7 @@ function SortableRow({ item, canEdit, onUpdate, onRemove }: SortableRowProps) {
         <button
           type="button"
           onClick={() => onRemove(item.id)}
-          className="p-1 text-text-subtle hover:text-danger transition cursor-pointer justify-self-center"
+          className={`${compact ? '' : 'p-1 '}text-text-subtle hover:text-danger transition cursor-pointer justify-self-center`}
           aria-label="Remove item"
         >
           <Trash2 size={14} strokeWidth={1.5} />

@@ -21,9 +21,10 @@ const KNOWN_PATHS = new Set([
   'couple.spouse_name', 'couple.partner2', 'couple.email', 'couple.phone', 'couple.status',
   'event.date', 'event.days_until', 'event.days_since', 'event.weekday',
   'venue.name',
-  'mc.business_name', 'mc.name', 'mc.contact_name', 'mc.email', 'mc.phone',
+  'mc.business_name', 'mc.name', 'mc.contact_name', 'mc.email', 'mc.phone', 'mc.signature',
   'portal.link',
   'quote.link', 'quote.number', 'quote.total',
+  'proposal.link', 'proposal.number', 'proposal.total',
   'invoice.link', 'invoice.number', 'invoice.total',
   'contract.link', 'contract.number',
 ])
@@ -40,17 +41,25 @@ function mentionPaths(node: JSONContent, out: string[] = []): string[] {
 }
 
 describe('STARTER_EMAIL_TEMPLATES', () => {
-  it('ships a meaningful library across all lifecycle stages', () => {
-    expect(STARTER_EMAIL_TEMPLATES.length).toBeGreaterThanOrEqual(20)
-    const stages = new Set(STARTER_EMAIL_TEMPLATES.map((t) => t.lifecycleStage))
-    for (const stage of LIFECYCLE_STAGES) expect(stages).toContain(stage)
-  })
-
-  it('includes the celebrant AU-legal templates', () => {
-    const names = STARTER_EMAIL_TEMPLATES.map((t) => t.name)
-    expect(names).toContain('NOIM request (celebrant)')
-    expect(names).toContain('Required documents request (celebrant)')
-    expect(names).toContain('Ceremony script for review (celebrant)')
+  // The catalog was deliberately trimmed (2026-07-09 spec): starters are
+  // a small guide showing how a template is built, not a full library —
+  // most MCs write their own. Exemplars spanning the funnel; the
+  // proposal cover email joined when proposals replaced quotes
+  // (proposals rollout, 2026-07-10 — the quote exemplar leaves with
+  // the quotes feature).
+  it('ships the agreed exemplars spanning the funnel', () => {
+    expect(STARTER_EMAIL_TEMPLATES.map((t) => t.name)).toEqual([
+      'Enquiry acknowledgement',
+      'Quote cover email',
+      'Proposal cover email',
+      'You’re booked: confirmation',
+    ])
+    expect(STARTER_EMAIL_TEMPLATES.map((t) => t.lifecycleStage)).toEqual([
+      'enquiry',
+      'quote',
+      'quote',
+      'booking',
+    ])
   })
 
   it('has unique names and valid, non-empty fields', () => {

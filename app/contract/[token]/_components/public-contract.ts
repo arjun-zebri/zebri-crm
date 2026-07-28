@@ -1,7 +1,7 @@
 /**
  * Shared types + pure helpers for the public-contract surface.
  *
- * Mirrors `app/quote/[token]/_components/public-quote.ts` and
+ * Mirrors `app/proposal/[token]/_components` and
  * `app/invoice/[token]/_components/public-invoice.ts`. The shape
  * is the JSONB payload from `get_public_contract(token)`.
  *
@@ -27,6 +27,8 @@ export interface PublicContract extends PublicBranding {
   mc_signature_name: string | null;
   email_sent_at: string | null;
   couple_name: string;
+  event_date: string | null;
+  venue: string | null;
   branding_blocks: Block[] | null;
 }
 

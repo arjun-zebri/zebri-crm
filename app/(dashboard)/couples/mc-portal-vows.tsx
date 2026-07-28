@@ -1,11 +1,12 @@
 'use client'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { History, RotateCcw } from 'lucide-react'
+import { Heart, History, RotateCcw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
 
+import { CoupleTabEmpty, CoupleTabShell } from './couple-tab-shell'
 import { revertVowAction, updateVowAsMcAction } from './portal-actions'
 
 interface Vow {
@@ -192,40 +193,61 @@ export function McPortalVows({ coupleId, primaryName, secondaryName }: McPortalV
     setBusy(false)
   }
 
-  if (isLoading) return <VowsSkeleton />
-  if (vows.length === 0) {
-    return <p className="text-sm text-text-muted">The couple hasn&apos;t written any vows yet.</p>
-  }
+  // A vow row exists per partner slot; "written" means it has real content.
+  const writtenCount = vows.filter((vow) => (vow.content ?? '').trim().length > 0).length
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 auto-rows-fr gap-6 flex-1 min-h-0">
-      {vows.map((vow) => {
-        const history = revisions.filter((r) => r.vow_id === vow.id)
-        const value = drafts[vow.id] ?? vow.content
-        const st = status[vow.id]
-        return (
-          <div key={vow.id} className="flex flex-col min-h-[280px]">
-            <div className="flex items-center justify-between mb-2 px-3">
-              <span className="text-sm font-medium text-text">{label(vow.who)}</span>
-              <div className="flex items-center gap-3">
-                <span
-                  className={`text-xs text-text-subtle transition-opacity duration-300 ${st ? 'opacity-100' : 'opacity-0'}`}
-                >
-                  {st === 'saving' ? 'Saving…' : 'Saved'}
-                </span>
-                <HistoryPopover history={history} onRestore={(id) => restore(vow.id, id)} busy={busy} />
+    <CoupleTabShell
+      title="Vows"
+      stats={
+        vows.length > 0
+          ? [
+              writtenCount === vows.length
+                ? { label: `${writtenCount} of ${vows.length} written`, tone: 'success' as const }
+                : { label: `${writtenCount} of ${vows.length} written` },
+            ]
+          : undefined
+      }
+    >
+      {isLoading ? (
+        <VowsSkeleton />
+      ) : vows.length === 0 ? (
+        <CoupleTabEmpty
+          icon={Heart}
+          title="No vows yet"
+          description="Vows will appear here once your couple writes them."
+        />
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 auto-rows-fr gap-6 flex-1 min-h-0">
+          {vows.map((vow) => {
+            const history = revisions.filter((r) => r.vow_id === vow.id)
+            const value = drafts[vow.id] ?? vow.content
+            const st = status[vow.id]
+            return (
+              <div key={vow.id} className="flex flex-col min-h-[280px]">
+                <div className="flex items-center justify-between mb-2 px-3">
+                  <span className="text-sm font-medium text-text">{label(vow.who)}</span>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-xs text-text-subtle transition-opacity duration-300 ${st ? 'opacity-100' : 'opacity-0'}`}
+                    >
+                      {st === 'saving' ? 'Saving…' : 'Saved'}
+                    </span>
+                    <HistoryPopover history={history} onRestore={(id) => restore(vow.id, id)} busy={busy} />
+                  </div>
+                </div>
+                <textarea
+                  className="flex-1 w-full resize-none rounded-md border border-border bg-surface p-3 text-sm text-text transition-shadow focus:outline-none focus:ring-2 focus:ring-brand/30"
+                  value={value}
+                  placeholder="No vows written yet."
+                  onChange={(e) => setDrafts((d) => ({ ...d, [vow.id]: e.target.value }))}
+                  onBlur={() => autosave(vow)}
+                />
               </div>
-            </div>
-            <textarea
-              className="flex-1 w-full resize-none rounded-md border border-border bg-surface p-3 text-sm text-text transition-shadow focus:outline-none focus:ring-2 focus:ring-brand/30"
-              value={value}
-              placeholder="No vows written yet."
-              onChange={(e) => setDrafts((d) => ({ ...d, [vow.id]: e.target.value }))}
-              onBlur={() => autosave(vow)}
-            />
-          </div>
-        )
-      })}
-    </div>
+            )
+          })}
+        </div>
+      )}
+    </CoupleTabShell>
   )
 }

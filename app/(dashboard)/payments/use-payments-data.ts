@@ -2,7 +2,7 @@
  * React Query hooks for the /payments page data sources.
  *
  * Three lists share the same shape (id, title, status, couple, …) but
- * have tab-specific extras: quotes carry a subtotal, invoices add a
+ * have tab-specific extras: proposals carry a subtotal, invoices add a
  * due-date + overdue derivation, contracts add a signed_at timestamp.
  *
  * Hooks live in a single module so the parent page can call all
@@ -18,12 +18,14 @@ import { useQuery } from '@tanstack/react-query';
 
 import { createClient } from '@/lib/supabase/client';
 
-export interface Quote {
+export interface Proposal {
   id: string;
-  quote_number: string;
+  proposal_number: string;
   title: string;
   status: string;
+  /** Primary option total pre-acceptance; accepted total after. */
   subtotal: number;
+  expires_at: string | null;
   created_at: string;
   couple: { id: string; name: string };
 }
@@ -49,21 +51,23 @@ export interface Contract {
   couple: { id: string; name: string };
 }
 
-/** Quotes owned by the current user, newest first. */
-export function useQuotes() {
+/** Proposals owned by the current user, newest first. */
+export function useProposals() {
   const supabase = createClient();
   return useQuery({
-    queryKey: ['all-quotes'],
-    queryFn: async (): Promise<Quote[]> => {
+    queryKey: ['all-proposals'],
+    queryFn: async (): Promise<Proposal[]> => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error('Not authenticated');
       const { data, error } = await supabase
-        .from('quotes')
-        .select('id, quote_number, title, status, subtotal, created_at, couple:couple_id(id, name)')
+        .from('proposals')
+        .select(
+          'id, proposal_number, title, status, subtotal, expires_at, created_at, couple:couple_id(id, name)',
+        )
         .eq('user_id', user.user.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data as unknown as Quote[]) || [];
+      return (data as unknown as Proposal[]) || [];
     },
   });
 }

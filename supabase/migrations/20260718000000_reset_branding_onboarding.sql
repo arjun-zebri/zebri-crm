@@ -1,0 +1,21 @@
+-- Reset branding for every account so the branding onboarding wizard
+-- re-appears for all users.
+--
+-- Why: the branding page (`app/(dashboard)/branding/page.tsx`) gates the
+-- OnboardingModal purely on `user_branding.onboarded_at IS NULL` (an absent
+-- row resolves to null too). Clearing the table therefore drops every account
+-- back to a fresh first-run wizard, and the editor rebuilds a new row on
+-- completion. The client's `zebri:branding-onboarded` localStorage flag only
+-- affects the loading skeleton and is rewritten from the DB value on every
+-- load (page.tsx:159), so it self-corrects after this reset — no client action
+-- needed.
+--
+-- This deletes the block trees, brand kits, portal sections, and enabled
+-- surfaces stored in `user_branding`. The legacy scalar branding fields in
+-- `auth.users.user_metadata` (brand_color, logo_url, etc.) are intentionally
+-- left untouched — they only pre-fill wizard defaults and do not gate the
+-- onboarding screen.
+
+-- @ALLOW_DESTRUCTIVE: intentional one-time reset of all branding state to force
+-- every account through the branding onboarding wizard again.
+delete from user_branding;

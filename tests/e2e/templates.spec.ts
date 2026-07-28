@@ -26,7 +26,7 @@ test.describe('Email Templates library', () => {
     const nameField = page.getByPlaceholder('e.g. Quote follow-up')
     await expect(nameField).toBeVisible()
     await nameField.fill(name)
-    await page.getByPlaceholder('e.g. Your quote from {{mc.business_name}}').fill('Hi {{couple.primary_name}}')
+    await page.getByPlaceholder('e.g. Your proposal from {{mc.business_name}}').fill('Hi {{couple.primary_name}}')
 
     // The preview resolves the sample couple's primary name.
     await expect(page.getByText('Hi Sam', { exact: false }).first()).toBeVisible()

@@ -2,6 +2,11 @@
 
 import { Pencil } from 'lucide-react'
 
+import { getRgb } from '@/lib/branding/contrast'
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
+
 import { PortalEvent } from './page'
 
 /** Formats a date as "18 June 2026 · Thu" (matches the couple-modal style). */
@@ -53,22 +58,37 @@ interface EventsListProps {
   onAdd: () => void
   /** Open the edit modal for a given event (row click). */
   onEdit: (event: PortalEvent) => void
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
 /**
- * Vertical timeline of the couple's events — a quiet date header, an
- * emerald dot on a hairline rail, the venue, and a countdown line. Rows
+ * Vertical timeline of the couple's events - a quiet date header, an
+ * accent dot on a hairline rail, the venue, and a countdown line. Rows
  * are clickable to edit. Borderless to match the couple-modal Overview.
  */
-export function EventsList({ events, onAdd, onEdit }: EventsListProps) {
+export function EventsList({ events, onAdd, onEdit, branding }: EventsListProps) {
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+  const borderRgb = getRgb(branding.border_color)
+  const borderColor = borderRgb
+    ? `rgba(${borderRgb[0]}, ${borderRgb[1]}, ${borderRgb[2]}, 1)`
+    : branding.border_color
   if (events.length === 0) {
     return (
       <button
         type="button"
         onClick={onAdd}
-        className="text-body text-text-subtle hover:text-text-muted transition cursor-pointer py-1"
+        className="transition cursor-pointer py-1 hover:opacity-75"
+        style={{
+          fontSize: `${bodyDefaults.fontSize}px`,
+          color: finePrintDefaults.color,
+          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+          fontWeight: bodyDefaults.fontWeight,
+          lineHeight: bodyDefaults.lineHeight,
+        }}
       >
-        No events yet — add your first event.
+        No events yet - add your first event.
       </button>
     )
   }
@@ -79,9 +99,20 @@ export function EventsList({ events, onAdd, onEdit }: EventsListProps) {
         if (!first) return null
         return (
         <div key={`${first.date}-${first.id}`}>
-          <p className="text-caption text-text-subtle mb-2">{formatGroupDate(first.date)}</p>
+          <p
+            className="mb-2"
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: finePrintDefaults.fontWeight,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
+            {formatGroupDate(first.date)}
+          </p>
           <div className="relative">
-            <div className="absolute left-[4px] top-2 bottom-2 w-px bg-border" aria-hidden />
+            <div className="absolute left-[4px] top-2 bottom-2 w-px" style={{ backgroundColor: borderColor }} aria-hidden />
             {group.map((event) => (
               <button
                 key={event.id}
@@ -90,15 +121,41 @@ export function EventsList({ events, onAdd, onEdit }: EventsListProps) {
                 className="group relative w-full text-left pl-6 py-1.5 cursor-pointer"
               >
                 <span
-                  className="absolute left-0 top-2.5 w-[9px] h-[9px] rounded-full ring-2 ring-white bg-emerald-200"
+                  className="absolute left-0 top-2.5 w-[9px] h-[9px] rounded-full"
+                  style={{
+                    backgroundColor: branding.brand_color,
+                    boxShadow: `0 0 0 2px ${branding.surface_color}`,
+                  }}
                   aria-hidden
                 />
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-body text-text truncate">{event.venue || countdownPhrase(event.date)}</p>
-                  <Pencil size={11} strokeWidth={1.5} className="shrink-0 text-text-subtle opacity-0 group-hover:opacity-60 transition" />
+                  <p
+                    className="truncate"
+                    style={{
+                      fontSize: `${bodyDefaults.fontSize}px`,
+                      color: bodyDefaults.color,
+                      fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                      fontWeight: bodyDefaults.fontWeight,
+                      lineHeight: bodyDefaults.lineHeight,
+                    }}
+                  >
+                    {event.venue || countdownPhrase(event.date)}
+                  </p>
+                  <Pencil size={11} strokeWidth={1.5} className="shrink-0 opacity-0 group-hover:opacity-60 transition" style={{ color: finePrintDefaults.color }} />
                 </div>
                 {event.venue && (
-                  <p className="text-caption text-text-subtle mt-0.5">{countdownPhrase(event.date)}</p>
+                  <p
+                    className="mt-0.5"
+                    style={{
+                      fontSize: `${finePrintDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                      fontWeight: finePrintDefaults.fontWeight,
+                      lineHeight: finePrintDefaults.lineHeight,
+                    }}
+                  >
+                    {countdownPhrase(event.date)}
+                  </p>
                 )}
               </button>
             ))}

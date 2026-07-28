@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -19,31 +18,48 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
+
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import type { Block } from './types'
-import type { BrandPreviewState } from '@/types/branding-preview'
+import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
+import { RenderDivider as PublicRenderDivider } from '@/lib/branding/public-blocks/divider'
+import { RenderFooter as PublicRenderFooter } from '@/lib/branding/public-blocks/footer'
+import { RenderTagline as PublicRenderTagline } from '@/lib/branding/public-blocks/tagline'
+import { RenderText as PublicRenderText } from '@/lib/branding/public-blocks/text'
+import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
+
+import { publicBrandingFromEditorState } from '../editor-branding'
+
 import { BlockFrame } from './block-frame'
+import { InlineText } from './inline-text'
 import {
-  RenderHeaderBanner,
-  RenderBusinessName,
-  RenderTagline,
-  RenderTitle,
-  RenderLineItems,
-  RenderTotals,
-  RenderPaymentDetails,
-  RenderText,
   RenderAction,
+  RenderBusinessName,
   RenderContractBody,
   RenderCouplePortal,
-  RenderDivider,
-  RenderFooter,
+  RenderHeaderBanner,
+  RenderImage,
+  RenderLineItems,
+  RenderPackageDetails,
+  RenderPackageHeader,
+  RenderPackageLineItems,
+  RenderPackageInclusions,
+  RenderPackageTotals,
+  RenderPaymentDetails,
   RenderPaymentSchedule,
+  RenderQuestionnaireBody,
+  RenderTitle,
+  RenderTotals,
+  RenderVendorTimelineBody,
 } from './render'
+import { RichText } from './rich-text/rich-text'
+import type { Block, SpacerBlock } from './types'
 
 interface BlockRendererProps {
   blocks: Block[]
   setBlocks: (b: Block[]) => void
   state: BrandPreviewState
+  surface: SurfaceTab
   selectedBlockIds: string[]
   setSelectedBlockIds: (ids: string[]) => void
   requestAddAfter: (afterId: string | null) => void
@@ -57,12 +73,17 @@ interface BlockRendererProps {
   removeLogo?: () => void | Promise<void>
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
+  uploadImage?: (file: File, blockId: string) => Promise<void>
+  removeImage?: (blockId: string) => void | Promise<void>
+  /** Proposal surface only: edit the fixed core's section labels. */
+  onEditProposalLabel?: ProposalLabelEdit
 }
 
 export function BlockRenderer({
   blocks,
   setBlocks,
   state,
+  surface,
   selectedBlockIds,
   setSelectedBlockIds,
   requestAddAfter,
@@ -76,6 +97,9 @@ export function BlockRenderer({
   removeLogo,
   uploadHeader,
   removeHeader,
+  uploadImage,
+  removeImage,
+  onEditProposalLabel,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -129,23 +153,36 @@ export function BlockRenderer({
 
   if (blocks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <p className="text-sm font-semibold text-gray-800">No blocks yet</p>
-        <p className="text-xs text-gray-500 mt-1 mb-4">Build your document layout block by block</p>
-        <button
-          type="button"
-          onClick={() => requestAddAfter(null)}
-          className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black cursor-pointer transition shadow-sm"
-        >
-          <Plus size={14} strokeWidth={2} />
-          Add your first element
-        </button>
+      <div className="relative min-h-[60vh]">
+        {/* Render the same white document page a real document sits on, so an
+            empty surface reads as a clean blank page rather than bare canvas. */}
+        <div
+          aria-hidden
+          className="absolute inset-0 border border-gray-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]"
+          style={{
+            background: state.surfaceColor || '#FFFFFF',
+            borderRadius: state.cornerRadius,
+          }}
+        />
+        <div className="relative flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
+          <p className="text-xs text-gray-500 mb-4">This document is empty</p>
+          <button
+            type="button"
+            onClick={() => requestAddAfter(null)}
+            className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black cursor-pointer transition shadow-sm"
+          >
+            <Plus size={14} strokeWidth={2} />
+            Add your first block
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="relative">
+    // Same min height as the empty state so the page never shrinks when the
+    // first block lands; it only grows once content exceeds this minimum.
+    <div className="relative min-h-[60vh]">
       <div
         aria-hidden
         className="absolute inset-0 border border-gray-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]"
@@ -171,17 +208,51 @@ export function BlockRenderer({
           onDragCancel={() => setActiveId(null)}
         >
           <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+            {/* Insert above the first block. Every block carries an "add below"
+                affordance, which leaves the very top of the document as the one
+                place nothing can be inserted. This is its counterpart, and it
+                reuses the same null target the empty-state button uses. */}
+            <div className="group relative h-0">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  requestAddAfter(null)
+                }}
+                aria-label="Add block above"
+                title="Add block above"
+                className="absolute left-1/2 -translate-x-1/2 -top-3 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer"
+              >
+                <Plus size={12} strokeWidth={2} />
+              </button>
+              {/* Hover target: the button itself is 24px in a zero-height row,
+                  so this widens the area that reveals it to the full width of
+                  the document. */}
+              <div aria-hidden className="absolute inset-x-0 -top-4 h-8" />
+            </div>
             {blocks.map((block) => {
-              if (block.type === 'couplePortal' || block.type === 'paymentSchedule' || block.type === 'contractBody') {
+              if (
+                block.type === 'couplePortal' ||
+                block.type === 'contractBody' ||
+                block.type === 'proposalBody' ||
+                block.type === 'vendorTimelineBody' ||
+                block.type === 'questionnaireBody'
+              ) {
                 const fixedLabel =
                   block.type === 'couplePortal'
                     ? 'Couple portal (fixed)'
-                    : block.type === 'paymentSchedule'
-                      ? 'Payment schedule (fixed)'
-                      : 'Contract body (fixed)';
+                    : block.type === 'contractBody'
+                      ? 'Contract body (fixed)'
+                      : block.type === 'proposalBody'
+                        ? 'Proposal (fixed)'
+                        : block.type === 'vendorTimelineBody'
+                          ? 'Run sheet (fixed)'
+                          : 'Questionnaire (fixed)';
                 return (
                   <div key={block.id} aria-label={fixedLabel} className="group relative">
-                    {renderBlock(block, state, updateBlock, {})}
+                    {renderBlock(block, state, updateBlock, {
+                      onEditProposalLabel,
+                    }, surface)}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -205,6 +276,7 @@ export function BlockRenderer({
                   id={block.id}
                   block={block}
                   state={state}
+                  surface={surface}
                   updateBlock={updateBlock}
                   selected={selected}
                   multiSelected={multi}
@@ -233,7 +305,9 @@ export function BlockRenderer({
                     removeLogo,
                     uploadHeader,
                     removeHeader,
-                  })}
+                    uploadImage,
+                    removeImage,
+                  }, surface)}
                 </BlockFrame>
               )
             })}
@@ -244,7 +318,7 @@ export function BlockRenderer({
                 className="opacity-90 shadow-2xl rounded-md bg-white"
                 style={{ outline: `2px solid ${state.brandColor || '#111827'}` }}
               >
-                {renderBlock(activeBlock, state, updateBlock)}
+                {renderBlock(activeBlock, state, updateBlock, {}, surface)}
               </div>
             ) : null}
           </DragOverlay>
@@ -262,6 +336,61 @@ interface RenderExtras {
   removeLogo?: () => void | Promise<void>
   uploadHeader?: (file: File) => Promise<void>
   removeHeader?: () => void | Promise<void>
+  uploadImage?: (file: File, blockId: string) => Promise<void>
+  removeImage?: (blockId: string) => void | Promise<void>
+  onEditProposalLabel?: ProposalLabelEdit | undefined
+}
+
+interface SpacerWithResizeProps {
+  block: SpacerBlock
+  branding: ReturnType<typeof publicBrandingFromEditorState>
+  heightPx: number
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}
+
+function SpacerWithResize({ block, heightPx, updateBlock }: SpacerWithResizeProps) {
+  const [resizing, setResizing] = useState(false)
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = heightPx
+    setResizing(true)
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(8, Math.min(160, startHeight + dy))
+      updateBlock(block.id, { heightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      setResizing(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  return (
+    <div className="group relative w-full" style={{ height: heightPx }}>
+      {/* Height readout centred inside the spacer, hover-only. */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span className="text-[10px] text-gray-400 font-medium opacity-0 group-hover:opacity-100 transition">
+          {heightPx}px
+        </span>
+      </div>
+      {/* The single resize control: a grip on the bottom edge. */}
+      <div
+        onMouseDown={startResize}
+        title="Drag to resize"
+        className={`absolute inset-x-0 bottom-0 h-3 flex items-end justify-center pb-0.5 cursor-ns-resize transition ${
+          resizing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
+      >
+        <div className="h-1 w-10 rounded-full bg-gray-900/50 ring-1 ring-white/80 shadow-sm" />
+      </div>
+    </div>
+  )
 }
 
 function renderBlock(
@@ -269,6 +398,7 @@ function renderBlock(
   state: BrandPreviewState,
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void,
   extras: RenderExtras = {},
+  surface?: SurfaceTab,
 ) {
   switch (block.type) {
     case 'headerBanner':
@@ -276,6 +406,7 @@ function renderBlock(
         <RenderHeaderBanner
           block={block}
           state={state}
+          surface={surface}
           updateBlock={updateBlock}
           uploadHeader={extras.uploadHeader}
           removeHeader={extras.removeHeader}
@@ -286,36 +417,128 @@ function renderBlock(
         <RenderBusinessName
           block={block}
           state={state}
+          surface={surface}
           updateBlock={updateBlock}
-          setBusinessName={extras.setBusinessName}
           uploadLogo={extras.uploadLogo}
           removeLogo={extras.removeLogo}
         />
       )
-    case 'tagline':
-      return <RenderTagline block={block} state={state} updateBlock={updateBlock} setTagline={extras.setTagline} />
+    case 'tagline': {
+      const branding = publicBrandingFromEditorState(state)
+      return (
+        <PublicRenderTagline
+          block={block}
+          branding={branding}
+          slots={{
+            text: (
+              <InlineText
+                value={state.tagline ?? ''}
+                onChange={(v) => extras.setTagline?.(v)}
+                placeholder="Your tagline"
+                as="span"
+              />
+            ),
+          }}
+        />
+      )
+    }
     case 'title':
-      return <RenderTitle block={block} state={state} updateBlock={updateBlock} />
+      return <RenderTitle block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'lineItems':
-      return <RenderLineItems block={block} state={state} updateBlock={updateBlock} />
+      return <RenderLineItems block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'totals':
-      return <RenderTotals block={block} state={state} updateBlock={updateBlock} />
+      return <RenderTotals block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'paymentDetails':
-      return <RenderPaymentDetails block={block} state={state} updateBlock={updateBlock} />
-    case 'text':
-      return <RenderText block={block} state={state} updateBlock={updateBlock} />
+      return <RenderPaymentDetails block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'text': {
+      const branding = publicBrandingFromEditorState(state)
+      return (
+        <PublicRenderText
+          block={block}
+          branding={branding}
+          slots={{
+            text: (
+              <RichText
+                value={block.text}
+                onChange={(v) => updateBlock(block.id, { text: v })}
+                surface={surface ?? 'invoice'}
+                placeholder="Add a note to your client."
+                className="break-words"
+              />
+            ),
+          }}
+        />
+      )
+    }
     case 'action':
-      return <RenderAction block={block} state={state} updateBlock={updateBlock} selected={extras.selected} />
-    case 'divider':
-      return <RenderDivider block={block} state={state} updateBlock={updateBlock} />
-    case 'footer':
-      return <RenderFooter block={block} state={state} updateBlock={updateBlock} />
+      return <RenderAction block={block} state={state} surface={surface} updateBlock={updateBlock} selected={extras.selected} />
+    case 'divider': {
+      const branding = publicBrandingFromEditorState(state)
+      return <PublicRenderDivider block={block} branding={branding} />
+    }
+    case 'footer': {
+      const branding = publicBrandingFromEditorState(state)
+      return (
+        <PublicRenderFooter
+          block={block}
+          branding={branding}
+          variablePreview
+          slots={{
+            note: (
+              <RichText
+                value={block.closingNote}
+                onChange={(v) => updateBlock(block.id, { closingNote: v })}
+                surface={surface ?? 'invoice'}
+                placeholder="Closing line"
+              />
+            ),
+          }}
+        />
+      )
+    }
     case 'couplePortal':
       return <RenderCouplePortal state={state} />
     case 'paymentSchedule':
-      return <RenderPaymentSchedule state={state} />
+      return <RenderPaymentSchedule block={block} state={state} updateBlock={updateBlock} />
     case 'contractBody':
       return <RenderContractBody state={state} />
+    case 'vendorTimelineBody':
+      return <RenderVendorTimelineBody state={state} />
+    case 'questionnaireBody':
+      return <RenderQuestionnaireBody block={block} state={state} updateBlock={updateBlock} />
+    case 'packageHeader':
+      return <RenderPackageHeader block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'packageDetails':
+      return <RenderPackageDetails block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'packageLineItems':
+      return <RenderPackageLineItems block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'packageInclusions':
+      return <RenderPackageInclusions block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'packageTotals':
+      return <RenderPackageTotals block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'image':
+      return (
+        <RenderImage
+          block={block}
+          state={state}
+          surface={surface}
+          updateBlock={updateBlock}
+          uploadImage={extras.uploadImage}
+          removeImage={extras.removeImage}
+        />
+      )
+    case 'spacer': {
+      const branding = publicBrandingFromEditorState(state)
+      const heightPx = block.heightPx ?? 32
+      return (
+        <SpacerWithResize
+          block={block}
+          branding={branding}
+          heightPx={heightPx}
+          updateBlock={updateBlock}
+        />
+      )
+    }
   }
 }
 

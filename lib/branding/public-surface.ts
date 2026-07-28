@@ -12,39 +12,11 @@ import type { Density } from './themes'
 
 export type { Density }
 
-export interface PublicBranding {
-  logo_url: string | null
-  favicon_url: string | null
-  header_image_url: string | null
-  brand_color: string
-  accent_color: string
-  surface_color: string
-  text_color: string
-  muted_color: string
-  secondary_color: string
-  secondary_text_color: string
-  business_name: string | null
-  tagline: string | null
-  abn: string | null
-  phone: string | null
-  website: string | null
-  instagram_url: string | null
-  facebook_url: string | null
-  show_contact_on_documents: boolean
-  /** Real bank settings (present on the invoice surface). The paymentDetails
-   *  block prefers these over its own placeholder values when available. */
-  bank_account_name?: string | null
-  bank_bsb?: string | null
-  bank_account_number?: string | null
-  font_heading: HeadingFont
-  font_body: BodyFont
-  font_weight: FontWeight
-  font_body_weight: FontWeight
-  font_scale: number
-  density: Density
-  corner_radius: number
-  theme_preset: string
-}
+// Canonical definition moved to the pure module so server code (email
+// shell, send route) can use it; re-exported here so the many existing
+// public-page imports keep working.
+export type { PublicBranding } from './public-branding'
+import type { PublicBranding } from './public-branding'
 
 // Re-exported under the original DENSITY_PAD name so the four public pages
 // don't all need to update their imports. Canonical map lives in ./density.ts.

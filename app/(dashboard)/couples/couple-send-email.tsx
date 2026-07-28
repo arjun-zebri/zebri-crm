@@ -14,10 +14,11 @@
 
 import { useQuery } from '@tanstack/react-query'
 import type { JSONContent } from '@tiptap/react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, FileText } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { RichTextEditor } from '@/components/ui/rich-text-editor'
@@ -69,7 +70,10 @@ export function CoupleSendEmail({
     queryFn: async (): Promise<EmailTemplate[]> => {
       const { data, error } = await supabase.from('email_templates').select('*').order('position')
       if (error) throw error
-      return (data ?? []) as unknown as EmailTemplate[]
+      // Archived templates stay out of the send picker (soft retirement).
+      // Filtered client-side so a deploy that beats the migration
+      // degrades to "no filter" instead of a failed query.
+      return ((data ?? []) as unknown as EmailTemplate[]).filter((t) => !t.archived_at)
     },
   })
 
@@ -79,6 +83,23 @@ export function CoupleSendEmail({
     queryFn: () => loadSendContextAction(coupleId),
   })
   const ctx = ctxResult?.ok ? ctxResult.ctx : null
+
+  // The template's saved attachments — included by default, each
+  // deselectable for this send only.
+  const { data: templateFiles = [] } = useQuery({
+    queryKey: ['email-template-files', initialTemplateId ?? null],
+    enabled: isOpen && !!initialTemplateId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_template_files')
+        .select('id, file_name, file_size')
+        .eq('template_id', initialTemplateId!)
+        .order('created_at')
+      if (error) throw error
+      return data ?? []
+    },
+  })
+  const [excludedFileIds, setExcludedFileIds] = useState<Set<string>>(new Set())
 
   const [sending, setSending] = useState(false)
 
@@ -129,6 +150,7 @@ export function CoupleSendEmail({
           inlineBody: editContent,
           sendAnyway: true,
           test: isTest,
+          attachmentFileIds: templateFiles.filter((f) => !excludedFileIds.has(f.id)).map((f) => f.id),
         }),
       })
       const json = await res.json()
@@ -200,6 +222,34 @@ export function CoupleSendEmail({
                 placeholder="Write your email…"
               />
             </div>
+            {templateFiles.length > 0 && (
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-text">Attachments</p>
+                <ul className="space-y-1">
+                  {templateFiles.map((f) => (
+                    <li key={f.id} className="flex items-center gap-2.5">
+                      <Checkbox
+                        checked={!excludedFileIds.has(f.id)}
+                        onChange={(next) =>
+                          setExcludedFileIds((prev) => {
+                            const out = new Set(prev)
+                            if (next) out.delete(f.id)
+                            else out.add(f.id)
+                            return out
+                          })
+                        }
+                        label={
+                          <span className="flex items-center gap-1.5 text-sm text-text">
+                            <FileText size={14} strokeWidth={1.5} className="text-text-subtle" />
+                            {f.file_name}
+                          </span>
+                        }
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </>
         )}
       </div>

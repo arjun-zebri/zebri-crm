@@ -1,7 +1,7 @@
 /**
  * "Public Page" settings section. Groups the outward-facing branding an
  * MC's couples see: the Zebri subdomain that fronts the portal, invoices,
- * quotes, and contracts, plus (in the {@link PublicPageEmail} subsection)
+ * proposals, and contracts, plus (in the {@link PublicPageEmail} subsection)
  * the address that emails are sent from.
  *
  * State is persisted to `user_public_settings`: the subdomain auto-saves
@@ -54,9 +54,9 @@ interface SurfaceDef {
 
 const SURFACES: SurfaceDef[] = [
   { id: 'portal', label: 'Couple portal', icon: Users2, build: (h) => `${h}/portal/emma-and-james` },
-  { id: 'invoices', label: 'Invoices', icon: Receipt, build: (h) => `${h}/i/INV-1042` },
-  { id: 'quotes', label: 'Quotes', icon: ScrollText, build: (h) => `${h}/q/QTE-1042` },
-  { id: 'contracts', label: 'Contracts', icon: FileSignature, build: (h) => `${h}/c/CON-1042` },
+  { id: 'proposals', label: 'Proposals', icon: ScrollText, build: (h) => `${h}/proposal/PR-1042` },
+  { id: 'invoices', label: 'Invoices', icon: Receipt, build: (h) => `${h}/invoice/INV-1042` },
+  { id: 'contracts', label: 'Contracts', icon: FileSignature, build: (h) => `${h}/contract/CON-1042` },
 ];
 
 export function PublicPageSection({ seedName, initial }: PublicPageSectionProps) {

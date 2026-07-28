@@ -45,6 +45,10 @@ import { notFound } from 'next/navigation';
 
 import { sendAlert } from '@/lib/alerts/send-alert';
 import { stripeConnectAccountId } from '@/lib/auth/entitlements';
+import { FONT_STACKS } from '@/lib/branding/fonts';
+import { buildPublicBranding, type UserMetadata } from '@/lib/branding/public-branding';
+import { STATUS_COLORS } from '@/lib/branding/status-colors';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 import { stripe } from '@/lib/payments/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -124,17 +128,46 @@ export default async function PaymentSuccessPage({ searchParams }: PageProps) {
     notFound();
   }
 
+  // Fetch branding from the user's account for the success page styling.
+  const { data: brandingData } = await admin.rpc('_user_branding', {
+    p_user_id: invoice.user_id,
+  });
+  // Resolve branding once here. _user_branding coalesces every key server
+  // side, so a row always comes back fully populated; buildPublicBranding
+  // covers the unreachable empty case with the Minimal theme rather than a
+  // scatter of hardcoded literals downstream.
+  const branding = buildPublicBranding((brandingData ?? {}) as UserMetadata);
+
+  const bodyDefaults = roleDefaults(branding, 'body');
+  const headingDefaults = roleDefaults(branding, 'sectionHeading');
+  const bodyStack = FONT_STACKS[branding.font_body as never];
+
   return (
-    <div className="min-h-screen bg-surface-muted flex items-center justify-center px-4">
-      <div className="bg-surface rounded-card border border-border shadow-sm p-10 max-w-sm w-full text-center">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: branding.surface_color }}>
+      <div
+        className="shadow-sm p-10 max-w-sm w-full text-center"
+        style={{
+          backgroundColor: branding.surface_color,
+          borderRadius: branding.corner_radius,
+          border: `1px solid ${branding.border_color}`,
+        }}
+      >
         <CheckCircle2
-          className="w-12 h-12 text-success mx-auto mb-4"
+          className="w-12 h-12 mx-auto mb-4"
           strokeWidth={1.5}
+          style={{ color: STATUS_COLORS.success }}
         />
-        <h1 className="text-section font-semibold text-text mb-2">
+        <h1
+          className="font-semibold mb-2"
+          style={{
+            fontSize: `${headingDefaults.fontSize}px`,
+            color: headingDefaults.color,
+            fontFamily: FONT_STACKS[headingDefaults.fontFamily as never],
+          }}
+        >
           Payment successful
         </h1>
-        <p className="text-body text-text-muted">
+        <p style={{ fontSize: `${bodyDefaults.fontSize}px`, color: bodyDefaults.color, fontFamily: bodyStack }}>
           Thank you — your payment has been received. You&apos;ll get a
           confirmation by email shortly.
         </p>

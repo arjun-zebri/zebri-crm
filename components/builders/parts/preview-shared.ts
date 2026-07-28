@@ -21,7 +21,7 @@ export interface PreviewDiscount {
 }
 
 export interface PreviewDoc {
-  kind: 'quote' | 'invoice' | 'contract';
+  kind: 'invoice' | 'contract';
   documentNumber: string;
   title: string;
   status: string;
@@ -31,10 +31,18 @@ export interface PreviewDoc {
   taxRate: number;
   discount: PreviewDiscount | null;
   notes: string | null;
-  /** Quote-only: when the quote expires. */
+  /** Contract-only: when the document expires. */
   expiresAt?: string | null;
   /** Invoice-only: when the invoice is due. */
   dueDate?: string | null;
+  /** Invoice-only: deposit / final-balance schedule when the MC enabled one. */
+  paymentSchedule?: {
+    depositPercent: number;
+    depositAmount: number;
+    depositDueDate: string | null;
+    finalAmount: number;
+    finalDueDate: string | null;
+  } | null;
   /** Invoice-only bank-transfer details (from user_metadata). */
   bankAccountName?: string | null;
   bankBsb?: string | null;

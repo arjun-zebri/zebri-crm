@@ -108,12 +108,17 @@ const eslintConfig = defineConfig([
 
   // Override default ignores of eslint-config-next.
   globalIgnores([
-    ".next/**",
+    // Recursive so nested build output (e.g. a local git worktree under
+    // .claude/worktrees/*/.next) is never linted, not just the top-level dir.
+    "**/.next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
     "coverage/**",
     "types/database.ts",
+    // Local Claude tooling scratch (git-ignored worktrees, brainstorm dumps).
+    ".claude/worktrees/**",
+    ".superpowers/**",
   ]),
 ]);
 

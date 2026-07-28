@@ -66,7 +66,6 @@ describe('saveContractAction', () => {
       title: 't',
       content: validContent,
       expiresAt: null,
-      quoteId: null,
     });
     expect(result).toEqual({ ok: false, error: 'Invalid contract data.' });
   });
@@ -79,7 +78,6 @@ describe('saveContractAction', () => {
       title: 't',
       content: validContent,
       expiresAt: null,
-      quoteId: null,
     });
     expect(result).toEqual({ ok: false, error: 'Not signed in.' });
   });
@@ -94,7 +92,6 @@ describe('saveContractAction', () => {
       title: 'Wedding contract',
       content: validContent,
       expiresAt: '2026-12-31',
-      quoteId: null,
     });
     expect(result).toEqual({ ok: true, data: { id: validId } });
     expect(fromMock).toHaveBeenCalledWith('contracts');
@@ -102,26 +99,10 @@ describe('saveContractAction', () => {
       expect.objectContaining({
         title: 'Wedding contract',
         expires_at: '2026-12-31',
-        quote_id: null,
       }),
     );
   });
 
-  it('rejects a quoteId that is not a UUID', async () => {
-    getUserMock.mockResolvedValue({
-      data: { user: { id: 'u1', app_metadata: {} } },
-    });
-    const { saveContractAction } = await loadActions();
-    const result = await saveContractAction({
-      contractId: validId,
-      title: 't',
-      content: validContent,
-      expiresAt: null,
-      // Cast — the Zod schema is the gate at runtime.
-      quoteId: 'not-a-uuid' as unknown as string,
-    });
-    expect(result.ok).toBe(false);
-  });
 });
 
 describe('revokeContractAction', () => {

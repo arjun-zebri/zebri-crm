@@ -40,9 +40,9 @@ import { findActionStyle } from '@/lib/branding/public-renderer';
 import {
   bodyFontFamily,
   DENSITY_PAD,
-  headingFontFamily,
   useBrandingHead,
 } from '@/lib/branding/public-surface';
+import { repairBlocks } from '@/lib/branding/validate-blocks';
 import { createClient } from '@/lib/supabase/client';
 
 import { InvoiceBrandedCard } from './_components/invoice-branded-card';
@@ -69,6 +69,18 @@ export default function PublicInvoicePage() {
         token: params.token,
       });
       if (error || !data) {
+        // Distinguish the two "not available" causes so a real report is
+        // actionable: an `error` means the RPC itself failed (missing function
+        // / column on this database — usually an undeployed migration), while
+        // no error + no data means the token matched no invoice with sharing
+        // enabled (wrong DB for this link, share disabled, or no such invoice).
+        // Logged as a single string via console.warn (not console.error, which
+        // trips the Next dev error overlay and renders the detail object as
+        // an unreadable `{}`).
+        const reason = error ? 'rpc-error' : 'no-row-or-sharing-disabled';
+        console.warn(
+          `[public-invoice] not available — reason=${reason} token=${params.token ?? '(none)'} rpcError=${error?.message ?? 'none'}`,
+        );
         setPageState('not_found');
         return;
       }
@@ -110,34 +122,26 @@ export default function PublicInvoicePage() {
   const textColor = invoice?.text_color || '#111827';
   const mutedColor = invoice?.muted_color || '#6B7280';
   const radius = invoice?.corner_radius ?? 16;
-  const headingStack = invoice ? headingFontFamily(invoice) : undefined;
   const bodyStack = invoice ? bodyFontFamily(invoice) : undefined;
-  const headingWeight = invoice?.font_weight ?? 600;
   const pad = DENSITY_PAD[invoice?.density ?? 'cozy'];
-  // Action-style: the brand-customised colour + radius for the Pay
-  // buttons. Read from the saved action block (if any) so the MC's
-  // customisation flows through even though we hide the action
-  // block itself in the renderer.
-  const actionStyle = findActionStyle(invoice?.branding_blocks, {
-    brandColor: invoice?.brand_color || '#000000',
-    cornerRadius: invoice?.corner_radius ?? 16,
-  });
 
-  // Split the block tree at the `paymentSchedule` marker — anything
-  // before it renders the invoice body (header + items + totals),
+  // Repair block tree when present, then split at the `paymentSchedule` marker.
+  // Anything before it renders the invoice body (header + items + totals),
   // and anything after renders the footer (notes, contact, etc).
-  // The schedule + pay buttons get rendered by Zebri between the
-  // two halves.
+  // The schedule + pay buttons get rendered by Zebri between the two halves.
+  const repairedBlocks = invoice?.branding_blocks && invoice.branding_blocks.length > 0
+    ? repairBlocks('invoice', invoice.branding_blocks)
+    : null;
   const psIdx =
-    invoice?.branding_blocks?.findIndex((b) => b.type === 'paymentSchedule') ?? -1;
-  const preBlocks = invoice?.branding_blocks
+    repairedBlocks?.findIndex((b) => b.type === 'paymentSchedule') ?? -1;
+  const preBlocks = repairedBlocks
     ? psIdx >= 0
-      ? invoice.branding_blocks.slice(0, psIdx)
-      : invoice.branding_blocks
+      ? repairedBlocks.slice(0, psIdx)
+      : repairedBlocks
     : [];
   const postBlocks =
-    invoice?.branding_blocks && psIdx >= 0
-      ? invoice.branding_blocks.slice(psIdx + 1)
+    repairedBlocks && psIdx >= 0
+      ? repairedBlocks.slice(psIdx + 1)
       : [];
 
   const showHeaderBannerImage =
@@ -147,12 +151,21 @@ export default function PublicInvoicePage() {
     pageState !== 'not_found' &&
     pageState !== 'cancelled';
 
+  // Extract action block's button color and radius overrides.
+  // Falls back to brand color and corner radius when not customised.
+  const actionStyle = invoice
+    ? findActionStyle(repairedBlocks, {
+        brandColor: invoice.brand_color,
+        cornerRadius: invoice.corner_radius,
+      })
+    : null;
+
   return (
     <div
       className={`min-h-screen ${pad.page} px-4`}
       style={{ background: pageBg, color: textColor, fontFamily: bodyStack }}
     >
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg lg:max-w-2xl mx-auto @container/doc">
         {showHeaderBannerImage ? (
           <div
             className="mb-5 overflow-hidden"
@@ -170,10 +183,10 @@ export default function PublicInvoicePage() {
         ) : null}
 
         {invoice && pageState === 'paid' ? (
-          <InvoiceStatusBanner kind="paid" paidAt={invoice.paid_at} />
+          <InvoiceStatusBanner kind="paid" paidAt={invoice.paid_at} branding={invoice} />
         ) : null}
         {invoice && pageState === 'overdue' ? (
-          <InvoiceStatusBanner kind="overdue" businessName={invoice.business_name} />
+          <InvoiceStatusBanner kind="overdue" businessName={invoice.business_name} branding={invoice} />
         ) : null}
 
         {pageState === 'loading' ? <InvoiceLoading radius={radius} /> : null}
@@ -202,11 +215,9 @@ export default function PublicInvoicePage() {
               showFullButton={showFullButton}
               showDepositButton={showDepositButton}
               showFinalButton={showFinalButton}
-              buttonColor={actionStyle.color}
-              buttonRadius={actionStyle.radius}
-              textColor={textColor}
-              mutedColor={mutedColor}
+              branding={invoice}
               radius={radius}
+              actionStyle={actionStyle}
             />
           ) : (
             <InvoiceFallbackCard
@@ -220,13 +231,9 @@ export default function PublicInvoicePage() {
               showFullButton={showFullButton}
               showDepositButton={showDepositButton}
               showFinalButton={showFinalButton}
-              buttonColor={actionStyle.color}
-              buttonRadius={actionStyle.radius}
-              textColor={textColor}
-              mutedColor={mutedColor}
+              branding={invoice}
               radius={radius}
-              headingStack={headingStack}
-              headingWeight={headingWeight}
+              actionStyle={actionStyle}
             />
           )
         ) : null}

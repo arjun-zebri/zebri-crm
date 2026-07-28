@@ -1,15 +1,21 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, Pencil, Sparkles } from 'lucide-react'
+import { Plus, Trash2, Sparkles, Clock } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
+import { TimePicker } from '@/components/events/event-timeline-modal'
+import { Button } from '@/components/ui/button'
+import { Empty } from '@/components/ui/empty'
+import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 
-
-import { TimePicker } from '@/components/events/event-timeline-modal'
+import { TemplatePreviewHeader } from './template-preview-header'
+import { TemplatesActions } from './templates-actions-slot'
+import { TemplatesTwoPane } from './templates-two-pane'
+import { TimelineTemplatePreview } from './timeline-template-preview'
 
 interface TemplateItem {
   id: string
@@ -188,62 +194,32 @@ const noArrowsClass =
 
 function TemplateRow({
   template,
-  onEdit,
-  onDelete,
+  selected,
+  onSelect,
 }: {
   template: Template
-  onEdit: (id: string) => void
-  onDelete: (id: string) => void
+  selected: boolean
+  onSelect: (id: string) => void
 }) {
-  const [confirmDelete, setConfirmDelete] = useState(false)
-
-  if (confirmDelete) {
-    return (
-      <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red-200 bg-red-50">
-        <p className="flex-1 text-sm text-red-700">
-          Delete <span className="font-medium">{template.name}</span>?
-        </p>
-        <button
-          type="button"
-          onClick={() => { onDelete(template.id); setConfirmDelete(false) }}
-          className="px-3 py-1.5 text-xs rounded-lg bg-red-600 text-white hover:bg-red-700 transition cursor-pointer"
-        >
-          Delete
-        </button>
-        <button
-          type="button"
-          onClick={() => setConfirmDelete(false)}
-          className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-700 hover:bg-white transition cursor-pointer"
-        >
-          Cancel
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition">
-      <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-medium text-gray-900 truncate">{template.name}</h4>
-        <p className="text-xs text-gray-400 mt-0.5">
+    <button
+      type="button"
+      onClick={() => onSelect(template.id)}
+      aria-current={selected ? 'true' : undefined}
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition ${
+        selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'
+      }`}
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-text-muted">
+        <Clock size={16} strokeWidth={1.5} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-text">{template.name}</span>
+        <span className="block truncate text-xs text-text-subtle">
           {template.item_count || 0} item{(template.item_count || 0) !== 1 ? 's' : ''}
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={() => onEdit(template.id)}
-        className="shrink-0 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
-      >
-        <Pencil size={15} strokeWidth={1.5} />
-      </button>
-      <button
-        type="button"
-        onClick={() => setConfirmDelete(true)}
-        className="shrink-0 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition cursor-pointer"
-      >
-        <Trash2 size={15} strokeWidth={1.5} />
-      </button>
-    </div>
+        </span>
+      </span>
+    </button>
   )
 }
 
@@ -391,6 +367,8 @@ export function TimelineTemplateManager() {
   const [userId, setUserId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [search, setSearch] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -424,8 +402,7 @@ export function TimelineTemplateManager() {
       if (error) throw error
       const grouped: Record<string, TemplateItem[]> = {}
       ;(data || []).forEach((item: any) => {
-        if (!grouped[item.template_id]) grouped[item.template_id] = []
-        grouped[item.template_id].push({
+        ;(grouped[item.template_id] ??= []).push({
           id: item.id,
           title: item.title,
           start_time: item.start_time,
@@ -442,9 +419,15 @@ export function TimelineTemplateManager() {
     item_count: allItems?.[t.id]?.length ?? 0,
   }))
 
+  const isSearching = search.trim().length > 0
+  const visible = isSearching
+    ? templatesWithCounts.filter((t) => t.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : templatesWithCounts
+
   const saveTemplates = async (userId: string, templatesToSave: typeof STARTER_TEMPLATES, basePosition = 0) => {
     for (let ti = 0; ti < templatesToSave.length; ti++) {
       const tmpl = templatesToSave[ti]
+      if (!tmpl) continue
       const { data, error } = await supabase
         .from('timeline_templates')
         .insert({ user_id: userId, name: tmpl.name, position: (basePosition + ti) * 1000 })
@@ -598,9 +581,15 @@ export function TimelineTemplateManager() {
     ? { ...templates.find((t) => t.id === editingId)!, items: allItems?.[editingId] || [] }
     : null
 
+  const effectiveId =
+    selectedId && templatesWithCounts.some((t) => t.id === selectedId)
+      ? selectedId
+      : (templatesWithCounts[0]?.id ?? null)
+  const selectedT = templatesWithCounts.find((t) => t.id === effectiveId) ?? null
+
   if (isLoading) {
     return (
-      <div className="max-w-2xl space-y-3 animate-pulse">
+      <div className="space-y-3 animate-pulse">
         {[1, 2].map((i) => (
           <div key={i} className="h-12 bg-gray-100 rounded-xl" />
         ))}
@@ -609,22 +598,30 @@ export function TimelineTemplateManager() {
   }
 
   return (
-    <div className="max-w-2xl space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900">Timeline Templates</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Reusable sets of timeline items - with times - you can apply to any event.
-          </p>
-        </div>
-        <button
-          onClick={() => { setEditingId(null); setIsCreating(true) }}
-          className="shrink-0 px-3 py-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition text-sm font-medium flex items-center gap-1.5 cursor-pointer"
+    <div className="flex h-full flex-col">
+      <TemplatesActions>
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search timeline templates…"
+          size="sm"
+          className="w-36 sm:w-48"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => loadStartersMutation.mutate()}
+          disabled={loadStartersMutation.isPending}
+          className="gap-1.5"
         >
-          <Plus size={15} strokeWidth={1.5} />
+          <Sparkles size={14} strokeWidth={1.5} />
+          {loadStartersMutation.isPending ? 'Loading…' : 'Load starters'}
+        </Button>
+        <Button size="sm" onClick={() => { setEditingId(null); setIsCreating(true) }} className="gap-1.5">
+          <Plus size={14} strokeWidth={1.5} />
           New Template
-        </button>
-      </div>
+        </Button>
+      </TemplatesActions>
 
       <Modal isOpen={isCreating} onClose={() => setIsCreating(false)} title="New Timeline Template">
         <EditTemplateForm
@@ -647,40 +644,55 @@ export function TimelineTemplateManager() {
       </Modal>
 
       {templatesWithCounts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-gray-200 rounded-xl gap-4">
-          <div>
-            <p className="text-sm text-gray-500">No templates yet</p>
-            <p className="text-xs text-gray-400 mt-1">Build a template once, apply it to any event</p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            <button
-              onClick={() => loadStartersMutation.mutate()}
-              disabled={loadStartersMutation.isPending}
-              className="px-3 py-2 text-sm rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <Sparkles size={14} strokeWidth={1.5} />
-              {loadStartersMutation.isPending ? 'Loading…' : 'Load starter templates'}
-            </button>
-            <button
-              onClick={() => { setEditingId(null); setIsCreating(true) }}
-              className="px-3 py-2 text-sm rounded-xl bg-black text-white hover:bg-neutral-800 transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <Plus size={14} strokeWidth={1.5} />
-              New Template
-            </button>
-          </div>
+        <div className="flex flex-1 items-center justify-center pb-[10vh]">
+          <Empty
+            size="sm"
+            icon={Clock}
+            title="No timeline templates yet"
+            description="Build a template once, then apply it to any event."
+          />
         </div>
       ) : (
-        <div className="space-y-2">
-          {templatesWithCounts.map((template) => (
-            <TemplateRow
-              key={template.id}
-              template={template}
-              onEdit={(id) => { setIsCreating(false); setEditingId(id) }}
-              onDelete={(id) => deleteMutation.mutate(id)}
-            />
-          ))}
-        </div>
+        <TemplatesTwoPane
+          selected={!!selectedId}
+          onBack={() => setSelectedId(null)}
+          list={
+            visible.length === 0 ? (
+              <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+            ) : (
+              <div className="space-y-0.5">
+                {visible.map((template) => (
+                  <TemplateRow
+                    key={template.id}
+                    template={template}
+                    selected={template.id === effectiveId}
+                    onSelect={setSelectedId}
+                  />
+                ))}
+              </div>
+            )
+          }
+          detail={
+            selectedT ? (
+              <div className="space-y-4">
+                <TemplatePreviewHeader
+                  title={selectedT.name}
+                  editLabel="Edit template"
+                  onEdit={() => {
+                    setIsCreating(false)
+                    setEditingId(selectedT.id)
+                  }}
+                  onDelete={() => deleteMutation.mutate(selectedT.id)}
+                />
+                <TimelineTemplatePreview name={selectedT.name} items={allItems?.[selectedT.id] ?? []} />
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center pb-[10vh]">
+                <p className="text-sm text-text-subtle">Select a template to preview.</p>
+              </div>
+            )
+          }
+        />
       )}
     </div>
   )

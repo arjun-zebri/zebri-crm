@@ -148,10 +148,12 @@ export function BuilderModalShell({
       footer={footer}
     >
       {twoPane ? (
-        // Two-pane layout: editor on the left (lg:col-1), preview
-        // on the right (lg:col-2). Below the lg breakpoint they
-        // stack vertically — preview comes after the form.
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 h-full">
+        // Two-pane layout: editor on the left, preview on the right.
+        // The preview gets the larger share (≈57%) so the couple-
+        // facing page reads at a comfortable size while composing;
+        // the form column stays narrow but workable. Below the lg
+        // breakpoint they stack vertically — preview comes after.
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,4fr)] gap-4 lg:gap-6 h-full">
           {/* Left pane scrolls internally so the modal's footer +
               the right-pane preview stay anchored regardless of
               form height. */}

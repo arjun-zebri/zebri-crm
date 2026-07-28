@@ -4,11 +4,11 @@ import { useState } from 'react'
 
 import { DatePicker } from '@/components/ui/date-picker'
 import { Modal } from '@/components/ui/modal'
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 
 import type { PortalEvent } from './page'
-
-const inputClass =
-  'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition'
 
 interface PortalEventModalProps {
   onClose: () => void
@@ -16,6 +16,8 @@ interface PortalEventModalProps {
   /** Event being edited, or null when adding a new one. */
   event: PortalEvent | null
   saving: boolean
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
 /**
@@ -23,34 +25,77 @@ interface PortalEventModalProps {
  * (required) and venue; status is managed by the MC and left untouched.
  *
  * Mounted fresh on each open by the parent (keyed conditional render), so
- * state initialises straight from props — no re-seeding effect needed.
+ * state initialises straight from props - no re-seeding effect needed.
  */
-export function PortalEventModal({ onClose, onSave, event, saving }: PortalEventModalProps) {
+export function PortalEventModal({ onClose, onSave, event, saving, branding }: PortalEventModalProps) {
   const [date, setDate] = useState(event?.date ?? '')
   const [venue, setVenue] = useState(event?.venue ?? '')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+  const bodyDefaults = roleDefaults(branding, 'body')
 
   return (
     <Modal isOpen onClose={onClose} title={event ? 'Edit event' : 'Add event'} size="md">
       <div className="space-y-4">
         <div>
-          <label className="block text-xs text-gray-500 mb-1.5">Date</label>
+          <label
+            className="block mb-1.5"
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: finePrintDefaults.fontWeight,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
+            Date
+          </label>
           <DatePicker value={date} onChange={setDate} placeholder="Select date" />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Venue</label>
+          <label
+            className="block mb-1"
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: finePrintDefaults.fontWeight,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
+            Venue
+          </label>
           <input
             type="text"
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
             placeholder="Venue name"
-            className={inputClass}
+            style={{
+              width: '100%',
+              borderRadius: `${branding.corner_radius}px`,
+              padding: '0.5rem 0.75rem',
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: bodyDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: bodyDefaults.fontWeight,
+              lineHeight: bodyDefaults.lineHeight,
+              border: `1px solid ${branding.border_color}`,
+              outline: 'none',
+            }}
+            className="transition hover:opacity-80 focus:opacity-100"
           />
         </div>
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-end gap-2 pt-2" style={{ borderTop: `1px solid ${branding.border_color}` }}>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-gray-500 px-3 py-1.5 hover:text-gray-700 transition cursor-pointer"
+            className="px-3 py-1.5 transition cursor-pointer hover:opacity-75"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: bodyDefaults.fontWeight,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
           >
             Cancel
           </button>
@@ -58,9 +103,17 @@ export function PortalEventModal({ onClose, onSave, event, saving }: PortalEvent
             type="button"
             onClick={() => onSave({ date, venue })}
             disabled={saving || !date}
-            className="text-sm text-white bg-gray-900 rounded-xl px-3 py-1.5 hover:bg-gray-800 transition cursor-pointer disabled:opacity-50"
+            className="rounded-xl px-3 py-1.5 transition cursor-pointer disabled:opacity-50 hover:opacity-90"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: 'white',
+              backgroundColor: branding.brand_color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: bodyDefaults.fontWeight,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
           >
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>

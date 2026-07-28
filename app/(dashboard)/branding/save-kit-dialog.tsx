@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+
 import { Modal } from '@/components/ui/modal'
 import { FONT_STACKS, FONT_LABELS } from '@/lib/branding/fonts'
 import type { BrandPreviewState } from '@/types/branding-preview'
@@ -16,9 +17,15 @@ interface SaveKitDialogProps {
 export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: SaveKitDialogProps) {
   const [name, setName] = useState(defaultName)
   const inputRef = useRef<HTMLInputElement>(null)
+  const openRef = useRef(open)
 
   useEffect(() => {
-    if (open) {
+    openRef.current = open
+  }, [open])
+
+  useEffect(() => {
+    if (openRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(defaultName)
       const t = setTimeout(() => {
         inputRef.current?.focus()
@@ -26,7 +33,7 @@ export function SaveKitDialog({ open, onClose, onSave, defaultName, state }: Sav
       }, 60)
       return () => clearTimeout(t)
     }
-  }, [open, defaultName])
+  }, [defaultName])
 
   const trimmed = name.trim()
   const handleSave = () => {
@@ -111,7 +118,7 @@ function KitPreviewCard({ state }: { state: BrandPreviewState }) {
           className="text-xs mt-1.5 truncate"
           style={{
             fontFamily: FONT_STACKS[state.fontBody],
-            color: state.mutedColor,
+            color: state.textColor,
           }}
         >
           {FONT_LABELS[state.fontHeading]} · {FONT_LABELS[state.fontBody]}
@@ -119,9 +126,9 @@ function KitPreviewCard({ state }: { state: BrandPreviewState }) {
       </div>
       <div className="flex items-center gap-1 shrink-0">
         <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.brandColor }} title="Primary" />
-        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.accentColor }} title="Accent" />
+        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.headingColor }} title="Heading" />
         <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.textColor }} title="Text" />
-        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.mutedColor }} title="Muted" />
+        <span className="w-6 h-6 rounded-full ring-1 ring-black/10" style={{ background: state.secondaryColor }} title="Secondary" />
       </div>
     </div>
   )

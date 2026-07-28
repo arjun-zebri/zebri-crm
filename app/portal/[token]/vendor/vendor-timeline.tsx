@@ -1,7 +1,14 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, Clock } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+
+import { getRgb } from '@/lib/branding/contrast'
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 
 export interface VendorTimelineItem {
   id: string
@@ -75,19 +82,36 @@ function dayLabel(day: VendorDay): string {
   return day.venues.length > 0 ? `${date} · ${day.venues.join(', ')}` : date
 }
 
-/** Per-day dropdown for the run sheet. */
+/**
+ * Per-day dropdown for the run sheet. Applies branding colors for border and text.
+ *
+ * @param days - List of distinct days with their events and venues
+ * @param value - Currently selected date (YYYY-MM-DD)
+ * @param onChange - Callback when a new day is selected
+ * @param borderColor - Optional border colour; defaults to gray-200
+ * @param textColor - Optional text colour; defaults to gray-900
+ */
 function DaySelector({
   days,
   value,
   onChange,
+  borderColor,
+  textColor,
 }: {
   days: VendorDay[]
   value: string
   onChange: (date: string) => void
+  borderColor?: string
+  textColor?: string
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const active = days.find((d) => d.date === value) ?? null
+
+  // Default to the original gray palette when colours are not provided.
+  const border = borderColor ?? '#E5E7EB'
+  const text = textColor ?? '#111827'
+  const softBg = borderColor ? `${borderColor}10` : '#F9FAFB'
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -104,16 +128,29 @@ function DaySelector({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between gap-2 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none"
+        className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm transition cursor-pointer focus:outline-none hover:opacity-75"
+        style={{
+          borderColor: border,
+          borderWidth: 1,
+          color: text,
+          backgroundColor: '#ffffff',
+        }}
       >
-        <span className="text-gray-900 font-medium">
+        <span className="font-medium">
           {active ? dayLabel(active) : formatEventDate(value)}
         </span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: text }} />
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 min-w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden py-1">
+        <div
+          className="absolute z-50 mt-1 min-w-full rounded-xl shadow-lg overflow-hidden py-1"
+          style={{
+            borderColor: border,
+            borderWidth: 1,
+            backgroundColor: '#ffffff',
+          }}
+        >
           {days.map((d) => (
             <button
               key={d.date}
@@ -122,9 +159,12 @@ function DaySelector({
                 onChange(d.date)
                 setOpen(false)
               }}
-              className={`block w-full text-left px-3 py-2 text-sm whitespace-nowrap transition hover:bg-gray-50 cursor-pointer ${
-                d.date === value ? 'bg-gray-50 font-medium text-gray-900' : 'text-gray-500'
-              }`}
+              className="block w-full text-left px-3 py-2 text-sm whitespace-nowrap transition cursor-pointer"
+              style={{
+                color: d.date === value ? text : '#6B7280',
+                backgroundColor: d.date === value ? softBg : 'transparent',
+                fontWeight: d.date === value ? 500 : 400,
+              }}
             >
               {dayLabel(d)}
             </button>
@@ -138,13 +178,34 @@ function DaySelector({
 interface VendorTimelineProps {
   events: VendorEvent[]
   items: VendorTimelineItem[]
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
 /**
  * Vendor-facing run sheet. Lists the couple's events as a per-day selector
  * and shows the merged, time-ordered moments for the chosen day. Read-only.
+ * Branding colors tint headings and accents.
  */
-export function VendorTimeline({ events, items }: VendorTimelineProps) {
+/**
+ * Provisional (pending review) styling. Pending is a status, not a brand
+ * state, so it derives from the fixed warning colour rather than a copied
+ * hex. Tints composite through getRgb because a hex inside rgba() is invalid
+ * CSS and the declaration would be dropped silently.
+ */
+const PROVISIONAL = (() => {
+  const rgb = getRgb(STATUS_COLORS.warning)
+  const tint = (alpha: number) =>
+    rgb ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})` : 'transparent'
+  return {
+    border: tint(0.45),
+    rowBackground: tint(0.08),
+    badgeBackground: tint(0.14),
+    text: STATUS_COLORS.warning,
+  }
+})()
+
+export function VendorTimeline({ events, items, branding }: VendorTimelineProps) {
   const days = useMemo(() => buildDays(events), [events])
   const [pickedDay, setPickedDay] = useState<string | null>(null)
 
@@ -159,16 +220,47 @@ export function VendorTimeline({ events, items }: VendorTimelineProps) {
   const dayEventIds = new Set(activeDay?.eventIds ?? [])
   const dayItems = items.filter((i) => dayEventIds.has(i.event_id))
 
+  // Type scale from branding.
+  const docTitleDefaults = roleDefaults(branding, 'docTitle')
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+  const sectionLabelDefaults = roleDefaults(branding, 'sectionLabel')
+
+  // Derived colors from branding; helper for softened variants.
+  const hCol = branding.heading_color
+  const borderCol = branding.brand_color + '20'
+  const mutedCol = branding.text_color
+  const softBorder = branding.border_color
+
   return (
     <>
       {/* Header */}
-      <div className="pt-8 pb-8 border-b border-gray-100">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">Run Sheet</h1>
+      <div className="pt-8 pb-8" style={{ borderColor: softBorder, borderBottomWidth: 1 }}>
+        <h1
+          className="font-semibold mb-1"
+          style={{
+            fontSize: `${docTitleDefaults.fontSize}px`,
+            color: hCol,
+            fontFamily: FONT_STACKS[docTitleDefaults.fontFamily as never],
+            fontWeight: docTitleDefaults.fontWeight,
+            lineHeight: docTitleDefaults.lineHeight,
+          }}
+        >
+          Run Sheet
+        </h1>
         {selectedDay && (
-          <p className="text-sm text-gray-500">
+          <p
+            style={{
+              fontSize: `${finePrintDefaults.fontSize}px`,
+              color: mutedCol,
+              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+              fontWeight: finePrintDefaults.fontWeight,
+              lineHeight: finePrintDefaults.lineHeight,
+            }}
+          >
             {formatEventDate(selectedDay)}
             {activeDay && activeDay.venues.length > 0
-              ? ` · ${activeDay.venues.join(', ').replace(/\s*[—–]\s*/g, ', ')}`
+              ? ` · ${activeDay.venues.join(', ').replace(/\s*-\s*/g, ', ')}`
               : ''}
           </p>
         )}
@@ -176,48 +268,125 @@ export function VendorTimeline({ events, items }: VendorTimelineProps) {
 
       {days.length > 1 && selectedDay && (
         <div className="pt-6 flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-400">Day</span>
-          <DaySelector days={days} value={selectedDay} onChange={setPickedDay} />
+          <span
+            style={{
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              fontWeight: sectionLabelDefaults.fontWeight,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              lineHeight: sectionLabelDefaults.lineHeight,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
+              letterSpacing: sectionLabelDefaults.letterSpacing,
+            }}
+          >
+            {applyCase('Day', sectionLabelDefaults.textTransform)}
+          </span>
+          <DaySelector days={days} value={selectedDay} onChange={setPickedDay} borderColor={borderCol} textColor={hCol} />
         </div>
       )}
 
       {/* Timeline */}
       <div className="pt-8 space-y-2">
         {dayItems.length === 0 ? (
-          <p className="text-sm text-gray-400 py-4">No items yet.</p>
+          <p
+            className="py-4"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: finePrintDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: bodyDefaults.fontWeight,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
+          >
+            No items yet.
+          </p>
         ) : (
           dayItems.map((item) => (
             <div
               key={item.id}
-              className={`flex items-start gap-4 border rounded-xl px-4 py-3 ${
-                item.pending_review
-                  ? 'border-amber-100 bg-amber-50/30'
-                  : 'border-gray-100 bg-white'
-              }`}
+              className="flex items-start gap-4 rounded-xl px-4 py-3"
+              style={{
+                borderWidth: 1,
+                borderColor: item.pending_review ? PROVISIONAL.border : softBorder,
+                backgroundColor: item.pending_review ? PROVISIONAL.rowBackground : branding.surface_color,
+                borderRadius: branding.corner_radius,
+              }}
             >
-              <div className="flex items-center gap-1.5 text-xs w-20 shrink-0 pt-0.5">
-                <Clock size={11} strokeWidth={1.5} className="text-gray-300" />
+              <div className="flex items-center gap-1.5 w-20 shrink-0 pt-0.5" style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+              }}>
+                <Clock
+                  size={11}
+                  strokeWidth={1.5}
+                  style={{ color: finePrintDefaults.color }}
+                />
                 <span
-                  className={
-                    item.start_time
-                      ? 'text-gray-600 font-medium tabular-nums'
-                      : 'text-gray-300'
-                  }
+                  className="font-medium tabular-nums"
+                  style={{
+                    color: item.start_time ? bodyDefaults.color : finePrintDefaults.color,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                  }}
                 >
                   {formatTime(item.start_time)}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                <p
+                  className="font-medium"
+                  style={{
+                    fontSize: `${bodyDefaults.fontSize}px`,
+                    color: hCol,
+                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                    fontWeight: bodyDefaults.fontWeight,
+                    lineHeight: bodyDefaults.lineHeight,
+                  }}
+                >
+                  {item.title}
+                </p>
                 {item.description && (
-                  <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>
+                  <p
+                    className="mt-0.5"
+                    style={{
+                      fontSize: `${finePrintDefaults.fontSize}px`,
+                      color: mutedCol,
+                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                      fontWeight: finePrintDefaults.fontWeight,
+                      lineHeight: finePrintDefaults.lineHeight,
+                    }}
+                  >
+                    {item.description}
+                  </p>
                 )}
                 {item.duration_min && (
-                  <p className="text-xs text-gray-400 mt-0.5">{item.duration_min} min</p>
+                  <p
+                    className="mt-0.5"
+                    style={{
+                      fontSize: `${finePrintDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                      fontWeight: finePrintDefaults.fontWeight,
+                      lineHeight: finePrintDefaults.lineHeight,
+                    }}
+                  >
+                    {item.duration_min} min
+                  </p>
                 )}
               </div>
               {item.pending_review && (
-                <span className="text-xs bg-amber-50 text-amber-500 border border-amber-100 rounded-full px-2 py-0.5 shrink-0">
+                <span
+                  className="border rounded-full px-2 py-0.5 shrink-0"
+                  style={{
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                    borderColor: PROVISIONAL.border,
+                    backgroundColor: PROVISIONAL.badgeBackground,
+                    color: PROVISIONAL.text,
+                  }}
+                >
                   Provisional
                 </span>
               )}
@@ -227,9 +396,17 @@ export function VendorTimeline({ events, items }: VendorTimelineProps) {
       </div>
 
       {/* Footer note */}
-      <div className="border-t border-gray-100 mt-12 pt-6">
-        <p className="text-xs text-gray-400">
-          Items marked &quot;Provisional&quot; are awaiting MC confirmation. This run sheet
+      <div className="mt-12 pt-6" style={{ borderColor: softBorder, borderTopWidth: 1 }}>
+        <p
+          style={{
+            fontSize: `${finePrintDefaults.fontSize}px`,
+            color: finePrintDefaults.color,
+            fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+            fontWeight: finePrintDefaults.fontWeight,
+            lineHeight: finePrintDefaults.lineHeight,
+          }}
+        >
+          Items marked "Provisional" are awaiting MC confirmation. This run sheet
           may be updated. Check back for the latest version.
         </p>
       </div>

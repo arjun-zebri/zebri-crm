@@ -1,8 +1,9 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { Monitor, Smartphone, Undo2, Redo2, Eye, ChevronDown, Check, Trash2, Plus } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { Monitor, Smartphone, Undo2, Redo2, Eye, ChevronDown, Check, Trash2, Plus } from 'lucide-react'
+import { useRef, useState } from 'react'
+
 import type { SaveStatus } from '@/lib/branding/use-autosave'
 import type { BrandKit } from '@/types/branding-preview'
 
@@ -21,6 +22,7 @@ interface EditorTopbarProps {
   brandKits: BrandKit[]
   onApplyKit: (kit: BrandKit) => void
   onDeleteKit: (id: string) => void
+  onRetry?: () => void
   addBlockSlot?: React.ReactNode
 }
 
@@ -39,6 +41,7 @@ export function EditorTopbar({
   brandKits,
   onApplyKit,
   onDeleteKit,
+  onRetry,
   addBlockSlot,
 }: EditorTopbarProps) {
   return (
@@ -80,7 +83,7 @@ export function EditorTopbar({
       </div>
 
       <div className="flex items-center gap-1.5 flex-1 justify-end">
-        <SaveStatusPill status={saveStatus} />
+        <SaveStatusPill status={saveStatus} onRetry={onRetry} />
 
         <div className="flex items-center gap-0.5">
           <button
@@ -230,8 +233,8 @@ function KitPicker({
                   <li key={kit.id} className="group flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-50">
                     <span className="flex items-center gap-0.5 shrink-0">
                       <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.brandColor }} />
-                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.accentColor }} />
-                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.surfaceColor }} />
+                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.headingColor }} />
+                      <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: kit.textColor }} />
                     </span>
                     <Popover.Close asChild>
                       <button
@@ -278,7 +281,11 @@ function KitPicker({
   )
 }
 
-function SaveStatusPill({ status }: { status: SaveStatus }) {
+/**
+ * Save status indicator with optional retry button on error.
+ * Shows save status and provides a retry action when save fails.
+ */
+function SaveStatusPill({ status, onRetry }: { status: SaveStatus; onRetry?: () => void }) {
   const text =
     status === 'saving' ? 'Saving…' :
     status === 'error' ? 'Save failed' :
@@ -290,6 +297,25 @@ function SaveStatusPill({ status }: { status: SaveStatus }) {
     status === 'saved' ? 'bg-emerald-500' :
     'bg-gray-300'
   const tone = status === 'error' ? 'text-red-600' : 'text-gray-400'
+
+  if (status === 'error' && onRetry) {
+    return (
+      <div className="inline-flex items-center gap-1.5">
+        <span className={`inline-flex items-center gap-1.5 text-[11px] ${tone}`}>
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+          <span className="truncate">{text}</span>
+        </span>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="px-2 py-1 text-[11px] font-medium text-danger hover:text-danger hover:bg-danger/10 rounded-xl cursor-pointer transition"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
   return (
     <span
       className={`inline-flex items-center gap-1.5 text-[11px] ${tone}`}

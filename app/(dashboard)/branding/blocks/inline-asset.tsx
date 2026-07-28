@@ -1,7 +1,8 @@
 'use client'
 
+import { Loader2, RefreshCw, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
-import { Loader2, RefreshCw, Trash2 } from 'lucide-react'
+
 import { useToast } from '@/components/ui/toast'
 
 interface InlineAssetProps {
@@ -16,6 +17,22 @@ interface InlineAssetProps {
   label?: string
   /** Position of the Replace overlay button. Defaults to top-right. */
   overlayPosition?: 'top-right' | 'center'
+  /**
+   * When true, a click on the empty state does NOT open the file picker.
+   * The click bubbles instead so the surrounding block can be selected (and
+   * therefore deleted / reordered). Upload happens via the explicit "Upload"
+   * button and drag-and-drop. Used for the deletable image block so an empty
+   * image block never traps the user in the picker. Defaults to false, which
+   * keeps the whole-area click-to-upload behaviour for logo / header assets.
+   */
+  selectableWhenEmpty?: boolean
+  /**
+   * Compact overlay: small icon-only Replace / Remove buttons pinned to the
+   * top-right corner instead of the full-width labelled pill. Used for small
+   * assets like the My-details logo, where the labelled overlay dominates the
+   * mark. Defaults to false.
+   */
+  compact?: boolean
   className?: string
   style?: React.CSSProperties
 }
@@ -30,6 +47,8 @@ export function InlineAsset({
   emptyState,
   label = 'Upload image',
   overlayPosition = 'top-right',
+  selectableWhenEmpty = false,
+  compact = false,
   className = '',
   style,
 }: InlineAssetProps) {
@@ -66,6 +85,9 @@ export function InlineAsset({
     <div
       onClick={(e) => {
         if (populated) return
+        // Let the click bubble so the parent block can be selected (and thus
+        // deleted / reordered). Upload is handled by the explicit button below.
+        if (selectableWhenEmpty) return
         e.stopPropagation()
         openPicker()
       }}
@@ -86,10 +108,30 @@ export function InlineAsset({
         setDragOver(false)
         handleFile(e.dataTransfer.files?.[0])
       }}
-      className={`group/asset relative ${populated ? '' : 'cursor-pointer'} ${className}`}
+      className={`group/asset relative ${populated || selectableWhenEmpty ? '' : 'cursor-pointer'} ${className}`}
       style={style}
     >
       {populated ? children : emptyState}
+
+      {/*
+        Empty deletable image block: only the small centred square opens the
+        picker. Clicking anywhere else on the block bubbles up to select it (so
+        it can be deleted / reordered), because the overlay is pointer-events-none
+        and only the square button re-enables pointer events.
+      */}
+      {!populated && selectableWhenEmpty && !busy && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <button
+            type="button"
+            onClick={openPicker}
+            aria-label={label}
+            title="Upload image"
+            className="pointer-events-auto flex items-center justify-center w-11 h-11 rounded-lg border border-gray-300 bg-white text-gray-500 hover:text-gray-900 hover:border-gray-400 cursor-pointer transition shadow-sm"
+          >
+            <Upload size={16} strokeWidth={1.5} />
+          </button>
+        </div>
+      )}
 
       {dragOver && (
         <div
@@ -111,7 +153,38 @@ export function InlineAsset({
         </div>
       )}
 
-      {populated && !busy && (
+      {populated && !busy && compact && (
+        // Compact: icon-only controls float just above the mark (never over it),
+        // so a small logo is never obscured. Icon-only, so the tooltips are
+        // informative, not redundant.
+        <div
+          className="absolute z-10 bottom-full left-0 mb-1 flex items-center gap-1 opacity-0 group-hover/asset:opacity-100 transition"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={openPicker}
+            className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gray-900/90 text-white hover:bg-gray-900 cursor-pointer transition shadow-sm"
+            title="Replace"
+            aria-label="Replace"
+          >
+            <RefreshCw size={11} strokeWidth={1.5} />
+          </button>
+          {onClear && (
+            <button
+              type="button"
+              onClick={() => onClear()}
+              className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
+              title="Remove"
+              aria-label="Remove"
+            >
+              <Trash2 size={11} strokeWidth={1.5} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {populated && !busy && !compact && (
         <div
           className={`absolute z-10 flex items-center gap-1 opacity-0 group-hover/asset:opacity-100 transition ${
             overlayPosition === 'center'
@@ -120,13 +193,13 @@ export function InlineAsset({
           }`}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Visible "Replace" label makes a native title redundant, so none here. */}
           <button
             type="button"
             onClick={openPicker}
             className="inline-flex items-center gap-1 px-2 h-7 rounded-md bg-gray-900/90 text-white text-[11px] font-medium hover:bg-gray-900 cursor-pointer transition shadow-sm"
-            title="Replace image"
           >
-            <RefreshCw size={11} strokeWidth={2} />
+            <RefreshCw size={11} strokeWidth={1.5} />
             Replace
           </button>
           {onClear && (
@@ -134,9 +207,10 @@ export function InlineAsset({
               type="button"
               onClick={() => onClear()}
               className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
-              title="Remove image"
+              title="Remove"
+              aria-label="Remove"
             >
-              <Trash2 size={11} strokeWidth={2} />
+              <Trash2 size={11} strokeWidth={1.5} />
             </button>
           )}
         </div>

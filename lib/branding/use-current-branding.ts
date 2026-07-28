@@ -31,19 +31,17 @@ import { useEffect, useState } from 'react';
 import { defaultBlocksFor } from '@/app/(dashboard)/branding/blocks/defaults';
 // eslint-disable-next-line no-restricted-imports
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
+import { repairBlocks } from '@/lib/branding/validate-blocks';
 import { createClient } from '@/lib/supabase/client';
 
-import {
-  HEADING_FONTS,
-  BODY_FONTS,
-  type BodyFont,
-  type FontWeight,
-  type HeadingFont,
-} from './fonts';
-import { type PublicBranding } from './public-surface';
-import { THEME_PRESETS } from './themes';
+import { buildPublicBranding, type PublicBranding, type UserMetadata } from './public-branding';
 
-export type BuilderSurface = 'quote' | 'invoice' | 'contract';
+// The pure assembly moved to `./public-branding` so server code can use
+// it; re-exported here so existing client imports keep working.
+export { buildPublicBranding } from './public-branding';
+export type { UserMetadata } from './public-branding';
+
+export type BuilderSurface = 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire';
 
 export interface UseCurrentBrandingResult {
   branding: PublicBranding | null;
@@ -51,102 +49,18 @@ export interface UseCurrentBrandingResult {
   loading: boolean;
 }
 
-interface UserMetadata {
-  logo_url?: string;
-  favicon_url?: string;
-  header_image_url?: string;
-  brand_color?: string;
-  accent_color?: string;
-  surface_color?: string;
-  text_color?: string;
-  muted_color?: string;
-  secondary_color?: string;
-  secondary_text_color?: string;
-  business_name?: string;
-  tagline?: string;
-  abn?: string;
-  phone?: string;
-  website?: string;
-  instagram_url?: string;
-  facebook_url?: string;
-  show_contact_on_documents?: boolean;
-  font_heading?: string;
-  font_body?: string;
-  font_weight?: number;
-  font_body_weight?: number;
-  font_scale?: number;
-  density?: 'compact' | 'cozy' | 'roomy';
-  corner_radius?: number;
-  theme_preset?: string;
-  bank_account_name?: string;
-  bank_bsb?: string;
-  bank_account_number?: string;
-}
-
 interface UserBrandingRow {
   branding_blocks: {
+    proposal?: Block[];
+    /** Legacy key from before the proposals rollout — old rows keep
+     *  their saved design until the MC re-saves under `proposal`. */
     quote?: Block[];
     invoice?: Block[];
     contract?: Block[];
     portal?: Block[];
+    vendorTimeline?: Block[];
+    questionnaire?: Block[];
   } | null;
-}
-
-function sanitizeHeadingFont(v: string | undefined, fallback: HeadingFont): HeadingFont {
-  return HEADING_FONTS.includes(v as HeadingFont) ? (v as HeadingFont) : fallback;
-}
-
-function sanitizeBodyFont(v: string | undefined, fallback: BodyFont): BodyFont {
-  return BODY_FONTS.includes(v as BodyFont) ? (v as BodyFont) : fallback;
-}
-
-function sanitizeWeight(v: number | undefined, fallback: FontWeight): FontWeight {
-  const allowed = [400, 500, 600, 700] as const;
-  return (allowed.includes(v as 400) ? v : fallback) as FontWeight;
-}
-
-/**
- * Assemble a `PublicBranding` object from `user_metadata` + an
- * optional theme preset fallback. Pure — exported separately so
- * tests can build a branding without standing up the hook.
- */
-export function buildPublicBranding(metadata: UserMetadata): PublicBranding {
-  const themeId = metadata.theme_preset ?? 'minimal';
-  const fallback =
-    themeId === 'custom' ? THEME_PRESETS.minimal! : (THEME_PRESETS[themeId] ?? THEME_PRESETS.minimal!);
-
-  return {
-    logo_url: metadata.logo_url ?? null,
-    favicon_url: metadata.favicon_url ?? null,
-    header_image_url: metadata.header_image_url ?? null,
-    brand_color: metadata.brand_color ?? fallback.color,
-    accent_color: metadata.accent_color ?? fallback.accent,
-    surface_color: metadata.surface_color ?? fallback.surface,
-    text_color: metadata.text_color ?? fallback.text,
-    muted_color: metadata.muted_color ?? fallback.muted,
-    secondary_color: metadata.secondary_color ?? '#FFFFFF',
-    secondary_text_color: metadata.secondary_text_color ?? '#374151',
-    business_name: metadata.business_name ?? null,
-    tagline: metadata.tagline ?? null,
-    abn: metadata.abn ?? null,
-    phone: metadata.phone ?? null,
-    website: metadata.website ?? null,
-    instagram_url: metadata.instagram_url ?? null,
-    facebook_url: metadata.facebook_url ?? null,
-    show_contact_on_documents: metadata.show_contact_on_documents ?? true,
-    bank_account_name: metadata.bank_account_name ?? null,
-    bank_bsb: metadata.bank_bsb ?? null,
-    bank_account_number: metadata.bank_account_number ?? null,
-    font_heading: sanitizeHeadingFont(metadata.font_heading, fallback.headingFont),
-    font_body: sanitizeBodyFont(metadata.font_body, fallback.bodyFont),
-    font_weight: sanitizeWeight(metadata.font_weight, fallback.headingWeight),
-    font_body_weight: sanitizeWeight(metadata.font_body_weight, fallback.bodyWeight),
-    font_scale: typeof metadata.font_scale === 'number' ? metadata.font_scale : fallback.scale,
-    density: metadata.density ?? fallback.density,
-    corner_radius:
-      typeof metadata.corner_radius === 'number' ? metadata.corner_radius : fallback.radius,
-    theme_preset: themeId,
-  };
 }
 
 export function useCurrentBranding(surface: BuilderSurface): UseCurrentBrandingResult {
@@ -165,9 +79,17 @@ export function useCurrentBranding(surface: BuilderSurface): UseCurrentBrandingR
       if (cancelled) return;
       const metadata = (userResult.user?.user_metadata ?? {}) as UserMetadata;
       const row = (brandingRow as UserBrandingRow | null) ?? null;
-      const surfaceBlocks = row?.branding_blocks?.[surface];
+      // The proposal surface falls back to the legacy `quote` key so
+      // pre-rollout saved designs keep rendering.
+      const surfaceBlocks =
+        surface === 'proposal'
+          ? row?.branding_blocks?.proposal ?? row?.branding_blocks?.quote
+          : row?.branding_blocks?.[surface];
       setBranding(buildPublicBranding(metadata));
-      setBlocks(surfaceBlocks ?? defaultBlocksFor(surface));
+      // Run the same migrate/repair the editor and public pages apply, so the
+      // preview matches (e.g. invoices drop the secondary action button). Loading
+      // raw blocks here previously let stale/legacy shapes render only in preview.
+      setBlocks(surfaceBlocks ? repairBlocks(surface, surfaceBlocks) : defaultBlocksFor(surface));
       setLoading(false);
     }
     void load();

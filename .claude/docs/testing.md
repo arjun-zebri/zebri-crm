@@ -68,6 +68,45 @@ seed). The integration project runs serially in one process (shared DB).
   connected summary, persisted subdomain) from seeded rows once the
   migration is on the e2e DB.
 
+### Branding E2E specs (Phase 11 + Document Blocks Phase C)
+
+**Phase 11 (stable):**
+- `tests/e2e/branding-onboarding.spec.ts` — first-run wizard flow: fresh user sees wizard → completes business/look/documents steps → editor shows tabs + no wizard on reload.
+- `tests/e2e/branding-editor-locks.spec.ts` — lock model: required blocks cannot be deleted (line-items on invoice, etc.); non-required text blocks can be deleted with undo.
+- `tests/e2e/branding-mobile-overflow.spec.ts` — mobile responsive: canvas scales at <md breakpoint, toolbar scrolls without overflow.
+
+**Document Blocks Phase C (deferred to CI):**
+- `tests/e2e/branding-proposal-blocks.spec.ts` — proposal decomposition: Package header, details, optional inclusions, totals, Accept CTA blocks render; in-block package chooser appears when multiple packages present.
+- `tests/e2e/branding-block-readiness.spec.ts` — readiness validation: deleting a required block shows "Not ready to send" panel with plain-language missing items; panel clears when block is re-added.
+- `tests/integration/branding/blocks-repair.test.ts` — repair/migration: `repairBlocks` maps legacy `headerBanner` → Image, old `action` → CTA blocks, and `proposalBody` → five proposal blocks; sweep migrates all user rows idempotently.
+- `tests/integration/branding/account-readiness.test.ts` — Layer B validation: Stripe Connect, bank details, contract template prerequisites gate "ready to send" per surface.
+- `tests/integration/branding/social-urls-rpc.test.ts` — `_user_branding()` exposes twitter_url, pinterest_url, website_url from `raw_user_meta_data`.
+
+**New key selectors for blocks:**
+| Element | Selector |
+|---------|----------|
+| "Not ready to send" panel | `text=/Not ready to send/` |
+| Block "Required" chip | `text=/Required/` |
+| Package header block | `text=/Package header/` |
+| Package chooser switcher | `text=/See other packages/` |
+| Footer social toggle (Facebook) | `input[aria-label*="Facebook"]` |
+
+**Isolated-stack guard:** Phase 11 tests require either `BRANDING_E2E=1` OR `PLAYWRIGHT_BASE_URL` including `3123` (local Supabase on port 3123). Phase C tests (integration + new e2e) require `supabase start` locally; they are skipped on the remote dev server. Test helpers in `tests/e2e/helpers.ts`.
+
+### Welcome onboarding e2e specs (Phase 14, metadata-gated features)
+
+E2E tests for the welcome wizard use per-test users created via the local GoTrue admin API with `email_confirm: true`. The once-only gate is reset by sending a user metadata update with `{"user_metadata": {"welcome_onboarded_at": null}}` (GoTrue admin update MERGES metadata; keys are deleted only by explicit null). Tests are guarded to the isolated server on port 3123 (local Supabase); they do not run on the remote dev server.
+
+Environment variable: `LOCAL_SUPABASE_SERVICE_ROLE_KEY` — the service role key for admin API calls. Injected by the test harness when running on `:3123`. See `tests/e2e/welcome-onboarding.spec.ts`.
+
+### Grant repair after local DB reset
+
+After `supabase db reset` locally (Supabase CLI v2.65.5 + PG17), DML grants on auth schema tables may be stale. If integration tests fail with "permission denied," run:
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth.users TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON auth.sessions TO postgres;
+```
+
 ### Regenerating DB types
 After any migration: `supabase gen types typescript --local --schema public > types/database.ts`
 
@@ -124,6 +163,16 @@ All features must work on both:
 - Tables should stack or scroll horizontally
 - No content should overflow viewport width (no horizontal scroll on body)
 
+### Branding e2e specs (isolated-stack guard)
+
+Branding tests run against an isolated Supabase instance to test block-tree mutations without interfering with other tests. Guard with env vars:
+- `BRANDING_E2E=1` — signals that the branding test suite is running
+- `PLAYWRIGHT_BASE_URL` includes `:3123` — runs the app against the isolated stack (port 3123 is the isolated dev server's Supabase instance)
+
+After `supabase db reset` locally, run `scripts/repair-auth-grants.sql` to restore DML grants on the auth schema tables; the stale CLI v2.65.5 leaves them stripped on PG17.
+
+---
+
 ---
 
 ## Test Structure
@@ -138,6 +187,9 @@ tests/e2e/
 ├── calendar.spec.ts          # Calendar navigation, views, search (8 tests)
 ├── navigation.spec.ts        # Dashboard, sidebar nav, sign out (10 tests)
 ├── mobile.spec.ts            # Pixel 5 + iPhone 12 layouts (12 tests)
+├── branding-onboarding.spec.ts    # First-run wizard, surface tabs, preview (9 tests)
+├── branding-editor-locks.spec.ts  # Required blocks, surface reset, isDeletable (8 tests)
+├── branding-mobile-overflow.spec.ts # Responsive canvas, container queries, mobile preview (7 tests)
 ├── helpers.ts                # Shared actions (login, addCouple, deleteCouple, etc.)
 ├── fixtures/                 # Auth state, saved sessions
 └── README.md
@@ -159,6 +211,12 @@ One file per feature area. Do not create test files for sub-features  -  add to 
 | Delete (2-click) | `button:has-text("Delete")` → `button:has-text("Click again to confirm")` |
 | Board view label | "Board" (not "Kanban") |
 | Profile tabs | `button:has-text("Overview\|Events\|Vendors\|Tasks")` |
+| Welcome wizard dialog | `[role="dialog"]` (inside the modal) |
+| Wizard step heading | `h2:has-text("Welcome\|Business\|Look\|Documents\|Previews...")` |
+| Preview nav active item | `[data-active="true"]` (on sidebar nav buttons inside PreviewFrame) |
+| Wizard "Next" button | `button:has-text("Next")` (context-specific inside modal) |
+| Wizard "Done" button | `button:has-text("Done")` (step 8 close action) |
+| Settings phone input | `input[placeholder="Phone"]` (placeholder selector; label association pending Settings hardening) |
 
 ## Helpers
 

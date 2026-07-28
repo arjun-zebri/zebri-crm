@@ -30,11 +30,13 @@ function extractColorsFromImage(img: HTMLImageElement, count: number): string[] 
 
   const buckets = new Map<string, number>()
   for (let i = 0; i < data.length; i += 4) {
-    const a = data[i + 3]
+    // `data` indexing is `number | undefined` under noUncheckedIndexedAccess;
+    // an out-of-range read falls back to 0 (skipped as fully transparent).
+    const a = data[i + 3] ?? 0
     if (a < 200) continue
-    const r = (data[i] >> 4) << 4
-    const g = (data[i + 1] >> 4) << 4
-    const b = (data[i + 2] >> 4) << 4
+    const r = ((data[i] ?? 0) >> 4) << 4
+    const g = ((data[i + 1] ?? 0) >> 4) << 4
+    const b = ((data[i + 2] ?? 0) >> 4) << 4
     const avg = (r + g + b) / 3
     if (avg > 235 || avg < 20) continue
     const max = Math.max(r, g, b)
@@ -47,7 +49,9 @@ function extractColorsFromImage(img: HTMLImageElement, count: number): string[] 
   const sorted = [...buckets.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([key]) => {
-      const [r, g, b] = key.split(',').map(Number)
+      // Keys are self-authored `r,g,b` triples; defaults keep the channels
+      // typed as `number` rather than `number | undefined`.
+      const [r = 0, g = 0, b = 0] = key.split(',').map(Number)
       return '#' + [r, g, b].map(n => n.toString(16).padStart(2, '0')).join('')
     })
 

@@ -17,7 +17,7 @@
 import { Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
-import { Empty } from '@/components/ui/empty'
+import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 
 import {
@@ -28,13 +28,13 @@ import {
   retryRunAction,
 } from '../automations/actions'
 
-import { groupRuns, summarizeRuns, type RunWithAutomation } from './couple-automations-data'
+import { groupRuns, type RunWithAutomation } from './couple-automations-data'
 import type { RunActivity } from './couple-automations-feed'
 import { AutomationGroupRow } from './couple-automations-group'
-import { CoupleAutomationsHeader } from './couple-automations-header'
 import { loadCoupleAutomations } from './couple-automations-loader'
 import { CoupleRunPicker } from './couple-automations-run-picker'
 import { CoupleAutomationsSkeleton } from './couple-automations-skeleton'
+import { CoupleTabEmpty, CoupleTabShell, tabStat } from './couple-tab-shell'
 
 interface Props {
   coupleId: string
@@ -84,27 +84,29 @@ export function CoupleAutomations({ coupleId }: Props) {
   if (runs === null) return <CoupleAutomationsSkeleton />
 
   const groups = groupRuns(runs, activity)
-  const hasLive = runs.some((r) => r.status === 'running' || r.status === 'waiting')
-  const summary = summarizeRuns(runs, loadedAt)
 
   return (
-    <div>
-      <CoupleAutomationsHeader
-        summary={summary}
-        hasLive={hasLive}
-        pausing={pausing}
-        onPauseAll={pauseAll}
-        actions={
-          <>
-            <CoupleRunPicker coupleId={coupleId} mode="test" onRan={fetchAndSet} />
-            <CoupleRunPicker coupleId={coupleId} mode="run" onRan={fetchAndSet} />
-          </>
-        }
-      />
+    <CoupleTabShell
+      title="Automations"
+      stats={runs.length > 0 ? [{ label: tabStat(runs.length, 'run') }] : undefined}
+      actions={
+        <>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={pausing || runs.length === 0}
+            onClick={pauseAll}
+            className="cursor-pointer"
+          >
+            Pause all
+          </Button>
+          <CoupleRunPicker coupleId={coupleId} mode="test" onRan={fetchAndSet} />
+          <CoupleRunPicker coupleId={coupleId} mode="run" onRan={fetchAndSet} />
+        </>
+      }
+    >
       {runs.length === 0 ? (
-        <Empty
-          size="sm"
-          className="min-h-[36vh]"
+        <CoupleTabEmpty
           icon={Sparkles}
           title="No automations have run for this couple yet"
           description="Run one now, or wait for an active automation to match this couple."
@@ -126,6 +128,6 @@ export function CoupleAutomations({ coupleId }: Props) {
           ))}
         </div>
       )}
-    </div>
+    </CoupleTabShell>
   )
 }

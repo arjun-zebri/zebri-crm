@@ -1,6 +1,6 @@
 /**
  * Seeded starter catalogs for the line-item template types, packages,
- * quote templates and invoice templates.
+ * and invoice templates.
  *
  * These mirror `lib/email/starter-templates.ts`: nothing is auto-seeded;
  * the Templates page surfaces them through a "Browse starters" modal and
@@ -24,7 +24,7 @@ export interface StarterLineItem {
   amount: number
 }
 
-/** A named starter set of priced line items (package / quote / invoice). */
+/** A named starter set of priced line items (package / invoice). */
 export interface StarterLineItemSet {
   name: string
   /** Short subtitle shown on the list row and starter catalog. */
@@ -34,7 +34,7 @@ export interface StarterLineItemSet {
 
 /* ─── Packages: reusable service bundles ───────────────────────── */
 
-/** Starter service packages an MC can drop into quotes and invoices. */
+/** Starter service packages an MC can drop into proposals and invoices. */
 export const STARTER_PACKAGES: readonly StarterLineItemSet[] = [
   {
     name: 'Ceremony MC',
@@ -60,41 +60,6 @@ export const STARTER_PACKAGES: readonly StarterLineItemSet[] = [
       { description: 'Ceremony hosting', amount: 550 },
       { description: 'Reception MC & run sheet', amount: 900 },
     ],
-  },
-  {
-    name: 'Add-on: Planning meeting / rehearsal',
-    subtitle: 'Optional extras booked alongside a package',
-    items: [
-      { description: 'In-person planning meeting', amount: 150 },
-      { description: 'Rehearsal attendance', amount: 200 },
-    ],
-  },
-]
-
-/* ─── Quote templates: ready-to-send quotes ────────────────────── */
-
-/** Starter quote templates covering common booking shapes. */
-export const STARTER_QUOTE_TEMPLATES: readonly StarterLineItemSet[] = [
-  {
-    name: 'Standard Reception Wedding',
-    subtitle: 'Reception MC service',
-    items: [
-      { description: 'Reception MC & run sheet', amount: 900 },
-      { description: 'Travel (within metro)', amount: 0 },
-    ],
-  },
-  {
-    name: 'Full Day Wedding',
-    subtitle: 'Ceremony and reception',
-    items: [
-      { description: 'Ceremony hosting', amount: 550 },
-      { description: 'Reception MC & run sheet', amount: 900 },
-    ],
-  },
-  {
-    name: 'Elopement / Micro Wedding',
-    subtitle: 'Small, intimate celebration',
-    items: [{ description: 'Ceremony hosting', amount: 450 }],
   },
 ]
 

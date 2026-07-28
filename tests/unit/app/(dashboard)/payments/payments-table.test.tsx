@@ -2,7 +2,7 @@
  * Unit tests for `PaymentsTable` + the `formatCurrency` export.
  *
  * Walks the populated / empty / loading branches against a tiny
- * row type so the table primitive doesn't have to know about Quote
+ * row type so the table primitive doesn't have to know about Proposal
  * or Invoice domain types.
  */
 import { render, screen } from '@testing-library/react';
@@ -15,36 +15,37 @@ import {
   type PaymentsRow,
 } from '@/app/(dashboard)/payments/payments-table';
 
-// Use the Quote shape as a stand-in for the table primitive's
+// Use the Proposal shape as a stand-in for the table primitive's
 // generic — keeps the test code stable while satisfying the
 // PaymentsTableItem union.
-import type { Quote } from '@/app/(dashboard)/payments/use-payments-data';
+import type { Proposal } from '@/app/(dashboard)/payments/use-payments-data';
 
-function makeQuote(overrides: Partial<Quote> = {}): Quote {
+function makeProposal(overrides: Partial<Proposal> = {}): Proposal {
   return {
-    id: 'q1',
-    quote_number: 'Q-1',
-    title: 'Test Quote',
+    id: 'p1',
+    proposal_number: 'P-1',
+    title: 'Test Proposal',
     status: 'sent',
     subtotal: 1000,
+    expires_at: null,
     created_at: '2026-04-01T00:00:00Z',
     couple: { id: 'c1', name: 'Test Couple' },
     ...overrides,
   };
 }
 
-function row(q: Quote, opts: { onClick?: () => void } = {}): PaymentsRow {
+function row(p: Proposal, opts: { onClick?: () => void } = {}): PaymentsRow {
   return {
-    key: q.id,
+    key: p.id,
     onClick: opts.onClick ?? vi.fn(),
-    number: q.quote_number,
-    title: q.title,
-    coupleName: q.couple.name,
-    statusPill: <span>{q.status}</span>,
-    valueCell: <span>{formatCurrency(q.subtotal)}</span>,
-    lastCell: <span>{q.created_at.slice(0, 10)}</span>,
-    mobileValueRight: <span>{formatCurrency(q.subtotal)}</span>,
-    mobileStatus: <span>{q.status}</span>,
+    number: p.proposal_number,
+    title: p.title,
+    coupleName: p.couple.name,
+    statusPill: <span>{p.status}</span>,
+    valueCell: <span>{formatCurrency(p.subtotal)}</span>,
+    lastCell: <span>{p.created_at.slice(0, 10)}</span>,
+    mobileValueRight: <span>{formatCurrency(p.subtotal)}</span>,
+    mobileStatus: <span>{p.status}</span>,
     mobileSecondary: null,
   };
 }
@@ -92,20 +93,20 @@ describe('PaymentsTable', () => {
     render(
       <PaymentsTable
         loading={false}
-        rows={[makeQuote()]}
+        rows={[makeProposal()]}
         emptyIcon={<span />}
         emptyMessage="Nothing here"
         valueColLabel="Total"
         valueColIcon={<span />}
         lastColLabel="Date"
         lastColIcon={<span />}
-        renderRow={(q) => row(q, { onClick })}
+        renderRow={(p) => row(p, { onClick })}
       />,
     );
     // Desktop table is `hidden sm:table` in jsdom — but `display`
     // CSS isn't enforced at the DOM level, so the table cells are
     // still in the tree. Click the rendered title cell.
-    await userEvent.click(screen.getAllByText('Test Quote')[0]!);
+    await userEvent.click(screen.getAllByText('Test Proposal')[0]!);
     expect(onClick).toHaveBeenCalledOnce();
   });
 });

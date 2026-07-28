@@ -167,7 +167,7 @@ const sendPortalLink: ActionSpec<z.infer<typeof sendPortalLinkSchema>> = {
     if (!data.portal_token_enabled) {
       await supabase.from('couples').update({ portal_token_enabled: true }).eq('id', ctx.couple.id)
     }
-    const link = `${APP_URL}/p/${data.portal_token}`
+    const link = `${APP_URL}/portal/${data.portal_token}`
     const ctxWithLink: RunContext = {
       ...ctx,
       triggerEvent: {
@@ -217,7 +217,7 @@ const requestInformation: ActionSpec<z.infer<typeof requestInformationSchema>> =
       .eq('id', ctx.couple.id)
       .single()
     if (!data?.portal_token) return { kind: 'error', message: 'no portal token' }
-    const link = `${APP_URL}/p/${data.portal_token}#${config.section}`
+    const link = `${APP_URL}/portal/${data.portal_token}#${config.section}`
     const body = renderTemplate(config.message, ctx) + `\n\n${link}`
     await resend().emails.send({
       from: FROM,

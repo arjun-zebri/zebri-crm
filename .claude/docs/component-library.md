@@ -40,6 +40,18 @@ spec (emerald fill + white checkmark when checked) — never a native
 and an optional clickable `label`. Always visible (form variant);
 table rows keep their own hover-reveal selection checkbox.
 
+### `<AddressAutocomplete />` — `@/components/ui/address-autocomplete` (Phase 14, onboarding)
+
+Address search + autocomplete using Google Places API. Extracted from Settings page during onboarding wizard work. Props:
+
+- `value: string` — current search input text
+- `onChange: (v: string) => void` — fires on every keystroke (with `null` coordinates during typing)
+- `onSelect: (place: PlacePrediction) => void` — fires when user picks a place from the dropdown (includes resolved lat/lng)
+- `placeholder?: string` — input placeholder text
+- `className?: string` — wrapper class override
+
+Internal state mirrors the value so it survives parent re-renders during async coordinate resolution. The Places API call happens on `onSelect` (per-place); coordinate resolution completes asynchronously and does not block the `onSelect` callback.
+
 Conventions:
 - All of the above use design tokens only — no raw hex / arbitrary values.
 - Unit-tested in `tests/unit/components/ui/{button,input,select,checkbox}.test.tsx`.
@@ -111,6 +123,29 @@ changes; the parent modals own the actual form state + mutations.
 
 All parts are ≤200 LOC, TSDoc'd, and unit-tested under
 `tests/unit/components/builders/parts/*.test.tsx`.
+
+## Public Blocks components — `components/public-blocks/*` (Phase 11)
+
+Shared branded surface renderers. Each public surface (quote, invoice, contract, proposal, vendor timeline, questionnaire) consumes a block tree and renders it with the MC's branding (colours, fonts, corner radius, spacing).
+
+**Slots + Chrome Pattern:** The public component is the sole markup source. The editor injects `InlineText` slots (for editable fields: business name, heading, button text) as React node props. The editor's toolbar is a chrome overlay sitting above the public renderer without modifying DOM structure. **Two binding amendments:**
+1. Slots always render, even if empty (undefined slots render as nothing, not errors).
+2. Editor slot classes match static classes exactly (`edit-mode-{fieldName}` class prefix) — ensures clicking a slot in the preview reflects the edit without layout flicker.
+
+| Component | Used by | Notes |
+|---|---|---|
+| `public-block-renderer.tsx` | All surfaces | Orchestrator: renders a block tree by type (HeaderBanner, BusinessName, Text, Image, Spacer, Divider, Footer, Action, and surface-specific fixed cores). |
+| `header-banner.tsx` | All surfaces | Header image + overlay gradient. |
+| `business-name.tsx` | All surfaces | Logo + business name + tagline. |
+| `action-block.tsx` | Quote, Invoice, Proposal | Accept/Download/etc button. |
+| `text-block.tsx` | All surfaces | Rich text with font/colour overrides. |
+| `image-block.tsx` | All surfaces (chrome) | Image with fit, focal point, rounding, padding. |
+| `spacer-block.tsx` | All surfaces (chrome) | Vertical spacing. |
+| `quote-body.tsx` | Quote surface (fixed) | Renders proposal options + acceptance flow. |
+| `invoice-items.tsx` | Invoice surface (fixed) | Line items + totals + payment schedule. |
+| `contract-body.tsx` | Contract surface (fixed) | Contract text content. |
+
+**Shared helper:** `upload-brand-asset(file, type)` in `lib/branding/upload.ts` handles logo/favicon/header/image uploads to Supabase Storage (`branding/{user_id}/{type}`), returns a public URL via signed URL (1-hour TTL cached in-memory). Used by the editor's file picker, brand-panel upload controls, and image-block drag-drop.
 
 ## Events components — `components/events/*` (Phase 4A)
 
@@ -277,9 +312,9 @@ Variants (Vendor category):
 
 ## Modal
 
-Centered modal dialog. `rounded-2xl shadow-xl max-w-lg max-h-[85vh]`, centered with `flex items-center justify-center`. Footer has `rounded-b-2xl bg-gray-50`.
+Centered modal dialog. `rounded-2xl shadow-xl max-w-lg max-h-[85vh]`, centered with `flex items-center justify-center`. Footer has `rounded-b-2xl bg-gray-50`. All modals now have `role="dialog"` for accessibility (app-wide change in Phase 14).
 
-Used for: - create couple - create task - edit vendor
+Used for: - create couple - create task - edit vendor - welcome onboarding
 
 Features: overlay background escape to close click outside to close
 
@@ -355,18 +390,37 @@ Props:
   (`lib/email/template-variables`). The chosen `id` is stored verbatim
   on the inserted mention node (`attrs.id`).
 
+Toolbar: H1/H2, bold/italic, lists, a **Link** button (set/update/remove
+an `<a>` on the selection; bare domains get `https://` prepended;
+StarterKit v3's bundled Link with `openOnClick: false`), undo/redo, and
+the Insert-variable popover. The blockquote button was removed
+(2026-07). When `showVariableInserter` is on, typing **`@` or `{{`** in
+the body opens the inline variable suggestion
+(`components/ui/variable-suggestion.tsx` — keyboard-navigable floating
+list built on TipTap's suggestion plugin; Enter/Tab inserts the mention
+and swallows the trigger).
+
 ## Email Templates components — `app/(dashboard)/templates/*`
 
 - `TemplatePreview` — renders subject + body through
   `lib/email/templates`, highlighting unresolved variables in amber
-  (`preview` mode). Reused by the library editor (sample context) and
-  the couple Send-email modal (real context).
+  (`preview` mode). With `shell` it instead renders the **finished
+  email** — the branded shell from `wrapTemplateHtml` — in a sandboxed
+  iframe (the editor's WYSIWYG preview). Reused by the library editor
+  (sample context) and the couple Send-email modal (real context).
 - `SubjectField` — labelled subject input + Insert-variable popover
   that appends `{{ expression }}` tokens.
-- `TemplateEditorModal` — fullscreen create/edit (editor + live
-  preview), uses the `Button`, `Modal`, `Input`, `Select` primitives.
-- `TemplatesLibrary` — stage-filtered, searchable list with Edit /
-  Duplicate (`Copy`) / Delete (`ConfirmDialog`) row actions and
+- `TemplateEditorModal` — fullscreen create/edit (editor + WYSIWYG
+  preview + attachments + test-send), uses the `Button`, `Modal`,
+  `Input` primitives.
+- `CategoryPicker` (+ `CategoryManageRow`, `ColorSwatches`) — the
+  Notion-style category control: Select-like trigger, pick list with
+  colour dots, inline "New category", and an Edit mode with rename /
+  recolour / delete / dnd-kit drag-reorder. Colour keys map to
+  named-palette classes in `category-colors.ts`.
+- `TemplateAttachments` — upload/list/remove the files sent with a
+  template (browser → private bucket; metadata via server actions).
+- `TemplatesLibrary` — category-grouped, searchable list with
   `Loading` / `Empty` / `ErrorState` states.
 
 Shared across the non-email tabs (Packages / Quotes / Invoices /
@@ -384,3 +438,51 @@ Contracts):
 
 All use semantic tokens (`bg-card`, `text-text`, `border-border`,
 `bg-brand`) and the shared primitives — no ad-hoc colours.
+
+## Onboarding preview components — `app/(dashboard)/@modal/(.)welcome/previews/*` (Phase 14)
+
+High-fidelity mocks of real screens used in the welcome wizard steps 5–8. Mocks are hand-built and held to a resemblance bar by review against running-app screenshots side-by-side; there is no drift-detection mechanism, so when a real screen changes materially, the matching preview must be manually updated.
+
+### `PreviewFrame` — `preview-frame.tsx`
+
+Renders a mock app frame with the real sidebar nav (Dashboard through Templates) and active-state marking. Props:
+
+- `children: ReactNode` — content to render in the main pane
+- `activeNav?: string` — marks the nav item with `data-active="true"` after the click beat
+- `className?: string` — wrapper class override
+
+The active nav item is marked via a `data-active` attribute on the nav button, allowing tests to verify navigation state (see testing.md selectors).
+
+### Preview script hook — `usePreviewScript`
+
+Hook that manages preview-specific timing and reduced-motion detection. Props:
+
+- `onReady?: () => void` — fires when the preview is ready to animate (reduced-motion respected)
+- `delayMs?: number` — stagger animation start (default 100ms)
+
+Returns an object with `isReady`, `prefersReducedMotion`. Used by step 5–8 previews to coordinate entrance animations.
+
+### Reduced-motion detection — `useReducedMotion`
+
+Hook that reads `window.matchMedia('(prefers-reduced-motion: reduce)')` and returns a boolean. Used by preview scripts to respect system accessibility settings — when true, skip entrance animations and show all content immediately.
+
+### Preview content components
+
+- `preview-couples.tsx` — Kanban board mock with sample couple cards (name, status pill, event date, venue)
+- `preview-templates.tsx` — Two-pane layout: left pane shows LineItemsTable + controls, right pane shows sample email template render
+- `preview-emails.tsx` — Couple-profile Emails tab mock: contact picker + "Send email" button + sent-history list
+- `preview-automations.tsx` — Automation canvas mock with sample triggers and actions (placeholder copy to be replaced per brief)
+
+All previews use the design system primitives and tokens; none are pixel-perfect renders, but all are visually recognisable as analogues of their real counterparts.
+
+### `PreviewScriptProps` contract
+
+Type definition for preview script configuration:
+
+```typescript
+type PreviewScriptProps = {
+  onReady?: () => void;
+  delayMs?: number;
+  prefersReducedMotion?: boolean;
+};
+```

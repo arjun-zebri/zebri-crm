@@ -18,12 +18,20 @@ const MAX_HISTORY = 50
 
 export function useHistory<T>(initial: T): UseHistoryReturn<T> {
   const [state, setStateInner] = useState<T>(initial)
+  const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false })
   const pastRef = useRef<T[]>([])
   const futureRef = useRef<T[]>([])
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastCommittedRef = useRef<T>(initial)
   const [, force] = useState(0)
   const triggerRender = useCallback(() => force(n => n + 1), [])
+
+  const updateHistoryState = useCallback(() => {
+    setHistoryState({
+      canUndo: pastRef.current.length > 0,
+      canRedo: futureRef.current.length > 0,
+    })
+  }, [])
 
   const commitNow = useCallback(() => {
     if (timerRef.current) {
@@ -39,9 +47,10 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
       futureRef.current = []
       lastCommittedRef.current = current
       triggerRender()
+      updateHistoryState()
       return current
     })
-  }, [triggerRender])
+  }, [triggerRender, updateHistoryState])
 
   const set = useCallback(
     (updater: T | ((prev: T) => T), opts?: { commit?: boolean }) => {
@@ -71,7 +80,8 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
     lastCommittedRef.current = previous
     setStateInner(previous)
     triggerRender()
-  }, [triggerRender])
+    updateHistoryState()
+  }, [triggerRender, updateHistoryState])
 
   const redo = useCallback(() => {
     if (timerRef.current) {
@@ -85,7 +95,8 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
     lastCommittedRef.current = next
     setStateInner(next)
     triggerRender()
-  }, [triggerRender])
+    updateHistoryState()
+  }, [triggerRender, updateHistoryState])
 
   const reset = useCallback((newState: T) => {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -94,7 +105,8 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
     lastCommittedRef.current = newState
     setStateInner(newState)
     triggerRender()
-  }, [triggerRender])
+    updateHistoryState()
+  }, [triggerRender, updateHistoryState])
 
   useEffect(() => {
     return () => {
@@ -129,8 +141,8 @@ export function useHistory<T>(initial: T): UseHistoryReturn<T> {
     commit: commitNow,
     undo,
     redo,
-    canUndo: pastRef.current.length > 0,
-    canRedo: futureRef.current.length > 0,
+    canUndo: historyState.canUndo,
+    canRedo: historyState.canRedo,
     reset,
   }
 }
