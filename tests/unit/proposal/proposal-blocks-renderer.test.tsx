@@ -1,10 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { ProposalBlocksRenderer } from '@/components/proposal/proposal-blocks-renderer'
+import {
+  ProposalBlocksRenderer,
+  type AcceptStyle,
+} from '@/components/proposal/proposal-blocks-renderer'
 import { PROPOSAL_LABEL_DEFAULTS } from '@/lib/branding/proposal-labels'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
@@ -89,482 +92,121 @@ const viewBrandingFixture = (): ProposalViewBranding => ({
   labels: PROPOSAL_LABEL_DEFAULTS,
 })
 
-describe('ProposalBlocksRenderer', () => {
-  const option1: PublicProposalOption = {
-    id: 'opt-1',
-    title: 'Gold Package',
-    description: 'Premium service package',
-    deposit_percent: 50,
-    gst_inclusive: true,
-    is_popular: true,
-    subtotal: 5000,
-    position: 0,
-    items: [
-      {
-        id: 'base-1',
-        description: 'Photography',
-        amount: 3000,
-        is_addon: false,
-        default_included: true,
-        position: 0,
-      },
-      {
-        id: 'base-2',
-        description: 'Videography',
-        amount: 2000,
-        is_addon: false,
-        default_included: true,
-        position: 1,
-      },
-      {
-        id: 'addon-1',
-        description: 'Drone shots',
-        amount: 500,
-        is_addon: true,
-        default_included: false,
-        position: 2,
-      },
-      {
-        id: 'addon-2',
-        description: 'Highlight reel',
-        amount: 300,
-        is_addon: true,
-        default_included: false,
-        position: 3,
-      },
-    ],
-  }
+const option1: PublicProposalOption = {
+  id: 'opt-1',
+  title: 'Gold Package',
+  description: 'Premium service package',
+  deposit_percent: 50,
+  gst_inclusive: true,
+  is_popular: true,
+  subtotal: 5000,
+  position: 0,
+  items: [
+    { id: 'base-1', description: 'Photography', amount: 3000, is_addon: false, default_included: true, position: 0 },
+    { id: 'base-2', description: 'Videography', amount: 2000, is_addon: false, default_included: true, position: 1 },
+    { id: 'addon-1', description: 'Drone shots', amount: 500, is_addon: true, default_included: false, position: 2 },
+    { id: 'addon-2', description: 'Highlight reel', amount: 300, is_addon: true, default_included: false, position: 3 },
+  ],
+}
 
-  const option2: PublicProposalOption = {
-    id: 'opt-2',
-    title: 'Silver Package',
-    description: 'Standard service package',
-    deposit_percent: 30,
-    gst_inclusive: true,
-    is_popular: false,
-    subtotal: 3000,
-    position: 1,
-    items: [
-      {
-        id: 'base-3',
-        description: 'Photography',
-        amount: 2000,
-        is_addon: false,
-        default_included: true,
-        position: 0,
-      },
-      {
-        id: 'base-4',
-        description: 'Album',
-        amount: 1000,
-        is_addon: false,
-        default_included: true,
-        position: 1,
-      },
-      {
-        id: 'addon-3',
-        description: 'Extra prints',
-        amount: 200,
-        is_addon: true,
-        default_included: false,
-        position: 2,
-      },
-    ],
-  }
+const option2: PublicProposalOption = {
+  id: 'opt-2',
+  title: 'Silver Package',
+  description: 'Standard service package',
+  deposit_percent: 30,
+  gst_inclusive: true,
+  is_popular: false,
+  subtotal: 3000,
+  position: 1,
+  items: [
+    { id: 'base-3', description: 'Photography', amount: 2000, is_addon: false, default_included: true, position: 0 },
+    { id: 'base-4', description: 'Album', amount: 1000, is_addon: false, default_included: true, position: 1 },
+    { id: 'addon-3', description: 'Extra prints', amount: 200, is_addon: true, default_included: false, position: 2 },
+  ],
+}
 
-  it('renders packageHeader with package title', () => {
-    const blocks: Block[] = [
-      {
-        id: 'header-block',
-        type: 'packageHeader',
-      } as any,
-    ]
+/** A standard proposal block tree: the package region + the action block. */
+const packageBlocks: Block[] = [
+  { id: 'ph', type: 'packageHeader' } as Block,
+  { id: 'pd', type: 'packageDetails' } as Block,
+  { id: 'pi', type: 'packageInclusions' } as Block,
+  { id: 'pt', type: 'packageTotals' } as Block,
+  { id: 'ac', type: 'action', primary: 'Accept', secondary: 'Decline' } as Block,
+]
 
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1]}
-        chosenId="opt-1"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-      />
-    )
+/** Marker Accept CTA per package, tagged with the option id. */
+const renderPackageAccept = ({ option }: { option: PublicProposalOption; selection: Record<string, boolean>; style: AcceptStyle }) => (
+  <div data-testid={`accept-${option.id}`}>Accept {option.title}</div>
+)
+
+/** Marker for the single bottom Decline. */
+const renderDecline = () => <div data-testid="decline">Decline</div>
+
+function renderTree(options: PublicProposalOption[], overrides: Partial<React.ComponentProps<typeof ProposalBlocksRenderer>> = {}) {
+  return render(
+    <ProposalBlocksRenderer
+      blocks={packageBlocks}
+      branding={brandingFixture()}
+      view={viewBrandingFixture()}
+      options={options}
+      state="active"
+      expiresAt={null}
+      renderPackageAccept={renderPackageAccept}
+      renderDecline={renderDecline}
+      {...overrides}
+    />,
+  )
+}
+
+describe('ProposalBlocksRenderer — package stacking', () => {
+  it('renders one package with its own Accept and a Decline for a single option', () => {
+    renderTree([option1])
 
     expect(screen.getByText('Gold Package')).toBeInTheDocument()
+    expect(screen.getByText('Optional add-ons')).toBeInTheDocument()
+    expect(screen.getByTestId('accept-opt-1')).toBeInTheDocument()
+    expect(screen.getByTestId('decline')).toBeInTheDocument()
   })
 
-  it('renders the compare-and-pick chooser when multiple options exist', async () => {
-    const user = userEvent.setup()
-    const onChoose = vi.fn()
-    const blocks: Block[] = [
-      {
-        id: 'header-block',
-        type: 'packageHeader',
-      } as any,
-    ]
+  it('stacks each package with its own Accept, and one shared Decline, for multiple options', () => {
+    renderTree([option1, option2])
 
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1, option2]}
-        chosenId="opt-1"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-        onChoose={onChoose}
-      />
-    )
-
-    // Multi-option proposals show a comparison chooser (radio cards for every
-    // package), not a single package title with a dropdown.
-    expect(screen.getByRole('radiogroup')).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: /gold package/i })).toBeInTheDocument()
-    const silver = screen.getByRole('radio', { name: /silver package/i })
-    expect(silver).toBeInTheDocument()
-
-    // Picking a different package calls onChoose.
-    await user.click(silver)
-
-    expect(onChoose).toHaveBeenCalledWith('opt-2')
-  })
-
-  it('renders packageInclusions with add-on checkboxes and toggles them', async () => {
-    const user = userEvent.setup()
-    const onToggle = vi.fn()
-    const blocks: Block[] = [
-      {
-        id: 'inclusions-block',
-        type: 'packageInclusions',
-      } as any,
-    ]
-
-    const selection = {
-      'addon-1': false,
-      'addon-2': false,
-    }
-
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1]}
-        chosenId="opt-1"
-        selection={selection}
-        state="active"
-        expiresAt={null}
-        onToggle={onToggle}
-      />
-    )
-
-    // Should show add-on items
-    expect(screen.getByText('Drone shots')).toBeInTheDocument()
-    expect(screen.getByText('Highlight reel')).toBeInTheDocument()
-
-    // Should not show base items
-    expect(screen.queryByText('Photography')).not.toBeInTheDocument()
-    expect(screen.queryByText('Videography')).not.toBeInTheDocument()
-
-    // Toggle first add-on via checkbox
-    const checkbox1 = screen.getByRole('checkbox', { name: /drone shots/i })
-    await user.click(checkbox1)
-
-    expect(onToggle).toHaveBeenCalledWith('addon-1', true)
-  })
-
-  it('renders packageInclusions with correct checked state', () => {
-    const blocks: Block[] = [
-      {
-        id: 'inclusions-block',
-        type: 'packageInclusions',
-      } as any,
-    ]
-
-    const selection = {
-      'addon-1': true,
-      'addon-2': false,
-    }
-
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1]}
-        chosenId="opt-1"
-        selection={selection}
-        state="active"
-        expiresAt={null}
-      />
-    )
-
-    const checkbox1 = screen.getByRole('checkbox', { name: /drone shots/i })
-    const checkbox2 = screen.getByRole('checkbox', { name: /highlight reel/i })
-
-    expect(checkbox1).toBeChecked()
-    expect(checkbox2).not.toBeChecked()
-  })
-
-  it('renders packageTotals with computed price summary', () => {
-    const blocks: Block[] = [
-      {
-        id: 'totals-block',
-        type: 'packageTotals',
-      } as any,
-    ]
-
-    const selection = {
-      'addon-1': true, // +500
-      'addon-2': false,
-    }
-
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1]}
-        chosenId="opt-1"
-        selection={selection}
-        state="active"
-        expiresAt={null}
-      />
-    )
-
-    // Should show subtotal (5000 + 500 = 5500) with "Total" label
-    const totalElements = screen.getAllByText(/5,500/)
-    expect(totalElements.length).toBeGreaterThan(0)
-  })
-
-  it('renders packageDetails with description', () => {
-    const blocks: Block[] = [
-      {
-        id: 'details-block',
-        type: 'packageDetails',
-      } as any,
-    ]
-
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1]}
-        chosenId="opt-1"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-      />
-    )
-
-    expect(screen.getByText('Premium service package')).toBeInTheDocument()
-  })
-
-  it('renders packageDetails empty when description is null', () => {
-    const optionNoDesc = { ...option1, description: null }
-    const blocks: Block[] = [
-      {
-        id: 'details-block',
-        type: 'packageDetails',
-      } as any,
-    ]
-
-    const { container } = render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[optionNoDesc]}
-        chosenId="opt-1"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-      />
-    )
-
-    const detailsBlock = container.querySelector('[data-testid="package-details"]')
-    if (detailsBlock) {
-      expect(detailsBlock).toBeEmptyDOMElement()
-    }
-  })
-
-  it('renders action block via renderAccept callback', () => {
-    const blocks: Block[] = [
-      {
-        id: 'action-block',
-        type: 'action',
-      } as any,
-    ]
-
-    const renderAccept = vi.fn(() => <div>Accept CTA</div>)
-
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1]}
-        chosenId="opt-1"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-        renderAccept={renderAccept}
-      />
-    )
-
-    expect(screen.getByText('Accept CTA')).toBeInTheDocument()
-    expect(renderAccept).toHaveBeenCalled()
-  })
-
-  it('renders action block as static preview when renderAccept is not provided', () => {
-    const blocks: Block[] = [
-      {
-        id: 'action-block',
-        type: 'action',
-      } as any,
-    ]
-
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1]}
-        chosenId="opt-1"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-      />
-    )
-
-    // Should render something, but not call the callback
-    expect(screen.queryByText('Accept CTA')).not.toBeInTheDocument()
-  })
-
-  it('delegates non-package blocks to PublicBlockRenderer', () => {
-    const blocks: Block[] = [
-      {
-        id: 'text-block',
-        type: 'text',
-        text: 'Some promotional text',
-      } as any,
-    ]
-
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1]}
-        chosenId="opt-1"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-      />
-    )
-
-    expect(screen.getByText('Some promotional text')).toBeInTheDocument()
-  })
-
-  it('renders multiple blocks in sequence', () => {
-    const blocks: Block[] = [
-      {
-        id: 'header-block',
-        type: 'packageHeader',
-      } as any,
-      {
-        id: 'details-block',
-        type: 'packageDetails',
-      } as any,
-      {
-        id: 'inclusions-block',
-        type: 'packageInclusions',
-      } as any,
-      {
-        id: 'totals-block',
-        type: 'packageTotals',
-      } as any,
-    ]
-
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1]}
-        chosenId="opt-1"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-      />
-    )
-
+    // Both packages render in full (titles + their own Accept).
     expect(screen.getByText('Gold Package')).toBeInTheDocument()
-    expect(screen.getByText('Premium service package')).toBeInTheDocument()
-    expect(screen.getByText('Drone shots')).toBeInTheDocument()
-    const totalElements = screen.getAllByText(/5,000/)
-    expect(totalElements.length).toBeGreaterThan(0)
+    expect(screen.getByText('Silver Package')).toBeInTheDocument()
+    expect(screen.getByTestId('accept-opt-1')).toBeInTheDocument()
+    expect(screen.getByTestId('accept-opt-2')).toBeInTheDocument()
+
+    // Decline is shown exactly once, at the bottom.
+    expect(screen.getAllByTestId('decline')).toHaveLength(1)
   })
 
-  it('falls back to the first option when chosenId does not match any option', () => {
-    const blocks: Block[] = [
-      {
-        id: 'header-block',
-        type: 'packageHeader',
-      } as any,
-    ]
+  it('renders each package add-ons and toggles them independently', async () => {
+    const user = userEvent.setup()
+    renderTree([option1])
 
-    render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[option1, option2]}
-        chosenId="non-existent-id"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-      />
-    )
+    const drone = screen.getByRole('checkbox', { name: /drone shots/i })
+    expect(drone).toHaveAttribute('aria-checked', 'false')
 
-    // With an unmatched chosenId the region falls back to the first option, so
-    // the first package's card is the selected (checked) one in the chooser.
-    const goldRadio = screen.getByRole('radio', { name: /gold package/i })
-    expect(goldRadio).toHaveAttribute('aria-checked', 'true')
+    await user.click(drone)
+    expect(drone).toHaveAttribute('aria-checked', 'true')
   })
 
-  it('renders nothing for packageInclusions when there are no add-ons', () => {
-    const optionNoAddons = {
-      ...option1,
-      items: option1.items.filter((i) => !i.is_addon),
-    }
+  it('renders only the accepted package, with no Accept or Decline, once accepted', () => {
+    renderTree([option1, option2], {
+      state: 'accepted',
+      acceptedOptionId: 'opt-2',
+      acceptedSelection: {},
+    })
 
-    const blocks: Block[] = [
-      {
-        id: 'inclusions-block',
-        type: 'packageInclusions',
-      } as any,
-    ]
+    expect(screen.getByText('Silver Package')).toBeInTheDocument()
+    expect(screen.queryByText('Gold Package')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('accept-opt-2')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('decline')).not.toBeInTheDocument()
+  })
 
-    const { container } = render(
-      <ProposalBlocksRenderer
-        blocks={blocks}
-        branding={brandingFixture()}
-        view={viewBrandingFixture()}
-        options={[optionNoAddons]}
-        chosenId="opt-1"
-        selection={{}}
-        state="active"
-        expiresAt={null}
-      />
-    )
-
-    const inclusionsBlock = container.querySelector('[data-testid="package-inclusions"]')
-    expect(inclusionsBlock).toBeEmptyDOMElement()
+  it('renders nothing when there are no options', () => {
+    const { container } = renderTree([])
+    expect(container).toBeEmptyDOMElement()
   })
 })

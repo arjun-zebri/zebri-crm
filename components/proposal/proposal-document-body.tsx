@@ -26,7 +26,7 @@ import {
   ProposalPageView,
   viewBranding,
 } from '@/components/proposal/proposal-page-view'
-import { ProposalBlocksRenderer } from '@/components/proposal/proposal-blocks-renderer'
+import { ProposalBlocksRenderer, type AcceptStyle } from '@/components/proposal/proposal-blocks-renderer'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import type {
   ProposalViewBranding,
@@ -69,6 +69,18 @@ export interface ProposalDocumentBodyProps {
   renderAccept?:
     | ((ctx: { style: ProposalActionStyle; view: ProposalViewBranding; publicBranding: PublicBranding }) => ReactNode)
     | undefined
+  /** Block path — accepted view: the recorded option, so only it renders. */
+  acceptedOptionId?: string | null
+  /** Block path — accepted view: the recorded add-on selection. */
+  acceptedSelection?: Record<string, boolean> | undefined
+  /** Block path: render the per-package Accept CTA with its live selection. */
+  renderPackageAccept?: (ctx: {
+    option: PublicProposalOption
+    selection: Record<string, boolean>
+    style: AcceptStyle
+  }) => ReactNode
+  /** Block path: render the single Decline at the bottom of the stack. */
+  renderDecline?: (ctx: { style: AcceptStyle }) => ReactNode
 }
 
 /**
@@ -91,6 +103,10 @@ export function ProposalDocumentBody({
   onChoose,
   onToggle,
   renderAccept,
+  acceptedOptionId,
+  acceptedSelection,
+  renderPackageAccept,
+  renderDecline,
 }: ProposalDocumentBodyProps) {
   const view = viewBranding(branding)
 
@@ -106,7 +122,8 @@ export function ProposalDocumentBody({
   const accept =
     state === 'active' ? renderAccept?.({ style: { color: view.brand, radius: view.cornerRadius }, view, publicBranding: branding }) ?? null : null
 
-  // When package blocks are present, render the full tree via ProposalBlocksRenderer.
+  // When package blocks are present, render the tree via ProposalBlocksRenderer,
+  // which stacks a package per option, each with its own Accept.
   if (hasPackageBlocks) {
     return (
       <ProposalBlocksRenderer
@@ -114,13 +131,12 @@ export function ProposalDocumentBody({
         branding={branding}
         view={view}
         options={options}
-        chosenId={chosenId ?? (options.length === 1 ? options[0]!.id : '')}
-        selection={selection}
         state={state}
         expiresAt={expiresAt}
-        onChoose={onChoose}
-        onToggle={onToggle}
-        renderAccept={renderAccept}
+        acceptedOptionId={acceptedOptionId}
+        acceptedSelection={acceptedSelection}
+        renderPackageAccept={renderPackageAccept}
+        renderDecline={renderDecline}
       />
     )
   }

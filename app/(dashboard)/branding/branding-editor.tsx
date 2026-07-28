@@ -3,7 +3,6 @@
 import { Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
-import { ProposalMultiPreview } from '@/components/proposal/proposal-multi-preview'
 import { useToast } from '@/components/ui/toast'
 import { getAccountReadiness } from '@/lib/branding/account-readiness'
 import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
@@ -30,7 +29,7 @@ import { isDeletable, isMarker } from './blocks/policy'
 import type { Block, ImageBlock } from './blocks/types'
 import { BrandPanel } from './brand-panel'
 import { CanvasFrame } from './canvas-frame'
-import { CanvasScopeBar, type PackageView } from './canvas-scope-bar'
+import { CanvasScopeBar } from './canvas-scope-bar'
 import { EditorTopbar } from './editor-topbar'
 import { NotReadyPanel } from './not-ready-panel'
 import { PortalSectionsBar } from './portal-preview'
@@ -228,9 +227,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   const { state, set: setState, undo, redo, canUndo, canRedo } = useHistory<EditorState>(initial)
 
   const [surface, setSurface] = useState<SurfaceTab>('proposal')
-  // Proposal-only: which package presentation the canvas is designing. 'single'
-  // is the editable block layout; 'multi' previews the fixed comparison view.
-  const [packageView, setPackageView] = useState<PackageView>('single')
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [zoom, setZoom] = useState(1)
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
@@ -1127,8 +1123,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         >
           <CanvasScopeBar
             surface={surface}
-            packageView={surface === 'proposal' ? packageView : undefined}
-            onPackageViewChange={surface === 'proposal' ? setPackageView : undefined}
             onResetLayout={resetSurfaceToDefault}
             onClearBlocks={
               visibleBlocks.length > 0
@@ -1156,43 +1150,30 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
               }
             />
           )}
-          {surface === 'proposal' && packageView === 'multi' ? (
-            // Multi mode is a fixed presentation, so the canvas shows a live
-            // preview (not the drag-and-drop block editor): the compare-and-pick
-            // view with sample packages, branding applied, wording editable inline.
-            <ProposalMultiPreview
-              blocks={visibleBlocks}
-              state={previewState}
-              onEditLabel={(key, val) =>
-                setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
-              }
-            />
-          ) : (
-            <BlockRenderer
-              blocks={visibleBlocks}
-              setBlocks={setBlocksForCurrent}
-              state={previewState}
-              surface={surface}
-              selectedBlockIds={selectedBlockIds}
-              setSelectedBlockIds={setSelectedBlockIds}
-              requestAddAfter={requestAddAfter}
-              updateBlock={updateBlock}
-              duplicateBlock={duplicateBlock}
-              deleteBlock={deleteBlock}
-              resetBlock={resetBlockStyles}
-              setTagline={(v) => setEditor({ tagline: v }, false)}
-              setBusinessName={(v) => setEditor({ businessName: v }, false)}
-              uploadLogo={uploadLogo}
-              removeLogo={removeLogo}
-              uploadHeader={uploadHeader}
-              removeHeader={removeHeader}
-              uploadImage={uploadImage}
-              removeImage={removeImage}
-              onEditProposalLabel={(key, val) =>
-                setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
-              }
-            />
-          )}
+          <BlockRenderer
+            blocks={visibleBlocks}
+            setBlocks={setBlocksForCurrent}
+            state={previewState}
+            surface={surface}
+            selectedBlockIds={selectedBlockIds}
+            setSelectedBlockIds={setSelectedBlockIds}
+            requestAddAfter={requestAddAfter}
+            updateBlock={updateBlock}
+            duplicateBlock={duplicateBlock}
+            deleteBlock={deleteBlock}
+            resetBlock={resetBlockStyles}
+            setTagline={(v) => setEditor({ tagline: v }, false)}
+            setBusinessName={(v) => setEditor({ businessName: v }, false)}
+            uploadLogo={uploadLogo}
+            removeLogo={removeLogo}
+            uploadHeader={uploadHeader}
+            removeHeader={removeHeader}
+            uploadImage={uploadImage}
+            removeImage={removeImage}
+            onEditProposalLabel={(key, val) =>
+              setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
+            }
+          />
         </CanvasFrame>
       </div>
     </div>

@@ -45,6 +45,7 @@ import {
   selectionTotal,
   type PageState,
   type PublicProposal,
+  type PublicProposalOption,
 } from '@/lib/payments/proposal-view';
 import { createClient } from '@/lib/supabase/client';
 
@@ -105,14 +106,13 @@ export default function PublicProposalPage() {
     setPicks(defaultSelection(option));
   };
 
-  const handleAccept = async () => {
-    if (!chosen) return;
+  const handleAccept = async (optionId: string, addonSelection: Record<string, boolean>) => {
     setActionLoading(true);
     setActionError(null);
     const { data } = await supabase.rpc('accept_proposal', {
       token: params.token,
-      chosen_option_id: chosen.id,
-      addon_selection: selection,
+      chosen_option_id: optionId,
+      addon_selection: addonSelection,
     });
     setActionLoading(false);
     const res = data as { error?: string } | null;
@@ -151,7 +151,9 @@ export default function PublicProposalPage() {
         chosenOptionTitle={chosen?.title ?? null}
         totalLabel={totalLabel}
         expiresAt={proposal.expires_at}
-        onAccept={handleAccept}
+        onAccept={() => {
+          if (chosen) void handleAccept(chosen.id, selection);
+        }}
         onDecline={handleDecline}
         actionLoading={actionLoading}
         actionError={actionError}
@@ -166,6 +168,68 @@ export default function PublicProposalPage() {
           accept: style.primaryLabel ? { text: style.primaryLabel } : branding.labels.accept,
           decline: style.secondaryLabel ? { text: style.secondaryLabel } : branding.labels.decline,
         }}
+      />
+    ) : null;
+
+  /* Block-tree proposals stack each package, each with its own Accept. This
+     renders that per-package Accept (hiding the decline, which is shown once at
+     the bottom of the stack), wired to the package's own add-on selection. */
+  const renderPackageAccept = ({
+    option,
+    selection: optionSelection,
+    style,
+  }: {
+    option: PublicProposalOption;
+    selection: Record<string, boolean>;
+    style: ProposalActionStyle;
+  }) =>
+    proposal && branding ? (
+      <ProposalAcceptActions
+        branding={proposal}
+        chosenOptionTitle={option.title}
+        totalLabel={formatCurrency(selectionTotal(option, optionSelection))}
+        expiresAt={proposal.expires_at}
+        onAccept={() => void handleAccept(option.id, optionSelection)}
+        onDecline={handleDecline}
+        actionLoading={actionLoading}
+        actionError={actionError}
+        brand={style.color}
+        radius={style.radius}
+        textColor={branding.textColor}
+        mutedColor={branding.mutedColor}
+        borderColor={branding.borderColor}
+        surfaceColor={branding.pageBg}
+        labels={{
+          ...branding.labels,
+          accept: style.primaryLabel ? { text: style.primaryLabel } : branding.labels.accept,
+        }}
+        hideDecline
+      />
+    ) : null;
+
+  /* The single Decline shown once at the bottom of the package stack. */
+  const renderDecline = ({ style }: { style: ProposalActionStyle }) =>
+    proposal && branding ? (
+      <ProposalAcceptActions
+        branding={proposal}
+        chosenOptionTitle={null}
+        totalLabel=""
+        expiresAt={null}
+        onAccept={() => {}}
+        onDecline={handleDecline}
+        actionLoading={actionLoading}
+        actionError={actionError}
+        brand={style.color}
+        radius={style.radius}
+        textColor={branding.textColor}
+        mutedColor={branding.mutedColor}
+        borderColor={branding.borderColor}
+        surfaceColor={branding.pageBg}
+        labels={{
+          ...branding.labels,
+          decline: style.secondaryLabel ? { text: style.secondaryLabel } : branding.labels.decline,
+        }}
+        hideAccept
       />
     ) : null;
 
@@ -263,6 +327,10 @@ export default function PublicProposalPage() {
                 : undefined
             }
             renderAccept={renderAccept}
+            acceptedOptionId={proposal.accepted_option_id}
+            acceptedSelection={proposal.accepted_addon_selection ?? undefined}
+            renderPackageAccept={renderPackageAccept}
+            renderDecline={renderDecline}
           />
         ) : null}
       </div>

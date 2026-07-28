@@ -1,33 +1,39 @@
 /**
- * Renders a proposal block tree, substituting proposal-specific blocks
- * with their implementations and delegating other block types to the
- * generic {@link PublicBlockRenderer}.
+ * Renders a proposal block tree.
  *
- * All proposal blocks share state via {@link ProposalBlockContext} so
- * the option chooser, add-on selection, and price summary stay in sync.
+ * Chrome blocks (business name, notes, footer, dividers, images) render once in
+ * place via the generic {@link PublicBlockRenderer}. The package region (the
+ * `packageHeader/Details/Inclusions/Totals` blocks) plus the action block are
+ * consumed by the package stack: one package renders the region once; several
+ * packages render it once **per package**, stacked, each with its own Accept.
+ * A single Decline sits at the bottom of the stack.
+ *
+ * Each stacked package keeps its own add-on selection locally, so a couple can
+ * tick extras on the package they want before accepting it.
  *
  * @module components/proposal/proposal-blocks-renderer
  */
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import { pad } from '@/lib/branding/public-blocks/shared'
 import type { PublicBranding } from '@/lib/branding/public-branding'
-import { BlockOuter, PublicBlockRenderer } from '@/lib/branding/public-renderer'
-import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
+import { PublicBlockRenderer, BlockOuter } from '@/lib/branding/public-renderer'
+import {
+  defaultSelection,
+  type ProposalViewBranding,
+  type PublicProposalOption,
+} from '@/lib/payments/proposal-view'
 
-import { ProposalOptionChooser } from './option-chooser'
-import { ProposalSelection } from './option-selection'
 import { PackageDetails } from './package-details'
 import { PackageHeader } from './package-header'
 import { PackageInclusions } from './package-inclusions'
 import { PackageTotals } from './package-totals'
-import { ProposalBlockProvider, useProposalBlock } from './proposal-block-context'
+import { ProposalBlockProvider } from './proposal-block-context'
 
-/** The package-specific block types that make up the switchable package region. */
+/** The package-specific block types that make up the per-package region. */
 const PACKAGE_TYPES: ReadonlySet<Block['type']> = new Set([
   'packageHeader',
   'packageDetails',
@@ -35,9 +41,23 @@ const PACKAGE_TYPES: ReadonlySet<Block['type']> = new Set([
   'packageTotals',
 ])
 
-/**
- * Props for the proposal block renderer.
- */
+const EMPTY_DOC = {
+  title: '',
+  refNumber: '',
+  expiresAt: null,
+  items: [],
+  subtotal: 0,
+  taxRate: 0,
+}
+
+/** Resolved styling for the accept/decline CTA, from the action block. */
+export interface AcceptStyle {
+  color: string
+  radius: number
+  primaryLabel?: string
+  secondaryLabel?: string | null
+}
+
 export interface ProposalBlocksRendererProps {
   /** The proposal's block tree. */
   blocks: Block[]
@@ -45,230 +65,232 @@ export interface ProposalBlocksRendererProps {
   branding: PublicBranding
   /** Proposal view branding (resolved scalar values). */
   view: ProposalViewBranding
-  /** Available package options. */
+  /** Available package options — one renders single, several stack. */
   options: PublicProposalOption[]
-  /** ID of the currently chosen option. */
-  chosenId: string
-  /** Add-on selection state: itemId -> boolean. */
-  selection: Record<string, boolean>
   /** Proposal state: controls affordances. */
   state: 'active' | 'accepted' | 'declined' | 'expired'
   /** Expiry timestamp if known. */
   expiresAt: string | null
-  /** Called when the couple chooses a different package. */
-  onChoose?: (optionId: string) => void
-  /** Called when the couple toggles an add-on. */
-  onToggle?: (itemId: string, next: boolean) => void
-  /**
-   * Renders the accept/decline CTA. Called with the action block's
-   * styling. Omit to render a static preview.
-   */
-  renderAccept?: (ctx: {
-    style: { color: string; radius: number; primaryLabel?: string; secondaryLabel?: string | null }
-    view: ProposalViewBranding
-    publicBranding: PublicBranding
+  /** Accepted view: the recorded option, so only that package renders. */
+  acceptedOptionId?: string | null
+  /** Accepted view: the recorded add-on selection for that package. */
+  acceptedSelection?: Record<string, boolean>
+  /** Render the Accept CTA for one package with its live add-on selection. */
+  renderPackageAccept?: (ctx: {
+    option: PublicProposalOption
+    selection: Record<string, boolean>
+    style: AcceptStyle
   }) => ReactNode
-  /** Editor-only: commit an inline edit of a multi-package wording label. */
-  onEditLabel?: ProposalLabelEdit
+  /** Render the single Decline shown once at the bottom of the stack. */
+  renderDecline?: (ctx: { style: AcceptStyle }) => ReactNode
 }
 
 /**
- * Renders a proposal block tree, substituting proposal-specific blocks
- * with their implementations and delegating non-proposal blocks to the
- * generic renderer.
- *
- * Wraps all blocks in the proposal block context so package-specific
- * blocks can access the shared state.
+ * Render a proposal block tree with the package region stacked per package.
  */
 export function ProposalBlocksRenderer({
   blocks,
   branding,
   view,
   options,
-  chosenId,
-  selection,
   state,
   expiresAt,
-  onChoose,
-  onToggle,
-  renderAccept,
-  onEditLabel,
+  acceptedOptionId,
+  acceptedSelection,
+  renderPackageAccept,
+  renderDecline,
 }: ProposalBlocksRendererProps) {
   if (options.length === 0) return null
 
-  const contextValue = {
-    options,
-    chosenId,
-    selection,
-    onChoose,
-    onToggle,
-    branding,
-    view,
-    expiresAt,
-    state,
-    onEditLabel,
-  }
-
-  // Multi-package proposals replace the four single-package blocks with one
-  // compare-and-pick region; single-package proposals render the blocks as-is.
-  const isMulti = options.length > 1
   const visible = blocks.filter((block) => !block.hidden)
+  const packageBlocks = visible.filter((b) => PACKAGE_TYPES.has(b.type))
   const firstPackageIdx = visible.findIndex((b) => PACKAGE_TYPES.has(b.type))
 
-  // No wrapper spacing: horizontal document padding comes from BlockOuter and
-  // vertical rhythm from each block's `blockY`, exactly like the invoice tree,
-  // so the padding is uniform across all documents.
+  // The action block styles the Accept/Decline CTAs but is not rendered on its
+  // own — its style flows into every per-package Accept and the bottom Decline.
+  const actionBlock = visible.find((b) => b.type === 'action')
+  const style: AcceptStyle =
+    actionBlock && actionBlock.type === 'action'
+      ? {
+          color: actionBlock.buttonColor ?? view.brand,
+          radius: actionBlock.buttonRadius ?? view.cornerRadius,
+          primaryLabel: actionBlock.primary,
+          secondaryLabel: actionBlock.secondary,
+        }
+      : { color: view.brand, radius: view.cornerRadius }
+
+  // Accepted proposals pin to the recorded package; every other state stacks
+  // all the packages the MC offered.
+  const stacked =
+    state === 'accepted' && acceptedOptionId
+      ? options.filter((o) => o.id === acceptedOptionId)
+      : options
+
   return (
-    <ProposalBlockProvider value={contextValue}>
-      <div>
-        {visible.map((block, i) => {
-          // In multi mode the package region is rendered once, at the position
-          // of the first package block; the other package blocks are skipped.
-          if (isMulti && PACKAGE_TYPES.has(block.type)) {
-            return i === firstPackageIdx ? <MultiPackageRegion key="package-region" /> : null
-          }
-          return (
-            <BlockSwitch key={block.id} block={block} branding={branding} view={view} renderAccept={renderAccept} />
-          )
-        })}
-      </div>
-    </ProposalBlockProvider>
+    <div>
+      {visible.map((block, i) => {
+        // The package blocks + the action block are owned by the stack; render
+        // it once, at the first package block's position, and skip the rest.
+        if (PACKAGE_TYPES.has(block.type) || block.type === 'action') {
+          return i === firstPackageIdx ? (
+            <PackageStack
+              key="package-stack"
+              stacked={stacked}
+              packageBlocks={packageBlocks}
+              branding={branding}
+              view={view}
+              state={state}
+              expiresAt={expiresAt}
+              acceptedSelection={acceptedSelection}
+              style={style}
+              renderPackageAccept={renderPackageAccept}
+              renderDecline={renderDecline}
+            />
+          ) : null
+        }
+        // Chrome blocks render once, in place.
+        return (
+          <PublicBlockRenderer key={block.id} blocks={[block]} branding={branding} doc={EMPTY_DOC} hideAction />
+        )
+      })}
+    </div>
   )
 }
 
-/**
- * The multi-package region: the compare-and-pick experience that stands in for
- * the single-package blocks when a proposal offers more than one option. It
- * reuses the standalone chooser (comparison cards) + selection (the chosen
- * package's add-ons and live total), styled from the MC's branding, and takes
- * the single shared horizontal document padding like every other block.
- */
-function MultiPackageRegion() {
-  const { options, chosenId, selection, onChoose, onToggle, view, branding, state, onEditLabel } =
-    useProposalBlock()
-  const chosen = options.find((o) => o.id === chosenId) ?? options[0] ?? null
+interface PackageStackProps {
+  stacked: PublicProposalOption[]
+  packageBlocks: Block[]
+  branding: PublicBranding
+  view: ProposalViewBranding
+  state: 'active' | 'accepted' | 'declined' | 'expired'
+  expiresAt: string | null
+  acceptedSelection?: Record<string, boolean>
+  style: AcceptStyle
+  renderPackageAccept?: ProposalBlocksRendererProps['renderPackageAccept']
+  renderDecline?: ProposalBlocksRendererProps['renderDecline']
+}
+
+/** Stacks each package's region, then a single Decline while active. */
+function PackageStack({
+  stacked,
+  packageBlocks,
+  branding,
+  view,
+  state,
+  expiresAt,
+  acceptedSelection,
+  style,
+  renderPackageAccept,
+  renderDecline,
+}: PackageStackProps) {
   const p = pad(branding)
 
   return (
-    <div className={`${p.docX} ${p.blockY} space-y-8`}>
-      {state === 'active' && options.length > 1 ? (
-        <ProposalOptionChooser
-          options={options}
-          chosenId={chosen?.id ?? null}
-          onChoose={onChoose}
-          disabled={!onChoose}
-          branding={view}
-          publicBranding={branding}
-          onEditLabel={onEditLabel}
+    <div>
+      {stacked.map((option, idx) => (
+        <StackedPackage
+          key={option.id}
+          option={option}
+          packageBlocks={packageBlocks}
+          branding={branding}
+          view={view}
+          state={state}
+          expiresAt={expiresAt}
+          initialSelection={state === 'active' ? defaultSelection(option) : acceptedSelection ?? {}}
+          interactive={state === 'active'}
+          style={style}
+          renderPackageAccept={renderPackageAccept}
+          showDivider={idx > 0}
         />
-      ) : null}
-      {chosen ? (
-        <ProposalSelection
-          option={chosen}
-          selection={selection}
-          onToggle={onToggle}
-          locked={!onToggle}
-          heading={view.labels.selected.text}
-          headingLabel={view.labels.selected}
-          headingKey="selected"
-          branding={view}
-          publicBranding={branding}
-          onEditLabel={onEditLabel}
-        />
+      ))}
+      {state === 'active' && renderDecline ? (
+        <div className={`${p.docX} ${p.blockY}`}>{renderDecline({ style })}</div>
       ) : null}
     </div>
   )
 }
 
-interface BlockSwitchProps {
-  block: Block
+interface StackedPackageProps {
+  option: PublicProposalOption
+  packageBlocks: Block[]
   branding: PublicBranding
   view: ProposalViewBranding
-  renderAccept?: (ctx: {
-    style: { color: string; radius: number; primaryLabel?: string; secondaryLabel?: string | null }
-    view: ProposalViewBranding
-    publicBranding: PublicBranding
-  }) => ReactNode
+  state: 'active' | 'accepted' | 'declined' | 'expired'
+  expiresAt: string | null
+  initialSelection: Record<string, boolean>
+  interactive: boolean
+  style: AcceptStyle
+  renderPackageAccept?: ProposalBlocksRendererProps['renderPackageAccept']
+  showDivider: boolean
 }
 
-function BlockSwitch({ block, branding, view, renderAccept }: BlockSwitchProps) {
+/**
+ * One package in the stack: its four package blocks (rendered from the shared
+ * template but bound to this option) plus its own Accept. Holds this package's
+ * add-on selection locally so ticking extras here does not affect other
+ * stacked packages.
+ */
+function StackedPackage({
+  option,
+  packageBlocks,
+  branding,
+  view,
+  state,
+  expiresAt,
+  initialSelection,
+  interactive,
+  style,
+  renderPackageAccept,
+  showDivider,
+}: StackedPackageProps) {
+  const [selection, setSelection] = useState(initialSelection)
+  const p = pad(branding)
+
+  const contextValue = {
+    options: [option],
+    chosenId: option.id,
+    selection,
+    onChoose: undefined,
+    onToggle: interactive
+      ? (itemId: string, next: boolean) => setSelection((s) => ({ ...s, [itemId]: next }))
+      : undefined,
+    branding,
+    view,
+    expiresAt,
+    state,
+  }
+
+  return (
+    <ProposalBlockProvider value={contextValue}>
+      {showDivider ? (
+        <div className={`${p.docX} ${p.blockY}`}>
+          <div className="border-t" style={{ borderTopColor: branding.border_color }} />
+        </div>
+      ) : null}
+      {packageBlocks.map((block) => (
+        <BlockOuter key={block.id} block={block} branding={branding}>
+          <PackageBlockBody block={block} />
+        </BlockOuter>
+      ))}
+      {interactive && renderPackageAccept ? (
+        <div className={`${p.docX} ${p.blockY}`}>{renderPackageAccept({ option, selection, style })}</div>
+      ) : null}
+    </ProposalBlockProvider>
+  )
+}
+
+/** Dispatch a single package block to its component. */
+function PackageBlockBody({ block }: { block: Block }) {
   switch (block.type) {
-    // Package-specific blocks are routed through BlockOuter (the same wrapper
-    // PublicBlockRenderer applies to every other block) so per-block padding,
-    // background, border, and spacing overrides work identically here.
     case 'packageHeader':
-      return (
-        <BlockOuter block={block} branding={branding}>
-          <PackageHeader block={block} />
-        </BlockOuter>
-      )
+      return <PackageHeader block={block} />
     case 'packageDetails':
-      return (
-        <BlockOuter block={block} branding={branding}>
-          <PackageDetails block={block} />
-        </BlockOuter>
-      )
+      return <PackageDetails block={block} />
     case 'packageInclusions':
-      return (
-        <BlockOuter block={block} branding={branding}>
-          <PackageInclusions block={block} />
-        </BlockOuter>
-      )
+      return <PackageInclusions block={block} />
     case 'packageTotals':
-      return (
-        <BlockOuter block={block} branding={branding}>
-          <PackageTotals block={block} />
-        </BlockOuter>
-      )
-    case 'action':
-      if (renderAccept) {
-        return (
-          <>
-            {renderAccept({
-              style: {
-                color: block.buttonColor ?? view.brand,
-                radius: block.buttonRadius ?? view.cornerRadius,
-                primaryLabel: block.primary,
-                secondaryLabel: block.secondary,
-              },
-              view,
-              publicBranding: branding,
-            })}
-          </>
-        )
-      }
-      // Fallback: render static preview via PublicBlockRenderer
-      return (
-        <PublicBlockRenderer
-          blocks={[block]}
-          branding={branding}
-          doc={{
-            title: '',
-            refNumber: '',
-            expiresAt: null,
-            items: [],
-            subtotal: 0,
-            taxRate: 0,
-          }}
-          hideAction
-        />
-      )
+      return <PackageTotals block={block} />
     default:
-      // Delegate non-proposal blocks to PublicBlockRenderer
-      return (
-        <PublicBlockRenderer
-          blocks={[block]}
-          branding={branding}
-          doc={{
-            title: '',
-            refNumber: '',
-            expiresAt: null,
-            items: [],
-            subtotal: 0,
-            taxRate: 0,
-          }}
-          hideAction
-        />
-      )
+      return null
   }
 }
