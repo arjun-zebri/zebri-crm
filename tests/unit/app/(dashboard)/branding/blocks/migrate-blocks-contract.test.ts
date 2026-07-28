@@ -88,9 +88,12 @@ describe('migrateBlocks — contract surface', () => {
     expect(textBlocks).toHaveLength(0);
   });
 
-  it('preserves chrome blocks (headerBanner, businessName, title, footer)', () => {
+  it('preserves chrome blocks (banner→image, businessName, title, footer)', () => {
     const result = migrateBlocks(oldContractDefault, 'contract');
-    expect(result.find((b) => b.type === 'headerBanner')).toBeDefined();
+    // The legacy headerBanner is not dropped — it migrates to an `image`
+    // block (spec §6, defaults.ts). Chrome is otherwise preserved as-is.
+    expect(result.find((b) => b.type === 'headerBanner')).toBeUndefined();
+    expect(result.find((b) => b.type === 'image')).toBeDefined();
     expect(result.find((b) => b.type === 'businessName')).toBeDefined();
     expect(result.find((b) => b.type === 'title')).toBeDefined();
     expect(result.find((b) => b.type === 'footer')).toBeDefined();
@@ -175,15 +178,18 @@ describe('migrateBlocks — contract surface', () => {
   });
 
   it('leaves an already-migrated tree untouched (no false strips)', () => {
+    // A tree already in the new shape uses `image` for the banner (headerBanner
+    // is a legacy type that migrateBlocks rewrites), so this is the true
+    // already-migrated form — it must pass through unchanged.
     const alreadyMigrated: Block[] = [
-      { id: 'hb_1', type: 'headerBanner' },
+      { id: 'img_1', type: 'image' },
       { id: 'bn_1', type: 'businessName' },
       { id: 'cb_1', type: 'contractBody', locked: true },
       { id: 'ft_1', type: 'footer' },
     ];
     const result = migrateBlocks(alreadyMigrated, 'contract');
     expect(result.map((b) => b.type)).toEqual([
-      'headerBanner',
+      'image',
       'businessName',
       'contractBody',
       'footer',
