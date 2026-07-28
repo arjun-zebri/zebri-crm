@@ -193,22 +193,34 @@ function PackageStack({
 
   return (
     <div>
-      {stacked.map((option, idx) => (
-        <StackedPackage
-          key={option.id}
-          option={option}
-          packageBlocks={packageBlocks}
-          branding={branding}
-          view={view}
-          state={state}
-          expiresAt={expiresAt}
-          initialSelection={state === 'active' ? defaultSelection(option) : acceptedSelection ?? {}}
-          interactive={state === 'active'}
-          style={style}
-          renderPackageAccept={renderPackageAccept}
-          showDivider={idx > 0}
-        />
-      ))}
+      {stacked.map((option, idx) => {
+        const initialSelection =
+          state === 'active' ? defaultSelection(option) : acceptedSelection ?? {}
+        // Encode the pre-ticked add-on set in the key so that when the MC changes
+        // which add-ons start ticked (in the composer), the package re-seeds its
+        // local selection. A couple's own live toggles on the public page don't
+        // change this signature, so their picks persist across re-renders.
+        const tickKey = Object.keys(initialSelection)
+          .filter((k) => initialSelection[k])
+          .sort()
+          .join(',')
+        return (
+          <StackedPackage
+            key={`${option.id}:${tickKey}`}
+            option={option}
+            packageBlocks={packageBlocks}
+            branding={branding}
+            view={view}
+            state={state}
+            expiresAt={expiresAt}
+            initialSelection={initialSelection}
+            interactive={state === 'active'}
+            style={style}
+            renderPackageAccept={renderPackageAccept}
+            showDivider={idx > 0}
+          />
+        )
+      })}
       {state === 'active' ? (
         <div className={`${p.docX} ${p.blockY}`}>
           {renderDecline ? (
