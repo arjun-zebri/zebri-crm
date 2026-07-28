@@ -28,32 +28,48 @@ function toProfile(user: User): WelcomeProfile {
 }
 
 /**
+ * localStorage key holding the onboarding hint for one specific user.
+ *
+ * Scoped by user id because the cache outlives the session: `signOut()`
+ * clears Supabase's cookies but leaves localStorage untouched, so a
+ * single browser-global key let the first account's dismissal suppress
+ * the tour for every account that signed up afterwards on that machine.
+ */
+function cacheKeyFor(userId: string): string {
+  return `${WELCOME_CACHE_KEY}:${userId}`
+}
+
+/**
  * Decides whether the welcome wizard appears.
  *
  * The flag lives in `user_metadata` rather than a table: it rides in the
  * JWT, so the gate costs no query and no migration. It is not an
  * entitlement, so the app_metadata rule in authentication.md does not
  * apply. A user who cleared it would simply see the wizard again.
+ *
+ * The localStorage hint is a second, faster suppressor for the common
+ * already-onboarded case. It is read *after* `getUser` rather than
+ * before, since the key cannot be scoped to a user whose id is not
+ * known yet. Nothing flashes in the meantime: the modal only mounts
+ * once `user` is set, which happens after the same round-trip.
  */
 export function WelcomeGate() {
   const [user, setUser] = useState<User | null>(null)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    // The localStorage hint suppresses the modal synchronously for the
-    // common case (already onboarded), so it cannot flash during the
-    // getUser round-trip.
-    if (localStorage.getItem(WELCOME_CACHE_KEY) === 'true') return
     let cancelled = false
     void (async () => {
       const { data } = await createClient().auth.getUser()
       if (cancelled || !data.user) return
-      const done = Boolean((data.user.user_metadata ?? {}).welcome_onboarded_at)
+      const found = data.user
+      if (localStorage.getItem(cacheKeyFor(found.id)) === 'true') return
+      const done = Boolean((found.user_metadata ?? {}).welcome_onboarded_at)
       if (done) {
-        localStorage.setItem(WELCOME_CACHE_KEY, 'true')
+        localStorage.setItem(cacheKeyFor(found.id), 'true')
         return
       }
-      setUser(data.user)
+      setUser(found)
       setOpen(true)
     })()
     return () => { cancelled = true }
@@ -85,7 +101,7 @@ export function WelcomeGate() {
     setOpen(false)
     // Stamp locally first so the modal cannot reappear on the next route
     // change even if the write is slow or fails.
-    localStorage.setItem(WELCOME_CACHE_KEY, 'true')
+    localStorage.setItem(cacheKeyFor(user.id), 'true')
     void createClient().auth.updateUser({
       data: { ...(user.user_metadata ?? {}), welcome_onboarded_at: new Date().toISOString() },
     })

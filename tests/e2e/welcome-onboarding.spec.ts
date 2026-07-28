@@ -138,6 +138,21 @@ async function loginAs(page: Page, email: string) {
   await page.waitForURL(url => !url.pathname.startsWith('/login'), { timeout: 20000 })
 }
 
+/**
+ * Drop every cached onboarding hint in the browser.
+ *
+ * The gate stores one key per user id, so a fixed key name would miss
+ * any account but the one that happened to be hard-coded. Sweeping the
+ * prefix keeps the reset honest no matter which user the test created.
+ */
+async function clearWelcomeCache(page: Page) {
+  await page.evaluate(() => {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('zebri:welcome-onboarded'))
+      .forEach(k => localStorage.removeItem(k))
+  })
+}
+
 test.describe('Welcome onboarding', () => {
   // Guard: these tests depend on local Supabase for user creation and state reset
   test.skip(
@@ -150,7 +165,7 @@ test.describe('Welcome onboarding', () => {
     const email = freshEmail('walk', projectName)
     await ensureFreshUser(email)
     await loginAs(page, email)
-    await page.evaluate(() => localStorage.removeItem('zebri:welcome-onboarded'))
+    await clearWelcomeCache(page)
     await page.goto('/')
 
     const dialog = page.getByRole('dialog')
@@ -183,7 +198,7 @@ test.describe('Welcome onboarding', () => {
     const email = freshEmail('dismiss', projectName)
     await ensureFreshUser(email)
     await loginAs(page, email)
-    await page.evaluate(() => localStorage.removeItem('zebri:welcome-onboarded'))
+    await clearWelcomeCache(page)
     await page.goto('/')
 
     const dialog = page.getByRole('dialog')
