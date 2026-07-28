@@ -103,6 +103,7 @@ export function PackageInclusions({
             checked={selection[item.id] ?? false}
             onChange={(checked) => onToggle?.(item.id, checked)}
             ariaLabel={item.description}
+            color={branding.brand_color}
           />
           <span className="flex-1 min-w-0 break-words" style={itemCss}>
             {caseText(item.description, block.itemStyle, itemDefaults)}

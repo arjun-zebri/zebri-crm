@@ -159,6 +159,7 @@ export default function PublicProposalPage() {
         actionError={actionError}
         brand={style.color}
         radius={style.radius}
+        secondaryColor={style.secondaryColor}
         textColor={branding.textColor}
         mutedColor={branding.mutedColor}
         borderColor={branding.borderColor}
@@ -195,6 +196,7 @@ export default function PublicProposalPage() {
         actionError={actionError}
         brand={style.color}
         radius={style.radius}
+        secondaryColor={style.secondaryColor}
         textColor={branding.textColor}
         mutedColor={branding.mutedColor}
         borderColor={branding.borderColor}
@@ -221,6 +223,7 @@ export default function PublicProposalPage() {
         actionError={actionError}
         brand={style.color}
         radius={style.radius}
+        secondaryColor={style.secondaryColor}
         textColor={branding.textColor}
         mutedColor={branding.mutedColor}
         borderColor={branding.borderColor}

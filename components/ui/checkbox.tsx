@@ -38,6 +38,9 @@ export interface CheckboxProps {
   className?: string
   /** Accessible name for label-less checkboxes (e.g. per-row ticks). */
   ariaLabel?: string
+  /** Checked fill/border colour. Defaults to the app emerald. Branded surfaces
+   *  (e.g. the proposal add-ons) pass the MC's brand colour. */
+  color?: string
 }
 
 export function Checkbox({
@@ -47,7 +50,11 @@ export function Checkbox({
   disabled,
   className,
   ariaLabel,
+  color,
 }: CheckboxProps) {
+  // When a colour is supplied, the checked fill/border come from it inline;
+  // otherwise fall back to the default emerald class.
+  const branded = checked && !disabled && !!color
   const box = (
     <button
       type="button"
@@ -56,11 +63,14 @@ export function Checkbox({
       {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
       disabled={disabled}
       onClick={() => onChange(!checked)}
+      style={branded ? { backgroundColor: color, borderColor: color } : undefined}
       className={`shrink-0 w-4 h-4 rounded border transition flex items-center justify-center ${
         disabled
           ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
           : checked
-            ? 'bg-emerald-500 border-emerald-500 cursor-pointer'
+            ? branded
+              ? 'cursor-pointer'
+              : 'bg-emerald-500 border-emerald-500 cursor-pointer'
             : 'bg-surface border-gray-300 hover:border-gray-500 cursor-pointer'
       } ${label ? '' : (className ?? '')}`}
     >

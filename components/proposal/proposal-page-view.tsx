@@ -358,11 +358,11 @@ export function StaticAcceptCta({
   publicBranding: PublicBranding;
   onEditLabel?: ProposalLabelEdit | undefined;
   style?:
-    | { color?: string; radius?: number; primaryLabel?: string; secondaryLabel?: string | null }
+    | { color?: string; radius?: number; primaryLabel?: string; secondaryLabel?: string | null; secondaryColor?: string }
     | undefined;
-  /** Hide the decline link — for a per-package Accept in a stack. */
+  /** Hide the decline button — for a per-package Accept in a stack. */
   hideDecline?: boolean;
-  /** Render only the decline link — the single bottom Decline of a stack. */
+  /** Render only the decline button — the single bottom Decline of a stack. */
   hideAccept?: boolean;
 }) {
   const labels = resolveProposalLabels(branding.labels);
@@ -373,21 +373,27 @@ export function StaticAcceptCta({
   const acceptLabel = style?.primaryLabel || labels.accept.text;
   const declineLabel = style?.secondaryLabel || labels.decline.text;
 
-  const declineLink = (
+  // The Decline is a secondary button — same fill/radius the MC set on the
+  // action block's secondary in the branding editor, so preview + sent page match.
+  const declineColor = style?.secondaryColor ?? branding.secondaryColor;
+  const declineButton = (
     <EditableLabel
+      as="div"
       value={declineLabel}
       onCommit={onEditLabel && ((v) => onEditLabel('decline', v))}
       placeholder={PROPOSAL_LABEL_DEFAULTS.decline.text}
       cornerRadius={branding.cornerRadius}
-      className="underline underline-offset-2"
+      className="w-full py-3.5 text-center font-medium"
       style={{
-        fontSize: `${finePrintDefaults.fontSize}px`,
-        color: branding.mutedColor,
+        fontSize: `${bodyDefaults.fontSize}px`,
+        backgroundColor: declineColor,
+        color: getTextColor(declineColor),
+        borderRadius: buttonRadius,
         ...resolveTextStyle(labels.decline.style, {
           fontFamily: 'work_sans',
-          fontSize: finePrintDefaults.fontSize,
-          fontWeight: 400,
-          color: branding.mutedColor,
+          fontSize: bodyDefaults.fontSize,
+          fontWeight: 500,
+          color: getTextColor(declineColor),
           align: 'center',
           lineHeight: 1.4,
           letterSpacing: 0,
@@ -397,7 +403,7 @@ export function StaticAcceptCta({
   );
 
   // Decline-only: the single Decline shown once at the bottom of a stack.
-  if (hideAccept) return <div className="text-center">{declineLink}</div>;
+  if (hideAccept) return declineButton;
 
   return (
     <div>
@@ -429,7 +435,7 @@ export function StaticAcceptCta({
           This proposal is held for you until {formatDate(expiresAt)}
         </p>
       ) : null}
-      {!hideDecline ? <div className="mt-4 text-center">{declineLink}</div> : null}
+      {!hideDecline ? <div className="mt-3">{declineButton}</div> : null}
     </div>
   );
 }

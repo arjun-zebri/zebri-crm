@@ -59,6 +59,8 @@ export interface AcceptStyle {
   radius: number
   primaryLabel?: string
   secondaryLabel?: string | null
+  /** Fill colour for the Decline (secondary) button, from the action block. */
+  secondaryColor?: string
 }
 
 export interface ProposalBlocksRendererProps {
@@ -119,8 +121,9 @@ export function ProposalBlocksRenderer({
           radius: actionBlock.buttonRadius ?? view.cornerRadius,
           primaryLabel: actionBlock.primary,
           secondaryLabel: actionBlock.secondary,
+          secondaryColor: actionBlock.secondaryColor ?? view.secondaryColor,
         }
-      : { color: view.brand, radius: view.cornerRadius }
+      : { color: view.brand, radius: view.cornerRadius, secondaryColor: view.secondaryColor }
 
   // Accepted proposals pin to the recorded package; every other state stacks
   // all the packages the MC offered.

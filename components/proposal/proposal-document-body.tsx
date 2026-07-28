@@ -39,6 +39,8 @@ export interface ProposalActionStyle {
   radius: number
   primaryLabel?: string
   secondaryLabel?: string | null
+  /** Fill colour for the Decline (secondary) button. */
+  secondaryColor?: string
 }
 
 export interface ProposalDocumentBodyProps {
@@ -120,7 +122,7 @@ export function ProposalDocumentBody({
   // The accept slot only shows on an active proposal; the accepted /
   // expired / declined views pin to the recorded state with no CTA.
   const accept =
-    state === 'active' ? renderAccept?.({ style: { color: view.brand, radius: view.cornerRadius }, view, publicBranding: branding }) ?? null : null
+    state === 'active' ? renderAccept?.({ style: { color: view.brand, radius: view.cornerRadius, secondaryColor: view.secondaryColor }, view, publicBranding: branding }) ?? null : null
 
   // When package blocks are present, render the tree via ProposalBlocksRenderer,
   // which stacks a package per option, each with its own Accept.

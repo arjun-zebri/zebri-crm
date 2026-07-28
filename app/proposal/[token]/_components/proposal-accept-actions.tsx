@@ -44,10 +44,12 @@ export interface ProposalAcceptActionsProps {
   surfaceColor: string;
   /** The MC's editable accept/decline wording. */
   labels?: ProposalLabels;
-  /** Hide the decline link — used when Decline is rendered once for the stack. */
+  /** Hide the decline button — used when Decline is rendered once for the stack. */
   hideDecline?: boolean;
-  /** Render only the decline link (the shared bottom Decline for the stack). */
+  /** Render only the decline button (the shared bottom Decline for the stack). */
   hideAccept?: boolean;
+  /** Fill colour for the Decline (secondary) button; defaults to branding secondary. */
+  secondaryColor?: string;
 }
 
 export function ProposalAcceptActions({
@@ -68,6 +70,7 @@ export function ProposalAcceptActions({
   labels = PROPOSAL_LABEL_DEFAULTS,
   hideDecline = false,
   hideAccept = false,
+  secondaryColor,
 }: ProposalAcceptActionsProps) {
   const bodyDefaults = roleDefaults(branding, 'body');
   const finePrintDefaults = roleDefaults(branding, 'finePrint');
@@ -76,21 +79,30 @@ export function ProposalAcceptActions({
   const canAccept = !!chosenOptionTitle;
   const buttonRadius = Math.min(radius, 14);
 
+  // The Decline is a secondary button — the fill/radius the MC set on the action
+  // block's secondary in the branding editor, matching the preview + editor.
+  const declineColor = secondaryColor ?? branding.secondary_color;
+  const declineButton = (
+    <button
+      type="button"
+      onClick={() => void onDecline()}
+      disabled={actionLoading}
+      style={{
+        fontSize: `${bodyDefaults.fontSize}px`,
+        fontWeight: 500,
+        backgroundColor: declineColor,
+        color: getTextColor(declineColor),
+        borderRadius: buttonRadius,
+      }}
+      className="w-full py-3.5 hover:opacity-90 transition cursor-pointer disabled:opacity-50"
+    >
+      {labels.decline.text}
+    </button>
+  );
+
   // Decline-only mode: the single Decline shown once at the bottom of a stack.
   if (hideAccept) {
-    return (
-      <div className="text-center">
-        <button
-          type="button"
-          onClick={() => void onDecline()}
-          disabled={actionLoading}
-          style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: mutedColor, textDecoration: 'underline', textUnderlineOffset: '2px' }}
-          className="hover:opacity-80 transition cursor-pointer disabled:opacity-50"
-        >
-          {labels.decline.text}
-        </button>
-      </div>
-    );
+    return declineButton;
   }
 
   return (
@@ -172,19 +184,7 @@ export function ProposalAcceptActions({
               This proposal is held for you until {formatDate(expiresAt)}
             </p>
           ) : null}
-          {!hideDecline ? (
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => void onDecline()}
-                disabled={actionLoading}
-                style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: mutedColor, textDecoration: 'underline', textUnderlineOffset: '2px' }}
-                className="hover:opacity-80 transition cursor-pointer disabled:opacity-50"
-              >
-                {labels.decline.text}
-              </button>
-            </div>
-          ) : null}
+          {!hideDecline ? <div className="mt-3">{declineButton}</div> : null}
         </div>
       )}
     </div>
