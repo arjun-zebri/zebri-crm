@@ -19,6 +19,7 @@ function sampleInvoiceDoc(): PublicDocData {
   return {
     title: 'Invoice',
     refNumber: 'INV-2024-001',
+    coupleName: 'Sarah & James',
     expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ?? '',
     items: [
       { id: 'i1', description: 'Full Day MC Services', amount: 2500 },
@@ -38,6 +39,7 @@ function sampleContractDoc(): PublicDocData {
   return {
     title: 'Wedding Services Agreement',
     refNumber: 'CONTRACT-2024-001',
+    coupleName: 'Sarah & James',
     expiresAt: null,
     items: [],
     subtotal: 0,

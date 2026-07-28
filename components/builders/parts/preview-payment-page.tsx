@@ -61,7 +61,15 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
   const publicDoc: PublicDocData = {
     title: doc.title,
     refNumber: doc.documentNumber,
-    expiresAt: doc.expiresAt ?? null,
+    // Invoices carry a due date (`dueDate`); other surfaces an expiry
+    // (`expiresAt`). The title meta reads `expiresAt` + `expiresLabel`, so map the
+    // invoice due date across and label it "Due" (else the row silently vanishes).
+    // When a payment schedule exists, the deposit/final due dates show in the
+    // schedule block, so suppress the header due row to avoid a duplicate date —
+    // matching the live /invoice/[token] page.
+    expiresAt: doc.paymentSchedule ? null : (doc.expiresAt ?? doc.dueDate ?? null),
+    expiresLabel: doc.kind === 'invoice' ? 'Due' : 'Expires',
+    coupleName: doc.coupleName ?? undefined,
     items: doc.items.map((item) => ({
       id: item.id,
       description: item.description,
@@ -71,6 +79,7 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
     taxRate: doc.taxRate ?? 0,
     discountType: doc.discount?.type ?? null,
     discountValue: doc.discount?.value ?? null,
+    paymentSchedule: doc.paymentSchedule ?? null,
   };
 
   const padding = DENSITY_PAD[branding.density];
@@ -102,9 +111,13 @@ export function PreviewPaymentPage({ doc, surface }: PreviewPaymentPageProps) {
         fontWeight: branding.font_body_weight,
       }}
     >
+      {/* @container/doc establishes the container query context the public block
+          renderers use (e.g. payment-details switches label/value to a row at
+          @sm/doc). Without it those responsive variants never fire and values
+          stack under their labels. */}
       <div
         ref={blockStackRef}
-        className="mx-auto"
+        className="mx-auto @container/doc"
         style={{
           maxWidth: 640,
           fontFamily: headingFontFamily(branding),

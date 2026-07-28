@@ -42,41 +42,41 @@ function sampleProposal(): {
   notes: string
 } {
   return {
-    title: 'Wedding Photography & Videography',
+    title: 'Wedding MC & Hosting',
     coupleName: 'Emma & James',
     proposalNumber: 'PROP-2024-001',
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ?? '',
-    notes: 'Package includes pre-wedding shoot and day-of coverage. Two operators on the day. All photos colour-corrected and delivered within two weeks.',
+    notes: 'Includes a pre-wedding planning meeting, a detailed run sheet, and full hosting of your ceremony and reception. Vendor coordination on the day so everything runs to time.',
     options: [
       {
         id: 'opt-1',
         title: 'Standard Package',
-        description: '8 hours coverage with two photographers',
+        description: 'Ceremony hosting plus reception MC',
         subtotal: 1800,
         deposit_percent: 50,
         gst_inclusive: true,
         is_popular: true,
         position: 0,
         items: [
-          { id: 'i1', description: 'Engagement session (2 hours)', amount: 0, position: 0, is_addon: false, default_included: false },
-          { id: 'i2', description: '8 hours day-of coverage', amount: 1200, position: 1, is_addon: false, default_included: false },
-          { id: 'i3', description: 'Digital gallery (1000+ photos)', amount: 600, position: 2, is_addon: false, default_included: false },
+          { id: 'i1', description: 'Pre-wedding planning meeting', amount: 0, position: 0, is_addon: false, default_included: false },
+          { id: 'i2', description: 'Ceremony & reception hosting', amount: 1200, position: 1, is_addon: false, default_included: false },
+          { id: 'i3', description: 'Run sheet & vendor coordination', amount: 600, position: 2, is_addon: false, default_included: false },
         ],
       },
       {
         id: 'opt-2',
         title: 'Premium Package',
-        description: '10 hours coverage with two photographers and videographer',
+        description: 'Full-day hosting with rehearsal attendance',
         subtotal: 2500,
         deposit_percent: 50,
         gst_inclusive: true,
         is_popular: false,
         position: 1,
         items: [
-          { id: 'i4', description: 'Engagement session (2 hours)', amount: 0, position: 0, is_addon: false, default_included: false },
-          { id: 'i5', description: '10 hours day-of coverage (2 photographers)', amount: 1500, position: 1, is_addon: false, default_included: false },
-          { id: 'i6', description: 'Edited 4K video (same-day highlights)', amount: 500, position: 2, is_addon: false, default_included: false },
-          { id: 'i7', description: 'Digital gallery (1500+ photos)', amount: 500, position: 3, is_addon: false, default_included: false },
+          { id: 'i4', description: 'Pre-wedding planning meeting', amount: 0, position: 0, is_addon: false, default_included: false },
+          { id: 'i5', description: 'Full-day ceremony & reception hosting', amount: 1500, position: 1, is_addon: false, default_included: false },
+          { id: 'i6', description: 'Ceremony rehearsal attendance', amount: 500, position: 2, is_addon: false, default_included: false },
+          { id: 'i7', description: 'Run sheet & vendor coordination', amount: 500, position: 3, is_addon: false, default_included: false },
         ],
       },
     ],
@@ -87,17 +87,30 @@ function sampleProposal(): {
  * Sample invoice data for preview.
  */
 function sampleInvoiceDoc(): PublicDocData {
+  const depositDue = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ?? ''
+  const finalDue = new Date(Date.now() + 28 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ?? ''
   return {
     title: 'Invoice',
     refNumber: 'INV-2024-001',
-    expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ?? '',
+    expiresLabel: 'Due',
+    // Due dates live in the schedule below, so suppress the header row (matches
+    // the live invoice page).
+    expiresAt: null,
     items: [
-      { id: 'i1', description: 'Wedding Photography - Full Day Package', amount: 2000 },
-      { id: 'i2', description: 'Travel fee', amount: 150 },
-      { id: 'i3', description: 'Extra photographer (optional)', amount: 600 },
+      { id: 'i1', description: 'Full-day wedding MC & hosting', amount: 2000 },
+      { id: 'i2', description: 'Pre-wedding planning meeting', amount: 150 },
+      { id: 'i3', description: 'Ceremony rehearsal attendance', amount: 600 },
     ],
     subtotal: 2750,
     taxRate: 10,
+    // Sample deposit/final schedule so the paymentSchedule block previews with data.
+    paymentSchedule: {
+      depositPercent: 50,
+      depositAmount: 1512.5,
+      depositDueDate: depositDue,
+      finalAmount: 1512.5,
+      finalDueDate: finalDue,
+    },
   }
 }
 
@@ -110,7 +123,7 @@ function sampleContractDoc(): PublicDocData {
     refNumber: 'CONTRACT-2024-001',
     expiresAt: null,
     items: [
-      { id: 'i1', description: 'Event Photography Services', amount: 0 },
+      { id: 'i1', description: 'Wedding MC & hosting services', amount: 0 },
     ],
     subtotal: 0,
     taxRate: 0,
@@ -258,11 +271,14 @@ function InvoicePreview({
     <div style={pageStyle}>
       <div className="mx-auto max-w-2xl p-4">
         <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
+          {/* Render the action (CTA) block: on the live payment page a functional
+              button is injected separately (so it's hidden there to avoid a
+              duplicate), but this static preview has no such button, so we let the
+              block-tree CTA show — matching what the couple actually sees. */}
           <PublicBlockRenderer
             blocks={blocks}
             branding={branding}
             doc={doc}
-            hideAction
           />
         </div>
       </div>
@@ -288,11 +304,11 @@ function ContractPreview({
     <div style={pageStyle}>
       <div className="mx-auto max-w-2xl p-4">
         <div className="rounded-xl border shadow-sm overflow-hidden p-8 @container/doc" style={{ background: branding.surface_color }}>
+          {/* Show the CTA block (see InvoicePreview note). */}
           <PublicBlockRenderer
             blocks={blocks}
             branding={branding}
             doc={doc}
-            hideAction
           />
         </div>
       </div>

@@ -54,9 +54,43 @@ export function BlockFrame({
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [resizing, setResizing] = useState(false)
   const [editing, setEditing] = useState(false)
+  // Which styleable sub-element inside this block is targeted by the toolbar's
+  // style controls. Driven by clicking a `data-subtarget`-tagged element in the
+  // preview (direct manipulation) rather than a toolbar switcher. Null = the
+  // control's own default target.
+  const [activeSubTarget, setActiveSubTarget] = useState<string | null>(null)
   const blockRef = useRef<HTMLDivElement>(null)
 
   const selectionColor = state.brandColor || '#111827'
+
+  // Note: no reset-on-deselect effect (it would setState in an effect). The
+  // highlight below is guarded by `selected`, so it clears when the block is
+  // deselected; the remembered target is simply sticky per block, which reads
+  // fine — re-selecting a block returns you to the part you last styled.
+
+  // Outline the targeted sub-element so it's obvious what the toolbar's style
+  // controls affect. Uses `outline` (not `border`) so it never reflows the
+  // print-accurate preview, and re-runs every commit so it survives the
+  // preview re-rendering mid-edit. Also gives tagged parts a pointer cursor so
+  // they read as clickable.
+  useEffect(() => {
+    const el = blockRef.current
+    if (!el) return
+    const parts = el.querySelectorAll<HTMLElement>('[data-subtarget]')
+    parts.forEach((n) => {
+      n.style.cursor = 'pointer'
+      n.style.outline = ''
+      n.style.outlineOffset = ''
+    })
+    if (selected && activeSubTarget) {
+      // Outline every element carrying the active target — some blocks repeat a
+      // target (e.g. the three label cells in payment details).
+      el.querySelectorAll<HTMLElement>(`[data-subtarget="${activeSubTarget}"]`).forEach((active) => {
+        active.style.outline = `2px solid ${selectionColor}`
+        active.style.outlineOffset = '3px'
+      })
+    }
+  })
 
   // Listen for text focus event from InlineText; select this block if not already selected
   useEffect(() => {
@@ -154,6 +188,11 @@ export function BlockFrame({
       onClick={(e) => {
         e.stopPropagation()
         onSelect(e.shiftKey || e.metaKey || e.ctrlKey)
+        // Target the clicked sub-element (title, subtitle, a totals row, …) so
+        // the toolbar styles it; clicking anywhere else in the block clears back
+        // to the control's default target.
+        const part = (e.target as HTMLElement).closest('[data-subtarget]')
+        setActiveSubTarget(part && blockRef.current?.contains(part) ? part.getAttribute('data-subtarget') : null)
       }}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -274,6 +313,7 @@ export function BlockFrame({
               state={state}
               surface={surface}
               updateBlock={updateBlock}
+              activeSubTarget={activeSubTarget}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
               onResetBlock={onResetBlock}

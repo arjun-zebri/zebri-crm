@@ -125,6 +125,10 @@ interface BrandPanelProps {
   setInstagramUrl: (v: string) => void
   facebookUrl: string
   setFacebookUrl: (v: string) => void
+  twitterUrl: string
+  setTwitterUrl: (v: string) => void
+  pinterestUrl: string
+  setPinterestUrl: (v: string) => void
 
 }
 
@@ -189,6 +193,10 @@ export function BrandPanel(props: BrandPanelProps) {
             setInstagramUrl={props.setInstagramUrl}
             facebookUrl={props.facebookUrl}
             setFacebookUrl={props.setFacebookUrl}
+            twitterUrl={props.twitterUrl}
+            setTwitterUrl={props.setTwitterUrl}
+            pinterestUrl={props.pinterestUrl}
+            setPinterestUrl={props.setPinterestUrl}
             faviconUrl={props.faviconUrl}
             uploadFavicon={props.uploadFavicon}
             removeFavicon={props.removeFavicon}

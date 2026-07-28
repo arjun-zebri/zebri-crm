@@ -25,6 +25,11 @@ interface UserMetadata {
   website?: string
   instagram_url?: string
   facebook_url?: string
+  twitter_url?: string
+  pinterest_url?: string
+  bank_account_name?: string
+  bank_bsb?: string
+  bank_account_number?: string
   logo_url?: string
   favicon_url?: string
   header_image_url?: string
@@ -341,11 +346,12 @@ export default function BrandingPage() {
   }
   const enabledSrc = (branding?.enabled_surfaces ?? defaultEnabledSurfaces) as Record<string, boolean>
   const onboardedAt = branding?.onboarded_at ?? null
-  const showOnboarding = shouldShowOnboarding({
-    loading,
-    cacheSaysNeedsOnboarding: likelyNeedsOnboarding,
-    onboardedAt,
-  })
+  const showOnboarding =
+    shouldShowOnboarding({
+      loading,
+      cacheSaysNeedsOnboarding: likelyNeedsOnboarding,
+      onboardedAt,
+    })
 
   return (
     <>
@@ -394,6 +400,11 @@ export default function BrandingPage() {
             website: metadata?.website || '',
             instagramUrl: metadata?.instagram_url || '',
             facebookUrl: metadata?.facebook_url || '',
+            twitterUrl: metadata?.twitter_url || '',
+            pinterestUrl: metadata?.pinterest_url || '',
+            bankAccountName: metadata?.bank_account_name || '',
+            bankBsb: metadata?.bank_bsb || '',
+            bankAccountNumber: metadata?.bank_account_number || '',
             brandKits: kits,
             activeKitId: metadata?.active_kit_id ?? null,
             portalSections: {

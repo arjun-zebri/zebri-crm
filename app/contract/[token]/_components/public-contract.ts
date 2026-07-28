@@ -27,6 +27,8 @@ export interface PublicContract extends PublicBranding {
   mc_signature_name: string | null;
   email_sent_at: string | null;
   couple_name: string;
+  event_date: string | null;
+  venue: string | null;
   branding_blocks: Block[] | null;
 }
 

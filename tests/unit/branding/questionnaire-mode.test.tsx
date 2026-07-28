@@ -62,6 +62,11 @@ describe('RenderQuestionnaireBody', () => {
     website: '',
     instagramUrl: '',
     facebookUrl: '',
+    twitterUrl: '',
+    pinterestUrl: '',
+    bankAccountName: '',
+    bankBsb: '',
+    bankAccountNumber: '',
   }
 
   it('should call updateBlock with mode: "oneAtATime" when clicking "One at a time"', async () => {

@@ -31,6 +31,7 @@ import { useEffect, useState } from 'react';
 import { defaultBlocksFor } from '@/app/(dashboard)/branding/blocks/defaults';
 // eslint-disable-next-line no-restricted-imports
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
+import { repairBlocks } from '@/lib/branding/validate-blocks';
 import { createClient } from '@/lib/supabase/client';
 
 import { buildPublicBranding, type PublicBranding, type UserMetadata } from './public-branding';
@@ -85,7 +86,10 @@ export function useCurrentBranding(surface: BuilderSurface): UseCurrentBrandingR
           ? row?.branding_blocks?.proposal ?? row?.branding_blocks?.quote
           : row?.branding_blocks?.[surface];
       setBranding(buildPublicBranding(metadata));
-      setBlocks(surfaceBlocks ?? defaultBlocksFor(surface));
+      // Run the same migrate/repair the editor and public pages apply, so the
+      // preview matches (e.g. invoices drop the secondary action button). Loading
+      // raw blocks here previously let stale/legacy shapes render only in preview.
+      setBlocks(surfaceBlocks ? repairBlocks(surface, surfaceBlocks) : defaultBlocksFor(surface));
       setLoading(false);
     }
     void load();

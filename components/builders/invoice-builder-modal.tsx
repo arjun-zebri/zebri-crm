@@ -701,6 +701,15 @@ export function InvoiceBuilderModal({
         : null,
     notes: notes || null,
     dueDate: dueDate,
+    paymentSchedule: depositEnabled
+      ? {
+          depositPercent,
+          depositAmount,
+          depositDueDate: depositDueDate || null,
+          finalAmount: total - depositAmount,
+          finalDueDate: finalDueDate || null,
+        }
+      : null,
     shareUrl: shareUrl ?? `https://example.com/invoice/${invoice?.share_token ?? 'preview'}`,
     stripePaymentEnabled,
   };

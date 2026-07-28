@@ -1,6 +1,15 @@
+import type { JSONContent } from '@tiptap/core'
+
 import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
 
 export type TextAlign = 'left' | 'center' | 'right'
+
+/**
+ * A rich-text field value. New content is TipTap {@link JSONContent}; a plain
+ * string is tolerated for legacy/pre-migration data, which `migrateBlocks`
+ * upgrades and the public renderer escapes.
+ */
+export type RichTextValue = JSONContent | string
 
 export interface TextStyle {
   fontFamily?: HeadingFont | BodyFont
@@ -101,6 +110,13 @@ export interface BusinessNameBlock extends BaseBlock {
   layout?: BusinessNameLayout
   /** Pixel height of the logo / monogram. Defaults to 40, capped at 3.5x width. */
   logoHeightPx?: number
+  /**
+   * Block-local business name override. When set, this block renders this name
+   * instead of the global brand name (`branding.business_name`), and editing the
+   * name inline writes here — never the shared brand field. Undefined means the
+   * block inherits the global brand name (the default for an untouched block).
+   */
+  name?: string
 }
 
 export interface TaglineBlock extends BaseBlock {
@@ -111,12 +127,29 @@ export interface TaglineBlock extends BaseBlock {
 export interface TitleBlock extends BaseBlock {
   type: 'title'
   title: string
-  subtitle: string
+  /**
+   * @deprecated Free-text subtitle. Replaced by the auto couple-name line
+   * (`showCoupleName`), which pulls the couple's real name from document data
+   * so nothing editable can render placeholder text on a sent document. Kept
+   * on the type only so existing saved blocks migrate cleanly; not rendered.
+   */
+  subtitle?: string
+  /**
+   * Show the couple's name as the subtitle line. The value is sourced from the
+   * document (`PublicDocData.coupleName`), not editable in the block, and is
+   * toggled via the title toolbar's Include dropdown.
+   */
+  showCoupleName?: boolean
   showRef: boolean
   showExpires: boolean
   showAbn: boolean
   titleStyle?: TextStyle
+  /** Styling for the couple-name subtitle line. Targeted by clicking the couple
+   *  name in the preview; falls back to the global subtitle role. */
   subtitleStyle?: TextStyle
+  /** Styling for the meta row (reference / due-or-expiry date / ABN). Targeted by
+   *  clicking the meta row in the preview; falls back to the global roles. */
+  metaStyle?: TextStyle
 }
 
 export interface LineItemsBlock extends BaseBlock {
@@ -142,18 +175,25 @@ export interface TotalsBlock extends BaseBlock {
 
 export interface PaymentDetailsBlock extends BaseBlock {
   type: 'paymentDetails'
-  heading: string
+  /** Section heading (rich text). */
+  heading: RichTextValue
   accountName: string
   bsb: string
   accountNumber: string
+  /** Editable instruction shown under the heading (e.g. "Please transfer the
+   *  total to the account below"). Empty = not shown on the sent document. */
+  note?: string
   headingStyle?: TextStyle
   labelStyle?: TextStyle
   valueStyle?: TextStyle
+  /** Styling for the instruction note. */
+  noteStyle?: TextStyle
 }
 
 export interface TextBlock extends BaseBlock {
   type: 'text'
-  text: string
+  /** Rich-text content (TipTap JSON; legacy string tolerated during migration). */
+  text: RichTextValue
   textStyle?: TextStyle
 }
 
@@ -161,6 +201,10 @@ export interface ActionBlock extends BaseBlock {
   type: 'action'
   primary: string
   secondary: string | null
+  /** Editable instruction shown above the button(s) (e.g. "Pay securely online
+   *  with your card"). Empty = not shown on the sent document. */
+  note?: string
+  noteStyle?: TextStyle
   primaryStyle?: TextStyle
   secondaryStyle?: TextStyle
   buttonColor?: string
@@ -194,11 +238,15 @@ export interface DividerBlock extends BaseBlock {
 
 export interface FooterBlock extends BaseBlock {
   type: 'footer'
-  /** Optional final line of copy (e.g. "Thank you for choosing us"). */
-  closingNote?: string
+  /** Optional final line of copy (e.g. "Thank you for choosing us"). Rich text. */
+  closingNote?: RichTextValue
   noteStyle?: TextStyle
   contactStyle?: TextStyle
-  /** Show the business name in the contact line. Defaults to shown. */
+  /**
+   * @deprecated The business name was removed from the footer contact line (it
+   * duplicated the My-details block). Kept on the type so saved blocks migrate
+   * cleanly; no longer rendered or toggleable.
+   */
   showBusinessName?: boolean
   /** Show the phone number in the contact line. Defaults to shown. */
   showPhone?: boolean
@@ -216,6 +264,16 @@ export interface FooterBlock extends BaseBlock {
   showTwitter?: boolean
   /** Show Pinterest social icon when URL is present. */
   showPinterest?: boolean
+  /** Horizontal gap (px) between social icons. Defaults to 12. */
+  socialGap?: number
+  /** Colour of the social icons. Undefined = the muted body colour (the default). */
+  socialIconColor?: string
+  /** Background colour of the chip behind each social icon. Undefined = no chip
+   *  (plain icon, the default). */
+  socialIconBg?: string
+  /** Corner radius (px) of the social icon chip. Defaults to 8. Only applies when
+   *  socialIconBg is set. */
+  socialIconRadius?: number
 }
 
 /**
@@ -254,6 +312,19 @@ export interface CouplePortalBlock extends BaseBlock {
 
 export interface PaymentScheduleBlock extends BaseBlock {
   type: 'paymentSchedule'
+  /** Editable subheading shown above the schedule. Defaults to "Payment schedule". */
+  heading?: string
+  /** Editable label for the deposit line. Defaults to "Deposit". */
+  depositLabel?: string
+  /** Editable label for the final-balance line. Defaults to "Final balance". */
+  finalLabel?: string
+  /** Styling for the subheading (targeted by clicking it in the preview). */
+  headingStyle?: TextStyle
+  /** Styling for the two line labels (targeted by clicking a line in the preview). */
+  lineStyle?: TextStyle
+  /** Styling for the amount + due-date values (targeted by clicking either in the
+   *  preview). */
+  valueStyle?: TextStyle
 }
 
 /**
@@ -365,12 +436,12 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   headerBanner: 'Header banner',
   businessName: 'My details',
   tagline: 'Tagline',
-  title: 'Title & meta',
+  title: 'Invoice header',
   lineItems: 'Line items',
   totals: 'Totals',
-  paymentDetails: 'Payment details',
+  paymentDetails: 'Bank transfer',
   text: 'Text',
-  action: 'Action',
+  action: 'Pay with card',
   divider: 'Divider',
   footer: 'Footer',
   couplePortal: 'Couple portal',

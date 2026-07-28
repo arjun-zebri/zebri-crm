@@ -76,6 +76,11 @@ interface BrandingEditorProps {
     website: string
     instagramUrl: string
     facebookUrl: string
+    twitterUrl: string
+    pinterestUrl: string
+    bankAccountName: string
+    bankBsb: string
+    bankAccountNumber: string
     brandKits: BrandKit[]
     activeKitId: string | null
     portalSections: PortalSectionSettings
@@ -119,6 +124,11 @@ export interface EditorState {
   website: string
   instagramUrl: string
   facebookUrl: string
+  twitterUrl: string
+  pinterestUrl: string
+  bankAccountName: string
+  bankBsb: string
+  bankAccountNumber: string
   fontHeading: HeadingFont
   fontBody: BodyFont
   fontWeight: FontWeight
@@ -174,6 +184,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       website: initialData.website,
       instagramUrl: initialData.instagramUrl,
       facebookUrl: initialData.facebookUrl,
+      twitterUrl: initialData.twitterUrl,
+      pinterestUrl: initialData.pinterestUrl,
+      bankAccountName: initialData.bankAccountName,
+      bankBsb: initialData.bankBsb,
+      bankAccountNumber: initialData.bankAccountNumber,
       fontHeading: initialData.fontHeading,
       fontBody: initialData.fontBody,
       fontWeight: initialData.fontWeight,
@@ -286,6 +301,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         website: value.website,
         instagram_url: value.instagramUrl,
         facebook_url: value.facebookUrl,
+        twitter_url: value.twitterUrl,
+        pinterest_url: value.pinterestUrl,
         font_heading: value.fontHeading,
         font_body: value.fontBody,
         font_weight: value.fontWeight,
@@ -939,6 +956,11 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     website: state.website,
     instagramUrl: state.instagramUrl,
     facebookUrl: state.facebookUrl,
+    twitterUrl: state.twitterUrl,
+    pinterestUrl: state.pinterestUrl,
+    bankAccountName: state.bankAccountName,
+    bankBsb: state.bankBsb,
+    bankAccountNumber: state.bankAccountNumber,
     portalSections: state.portalSections,
     proposalLabels: state.proposalLabels,
   }), [state])
@@ -1086,6 +1108,10 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
           setInstagramUrl={(v) => setEditor({ instagramUrl: v }, false)}
           facebookUrl={state.facebookUrl}
           setFacebookUrl={(v) => setEditor({ facebookUrl: v }, false)}
+          twitterUrl={state.twitterUrl}
+          setTwitterUrl={(v) => setEditor({ twitterUrl: v }, false)}
+          pinterestUrl={state.pinterestUrl}
+          setPinterestUrl={(v) => setEditor({ pinterestUrl: v }, false)}
         />
 
         <CanvasFrame
@@ -1159,8 +1185,8 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 function clearStyleOverrides(block: Block): Block {
   switch (block.type) {
     case 'title': {
-      const { titleStyle: _t, subtitleStyle: _s, ...rest } = block
-      void _t; void _s
+      const { titleStyle: _t, subtitleStyle: _s, metaStyle: _m, ...rest } = block
+      void _t; void _s; void _m
       return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
     }
     case 'businessName': {
@@ -1180,13 +1206,18 @@ function clearStyleOverrides(block: Block): Block {
       return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
     }
     case 'paymentDetails': {
-      const { headingStyle: _h, labelStyle: _l, valueStyle: _v, ...rest } = block
-      void _h; void _l; void _v
+      const { headingStyle: _h, labelStyle: _l, valueStyle: _v, noteStyle: _n, ...rest } = block
+      void _h; void _l; void _v; void _n
       return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
     }
+    case 'paymentSchedule': {
+      const { headingStyle: _h, lineStyle: _l, valueStyle: _v, ...rest } = block
+      void _h; void _l; void _v
+      return { ...rest, borderWidth: 0, blockRadius: undefined } as unknown as Block
+    }
     case 'action': {
-      const { primaryStyle: _p, secondaryStyle: _s, buttonColor: _b, buttonRadius: _br, ...rest } = block
-      void _p; void _s; void _b; void _br
+      const { primaryStyle: _p, secondaryStyle: _s, buttonColor: _b, buttonRadius: _br, noteStyle: _n, ...rest } = block
+      void _p; void _s; void _b; void _br; void _n
       return { ...rest, borderWidth: 0, blockRadius: undefined } as Block
     }
     case 'lineItems': {

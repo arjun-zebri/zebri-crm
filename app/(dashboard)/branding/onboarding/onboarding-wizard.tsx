@@ -8,7 +8,7 @@ import type { SurfaceTab } from '@/types/branding-preview'
 
 import { StepBusiness } from './step-business'
 import { StepDocuments } from './step-documents'
-import { StepIndicator } from './step-indicator'
+import { StepEditorDemo } from './step-editor-demo'
 import { StepLook } from './step-look'
 import { WizardChrome } from './wizard-chrome'
 import { WizardPreview } from './wizard-preview'
@@ -49,7 +49,8 @@ export interface OnboardingWizardProps {
 /**
  * OnboardingWizard — First-run setup for branding.
  *
- * Three-step wizard: business identity, visual look, document surfaces.
+ * Four-step wizard: business identity, visual look, document surfaces, and
+ * an animated preview of how it all comes together in the editor.
  * Supports skip on every step (uses defaults).
  * Shows progress dots and step navigation.
  *
@@ -57,7 +58,7 @@ export interface OnboardingWizardProps {
  * @public
  */
 export function OnboardingWizard(props: OnboardingWizardProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   // Welcome screen shown before the steps; dismissed by Get started.
   const [intro, setIntro] = useState(true)
   const [businessName, setBusinessName] = useState(props.initial.businessName || '')
@@ -142,14 +143,8 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
         </div>
       )}
 
-      {/* Header: the step rail spans the full modal width. */}
-      {!intro && (
-        <div className="px-6 pt-6 pb-4 border-b border-border">
-          <StepIndicator currentStep={step} />
-        </div>
-      )}
-
-      {/* Middle: form column left, companion pane right. */}
+      {/* Middle: form column left, companion pane right. Step progress lives
+          in the footer (bottom left), matching the welcome tour. */}
       <div className="flex flex-1 min-h-0">
         <div className="flex-1 min-w-0 flex flex-col px-6 py-5">
         {intro && (
@@ -157,7 +152,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
           <div className="flex-1 flex flex-col justify-center gap-3 pb-10">
             <h2 className="text-xl font-semibold text-text">Welcome to your branding</h2>
             <p className="text-sm text-text-muted leading-relaxed">
-              Three quick steps: your business, your look, and which documents
+              A few quick steps: your business, your look, and which documents
               you send. This just gets you going, you can change everything
               later in the editor.
             </p>
@@ -181,7 +176,6 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
 
         {step === 2 && (
           <StepLook
-            logoUrl={logoUrl}
             headingColor={headingColor}
             setHeadingColor={setHeadingColor}
             subheadingColor={subheadingColor}
@@ -209,13 +203,16 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
             setEnabledSurfaces={setEnabledSurfaces}
           />
         )}
+
+        {step === 4 && <StepEditorDemo />}
         </div>
         )}
         </div>
 
-        {/* Right pane: live preview of the choices (hidden on narrow screens
-            and on the documents step, whose cards carry their own copy). */}
-        {(intro || step !== 3) && (
+        {/* Right pane: live preview of the choices (hidden on narrow screens,
+            on the documents step, whose cards carry their own copy, and on
+            the editor demo, which wants the full width for its scene). */}
+        {(intro || step === 1 || step === 2) && (
         <div className="hidden sm:block w-[380px] shrink-0 border-l border-border bg-surface-muted p-5">
           <WizardPreview
             businessName={businessName}
@@ -244,9 +241,9 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
           intro={intro}
           loading={loading}
           onStart={() => setIntro(false)}
-          onBack={() => setStep((s) => (s > 1 ? (s - 1 as 1 | 2 | 3) : s))}
+          onBack={() => setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3 | 4) : s))}
           onSkip={handleSkip}
-          onNext={() => setStep((s) => ((s + 1) as 1 | 2 | 3))}
+          onNext={() => setStep((s) => (s < 4 ? ((s + 1) as 1 | 2 | 3 | 4) : s))}
           onFinish={handleComplete}
           canFinish={enabledSurfaces.length > 0}
         />

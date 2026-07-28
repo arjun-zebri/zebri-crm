@@ -22,6 +22,8 @@ export interface ActionSlots {
   primary?: ReactNode
   /** Editor replaces static secondary button text with live InlineText. */
   secondary?: ReactNode
+  /** Editor replaces the instruction note above the buttons with live InlineText. */
+  note?: ReactNode
 }
 
 export function RenderAction({
@@ -88,10 +90,33 @@ export function RenderAction({
     end: 'justify-end',
   }[block.buttonJustify ?? 'center']
 
+  // Optional instruction above the buttons (e.g. "Pay securely online with your
+  // card"). Editable in the editor via the note slot; on the sent document it
+  // renders only when the MC wrote one.
+  const noteDefaults: TextStyleDefaults = {
+    fontFamily: branding.font_body,
+    fontSize: 14,
+    fontWeight: 400,
+    color: branding.text_color,
+    align: 'center',
+    lineHeight: 1.5,
+    letterSpacing: 0,
+  }
+  const noteCss = resolveTextStyle(block.noteStyle, noteDefaults)
+  const noteNode =
+    slots?.note !== undefined ? (
+      <p data-subtarget="note" className="mb-3" style={noteCss}>{slots.note}</p>
+    ) : block.note ? (
+      <p data-subtarget="note" className="mb-3" style={noteCss}>{block.note}</p>
+    ) : null
+
   return (
-    <div className={`${p.docX} ${p.blockY} flex flex-col gap-2 @sm/doc:flex-row @sm/doc:gap-3 ${justifyClass}`}>
+    <div className={`${p.docX} ${p.blockY}`}>
+      {noteNode}
+      <div className={`flex flex-col gap-2 @sm/doc:flex-row @sm/doc:gap-3 ${justifyClass}`}>
       <button
         type="button"
+        data-subtarget="primary"
         disabled={primaryDisabled || primaryLoading}
         onClick={onPrimary}
         className={`cursor-pointer hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed w-full ${
@@ -119,6 +144,7 @@ export function RenderAction({
       {secondaryText !== null && (
         <button
           type="button"
+          data-subtarget="secondary"
           disabled={primaryLoading}
           onClick={onSecondary}
           className={`border cursor-pointer hover:opacity-90 transition disabled:opacity-50 w-full ${
@@ -147,6 +173,7 @@ export function RenderAction({
           )}
         </button>
       )}
+      </div>
     </div>
   )
 }

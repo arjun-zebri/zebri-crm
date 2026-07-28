@@ -32,6 +32,7 @@ import { publicBrandingFromEditorState } from '../editor-branding'
 
 import { BlockFrame } from './block-frame'
 import { InlineText } from './inline-text'
+import { RichText } from './rich-text/rich-text'
 import {
   RenderAction,
   RenderBusinessName,
@@ -231,7 +232,6 @@ export function BlockRenderer({
             {blocks.map((block) => {
               if (
                 block.type === 'couplePortal' ||
-                block.type === 'paymentSchedule' ||
                 block.type === 'contractBody' ||
                 block.type === 'proposalBody' ||
                 block.type === 'vendorTimelineBody' ||
@@ -240,15 +240,13 @@ export function BlockRenderer({
                 const fixedLabel =
                   block.type === 'couplePortal'
                     ? 'Couple portal (fixed)'
-                    : block.type === 'paymentSchedule'
-                      ? 'Payment schedule (fixed)'
-                      : block.type === 'contractBody'
-                        ? 'Contract body (fixed)'
-                        : block.type === 'proposalBody'
-                          ? 'Proposal (fixed)'
-                          : block.type === 'vendorTimelineBody'
-                            ? 'Run sheet (fixed)'
-                            : 'Questionnaire (fixed)';
+                    : block.type === 'contractBody'
+                      ? 'Contract body (fixed)'
+                      : block.type === 'proposalBody'
+                        ? 'Proposal (fixed)'
+                        : block.type === 'vendorTimelineBody'
+                          ? 'Run sheet (fixed)'
+                          : 'Questionnaire (fixed)';
                 return (
                   <div key={block.id} aria-label={fixedLabel} className="group relative">
                     {renderBlock(block, state, updateBlock, {
@@ -420,7 +418,6 @@ function renderBlock(
           state={state}
           surface={surface}
           updateBlock={updateBlock}
-          setBusinessName={extras.setBusinessName}
           uploadLogo={extras.uploadLogo}
           removeLogo={extras.removeLogo}
         />
@@ -460,13 +457,12 @@ function renderBlock(
           branding={branding}
           slots={{
             text: (
-              <InlineText
+              <RichText
                 value={block.text}
                 onChange={(v) => updateBlock(block.id, { text: v })}
+                surface={surface ?? 'invoice'}
                 placeholder="Add a note to your client."
-                multiline
-                as="div"
-                className="whitespace-pre-wrap break-words"
+                className="break-words"
               />
             ),
           }}
@@ -485,13 +481,14 @@ function renderBlock(
         <PublicRenderFooter
           block={block}
           branding={branding}
+          variablePreview
           slots={{
             note: (
-              <InlineText
-                value={block.closingNote ?? ''}
+              <RichText
+                value={block.closingNote}
                 onChange={(v) => updateBlock(block.id, { closingNote: v })}
+                surface={surface ?? 'invoice'}
                 placeholder="Closing line"
-                as="span"
               />
             ),
           }}
@@ -501,7 +498,7 @@ function renderBlock(
     case 'couplePortal':
       return <RenderCouplePortal state={state} />
     case 'paymentSchedule':
-      return <RenderPaymentSchedule state={state} />
+      return <RenderPaymentSchedule block={block} state={state} updateBlock={updateBlock} />
     case 'contractBody':
       return <RenderContractBody state={state} />
     case 'vendorTimelineBody':

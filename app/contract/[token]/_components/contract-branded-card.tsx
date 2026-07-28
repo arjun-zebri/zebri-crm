@@ -72,6 +72,9 @@ export function ContractBrandedCard({
           doc={{
             title: contract.title,
             refNumber: contract.contract_number,
+            coupleName: contract.couple_name,
+            eventDate: contract.event_date,
+            venue: contract.venue,
             expiresAt: contract.expires_at,
             items: [],
             subtotal: 0,
@@ -100,6 +103,9 @@ export function ContractBrandedCard({
           doc={{
             title: contract.title,
             refNumber: contract.contract_number,
+            coupleName: contract.couple_name,
+            eventDate: contract.event_date,
+            venue: contract.venue,
             expiresAt: contract.expires_at,
             items: [],
             subtotal: 0,

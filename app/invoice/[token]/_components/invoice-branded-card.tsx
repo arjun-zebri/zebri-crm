@@ -74,11 +74,27 @@ export function InvoiceBrandedCard({
   const doc = {
     title: invoice.title,
     refNumber: invoice.invoice_number,
-    expiresAt: invoice.due_date,
+    coupleName: invoice.couple_name,
+    eventDate: invoice.event_date,
+    venue: invoice.venue,
+    // Invoices fall DUE, they don't expire. The shared title/meta block labels
+    // this row generically (correct for contracts/quotes); override to "Due".
+    expiresLabel: 'Due',
+    // When a payment schedule exists, the deposit + final due dates render in
+    // the schedule block below, so suppress the header due row to avoid showing
+    // the same date twice on one invoice. Simple invoices still show it here.
+    expiresAt: hasSchedule ? null : invoice.due_date,
     items: invoice.items,
     subtotal: invoice.subtotal,
     taxRate: invoice.tax_rate ?? 0,
   };
+
+  // AU tax invoices must carry an identifying number, so the reference is
+  // mandatory on this surface. Force the title block's ref row on regardless of
+  // any saved toggle (the editor also hides the Ref toggle for invoices).
+  const renderBlocks = preBlocks.map((b) =>
+    b.type === 'title' ? { ...b, showRef: true } : b,
+  );
 
   return (
     <div
@@ -86,7 +102,7 @@ export function InvoiceBrandedCard({
       style={{ borderRadius: radius, backgroundColor: branding.surface_color, borderColor }}
     >
       <PublicBlockRenderer
-        blocks={preBlocks}
+        blocks={renderBlocks}
         branding={invoice}
         doc={doc}
         hideAction

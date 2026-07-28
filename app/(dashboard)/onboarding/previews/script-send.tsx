@@ -23,8 +23,8 @@ import { usePreviewScript, useSettledBeat } from './use-preview-script'
  * Beats: 0 the couple profile is already open (Overview), 1 Emails tab
  * clicked, 2 Send email clicked — the template picker opens on the same
  * beat, 3 pointer reaches Enquiry reply, 4 it is picked and the compose
- * modal opens immediately, 5 pointer reaches Send, 6 Send pressed,
- * 7 the button flips to a green Sent and the animation rests there —
+ * modal opens immediately, 5 pointer reaches Send, 6 Send pressed and the
+ * button flips to a green Sent just after, 7 the animation rests there —
  * the composed email is the closing frame.
  */
 const BEATS = 8
@@ -66,6 +66,14 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
   const c = CURSOR[beat]
   const clicking = !!c?.click && view === beat
   const emailsTab = show(1)
+
+  // Send goes green shortly after the press instead of waiting out the rest
+  // of the beat — a full beat of a pressed-but-unchanged button reads as a
+  // hang. This clock starts when the click lands (view 6) and trails it by
+  // just enough to look like the send went through. `show(7)` still covers
+  // the resting and reduced-motion frames, where green is immediate.
+  const sendLanded = useSettledBeat(view >= 6 ? 7 : 0, 300)
+  const sent = show(7) || sendLanded >= 7
 
   const overlay = (
     <>
@@ -166,12 +174,12 @@ export function ScriptSend({ active, reducedMotion }: PreviewScriptProps) {
                 <span
                   data-cursor="send"
                   className={`inline-flex items-center justify-center gap-1 rounded-md px-3 py-1 text-xs border min-w-[92px] transition-colors duration-300 ${
-                    show(7)
+                    sent
                       ? 'bg-success border-transparent text-text-inverse'
                       : 'bg-brand-fg border-brand-fg text-text-inverse'
                   }`}
                 >
-                  {show(7) ? (
+                  {sent ? (
                     <>
                       <Check size={11} strokeWidth={2} /> Sent
                     </>

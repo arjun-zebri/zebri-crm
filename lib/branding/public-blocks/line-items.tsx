@@ -9,6 +9,7 @@ import type { PublicBranding } from '../public-surface'
 import { roleDefaults } from '../type-defaults'
 
 import { fmt, pad, type PublicDocData } from './shared'
+import { VarChip } from './var-chip'
 
 /**
  * Renders the line items block for a document (invoice, proposal).
@@ -21,11 +22,18 @@ export function RenderLineItems({
   block,
   branding,
   doc,
+  variablePreview = false,
   chrome,
 }: {
   block: LineItemsBlock
   branding: PublicBranding
   doc: PublicDocData
+  /**
+   * Editor-only: line items are filled from the real document, so the template
+   * shows placeholder rows of mint `{{ … }}` chips instead of concrete sample
+   * data. The sent document renders the couple's actual items.
+   */
+  variablePreview?: boolean
   chrome?: React.ReactNode
 }) {
   const p = pad(branding)
@@ -39,7 +47,7 @@ export function RenderLineItems({
   const fineCss = resolveTextStyle({}, fineDefaults)
   const rowBorder = rowStyle === 'lines' ? 'border-b last:border-b-0' : ''
 
-  if (!doc.items || doc.items.length === 0) {
+  if (!variablePreview && (!doc.items || doc.items.length === 0)) {
     const emptyDefaults = roleDefaults(branding, 'body')
     const emptyCss = resolveTextStyle({}, emptyDefaults)
     return (
@@ -51,30 +59,52 @@ export function RenderLineItems({
 
   return (
     <div className={`${p.docX} ${p.blockY} relative`}>
+      {/* data-subtarget tags the header + item rows for click-to-style in the editor; inert on the public surface. */}
       {showHeader && (
-        <div className="flex justify-between items-center pb-3 border-b gap-4" style={{ borderBottomColor: branding.border_color }}>
+        <div data-subtarget="header" className="flex justify-between items-center pb-3 border-b gap-4" style={{ borderBottomColor: branding.border_color }}>
           <span style={{ ...headerCss, flex: 1 }}>{caseText('Description', block.headerStyle, headerDefaults)}</span>
           <span style={{ ...headerCss, marginLeft: '1rem' }}>{caseText('Amount', block.headerStyle, headerDefaults)}</span>
         </div>
       )}
-      {doc.items.map((item) => (
-        <div key={item.id} className={`flex justify-between items-start gap-4 ${p.rowY} ${rowBorder}`} style={rowBorder ? { borderBottomColor: branding.border_color } : {}}>
-          <div className="flex-1 min-w-0 break-words">
-            <span style={itemCss}>{caseText(item.description, block.itemStyle, itemDefaults)}</span>
-            {item.quantity !== undefined && item.quantity !== 1 && item.unit_price !== undefined && (
-              <span className="block" style={fineCss}>
-                {item.quantity} × {fmt(item.unit_price)}
+      {variablePreview
+        ? // Placeholder rows: the real items are unknown until the document is
+          // sent, so show a few mint-chip rows that keep the header/item styling
+          // targets clickable without inventing sample data.
+          [0, 1, 2].map((i) => (
+            <div
+              key={`ph-${i}`}
+              data-subtarget="item"
+              className={`flex justify-between items-start gap-4 ${p.rowY} ${rowBorder}`}
+              style={rowBorder ? { borderBottomColor: branding.border_color } : {}}
+            >
+              <div className="flex-1 min-w-0">
+                <span style={itemCss}>
+                  <VarChip label="Item" hint="Line items are filled from the document when it's sent." />
+                </span>
+              </div>
+              <span className="shrink-0 tabular-nums" style={{ ...itemCss, textAlign: 'right' }}>
+                <VarChip label="Amount" hint="Each line item's amount, filled from the document." />
               </span>
-            )}
-          </div>
-          <span
-            className="shrink-0 tabular-nums"
-            style={{ ...itemCss, fontWeight: (itemCss.fontWeight as number ?? 400) + 100, textAlign: 'right' }}
-          >
-            {caseText(fmt(item.amount), block.itemStyle, itemDefaults)}
-          </span>
-        </div>
-      ))}
+            </div>
+          ))
+        : doc.items.map((item) => (
+            <div key={item.id} data-subtarget="item" className={`flex justify-between items-start gap-4 ${p.rowY} ${rowBorder}`} style={rowBorder ? { borderBottomColor: branding.border_color } : {}}>
+              <div className="flex-1 min-w-0 break-words">
+                <span style={itemCss}>{caseText(item.description, block.itemStyle, itemDefaults)}</span>
+                {item.quantity !== undefined && item.quantity !== 1 && item.unit_price !== undefined && (
+                  <span className="block" style={fineCss}>
+                    {item.quantity} × {fmt(item.unit_price)}
+                  </span>
+                )}
+              </div>
+              <span
+                className="shrink-0 tabular-nums"
+                style={{ ...itemCss, fontWeight: (itemCss.fontWeight as number ?? 400) + 100, textAlign: 'right' }}
+              >
+                {caseText(fmt(item.amount), block.itemStyle, itemDefaults)}
+              </span>
+            </div>
+          ))}
       {chrome}
     </div>
   )

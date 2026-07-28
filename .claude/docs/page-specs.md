@@ -108,7 +108,7 @@ The previews share a beat-clock animation system: a fake cursor measured onto re
 
 ```
 app/(dashboard)/onboarding/
-  welcome-gate.tsx                      — gate logic (localStorage hint + metadata read) + replay listener
+  welcome-gate.tsx                      — gate logic (localStorage hint + metadata read)
   welcome-modal.tsx                     — Modal shell (2xl, floatingClose, fixed-height wrapper)
   welcome-wizard.tsx                    — step state, single save point, footer chrome host
   wizard-chrome.tsx                     — progress bar + Skip/Back/Next/Finish
@@ -129,10 +129,6 @@ app/(dashboard)/onboarding/
     script-send.tsx                     — step 6 script
     script-automation.tsx               — step 7 script
 ```
-
-## Temporary Testing Control
-
-A "Welcome tour" button in the sidebar (above Branding) fires the `WELCOME_REPLAY_EVENT` ('zebri:welcome-replay'). The `WelcomeGate` component listens for this event and re-opens the wizard, bypassing the once-only gate. **To be removed before production release.**
 
 ## Rollout Note
 

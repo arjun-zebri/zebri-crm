@@ -8,34 +8,47 @@ import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
 import type { TextBlock } from '@/app/(dashboard)/branding/blocks/types'
 
 import type { PublicBranding } from '../public-surface'
+import { renderRichText, richContentToPlainText } from '../render-rich-text'
 import { roleDefaults } from '../type-defaults'
 
-import { Html } from './html'
 import { pad } from './shared'
 
 export interface TextSlots {
-  /** Editor replaces static sanitized HTML with live InlineText. */
+  /** Editor replaces static rendered content with the live RichText editor. */
   text?: ReactNode
 }
 
+/**
+ * Public renderer for a rich-text block. Renders the stored TipTap JSON to
+ * sanitized HTML with variable chips resolved to their real values
+ * (`renderRichText`). The editor passes a `slots.text` (the live RichText
+ * component) instead.
+ */
 export function RenderText({
   block,
   branding,
   slots,
+  variableValues,
   chrome,
 }: {
   block: TextBlock
   branding: PublicBranding
   slots?: TextSlots
+  /** Variable id -> display value map for resolving chips. */
+  variableValues?: Record<string, string>
   chrome?: ReactNode
 }) {
-  if (!block.text && !slots?.text) return null
+  // Empty when there is neither an editor slot nor any rendered text.
+  if (!slots?.text && !richContentToPlainText(block.text)) return null
   const p = pad(branding)
   const defaults = roleDefaults(branding, 'body')
   return (
-    <div className={`${p.docX} ${p.blockY}`} style={resolveTextStyle(block.textStyle, defaults)}>
+    <div className={`${p.docX} ${p.blockY} [&_p]:m-0`} style={resolveTextStyle(block.textStyle, defaults)}>
       {slots?.text ?? (
-        <Html value={block.text} as="div" className="whitespace-pre-wrap break-words" />
+        <div
+          className="break-words"
+          dangerouslySetInnerHTML={{ __html: renderRichText(block.text, variableValues ?? {}) }}
+        />
       )}
       {chrome}
     </div>

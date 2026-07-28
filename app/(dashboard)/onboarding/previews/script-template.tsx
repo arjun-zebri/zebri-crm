@@ -10,14 +10,21 @@ import { usePreviewScript, useSettledBeat } from './use-preview-script'
 
 /**
  * Beats: 0 blank, 1 sidebar click reveals the page, 2 New template clicked
- * — the editor modal opens on the same beat, at its final size — 3 name
- * typed, 4 subject typed, 5 body typed, 6 Attach file clicked, 7 the PDF
- * lands.
+ * (the editor modal opens on the same beat, at its final size), 3 name
+ * typed, 4 subject typed, 5 and 6 body typed, 7 Attach file clicked, 8 the
+ * PDF lands.
  *
  * Subject and body write themselves in with the rich typewriter; every box
  * has a fixed height, so the modal never changes size while it fills.
  */
-const BEATS = 8
+const BEATS = 9
+
+// One typing rate for all three fields, so name, subject and body fill at
+// the same visible speed instead of three. The ceiling is the body: 143
+// steps have to land before its window closes or the rest snaps in mid
+// sentence, which is why the body gets two beats rather than one. That
+// 3200ms window is what buys a rate slow enough to read.
+const TYPE_MS = 20
 
 // The pointer clicks the two real buttons and the attachment control; the
 // email itself writes in without the cursor jabbing around inside it.
@@ -26,6 +33,7 @@ const CURSOR: ({ target: string; click?: boolean } | null)[] = [
   { target: 'nav-templates', click: true },
   { target: 'new-template', click: true },
   { target: 'tpl-name' },
+  null,
   null,
   null,
   { target: 'tpl-attach', click: true },
@@ -88,7 +96,7 @@ export function ScriptTemplate({ active, reducedMotion }: PreviewScriptProps) {
             <p className="text-[10px] text-text-subtle font-medium mb-0.5">Template name</p>
             <div className="rounded-lg border border-border px-2 h-6 flex items-center text-[11px] font-medium text-text">
               {show(3) ? (
-                <Typewriter text="Enquiry reply" typing={view === 3} />
+                <Typewriter text="Enquiry reply" typing={view === 3} charMs={TYPE_MS} />
               ) : (
                 <span className="inline-block w-px h-3 bg-text-subtle animate-pulse" />
               )}
@@ -112,7 +120,7 @@ export function ScriptTemplate({ active, reducedMotion }: PreviewScriptProps) {
             <InsertVariableChip />
           </div>
           <div className="rounded-lg border border-border px-2 h-6 flex items-center text-[11px] text-text overflow-hidden">
-            {show(4) && <TypedRich segments={SUBJECT_SEGMENTS} typing={view === 4} charMs={40} />}
+            {show(4) && <TypedRich segments={SUBJECT_SEGMENTS} typing={view === 4} charMs={TYPE_MS} />}
           </div>
         </div>
 
@@ -122,7 +130,12 @@ export function ScriptTemplate({ active, reducedMotion }: PreviewScriptProps) {
             <EditorToolbar insertVariable />
             <div className="px-2 py-1.5 h-[112px] overflow-hidden text-[11px] text-text leading-relaxed">
               {show(5) && (
-                <TypedRich segments={BODY_SEGMENTS} typing={view === 5} charMs={10} className="whitespace-pre-line" />
+                <TypedRich
+                  segments={BODY_SEGMENTS}
+                  typing={view === 5 || view === 6}
+                  charMs={TYPE_MS}
+                  className="whitespace-pre-line"
+                />
               )}
             </div>
           </div>
@@ -139,7 +152,7 @@ export function ScriptTemplate({ active, reducedMotion }: PreviewScriptProps) {
             </span>
           </div>
           <div className="h-[18px] flex items-center">
-            {show(7) ? (
+            {show(8) ? (
               <div className="flex items-center gap-1.5 text-[11px] text-text animate-fade-in">
                 <FileText size={12} strokeWidth={1.5} className="text-text-subtle" />
                 Wedding-packages.pdf

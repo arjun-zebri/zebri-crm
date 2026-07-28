@@ -32,10 +32,9 @@ export function StepFounder() {
         </p>
         <p>
           Zebri exists to give MCs and Celebrants the tools their craft
-          deserves. One platform that carries the whole business, from the
-          first enquiry through proposals, contracts and payments to the
-          wedding day itself, so your energy goes to the couples rather than
-          the admin.
+          deserves. One platform for the whole business, from first enquiry
+          to wedding day, so your energy goes to the couples rather than the
+          admin.
         </p>
         <p>
           And this is just the start. Zebri is shaped by its community. The

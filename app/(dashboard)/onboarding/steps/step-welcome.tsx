@@ -10,10 +10,9 @@ import Image from 'next/image'
  * wedding, rendered black and white so the wall reads as one calm piece
  * behind the copy rather than five competing images.
  *
- * The photos lead: they fade in one by one first, and the message follows
- * once the wall is up — so "these photos are from my own wedding" arrives
- * with the photos already there to point at. On phones the grid hides and
- * a single photo leads above the copy instead, on a faster clock.
+ * The copy is present from the first frame (no animation) so there's
+ * something to read straight away; only the photos fade in, one by one. On
+ * phones the grid hides and a single photo sits above the copy instead.
  */
 export function StepWelcome() {
   return (
@@ -25,16 +24,16 @@ export function StepWelcome() {
           <Image src="/wedding/wed-3.jpeg" alt="" fill sizes="100vw" className="object-cover grayscale" />
         </div>
 
-        <h2 className="text-3xl font-semibold text-text animate-tile-in [animation-delay:500ms] sm:[animation-delay:3200ms]">
+        <h2 className="text-3xl font-semibold text-text">
           Welcome to Zebri
         </h2>
-        <p className="text-sm text-text-muted leading-relaxed animate-tile-in [animation-delay:900ms] sm:[animation-delay:3700ms]">
+        <p className="text-sm text-text-muted leading-relaxed">
           These photos are from my own wedding. The people who made that day
           so special are the reason Zebri exists.
         </p>
-        <p className="text-sm text-text-muted leading-relaxed animate-tile-in [animation-delay:1300ms] sm:[animation-delay:4200ms]">
+        <p className="text-sm text-text-muted leading-relaxed">
           We built Zebri so you can spend more time doing what you do best
-          and creating unforgettable moments for your couples.
+          and create unforgettable moments for your couples.
         </p>
       </div>
 
@@ -53,8 +52,7 @@ export function StepWelcome() {
 // Flush, full-cell tiles in two generous columns: portraits in the tall
 // cells, landscapes in the wide ones, and the two columns break at
 // different rows so no horizontal seam runs straight through. Each photo
-// fades in slowly (1.3s, no movement), spaced 600ms apart, and the text
-// follows once the wall is up.
+// fades in slowly (1.3s, no movement), spaced 600ms apart.
 const TILES = [
   { src: '/wedding/wed-1.jpeg', cls: 'col-start-1 row-start-1 row-span-2 [animation-delay:0ms]' },
   { src: '/wedding/wed-3.jpeg', cls: 'col-start-2 row-start-1 [animation-delay:600ms]' },

@@ -2,7 +2,7 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FileText, PackageOpen, Receipt, Plus } from 'lucide-react'
+import { PackageOpen, Receipt, Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal'
@@ -50,6 +50,20 @@ const STATUS_STYLES: Record<string, string> = {
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(amount)
+}
+
+/**
+ * Quiet placeholder for one column of the Payments tab when that column has
+ * no records but the other one does. Mirrors a real row's icon + padding so
+ * the two columns stay balanced instead of one side reading as dead space.
+ */
+function SectionEmpty({ icon: Icon, label }: { icon: typeof Receipt; label: string }) {
+  return (
+    <div className="flex items-center gap-3 px-2 py-2">
+      <Icon size={13} strokeWidth={1.5} className="text-gray-300 shrink-0" />
+      <p className="text-sm text-gray-400">{label}</p>
+    </div>
+  )
 }
 
 export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
@@ -204,47 +218,46 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
       ) : (
       <div className="flex flex-col flex-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-16 flex-1">
-          {/* Proposals + Quotes column */}
+          {/* Proposals column */}
           <div>
-            {(allProposals.length > 0 || isProposalsLoading) && (
-              <div className="mb-8">
-                <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-900">
-                  Proposals
-                </h3>
-                {isProposalsLoading ? (
-                  <div className="space-y-2">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {allProposals.map((proposal) => (
-                      <button
-                        key={proposal.id}
-                        onClick={() => setActiveProposalId(proposal.id)}
-                        className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
-                      >
-                        <PackageOpen size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900 truncate">{proposal.title}</p>
-                          <p className="text-xs text-gray-400">{proposal.proposal_number}</p>
-                        </div>
-                        <span
-                          className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full capitalize ${
-                            STATUS_STYLES[proposal.status] || STATUS_STYLES.draft
-                          }`}
-                        >
-                          {proposal.status}
-                        </span>
-                        <span className="shrink-0 text-sm text-gray-700 font-medium tabular-nums">
-                          {formatCurrency(proposal.subtotal)}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-900">
+              Proposals
+            </h3>
+
+            {isProposalsLoading ? (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+                ))}
               </div>
+            ) : allProposals.length > 0 ? (
+              <div className="space-y-1">
+                {allProposals.map((proposal) => (
+                  <button
+                    key={proposal.id}
+                    onClick={() => setActiveProposalId(proposal.id)}
+                    className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
+                  >
+                    <PackageOpen size={13} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900 truncate">{proposal.title}</p>
+                      <p className="text-xs text-gray-400">{proposal.proposal_number}</p>
+                    </div>
+                    <span
+                      className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-full capitalize ${
+                        STATUS_STYLES[proposal.status] || STATUS_STYLES.draft
+                      }`}
+                    >
+                      {proposal.status}
+                    </span>
+                    <span className="shrink-0 text-sm text-gray-700 font-medium tabular-nums">
+                      {formatCurrency(proposal.subtotal)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <SectionEmpty icon={PackageOpen} label="No proposals yet" />
             )}
           </div>
 
@@ -299,7 +312,7 @@ export function CouplePayments({ coupleId, coupleName }: CouplePaymentsProps) {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-gray-400 py-1">No invoices yet.</p>
+              <SectionEmpty icon={Receipt} label="No invoices yet" />
             )}
           </div>
         </div>

@@ -34,8 +34,9 @@ interface WizardPreviewProps {
   fontHeading: HeadingFont
   fontBody: BodyFont
   density: Density
-  /** Current wizard step. */
-  step: 1 | 2 | 3
+  /** Current wizard step. The pane is only rendered on steps 1-2 (and the
+   *  intro); 3-4 are in the type so the wizard can pass its step through. */
+  step: 1 | 2 | 3 | 4
   /** True on the welcome screen: the full document shows undimmed. */
   intro?: boolean
 }
@@ -90,11 +91,13 @@ const FOOTER_BLOCKS: Block[] = [
  * logo, footer contact); step 2 restyles everything; step 3 is about the
  * document list below, so the whole page recedes.
  */
-const GROUP_OPACITY: Record<1 | 2 | 3, { identity: string; body: string }> = {
+const GROUP_OPACITY: Record<1 | 2 | 3 | 4, { identity: string; body: string }> = {
   // Step 1 reaches this branch only on the intro screen (full document).
   1: { identity: 'opacity-100', body: 'opacity-100' },
   2: { identity: 'opacity-100', body: 'opacity-100' },
   3: { identity: 'opacity-100', body: 'opacity-100' },
+  // Step 4 never renders the pane; the entry keeps the record total.
+  4: { identity: 'opacity-100', body: 'opacity-100' },
 }
 
 

@@ -145,9 +145,19 @@ describe('migrateBlocks — contract surface', () => {
       },
     ];
     const result = migrateBlocks(customised, 'contract');
+    // Text blocks now store rich-text JSON, so read their plain text to assert
+    // which survived. The migration behaviour (strip old-default, keep custom)
+    // is unchanged; only the field representation moved from string to JSON.
+    const plain = (value: unknown): string => {
+      if (typeof value === 'string') return value;
+      if (!value || typeof value !== 'object') return '';
+      const node = value as { text?: string; content?: unknown[] };
+      if (typeof node.text === 'string') return node.text;
+      return Array.isArray(node.content) ? node.content.map(plain).join('') : '';
+    };
     const texts = result
-      .filter((b): b is Block & { type: 'text'; text: string } => b.type === 'text')
-      .map((b) => b.text);
+      .filter((b): b is Block & { type: 'text' } => b.type === 'text')
+      .map((b) => plain(b.text));
     expect(texts).toContain(
       'Thanks for choosing us - here\'s the agreement we discussed.',
     );

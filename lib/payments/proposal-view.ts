@@ -54,6 +54,8 @@ export interface PublicProposal extends PublicBranding {
   accepted_option_id: string | null;
   accepted_addon_selection: Record<string, boolean> | null;
   couple_name: string;
+  event_date: string | null;
+  venue: string | null;
   /** The MC's saved proposal branding block tree (chrome around the
    *  fixed core + the Accept action + Footer). Null/empty → the page
    *  renders the standalone fallback layout. */

@@ -25,6 +25,10 @@ interface BusinessSectionProps {
   setInstagramUrl: (v: string) => void
   facebookUrl: string
   setFacebookUrl: (v: string) => void
+  twitterUrl: string
+  setTwitterUrl: (v: string) => void
+  pinterestUrl: string
+  setPinterestUrl: (v: string) => void
   faviconUrl: string
   uploadFavicon: (file: File) => Promise<void>
   removeFavicon: () => void
@@ -39,6 +43,8 @@ export function BusinessSection(props: BusinessSectionProps) {
       <TextField label="Website" value={props.website} onChange={props.setWebsite} placeholder="www.yourbusiness.com" />
       <TextField label="Instagram URL" value={props.instagramUrl} onChange={props.setInstagramUrl} placeholder="instagram.com/youraccount" />
       <TextField label="Facebook URL" value={props.facebookUrl} onChange={props.setFacebookUrl} placeholder="facebook.com/youraccount" />
+      <TextField label="Twitter URL" value={props.twitterUrl} onChange={props.setTwitterUrl} placeholder="x.com/youraccount" />
+      <TextField label="Pinterest URL" value={props.pinterestUrl} onChange={props.setPinterestUrl} placeholder="pinterest.com/youraccount" />
       <TextField label="ABN" value={props.abn} onChange={props.setAbn} placeholder="00 000 000 000" />
       <IdentityTile label="Favicon" hint="Browser tab · 256KB" url={props.faviconUrl} onUpload={props.uploadFavicon} onRemove={props.removeFavicon} accept="image/png,image/x-icon,image/svg+xml,image/vnd.microsoft.icon" square />
     </div>

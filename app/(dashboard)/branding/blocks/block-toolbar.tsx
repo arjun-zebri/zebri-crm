@@ -33,6 +33,7 @@ import type {
   FooterBlock,
   ImageBlock,
   SpacerBlock,
+  PaymentScheduleBlock,
 } from './types'
 
 interface BlockToolbarProps {
@@ -40,12 +41,14 @@ interface BlockToolbarProps {
   state: BrandPreviewState
   surface: SurfaceTab
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  /** Sub-element the user clicked in the preview; drives which part the style controls target. */
+  activeSubTarget: string | null
   onDuplicate: () => void
   onDelete: () => void
   onResetBlock: () => void
 }
 
-export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, onDelete, onResetBlock }: BlockToolbarProps) {
+export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarget, onDuplicate, onDelete, onResetBlock }: BlockToolbarProps) {
   const canDelete = isDeletable(block, surface)
   const hasLiveData = isDataBound(block.type)
   const isBlockRequired = isRequired(block.type, surface)
@@ -80,7 +83,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
           colour sits beside the block's text/colour controls rather than down
           in the structural row. */}
       <div className="flex items-center gap-1 px-1 pt-1">
-        <BlockSpecificControls block={block} state={state} updateBlock={updateBlock} />
+        <BlockSpecificControls block={block} state={state} surface={surface} updateBlock={updateBlock} activeSubTarget={activeSubTarget} />
         {/* Text-content blocks render Background inside their controls, right
             next to the text colour (via bgSlot); the divider renders it beside
             its line colour. The rest show it here. */}
@@ -157,18 +160,20 @@ export function BlockToolbar({ block, state, surface, updateBlock, onDuplicate, 
 interface ControlsProps {
   block: Block
   state: BrandPreviewState
+  surface: SurfaceTab
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
   expanded?: boolean
 }
 
-function BlockSpecificControls({ block, state, updateBlock, expanded }: ControlsProps) {
+function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTarget, expanded }: ControlsProps) {
   switch (block.type) {
     case 'title':
-      return <TitleControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
+      return <TitleControls block={block} state={state} surface={surface} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'text':
       return <TextControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'action':
-      return <ActionControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
+      return <ActionControls block={block} state={state} surface={surface} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'headerBanner':
       return <HeaderBannerControls block={block} updateBlock={updateBlock} />
     case 'businessName':
@@ -176,15 +181,15 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
     case 'tagline':
       return <TaglineControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
     case 'totals':
-      return <TotalsControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
+      return <TotalsControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'paymentDetails':
-      return <PaymentDetailsControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
+      return <PaymentDetailsControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'lineItems':
-      return <LineItemsControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
+      return <LineItemsControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'divider':
       return <DividerControls block={block} updateBlock={updateBlock} />
     case 'footer':
-      return <FooterControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
+      return <FooterControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'image':
       return <ImageControls block={block} updateBlock={updateBlock} />
     case 'spacer':
@@ -192,7 +197,7 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
     case 'couplePortal':
       return null
     case 'paymentSchedule':
-      return null
+      return <PaymentScheduleControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'contractBody':
       return null
     case 'vendorTimelineBody':
@@ -204,93 +209,143 @@ function BlockSpecificControls({ block, state, updateBlock, expanded }: Controls
 
 // ── Title ─────────────────────────────────────────────────────────────────────
 
-type TitleTarget = 'title' | 'subtitle' | 'meta'
-
 function TitleControls({
   block,
   state,
+  surface,
   updateBlock,
+  activeSubTarget,
   expanded,
 }: {
   block: TitleBlock
   state: BrandPreviewState
+  surface: SurfaceTab
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
   expanded?: boolean
 }) {
-  const [target, setTarget] = useState<TitleTarget>('title')
-
-  if (target === 'meta') {
-    return (
-      <div className="flex items-center gap-2">
-        <TargetSwitcher
-          target={target}
-          setTarget={setTarget}
-          options={[
-            { value: 'title', label: 'Title' },
-            { value: 'subtitle', label: 'Subtitle' },
-            { value: 'meta', label: 'Meta' },
-          ]}
-        />
-        <Divider />
-        <Toggle
-          label="Ref"
-          active={block.showRef}
-          onChange={(v) => updateBlock<TitleBlock>(block.id, { showRef: v })}
-        />
-        <Toggle
-          label="Expires"
-          active={block.showExpires}
-          onChange={(v) => updateBlock<TitleBlock>(block.id, { showExpires: v })}
-        />
-        <Toggle
-          label="ABN"
-          active={block.showAbn}
-          onChange={(v) => updateBlock<TitleBlock>(block.id, { showAbn: v })}
-        />
-      </div>
+  // Which element the style controls target comes from what the user clicked in
+  // the preview (a `data-subtarget`-tagged element), defaulting to the title.
+  // The ActiveTargetLabel names it; there is no toolbar switcher. "Couple name"
+  // is the subtitle line; "Meta" is the reference / date / ABN row. Visibility of
+  // each still lives in the Include dropdown.
+  const target: 'title' | 'subtitle' | 'meta' =
+    activeSubTarget === 'subtitle' ? 'subtitle' : activeSubTarget === 'meta' ? 'meta' : 'title'
+  const style = target === 'title' ? block.titleStyle : target === 'subtitle' ? block.subtitleStyle : block.metaStyle
+  const defaults: TextStyleDefaults =
+    target === 'title'
+      ? {
+          fontFamily: state.fontHeading,
+          fontSize: 36,
+          fontWeight: state.fontWeight,
+          color: '#111827',
+          align: 'left',
+          lineHeight: 1.1,
+          letterSpacing: -0.01,
+        }
+      : target === 'subtitle'
+        ? {
+            fontFamily: state.fontBody,
+            fontSize: 14,
+            fontWeight: 400,
+            color: '#6B7280',
+            align: 'left',
+            lineHeight: 1.5,
+            letterSpacing: 0,
+          }
+        : {
+            fontFamily: state.fontBody,
+            fontSize: 13,
+            fontWeight: 400,
+            color: state.textColor || '#6B7280',
+            align: 'left',
+            lineHeight: 1.5,
+            letterSpacing: 0,
+          }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<TitleBlock>(
+      block.id,
+      target === 'title' ? { titleStyle: merged } : target === 'subtitle' ? { subtitleStyle: merged } : { metaStyle: merged },
     )
   }
 
-  const isTitle = target === 'title'
-  const style = isTitle ? block.titleStyle : block.subtitleStyle
-  const defaults: TextStyleDefaults = isTitle
-    ? {
-        fontFamily: state.fontHeading,
-        fontSize: 36,
-        fontWeight: state.fontWeight,
-        color: '#111827',
-        align: 'left',
-        lineHeight: 1.1,
-        letterSpacing: -0.01,
-      }
-    : {
-        fontFamily: state.fontBody,
-        fontSize: 14,
-        fontWeight: 400,
-        color: '#6B7280',
-        align: 'left',
-        lineHeight: 1.5,
-        letterSpacing: 0,
-      }
-  const onStyleChange = (patch: TextStyle) => {
-    const merged = { ...(style ?? {}), ...patch }
-    updateBlock<TitleBlock>(block.id, isTitle ? { titleStyle: merged } : { subtitleStyle: merged })
-  }
-
   return (
-    <div className="flex items-center gap-2">
-      <TargetSwitcher
-        target={target}
-        setTarget={setTarget}
-        options={[
-          { value: 'title', label: 'Title' },
-          { value: 'subtitle', label: 'Subtitle' },
-          { value: 'meta', label: 'Meta' },
-        ]}
-      />
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'title' ? 'Title' : target === 'subtitle' ? 'Couple name' : 'Meta'} />
       <Divider />
       <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />} />
+      <Divider />
+      <TitleIncludeDropdown block={block} surface={surface} updateBlock={updateBlock} />
     </div>
+  )
+}
+
+/**
+ * Single multi-select dropdown for everything the title block can show: the
+ * couple-name line plus the meta rows (reference, date, ABN). Mirrors the
+ * footer's Include dropdown so visibility lives in one place and the toolbar
+ * stays narrow. Reference is omitted on the invoice surface, where an
+ * identifying number is mandatory and forced on at render.
+ */
+function TitleIncludeDropdown({
+  block,
+  surface,
+  updateBlock,
+}: {
+  block: TitleBlock
+  surface: SurfaceTab
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const isInvoice = surface === 'invoice'
+  const rows: { label: string; active: boolean; set: (v: boolean) => void }[] = [
+    { label: 'Couple name', active: block.showCoupleName ?? false, set: (v) => updateBlock<TitleBlock>(block.id, { showCoupleName: v }) },
+    ...(isInvoice
+      ? []
+      : [{ label: 'Reference', active: block.showRef, set: (v: boolean) => updateBlock<TitleBlock>(block.id, { showRef: v }) }]),
+    { label: isInvoice ? 'Due date' : 'Expiry date', active: block.showExpires, set: (v: boolean) => updateBlock<TitleBlock>(block.id, { showExpires: v }) },
+    { label: 'ABN', active: block.showAbn, set: (v: boolean) => updateBlock<TitleBlock>(block.id, { showAbn: v }) },
+  ]
+  return (
+    <Popover.Root>
+      <Tooltip label="Show or hide title items">
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-md text-xs hover:bg-gray-100 cursor-pointer border border-gray-200 text-gray-700 shrink-0"
+          >
+            <span className="text-gray-900 font-medium">Include</span>
+            <ChevronDown size={10} strokeWidth={2} className="text-gray-400" />
+          </button>
+        </Popover.Trigger>
+      </Tooltip>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-2 z-[60] w-[200px] animate-modal-in"
+        >
+          {rows.map((row) => (
+            <button
+              key={row.label}
+              type="button"
+              onClick={() => row.set(!row.active)}
+              aria-pressed={row.active}
+              className="flex w-full items-center gap-2 px-2 py-1.5 rounded-md text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+            >
+              <span
+                className={`inline-flex items-center justify-center w-4 h-4 rounded border shrink-0 ${
+                  row.active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-300 text-transparent'
+                }`}
+              >
+                <Check size={11} strokeWidth={3} />
+              </span>
+              <span>{row.label}</span>
+            </button>
+          ))}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 
@@ -329,43 +384,62 @@ function TextControls({
 
 // ── Action ────────────────────────────────────────────────────────────────────
 
-type ActionTarget = 'block' | 'primary' | 'secondary'
+type ActionTarget = 'block' | 'primary' | 'secondary' | 'note'
 
 function ActionControls({
   block,
   state,
+  surface,
   updateBlock,
+  activeSubTarget,
   expanded,
 }: {
   block: ActionBlock
   state: BrandPreviewState
+  surface: SurfaceTab
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
   expanded?: boolean
 }) {
-  const [target, setTarget] = useState<ActionTarget>('block')
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTarget(prev => {
-      if (block.secondary === null && prev === 'secondary') {
-        return 'block'
-      }
-      return prev
-    })
-  }, [block.secondary])
-
-  const options = [
-    { value: 'block' as const, label: 'Block' },
-    { value: 'primary' as const, label: 'Primary' },
-    ...(block.secondary !== null ? [{ value: 'secondary' as const, label: 'Secondary' }] : []),
-  ]
+  // Target from the preview click: the primary/secondary buttons are clickable,
+  // and clicking elsewhere in the block falls back to 'block' (variant / size /
+  // radius). A stale 'secondary' after the secondary button is removed also
+  // falls back to 'block'.
+  const target: ActionTarget =
+    activeSubTarget === 'primary'
+      ? 'primary'
+      : activeSubTarget === 'secondary' && block.secondary !== null
+        ? 'secondary'
+        : activeSubTarget === 'note'
+          ? 'note'
+          : 'block'
 
   if (target === 'block') {
     return (
       <div className="flex items-center gap-2 w-full">
-        <TargetSwitcher target={target} setTarget={setTarget} options={options} />
+        <ActiveTargetLabel label="Block" />
         <Divider />
-        <ActionBlockControls block={block} state={state} updateBlock={updateBlock} />
+        <ActionBlockControls block={block} state={state} surface={surface} updateBlock={updateBlock} />
+      </div>
+    )
+  }
+
+  if (target === 'note') {
+    const noteStyle = block.noteStyle
+    const noteDefaults: TextStyleDefaults = {
+      ...roleDefaults(publicBrandingFromEditorState(state), 'body'),
+      align: 'center',
+    }
+    return (
+      <div className="flex items-center gap-2 w-full">
+        <ActiveTargetLabel label="Note" />
+        <Divider />
+        <TextStyleControls
+          style={noteStyle}
+          defaults={noteDefaults}
+          onChange={(patch) => updateBlock<ActionBlock>(block.id, { noteStyle: { ...(noteStyle ?? {}), ...patch } })}
+          {...(expanded !== undefined ? { expanded } : {})}
+        />
       </div>
     )
   }
@@ -382,7 +456,7 @@ function ActionControls({
 
   return (
     <div className="flex items-center gap-2 w-full">
-      <TargetSwitcher target={target} setTarget={setTarget} options={options} />
+      <ActiveTargetLabel label={isPrimary ? 'Primary' : 'Secondary'} />
       <Divider />
       {isPrimary && (
         <>
@@ -438,10 +512,12 @@ function ActionControls({
 function ActionBlockControls({
   block,
   state,
+  surface,
   updateBlock,
 }: {
   block: ActionBlock
   state: BrandPreviewState
+  surface: SurfaceTab
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
 }) {
   const radius = block.buttonRadius ?? state.cornerRadius
@@ -603,6 +679,10 @@ function ActionBlockControls({
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
+      {/* Invoices can only be paid, not declined, so they get no secondary
+          button — hide the toggle + its width controls on the invoice surface. */}
+      {surface !== 'invoice' && (
+        <>
       <Divider />
       <Toggle
         label="Secondary"
@@ -663,6 +743,8 @@ function ActionBlockControls({
               Match
             </button>
           </Tooltip>
+        </>
+      )}
         </>
       )}
     </>
@@ -794,14 +876,22 @@ function TotalsControls({
   block,
   state,
   updateBlock,
+  activeSubTarget,
   expanded,
 }: {
   block: TotalsBlock
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
   expanded?: boolean
 }) {
-  const [target, setTarget] = useState<TotalsTarget>('rows')
+  // Clicking a specific row (subtotal / tax / total) targets its text style;
+  // clicking elsewhere in the block falls back to 'rows' (the structural view:
+  // layout, show toggles, tax %).
+  const target: TotalsTarget =
+    activeSubTarget === 'subtotal' || activeSubTarget === 'tax' || activeSubTarget === 'total'
+      ? activeSubTarget
+      : 'rows'
 
   const rowDefaults: TextStyleDefaults = {
     fontFamily: state.fontBody,
@@ -825,16 +915,7 @@ function TotalsControls({
   if (target === 'rows') {
     return (
       <div className="flex items-center gap-2">
-        <TargetSwitcher
-          target={target}
-          setTarget={setTarget}
-          options={[
-            { value: 'rows', label: 'Rows' },
-            { value: 'subtotal', label: 'Subtotal' },
-            { value: 'tax', label: 'Tax' },
-            { value: 'total', label: 'Total' },
-          ]}
-        />
+        <ActiveTargetLabel label="Rows" />
         <Divider />
         <Tooltip label="Justify between columns">
           <button
@@ -879,16 +960,7 @@ function TotalsControls({
 
   return (
     <div className="flex items-center gap-2">
-      <TargetSwitcher
-        target={target}
-        setTarget={setTarget}
-        options={[
-          { value: 'rows', label: 'Rows' },
-          { value: 'subtotal', label: 'Subtotal' },
-          { value: 'tax', label: 'Tax' },
-          { value: 'total', label: 'Total' },
-        ]}
-      />
+      <ActiveTargetLabel label={target === 'subtotal' ? 'Subtotal' : target === 'tax' ? 'Tax' : 'Total'} />
       <Divider />
       <TextStyleControls
         style={style}
@@ -904,69 +976,73 @@ function TotalsControls({
 
 // ── Payment Details ───────────────────────────────────────────────────────────
 
-type PaymentDetailsTarget = 'heading' | 'label' | 'value'
+type PaymentDetailsTarget = 'heading' | 'label' | 'value' | 'note'
 
 function PaymentDetailsControls({
   block,
   state,
   updateBlock,
+  activeSubTarget,
   expanded,
 }: {
   block: PaymentDetailsBlock
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
   expanded?: boolean
 }) {
-  const [target, setTarget] = useState<PaymentDetailsTarget>('heading')
+  // Target from the preview click, defaulting to the heading.
+  const target: PaymentDetailsTarget =
+    activeSubTarget === 'label' ? 'label'
+      : activeSubTarget === 'value' ? 'value'
+        : activeSubTarget === 'note' ? 'note'
+          : 'heading'
 
-  const isHeading = target === 'heading'
-  const isLabel = target === 'label'
-  const isValue = target === 'value'
-
-  const style = isHeading ? block.headingStyle : isLabel ? block.labelStyle : block.valueStyle
-  const defaults: TextStyleDefaults = isHeading
-    ? {
-        fontFamily: state.fontHeading,
-        fontSize: 16,
-        fontWeight: state.fontWeight,
-        color: state.textColor || '#111827',
-        align: 'left',
-        lineHeight: 1.3,
-        letterSpacing: 0,
-      }
-    : isLabel
+  const style =
+    target === 'heading' ? block.headingStyle
+      : target === 'label' ? block.labelStyle
+        : target === 'value' ? block.valueStyle
+          : block.noteStyle
+  const defaults: TextStyleDefaults =
+    target === 'heading'
       ? {
-          fontFamily: state.fontBody,
-          fontSize: 12,
-          fontWeight: 500,
-          color: state.textColor || '#6B7280',
-          align: 'left',
-          lineHeight: 1.5,
-          letterSpacing: 0,
-        }
-      : {
-          fontFamily: state.fontBody,
-          fontSize: 14,
-          fontWeight: 500,
+          fontFamily: state.fontHeading,
+          fontSize: 16,
+          fontWeight: state.fontWeight,
           color: state.textColor || '#111827',
           align: 'left',
-          lineHeight: 1.5,
+          lineHeight: 1.3,
           letterSpacing: 0,
         }
+      : target === 'label'
+        ? {
+            fontFamily: state.fontBody,
+            fontSize: 12,
+            fontWeight: 500,
+            color: state.textColor || '#6B7280',
+            align: 'left',
+            lineHeight: 1.5,
+            letterSpacing: 0,
+          }
+        : {
+            fontFamily: state.fontBody,
+            fontSize: 14,
+            fontWeight: target === 'value' ? 500 : 400,
+            color: state.textColor || '#111827',
+            align: 'left',
+            lineHeight: 1.5,
+            letterSpacing: 0,
+          }
 
-  const styleKey = isHeading ? 'headingStyle' : isLabel ? 'labelStyle' : 'valueStyle'
+  const styleKey =
+    target === 'heading' ? 'headingStyle'
+      : target === 'label' ? 'labelStyle'
+        : target === 'value' ? 'valueStyle'
+          : 'noteStyle'
 
   return (
     <div className="flex items-center gap-2">
-      <TargetSwitcher
-        target={target}
-        setTarget={setTarget}
-        options={[
-          { value: 'heading', label: 'Heading' },
-          { value: 'label', label: 'Label' },
-          { value: 'value', label: 'Value' },
-        ]}
-      />
+      <ActiveTargetLabel label={target === 'heading' ? 'Heading' : target === 'label' ? 'Label' : target === 'value' ? 'Value' : 'Note'} />
       <Divider />
       <TextStyleControls
         style={style}
@@ -988,27 +1064,25 @@ function LineItemsControls({
   block,
   state,
   updateBlock,
+  activeSubTarget,
   expanded,
 }: {
   block: LineItemsBlock
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
   expanded?: boolean
 }) {
-  const [target, setTarget] = useState<LineItemsTarget>('rows')
+  // Clicking the header row or an item row targets its text style; clicking
+  // elsewhere falls back to 'rows' (the structural view: row style, header
+  // toggle, column layout).
+  const target: LineItemsTarget =
+    activeSubTarget === 'header' || activeSubTarget === 'item' ? activeSubTarget : 'rows'
 
   if (target === 'rows') {
     return (
       <div className="flex items-center gap-2">
-        <TargetSwitcher
-          target={target}
-          setTarget={setTarget}
-          options={[
-            { value: 'rows', label: 'Rows' },
-            { value: 'header', label: 'Header' },
-            { value: 'item', label: 'Items' },
-          ]}
-        />
+        <ActiveTargetLabel label="Rows" />
         <Divider />
         <PillToggle
           options={[
@@ -1067,15 +1141,7 @@ function LineItemsControls({
 
   return (
     <div className="flex items-center gap-2">
-      <TargetSwitcher
-        target={target}
-        setTarget={setTarget}
-        options={[
-          { value: 'rows', label: 'Rows' },
-          { value: 'header', label: 'Header' },
-          { value: 'item', label: 'Items' },
-        ]}
-      />
+      <ActiveTargetLabel label={isHeader ? 'Header' : 'Items'} />
       <Divider />
       <TextStyleControls
         style={style}
@@ -1404,25 +1470,29 @@ function DividerControls({
 
 // ── Footer ────────────────────────────────────────────────────────────────────
 
-type FooterTarget = 'note' | 'contact'
-
 function FooterControls({
   block,
   state,
   updateBlock,
+  activeSubTarget,
   expanded,
 }: {
   block: FooterBlock
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
   expanded?: boolean
 }) {
-  // The switcher only chooses which text element to style (note vs contact
-  // line). Visibility toggles live inline and are always shown, so nothing is
-  // hidden behind a separate view.
-  const [target, setTarget] = useState<FooterTarget>('note')
+  // Clicking the social icon row targets it: swap the text-style controls for the
+  // icon-row controls (spacing + optional background chip), keeping Include.
+  if (activeSubTarget === 'social') {
+    return <FooterSocialControls block={block} updateBlock={updateBlock} />
+  }
 
-  const isNote = target === 'note'
+  // Which text element the style controls target comes from the preview click
+  // (note vs contact line), defaulting to the note. Visibility toggles stay in
+  // the Include dropdown.
+  const isNote = activeSubTarget !== 'contact'
   const style = isNote ? block.noteStyle : block.contactStyle
   const defaults: TextStyleDefaults = isNote
     ? {
@@ -1450,14 +1520,8 @@ function FooterControls({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <PillToggle
-        options={[
-          { value: 'note', label: 'Note' },
-          { value: 'contact', label: 'Contact' },
-        ]}
-        value={target}
-        onChange={setTarget}
-      />
+      <ActiveTargetLabel label={isNote ? 'Note' : 'Contact'} />
+      <Divider />
       <TextStyleControls style={style} defaults={defaults} onChange={onStyleChange} {...(expanded !== undefined ? { expanded } : {})} bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />} />
       <Divider />
       <FooterIncludeDropdown block={block} updateBlock={updateBlock} />
@@ -1483,7 +1547,6 @@ function FooterIncludeDropdown({
     {
       title: 'Contact details',
       rows: [
-        { label: 'Business name', active: block.showBusinessName ?? true, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showBusinessName: v }) },
         { label: 'Phone', active: block.showPhone ?? true, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showPhone: v }) },
         { label: 'Website', active: block.showContactWebsite ?? true, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showContactWebsite: v }) },
         { label: 'ABN', active: block.showAbn ?? true, set: (v: boolean) => updateBlock<FooterBlock>(block.id, { showAbn: v }) },
@@ -1600,7 +1663,186 @@ function FooterGapControl({
   )
 }
 
+/**
+ * Controls shown when the footer's social icon row is selected: spacing between
+ * icons, plus an optional background chip (colour + rounding) behind each icon.
+ * Include stays available so networks can still be toggled on/off from here.
+ */
+function FooterSocialControls({
+  block,
+  updateBlock,
+}: {
+  block: FooterBlock
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+}) {
+  const bgOn = block.socialIconBg != null
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label="Social" />
+      <Divider />
+      <MiniSlider
+        icon={<Equal size={12} strokeWidth={1.75} />}
+        tooltip="Icon spacing"
+        label="Icon spacing"
+        value={block.socialGap ?? 12}
+        min={0}
+        max={40}
+        onChange={(v) => updateBlock<FooterBlock>(block.id, { socialGap: v })}
+      />
+      <Tooltip label="Icon colour">
+        <ColorPopover
+          value={block.socialIconColor || '#6B7280'}
+          onChange={(v) => updateBlock<FooterBlock>(block.id, { socialIconColor: v })}
+          swatches={COLOR_PALETTE}
+          trigger={
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200 text-xs text-gray-700"
+            >
+              <span className="w-4 h-4 rounded-full ring-1 ring-black/10" style={{ background: block.socialIconColor || '#6B7280' }} />
+              Icon
+            </button>
+          }
+        />
+      </Tooltip>
+      <Toggle
+        label="Icon bg"
+        active={bgOn}
+        onChange={(v) => updateBlock(block.id, { socialIconBg: v ? '#F3F4F6' : undefined } as Partial<FooterBlock>)}
+      />
+      {bgOn && (
+        <>
+          <Tooltip label="Icon background colour">
+            <ColorPopover
+              value={block.socialIconBg || '#F3F4F6'}
+              onChange={(v) => updateBlock<FooterBlock>(block.id, { socialIconBg: v })}
+              swatches={COLOR_PALETTE}
+              trigger={
+                <button
+                  type="button"
+                  className="inline-flex items-center h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+                >
+                  <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: block.socialIconBg || '#F3F4F6' }} />
+                </button>
+              }
+            />
+          </Tooltip>
+          <MiniSlider
+            icon={<Square size={12} strokeWidth={1.75} />}
+            tooltip="Icon rounding"
+            label="Icon rounding"
+            value={block.socialIconRadius ?? 8}
+            min={0}
+            max={20}
+            onChange={(v) => updateBlock<FooterBlock>(block.id, { socialIconRadius: v })}
+          />
+        </>
+      )}
+      <Divider />
+      <FooterIncludeDropdown block={block} updateBlock={updateBlock} />
+    </div>
+  )
+}
+
+/**
+ * Style controls for the payment-schedule block. Clicking the subheading targets
+ * it (headingStyle); clicking a line label targets the line labels (lineStyle).
+ * The amounts/dates are dynamic chips, so they are not styleable here.
+ */
+function PaymentScheduleControls({
+  block,
+  state,
+  updateBlock,
+  activeSubTarget,
+  expanded,
+}: {
+  block: PaymentScheduleBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
+  expanded?: boolean
+}) {
+  const target: 'heading' | 'line' | 'value' =
+    activeSubTarget === 'line' ? 'line' : activeSubTarget === 'value' ? 'value' : 'heading'
+  const style = target === 'line' ? block.lineStyle : target === 'value' ? block.valueStyle : block.headingStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(publicBrandingFromEditorState(state), target === 'heading' ? 'sectionHeading' : 'body'),
+    align: 'left',
+  }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<PaymentScheduleBlock>(
+      block.id,
+      target === 'line' ? { lineStyle: merged } : target === 'value' ? { valueStyle: merged } : { headingStyle: merged },
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'heading' ? 'Heading' : target === 'line' ? 'Line' : 'Amount & date'} />
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        onChange={onStyleChange}
+        {...(expanded !== undefined ? { expanded } : {})}
+        bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />}
+      />
+    </div>
+  )
+}
+
 // ── Primitives ────────────────────────────────────────────────────────────────
+
+/**
+ * Compact toolbar button that opens a single-slider popover. Used for the footer
+ * social icon spacing and rounding controls.
+ */
+function MiniSlider({
+  icon,
+  tooltip,
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  icon: React.ReactNode
+  tooltip: string
+  label: string
+  value: number
+  min: number
+  max: number
+  onChange: (v: number) => void
+}) {
+  return (
+    <Popover.Root>
+      <Tooltip label={tooltip}>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 px-2 h-8 rounded-md text-xs border cursor-pointer transition shrink-0 bg-white text-gray-600 border-gray-200 hover:text-gray-900"
+          >
+            {icon}
+            <span className="font-mono text-[10px] opacity-80">{value}px</span>
+          </button>
+        </Popover.Trigger>
+      </Tooltip>
+      <Popover.Portal>
+        <Popover.Content
+          align="center"
+          sideOffset={6}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl p-2.5 z-[60] w-[200px] animate-modal-in"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] text-gray-400 uppercase tracking-[0.08em]">{label}</span>
+            <span className="text-[10px] font-mono text-gray-700 tabular-nums">{value}px</span>
+          </div>
+          <Slider value={value} min={min} max={max} step={1} onChange={onChange} ariaLabel={label} />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  )
+}
 
 function Divider() {
   return <span className="w-px h-5 bg-gray-200 mx-0.5 shrink-0" />
@@ -1655,50 +1897,16 @@ function PillToggle<V extends string>({
   )
 }
 
-function TargetSwitcher<V extends string>({
-  target,
-  setTarget,
-  options,
-}: {
-  target: V
-  setTarget: (v: V) => void
-  options: { value: V; label: string }[]
-}) {
-  const current = options.find((o) => o.value === target) ?? options[0]
+/**
+ * Non-interactive label naming the sub-element the style controls are acting on
+ * (the one clicked in the preview). Replaces the per-block target switchers:
+ * selection happens by clicking in the preview, this just says what's selected.
+ */
+function ActiveTargetLabel({ label }: { label: string }) {
   return (
-    <Popover.Root>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-md text-xs hover:bg-gray-100 cursor-pointer border border-gray-200 text-gray-700"
-        >
-          <span className="text-gray-900 font-medium">{current.label}</span>
-          <ChevronDown size={10} strokeWidth={2} className="text-gray-400" />
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          align="start"
-          sideOffset={4}
-          className="bg-white border border-gray-200 rounded-lg shadow-xl p-1 z-[60] min-w-[160px]"
-        >
-          {options.map((opt) => (
-            <Popover.Close asChild key={opt.value}>
-              <button
-                type="button"
-                onClick={() => setTarget(opt.value)}
-                className={`flex items-center w-full px-2.5 py-1.5 rounded-md text-sm cursor-pointer ${
-                  target === opt.value ? 'bg-gray-100 text-gray-900' : 'hover:bg-gray-50 text-gray-700'
-                }`}
-              >
-                <span className="flex-1 text-left">{opt.label}</span>
-                {target === opt.value && <Check size={11} strokeWidth={2.5} className="text-gray-900" />}
-              </button>
-            </Popover.Close>
-          ))}
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+    <span className="inline-flex items-center h-8 px-2.5 rounded-md bg-gray-100 text-xs font-medium text-gray-900 whitespace-nowrap shrink-0">
+      {label}
+    </span>
   )
 }
 

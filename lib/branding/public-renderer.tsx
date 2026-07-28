@@ -13,6 +13,7 @@ import { RenderHeaderBanner } from './public-blocks/header-banner'
 import { RenderImage } from './public-blocks/image'
 import { RenderLineItems } from './public-blocks/line-items'
 import { RenderPaymentDetails } from './public-blocks/payment-details'
+import { RenderPaymentSchedule } from './public-blocks/payment-schedule'
 import {
   type PublicDocData,
   type ActionSlotProps,
@@ -22,6 +23,7 @@ import { RenderTagline } from './public-blocks/tagline'
 import { RenderText } from './public-blocks/text'
 import { RenderTitle } from './public-blocks/title'
 import { RenderTotals } from './public-blocks/totals'
+import { buildVariableValues } from './public-blocks/variable-values'
 import type { PublicBranding } from './public-surface'
 
 export type { PublicDocItem, PublicDocData } from './public-blocks/shared'
@@ -81,8 +83,8 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'title':        return <RenderTitle block={block} branding={branding} doc={doc} />
     case 'lineItems':    return <RenderLineItems block={block} branding={branding} doc={doc} />
     case 'totals':       return <RenderTotals block={block} branding={branding} doc={doc} />
-    case 'paymentDetails': return <RenderPaymentDetails block={block} branding={branding} />
-    case 'text':         return <RenderText block={block} branding={branding} />
+    case 'paymentDetails': return <RenderPaymentDetails block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
+    case 'text':         return <RenderText block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
     case 'action':       return (
       <RenderAction
         block={block}
@@ -97,10 +99,10 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
       />
     )
     case 'divider':      return <RenderDivider block={block} branding={branding} />
-    case 'footer':       return <RenderFooter block={block} branding={branding} />
+    case 'footer':       return <RenderFooter block={block} branding={branding} variableValues={buildVariableValues(branding, doc)} />
     case 'spacer':       return <RenderSpacer block={block} branding={branding} />
     case 'couplePortal': return null
-    case 'paymentSchedule': return null
+    case 'paymentSchedule': return <RenderPaymentSchedule block={block} branding={branding} doc={doc} />
     case 'contractBody': return null
     case 'proposalBody': return null
     case 'vendorTimelineBody': return null

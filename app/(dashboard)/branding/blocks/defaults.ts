@@ -1,4 +1,27 @@
+import type { JSONContent } from '@tiptap/core'
+
+import { htmlToPlainText } from '@/lib/branding/sanitize'
+
 import type { Block, BlockType } from './types'
+
+/** Build a single-paragraph rich-text doc from a plain string (empty = blank paragraph). */
+function textDoc(s: string): JSONContent {
+  return { type: 'doc', content: [{ type: 'paragraph', ...(s ? { content: [{ type: 'text', text: s }] } : {}) }] }
+}
+
+/**
+ * Plain text of a rich-text field value, whether a legacy HTML string or a
+ * TipTap JSON doc. Used by the contract migration heuristic, which matches the
+ * old template's headings against a text block's content.
+ */
+function richPlainText(value: unknown): string {
+  if (typeof value === 'string') return htmlToPlainText(value)
+  if (!value || typeof value !== 'object') return ''
+  const node = value as { text?: string; content?: unknown[] }
+  if (typeof node.text === 'string') return node.text
+  if (Array.isArray(node.content)) return node.content.map(richPlainText).join('')
+  return ''
+}
 
 let counter = 0
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`
@@ -16,7 +39,7 @@ export function blockTemplate(type: BlockType): Block {
         id: newId('tt'),
         type: 'title',
         title: 'Document title',
-        subtitle: 'Couple name · Date',
+        showCoupleName: true,
         showRef: true,
         showExpires: true,
         showAbn: false,
@@ -26,21 +49,21 @@ export function blockTemplate(type: BlockType): Block {
     case 'totals':
       return { id: newId('to'), type: 'totals', taxRate: 10, showSubtotal: true, colSpread: true }
     case 'text':
-      // Empty by default so the prompt shows as editor placeholder only and
-      // an untouched text block renders nothing on the public document.
-      return { id: newId('tx'), type: 'text', text: '' }
+      // Empty rich-text doc by default so the prompt shows as editor placeholder
+      // only and an untouched text block renders nothing on the public document.
+      return { id: newId('tx'), type: 'text', text: textDoc('') }
     case 'action':
-      return { id: newId('ac'), type: 'action', primary: 'Submit', secondary: null }
+      return { id: newId('ac'), type: 'action', primary: 'Pay now', secondary: null }
     case 'divider':
       return { id: newId('dv'), type: 'divider' }
     case 'footer':
-      return { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.' }
+      return { id: newId('ft'), type: 'footer', closingNote: textDoc('Thank you for choosing us.') }
     case 'paymentDetails':
-      return { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' }
+      return { id: newId('pd'), type: 'paymentDetails', heading: textDoc('Bank transfer'), accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' }
     case 'couplePortal':
       return { id: newId('cp'), type: 'couplePortal', locked: true }
     case 'paymentSchedule':
-      return { id: newId('ps'), type: 'paymentSchedule', locked: true }
+      return { id: newId('ps'), type: 'paymentSchedule' }
     case 'contractBody':
       return { id: newId('cb'), type: 'contractBody', locked: true }
     case 'proposalBody':
@@ -81,7 +104,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
       { id: newId('pi'), type: 'packageInclusions' },
       { id: newId('pt'), type: 'packageTotals' },
       { id: newId('ac'), type: 'action', primary: 'Accept & reserve our date', secondary: null },
-      { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.' },
+      { id: newId('ft'), type: 'footer', closingNote: textDoc('Thank you for thinking of us.') },
     ]
   }
   if (surface === 'invoice') {
@@ -90,16 +113,17 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
     // the MC did not ask for. Everything else stays one click away in the
     // block palette.
     //
-    // The title carries NO subtitle. It used to ship a sample one, and since
-    // the public renderer has no slot to override it, that placeholder was
-    // rendering verbatim on real invoices sent to real couples.
+    // The subtitle is the couple's real name (opt-in via the Include dropdown),
+    // sourced from document data — never free text — so nothing placeholder-ish
+    // can render on a real invoice. Off by default to preserve the historically
+    // subtitle-free invoice header until the MC turns it on.
     return [
       { id: newId('bn'), type: 'businessName' },
       {
         id: newId('tt'),
         type: 'title',
         title: 'Invoice',
-        subtitle: '',
+        showCoupleName: false,
         showRef: true,
         showExpires: true,
         showAbn: true,
@@ -111,10 +135,10 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
         taxRate: 10,
         showSubtotal: true,
       },
-      { id: newId('ps'), type: 'paymentSchedule', locked: true },
-      { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' },
-      { id: newId('ac'), type: 'action', primary: 'Pay with card', secondary: null },
-      { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.' },
+      { id: newId('ps'), type: 'paymentSchedule' },
+      { id: newId('pd'), type: 'paymentDetails', heading: textDoc('Bank transfer'), note: 'Please transfer the total to the account below.', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' },
+      { id: newId('ac'), type: 'action', primary: 'Pay now', secondary: null, note: 'Or pay securely online with your card.' },
+      { id: newId('ft'), type: 'footer', closingNote: textDoc('Thank you for choosing us.') },
     ]
   }
   if (surface === 'vendorTimeline') {
@@ -179,6 +203,14 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
   // so the "My details" block jumped to the top on refresh. Blocks now keep
   // whatever order the user arranged.)
 
+  // Invoices can be paid but not declined, so an action block on the invoice
+  // surface never carries a secondary button. Clear any legacy one.
+  if (surface === 'invoice') {
+    migrated = migrated.map((b) =>
+      b.type === 'action' && b.secondary !== null ? ({ ...b, secondary: null } as Block) : b,
+    )
+  }
+
   // Contract surface migration (Phase 3.1):
   // Old default for the contract surface inserted ~13 text blocks
   // carrying the full contract template (PARTIES / SERVICES /
@@ -198,7 +230,7 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
       // start-of-string against the old default's headings.
       const oldDefaultPattern = /^(PARTIES|EVENT DETAILS|\d+\.\s+[A-Z][A-Z &,]+|SIGNATURES)\b/
       const chrome = migrated.filter(
-        (b) => b.type !== 'text' || !oldDefaultPattern.test((b as { text?: string }).text ?? ''),
+        (b) => b.type !== 'text' || !oldDefaultPattern.test(richPlainText((b as { text?: unknown }).text).trimStart()),
       )
       // Drop the action + standalone dividers that bracketed the
       // old template's signature section — they're chrome but
@@ -256,12 +288,36 @@ function stripDashes(block: Block): Block {
     typeof s === 'string' ? s.replace(/—|–/g, '-') : s
   switch (block.type) {
     case 'text':
-      return { ...block, text: swap(block.text) ?? block.text }
+      // Upgrade a legacy plain-string body to a rich-text JSON doc so the editor
+      // (which expects TipTap JSON) can load it. HTML tags in the old string are
+      // reduced to plain text; new content already arrives as JSON and passes
+      // through untouched.
+      if (typeof block.text === 'string') {
+        return { ...block, text: textDoc(htmlToPlainText(block.text)) }
+      }
+      return block
+    case 'footer':
+      // Same upgrade for the footer's closing note (now rich text).
+      if (typeof block.closingNote === 'string') {
+        return { ...block, closingNote: textDoc(htmlToPlainText(block.closingNote)) }
+      }
+      return block
+    case 'paymentDetails':
+      // Same upgrade for the payment-details heading (now rich text).
+      if (typeof block.heading === 'string') {
+        return { ...block, heading: textDoc(htmlToPlainText(block.heading)) }
+      }
+      return block
     case 'title':
       return {
         ...block,
         title: swap(block.title) ?? block.title,
-        subtitle: swap(block.subtitle) ?? block.subtitle,
+        // The free-text subtitle is retired in favour of the auto couple-name
+        // line. Migrate intent: a block that had any subtitle text becomes a
+        // shown couple-name line; an empty/absent one stays off. Idempotent —
+        // once showCoupleName is set we leave it alone.
+        showCoupleName:
+          block.showCoupleName ?? (typeof block.subtitle === 'string' && block.subtitle.trim().length > 0),
       }
     case 'action':
       return {
@@ -269,6 +325,11 @@ function stripDashes(block: Block): Block {
         primary: swap(block.primary) ?? block.primary,
         secondary: block.secondary == null ? null : swap(block.secondary) ?? block.secondary,
       }
+    case 'paymentSchedule':
+      // The payment schedule is now a normal, selectable + deletable block (it
+      // used to ship `locked`, which hid its toolbar entirely). Unlock any saved
+      // instances so clicking it shows the toolbar and it can be removed/re-added.
+      return block.locked ? { ...block, locked: false } : block
     default:
       return block
   }

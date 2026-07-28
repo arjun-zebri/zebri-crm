@@ -1,6 +1,6 @@
 'use client'
 
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 // eslint-disable-next-line no-restricted-imports
 import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
@@ -11,18 +11,21 @@ import type { PublicBranding } from '../public-surface'
 import { roleDefaults } from '../type-defaults'
 
 import { fmt, pad, type PublicDocData } from './shared'
+import { VarChip } from './var-chip'
 
 interface RowProps {
   label: string
-  value: string
+  value: ReactNode
   css: CSSProperties
   /** @deprecated No longer affects layout. Kept for backward compatibility. */
   spread?: boolean
+  /** Editor click-to-style target tag; inert on the public surface. */
+  subtarget?: string
 }
 
-function Row({ label, value, css }: RowProps) {
+function Row({ label, value, css, subtarget }: RowProps) {
   return (
-    <div className="flex items-center">
+    <div className="flex items-center" data-subtarget={subtarget}>
       <span className="flex-1 min-w-0 break-words" style={css}>
         {label}
       </span>
@@ -37,11 +40,18 @@ export function RenderTotals({
   block,
   branding,
   doc,
+  variablePreview = false,
   chrome,
 }: {
   block: TotalsBlock
   branding: PublicBranding
   doc: PublicDocData
+  /**
+   * Editor-only: the amounts are computed from the couple's real line items, so
+   * the template shows mint `{{ … }}` chips instead of concrete sample figures.
+   * The sent document renders the real subtotal/GST/total.
+   */
+  variablePreview?: boolean
   chrome?: React.ReactNode
 }) {
   const p = pad(branding)
@@ -65,7 +75,7 @@ export function RenderTotals({
       <div className="space-y-1.5 pt-3 border-t" style={{ borderTopColor: branding.border_color }} data-testid="totals-rule">
         {block.showSubtotal && (
           <div className="pt-2">
-            <Row label={caseText('Subtotal', block.subtotalStyle, rowDefaults)} value={fmt(subtotal)} css={subtotalCss} spread={spread} />
+            <Row label={caseText('Subtotal', block.subtotalStyle, rowDefaults)} value={variablePreview ? <VarChip label="Amount" hint="The subtotal, summed from the line items." /> : fmt(subtotal)} css={subtotalCss} spread={spread} subtarget="subtotal" />
           </div>
         )}
         {discountAmt > 0 && (
@@ -77,10 +87,10 @@ export function RenderTotals({
           />
         )}
         {doc.taxRate > 0 && (block.showTax ?? true) && (
-          <Row label={caseText(`GST (${doc.taxRate}%)`, block.taxStyle, rowDefaults)} value={fmt(tax)} css={taxCss} spread={spread} />
+          <Row label={caseText(`GST (${doc.taxRate}%)`, block.taxStyle, rowDefaults)} value={variablePreview ? <VarChip label="Amount" hint="GST, calculated from the subtotal and tax rate." /> : fmt(tax)} css={taxCss} spread={spread} subtarget="tax" />
         )}
         <div className="pt-3 mt-2 border-t" style={{ borderTopColor: branding.border_color }}>
-          <Row label={caseText('Total', block.totalStyle, totalDefaults)} value={fmt(total)} css={totalCss} spread={spread} />
+          <Row label={caseText('Total', block.totalStyle, totalDefaults)} value={variablePreview ? <VarChip label="Amount" hint="The total, calculated from the subtotal, any discount, and GST." /> : fmt(total)} css={totalCss} spread={spread} subtarget="total" />
         </div>
       </div>
       {chrome}

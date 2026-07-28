@@ -43,7 +43,10 @@ export function RenderBusinessName({
 }) {
   const p = pad(branding)
   const logoUrl = branding.logo_url
-  const businessName = branding.business_name
+  // Prefer the block-local name override; fall back to the shared brand name when
+  // the block has never been edited (`name` undefined). This keeps the My-details
+  // block independent from the global brand name and from other business-name blocks.
+  const businessName = block.name ?? branding.business_name
   const fallbackInitial = businessName?.[0]?.toUpperCase() || 'Z'
   const layout = block.layout ?? 'row'
   const logoHeight = block.logoHeightPx ?? 40

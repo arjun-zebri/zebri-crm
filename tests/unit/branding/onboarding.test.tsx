@@ -6,7 +6,7 @@ import { OnboardingModalSkeleton } from '@/app/(dashboard)/branding/onboarding/o
 import { OnboardingWizard } from '@/app/(dashboard)/branding/onboarding/onboarding-wizard'
 
 describe('OnboardingWizard', () => {
-  it('walks through all three steps and completes with correct payload', async () => {
+  it('walks through all four steps and completes with correct payload', async () => {
     const user = userEvent.setup()
     const onComplete = vi.fn().mockResolvedValue(undefined)
 
@@ -102,6 +102,12 @@ describe('OnboardingWizard', () => {
     // Verify other surfaces remain checked
     expect(proposalCheckbox).toBeChecked()
     expect(contractCheckbox).toBeChecked()
+
+    // Click Next to go to Step 4 (editor demo)
+    await user.click(within(dialog).getByRole('button', { name: /next/i }))
+    await waitFor(() => {
+      expect(within(dialog).getByText('See how the editor works')).toBeInTheDocument()
+    })
 
     // Click Finish button
     const finishButton = within(dialog).getByRole('button', { name: /finish/i })

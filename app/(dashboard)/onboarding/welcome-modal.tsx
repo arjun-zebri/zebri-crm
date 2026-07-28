@@ -8,14 +8,6 @@ import { WelcomeWizard, type SaveResult } from './welcome-wizard'
 /** localStorage hint that stops the modal flashing on a slow hydrate. */
 export const WELCOME_CACHE_KEY = 'zebri:welcome-onboarded'
 
-/**
- * Window event that replays the wizard on demand, bypassing the gate.
- *
- * Temporary testing hook (2026-07-23) fired by the sidebar's "Welcome
- * tour" control. Remove both together before production release.
- */
-export const WELCOME_REPLAY_EVENT = 'zebri:welcome-replay'
-
 /** Props for {@link WelcomeModal}. */
 export interface WelcomeModalProps {
   isOpen: boolean

@@ -109,7 +109,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     expect(bodyEl).toHaveStyle({ fontSize: '22px' })
   })
 
-  it('renders subtitle at the global body size', () => {
+  it('renders the couple-name subtitle line at the global body size', () => {
     const branding = createMockBranding({
       heading_size: 50,
       body_size: 22,
@@ -119,17 +119,17 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
         id: '1',
         type: 'title',
         text: 'Test Title',
-        subtitle: 'Test Subtitle',
+        showCoupleName: true,
         hidden: false,
       } as never,
     ]
-    const doc = { title: 'Test Title', refNumber: 'TEST-001', expiresAt: '2026-12-31', items: [], subtotal: 0, taxRate: 0 }
+    const doc = { title: 'Test Title', refNumber: 'TEST-001', coupleName: 'Test Couple', expiresAt: '2026-12-31', items: [], subtotal: 0, taxRate: 0 }
 
     render(
       <PublicBlockRenderer blocks={blocks} branding={branding} doc={doc} />,
     )
 
-    const subtitleEl = screen.getByText('Test Subtitle').closest('p')
+    const subtitleEl = screen.getByText('Test Couple').closest('p')
     expect(subtitleEl).toHaveStyle({ fontSize: '22px' })
   })
 
@@ -236,7 +236,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
       <PublicBlockRenderer blocks={blocks} branding={branding} doc={doc} />,
     )
 
-    const contactLineEl = screen.getByText(/Test Business/).closest('p')
+    const contactLineEl = screen.getByText(/0400000000/).closest('p')
     expect(contactLineEl).toHaveStyle({ fontSize: '18px' })
   })
 
@@ -318,7 +318,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
         id: '1',
         type: 'title',
         text: 'Doc Title',
-        subtitle: 'Subtitle',
+        showCoupleName: true,
         showRef: true,
         hidden: false,
       } as never,
@@ -337,6 +337,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     const doc = {
       title: 'Doc Title',
       refNumber: 'TEST-001',
+      coupleName: 'Alex & Sam',
       expiresAt: '2026-12-31',
       items: [{ id: '1', description: 'Item 1', quantity: 1, unit_price: 100, displayPrice: '100.00', amount: 100 }],
       subtotal: 100,
@@ -348,7 +349,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     )
 
     const docTitleBaseline = screen.getByText('Doc Title')
-    const subtitleBaseline = screen.getByText('Subtitle').closest('p')
+    const subtitleBaseline = screen.getByText('Alex & Sam').closest('p')
     const sectionLabelBaseline = screen.getByText('Ref')
     const sectionHeadingBaseline = screen.getByText('Test Business').closest('p')
     const totalBaseline = screen.getByText('Total').nextElementSibling
@@ -365,7 +366,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     )
 
     const docTitleAlt = screen.getByText('Doc Title')
-    const subtitleAlt = screen.getByText('Subtitle').closest('p')
+    const subtitleAlt = screen.getByText('Alex & Sam').closest('p')
     const sectionLabelAlt = screen.getByText('Ref')
     const sectionHeadingAlt = screen.getByText('Test Business').closest('p')
     const totalAlt = screen.getByText('Total').nextElementSibling
@@ -397,7 +398,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
         id: '1',
         type: 'title',
         text: 'Doc Title',
-        subtitle: 'Subtitle',
+        showCoupleName: true,
         showRef: true,
         hidden: false,
       } as never,
@@ -422,6 +423,7 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     const doc = {
       title: 'Doc Title',
       refNumber: 'TEST-001',
+      coupleName: 'Alex & Sam',
       expiresAt: '2026-12-31',
       items: [{ id: '1', description: 'Item 1', quantity: 1, unit_price: 100, displayPrice: '100.00', amount: 100 }],
       subtotal: 100,
@@ -433,10 +435,10 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     )
 
     const docTitleBaseline = screen.getByText('Doc Title')
-    const subtitleBaseline = screen.getByText('Subtitle').closest('p')
+    const subtitleBaseline = screen.getByText('Alex & Sam').closest('p')
     const bodyBaseline = screen.getByText(/body copy/i).parentElement
     const descriptionHeaderBaseline = screen.getByText('Description')
-    const contactLineBaseline = screen.getByText(/Test Business/).closest('p')
+    const contactLineBaseline = screen.getByText(/0400000000/).closest('p')
 
     expect(docTitleBaseline).toHaveStyle({ fontSize: '50px' })
     expect(subtitleBaseline).toHaveStyle({ fontSize: '22px' })
@@ -451,10 +453,10 @@ describe('PublicBlockRenderer inherits global type scale and border colour', () 
     )
 
     const docTitleAlt = screen.getByText('Doc Title')
-    const subtitleAlt = screen.getByText('Subtitle').closest('p')
+    const subtitleAlt = screen.getByText('Alex & Sam').closest('p')
     const bodyAlt = screen.getByText(/body copy/i).parentElement
     const descriptionHeaderAlt = screen.getByText('Description')
-    const contactLineAlt = screen.getByText(/Test Business/).closest('p')
+    const contactLineAlt = screen.getByText(/0400000000/).closest('p')
 
     expect(docTitleAlt).toHaveStyle({ fontSize: '50px' })
     expect(subtitleAlt).toHaveStyle({ fontSize: '30px' })

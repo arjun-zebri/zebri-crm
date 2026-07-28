@@ -26,6 +26,13 @@ interface InlineAssetProps {
    * keeps the whole-area click-to-upload behaviour for logo / header assets.
    */
   selectableWhenEmpty?: boolean
+  /**
+   * Compact overlay: small icon-only Replace / Remove buttons pinned to the
+   * top-right corner instead of the full-width labelled pill. Used for small
+   * assets like the My-details logo, where the labelled overlay dominates the
+   * mark. Defaults to false.
+   */
+  compact?: boolean
   className?: string
   style?: React.CSSProperties
 }
@@ -41,6 +48,7 @@ export function InlineAsset({
   label = 'Upload image',
   overlayPosition = 'top-right',
   selectableWhenEmpty = false,
+  compact = false,
   className = '',
   style,
 }: InlineAssetProps) {
@@ -145,7 +153,38 @@ export function InlineAsset({
         </div>
       )}
 
-      {populated && !busy && (
+      {populated && !busy && compact && (
+        // Compact: icon-only controls float just above the mark (never over it),
+        // so a small logo is never obscured. Icon-only, so the tooltips are
+        // informative, not redundant.
+        <div
+          className="absolute z-10 bottom-full left-0 mb-1 flex items-center gap-1 opacity-0 group-hover/asset:opacity-100 transition"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={openPicker}
+            className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gray-900/90 text-white hover:bg-gray-900 cursor-pointer transition shadow-sm"
+            title="Replace"
+            aria-label="Replace"
+          >
+            <RefreshCw size={11} strokeWidth={1.5} />
+          </button>
+          {onClear && (
+            <button
+              type="button"
+              onClick={() => onClear()}
+              className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
+              title="Remove"
+              aria-label="Remove"
+            >
+              <Trash2 size={11} strokeWidth={1.5} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {populated && !busy && !compact && (
         <div
           className={`absolute z-10 flex items-center gap-1 opacity-0 group-hover/asset:opacity-100 transition ${
             overlayPosition === 'center'
@@ -154,11 +193,11 @@ export function InlineAsset({
           }`}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Visible "Replace" label makes a native title redundant, so none here. */}
           <button
             type="button"
             onClick={openPicker}
             className="inline-flex items-center gap-1 px-2 h-7 rounded-md bg-gray-900/90 text-white text-[11px] font-medium hover:bg-gray-900 cursor-pointer transition shadow-sm"
-            title="Replace image"
           >
             <RefreshCw size={11} strokeWidth={1.5} />
             Replace
@@ -168,7 +207,8 @@ export function InlineAsset({
               type="button"
               onClick={() => onClear()}
               className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-white/90 text-gray-700 hover:bg-white hover:text-red-600 cursor-pointer transition shadow-sm"
-              title="Remove image"
+              title="Remove"
+              aria-label="Remove"
             >
               <Trash2 size={11} strokeWidth={1.5} />
             </button>

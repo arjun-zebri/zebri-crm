@@ -65,6 +65,14 @@ export interface BrandPreviewState {
   website: string
   instagramUrl: string
   facebookUrl: string
+  twitterUrl: string
+  pinterestUrl: string
+  /** Bank-transfer details from Settings → Payments. Read-only in the branding
+   *  editor; drive the paymentDetails block (real value when set, else a mint
+   *  placeholder). */
+  bankAccountName: string
+  bankBsb: string
+  bankAccountNumber: string
   /** Which couple-portal sections are enabled. Drives the couplePortal block preview. */
   portalSections?: {
     timeline: boolean

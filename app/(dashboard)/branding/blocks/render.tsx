@@ -17,7 +17,9 @@ import { RenderPaymentDetails as PublicRenderPaymentDetails, type PaymentDetails
 import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
 import { RenderTitle as PublicRenderTitle, type TitleSlots } from '@/lib/branding/public-blocks/title'
 import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks/totals'
+import { VarChip } from '@/lib/branding/public-blocks/var-chip'
 import { htmlToPlainText } from '@/lib/branding/sanitize'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
@@ -27,7 +29,9 @@ import { publicBrandingFromEditorState } from '../editor-branding'
 
 import { InlineAsset } from './inline-asset'
 import { InlineText } from './inline-text'
+import { RichText } from './rich-text/rich-text'
 import { SAMPLE_DOC_BY_SURFACE } from './sample-doc'
+import { resolveTextStyle } from './text-style'
 import type {
   Block,
   HeaderBannerBlock,
@@ -45,6 +49,7 @@ import type {
   PackageInclusionsBlock,
   PackageTotalsBlock,
   QuestionnaireBodyBlock,
+  PaymentScheduleBlock,
 } from './types'
 
 const PAD = (state: BrandPreviewState) => DENSITY_PADDING[state.density]
@@ -452,65 +457,115 @@ export function RenderImage({
 
 /**
  * Editor wrapper for businessName block. Provides interactive slots for logo
- * upload and name editing, plus a resize grip for logo height adjustment.
+ * upload and name editing, plus a drag grip that resizes the logo height.
+ *
+ * The business name here is a block-local override (`block.name`): editing it
+ * writes to this block only and never mutates the shared brand name. The logo
+ * slot carries its own hover/selected highlight and a corner resize grip so the
+ * mark reads as a directly editable, resizable object.
  */
 export function RenderBusinessName({
   block,
   state,
-  setBusinessName,
+  updateBlock,
   uploadLogo,
   removeLogo,
 }: RenderProps<BusinessNameBlock> & {
-  setBusinessName?: (v: string) => void
   uploadLogo?: (file: File) => Promise<void>
   removeLogo?: () => void | Promise<void>
 }) {
   const branding = publicBrandingFromEditorState(state)
   const { logoUrl, businessName } = state
   const logoHeight = block.logoHeightPx ?? 40
+  const [resizing, setResizing] = useState(false)
 
-  // Logo slot: wraps the logo with InlineAsset for upload overlay (selectableWhenEmpty=false)
+  // Drag the corner grip to set the logo height. Mirrors the header/image
+  // resize gesture (vertical drag) but drives logoHeightPx, matching the
+  // toolbar's Logo size slider bounds (24–160px).
+  const startLogoResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startY = e.clientY
+    const startHeight = logoHeight
+    setResizing(true)
+    const onMove = (ev: MouseEvent) => {
+      const dy = ev.clientY - startY
+      const next = Math.max(24, Math.min(160, startHeight + dy))
+      updateBlock<BusinessNameBlock>(block.id, { logoHeightPx: Math.round(next) })
+    }
+    const onUp = () => {
+      setResizing(false)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  // Logo slot: the InlineAsset handles upload/replace/remove; the wrapper adds a
+  // grey hover ring and the resize grip. Clicking the logo highlights it via the
+  // shared `data-subtarget` mechanism (BlockFrame outlines the clicked part in
+  // the brand colour and clears it when you click elsewhere), so selecting the
+  // block no longer lights up the logo on its own. The grip lives on the
+  // wrapper, not inside InlineAsset, so it works for the empty state too.
   const logoSlot = uploadLogo ? (
-    <InlineAsset
-      value={logoUrl || null}
-      onUpload={uploadLogo}
-      {...(logoUrl && removeLogo ? { onClear: removeLogo } : {})}
-      label={logoUrl ? 'Replace logo' : 'Upload logo'}
-      overlayPosition="center"
-      className="h-full"
-      style={logoUrl ? undefined : { width: logoHeight }}
-      selectableWhenEmpty={false}
-      emptyState={
-        <div
-          className="flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
-          style={{
-            width: logoHeight,
-            height: logoHeight,
-            borderRadius: Math.min(state.cornerRadius, 12),
-          }}
-        >
-          <ImageIcon size={Math.max(12, Math.round(logoHeight * 0.3))} strokeWidth={1.5} className="text-gray-300" />
-        </div>
-      }
+    <div
+      data-subtarget="logo"
+      className="group/logo relative h-full rounded-md ring-inset ring-0 hover:ring-1 hover:ring-gray-300 transition"
     >
-      <img
-        src={logoUrl}
-        alt={businessName || 'Logo'}
-        draggable={false}
-        className="block h-full w-auto max-w-full object-contain select-none"
-      />
-    </InlineAsset>
+      <InlineAsset
+        value={logoUrl || null}
+        onUpload={uploadLogo}
+        {...(logoUrl && removeLogo ? { onClear: removeLogo } : {})}
+        label={logoUrl ? 'Replace logo' : 'Upload logo'}
+        compact
+        className="h-full"
+        style={logoUrl ? undefined : { width: logoHeight }}
+        selectableWhenEmpty={false}
+        emptyState={
+          <div
+            className="flex items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50/40"
+            style={{
+              width: logoHeight,
+              height: logoHeight,
+              borderRadius: Math.min(state.cornerRadius, 12),
+            }}
+          >
+            <ImageIcon size={Math.max(12, Math.round(logoHeight * 0.3))} strokeWidth={1.5} className="text-gray-300" />
+          </div>
+        }
+      >
+        <img
+          src={logoUrl}
+          alt={businessName || 'Logo'}
+          draggable={false}
+          className="block h-full w-auto max-w-full object-contain select-none"
+        />
+      </InlineAsset>
+
+      {/* Corner resize grip: visible on hover or while the block is selected. */}
+      <div
+        onMouseDown={startLogoResize}
+        title="Drag to resize logo"
+        className={`absolute -bottom-1 -right-1 z-10 w-3.5 h-3.5 flex items-center justify-center cursor-nwse-resize transition ${
+          resizing ? 'opacity-100' : 'opacity-0 group-hover/logo:opacity-100'
+        }`}
+      >
+        <div className="w-2.5 h-2.5 rounded-sm bg-gray-900/70 ring-1 ring-white/80 shadow-sm" />
+      </div>
+    </div>
   ) : undefined
 
-  // Name slot: wraps the name with InlineText for editing
-  const nameSlot = setBusinessName ? (
+  // Name slot: block-local override. Shows the global brand name until edited,
+  // then persists onto this block so it never writes back to the shared field.
+  const nameSlot = (
     <InlineText
-      value={businessName ?? ''}
-      onChange={setBusinessName}
+      value={block.name ?? businessName ?? ''}
+      onChange={(v) => updateBlock<BusinessNameBlock>(block.id, { name: v })}
       placeholder="Your business name"
       as="span"
     />
-  ) : undefined
+  )
 
   return (
     <div className="group relative">
@@ -533,18 +588,29 @@ export function RenderBusinessName({
 
 // ── Title ─────────────────────────────────────────────────────────────────────
 
-export function RenderTitle({ block, state, updateBlock }: RenderProps<TitleBlock>) {
+export function RenderTitle({ block, state, surface, updateBlock }: RenderProps<TitleBlock>) {
   const branding = publicBrandingFromEditorState(state)
+  const isInvoice = surface === 'invoice'
 
-  // Dummy doc for editor preview; meta row displays placeholder values
+  // Dummy doc for editor preview; meta row displays placeholder values.
+  // Invoices label the date row "Due" (they fall due, not expire) to mirror the
+  // public surface; other surfaces default to "Expires". The date is an ISO
+  // (YYYY-MM-DD) string so `fmtDate` parses it — a display string like
+  // "30 April 2026" would render "Invalid Date" in the preview.
   const dummyDoc: PublicDocData = {
     title: '', // Replaced by slot
     refNumber: 'PR-001',
-    expiresAt: '30 April 2026',
+    coupleName: 'Sarah & James',
+    expiresAt: '2026-04-30',
+    expiresLabel: isInvoice ? 'Due' : 'Expires',
     items: [],
     subtotal: 0,
     taxRate: 0,
   }
+
+  // On invoices the reference is mandatory (the public surface forces it on and
+  // the Ref toggle is hidden), so keep the preview in step by forcing it here.
+  const previewBlock = isInvoice ? { ...block, showRef: true } : block
 
   const slots: TitleSlots = {
     title: (
@@ -555,22 +621,15 @@ export function RenderTitle({ block, state, updateBlock }: RenderProps<TitleBloc
         as="span"
       />
     ),
-    subtitle: (
-      <InlineText
-        value={block.subtitle}
-        onChange={(v) => updateBlock<TitleBlock>(block.id, { subtitle: v })}
-        placeholder="Subtitle"
-        as="span"
-      />
-    ),
   }
 
   return (
     <PublicRenderTitle
-      block={block}
+      block={previewBlock}
       branding={branding}
       doc={dummyDoc}
       slots={slots}
+      variablePreview
     />
   )
 }
@@ -586,6 +645,7 @@ export function RenderLineItems({ block, state, surface }: RenderProps<LineItems
       block={block}
       branding={branding}
       doc={sampleDoc}
+      variablePreview
     />
   )
 }
@@ -601,6 +661,7 @@ export function RenderTotals({ block, state, surface }: RenderProps<TotalsBlock>
       block={block}
       branding={branding}
       doc={sampleDoc}
+      variablePreview
     />
   )
 }
@@ -617,12 +678,19 @@ export function RenderTotals({ block, state, surface }: RenderProps<TotalsBlock>
  * and renders real but non-interactive buttons via the public component.
  */
 export function RenderAction({
-  block,
+  block: rawBlock,
   state,
+  surface,
   updateBlock,
   selected,
 }: RenderProps<ActionBlock> & { selected?: boolean }) {
   const branding = publicBrandingFromEditorState(state)
+  // Invoices are paid, not declined, so they never carry a secondary button —
+  // suppress it here so it disappears immediately (migrateBlocks also strips the
+  // stored value on the next load/save).
+  const block: ActionBlock = surface === 'invoice' && rawBlock.secondary !== null
+    ? { ...rawBlock, secondary: null }
+    : rawBlock
   const primaryRef = useRef<HTMLButtonElement>(null)
   const secondaryRef = useRef<HTMLButtonElement>(null)
 
@@ -672,6 +740,14 @@ export function RenderAction({
    * (non-interactive in the editor).
    */
   const slots: ActionSlots = {
+    note: (
+      <InlineText
+        value={block.note ?? ''}
+        onChange={(v) => updateBlock<ActionBlock>(block.id, { note: v })}
+        placeholder="Add a note above the button, e.g. how to pay…"
+        as="span"
+      />
+    ),
     primary: (
       <InlineText
         value={block.primary}
@@ -712,7 +788,7 @@ export function RenderAction({
           style={{ left: 'auto', top: 'auto' }}
         />
       )}
-      {block.secondary === null && (
+      {surface !== 'invoice' && block.secondary === null && (
         <button
           type="button"
           onClick={(e) => {
@@ -741,39 +817,27 @@ export function RenderAction({
 
 // ── Payment Details ───────────────────────────────────────────────────────────
 
-export function RenderPaymentDetails({ block, state, updateBlock }: RenderProps<PaymentDetailsBlock>) {
+export function RenderPaymentDetails({ block, state, surface, updateBlock }: RenderProps<PaymentDetailsBlock>) {
   const branding = publicBrandingFromEditorState(state)
 
+  // Only the heading is block-editable. The account name / BSB / number are the
+  // MC's real bank details from Settings → Payments, so they're not edited here:
+  // the public component shows the real value when set, or a mint placeholder.
   const slots: PaymentDetailsSlots = {
     heading: (
-      <InlineText
+      <RichText
         value={block.heading}
         onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { heading: v })}
+        surface={surface ?? 'invoice'}
         placeholder="Heading"
-        as="span"
+        singleLine
       />
     ),
-    accountName: (
+    note: (
       <InlineText
-        value={block.accountName}
-        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountName: v })}
-        placeholder="Account name"
-        as="span"
-      />
-    ),
-    bsb: (
-      <InlineText
-        value={block.bsb}
-        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { bsb: v })}
-        placeholder="BSB"
-        as="span"
-      />
-    ),
-    accountNumber: (
-      <InlineText
-        value={block.accountNumber}
-        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { accountNumber: v })}
-        placeholder="Account number"
+        value={block.note ?? ''}
+        onChange={(v) => updateBlock<PaymentDetailsBlock>(block.id, { note: v })}
+        placeholder="Add a note for the couple, e.g. how to pay…"
         as="span"
       />
     ),
@@ -784,6 +848,7 @@ export function RenderPaymentDetails({ block, state, updateBlock }: RenderProps<
       block={block}
       branding={branding}
       slots={slots}
+      variablePreview
     />
   )
 }
@@ -921,60 +986,70 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
  * Renders with a dashed border + muted "Live data" badge so it's
  * visually unambiguous this block isn't editable on the branding surface.
  */
-export function RenderPaymentSchedule({ state }: { state: BrandPreviewState }) {
+/**
+ * Editor render for the invoice payment schedule. The subheading and the two line
+ * labels (deposit, final balance) are editable text stored on the block and
+ * click-to-style targets; the amounts and due dates are per-invoice data filled
+ * when the invoice is sent, so they render as mint `{{ … }}` chips (the line-items
+ * idiom). Public rendering of the schedule is deferred (the public renderer omits
+ * this block), so this is editor-only chrome.
+ */
+export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps<PaymentScheduleBlock>) {
+  const branding = publicBrandingFromEditorState(state)
   const pad = PAD(state)
-  const muted = state.textColor || '#6B7280'
-  const text = state.textColor || '#111827'
-  const surface = state.surfaceColor || '#FFFFFF'
+  const headingDefaults = roleDefaults(branding, 'sectionHeading')
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const headingCss = resolveTextStyle(block.headingStyle, headingDefaults)
+  const lineCss = resolveTextStyle(block.lineStyle, bodyDefaults)
+  // Amount + due date default to the body role (larger than fine print) and share
+  // one style target so they can be resized together.
+  const valueCss = resolveTextStyle(block.valueStyle, bodyDefaults)
+
+  const stages = [
+    {
+      value: block.depositLabel ?? 'Deposit',
+      placeholder: 'Deposit',
+      onChange: (v: string) => updateBlock<PaymentScheduleBlock>(block.id, { depositLabel: v }),
+      dueHint: "The deposit's due date, from the invoice.",
+    },
+    {
+      value: block.finalLabel ?? 'Final balance',
+      placeholder: 'Final balance',
+      onChange: (v: string) => updateBlock<PaymentScheduleBlock>(block.id, { finalLabel: v }),
+      dueHint: "The final balance's due date, from the invoice.",
+    },
+  ]
+
   return (
-    <div className="border-t border-gray-100">
-      <div className={`${pad.docX} ${pad.blockY}`}>
-        {/* Locked-slot affordance: dashed border + muted "Live data"
-            badge make it clear at a glance that this block isn't
-            editable on the branding surface. */}
+    <div className={`${pad.docX} ${pad.blockY}`}>
+      <p data-subtarget="heading" className="mb-3" style={headingCss}>
+        <InlineText
+          value={block.heading ?? 'Payment schedule'}
+          onChange={(v) => updateBlock<PaymentScheduleBlock>(block.id, { heading: v })}
+          placeholder="Payment schedule"
+          as="span"
+        />
+      </p>
+      {stages.map((stage, i) => (
         <div
-          className="rounded-xl border-2 border-dashed p-5"
-          style={{
-            borderColor: muted + '60',
-            backgroundColor: surface,
-          }}
+          key={i}
+          className="flex justify-between items-baseline gap-4 py-2.5 border-b last:border-b-0"
+          style={{ borderBottomColor: branding.border_color }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <p
-              className="text-xs font-medium uppercase tracking-wider"
-              style={{ color: muted }}
-            >
-              Payment schedule
-            </p>
-            <span
-              className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
-              style={{
-                backgroundColor: muted + '20',
-                color: muted,
-              }}
-            >
-              Live data - deposit and balance
+          {/* Label + due date sit on one line (due date beside, not under). */}
+          <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
+            <span data-subtarget="line" style={lineCss}>
+              <InlineText value={stage.value} onChange={stage.onChange} placeholder={stage.placeholder} as="span" />
+            </span>
+            <span data-subtarget="value" style={valueCss}>
+              <VarChip label="Due date" hint={stage.dueHint} />
             </span>
           </div>
-
-          <div className="space-y-2 opacity-60 select-none pointer-events-none">
-            <div className="py-2.5 border-b border-gray-50 flex items-center justify-between">
-              <span className="text-sm" style={{ color: text }}>Deposit (50%)</span>
-              <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
-            </div>
-            <div className="py-2.5 flex items-center justify-between">
-              <span className="text-sm" style={{ color: text }}>Final balance (50%)</span>
-              <span className="text-sm font-medium tabular-nums" style={{ color: text }}>$1,584.00</span>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t" style={{ borderColor: muted + '30' }}>
-            <p className="text-xs" style={{ color: muted }}>
-              The payment schedule is driven by your couple data and deposit percent settings. Edit it there, not here. You can drag other blocks (headings, spacing, legal text) above or below this slot.
-            </p>
-          </div>
+          <span className="shrink-0" data-subtarget="value" style={valueCss}>
+            <VarChip label="Amount" hint="Filled from the invoice's deposit percent and total." />
+          </span>
         </div>
-      </div>
+      ))}
     </div>
   )
 }
