@@ -47,12 +47,15 @@ describe('_user_branding social URLs', () => {
     if (error) throw error
     testUserId = data.user.id
 
-    // Update user metadata with social URLs in app_metadata-equivalent field.
-    // The admin API uses app_metadata internally for raw_user_meta_data updates.
+    // Branding (social URLs, business name, colours) is user-editable content
+    // that lives in raw_user_meta_data — the app writes it via
+    // auth.updateUser({ data }), and _user_branding reads it from there. So the
+    // admin API's user_metadata field is what feeds the RPC (NOT app_metadata,
+    // which maps to raw_app_meta_data for trust-level fields only).
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       testUserId,
       {
-        app_metadata: {
+        user_metadata: {
           twitter_url: 'https://twitter.com/testmc',
           pinterest_url: 'https://pinterest.com/testmc',
           website: 'https://testmc.com',
@@ -141,7 +144,7 @@ describe('_user_branding social URLs', () => {
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       testUserId,
       {
-        app_metadata: {
+        user_metadata: {
           twitter_url: 'https://twitter.com/testmc',
           pinterest_url: 'https://pinterest.com/testmc',
           website: 'https://testmc.com',
