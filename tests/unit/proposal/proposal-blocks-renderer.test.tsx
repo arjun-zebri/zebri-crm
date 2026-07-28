@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom'
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import { ProposalBlocksRenderer } from '@/components/proposal/proposal-blocks-renderer'
@@ -196,7 +196,7 @@ describe('ProposalBlocksRenderer', () => {
     expect(screen.getByText('Gold Package')).toBeInTheDocument()
   })
 
-  it('renders packageHeader with package switcher when multiple options exist', async () => {
+  it('renders the compare-and-pick chooser when multiple options exist', async () => {
     const user = userEvent.setup()
     const onChoose = vi.fn()
     const blocks: Block[] = [
@@ -220,21 +220,15 @@ describe('ProposalBlocksRenderer', () => {
       />
     )
 
-    expect(screen.getByText('Gold Package')).toBeInTheDocument()
+    // Multi-option proposals show a comparison chooser (radio cards for every
+    // package), not a single package title with a dropdown.
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /gold package/i })).toBeInTheDocument()
+    const silver = screen.getByRole('radio', { name: /silver package/i })
+    expect(silver).toBeInTheDocument()
 
-    // Should show subtle "See other packages" control
-    const seeOtherButton = screen.getByRole('button', { name: /see other packages/i })
-    expect(seeOtherButton).toBeInTheDocument()
-
-    // Click to open chooser
-    await user.click(seeOtherButton)
-
-    // Should show button list with both options
-    const silverOption = screen.getByRole('button', { name: /silver package/i })
-    expect(silverOption).toBeInTheDocument()
-
-    // Select the other option
-    await user.click(silverOption)
+    // Picking a different package calls onChoose.
+    await user.click(silver)
 
     expect(onChoose).toHaveBeenCalledWith('opt-2')
   })
@@ -517,7 +511,7 @@ describe('ProposalBlocksRenderer', () => {
     expect(totalElements.length).toBeGreaterThan(0)
   })
 
-  it('uses first option when chosenId does not match any option', () => {
+  it('falls back to the first option when chosenId does not match any option', () => {
     const blocks: Block[] = [
       {
         id: 'header-block',
@@ -538,8 +532,10 @@ describe('ProposalBlocksRenderer', () => {
       />
     )
 
-    // Should render first option (option1)
-    expect(screen.getByText('Gold Package')).toBeInTheDocument()
+    // With an unmatched chosenId the region falls back to the first option, so
+    // the first package's card is the selected (checked) one in the chooser.
+    const goldRadio = screen.getByRole('radio', { name: /gold package/i })
+    expect(goldRadio).toHaveAttribute('aria-checked', 'true')
   })
 
   it('renders nothing for packageInclusions when there are no add-ons', () => {

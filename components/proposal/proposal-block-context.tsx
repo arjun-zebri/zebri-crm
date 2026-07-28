@@ -9,6 +9,7 @@
 
 import { createContext, ReactNode, useContext } from 'react'
 
+import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
 
@@ -26,6 +27,12 @@ export interface ProposalBlockContextValue {
   view: ProposalViewBranding
   expiresAt: string | null
   state: 'active' | 'accepted' | 'declined' | 'expired'
+  /**
+   * Editor-only: commit an inline edit of a proposal wording label (the multi-
+   * package chooser/selection labels). Omitted on the public surface, where the
+   * labels are read-only.
+   */
+  onEditLabel?: ProposalLabelEdit
 }
 
 const ProposalBlockContext = createContext<ProposalBlockContextValue | undefined>(undefined)

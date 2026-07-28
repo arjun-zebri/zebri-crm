@@ -11,10 +11,10 @@ import {
   ProposalBlockProvider,
   type ProposalBlockContextValue,
 } from '@/components/proposal/proposal-block-context'
-import { ProposalPageView } from '@/components/proposal/proposal-page-view'
+import { PROPOSAL_SAMPLE_MULTI } from '@/components/proposal/proposal-sample-data'
 import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import { resolveProposalLabels, type ProposalLabelEdit } from '@/lib/branding/proposal-labels'
+import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
 import { defaultSelection } from '@/lib/payments/proposal-view'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
@@ -28,7 +28,7 @@ import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks
 import { VarChip } from '@/lib/branding/public-blocks/var-chip'
 import { htmlToPlainText } from '@/lib/branding/sanitize'
 import { roleDefaults } from '@/lib/branding/type-defaults'
-import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
+import type { ProposalViewBranding } from '@/lib/payments/proposal-view'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
@@ -1172,53 +1172,6 @@ function proposalBranding(state: BrandPreviewState): ProposalViewBranding {
   }
 }
 
-const PROPOSAL_SAMPLE_MULTI: PublicProposalOption[] = [
-  {
-    id: 'sample-essentials',
-    title: 'The Essentials',
-    description: 'A beautiful record of the day itself.',
-    deposit_percent: 25,
-    gst_inclusive: true,
-    is_popular: false,
-    subtotal: 1100,
-    position: 0,
-    items: [
-      { id: 'e1', description: 'Ceremony hosting', amount: 550, is_addon: false, default_included: false, position: 0 },
-      { id: 'e2', description: 'Reception MC & run sheet', amount: 550, is_addon: false, default_included: false, position: 1 },
-    ],
-  },
-  {
-    id: 'sample-fullday',
-    title: 'The Full Day',
-    description: 'Ceremony and reception, start to finish.',
-    deposit_percent: 25,
-    gst_inclusive: true,
-    is_popular: true,
-    subtotal: 1450,
-    position: 1,
-    items: [
-      { id: 'f1', description: 'Pre-wedding consultation', amount: 0, is_addon: false, default_included: false, position: 0 },
-      { id: 'f2', description: 'Ceremony hosting', amount: 550, is_addon: false, default_included: false, position: 1 },
-      { id: 'f3', description: 'Reception MC & run sheet', amount: 900, is_addon: false, default_included: false, position: 2 },
-      { id: 'f4', description: 'Rehearsal attendance', amount: 150, is_addon: true, default_included: true, position: 3 },
-      { id: 'f5', description: 'After-party hosting', amount: 250, is_addon: true, default_included: false, position: 4 },
-    ],
-  },
-  {
-    id: 'sample-legacy',
-    title: 'The Legacy',
-    description: 'Everything, plus extended coverage.',
-    deposit_percent: 25,
-    gst_inclusive: true,
-    is_popular: false,
-    subtotal: 2400,
-    position: 2,
-    items: [
-      { id: 'l1', description: 'Full-day hosting (12 hrs)', amount: 1800, is_addon: false, default_included: false, position: 0 },
-      { id: 'l2', description: 'Rehearsal-dinner hosting', amount: 600, is_addon: false, default_included: false, position: 1 },
-    ],
-  },
-]
 
 
 // ── Package blocks (proposal decomposed) ───────────────────────────────

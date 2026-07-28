@@ -27,6 +27,9 @@ const SURFACE_LABEL: Record<SurfaceTab, string> = {
   questionnaire: 'Questionnaire',
 }
 
+/** Which package presentation the proposal canvas is designing/previewing. */
+export type PackageView = 'single' | 'multi'
+
 export interface CanvasScopeBarProps {
   surface: SurfaceTab
   /** When provided, renders the "Clear all blocks" action on the right. */
@@ -38,9 +41,24 @@ export interface CanvasScopeBarProps {
    * customisations to the theme preset.
    */
   onResetLayout?: (() => void) | undefined
+  /**
+   * Proposal-only: the current single/multi package view. When provided
+   * alongside {@link onPackageViewChange}, renders the Single/Multi toggle so
+   * the MC can design the one-package layout or preview the multi-package
+   * comparison.
+   */
+  packageView?: PackageView | undefined
+  /** Proposal-only: switch the package view. */
+  onPackageViewChange?: ((view: PackageView) => void) | undefined
 }
 
-export function CanvasScopeBar({ surface, onClearBlocks, onResetLayout }: CanvasScopeBarProps) {
+export function CanvasScopeBar({
+  surface,
+  onClearBlocks,
+  onResetLayout,
+  packageView,
+  onPackageViewChange,
+}: CanvasScopeBarProps) {
   return (
     <div className="flex items-center justify-between gap-3 mb-2">
       <div className="flex items-center gap-1.5 text-[11px] min-w-0">
@@ -49,6 +67,9 @@ export function CanvasScopeBar({ surface, onClearBlocks, onResetLayout }: Canvas
         <span className="text-gray-400 truncate">· blocks &amp; wording for this document only</span>
       </div>
       <div className="flex items-center gap-3 shrink-0">
+        {packageView && onPackageViewChange && (
+          <PackageViewToggle value={packageView} onChange={onPackageViewChange} />
+        )}
         {onResetLayout && <ResetLayoutAction onReset={onResetLayout} />}
         {onClearBlocks && (
           <button
@@ -60,6 +81,38 @@ export function CanvasScopeBar({ surface, onClearBlocks, onResetLayout }: Canvas
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Segmented Single / Multi toggle. "Single" edits the one-package block layout;
+ * "Multi" previews the fixed compare-and-pick view (a proposal with several
+ * packages). The sent document picks the view automatically by package count —
+ * this toggle only chooses which one the MC is designing/previewing.
+ */
+function PackageViewToggle({
+  value,
+  onChange,
+}: {
+  value: PackageView
+  onChange: (view: PackageView) => void
+}) {
+  return (
+    <div className="inline-flex items-center rounded-lg border border-gray-200 p-0.5 text-[11px]">
+      {(['single', 'multi'] as const).map((view) => (
+        <button
+          key={view}
+          type="button"
+          onClick={() => onChange(view)}
+          aria-pressed={value === view}
+          className={`px-2 py-0.5 rounded-md cursor-pointer transition ${
+            value === view ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-800'
+          }`}
+        >
+          {view === 'single' ? 'Single' : 'Multi'}
+        </button>
+      ))}
     </div>
   )
 }
