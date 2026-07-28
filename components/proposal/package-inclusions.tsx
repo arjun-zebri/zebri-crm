@@ -56,7 +56,7 @@ export function PackageInclusions({
   }
 
   const heading = (
-    <p className="pb-3 border-b" style={{ ...headingCss, borderBottomColor: branding.border_color }}>
+    <p data-subtarget="heading" className="pb-3 border-b" style={{ ...headingCss, borderBottomColor: branding.border_color }}>
       {caseText('Optional add-ons', block.headingStyle, headingDefaults)}
     </p>
   )
@@ -68,6 +68,7 @@ export function PackageInclusions({
         {[0, 1].map((i) => (
           <div
             key={`ph-${i}`}
+            data-subtarget="item"
             className={`flex items-center gap-3 ${p.rowY} border-b last:border-b-0`}
             style={{ borderBottomColor: branding.border_color }}
           >
@@ -96,6 +97,7 @@ export function PackageInclusions({
       {addOns.map((item) => (
         <div
           key={item.id}
+          data-subtarget="item"
           className={`flex items-center gap-3 ${p.rowY} border-b last:border-b-0`}
           style={{ borderBottomColor: branding.border_color }}
         >

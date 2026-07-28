@@ -23,9 +23,9 @@ import { formatCurrency, selectionTotal } from '@/lib/payments/proposal-view'
 import { useProposalBlock } from './proposal-block-context'
 
 /** A label/value row with a right-aligned tabular figure. */
-function Row({ label, value, css }: { label: ReactNode; value: ReactNode; css: CSSProperties }) {
+function Row({ label, value, css, subtarget }: { label: ReactNode; value: ReactNode; css: CSSProperties; subtarget?: string }) {
   return (
-    <div className="flex items-center">
+    <div className="flex items-center" data-subtarget={subtarget}>
       <span className="flex-1 min-w-0 break-words" style={css}>
         {label}
       </span>
@@ -70,6 +70,7 @@ export function PackageTotals({
               label={caseText('Subtotal', block.subtotalStyle, rowDefaults)}
               value={<VarChip label="Amount" hint="The subtotal, summed from the package and its selected add-ons." />}
               css={subtotalCss}
+              subtarget="subtotal"
             />
           </div>
           <div className="pt-3 mt-2 border-t" style={{ borderTopColor: branding.border_color }}>
@@ -77,6 +78,7 @@ export function PackageTotals({
               label={caseText('Total', block.totalStyle, totalDefaults)}
               value={<VarChip label="Amount" hint="The total, calculated from the selection and any GST." />}
               css={totalCss}
+              subtarget="total"
             />
           </div>
         </div>
@@ -102,6 +104,7 @@ export function PackageTotals({
             label={caseText('Subtotal', block.subtotalStyle, rowDefaults)}
             value={formatCurrency(subtotal)}
             css={subtotalCss}
+            subtarget="subtotal"
           />
         </div>
         {!chosen.gst_inclusive && gstAmount > 0 && (
@@ -112,6 +115,7 @@ export function PackageTotals({
             label={caseText('Total', block.totalStyle, totalDefaults)}
             value={formatCurrency(grandTotal)}
             css={totalCss}
+            subtarget="total"
           />
         </div>
       </div>
