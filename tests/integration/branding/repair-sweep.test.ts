@@ -2,8 +2,8 @@
 
 import { describe, it, expect, beforeAll } from 'vitest'
 
-import { serviceClient } from '@/tests/integration/helpers/supabase'
 import { repairRow } from '@/scripts/repair-branding-blocks'
+import { serviceClient } from '@/tests/integration/helpers/supabase'
 
 /**
  * Integration test for the branding blocks repair sweep.

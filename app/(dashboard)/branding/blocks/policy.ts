@@ -10,6 +10,7 @@
  * @module app/(dashboard)/branding/blocks/policy
  */
 import type { SurfaceTab } from '@/types/branding-preview'
+
 import type { Block, BlockType } from './types'
 
 /** Render-split markers: the generic public renderer emits null for these and

@@ -103,6 +103,7 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
           onClick={onMobileClose}
           className="flex items-center hover:opacity-80 transition px-[16px] pt-4"
         >
+          {/* eslint-disable-next-line @next/next/no-img-element -- static SVG icon, nothing for next/image to optimise */}
           <img
             src="/zebri-icon.svg"
             alt="Zebri"

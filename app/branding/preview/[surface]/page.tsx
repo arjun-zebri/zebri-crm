@@ -11,8 +11,8 @@
  */
 'use client'
 
-import { useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import { useEffect } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import { ProposalDocumentBody } from '@/components/proposal/proposal-document-body'

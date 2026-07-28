@@ -29,8 +29,8 @@ import {
 
 import { PackageDetails } from './package-details'
 import { PackageHeader } from './package-header'
-import { PackageLineItems } from './package-line-items'
 import { PackageInclusions } from './package-inclusions'
+import { PackageLineItems } from './package-line-items'
 import { PackageTotals } from './package-totals'
 import { ProposalBlockProvider } from './proposal-block-context'
 import { StaticAcceptCta } from './proposal-page-view'

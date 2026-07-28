@@ -2,6 +2,7 @@
 
 import { type ReactNode } from 'react'
 
+// eslint-disable-next-line no-restricted-imports -- Block is the canonical block-tree type, authored in the branding editor
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 import { blockOuterStyle, hasOuterStyle, HPAD_EXEMPT_TYPES } from './block-outer-style'

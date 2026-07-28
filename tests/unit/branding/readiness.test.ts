@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { evaluateSurface } from '@/lib/branding/readiness'
+
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import type { SurfaceTab } from '@/types/branding-preview'
+import { evaluateSurface } from '@/lib/branding/readiness'
 
 describe('readiness', () => {
   it('proposal missing packageTotals raises missing-required issue naming the missing type', () => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { repairBlocks } from '@/lib/branding/validate-blocks'
+
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { repairBlocks } from '@/lib/branding/validate-blocks'
 
 const types = (bs: Block[]) => bs.map((b) => b.type)
 

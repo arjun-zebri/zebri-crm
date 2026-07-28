@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import '@testing-library/jest-dom'
 
 import { PersonalInfoSection } from '@/app/(dashboard)/settings/personal-info-section'
@@ -129,7 +129,7 @@ describe('PersonalInfoSection social settings', () => {
   it('detects changes to twitter_url and pinterest_url as dirty state', async () => {
     const user = userEvent.setup()
 
-    const { rerender } = render(
+    render(
       <PersonalInfoSection
         initialData={{
           displayName: 'John Doe',

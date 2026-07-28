@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 import type { BlocksByDoc } from '@/lib/branding/validate-blocks'
 import { repairRow } from '@/scripts/repair-branding-blocks'
@@ -49,7 +49,7 @@ describe('branding repair sweep', () => {
                 },
               }),
             }),
-            upsert: async (row: { user_id: string; branding_blocks: unknown }, options?: { onConflict?: string }) => {
+            upsert: async (row: { user_id: string; branding_blocks: unknown }) => {
               if (row && row.user_id === userId) {
                 storedBlocks = JSON.parse(JSON.stringify(row.branding_blocks)) as BlocksByDoc
                 upsertCalled = true

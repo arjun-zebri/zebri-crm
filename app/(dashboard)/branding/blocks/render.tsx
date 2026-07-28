@@ -5,8 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { PackageDetails } from '@/components/proposal/package-details'
 import { PackageHeader } from '@/components/proposal/package-header'
-import { PackageLineItems } from '@/components/proposal/package-line-items'
 import { PackageInclusions } from '@/components/proposal/package-inclusions'
+import { PackageLineItems } from '@/components/proposal/package-line-items'
 import { PackageTotals } from '@/components/proposal/package-totals'
 import {
   ProposalBlockProvider,
@@ -16,7 +16,6 @@ import { PROPOSAL_SAMPLE_MULTI } from '@/components/proposal/proposal-sample-dat
 import { getTextColor, pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
-import { defaultSelection } from '@/lib/payments/proposal-view'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
 import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
@@ -29,6 +28,7 @@ import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks
 import { VarChip } from '@/lib/branding/public-blocks/var-chip'
 import { htmlToPlainText } from '@/lib/branding/sanitize'
 import { roleDefaults } from '@/lib/branding/type-defaults'
+import { defaultSelection } from '@/lib/payments/proposal-view'
 import type { ProposalViewBranding } from '@/lib/payments/proposal-view'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
@@ -50,8 +50,6 @@ import type {
   TotalsBlock,
   PaymentDetailsBlock,
   ActionBlock,
-  ContractBodyBlock,
-  ProposalBodyBlock,
   ImageBlock,
   PackageHeaderBlock,
   PackageDetailsBlock,
@@ -545,6 +543,7 @@ export function RenderBusinessName({
           </div>
         }
       >
+        {/* eslint-disable-next-line @next/next/no-img-element -- user-supplied logo URL, not a Next-optimised static asset */}
         <img
           src={logoUrl}
           alt={businessName || 'Logo'}

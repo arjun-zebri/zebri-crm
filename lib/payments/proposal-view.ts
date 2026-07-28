@@ -14,6 +14,7 @@
  *
  * @module lib/payments/proposal-view
  */
+// eslint-disable-next-line no-restricted-imports -- Block is the canonical block-tree type, authored in the branding editor
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
 import type { ProposalLabels } from '@/lib/branding/proposal-labels';
 import type { PublicBranding } from '@/lib/branding/public-surface';

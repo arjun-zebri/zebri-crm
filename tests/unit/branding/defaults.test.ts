@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+
 import { defaultBlocksFor, blockTemplate } from '@/app/(dashboard)/branding/blocks/defaults'
 
 const types = (bs: { type: string }[]) => bs.map((b) => b.type)

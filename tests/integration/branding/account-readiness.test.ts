@@ -3,6 +3,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { getAccountReadiness } from '@/lib/branding/account-readiness'
+
 import {
   createTestUser,
   serviceClient,

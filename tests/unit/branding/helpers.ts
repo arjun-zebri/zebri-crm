@@ -1,5 +1,5 @@
-import type { PublicBranding } from '@/lib/branding/public-branding'
 import { PROPOSAL_LABEL_DEFAULTS } from '@/lib/branding/proposal-labels'
+import type { PublicBranding } from '@/lib/branding/public-branding'
 
 /**
  * Factory for creating test PublicBranding objects with sensible defaults.

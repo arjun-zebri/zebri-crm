@@ -64,6 +64,7 @@ export function RenderBusinessName({
       {slots.logo}
     </div>
   ) : logoUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element -- user-supplied logo URL, not a Next-optimised static asset
     <img
       src={logoUrl}
       alt={businessName || 'Logo'}

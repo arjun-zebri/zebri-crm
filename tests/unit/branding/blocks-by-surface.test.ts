@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+
 import {
   GENERAL_BLOCKS, blocksForSurface, paletteGroupsForSurface,
 } from '@/app/(dashboard)/branding/blocks/blocks-by-surface'

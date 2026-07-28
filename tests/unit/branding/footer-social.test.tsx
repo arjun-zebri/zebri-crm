@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
 import '@testing-library/jest-dom'
 
 import { RenderFooter } from '@/lib/branding/public-blocks/footer'
+
 import { makeBranding } from './helpers'
 
 describe('footer social links', () => {

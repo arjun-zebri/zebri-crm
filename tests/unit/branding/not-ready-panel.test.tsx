@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
 
 import { NotReadyPanel } from '@/app/(dashboard)/branding/not-ready-panel'
 import type { SurfaceReadiness } from '@/lib/branding/readiness'

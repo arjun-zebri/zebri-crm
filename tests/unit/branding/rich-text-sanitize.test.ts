@@ -54,7 +54,7 @@ describe('sanitizeRichHtml — attacks are neutralised', () => {
   })
 
   it('drops a javascript: link', () => {
-    // eslint-disable-next-line no-script-url
+     
     expect(sanitizeRichHtml('<a href="javascript:alert(1)">x</a>')).toBe('<a>x</a>')
   })
 

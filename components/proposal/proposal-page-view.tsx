@@ -31,7 +31,6 @@ import { EditableLabel } from '@/components/proposal/editable-label';
 import { ProposalOptionChooser } from '@/components/proposal/option-chooser';
 import { ProposalSelection } from '@/components/proposal/option-selection';
 import { getTextColor } from '@/lib/branding/contrast';
-import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { FONT_STACKS } from '@/lib/branding/fonts';
 import {
   PROPOSAL_LABEL_DEFAULTS,
@@ -40,6 +39,7 @@ import {
 } from '@/lib/branding/proposal-labels';
 import type { PublicBranding } from '@/lib/branding/public-surface';
 import { htmlToPlainText } from '@/lib/branding/sanitize';
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
 import { roleDefaults } from '@/lib/branding/type-defaults';
 import {
   formatDate,

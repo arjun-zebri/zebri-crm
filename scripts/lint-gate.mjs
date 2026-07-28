@@ -165,7 +165,14 @@ const ERROR_BUDGET = 64;
 // STATUS_COLORS constants, dropping one more warning (271 -> 270).
 // Welcome onboarding wizard: pure utility modules + component extraction cleared
 // unused-import warnings across preview files (270 -> 267).
-const WARNING_BUDGET = 267;
+// Proposals single/multi-package + branding batch drifted warnings up to 307
+// (mostly import-order across the new proposal/branding surfaces). Auto-fixed
+// import-order in the changed files, removed dead imports/vars, and applied the
+// established disable-comment convention for the deliberate app->lib Block type
+// import (no-restricted-imports) and public-branding logo <img> (no-img-element).
+// Also made the eslint `.next` ignore recursive so a local git worktree's build
+// output stops polluting the count (307 -> 265). Locking in at 265.
+const WARNING_BUDGET = 265;
 
 function runEslintJson() {
   try {

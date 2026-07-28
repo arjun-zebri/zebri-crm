@@ -32,7 +32,6 @@ import { publicBrandingFromEditorState } from '../editor-branding'
 
 import { BlockFrame } from './block-frame'
 import { InlineText } from './inline-text'
-import { RichText } from './rich-text/rich-text'
 import {
   RenderAction,
   RenderBusinessName,
@@ -53,6 +52,7 @@ import {
   RenderTotals,
   RenderVendorTimelineBody,
 } from './render'
+import { RichText } from './rich-text/rich-text'
 import type { Block, SpacerBlock } from './types'
 
 interface BlockRendererProps {

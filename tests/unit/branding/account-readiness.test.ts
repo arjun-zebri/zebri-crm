@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { describe, expect, it, vi } from 'vitest'
 
-import { getAccountReadiness } from '@/lib/branding/account-readiness'
 import type { EntitlementSource } from '@/lib/auth/entitlements'
+import { getAccountReadiness } from '@/lib/branding/account-readiness'
 import type { Database } from '@/types/database'
 
 describe('getAccountReadiness', () => {

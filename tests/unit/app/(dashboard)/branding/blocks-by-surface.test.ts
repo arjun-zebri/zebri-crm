@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { blocksForSurface } from '@/app/(dashboard)/branding/blocks/blocks-by-surface'
 import type { SurfaceTab } from '@/types/branding-preview'
 

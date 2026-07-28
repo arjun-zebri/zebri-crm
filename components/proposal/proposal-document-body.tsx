@@ -22,11 +22,11 @@ import type { ReactNode } from 'react'
 // The block tree type lives under the editor surface; consuming it here
 // is the same bridge `lib/branding/public-renderer` already makes.
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { ProposalBlocksRenderer, type AcceptStyle } from '@/components/proposal/proposal-blocks-renderer'
 import {
   ProposalPageView,
   viewBranding,
 } from '@/components/proposal/proposal-page-view'
-import { ProposalBlocksRenderer, type AcceptStyle } from '@/components/proposal/proposal-blocks-renderer'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import type {
   ProposalViewBranding,
@@ -93,7 +93,6 @@ export interface ProposalDocumentBodyProps {
 export function ProposalDocumentBody({
   blocks,
   branding,
-  title,
   coupleName,
   proposalNumber,
   notes,

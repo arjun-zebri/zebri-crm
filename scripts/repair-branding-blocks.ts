@@ -98,7 +98,7 @@ async function main() {
 
   let totalRows = 0
   let changedRows = 0
-  let pageSize = 100
+  const pageSize = 100
   let offset = 0
 
   // Pagination loop over all user_branding rows

@@ -1,7 +1,8 @@
 // Requires local Supabase (Docker). Deferred: not executed in the authoring session.
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+
 import type { Database } from '@/types/database'
 
 /**
