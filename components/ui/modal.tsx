@@ -29,6 +29,11 @@ interface ModalProps {
    *  to the modal's rounded bottom edge. Used by full-bleed tables
    *  (e.g. plan-comparison) so column tints reach the bottom. */
   flushBottom?: boolean;
+  /** Skip the header band entirely and float the close button in the
+   *  top-right corner, so the body's own content starts at the very top.
+   *  Used by the welcome tour, whose per-step title should sit flush at
+   *  the top rather than below a tall, otherwise-empty header row. */
+  floatingClose?: boolean;
 }
 
 const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
@@ -55,6 +60,7 @@ export function Modal({
   size = 'md',
   nested = false,
   flushBottom = false,
+  floatingClose = false,
 }: ModalProps) {
   useEffect(() => {
     if (!isOpen) return;
@@ -101,6 +107,8 @@ export function Modal({
         onClick={handleBackdropClick}
       />
       <div
+        role="dialog"
+        aria-modal="true"
         className={`fixed inset-0 flex items-center justify-center p-4 ${nested ? 'z-[80]' : 'z-[60]'}`}
         onMouseDown={handleBackdropMouseDown}
         onClick={handleBackdropClick}
@@ -115,34 +123,48 @@ export function Modal({
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header — height ≈ 4rem (py-4 + text-xl content). The
-              `flushBottom` body below subtracts that from 85vh to
-              cap its scroll height. If you change the header
-              padding or content size, update the calc() in the
-              body's maxHeight to match. */}
-          <div
-            className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}
-          >
-            {title && (
-              <div className="flex items-center gap-2 text-xl font-semibold text-gray-900">
-                {title}
-              </div>
-            )}
-            <div className={`flex items-center gap-1 ${!title ? 'ml-auto' : ''}`}>
-              {headerActions && (
-                <>
-                  {headerActions}
-                  <div className="w-px h-4 bg-gray-200 mx-1" />
-                </>
+          {floatingClose ? (
+            // Headerless: the close button floats over the top-right so the
+            // body's first row (e.g. the wizard's step title) sits flush at
+            // the very top instead of below an otherwise-empty header band.
+            <button
+              onClick={onClose}
+              className="absolute top-3 right-3 z-10 p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+            >
+              <X size={18} strokeWidth={1.5} />
+            </button>
+          ) : (
+            /* Header — height ≈ 4rem (py-4 + text-xl content). The
+               `flushBottom` body below subtracts that from 85vh to
+               cap its scroll height. If you change the header
+               padding or content size, update the calc() in the
+               body's maxHeight to match. */
+            <div
+              className={`flex items-center justify-between px-4 sm:px-6 py-4 ${title ? 'border-b border-gray-200' : ''}`}
+            >
+              {title && (
+                // A real heading: screen readers announce the dialog name
+                // and e2e selectors can target `h2:has-text(...)`.
+                <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                  {title}
+                </h2>
               )}
-              <button
-                onClick={onClose}
-                className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
-              >
-                <X size={18} strokeWidth={1.5} />
-              </button>
+              <div className={`flex items-center gap-1 ${!title ? 'ml-auto' : ''}`}>
+                {headerActions && (
+                  <>
+                    {headerActions}
+                    <div className="w-px h-4 bg-gray-200 mx-1" />
+                  </>
+                )}
+                <button
+                  onClick={onClose}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                >
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div
             className={`overflow-y-auto px-4 sm:px-6 pt-4 ${flushBottom ? 'pb-0' : 'flex-1 pb-4'}`}

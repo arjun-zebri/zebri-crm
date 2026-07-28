@@ -11,6 +11,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { buildPublicBranding, type UserMetadata } from '@/lib/branding/public-branding'
 import { resolveCoupleEmail } from '@/lib/couples/email'
 import type {
   AutomationEventRow,
@@ -178,5 +179,8 @@ export async function loadMcSnapshot(
     quietHoursEnd: (metadata['quiet_hours_end'] as string) ?? '08:00',
     quietHoursTimezone: (metadata['timezone'] as string) ?? (appMetadata['timezone'] as string) ?? DEFAULT_TIMEZONE,
     signature: (metadata['email_signature'] as McSnapshot['signature']) ?? null,
+    // Resolved branding for the branded email shell — automation sends
+    // look identical to manual sends and the editor preview.
+    branding: buildPublicBranding(metadata as UserMetadata),
   }
 }

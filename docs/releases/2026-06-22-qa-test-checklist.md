@@ -26,11 +26,11 @@ For every problem, capture:
 
 ## Before you start (setup)
 
-- [ ] Log in with the test account you were given.
-- [ ] Make sure there are at least **2 test couples** in the system (create them
+- [x] Log in with the test account you were given.
+- [x] Make sure there are at least **2 test couples** in the system (create them
       under **Couples → New couple** if needed). Give one couple a full email
       address and the other **no email** — we need both to test error handling.
-- [ ] Have access to the test account's **own email inbox** — several tests send
+- [x] Have access to the test account's **own email inbox** — several tests send
       a "test" email there.
 
 ---
@@ -39,19 +39,19 @@ For every problem, capture:
 
 The left sidebar changed. Test it first because you'll use it everywhere.
 
-- [ ] **1.1** Look at the left sidebar. **Should see** these items: Dashboard,
+- [x] **1.1** Look at the left sidebar. **Should see** these items: Dashboard,
       Couples, Calendar, Tasks, Contacts, Payments, **Automations** (new),
       **Templates** (new), Branding, **Docs** (new), Settings. Admin only shows
       for admin accounts.
-- [ ] **1.2** Click **Automations**. **Should see** the Automations page open.
-- [ ] **1.3** Click **Templates**. **Should see** the Templates page open.
-- [ ] **1.4** Click **Docs**. **Should see** it open the Zebri docs website in a
+- [x] **1.2** Click **Automations**. **Should see** the Automations page open.
+- [x] **1.3** Click **Templates**. **Should see** the Templates page open.
+- [x] **1.4** Click **Docs**. **Should see** it open the Zebri docs website in a
       **new browser tab** (it leaves the app). The Docs item should **not** look
       "selected/active" like the in-app pages do.
-- [ ] **1.5** Collapse / expand the sidebar (look for the collapse toggle).
+- [x] **1.5** Collapse / expand the sidebar (look for the collapse toggle).
       **Should see** the sidebar narrow to icons only and expand back. The labels
       should not overflow or look broken while it animates.
-- [ ] **1.6 (Phone)** On a phone width, open and close the sidebar menu.
+- [x] **1.6 (Phone)** On a phone width, open and close the sidebar menu.
       **Should see** it slide in over the page and close cleanly.
 
 ---
@@ -63,84 +63,84 @@ is sent, wait 2 days, then email the couple a reminder."
 
 ## 2A. The Automations list page
 
-- [ ] **2A.1** Go to **Automations**. **Should see** a page title, a **New
+- [x] **2A.1** Go to **Automations**. **Should see** a page title, a **New
       automation** button, four summary cards across the top (Total, Active,
       Couples in flow, Paused), tabs (**All / Active / Paused / Draft**), a
       search box, and a table of automations.
-- [ ] **2A.2** Click each tab. **Should see** the list filter to only those
+- [x] **2A.2** Click each tab. **Should see** the list filter to only those
       automations (e.g. "Active" shows only switched-on ones).
-- [ ] **2A.3** Type a word into the search box that matches an automation name.
+- [x] **2A.3** Type a word into the search box that matches an automation name.
       **Should see** the list narrow to matching automations. Clear it → full
       list returns.
-- [ ] **2A.4** In a table row, flip the **On/Off** toggle. **Should see** the
+- [x] **2A.4** In a table row, flip the **On/Off** toggle. **Should see** the
       automation switch between Active and Paused. Refresh the page → the new
       state sticks.
-- [ ] **2A.5** Open a row's **"…" (more) menu** and choose **Delete**.
+- [x] **2A.5** Open a row's **"…" (more) menu** and choose **Delete**.
       **Should see** a confirmation first, then the automation disappears.
-- [ ] **2A.6** If any automation has recently failed, a **health banner** shows
+- [x] **2A.6** If any automation has recently failed, a **health banner** shows
       at the top ("X automation(s) have errored in the last 7 days"). Click it.
       **Should see** it open the failing automation. (Skip if no failures exist.)
-- [ ] **2A.7 (Phone)** Open this page on a phone. **Should see** the cards stack,
+- [x] **2A.7 (Phone)** Open this page on a phone. **Should see** the cards stack,
       and the table become easy-to-read stacked cards. Everything stays tappable.
 
 ## 2B. Building an automation (the canvas)
 
-- [ ] **2B.1** Click **New automation**. **Should see** a blank builder open. The
+- [x] **2B.1** Click **New automation**. **Should see** a blank builder open. The
       top card says something like **"Click to choose a trigger"**, and there is
       **no** "Add action" button yet. Status is **Draft** (toggle off).
-- [ ] **2B.2** Click the automation **name** in the header and type a new name.
+- [x] **2B.2** Click the automation **name** in the header and type a new name.
       **Should see** the name update and a **"Saved"** indicator appear. Refresh →
       the name sticks.
-- [ ] **2B.3** Click the **trigger card**. **Should see** a searchable list of
+- [x] **2B.3** Click the **trigger card**. **Should see** a searchable list of
       triggers grouped by category (Enquiries, Quotes, Invoices, Contracts,
       Calendar, Portal, Tasks, Contacts, etc.).
-- [ ] **2B.4** Search "quote" → **Should see** only quote-related triggers. Pick
+- [x] **2B.4** Search "quote" → **Should see** only quote-related triggers. Pick
       **Quote due**. **Should see** the card update to "Quote due", a config panel
       open on the right (e.g. "Days until due"), and an **Add action** option now
       appears.
-- [ ] **2B.5** Set the trigger's number field (e.g. "7" days). **Should see** the
+- [x] **2B.5** Set the trigger's number field (e.g. "7" days). **Should see** the
       "Saved" indicator update.
-- [ ] **2B.6** Click **Add action**. **Should see** a picker listing actions
+- [x] **2B.6** Click **Add action**. **Should see** a picker listing actions
       grouped by category, with **Flow control** (Wait, Branch, Stop) near the top.
-- [ ] **2B.7** Add a **Send email** action. **Should see** it appear under the
+- [x] **2B.7** Add a **Send email** action. **Should see** it appear under the
       trigger and a config panel with: Subject, Body (rich text), Recipients
       (Primary / Spouse / Family / Vendor / Myself), and options like "branded
       shell", reply-to, CC, BCC.
-- [ ] **2B.8** In the Body, use the **Insert variable** helper. **Should see** a
+- [x] **2B.8** In the Body, use the **Insert variable** helper. **Should see** a
       list of merge fields (couple name, event date, business name, etc.). Insert
       one. **Should see** a live preview where the variable is filled with sample
       data.
-- [ ] **2B.9** Add a **Wait** action (e.g. "Wait 2 days", "respect quiet hours"
+- [x] **2B.9** Add a **Wait** action (e.g. "Wait 2 days", "respect quiet hours"
       ticked). **Should see** it added with a clock-style icon.
-- [ ] **2B.10** Add a second **Send email** after the wait. **Should see** the
+- [x] **2B.10** Add a second **Send email** after the wait. **Should see** the
       flow read: Trigger → Email → Wait → Email.
-- [ ] **2B.11** Add a **Branch** (if/else), e.g. "if amount is over $5000".
+- [x] **2B.11** Add a **Branch** (if/else), e.g. "if amount is over $5000".
       **Should see** the diagram split into a **Yes** path and a **No** path. Add
       a different action to each path.
-- [ ] **2B.12** Add a **Stop** action. **Should see** it end that path (nothing
+- [x] **2B.12** Add a **Stop** action. **Should see** it end that path (nothing
       can come after it).
-- [ ] **2B.13** Click any action, then click **Delete** in its panel.
+- [x] **2B.13** Click any action, then click **Delete** in its panel.
       **Should see** a confirmation, then the action is removed.
-- [ ] **2B.14** Drag an action to a new position. **Should see** the order change.
+- [x] **2B.14** Drag an action to a new position. **Should see** the order change.
       Refresh → the new order sticks.
-- [ ] **2B.15 Validation:** On a Send email action, clear the Subject and try to
+- [x] **2B.15 Validation:** On a Send email action, clear the Subject and try to
       save. **Should see** a clear error ("Subject is required") rather than a
       silent failure. Same for an empty Body.
 
 ## 2C. Turning on, testing, and running
 
-- [ ] **2C.1** With a finished automation (trigger + at least one action), flip
+- [x] **2C.1** With a finished automation (trigger + at least one action), flip
       the **Activate** toggle on. **Should see** status change to **Active**, and
       on the list page it now shows under the Active tab.
-- [ ] **2C.2** Click **Test** in the builder header. **Should see** a prompt to
+- [x] **2C.2** Click **Test** in the builder header. **Should see** a prompt to
       pick a couple. Pick one and run. **Should see** a preview of what would
       happen (emails rendered with that couple's real details). Any test email
       lands in **your own inbox** with **[Test]** in the subject — **not** in the
       couple's inbox.
-- [ ] **2C.3** Go to a couple → **Automations** tab → **Run manually**. Pick an
+- [x] **2C.3** Go to a couple → **Automations** tab → **Run manually**. Pick an
       automation. **Should see** it run for real now: the email actually goes to
       the couple, tasks get created, and a new run appears in the activity feed.
-- [ ] **2C.4 (Quiet hours)** With a "Wait" action set to respect quiet hours,
+- [x] **2C.4 (Quiet hours)** With a "Wait" action set to respect quiet hours,
       a follow-up that would land during the MC's quiet hours (e.g. overnight)
       should be held until the next allowed time (e.g. 8am), **not** sent in the
       middle of the night.

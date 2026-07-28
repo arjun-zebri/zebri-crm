@@ -8,21 +8,23 @@
  * @module types/branding-preview
  */
 
-import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
-import type { Density } from '@/lib/branding/themes'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
+import type { ProposalLabels } from '@/lib/branding/proposal-labels'
+import type { TextCase } from '@/lib/branding/text-case'
+import type { Density } from '@/lib/branding/themes'
 
 export interface BrandPreviewState {
   logoUrl: string
   faviconUrl: string
   headerImageUrl: string
   brandColor: string
-  accentColor: string
+  headingColor: string
+  subheadingColor: string
   surfaceColor: string
   textColor: string
-  mutedColor: string
   secondaryColor: string
-  secondaryTextColor: string
+  borderColor: string
   tagline: string
   footerText: string
   abn: string
@@ -31,15 +33,46 @@ export interface BrandPreviewState {
   fontBody: BodyFont
   fontWeight: FontWeight
   fontBodyWeight: FontWeight
-  fontScale: number
   density: Density
   cornerRadius: number
   docPadding: number
+  /**
+   * Global type scale and style fields.
+   *
+   * These drive roleDefaults() in every renderer, so the canvas cannot show a
+   * faithful preview without them. They were previously absent here, which
+   * left publicBrandingFromEditorState with nothing to read and hardcoded
+   * literals in their place: the Typography and Global styles controls
+   * changed the saved document but never the preview.
+   */
+  headingSize: number
+  bodySize: number
+  headingCase: TextCase
+  bodyCase: TextCase
+  /** Subheading (section-label) type controls — size, weight, case. */
+  subheadingSize: number
+  subheadingWeight: FontWeight
+  subheadingCase: TextCase
+  headingLetterSpacing: number
+  bodyLineHeight: number
+  linkColor: string
+  buttonVariant: 'fill' | 'outline'
+  buttonSize: 'sm' | 'md' | 'lg'
+  buttonRadius: number
+  sectionSpacing: number
   businessName: string
   phone: string
   website: string
   instagramUrl: string
   facebookUrl: string
+  twitterUrl: string
+  pinterestUrl: string
+  /** Bank-transfer details from Settings → Payments. Read-only in the branding
+   *  editor; drive the paymentDetails block (real value when set, else a mint
+   *  placeholder). */
+  bankAccountName: string
+  bankBsb: string
+  bankAccountNumber: string
   /** Which couple-portal sections are enabled. Drives the couplePortal block preview. */
   portalSections?: {
     timeline: boolean
@@ -49,6 +82,8 @@ export interface BrandPreviewState {
     songs: boolean
     files: boolean
   }
+  /** Editable proposal section wording — drives the proposalBody block. */
+  proposalLabels?: ProposalLabels
 }
 
 export interface BrandPreviewActions {
@@ -58,7 +93,7 @@ export interface BrandPreviewActions {
   setTagline: (v: string) => void
 }
 
-export type SurfaceTab = 'quote' | 'invoice' | 'contract' | 'portal'
+export type SurfaceTab = 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'
 
 export const NOOP_ACTIONS: BrandPreviewActions = {
   onEditLogo: () => {},
@@ -75,17 +110,16 @@ export interface BrandKit {
   id: string
   name: string
   brandColor: string
-  accentColor: string
+  headingColor: string
+  subheadingColor: string
   surfaceColor: string
   textColor: string
-  mutedColor: string
   secondaryColor: string
-  secondaryTextColor: string
+  borderColor: string
   fontHeading: HeadingFont
   fontBody: BodyFont
   fontWeight: FontWeight
   fontBodyWeight: FontWeight
-  fontScale: number
   density: Density
   cornerRadius: number
   docPadding?: number
@@ -93,6 +127,17 @@ export interface BrandKit {
   logoUrl?: string
   faviconUrl?: string
   headerImageUrl?: string
-  blocks?: { quote: Block[]; invoice: Block[]; contract: Block[]; portal: Block[] }
+  /** Per-surface block trees. `quote` is the LEGACY key from before
+   *  the proposals rollout — kits saved earlier still carry it; the
+   *  editor normalises it into `proposal` on apply. */
+  blocks?: {
+    proposal?: Block[]
+    quote?: Block[]
+    invoice: Block[]
+    contract: Block[]
+    portal: Block[]
+    vendorTimeline?: Block[]
+    questionnaire?: Block[]
+  }
   createdAt: string
 }

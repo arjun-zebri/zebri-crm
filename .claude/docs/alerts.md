@@ -24,6 +24,16 @@ sendAlert(event) ──────────┤
 - **`lib/alerts/slack.ts`** — low-level Slack webhook transport (still
   available for one-off custom Block-Kit payloads).
 
+### Local development suppression
+
+`sendAlert` never posts to Slack when `NODE_ENV === 'development'`; the
+structured log record is still written (look for
+`alert slack suppressed (dev): <type>` in the dev console). Local
+checkouts share the production webhook through `.env.local`, so this
+keeps dev-server noise out of the real alerts channel. To deliberately
+test Slack delivery from a dev server, set `ALERTS_DEV_SLACK=1`.
+Covered by `tests/unit/alerts/send-alert-suppression.test.ts`.
+
 > **Observability stack:** Vercel runtime logs (captures every logger
 > write) + Slack alerts via `sendAlert()` + the existing global error
 > boundaries (`app/error.tsx`, `app/global-error.tsx`, `app/providers.tsx`)

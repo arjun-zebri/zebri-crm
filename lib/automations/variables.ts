@@ -23,7 +23,6 @@
  *   - `venue.*`     name
  *   - `mc.*`        business_name, contact_name, email, phone
  *   - `portal.*`    link
- *   - `quote.*`     link, number, total (when the trigger / action config provides one)
  *   - `invoice.*`   link, number, total
  *   - `contract.*`  link, number
  *   - `task.*`      title, due_date
@@ -143,8 +142,10 @@ function readPath(path: string, ctx: RunContext): string {
       return readMc(ctx.mc, key)
     case 'portal':
       return readPortal(ctx, key)
-    case 'quote':
+    case 'questionnaire':
+      return readQuestionnaire(ctx, key)
     case 'invoice':
+    case 'proposal':
     case 'contract':
     case 'task':
       // These read from the triggering event's payload or the
@@ -263,6 +264,28 @@ function readPortal(ctx: RunContext, key: string): string {
   return typeof link === 'string' ? link : ''
 }
 
+/**
+ * Questionnaire reads come from two directions: a preceding "Send
+ * questionnaire" action writes `questionnaire_link` / `questionnaire_id` into
+ * its action results, and the `questionnaire_completed` trigger payload
+ * carries `title` + `share_token`. `link` falls back to building the fill URL
+ * from the trigger's share token so a thank-you email can still reference it.
+ */
+function readQuestionnaire(ctx: RunContext, key: string): string {
+  const direct = readEventField(ctx, 'questionnaire', key)
+  if (direct) return direct
+  if (key === 'link') {
+    const payload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
+    const token = payload['share_token']
+    // Only a questionnaire event's share_token belongs to this namespace.
+    if (payload['questionnaire_id'] != null && typeof token === 'string' && token) {
+      const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.zebri.com.au'
+      return `${base}/questionnaire/${token}`
+    }
+  }
+  return ''
+}
+
 function readEventField(ctx: RunContext, namespace: string, key: string): string {
   const payload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
   const candidates = [`${namespace}_${key}`, key, `${namespace}_${key.replace(/-/g, '_')}`]
@@ -271,7 +294,7 @@ function readEventField(ctx: RunContext, namespace: string, key: string): string
     if (v != null) return String(v)
   }
   // Look in prior action results too - actions like "Send quote"
-  // write the resulting quote_id / quote_link into actionResults.
+  // write the resulting proposal_id / proposal_link into actionResults.
   for (const actionId of Object.keys(ctx.actionResults)) {
     const r = ctx.actionResults[actionId] as Record<string, unknown> | null
     if (!r) continue
@@ -356,10 +379,26 @@ export const VARIABLE_CATALOGUE: ReadonlyArray<{
   {
     group: 'Links',
     variables: [
-      { token: '{{portal.link}}', label: 'Couple portal link', example: 'https://zebri.app/p/…' },
-      { token: '{{quote.link}}', label: 'Quote share link', example: 'https://zebri.app/q/…' },
-      { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/i/…' },
-      { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/c/…' },
+      { token: '{{portal.link}}', label: 'Couple portal link', example: 'https://zebri.app/portal/…' },
+      { token: '{{proposal.link}}', label: 'Proposal share link', example: 'https://zebri.app/proposal/…' },
+      { token: '{{invoice.link}}', label: 'Invoice share link', example: 'https://zebri.app/invoice/…' },
+      { token: '{{contract.link}}', label: 'Contract signing link', example: 'https://zebri.app/contract/…' },
+      { token: '{{questionnaire.link}}', label: 'Questionnaire link', example: 'https://zebri.app/questionnaire/…' },
+    ],
+  },
+  {
+    group: 'Document Numbers & Totals',
+    variables: [
+      { token: '{{proposal.number}}', label: 'Proposal number', example: 'PR-001' },
+      { token: '{{proposal.total}}', label: 'Proposal total', example: '$2,500' },
+      { token: '{{invoice.number}}', label: 'Invoice number', example: 'INV-001' },
+      { token: '{{contract.number}}', label: 'Contract number', example: 'CTR-001' },
+    ],
+  },
+  {
+    group: 'Questionnaire',
+    variables: [
+      { token: '{{questionnaire.title}}', label: 'Questionnaire title', example: 'Ceremony details' },
     ],
   },
 ]

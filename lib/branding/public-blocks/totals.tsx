@@ -1,18 +1,58 @@
 'use client'
 
-import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+import type { CSSProperties, ReactNode } from 'react'
+
+// eslint-disable-next-line no-restricted-imports
+import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
+// eslint-disable-next-line no-restricted-imports
 import type { TotalsBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import type { PublicBranding } from '../public-surface'
+import { roleDefaults } from '../type-defaults'
+
 import { fmt, pad, type PublicDocData } from './shared'
+import { VarChip } from './var-chip'
+
+interface RowProps {
+  label: string
+  value: ReactNode
+  css: CSSProperties
+  /** @deprecated No longer affects layout. Kept for backward compatibility. */
+  spread?: boolean
+  /** Editor click-to-style target tag; inert on the public surface. */
+  subtarget?: string
+}
+
+function Row({ label, value, css, subtarget }: RowProps) {
+  return (
+    <div className="flex items-center" data-subtarget={subtarget}>
+      <span className="flex-1 min-w-0 break-words" style={css}>
+        {label}
+      </span>
+      <span className="shrink-0 tabular-nums ml-4" style={{ ...css, textAlign: 'right' }}>
+        {value}
+      </span>
+    </div>
+  )
+}
 
 export function RenderTotals({
   block,
   branding,
   doc,
+  variablePreview = false,
+  chrome,
 }: {
   block: TotalsBlock
   branding: PublicBranding
   doc: PublicDocData
+  /**
+   * Editor-only: the amounts are computed from the couple's real line items, so
+   * the template shows mint `{{ … }}` chips instead of concrete sample figures.
+   * The sent document renders the real subtotal/GST/total.
+   */
+  variablePreview?: boolean
+  chrome?: React.ReactNode
 }) {
   const p = pad(branding)
   const subtotal = doc.subtotal
@@ -23,47 +63,37 @@ export function RenderTotals({
   const tax = taxableAmount * (doc.taxRate / 100)
   const total = taxableAmount + tax
 
-  const totalDefaults: TextStyleDefaults = {
-    fontFamily: branding.font_heading,
-    fontSize: 18,
-    fontWeight: branding.font_weight,
-    color: branding.text_color || '#111827',
-    align: 'left',
-    lineHeight: 1.2,
-    letterSpacing: 0,
-  }
+  const rowDefaults = roleDefaults(branding, 'body')
+  const totalDefaults = roleDefaults(branding, 'total')
+  const subtotalCss = resolveTextStyle(block.subtotalStyle, rowDefaults)
+  const taxCss = resolveTextStyle(block.taxStyle, rowDefaults)
   const totalCss = resolveTextStyle(block.totalStyle, totalDefaults)
-  const muted = branding.muted_color || '#6B7280'
-  const text = branding.text_color || '#111827'
+  const spread = block.colSpread ?? true
 
   return (
-    <div className={`${p.docX} ${p.blockY}`}>
-      <div className="space-y-1.5 pt-3 border-t border-gray-200">
+    <div className={`${p.blockY} relative`}>
+      <div className="space-y-1.5 pt-3 border-t" style={{ borderTopColor: branding.border_color }} data-testid="totals-rule">
         {block.showSubtotal && (
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-sm" style={{ color: muted }}>Subtotal</span>
-            <span className="text-sm tabular-nums" style={{ color: text }}>{fmt(subtotal)}</span>
+          <div className="pt-2">
+            <Row label={caseText('Subtotal', block.subtotalStyle, rowDefaults)} value={variablePreview ? <VarChip label="Amount" hint="The subtotal, summed from the line items." /> : fmt(subtotal)} css={subtotalCss} spread={spread} subtarget="subtotal" />
           </div>
         )}
         {discountAmt > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm" style={{ color: muted }}>
-              Discount{doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}
-            </span>
-            <span className="text-sm text-red-500 tabular-nums">-{fmt(discountAmt)}</span>
-          </div>
+          <Row
+            label={caseText(`Discount${doc.discountType === 'percentage' ? ` (${doc.discountValue}%)` : ''}`, {}, rowDefaults)}
+            value={`-${fmt(discountAmt)}`}
+            css={rowDefaults}
+            spread={spread}
+          />
         )}
-        {doc.taxRate > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm" style={{ color: muted }}>GST ({doc.taxRate}%)</span>
-            <span className="text-sm tabular-nums" style={{ color: text }}>{fmt(tax)}</span>
-          </div>
+        {doc.taxRate > 0 && (block.showTax ?? true) && (
+          <Row label={caseText(`GST (${doc.taxRate}%)`, block.taxStyle, rowDefaults)} value={variablePreview ? <VarChip label="Amount" hint="GST, calculated from the subtotal and tax rate." /> : fmt(tax)} css={taxCss} spread={spread} subtarget="tax" />
         )}
-        <div className="flex items-center justify-between pt-3 mt-2 border-t border-gray-200">
-          <span style={{ ...totalCss, fontSize: undefined }}>Total</span>
-          <span className="tabular-nums" style={totalCss}>{fmt(total)}</span>
+        <div className="pt-3 mt-2 border-t" style={{ borderTopColor: branding.border_color }}>
+          <Row label={caseText('Total', block.totalStyle, totalDefaults)} value={variablePreview ? <VarChip label="Amount" hint="The total, calculated from the subtotal, any discount, and GST." /> : fmt(total)} css={totalCss} spread={spread} subtarget="total" />
         </div>
       </div>
+      {chrome}
     </div>
   )
 }

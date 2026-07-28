@@ -98,11 +98,11 @@ test.describe('Couple Profile', () => {
 
   // ── TASKS tab ─────────────────────────────────────────────────────────────
 
-  test('Tasks: empty state shows "No tasks yet." and "+ Add task"', async ({ page }) => {
+  test('Tasks: empty state shows "No tasks yet" and a top-right "New task" button', async ({ page }) => {
     await navigateToProfileTab(page, 'Tasks')
     const panel = page.locator('[data-testid="couple-profile-panel"]')
-    await expect(panel.locator('text=No tasks yet.')).toBeVisible()
-    await expect(panel.locator('text=+ Add task')).toBeVisible()
+    await expect(panel.locator('text=No tasks yet')).toBeVisible()
+    await expect(panel.getByRole('button', { name: 'New task' })).toBeVisible()
   })
 
   test('Tasks: create task — row with title appears in Upcoming section', async ({ page }) => {
@@ -140,23 +140,21 @@ test.describe('Couple Profile', () => {
 
   // ── PAYMENTS tab ──────────────────────────────────────────────────────────
 
-  test('Payments: both section headings are visible', async ({ page }) => {
+  // A couple with no proposals or invoices shows a single centred empty state
+  // (the per-section Quotes/Invoices columns only appear once there is data).
+  test('Payments: empty state shows "No payments yet" and a top-right "New" button', async ({ page }) => {
     await navigateToProfileTab(page, 'Payments')
     const panel = page.locator('[data-testid="couple-profile-panel"]')
-    await expect(panel.locator('text=Quotes').first()).toBeVisible()
-    await expect(panel.locator('text=Invoices').first()).toBeVisible()
+    await expect(panel.locator('text=No payments yet')).toBeVisible()
+    await expect(panel.getByRole('button', { name: 'New', exact: true })).toBeVisible()
   })
 
-  test('Payments: Quotes empty state shows "No quotes yet."', async ({ page }) => {
+  test('Payments: "New" popover offers New proposal and New invoice', async ({ page }) => {
     await navigateToProfileTab(page, 'Payments')
     const panel = page.locator('[data-testid="couple-profile-panel"]')
-    await expect(panel.locator('text=No quotes yet.')).toBeVisible()
-  })
-
-  test('Payments: Invoices empty state shows "No invoices yet."', async ({ page }) => {
-    await navigateToProfileTab(page, 'Payments')
-    const panel = page.locator('[data-testid="couple-profile-panel"]')
-    await expect(panel.locator('text=No invoices yet.')).toBeVisible()
+    await panel.getByRole('button', { name: 'New', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'New proposal' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'New invoice' })).toBeVisible()
   })
 
   // ── NAMES tab ─────────────────────────────────────────────────────────────
@@ -200,10 +198,10 @@ test.describe('Couple Profile', () => {
 
   // ── FILES tab ─────────────────────────────────────────────────────────────
 
-  test('Files: empty state shows "No files uploaded yet."', async ({ page }) => {
+  test('Files: empty state shows "No files uploaded yet"', async ({ page }) => {
     await navigateToProfileTab(page, 'Files')
     const panel = page.locator('[data-testid="couple-profile-panel"]')
-    await expect(panel.locator('text=No files uploaded yet.')).toBeVisible()
+    await expect(panel.locator('text=No files uploaded yet')).toBeVisible()
   })
 
   test('Files: "Add file" button is always visible (even when loading)', async ({ page }) => {
@@ -218,6 +216,6 @@ test.describe('Couple Profile', () => {
     await navigateToProfileTab(page, 'Timeline')
     const panel = page.locator('[data-testid="couple-profile-panel"]')
     await page.waitForLoadState('networkidle')
-    await expect(panel.locator('text=No events yet.')).toBeVisible({ timeout: 8000 })
+    await expect(panel.locator('text=No events yet')).toBeVisible({ timeout: 8000 })
   })
 })

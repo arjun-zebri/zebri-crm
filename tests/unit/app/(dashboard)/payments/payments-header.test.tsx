@@ -1,8 +1,8 @@
 /**
  * Unit tests for `PaymentsHeader`.
  *
- * Covers tab switching, search clearing, and that all three tabs
- * (Quotes / Invoices / Contracts) are always rendered — the
+ * Covers tab switching, search clearing, and that all tabs
+ * (Proposals / Invoices / Contracts) are always rendered — the
  * Starter-plan cap is enforced at contract create time, not by
  * hiding the tab (2026-06-03 policy change).
  */
@@ -17,7 +17,7 @@ function Harness(overrides: Partial<React.ComponentProps<typeof PaymentsHeader>>
   const ref = useRef<HTMLInputElement | null>(null);
   return (
     <PaymentsHeader
-      activeTab="quotes"
+      activeTab="proposals"
       onTabChange={vi.fn()}
       count={3}
       search=""
@@ -35,10 +35,10 @@ describe('PaymentsHeader', () => {
     expect(screen.getByText('7 total')).toBeInTheDocument();
   });
 
-  it('always renders the Contracts tab (no plan gate)', () => {
+  it('always renders all tabs (no plan gate)', () => {
     render(<Harness />);
     expect(screen.getByRole('button', { name: /Contracts/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Quotes/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Proposals/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Invoices/i })).toBeInTheDocument();
   });
 
@@ -52,7 +52,7 @@ describe('PaymentsHeader', () => {
   it('calls onSearchChange on typing', async () => {
     const onSearchChange = vi.fn();
     render(<Harness onSearchChange={onSearchChange} />);
-    const input = screen.getByPlaceholderText('Search quotes...');
+    const input = screen.getByPlaceholderText('Search proposals...');
     await userEvent.type(input, 'a');
     expect(onSearchChange).toHaveBeenCalledWith('a');
   });

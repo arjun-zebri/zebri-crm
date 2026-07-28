@@ -49,7 +49,17 @@ import { execSync } from 'node:child_process';
 // couples tokenization): 89 → 80.
 // Merge of main into the timeline branch: both reductions combine
 // (main's 80 + the dead-file deletion). Re-measured post-merge → 79.
-const ERROR_BUDGET = 79;
+// Email-template editor overhaul (categories + branded shell): new
+// surfaces landed clean and the sweep cleared one existing error → 78.
+// Phase G quotes removal: deleted quote builder, list pages, API routes,
+// time emitters, and automation triggers; removed quote references from
+// contract builder, templates, payments, and test code → 78 → 75.
+// P5.D action/lineItems/totals/paymentDetails full controls: refactored
+// RenderTotals to use a pure renderRow helper (not component during render)
+// and fixed import-order across public block renderers → 75 → 72.
+// Branding overhaul phase-a completion: strict type compliance fixes +
+// render consolidation clearances → 72 → 66 → 64 (page.tsx any-casts fixed).
+const ERROR_BUDGET = 64;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -110,7 +120,59 @@ const ERROR_BUDGET = 79;
 // Re-measured post-merge → 405.
 // Timeline Add-item modal: removed the unused Assigned-contact field +
 // its event-contacts queries across three callers → 405 → 403.
-const WARNING_BUDGET = 403;
+// Couple-profile tab standardization (shared CoupleTabShell across all
+// tabs): dropped a cluster of import-order/unused-import warnings → 403 → 400.
+// Templates tab-row toolbar: moved per-tab actions into a shared slot and
+// replaced the Timeline tab's off-token empty state/buttons with primitives,
+// clearing two off-token-colour warnings → 400 → 398.
+// Couple-profile tab settings (hide/reorder/default-tab layout): net-clean new
+// code that also cleared one stray warning → 398 → 397.
+// Templates master-detail (two-pane + previews): converting the email/list
+// rows to selectable buttons + dropping the off-token timeline row dropped
+// two warnings → 397 → 395.
+// Quote/invoice templates hardening: the shared manager replaced both
+// legacy managers and their stray hook-deps suppressions → 395 → 394.
+// Phase G quotes removal: cleaned up imports/exports from files that
+// previously exported quote types or references → 394 → 392.
+// Proposal branding audit follow-ups: starter-designs work removed a
+// stale unused import in brand-panel → 342 → 341.
+// P3.1 business-section extraction: fixed @next/next/no-img-element and
+// @typescript-eslint/no-unused-expressions violations by using Image from
+// next/image and extracting event handlers → 341 → 340.
+// P5.1 shared block controls: pure module added to lib/branding with clean
+// imports; fixed import-order across block-frame and public-renderer → 340 → 335.
+// P5.C header banner overlay + business name logo size + divider width: clean
+// new toolbar + renderer code; fixed import-order → 335 → 334.
+// P6.1 templates: deleted starter-designs.ts + starterLayout; added templates/index.ts
+// and templates-section.tsx with strict-clean code; lint --fix swept import-order across
+// the codebase → 334 → 97.
+// Fix branding autosave: removed unused imports from validate-blocks.ts, fixed import
+// order in test file → 333 → 330.
+// Task 23 PDF branding: added publicBrandingToPdfOpts adapter with clean imports,
+// updated two callers (contract page + builder modal) with proper type casts instead
+// of `any` (reduced pre-existing violations); fixed import-order across the changes → 330 → 329.
+// Role-based branding colours: dropping accent/muted/secondary-text/page-background
+// left unused imports across the public-blocks and surface views; removing them
+// cleared 20 warnings → 299 → 279.
+// Lint cleanup (getTextColor imports + dead destructured variables): removing 8 unused
+// imports and destructured variables + fixing import-order violations across
+// public-blocks files → 299 → 279.
+// Task 7 strip default block baked styles: removing four TextStyle constants and
+// their four uses in the invoice default tree → 279 → 278.
+// Task 14 branding conversion: portal vendor-timeline, contacts-section, timeline-section,
+// portal-shell, page.tsx converted to use branding; 278 → 271.
+// Portal status tokens (text-danger/bg-success/bg-warning) moved to
+// STATUS_COLORS constants, dropping one more warning (271 -> 270).
+// Welcome onboarding wizard: pure utility modules + component extraction cleared
+// unused-import warnings across preview files (270 -> 267).
+// Proposals single/multi-package + branding batch drifted warnings up to 307
+// (mostly import-order across the new proposal/branding surfaces). Auto-fixed
+// import-order in the changed files, removed dead imports/vars, and applied the
+// established disable-comment convention for the deliberate app->lib Block type
+// import (no-restricted-imports) and public-branding logo <img> (no-img-element).
+// Also made the eslint `.next` ignore recursive so a local git worktree's build
+// output stops polluting the count (307 -> 265). Locking in at 265.
+const WARNING_BUDGET = 265;
 
 function runEslintJson() {
   try {

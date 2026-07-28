@@ -18,14 +18,14 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
-import { LIFECYCLE_LABELS, type LifecycleStage } from '@/types/email-template'
 
 type Mode = 'send' | 'test'
 
 interface TemplateRow {
   id: string
   name: string
-  lifecycle_stage: string | null
+  /** Joined category (the user's grouping), when the template has one. */
+  category: { name: string } | null
 }
 
 const MODE = {
@@ -63,7 +63,8 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
     enabled: open,
     queryFn: async (): Promise<TemplateRow[]> => {
       const supabase = createClient()
-      const { data, error } = await supabase.from('email_templates').select('id, name, lifecycle_stage').order('position')
+      // Archived templates stay out of the picker (soft retirement).
+      const { data, error } = await supabase.from('email_templates').select('id, name, category:email_template_categories(name)').is('archived_at', null).order('position')
       if (error) throw error
       return (data ?? []) as TemplateRow[]
     },
@@ -100,10 +101,8 @@ export function CoupleTemplatePicker({ mode, onPick }: Props) {
                   className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm text-text transition hover:bg-surface-muted cursor-pointer"
                 >
                   <span className="truncate">{t.name}</span>
-                  {t.lifecycle_stage && (
-                    <span className="shrink-0 text-xs text-text-subtle">
-                      {LIFECYCLE_LABELS[t.lifecycle_stage as LifecycleStage] ?? t.lifecycle_stage}
-                    </span>
+                  {t.category && (
+                    <span className="shrink-0 text-xs text-text-subtle">{t.category.name}</span>
                   )}
                 </button>
               ))}

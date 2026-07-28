@@ -1,180 +1,159 @@
 /**
- * Email-template library list.
+ * Email-template master list (left pane of the Emails master-detail).
  *
- * Browses templates grouped by wedding-lifecycle stage — quiet stage
- * subheaders with calm, click-to-edit rows beneath, mirroring the
- * couple Overview / Automations surfaces. A slim search narrows by
- * name or subject; per-row Edit / Duplicate / Delete live in a
- * hover-revealed overflow menu so the list stays scannable. Create/edit
- * open the editor modal via the orchestrator.
+ * Browses active templates grouped by the MC's own categories
+ * (colour-dotted subheaders in the user's drag order), with un-tagged
+ * templates in a trailing "Uncategorised" bucket and archived templates
+ * in a collapsed "Archived (n)" section at the bottom (mirrors the
+ * Packages tab). Selecting a row drives the preview pane; the row's
+ * edit/duplicate/archive/delete actions live on that preview, so the
+ * list itself stays scannable. Filtered by the toolbar `search`.
  *
  * @module app/(dashboard)/templates/templates-library
  */
 'use client'
 
-import { Copy, Library, Mail, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
 
-import { Button } from '@/components/ui/button'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Empty } from '@/components/ui/empty'
 import { ErrorState } from '@/components/ui/error-state'
-import { Input } from '@/components/ui/input'
-import { RowActionsMenu } from '@/components/ui/row-actions-menu'
-import { useToast } from '@/components/ui/toast'
-import { LIFECYCLE_LABELS, LIFECYCLE_STAGES, type EmailTemplate, type LifecycleStage } from '@/types/email-template'
+import type { EmailTemplate } from '@/types/email-template'
 
+import { categoryColorClasses } from './category-colors'
 import { TemplatesSkeleton } from './templates-skeleton'
-import { useCloneTemplate, useDeleteTemplate } from './use-templates'
+import { useCategories } from './use-categories'
 
 interface TemplatesLibraryProps {
+  /** Active (non-archived) templates, grouped by category. */
   templates: EmailTemplate[]
+  /** Archived templates — rendered in a collapsed trailing section. */
+  archived?: EmailTemplate[]
   isLoading: boolean
   isError: boolean
   onRetry: () => void
-  onNew: () => void
-  /** Open the "Browse starter templates" catalog (empty-state CTA). */
-  onBrowse: () => void
-  onEdit: (template: EmailTemplate) => void
+  /** Search query from the toolbar — filters by template name or subject. */
+  search: string
+  /** Currently-selected template id (drives the preview + row highlight). */
+  selectedId: string | null
+  onSelect: (template: EmailTemplate) => void
 }
 
-/** One lifecycle bucket plus its matching templates. `null` stage is the
- *  "Other" bucket for un-tagged templates, rendered last. */
-interface StageGroup {
-  key: LifecycleStage | 'other'
+/** One category bucket plus its matching templates. `null` dot = the
+ *  trailing "Uncategorised" bucket. */
+interface CategoryGroup {
+  key: string
   label: string
+  dotClass: string | null
   items: EmailTemplate[]
 }
 
-/** Render order: the journey stages first, then un-tagged templates. */
-const GROUP_ORDER: (LifecycleStage | null)[] = [...LIFECYCLE_STAGES, null]
+function TemplateRow({
+  template,
+  active,
+  onSelect,
+}: {
+  template: EmailTemplate
+  active: boolean
+  onSelect: (template: EmailTemplate) => void
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onSelect(template)}
+        aria-current={active ? 'true' : undefined}
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left transition ${
+          active ? 'bg-surface-muted' : 'hover:bg-surface-muted'
+        }`}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-text">{template.name}</span>
+          <span className="block truncate text-xs text-text-subtle">
+            {template.subject || 'No subject'}
+          </span>
+        </span>
+      </button>
+    </li>
+  )
+}
 
-export function TemplatesLibrary({ templates, isLoading, isError, onRetry, onNew, onBrowse, onEdit }: TemplatesLibraryProps) {
-  const { toast } = useToast()
-  const clone = useCloneTemplate()
-  const remove = useDeleteTemplate()
-  const [search, setSearch] = useState('')
-  const [pendingDelete, setPendingDelete] = useState<EmailTemplate | null>(null)
+export function TemplatesLibrary({ templates, archived = [], isLoading, isError, onRetry, search, selectedId, onSelect }: TemplatesLibraryProps) {
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories()
+  const [showArchived, setShowArchived] = useState(false)
 
-  // Group by lifecycle stage, preserving the position order the query
-  // returns within each bucket. Search filters by name or subject; only
-  // non-empty groups render so the page never shows a bare header.
-  const groups = useMemo<StageGroup[]>(() => {
-    const q = search.trim().toLowerCase()
-    const matches = (t: EmailTemplate) =>
-      !q || t.name.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q)
-    return GROUP_ORDER.map((stage) => ({
-      key: (stage ?? 'other') as LifecycleStage | 'other',
-      label: stage ? LIFECYCLE_LABELS[stage] : 'Other',
-      items: templates.filter((t) => (t.lifecycle_stage ?? null) === stage && matches(t)),
-    })).filter((g) => g.items.length > 0)
-  }, [templates, search])
+  const q = search.trim().toLowerCase()
+  const matches = (t: EmailTemplate) =>
+    !q || t.name.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q)
 
-  async function handleClone(t: EmailTemplate) {
-    try {
-      await clone.mutateAsync(t.id)
-      toast('Template duplicated', 'success')
-    } catch {
-      toast('Could not duplicate', 'error')
-    }
+  // Group by the user's categories in their drag order, preserving the
+  // position order the template query returns within each bucket.
+  // Search filters by name or subject; only non-empty groups render so
+  // the page never shows a bare header. Derived in render — the list is
+  // small enough that memoising isn't worth the dependency bookkeeping.
+  const categoryGroups = categories.map((c) => ({
+    key: c.id,
+    label: c.name,
+    dotClass: categoryColorClasses(c.color).dot,
+    items: templates.filter((t) => t.category_id === c.id && matches(t)),
+  }))
+  const known = new Set(categories.map((c) => c.id))
+  const uncategorised = {
+    key: 'uncategorised',
+    label: 'Uncategorised',
+    dotClass: null,
+    items: templates.filter((t) => (!t.category_id || !known.has(t.category_id)) && matches(t)),
   }
+  const groups: CategoryGroup[] = [...categoryGroups, uncategorised].filter(
+    (g) => g.items.length > 0,
+  )
 
-  if (isLoading) return <TemplatesSkeleton />
+  const visibleArchived = archived.filter(matches)
+
+  if (isLoading || categoriesLoading) return <TemplatesSkeleton />
   if (isError) return <ErrorState title="Couldn't load templates" onRetry={onRetry} />
-  if (templates.length === 0) {
-    return (
-      <Empty
-        size="sm"
-        className="min-h-[60vh]"
-        icon={Mail}
-        title="No templates yet"
-        description="Add ready-made starters from the catalog, or write your own from scratch."
-        action={
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onBrowse}>
-              Browse starter templates
-            </Button>
-            <Button size="sm" onClick={onNew}>
-              New template
-            </Button>
-          </div>
-        }
-      />
-    )
+  if (groups.length === 0 && archived.length === 0) {
+    return <p className="py-8 text-center text-sm text-text-subtle">No templates match your search.</p>
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="w-full sm:w-64">
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search templates…" size="sm" />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button size="sm" variant="outline" onClick={onBrowse} className="gap-1.5">
-            <Library size={14} strokeWidth={1.5} />
-            Browse starter templates
-          </Button>
-          <Button size="sm" onClick={onNew} className="gap-1.5">
-            <Plus size={14} strokeWidth={2} />
-            New template
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-5">
+      {groups.map((group) => (
+        <section key={group.key}>
+          <h3 className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+            {group.dotClass && <span className={`h-2 w-2 rounded-full ${group.dotClass}`} />}
+            {group.label}
+          </h3>
+          <ul className="mt-1 space-y-0.5">
+            {group.items.map((t) => (
+              <TemplateRow key={t.id} template={t} active={t.id === selectedId} onSelect={onSelect} />
+            ))}
+          </ul>
+        </section>
+      ))}
 
-      {groups.length === 0 ? (
-        <p className="py-8 text-center text-sm text-text-subtle">No templates match your search.</p>
-      ) : (
-        groups.map((group) => (
-          <section key={group.key}>
-            <h3 className="px-3 text-xs font-semibold uppercase tracking-wider text-text-subtle">{group.label}</h3>
-            <ul className="mt-1">
-              {group.items.map((t) => (
-                <li
-                  key={t.id}
-                  className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-surface-muted"
-                >
-                  <button type="button" onClick={() => onEdit(t)} className="min-w-0 flex-1 cursor-pointer text-left">
-                    <p className="truncate text-sm font-medium text-text">{t.name}</p>
-                    <p className="truncate text-xs text-text-subtle">{t.subject || 'No subject'}</p>
-                  </button>
-                  <RowActionsMenu
-                    alwaysVisible
-                    actions={[
-                      { label: 'Edit', icon: <Pencil size={15} strokeWidth={1.5} />, onSelect: () => onEdit(t) },
-                      { label: 'Duplicate', icon: <Copy size={15} strokeWidth={1.5} />, onSelect: () => void handleClone(t) },
-                      {
-                        label: 'Delete',
-                        destructive: true,
-                        icon: <Trash2 size={15} strokeWidth={1.5} />,
-                        onSelect: () => setPendingDelete(t),
-                      },
-                    ]}
-                  />
-                </li>
+      {archived.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowArchived((v) => !v)}
+            className="flex cursor-pointer items-center gap-1 px-2 py-1 text-xs text-text-muted transition hover:text-text"
+          >
+            {showArchived ? (
+              <ChevronDown size={14} strokeWidth={1.5} />
+            ) : (
+              <ChevronRight size={14} strokeWidth={1.5} />
+            )}
+            Archived ({archived.length})
+          </button>
+          {showArchived && (
+            <ul className="mt-1 space-y-0.5">
+              {visibleArchived.map((t) => (
+                <TemplateRow key={t.id} template={t} active={t.id === selectedId} onSelect={onSelect} />
               ))}
             </ul>
-          </section>
-        ))
+          )}
+        </div>
       )}
-
-      <ConfirmDialog
-        open={pendingDelete !== null}
-        title="Delete template?"
-        description={`"${pendingDelete?.name}" will be permanently removed. This can't be undone.`}
-        loading={remove.isPending}
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={async () => {
-          if (!pendingDelete) return
-          try {
-            await remove.mutateAsync(pendingDelete.id)
-            toast('Template deleted', 'success')
-          } catch {
-            toast('Could not delete', 'error')
-          } finally {
-            setPendingDelete(null)
-          }
-        }}
-      />
     </div>
   )
 }

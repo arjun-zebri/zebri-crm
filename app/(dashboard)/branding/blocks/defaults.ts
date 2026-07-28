@@ -1,9 +1,44 @@
-import type { Block, BlockType, TextStyle } from './types'
+import type { JSONContent } from '@tiptap/core'
+
+import { htmlToPlainText } from '@/lib/branding/sanitize'
+
+import type { Block, BlockType } from './types'
+
+/** Build a single-paragraph rich-text doc from a plain string (empty = blank paragraph). */
+function textDoc(s: string): JSONContent {
+  return { type: 'doc', content: [{ type: 'paragraph', ...(s ? { content: [{ type: 'text', text: s }] } : {}) }] }
+}
+
+/**
+ * Plain text of a rich-text field value, whether a legacy HTML string or a
+ * TipTap JSON doc. Used by the contract migration heuristic, which matches the
+ * old template's headings against a text block's content.
+ */
+function richPlainText(value: unknown): string {
+  if (typeof value === 'string') return htmlToPlainText(value)
+  if (!value || typeof value !== 'object') return ''
+  const node = value as { text?: string; content?: unknown[] }
+  if (typeof node.text === 'string') return node.text
+  if (Array.isArray(node.content)) return node.content.map(richPlainText).join('')
+  return ''
+}
 
 let counter = 0
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`
 
-export function blockTemplate(type: BlockType): Block {
+/**
+ * Default primary/secondary labels for an action block, by surface. Proposals
+ * accept or decline; invoices and every other surface pay, with no decline.
+ *
+ * @param surface - The document surface the action block belongs to.
+ */
+export function actionDefaults(surface?: string): { primary: string; secondary: string | null } {
+  return surface === 'proposal'
+    ? { primary: 'Accept', secondary: 'Decline' }
+    : { primary: 'Pay now', secondary: null }
+}
+
+export function blockTemplate(type: BlockType, surface?: string): Block {
   switch (type) {
     case 'headerBanner':
       return { id: newId('hb'), type: 'headerBanner' }
@@ -16,7 +51,7 @@ export function blockTemplate(type: BlockType): Block {
         id: newId('tt'),
         type: 'title',
         title: 'Document title',
-        subtitle: 'Couple name · Date',
+        showCoupleName: true,
         showRef: true,
         showExpires: true,
         showAbn: false,
@@ -26,114 +61,87 @@ export function blockTemplate(type: BlockType): Block {
     case 'totals':
       return { id: newId('to'), type: 'totals', taxRate: 10, showSubtotal: true, colSpread: true }
     case 'text':
-      return { id: newId('tx'), type: 'text', text: 'Add a note to your client.' }
+      // Empty rich-text doc by default so the prompt shows as editor placeholder
+      // only and an untouched text block renders nothing on the public document.
+      return { id: newId('tx'), type: 'text', text: textDoc('') }
     case 'action':
-      return { id: newId('ac'), type: 'action', primary: 'Submit', secondary: null }
+      return { id: newId('ac'), type: 'action', ...actionDefaults(surface) }
     case 'divider':
       return { id: newId('dv'), type: 'divider' }
     case 'footer':
-      return { id: newId('ft'), type: 'footer', closingNote: 'Thank you for choosing us.' }
+      return { id: newId('ft'), type: 'footer', closingNote: textDoc('Thank you for choosing us.') }
     case 'paymentDetails':
-      return { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' }
+      return { id: newId('pd'), type: 'paymentDetails', heading: textDoc('Bank transfer'), accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' }
     case 'couplePortal':
       return { id: newId('cp'), type: 'couplePortal', locked: true }
     case 'paymentSchedule':
-      return { id: newId('ps'), type: 'paymentSchedule', locked: true }
+      return { id: newId('ps'), type: 'paymentSchedule' }
     case 'contractBody':
       return { id: newId('cb'), type: 'contractBody', locked: true }
+    case 'proposalBody':
+      return { id: newId('pb'), type: 'proposalBody', locked: true }
+    case 'packageHeader':
+      return { id: newId('ph'), type: 'packageHeader' }
+    case 'packageDetails':
+      return { id: newId('pd2'), type: 'packageDetails' }
+    case 'packageLineItems':
+      return { id: newId('pli'), type: 'packageLineItems', showHeader: true }
+    case 'packageInclusions':
+      return { id: newId('pi'), type: 'packageInclusions' }
+    case 'packageTotals':
+      return { id: newId('pt'), type: 'packageTotals' }
+    case 'vendorTimelineBody':
+      return { id: newId('vt'), type: 'vendorTimelineBody', locked: true }
+    case 'questionnaireBody':
+      return { id: newId('qb'), type: 'questionnaireBody', locked: true, mode: 'form' }
+    case 'image':
+      return { id: newId('im'), type: 'image', fit: 'cover', heightPx: 160 }
+    case 'spacer':
+      return { id: newId('sp'), type: 'spacer', heightPx: 32 }
   }
 }
 
-// ── Curated styles ────────────────────────────────────────────────────────────
-// Intentional overrides that give the starter template a designed feel.
-// Kept minimal so theme/font changes still flow through cleanly.
-
-const HERO_SUBTITLE: TextStyle = {
-  fontSize: 12,
-  color: '#9CA3AF',
-  letterSpacing: 0.08,
-  lineHeight: 1.4,
-}
-
-const FORMAL_TITLE: TextStyle = {
-  fontSize: 38,
-  fontWeight: 500,
-  letterSpacing: -0.015,
-  lineHeight: 1.1,
-}
-
-const EMPHASIZED_TOTAL: TextStyle = {
-  fontSize: 22,
-  fontWeight: 700,
-  letterSpacing: -0.01,
-}
-
-const SOFT_MESSAGE: TextStyle = {
-  fontSize: 13,
-  lineHeight: 1.7,
-  color: '#4B5563',
-}
-
-const SOFT_DIVIDER = { thickness: 1, color: '#E5E7EB' } as const
-
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
-export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'portal'): Block[] {
+export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
   if (surface === 'portal') {
     return [
-      { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       { id: newId('cp'), type: 'couplePortal', locked: true },
     ]
   }
-  if (surface === 'quote') {
+  if (surface === 'proposal') {
     return [
-      { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
-      {
-        id: newId('tt'),
-        type: 'title',
-        title: 'Quote',
-        subtitle: 'ALEX & JORDAN  ·  14 SEPTEMBER 2026',
-        showRef: true,
-        showExpires: true,
-        showAbn: false,
-        titleStyle: FORMAL_TITLE,
-        subtitleStyle: HERO_SUBTITLE,
-      },
-      { id: newId('li'), type: 'lineItems', colSpread: true },
-      {
-        id: newId('to'),
-        type: 'totals',
-        taxRate: 10,
-        showSubtotal: true,
-        totalStyle: EMPHASIZED_TOTAL,
-      },
-      { id: newId('dv'), type: 'divider', ...SOFT_DIVIDER },
-      {
-        id: newId('tx'),
-        type: 'text',
-        text: 'Thanks for thinking of me for your day. The deposit secures the date - happy to jump on a call before you decide.',
-        textStyle: SOFT_MESSAGE,
-      },
-      { id: newId('ac'), type: 'action', primary: 'Accept quote', secondary: 'Decline' },
-      { id: newId('ft'), type: 'footer', closingNote: 'Thank you for thinking of us.' },
+      { id: newId('ph'), type: 'packageHeader' },
+      { id: newId('pd2'), type: 'packageDetails' },
+      { id: newId('pli'), type: 'packageLineItems', showHeader: true },
+      { id: newId('pi'), type: 'packageInclusions' },
+      { id: newId('pt'), type: 'packageTotals' },
+      { id: newId('ac'), type: 'action', ...actionDefaults('proposal') },
+      { id: newId('ft'), type: 'footer', closingNote: textDoc('Thank you for thinking of us.') },
     ]
   }
   if (surface === 'invoice') {
+    // Only what an invoice cannot be an invoice without: who it is from, what
+    // it is, what is owed, and how to pay. No banner, and no pre-written prose
+    // the MC did not ask for. Everything else stays one click away in the
+    // block palette.
+    //
+    // The subtitle is the couple's real name (opt-in via the Include dropdown),
+    // sourced from document data — never free text — so nothing placeholder-ish
+    // can render on a real invoice. Off by default to preserve the historically
+    // subtitle-free invoice header until the MC turns it on.
     return [
-      { id: newId('hb'), type: 'headerBanner' },
       { id: newId('bn'), type: 'businessName' },
       {
         id: newId('tt'),
         type: 'title',
         title: 'Invoice',
-        subtitle: 'ALEX & JORDAN  ·  14 SEPTEMBER 2026',
+        showCoupleName: false,
         showRef: true,
         showExpires: true,
         showAbn: true,
-        titleStyle: FORMAL_TITLE,
-        subtitleStyle: HERO_SUBTITLE,
       },
       { id: newId('li'), type: 'lineItems', colSpread: true },
       {
@@ -141,18 +149,23 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'po
         type: 'totals',
         taxRate: 10,
         showSubtotal: true,
-        totalStyle: EMPHASIZED_TOTAL,
       },
-      { id: newId('ps'), type: 'paymentSchedule', locked: true },
-      {
-        id: newId('tx'),
-        type: 'text',
-        text: 'Payment due within 14 days. Pay by card, or by bank transfer using the details below.',
-        textStyle: SOFT_MESSAGE,
-      },
-      { id: newId('pd'), type: 'paymentDetails', heading: 'Bank transfer', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' },
-      { id: newId('ac'), type: 'action', primary: 'Pay with card', secondary: null },
-      { id: newId('ft'), type: 'footer', closingNote: 'Questions? Reply any time and we will sort it.' },
+      { id: newId('ps'), type: 'paymentSchedule' },
+      { id: newId('pd'), type: 'paymentDetails', heading: textDoc('Bank transfer'), note: 'Please transfer the total to the account below.', accountName: 'Your business name', bsb: '000-000', accountNumber: '0000 0000' },
+      { id: newId('ac'), type: 'action', primary: 'Pay now', secondary: null, note: 'Or pay securely online with your card.' },
+      { id: newId('ft'), type: 'footer', closingNote: textDoc('Thank you for choosing us.') },
+    ]
+  }
+  if (surface === 'vendorTimeline') {
+    return [
+      { id: newId('bn'), type: 'businessName' },
+      { id: newId('vt'), type: 'vendorTimelineBody', locked: true },
+    ]
+  }
+  if (surface === 'questionnaire') {
+    return [
+      { id: newId('bn'), type: 'businessName' },
+      blockTemplate('questionnaireBody'),
     ]
   }
   // contract — minimal chrome scaffold. The contract body is
@@ -163,7 +176,6 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'po
   // stays intentionally lean so MCs aren't fighting pre-canned
   // structure they didn't ask for.
   return [
-    { id: newId('hb'), type: 'headerBanner' },
     { id: newId('bn'), type: 'businessName' },
     { id: newId('cb'), type: 'contractBody', locked: true },
   ]
@@ -173,12 +185,17 @@ export function defaultBlocksFor(surface: 'quote' | 'invoice' | 'contract' | 'po
  * Migrate persisted block data from older shapes (e.g. type: 'message') to the
  * current schema. Safe to run on every load.
  */
-export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | 'contract' | 'portal'): Block[] {
+export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
   if (!Array.isArray(blocks)) return []
   let migrated = blocks
     .map((raw): Block | null => {
       if (!raw || typeof raw !== 'object') return null
       const b = raw as Record<string, unknown> & { type?: string }
+      if (b.type === 'headerBanner') {
+        // Spec §6: banner block is deleted; migrate to an image block, keeping
+        // whatever image/positioning fields it carried.
+        return stripDashes({ ...(b as object), type: 'image' } as unknown as Block)
+      }
       if (b.type === 'message') {
         const { style: _style, ...rest } = b as Record<string, unknown>
         void _style
@@ -197,17 +214,30 @@ export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | '
   // ran on every load, so deleting the banner caused it to reappear on
   // refresh. New users still get a banner via defaultBlocksFor.)
 
-  // Ensure a single businessName sits right after the header banner. Older
-  // invoice templates dropped it at the end of the document; normalise.
-  const businessIdxs = migrated
-    .map((b, i) => (b.type === 'businessName' ? i : -1))
-    .filter((i) => i >= 0)
-  if (businessIdxs.length > 0) {
-    const first = migrated[businessIdxs[0]]
-    const without = migrated.filter((b) => b.type !== 'businessName')
-    const bannerIdx = without.findIndex((b) => b.type === 'headerBanner')
-    const insertAt = bannerIdx >= 0 ? bannerIdx + 1 : 0
-    migrated = [...without.slice(0, insertAt), first, ...without.slice(insertAt)]
+  // (Removed: previous code force-moved businessName to the top on every load,
+  // so the "My details" block jumped to the top on refresh. Blocks now keep
+  // whatever order the user arranged.)
+
+  // Invoices can be paid but not declined, so an action block on the invoice
+  // surface never carries a secondary button. Clear any legacy one.
+  if (surface === 'invoice') {
+    migrated = migrated.map((b) =>
+      b.type === 'action' && b.secondary !== null ? ({ ...b, secondary: null } as Block) : b,
+    )
+  }
+
+  // Proposals are accepted or declined, never paid. An action block still
+  // carrying the old surface-blind "Pay now" default (or the "Secondary"
+  // placeholder) leaked from the invoice-shaped template; give it the proposal
+  // accept/decline wording. Idempotent — only the exact legacy strings match.
+  if (surface === 'proposal') {
+    migrated = migrated.map((b) => {
+      if (b.type !== 'action') return b
+      let next = b
+      if (next.primary === 'Pay now') next = { ...next, ...actionDefaults('proposal') }
+      if (next.secondary === 'Secondary') next = { ...next, secondary: 'Decline' }
+      return next
+    })
   }
 
   // Contract surface migration (Phase 3.1):
@@ -229,7 +259,7 @@ export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | '
       // start-of-string against the old default's headings.
       const oldDefaultPattern = /^(PARTIES|EVENT DETAILS|\d+\.\s+[A-Z][A-Z &,]+|SIGNATURES)\b/
       const chrome = migrated.filter(
-        (b) => b.type !== 'text' || !oldDefaultPattern.test((b as { text?: string }).text ?? ''),
+        (b) => b.type !== 'text' || !oldDefaultPattern.test(richPlainText((b as { text?: unknown }).text).trimStart()),
       )
       // Drop the action + standalone dividers that bracketed the
       // old template's signature section — they're chrome but
@@ -270,6 +300,33 @@ export function migrateBlocks(blocks: unknown, surface?: 'quote' | 'invoice' | '
     }
   }
 
+  // Proposal surface migration: expand any surviving `proposalBody` marker
+  // into the four real package blocks (header, details, inclusions, totals).
+  if (surface === 'proposal') {
+    migrated = expandProposalBody(migrated)
+
+    // Insert packageLineItems block after packageDetails if the tree has package
+    // blocks but no packageLineItems yet. Idempotent — runs harmlessly when the
+    // data is already in the new shape.
+    const hasPackageBlocks = migrated.some((b) => b.type === 'packageDetails')
+    const hasLineItems = migrated.some((b) => b.type === 'packageLineItems')
+    if (hasPackageBlocks && !hasLineItems) {
+      const detailsIdx = migrated.findIndex((b) => b.type === 'packageDetails')
+      if (detailsIdx >= 0) {
+        const lineItemsBlock: Block = {
+          id: `pli_${Math.random().toString(36).slice(2, 9)}`,
+          type: 'packageLineItems',
+          showHeader: true,
+        }
+        migrated = [
+          ...migrated.slice(0, detailsIdx + 1),
+          lineItemsBlock,
+          ...migrated.slice(detailsIdx + 1),
+        ]
+      }
+    }
+  }
+
   return migrated
 }
 
@@ -281,12 +338,36 @@ function stripDashes(block: Block): Block {
     typeof s === 'string' ? s.replace(/—|–/g, '-') : s
   switch (block.type) {
     case 'text':
-      return { ...block, text: swap(block.text) ?? block.text }
+      // Upgrade a legacy plain-string body to a rich-text JSON doc so the editor
+      // (which expects TipTap JSON) can load it. HTML tags in the old string are
+      // reduced to plain text; new content already arrives as JSON and passes
+      // through untouched.
+      if (typeof block.text === 'string') {
+        return { ...block, text: textDoc(htmlToPlainText(block.text)) }
+      }
+      return block
+    case 'footer':
+      // Same upgrade for the footer's closing note (now rich text).
+      if (typeof block.closingNote === 'string') {
+        return { ...block, closingNote: textDoc(htmlToPlainText(block.closingNote)) }
+      }
+      return block
+    case 'paymentDetails':
+      // Same upgrade for the payment-details heading (now rich text).
+      if (typeof block.heading === 'string') {
+        return { ...block, heading: textDoc(htmlToPlainText(block.heading)) }
+      }
+      return block
     case 'title':
       return {
         ...block,
         title: swap(block.title) ?? block.title,
-        subtitle: swap(block.subtitle) ?? block.subtitle,
+        // The free-text subtitle is retired in favour of the auto couple-name
+        // line. Migrate intent: a block that had any subtitle text becomes a
+        // shown couple-name line; an empty/absent one stays off. Idempotent —
+        // once showCoupleName is set we leave it alone.
+        showCoupleName:
+          block.showCoupleName ?? (typeof block.subtitle === 'string' && block.subtitle.trim().length > 0),
       }
     case 'action':
       return {
@@ -294,7 +375,33 @@ function stripDashes(block: Block): Block {
         primary: swap(block.primary) ?? block.primary,
         secondary: block.secondary == null ? null : swap(block.secondary) ?? block.secondary,
       }
+    case 'paymentSchedule':
+      // The payment schedule is now a normal, selectable + deletable block (it
+      // used to ship `locked`, which hid its toolbar entirely). Unlock any saved
+      // instances so clicking it shows the toolbar and it can be removed/re-added.
+      return block.locked ? { ...block, locked: false } : block
     default:
       return block
   }
+}
+
+/**
+ * Spec §6: expand a legacy `proposalBody` marker into the four real package
+ * blocks (header, details, optional inclusions, totals) in place. The Accept
+ * CTA is the existing `action` block that already sits after the marker; we do
+ * not synthesise one here (readiness flags its absence). Idempotent: a tree
+ * with no `proposalBody` is returned unchanged.
+ */
+export function expandProposalBody(blocks: Block[]): Block[] {
+  const idx = blocks.findIndex((b) => b.type === 'proposalBody')
+  if (idx < 0) return blocks
+  const pkg: Block[] = [
+    blockTemplate('packageHeader'),
+    blockTemplate('packageDetails'),
+    blockTemplate('packageInclusions'),
+    blockTemplate('packageTotals'),
+  ]
+  // Drop the marker and any duplicate proposalBody markers further down.
+  const rest = blocks.filter((b) => b.type !== 'proposalBody')
+  return [...rest.slice(0, idx), ...pkg, ...rest.slice(idx)]
 }

@@ -4,8 +4,9 @@
  * Every action is Zod-validated and runs through the RLS-scoped server
  * client (never the service role), returning a tagged
  * `{ ok, data } | { ok: false, error }` the hook pattern-matches.
- * These cover the library's create / update / delete / clone mutations
- * plus adding starter templates from the catalog by name.
+ * These cover the library's create / update / delete / clone /
+ * archive mutations plus adding starter templates from the catalog
+ * by name.
  *
  * @module app/(dashboard)/templates/actions
  */
@@ -16,9 +17,10 @@ import { z } from 'zod'
 
 import { logger } from '@/lib/alerts/logger'
 import { starterTemplatesByName } from '@/lib/email/starter-templates'
+import { DEFAULT_EMAIL_CATEGORIES, ensureDefaultCategories } from '@/lib/email/template-categories'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/types/database'
-import { LIFECYCLE_STAGES, type EmailTemplate } from '@/types/email-template'
+import type { EmailTemplate } from '@/types/email-template'
 
 /* ─── Tagged result type ───────────────────────────────────────── */
 
@@ -45,7 +47,9 @@ const templateInputSchema = z.object({
   description: z.string().trim().max(500).default(''),
   subject: z.string().trim().max(300).default(''),
   content: contentSchema,
-  lifecycle_stage: z.enum(LIFECYCLE_STAGES).nullable().default(null),
+  // User category (replaces the legacy lifecycle_stage in the UI).
+  // Ownership is verified before write — see `ownCategoryId`.
+  category_id: z.uuid().nullable().default(null),
 })
 
 export type TemplateInput = z.input<typeof templateInputSchema>
@@ -62,8 +66,10 @@ function toTemplate(row: Row): EmailTemplate {
     subject: row.subject,
     content: (row.content ?? {}) as JSONContent,
     lifecycle_stage: row.lifecycle_stage as EmailTemplate['lifecycle_stage'],
+    category_id: row.category_id,
     is_starter: row.is_starter,
     position: row.position,
+    archived_at: row.archived_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }
@@ -75,6 +81,25 @@ async function requireUser() {
     data: { user },
   } = await supabase.auth.getUser()
   return { supabase, user }
+}
+
+/**
+ * Resolve a requested category id to one the caller owns, or `null`.
+ * The FK alone doesn't prove ownership (it only proves existence), so
+ * an RLS-scoped read is the gate — a foreign id quietly degrades to
+ * "no category" instead of landing on someone else's category.
+ */
+async function ownCategoryId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  categoryId: string | null,
+): Promise<string | null> {
+  if (!categoryId) return null
+  const { data } = await supabase
+    .from('email_template_categories')
+    .select('id')
+    .eq('id', categoryId)
+    .maybeSingle()
+  return data?.id ?? null
 }
 
 /* ─── createTemplateAction ─────────────────────────────────────── */
@@ -96,7 +121,7 @@ export async function createTemplateAction(
       description: parsed.data.description || null,
       subject: parsed.data.subject,
       content: parsed.data.content as Row['content'],
-      lifecycle_stage: parsed.data.lifecycle_stage,
+      category_id: await ownCategoryId(supabase, parsed.data.category_id),
     })
     .select('*')
     .single()
@@ -128,7 +153,7 @@ export async function updateTemplateAction(
       description: parsed.data.description || null,
       subject: parsed.data.subject,
       content: parsed.data.content as Row['content'],
-      lifecycle_stage: parsed.data.lifecycle_stage,
+      category_id: await ownCategoryId(supabase, parsed.data.category_id),
     })
     .eq('id', id)
     .select('*')
@@ -157,6 +182,35 @@ export async function deleteTemplateAction(id: string): Promise<ActionResult<{ i
   return { ok: true, data: { id } }
 }
 
+/* ─── setTemplateArchivedAction ────────────────────────────────── */
+
+/**
+ * Archive or restore a template (soft retirement). Archived templates
+ * drop out of the Emails library list and the template pickers but
+ * keep their row, so send history and automation references survive.
+ */
+export async function setTemplateArchivedAction(
+  id: string,
+  archived: boolean,
+): Promise<ActionResult<EmailTemplate>> {
+  if (!uuidSchema.safeParse(id).success) return { ok: false, error: 'Invalid template id.' }
+
+  const { supabase, user } = await requireUser()
+  if (!user) return { ok: false, error: 'Not signed in.' }
+
+  const { data, error } = await supabase
+    .from('email_templates')
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error || !data) {
+    logger.error('[templates/actions] setTemplateArchivedAction failed', error, { userId: user.id, id })
+    return { ok: false, error: archived ? 'Could not archive template.' : 'Could not unarchive template.' }
+  }
+  return { ok: true, data: toTemplate(data) }
+}
+
 /* ─── cloneTemplateAction ──────────────────────────────────────── */
 
 /** Duplicate an existing template (RLS guarantees same-owner only). */
@@ -182,6 +236,7 @@ export async function cloneTemplateAction(id: string): Promise<ActionResult<Emai
       subject: source.subject,
       content: source.content,
       lifecycle_stage: source.lifecycle_stage,
+      category_id: source.category_id,
       position: source.position + 1,
     })
     .select('*')
@@ -228,13 +283,24 @@ export async function addStarterTemplatesAction(names: string[]): Promise<Action
   const toInsert = starters.filter((t) => !have.has(t.name))
   if (toInsert.length === 0) return { ok: true, data: { added: 0 } }
 
+  // Starters carry a legacy lifecycle stage; file each one under the
+  // user's matching default category (seeded here if this is a fresh
+  // account) so they land grouped, not in "Uncategorised".
+  const categories = await ensureDefaultCategories(supabase, user)
+  const categoryByName = new Map(categories.map((c) => [c.name, c.id]))
+  const stageCategory = (stage: string): string | null => {
+    const def = DEFAULT_EMAIL_CATEGORIES.find((d) => d.stage === stage)
+    return def ? (categoryByName.get(def.name) ?? null) : null
+  }
+
   const rows = toInsert.map((t, i) => ({
     user_id: user.id,
     name: t.name,
     description: t.description,
     subject: t.subject,
-    content: t.content as Database['public']['Tables']['email_templates']['Insert']['content'],
+    content: t.content as NonNullable<Database['public']['Tables']['email_templates']['Insert']['content']>,
     lifecycle_stage: t.lifecycleStage,
+    category_id: stageCategory(t.lifecycleStage),
     is_starter: true,
     position: maxPosition + (i + 1) * 10,
   }))

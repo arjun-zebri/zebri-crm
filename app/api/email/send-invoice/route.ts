@@ -23,6 +23,7 @@ import { EMAIL_RATE_LIMITS, inMemoryLimiter, ipOf } from '@/lib/api/rate-limit';
 import { parseJsonBody } from '@/lib/api/validate';
 import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendInvoiceEmail } from '@/lib/email';
+import { emailBrandingForUser } from '@/lib/email/branding';
 import { resolveSender } from '@/lib/email/sender-identity';
 import { createClient } from '@/lib/supabase/server';
 
@@ -99,7 +100,28 @@ export async function POST(request: NextRequest) {
   if (!invoice.share_token_enabled) updates.share_token_enabled = true;
   if (invoice.status === 'draft') updates.status = 'sent';
   if (Object.keys(updates).length > 0) {
-    await supabase.from('invoices').update(updates).eq('id', invoiceId);
+    // Enabling the share token is what makes the emailed link resolvable
+    // (get_public_invoice filters on share_token_enabled = true). If this
+    // UPDATE fails we must NOT send an email pointing at a dead link, so surface
+    // the error instead of swallowing it.
+    const { error: updateError } = await supabase
+      .from('invoices')
+      .update(updates)
+      .eq('id', invoiceId);
+    if (updateError) {
+      return NextResponse.json(
+        { error: 'Could not enable the invoice link. Please try again.' },
+        { status: 500 },
+      );
+    }
+  }
+
+  // Guard against a missing share token producing an /invoice/undefined link.
+  if (!invoice.share_token) {
+    return NextResponse.json(
+      { error: 'This invoice has no share link yet. Re-save it and try again.' },
+      { status: 409 },
+    );
   }
 
   const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invoice/${invoice.share_token}`;
@@ -116,6 +138,10 @@ export async function POST(request: NextRequest) {
       })
     : null;
 
+  // Fetch the sender's branding to render the email with their brand colors,
+  // fonts, and logo. Gracefully continues without branding if fetch fails.
+  const branding = await emailBrandingForUser(supabase, user.id);
+
   const result = await sendInvoiceEmail({
     coupleEmail,
     coupleName,
@@ -125,6 +151,7 @@ export async function POST(request: NextRequest) {
     shareUrl,
     mcBusinessName,
     sender: await resolveSender(supabase, user.id, mcBusinessName),
+    branding,
   });
 
   if (!result.ok) {

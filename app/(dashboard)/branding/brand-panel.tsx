@@ -2,12 +2,13 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import {
-  ChevronDown, Check, Upload, Plus, RotateCcw, Paintbrush, Type as TypeIcon,
-  Layout, Sparkles, Trash2, ImageIcon,
+  ChevronDown, Check, RotateCcw, Paintbrush, Type as TypeIcon,
+  Layout, Globe,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
 import { ColorPopover } from '@/components/ui/color-popover'
+import { Tooltip } from '@/components/ui/tooltip'
 import { getContrastRatio, getWcagLevel } from '@/lib/branding/contrast'
 import {
   HEADING_FONTS,
@@ -20,19 +21,19 @@ import {
   type BodyFont,
   type FontWeight,
 } from '@/lib/branding/fonts'
+import type { TextCase } from '@/lib/branding/text-case'
 import {
-  THEME_PRESETS,
-  THEME_IDS,
   COLOR_PALETTE,
-  ACCENT_PALETTE,
   SURFACE_PALETTE,
   TEXT_PALETTE,
-  MUTED_PALETTE,
+  BORDER_PALETTE,
   type ThemeId,
   type ThemeIdOrCustom,
   type Density,
 } from '@/lib/branding/themes'
+import type { SurfaceTab } from '@/types/branding-preview'
 
+import { BusinessSection } from './business-section'
 import { Slider } from './components/slider'
 
 
@@ -40,21 +41,23 @@ interface BrandPanelProps {
   themePreset: ThemeIdOrCustom
   applyTheme: (id: ThemeId) => void
   resetToTheme: () => void
+  surface: SurfaceTab
+  enabledSurfaces: SurfaceTab[]
+  onToggleSurface: (surface: SurfaceTab, enabled: boolean) => void
+  resetSurfaceToDefault: () => void
 
   brandColor: string
   setBrandColor: (v: string) => void
-  accentColor: string
-  setAccentColor: (v: string) => void
+  headingColor: string
+  setHeadingColor: (v: string) => void
+  subheadingColor: string
+  setSubheadingColor: (v: string) => void
   surfaceColor: string
   setSurfaceColor: (v: string) => void
   textColor: string
   setTextColor: (v: string) => void
-  mutedColor: string
-  setMutedColor: (v: string) => void
   secondaryColor: string
   setSecondaryColor: (v: string) => void
-  secondaryTextColor: string
-  setSecondaryTextColor: (v: string) => void
 
   fontHeading: HeadingFont
   setFontHeading: (v: HeadingFont) => void
@@ -64,8 +67,24 @@ interface BrandPanelProps {
   setFontWeight: (v: FontWeight) => void
   fontBodyWeight: FontWeight
   setFontBodyWeight: (v: FontWeight) => void
-  fontScale: number
-  setFontScale: (v: number) => void
+  headingSize: number
+  setHeadingSize: (v: number) => void
+  bodySize: number
+  setBodySize: (v: number) => void
+  headingCase: TextCase
+  setHeadingCase: (v: TextCase) => void
+  bodyCase: TextCase
+  setBodyCase: (v: TextCase) => void
+  subheadingSize: number
+  setSubheadingSize: (v: number) => void
+  subheadingWeight: FontWeight
+  setSubheadingWeight: (v: FontWeight) => void
+  subheadingCase: TextCase
+  setSubheadingCase: (v: TextCase) => void
+  headingLetterSpacing: number
+  setHeadingLetterSpacing: (v: number) => void
+  bodyLineHeight: number
+  setBodyLineHeight: (v: number) => void
 
   density: Density
   setDensity: (v: Density) => void
@@ -74,29 +93,56 @@ interface BrandPanelProps {
   docPadding: number
   setDocPadding: (v: number) => void
 
+  linkColor: string
+  setLinkColor: (v: string) => void
+  borderColor: string
+  onBorderColorChange: (v: string) => void
+  buttonVariant: 'fill' | 'outline'
+  setButtonVariant: (v: 'fill' | 'outline') => void
+  buttonSize: 'sm' | 'md' | 'lg'
+  setButtonSize: (v: 'sm' | 'md' | 'lg') => void
+  buttonRadius: number
+  setButtonRadius: (v: number) => void
+  sectionSpacing: number
+  setSectionSpacing: (v: number) => void
+
   faviconUrl: string
   uploadFavicon: (file: File) => Promise<void>
   removeFavicon: () => void
 
-  // Brand info - promoted into the rail
+  // Business info - promoted to the top of the rail
   businessName: string
   setBusinessName: (v: string) => void
   tagline: string
   setTagline: (v: string) => void
   abn: string
   setAbn: (v: string) => void
+  phone: string
+  setPhone: (v: string) => void
+  website: string
+  setWebsite: (v: string) => void
+  instagramUrl: string
+  setInstagramUrl: (v: string) => void
+  facebookUrl: string
+  setFacebookUrl: (v: string) => void
+  twitterUrl: string
+  setTwitterUrl: (v: string) => void
+  pinterestUrl: string
+  setPinterestUrl: (v: string) => void
 
 }
 
-type SectionId = 'themes' | 'colors' | 'fonts' | 'layout' | 'info'
+type SectionId = 'business' | 'colors' | 'fonts' | 'globalStyles'
 
 export function BrandPanel(props: BrandPanelProps) {
+  // Every section starts collapsed. Landing straight out of onboarding used to
+  // open "Your business", which read as clutter on first entry; a fully
+  // collapsed rail lets the preview breathe and the MC choose where to start.
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
-    themes: false,
+    business: false,
     colors: false,
     fonts: false,
-    layout: false,
-    info: false,
+    globalStyles: false,
   })
 
   const toggle = (id: SectionId) => setOpen((p) => ({ ...p, [id]: !p[id] }))
@@ -104,9 +150,12 @@ export function BrandPanel(props: BrandPanelProps) {
   return (
     <aside className="w-[320px] border-r border-gray-100 bg-white overflow-y-auto shrink-0 flex flex-col">
       <div className="px-4 pt-4 pb-3 flex items-center justify-between sticky top-0 bg-white z-10 border-b border-gray-50">
-        <div>
+        <div className="min-w-0">
           <p className="text-[11px] font-medium text-gray-400 uppercase tracking-[0.08em]">Brand kit</p>
-          <p className="text-sm font-medium text-gray-900">Tokens flow into every doc</p>
+          <p className="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+            <Globe size={13} strokeWidth={1.75} className="text-gray-400 shrink-0" />
+            Applies to every document
+          </p>
         </div>
         {props.themePreset === 'custom' && (
           <button
@@ -123,14 +172,41 @@ export function BrandPanel(props: BrandPanelProps) {
 
       <div className="pb-12">
         <Accordion
-          icon={<Sparkles size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Themes"
-          subtitle="Start from a preset"
-          open={open.themes}
-          onToggle={() => toggle('themes')}
+          icon={<Globe size={13} strokeWidth={1.75} className="text-gray-500" />}
+          title="Your business"
+          subtitle="Name, phone, social links, favicon"
+          open={open.business}
+          onToggle={() => toggle('business')}
         >
-          <ThemeSection {...props} />
+          <BusinessSection
+            businessName={props.businessName}
+            setBusinessName={props.setBusinessName}
+            tagline={props.tagline}
+            setTagline={props.setTagline}
+            abn={props.abn}
+            setAbn={props.setAbn}
+            phone={props.phone}
+            setPhone={props.setPhone}
+            website={props.website}
+            setWebsite={props.setWebsite}
+            instagramUrl={props.instagramUrl}
+            setInstagramUrl={props.setInstagramUrl}
+            facebookUrl={props.facebookUrl}
+            setFacebookUrl={props.setFacebookUrl}
+            twitterUrl={props.twitterUrl}
+            setTwitterUrl={props.setTwitterUrl}
+            pinterestUrl={props.pinterestUrl}
+            setPinterestUrl={props.setPinterestUrl}
+            faviconUrl={props.faviconUrl}
+            uploadFavicon={props.uploadFavicon}
+            removeFavicon={props.removeFavicon}
+          />
         </Accordion>
+
+        {/* Choosing which documents you use now sits behind the settings button
+            on the tab strip, and Reset layout sits in the canvas scope bar.
+            Both are per-document, whereas this rail is the brand kit that
+            applies to every document. */}
 
         <Accordion
           icon={<Paintbrush size={13} strokeWidth={1.75} className="text-gray-500" />}
@@ -154,22 +230,12 @@ export function BrandPanel(props: BrandPanelProps) {
 
         <Accordion
           icon={<Layout size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Layout"
-          subtitle="Density and corners"
-          open={open.layout}
-          onToggle={() => toggle('layout')}
+          title="Global styles"
+          subtitle="Radius, links, buttons, spacing"
+          open={open.globalStyles}
+          onToggle={() => toggle('globalStyles')}
         >
-          <LayoutSection {...props} />
-        </Accordion>
-
-        <Accordion
-          icon={<TypeIcon size={13} strokeWidth={1.75} className="text-gray-500" />}
-          title="Business info"
-          subtitle="Name, tagline, favicon, ABN"
-          open={open.info}
-          onToggle={() => toggle('info')}
-        >
-          <InfoSection {...props} />
+          <GlobalStylesSection {...props} />
         </Accordion>
       </div>
     </aside>
@@ -216,121 +282,55 @@ function Accordion({
   )
 }
 
-// ── Themes ────────────────────────────────────────────────────────────────────
-
-function ThemeSection({ themePreset, applyTheme }: BrandPanelProps) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {THEME_IDS.map((id) => {
-        const preset = THEME_PRESETS[id]
-        const active = themePreset === id
-        return (
-          <button
-            key={id}
-            type="button"
-            onClick={() => applyTheme(id)}
-            className={`relative rounded-xl border overflow-hidden text-left transition cursor-pointer ${
-              active ? 'border-gray-900' : 'border-gray-200 hover:border-gray-300'
-            }`}
-            style={{ background: preset.surface }}
-            title={preset.name}
-          >
-            <div className="p-3 pb-2 min-h-[96px] flex flex-col gap-1.5">
-              <div
-                className="h-1 w-8 rounded-full"
-                style={{ background: preset.color }}
-              />
-              <p
-                className="text-[14px] leading-tight"
-                style={{
-                  fontFamily: FONT_STACKS[preset.headingFont],
-                  fontWeight: preset.headingWeight,
-                  color: preset.text,
-                  letterSpacing: -0.005,
-                }}
-              >
-                Aa
-              </p>
-              <p
-                className="text-[10px] leading-tight"
-                style={{ fontFamily: FONT_STACKS[preset.bodyFont], color: preset.muted }}
-              >
-                {preset.name}
-              </p>
-              <div className="flex items-center gap-0.5 mt-auto">
-                <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: preset.color }} />
-                <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: preset.accent }} />
-                <span className="w-3 h-3 rounded-full ring-1 ring-black/5" style={{ background: preset.surface }} />
-              </div>
-            </div>
-            {active && (
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-gray-900 text-white flex items-center justify-center">
-                <Check size={10} strokeWidth={2.5} />
-              </span>
-            )}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 // ── Colours ───────────────────────────────────────────────────────────────────
 
 function ColorSection({
   brandColor, setBrandColor,
-  accentColor, setAccentColor,
+  headingColor, setHeadingColor,
+  subheadingColor, setSubheadingColor,
   surfaceColor, setSurfaceColor,
   textColor, setTextColor,
-  mutedColor, setMutedColor,
   secondaryColor, setSecondaryColor,
-  secondaryTextColor, setSecondaryTextColor,
+  borderColor, onBorderColorChange,
+  linkColor, setLinkColor,
 }: BrandPanelProps) {
   return (
     <div className="space-y-3">
-      <ColorRow label="Primary"  value={brandColor}   onChange={setBrandColor}   swatches={COLOR_PALETTE} />
-      <ColorRow label="Accent"   value={accentColor}  onChange={setAccentColor}  swatches={ACCENT_PALETTE} />
-      <ColorRow label="Surface"  value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
-      <ColorRow label="Text"     value={textColor}    onChange={setTextColor}    swatches={TEXT_PALETTE} />
-      <ColorRow label="Muted"    value={mutedColor}   onChange={setMutedColor}   swatches={MUTED_PALETTE} />
-      <ColorRow label="Secondary"      value={secondaryColor}     onChange={setSecondaryColor}     swatches={COLOR_PALETTE} />
-      <ColorRow label="Secondary text" value={secondaryTextColor} onChange={setSecondaryTextColor} swatches={TEXT_PALETTE} />
-      <ContrastWarnings
-        textColor={textColor}
-        mutedColor={mutedColor}
-        surfaceColor={surfaceColor}
-        brandColor={brandColor}
-      />
+      <ColorRow label="Heading" description="Main headings and titles" value={headingColor} onChange={setHeadingColor} swatches={TEXT_PALETTE} />
+      <ColorRow label="Subheading" description="Section labels under headings" value={subheadingColor} onChange={setSubheadingColor} swatches={TEXT_PALETTE} />
+      <ColorRow label="Body text" description="Paragraph and detail text" value={textColor} onChange={setTextColor} swatches={TEXT_PALETTE} />
+      <ColorRow label="Background" description="The page background" value={surfaceColor} onChange={setSurfaceColor} swatches={SURFACE_PALETTE} />
+      <ColorRow label="Primary button" description="Accept and Pay buttons" value={brandColor} onChange={setBrandColor} swatches={COLOR_PALETTE} />
+      <ColorRow label="Secondary button" description="Decline and supporting buttons" value={secondaryColor} onChange={setSecondaryColor} swatches={COLOR_PALETTE} />
+      <ColorRow label="Border" description="Lines, rules and card outlines" value={borderColor} onChange={onBorderColorChange} swatches={BORDER_PALETTE} />
+      <ColorRow label="Link" description="Links inside document text" value={linkColor} onChange={setLinkColor} swatches={COLOR_PALETTE} />
+      <ContrastWarnings textColor={textColor} surfaceColor={surfaceColor} />
     </div>
   )
 }
 
+/**
+ * Flags brand colour combinations that would genuinely be hard to read.
+ *
+ * Only body text against the page background is checked. An earlier version
+ * also compared the primary button colour to the background at 4.5:1, which
+ * was wrong twice over: 4.5:1 is the WCAG threshold for text, and the button
+ * is a fill whose label already picks black or white through getTextColor, so
+ * its legibility is never the user's problem to solve. That check fired on
+ * perfectly readable buttons and cited a rule that did not apply to them.
+ */
 function ContrastWarnings({
   textColor,
-  mutedColor,
   surfaceColor,
-  brandColor,
 }: {
   textColor: string
-  mutedColor: string
   surfaceColor: string
-  brandColor: string
 }) {
   const checks: Array<{ label: string; ratio: number; level: ReturnType<typeof getWcagLevel> }> = [
     {
       label: 'Text on Surface',
       ratio: getContrastRatio(textColor, surfaceColor),
       level: getWcagLevel(textColor, surfaceColor),
-    },
-    {
-      label: 'Muted on Surface',
-      ratio: getContrastRatio(mutedColor, surfaceColor),
-      level: getWcagLevel(mutedColor, surfaceColor),
-    },
-    {
-      label: 'Primary on Surface',
-      ratio: getContrastRatio(brandColor, surfaceColor),
-      level: getWcagLevel(brandColor, surfaceColor),
     },
   ]
   const fails = checks.filter((c) => c.level === 'fail')
@@ -343,18 +343,20 @@ function ContrastWarnings({
           {c.label} <span className="font-mono">{c.ratio.toFixed(2)}:1</span>
         </p>
       ))}
-      <p className="text-[10px] text-amber-700/80 pt-0.5">Aim for at least 4.5 for body text.</p>
+      <p className="text-[11px] text-amber-700/80 pt-0.5">Aim for at least 4.5 for body text.</p>
     </div>
   )
 }
 
 function ColorRow({
   label,
+  description,
   value,
   onChange,
   swatches,
 }: {
   label: string
+  description: string
   value: string
   onChange: (v: string) => void
   swatches: readonly string[]
@@ -377,24 +379,8 @@ function ColorRow({
       />
       <div className="flex-1 min-w-0">
         <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">{label}</p>
+        <p className="text-[11px] text-gray-500">{description}</p>
         <p className="text-xs font-mono text-gray-700 truncate">{value}</p>
-      </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {swatches.slice(0, 4).map((c) => {
-          const active = value.toLowerCase() === c.toLowerCase()
-          return (
-            <button
-              key={c}
-              type="button"
-              onClick={() => onChange(c)}
-              title={c}
-              className={`w-4 h-4 rounded-full ring-1 transition cursor-pointer hover:scale-110 ${
-                active ? 'ring-gray-900 ring-2' : 'ring-black/10'
-              }`}
-              style={{ background: c }}
-            />
-          )
-        })}
       </div>
     </div>
   )
@@ -407,53 +393,153 @@ function FontSection({
   fontBody, setFontBody,
   fontWeight, setFontWeight,
   fontBodyWeight, setFontBodyWeight,
-  fontScale, setFontScale,
+  headingSize, setHeadingSize,
+  bodySize, setBodySize,
+  headingCase, setHeadingCase,
+  bodyCase, setBodyCase,
+  subheadingSize, setSubheadingSize,
+  subheadingWeight, setSubheadingWeight,
+  subheadingCase, setSubheadingCase,
+  headingLetterSpacing, setHeadingLetterSpacing,
+  bodyLineHeight, setBodyLineHeight,
 }: BrandPanelProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1">Heading</p>
-        <p className="text-[10px] text-gray-400 -mt-0.5 mb-1.5">Used by Business name, Title and Totals</p>
-        <FontPicker role="Heading" value={fontHeading} options={HEADING_FONTS as readonly HeadingFont[]} onChange={setFontHeading} />
-      </div>
-      <WeightPills label="Heading weight" value={fontWeight} onChange={setFontWeight} />
-
-      <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1">Body</p>
-        <p className="text-[10px] text-gray-400 -mt-0.5 mb-1.5">Used by Subtitle, Text, Tagline and Line items</p>
-        <FontPicker role="Body" value={fontBody} options={BODY_FONTS as readonly BodyFont[]} onChange={setFontBody} />
-      </div>
-      <WeightPills label="Body weight" value={fontBodyWeight} onChange={setFontBodyWeight} />
-
-      <div className="pt-1">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Scale</span>
-          <span className="text-xs font-mono text-gray-700 tabular-nums">{Math.round(fontScale * 100)}%</span>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Heading</p>
+        <div className="space-y-2.5">
+          <div>
+            <p className="text-[11px] text-gray-500 mb-1">Font</p>
+            <FontPicker role="Heading" value={fontHeading} options={HEADING_FONTS as readonly HeadingFont[]} onChange={setFontHeading} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] text-gray-500">Size</span>
+                <span className="text-[11px] font-mono text-gray-700 tabular-nums">{headingSize}px</span>
+              </div>
+              <Slider value={headingSize} min={16} max={64} step={1} onChange={setHeadingSize} ariaLabel="Heading size" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] text-gray-500">Letter sp.</span>
+                <span className="text-[11px] font-mono text-gray-700 tabular-nums">{headingLetterSpacing.toFixed(2)}</span>
+              </div>
+              <Slider value={headingLetterSpacing} min={-0.05} max={0.1} step={0.01} onChange={setHeadingLetterSpacing} ariaLabel="Heading letter spacing" />
+            </div>
+          </div>
+          <WeightPills label="Weight" value={fontWeight} onChange={setFontWeight} compact />
+          <CasePills label="Case" value={headingCase} onChange={setHeadingCase} />
         </div>
-        <Slider value={fontScale} min={0.85} max={1.2} step={0.01} onChange={setFontScale} ariaLabel="Font scale" />
-        <p className="text-[10px] text-gray-400 mt-1">Scales every text block on the document.</p>
       </div>
+
+      <div>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Subheading</p>
+        {/* The small labels across every document: invoice "Ref"/"Expires",
+            "Account name"/"BSB"/"Account number", and the like. Sits between
+            heading and body because that is its visual weight. Colour is set in
+            Brand colours (Subheading); size, weight and case live here. */}
+        <p className="text-[11px] text-gray-500 mb-2 leading-snug">Labels like Ref, Expires and bank details. Colour is under Brand colours.</p>
+        <div className="space-y-2.5">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] text-gray-500">Size</span>
+              <span className="text-[11px] font-mono text-gray-700 tabular-nums">{subheadingSize}px</span>
+            </div>
+            <Slider value={subheadingSize} min={8} max={24} step={1} onChange={setSubheadingSize} ariaLabel="Subheading size" />
+          </div>
+          <WeightPills label="Weight" value={subheadingWeight} onChange={setSubheadingWeight} compact />
+          <CasePills label="Case" value={subheadingCase} onChange={setSubheadingCase} />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Body</p>
+        <div className="space-y-2.5">
+          <div>
+            <p className="text-[11px] text-gray-500 mb-1">Font</p>
+            <FontPicker role="Body" value={fontBody} options={BODY_FONTS as readonly BodyFont[]} onChange={setFontBody} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] text-gray-500">Size</span>
+                <span className="text-[11px] font-mono text-gray-700 tabular-nums">{bodySize}px</span>
+              </div>
+              <Slider value={bodySize} min={12} max={24} step={1} onChange={setBodySize} ariaLabel="Body size" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] text-gray-500">Line ht.</span>
+                <span className="text-[11px] font-mono text-gray-700 tabular-nums">{bodyLineHeight.toFixed(2)}</span>
+              </div>
+              <Slider value={bodyLineHeight} min={1.2} max={2} step={0.05} onChange={setBodyLineHeight} ariaLabel="Body line height" />
+            </div>
+          </div>
+          <WeightPills label="Weight" value={fontBodyWeight} onChange={setFontBodyWeight} compact />
+          <CasePills label="Case" value={bodyCase} onChange={setBodyCase} />
+        </div>
+      </div>
+
     </div>
   )
 }
 
-function WeightPills({ label, value, onChange }: { label: string; value: FontWeight; onChange: (v: FontWeight) => void }) {
+function WeightPills({ label, value, onChange, compact }: { label: string; value: FontWeight; onChange: (v: FontWeight) => void; compact?: boolean }) {
   return (
     <div>
-      <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1">{label}</p>
+      <p className={`mb-1 ${compact ? 'text-[11px] text-gray-500' : 'text-[11px] text-gray-400'}`}>{label}</p>
       <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
         {FONT_WEIGHTS.map((w) => (
           <button
             key={w}
             type="button"
             onClick={() => onChange(w)}
-            className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+            className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
               value === w ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
             }`}
             style={{ fontWeight: w }}
           >
             {FONT_WEIGHT_LABELS[w]}
           </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CasePills({ label, value, onChange }: { label: string; value: TextCase; onChange: (v: TextCase) => void }) {
+  // Glyph previews double as the behaviour: "Aa" = sentence case (first letter
+  // only), "Ab" = every word, "AA"/"aa" = upper/lower. The tooltip spells each
+  // one out. There's no "As typed" pill any more: sentence case took the "Aa"
+  // slot because that is what MCs reach for, and a stored 'none' just shows no
+  // active pill (harmless) until the MC picks one.
+  const cases: Array<{ id: TextCase; label: string; preview: string }> = [
+    { id: 'sentence', label: 'Capitalise first letter', preview: 'Aa' },
+    { id: 'capitalize', label: 'Capitalise each word', preview: 'Ab' },
+    { id: 'uppercase', label: 'Uppercase', preview: 'AA' },
+    { id: 'lowercase', label: 'Lowercase', preview: 'aa' },
+  ]
+  return (
+    <div>
+      <p className="text-[11px] text-gray-500 mb-1">{label}</p>
+      <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+        {cases.map((c) => (
+          // Shared Tooltip rather than the native `title` attribute: title
+          // tooltips are slow to appear and fire inconsistently. This one shows
+          // instantly on hover/focus. flex-1 on the wrapper keeps pills equal.
+          <Tooltip key={c.id} label={c.label} className="flex-1">
+            <button
+              type="button"
+              onClick={() => onChange(c.id)}
+              aria-label={c.label}
+              className={`w-full px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
+                value === c.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {c.preview}
+            </button>
+          </Tooltip>
         ))}
       </div>
     </div>
@@ -477,12 +563,14 @@ function FontPicker<V extends HeadingFont | BodyFont>({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="w-full flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white text-left hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer transition"
+          aria-label={`${role} font`}
+          className="w-full flex items-center gap-2 border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-left hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 cursor-pointer transition"
         >
-          <span className="flex-1 min-w-0 truncate text-[14px] text-gray-900" style={{ fontFamily: FONT_STACKS[value] }}>
+          {/* No role badge here. The group heading directly above already says
+              HEADING or BODY, so repeating it inside the control was noise. */}
+          <span className="flex-1 min-w-0 truncate text-[12px] text-gray-900" style={{ fontFamily: FONT_STACKS[value] }}>
             {FONT_LABELS[value]}
           </span>
-          <span className="text-[10px] uppercase tracking-[0.08em] text-gray-400 shrink-0">{role}</span>
           <ChevronDown size={12} strokeWidth={2} className="text-gray-400 shrink-0" />
         </button>
       </Popover.Trigger>
@@ -507,7 +595,7 @@ function FontPicker<V extends HeadingFont | BodyFont>({
                   onChange(opt)
                   setOpen(false)
                 }}
-                className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-[14px] hover:bg-gray-50 cursor-pointer ${
+                className={`flex items-center gap-2 w-full px-2.5 py-1.5 rounded-md text-[12px] hover:bg-gray-50 cursor-pointer ${
                   active ? 'text-gray-900' : 'text-gray-700'
                 }`}
                 style={{ fontFamily: FONT_STACKS[opt] }}
@@ -523,219 +611,94 @@ function FontPicker<V extends HeadingFont | BodyFont>({
   )
 }
 
-// ── Layout ────────────────────────────────────────────────────────────────────
+// ── Global Styles ────────────────────────────────────────────────────────────
 
-function LayoutSection({
-  density,
-  setDensity,
+function GlobalStylesSection({
   cornerRadius,
   setCornerRadius,
   docPadding,
   setDocPadding,
+  buttonVariant,
+  setButtonVariant,
+  buttonSize,
+  setButtonSize,
+  buttonRadius,
+  setButtonRadius,
 }: BrandPanelProps) {
-  const densities: { id: Density; label: string }[] = [
-    { id: 'compact', label: 'Compact' },
-    { id: 'cozy',    label: 'Cozy' },
-    { id: 'roomy',   label: 'Roomy' },
-  ]
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1.5">Density</p>
-        <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
-          {densities.map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => setDensity(d.id)}
-              className={`flex-1 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
-                density === d.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Padding</span>
-          <span className="text-xs font-mono text-gray-700 tabular-nums">{docPadding}px</span>
-        </div>
-        <Slider value={docPadding} min={0} max={48} step={1} onChange={setDocPadding} ariaLabel="Document padding" />
-      </div>
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em]">Corner radius</span>
-          <span className="text-xs font-mono text-gray-700 tabular-nums">{cornerRadius}px</span>
+          <span className="text-[11px] text-gray-500">Corner radius</span>
+          <span className="text-[11px] font-mono text-gray-700 tabular-nums">{cornerRadius}px</span>
         </div>
         <Slider value={cornerRadius} min={0} max={24} step={1} onChange={setCornerRadius} ariaLabel="Corner radius" />
       </div>
-    </div>
-  )
-}
 
-// ── Identity ──────────────────────────────────────────────────────────────────
-
-function IdentityTile({
-  label,
-  hint,
-  url,
-  onUpload,
-  onRemove,
-  accept,
-  wide,
-  tall,
-  square,
-  surface = 'light',
-}: {
-  label: string
-  hint?: string
-  url: string
-  onUpload: (file: File) => Promise<void>
-  onRemove: () => void
-  accept: string
-  wide?: boolean
-  tall?: boolean
-  square?: boolean
-  surface?: 'light' | 'dark'
-}) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [hovering, setHovering] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [dragging, setDragging] = useState(false)
-  const filled = !!url
-
-  const onFile = async (f: File) => {
-    setUploading(true)
-    try { await onUpload(f) } catch { /* toast upstream */ } finally { setUploading(false) }
-  }
-
-  const sizeClass = square ? 'w-16 h-16' : `w-full ${wide ? 'h-24' : tall ? 'h-24' : 'h-16'}`
-  const bg = surface === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
-  const placeholderText = surface === 'dark' ? 'text-gray-500' : 'text-gray-400'
-
-  const openPicker = () => inputRef.current?.click()
-
-  return (
-    <div
-      className="space-y-1"
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
-    >
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={openPicker}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            openPicker()
-          }
-        }}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragging(false)
-          const f = e.dataTransfer.files?.[0]
-          if (f) onFile(f)
-        }}
-        aria-label={filled ? `Replace ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
-        className={`relative ${sizeClass} rounded-xl ${bg} border border-dashed flex items-center justify-center overflow-hidden cursor-pointer outline-none focus-visible:border-gray-900 focus-visible:ring-2 focus-visible:ring-gray-900/10 transition ${
-          dragging ? 'border-gray-900 bg-gray-100' : filled ? 'border-gray-200 hover:border-gray-300' : 'border-gray-300 hover:border-gray-400'
-        }`}
-      >
-        {filled ? (
-          <img src={url} alt="" className="max-w-[80%] max-h-[80%] object-contain pointer-events-none" />
-        ) : uploading ? (
-          <span className={`text-[10px] ${placeholderText} pointer-events-none`}>Uploading…</span>
-        ) : (
-          <ImageIcon size={20} strokeWidth={1.25} className={`${placeholderText} pointer-events-none opacity-50`} />
-        )}
-        {filled && hovering && (
-          <span className="absolute inset-0 bg-gray-900/40 flex items-center justify-center gap-2 pointer-events-none">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 text-gray-800 text-[11px] font-medium shadow-sm">
-              <Upload size={11} strokeWidth={2} />
-              Replace
-            </span>
-          </span>
-        )}
-        {filled && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onRemove()
-            }}
-            aria-label={`Delete ${label.toLowerCase()}`}
-            title={`Delete ${label.toLowerCase()}`}
-            className={`absolute top-1.5 right-1.5 inline-flex items-center justify-center w-6 h-6 rounded-md bg-white/95 backdrop-blur-sm border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 shadow-sm cursor-pointer transition ${
-              hovering ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <Trash2 size={12} strokeWidth={1.75} />
-          </button>
-        )}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[11px] text-gray-500">Document padding</span>
+          <span className="text-[11px] font-mono text-gray-700 tabular-nums">{docPadding}px</span>
+        </div>
+        <Slider value={docPadding} min={0} max={48} step={1} onChange={setDocPadding} ariaLabel="Document padding" />
       </div>
-      <div className="flex items-center justify-between gap-1">
-        <p className="text-[10px] font-medium text-gray-600 uppercase tracking-[0.06em]">{label}</p>
-        {hint && <p className="text-[10px] text-gray-400 truncate">{hint}</p>}
+
+      <div>
+        <p className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-2">Button style</p>
+        <div className="space-y-2">
+          <div>
+            <p className="text-[11px] text-gray-500 mb-1">Variant</p>
+            <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+              {(['fill', 'outline'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setButtonVariant(v)}
+                  className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
+                    buttonVariant === v ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {v === 'fill' ? 'Filled' : 'Outline'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-[11px] text-gray-500 mb-1">Size</p>
+            <div className="inline-flex bg-gray-100 rounded-lg p-0.5 w-full">
+              {(['sm', 'md', 'lg'] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setButtonSize(s)}
+                  className={`flex-1 px-2 py-1 text-[11px] rounded-md transition cursor-pointer ${
+                    buttonSize === s ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {s === 'sm' ? 'Small' : s === 'md' ? 'Medium' : 'Large'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] text-gray-500">Radius</span>
+              <span className="text-[11px] font-mono text-gray-700 tabular-nums">{buttonRadius}px</span>
+            </div>
+            <Slider value={buttonRadius} min={0} max={16} step={1} onChange={setButtonRadius} ariaLabel="Button radius" />
+          </div>
+        </div>
       </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) onFile(f)
-          if (inputRef.current) inputRef.current.value = ''
-        }}
-      />
+
+      {/* Section spacing is not offered here. Nothing reads it: blocks take
+          their vertical rhythm from per-block padding and their own internal
+          margins, and there is no container gap for the value to drive. It
+          stays in the data layer, dormant, exactly as font_scale does, rather
+          than being wired now, which would add spacing on top of existing
+          padding and shift the layout of every document already sent. */}
     </div>
   )
 }
 
-// ── Business info ─────────────────────────────────────────────────────────────
-
-function InfoSection({
-  businessName, setBusinessName,
-  tagline, setTagline,
-  abn, setAbn,
-  faviconUrl, uploadFavicon, removeFavicon,
-}: BrandPanelProps) {
-  return (
-    <div className="space-y-3">
-      <TextField label="Business name" value={businessName} onChange={setBusinessName} placeholder="Your business name" />
-      <TextField label="Tagline" value={tagline} onChange={setTagline} placeholder="A short line about you" />
-      <TextField label="ABN" value={abn} onChange={setAbn} placeholder="00 000 000 000" />
-      <IdentityTile
-        label="Favicon"
-        hint="Browser tab · 256KB"
-        url={faviconUrl}
-        onUpload={uploadFavicon}
-        onRemove={removeFavicon}
-        accept="image/png,image/x-icon,image/svg+xml,image/vnd.microsoft.icon"
-        square
-      />
-    </div>
-  )
-}
-
-function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return (
-    <label className="block">
-      <span className="text-[11px] text-gray-400 uppercase tracking-[0.08em] mb-1 block">{label}</span>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 transition"
-      />
-    </label>
-  )
-}
 
 

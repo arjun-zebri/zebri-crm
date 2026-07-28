@@ -4,12 +4,11 @@
  * (scripts, styles, attributes, links, images, headings) to plain text.
  *
  * Used in two places:
- *   1. Editor canvas — sanitize on read/write to InlineText contentEditable
- *   2. Public surfaces — sanitize before dangerouslySetInnerHTML
+ *   1. Editor canvas - sanitize on read/write to InlineText contentEditable
+ *   2. Public surfaces - sanitize before dangerouslySetInnerHTML
  */
 
 const ALLOWED_TAGS = new Set(['b', 'strong', 'i', 'em', 'u', 'br', 'ul', 'ol', 'li', 'p', 'span'])
-const BLOCK_TAGS = new Set(['p', 'ul', 'ol', 'li'])
 
 export interface SanitizeOptions {
   /** If false, list tags (ul/ol/li) become inline whitespace. Default true. */
@@ -17,54 +16,61 @@ export interface SanitizeOptions {
 }
 
 /**
- * Server- and browser-safe HTML sanitizer.
- * Uses DOMParser in the browser, falls back to a regex-based pass on the server.
+ * Server- and browser-identical HTML sanitizer.
+ *
+ * A single pure-string tokenizer runs in both environments so the SSR pass
+ * and client hydration produce byte-identical markup. Allowed tags keep no
+ * attributes; disallowed tags are stripped but their text kept; unbalanced
+ * tags are closed via an open-tag stack; stray angle brackets are escaped.
  */
 export function sanitizeHtml(input: string, opts: SanitizeOptions = {}): string {
   if (!input) return ''
   const allowLists = opts.allowLists !== false
 
-  if (typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
-    return serverFallback(input, allowLists)
-  }
+  // Defense in depth: drop script-ish elements INCLUDING their content.
+  // (?:<\/\1\s*>|$) matches either a closing tag OR end-of-string, so unclosed
+  // dangerous tags also drop their content (e.g. 'before<script>bad' -> 'before').
+  const src = input.replace(/<(script|style|iframe|object|embed)\b[\s\S]*?(?:<\/\1\s*>|$)/gi, '')
 
-  const doc = new DOMParser().parseFromString(`<div>${input}</div>`, 'text/html')
-  const root = doc.body.firstElementChild
-  if (!root) return ''
-  return walk(root as HTMLElement, allowLists)
-}
+  const allowed = (tag: string) =>
+    ALLOWED_TAGS.has(tag) && (allowLists || (tag !== 'ul' && tag !== 'ol' && tag !== 'li'))
 
-function walk(node: HTMLElement, allowLists: boolean): string {
   let out = ''
-  node.childNodes.forEach((child) => {
-    if (child.nodeType === Node.TEXT_NODE) {
-      out += escapeText(child.nodeValue ?? '')
-      return
-    }
-    if (child.nodeType !== Node.ELEMENT_NODE) return
-    const el = child as HTMLElement
-    const tag = el.tagName.toLowerCase()
-
-    if (!ALLOWED_TAGS.has(tag)) {
-      out += walk(el, allowLists)
-      return
-    }
-    if (!allowLists && (tag === 'ul' || tag === 'ol' || tag === 'li')) {
-      out += walk(el, allowLists)
-      return
-    }
+  const stack: string[] = []
+  const tagRe = /<\s*(\/?)\s*([a-zA-Z][a-zA-Z0-9]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = tagRe.exec(src)) !== null) {
+    out += escapeText(src.slice(last, m.index))
+    last = tagRe.lastIndex
+    const closing = m[1] === '/'
+    const tag = (m[2] ?? '').toLowerCase()
+    if (!allowed(tag)) continue // strip tag, keep surrounding text
     if (tag === 'br') {
-      out += '<br>'
-      return
+      if (!closing) out += '<br>'
+      continue
     }
-    out += `<${tag}>${walk(el, allowLists)}</${tag}>`
-    if (BLOCK_TAGS.has(tag)) {
-      // No trailing newline — markup itself provides spacing
+    if (closing) {
+      // Close intermediate open tags so nesting stays well-formed, then
+      // drop orphan closers that never opened.
+      const at = stack.lastIndexOf(tag)
+      if (at === -1) continue
+      while (stack.length > at) out += `</${stack.pop()}>`
+    } else {
+      out += `<${tag}>`
+      stack.push(tag)
     }
-  })
+  }
+  out += escapeText(src.slice(last))
+  while (stack.length) out += `</${stack.pop()}>`
   return out
 }
 
+/**
+ * Escape text content for safe inclusion in HTML.
+ *
+ * Converts &, <, and > to their entity equivalents.
+ */
 function escapeText(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -73,36 +79,11 @@ function escapeText(s: string): string {
 }
 
 /**
- * Pure-string fallback for SSR. Keeps allowed tags, strips everything else.
- * Less strict than the DOMParser path (won't normalize attributes), but safe
- * because we still escape stray < > inside text segments and attributes are
- * removed wholesale.
- */
-function serverFallback(input: string, allowLists: boolean): string {
-  // Strip script/style blocks entirely first (defense-in-depth)
-  let s = input.replace(/<(script|style|iframe|object|embed)[\s\S]*?<\/\1>/gi, '')
-  // Remove any tag we don't allow, OR strip attributes from allowed tags
-  s = s.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)(\s[^>]*)?>/g, (match, tagName) => {
-    const tag = tagName.toLowerCase()
-    if (!ALLOWED_TAGS.has(tag)) return ''
-    if (!allowLists && (tag === 'ul' || tag === 'ol' || tag === 'li')) return ''
-    if (match[1] === '/') return `</${tag}>`
-    if (tag === 'br') return '<br>'
-    return `<${tag}>`
-  })
-  return s
-}
-
-/**
  * Strip ALL tags. Useful for rendering an HTML field in a plain-text context
  * (e.g. <title>, alt attributes, document title bars).
  */
 export function htmlToPlainText(input: string | null | undefined): string {
   if (!input) return ''
-  if (typeof window !== 'undefined' && typeof window.DOMParser !== 'undefined') {
-    const doc = new DOMParser().parseFromString(input, 'text/html')
-    return doc.body.textContent ?? ''
-  }
   return input
     .replace(/<[^>]*>/g, '')
     .replace(/&nbsp;/g, ' ')

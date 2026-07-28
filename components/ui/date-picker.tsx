@@ -25,8 +25,10 @@ interface DatePickerProps {
   /** Trigger visual style. `outlined` is the default boxed input
    *  (rounded border, used by builder modals). `underline` is the
    *  flat single-rule style used in form modals that follow the
-   *  couple-modal vocabulary (transparent, bottom border, no ring). */
-  variant?: 'outlined' | 'underline'
+   *  couple-modal vocabulary (transparent, bottom border, no ring).
+   *  `meta` matches the builder meta-row controls (couple picker,
+   *  terms picker): token chrome, compact padding, no focus ring. */
+  variant?: 'outlined' | 'underline' | 'meta'
   /** Month/year to open the calendar to when no value is set.
    *  YYYY-MM-DD. Falls back to today. Used by the event modal to
    *  scroll to the couple's existing event date when adding a second
@@ -222,18 +224,27 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
   const triggerLayout =
     iconPosition === 'left' ? 'justify-start gap-2' : 'justify-between'
   const isUnderline = variant === 'underline'
-  // Two visual treatments - boxed/outlined for builder modals (Quote,
-  // Invoice, Contract) and flat-underline for the form modals that
-  // share the couple-modal vocabulary (Couple, Event). Underline mode
+  const isMeta = variant === 'meta'
+  // Three visual treatments - boxed/outlined for legacy builder use,
+  // flat-underline for the form modals that share the couple-modal
+  // vocabulary (Couple, Event), and `meta` for the builder meta rows
+  // where the trigger must read as a sibling of the couple/terms
+  // pickers (same token chrome, no focus ring). Underline mode
   // intentionally drops the green focus ring; the form's other inputs
   // use the same calm `focus:border-gray-400` underline state.
-  const baseChrome = isUnderline
+  const baseChrome = isMeta
+    ? 'border border-border rounded-control px-2.5 py-1.5 bg-surface'
+    : isUnderline
     ? 'border-0 border-b rounded-none px-0 py-2 bg-transparent'
     : 'border rounded-xl px-3 py-2'
   const stateChrome = disabled
-    ? isUnderline
+    ? isMeta
+      ? 'opacity-70 cursor-not-allowed'
+      : isUnderline
       ? 'border-gray-100 text-gray-400 cursor-not-allowed'
       : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+    : isMeta
+    ? 'hover:bg-surface-muted'
     : isUnderline
     ? open
       ? 'border-gray-400'
@@ -241,9 +252,15 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     : open && inline
     ? 'border-green-300 ring-2 ring-green-100 bg-white hover:bg-white'
     : 'border-gray-200 hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
-  const triggerClass = `flex items-center ${triggerLayout} w-full text-sm focus:outline-none transition cursor-pointer ${baseChrome} ${stateChrome} ${className ?? ''}`
+  const triggerClass = `flex items-center ${
+    isMeta ? 'justify-start gap-1.5' : triggerLayout
+  } w-full text-sm focus:outline-none ${
+    isMeta ? 'transition-colors' : 'transition'
+  } cursor-pointer ${baseChrome} ${stateChrome} ${className ?? ''}`
 
-  const calendarIcon = (
+  const calendarIcon = isMeta ? (
+    <CalendarDays className="w-3.5 h-3.5 text-text-subtle flex-shrink-0" strokeWidth={1.5} />
+  ) : (
     <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
   )
   const displayedValue = value
@@ -251,10 +268,17 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       ? `${displayPrefix} ${formatDisplay(value)}`
       : formatDisplay(value)
     : (placeholder ?? 'Select date')
+  const valueClass = isMeta
+    ? value
+      ? 'text-text truncate'
+      : 'text-text-subtle truncate'
+    : value
+    ? 'text-gray-900'
+    : 'text-gray-400'
   const triggerContent = (
     <>
       {iconPosition === 'left' ? calendarIcon : null}
-      <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+      <span className={valueClass}>
         {displayedValue}
       </span>
       {iconPosition === 'right' ? calendarIcon : null}

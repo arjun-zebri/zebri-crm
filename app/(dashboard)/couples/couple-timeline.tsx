@@ -12,11 +12,12 @@ import {
 } from '@dnd-kit/core'
 import * as Popover from '@radix-ui/react-popover'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, Check, LayoutTemplate } from 'lucide-react'
-import { useState, useEffect, useCallback } from 'react'
+import { ChevronDown, Check, Clock, LayoutTemplate } from 'lucide-react'
+import { useState, useCallback } from 'react'
 
 import { EventDayCalendar } from '@/components/events/event-day-calendar'
 import { EventTimelineModal } from '@/components/events/event-timeline-modal'
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import {
   bulkInsertTimelineItemsAction,
@@ -25,6 +26,8 @@ import {
 } from '@/lib/events/actions'
 import { createClient } from '@/lib/supabase/client'
 import { TimelineItem } from '@/types/event'
+
+import { CoupleTabEmpty, CoupleTabShell, tabStat } from './couple-tab-shell'
 
 /** Throw on `ok: false` so React Query treats it as an error. */
 function unwrap<T>(
@@ -311,20 +314,48 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
   const unscheduledItems = items.filter((i) => !i.start_time && !i.pending_review)
   const reviewItems = items.filter((i) => i.pending_review)
 
-  if (!isLoading && events.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-sm text-gray-400">No events yet.</p>
-        <p className="text-sm text-gray-400 mt-1">Add an event to start building a timeline.</p>
-      </div>
-    )
-  }
+  // Render the "Apply template" action only when there's an active event and templates exist
+  const applyTemplateAction = activeEventId && templates.length > 0 ? (
+    <Popover.Root open={templatePickerOpen} onOpenChange={setTemplatePickerOpen}>
+      <Popover.Trigger asChild>
+        <Button size="sm" className="cursor-pointer gap-1.5">
+          <LayoutTemplate size={14} strokeWidth={1.5} />
+          Apply template
+        </Button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-56"
+          sideOffset={4}
+          align="start"
+        >
+          <p className="px-3 py-1.5 text-xs text-gray-400 font-medium uppercase tracking-wider">Templates</p>
+          {templates.map((tmpl) => (
+            <button
+              key={tmpl.id}
+              type="button"
+              disabled={applyTemplate.isPending}
+              onClick={() => applyTemplate.mutate(tmpl.id)}
+              className="w-full text-left px-3 py-2 text-sm transition flex items-center justify-between text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              <span className="truncate">{tmpl.name}</span>
+              <span className="text-xs text-gray-400 shrink-0 ml-2">
+                {applyingTemplateId === tmpl.id ? '…' : `${tmpl.item_count}`}
+              </span>
+            </button>
+          ))}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  ) : null
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-4">
-
-      {/* Skeleton - shown while any query is pending */}
-      {isLoading && (
+    <CoupleTabShell
+      title="Timeline"
+      stats={events.length > 0 ? [{ label: tabStat(events.length, 'event') }] : undefined}
+      actions={applyTemplateAction}
+    >
+      {isLoading ? (
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 flex-1 animate-pulse">
           {/* Left: calendar area */}
           <div className="flex-[3] space-y-2">
@@ -345,154 +376,121 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Real content - always mounted so queries fire; hidden via CSS while loading */}
-      <div className={`flex flex-col flex-1 min-h-0 gap-4 ${isLoading ? 'hidden' : ''}`}>
-        {/* Top bar: event selector + apply template */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Custom event dropdown */}
-          <Popover.Root open={dropdownOpen} onOpenChange={setDropdownOpen}>
-            <Popover.Trigger asChild>
-              <button type="button" className="inline-flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-200">
-                <span className="text-gray-700">{activeEvent ? `${formatDate(activeEvent.date)}${activeEvent.venue ? `, ${activeEvent.venue}` : ''}` : ''}</span>
-                {events.length > 1 && <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />}
-              </button>
-            </Popover.Trigger>
-          {events.length > 1 && (
-            <Popover.Portal>
-              <Popover.Content className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-64" sideOffset={4} align="start">
-                {events.map((event) => (
-                  <button key={event.id} type="button"
-                    onClick={() => { setSelectedEventId(event.id); setDropdownOpen(false) }}
-                    className={`w-full text-left px-3 py-2 text-sm transition flex items-center justify-between ${event.id === activeEventId ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
-                  >
-                    <span>{formatDate(event.date)}{event.venue ? `, ${event.venue}` : ''}</span>
-                    {event.id === activeEventId && <Check size={13} className="text-gray-500" />}
-                  </button>
-                ))}
-              </Popover.Content>
-            </Popover.Portal>
-          )}
-          </Popover.Root>
-
-          {/* Apply template */}
-          {activeEventId && templates.length > 0 && (
-            <Popover.Root open={templatePickerOpen} onOpenChange={setTemplatePickerOpen}>
+      ) : events.length === 0 ? (
+        <CoupleTabEmpty
+          icon={Clock}
+          title="No events yet"
+          description="Add an event to this couple to start building a timeline."
+        />
+      ) : (
+        <div className="flex flex-col flex-1 min-h-0 gap-4">
+          {/* Top bar: event selector */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Custom event dropdown */}
+            <Popover.Root open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <Popover.Trigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-200 text-gray-500"
-                >
-                  <LayoutTemplate size={14} strokeWidth={1.5} />
-                  Apply template
+                <button type="button" className="inline-flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white hover:bg-gray-50 transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-200">
+                  <span className="text-gray-700">{activeEvent ? `${formatDate(activeEvent.date)}${activeEvent.venue ? `, ${activeEvent.venue}` : ''}` : ''}</span>
+                  {events.length > 1 && <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />}
                 </button>
               </Popover.Trigger>
+            {events.length > 1 && (
               <Popover.Portal>
-                <Popover.Content
-                  className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-56"
-                  sideOffset={4}
-                  align="start"
-                >
-                  <p className="px-3 py-1.5 text-xs text-gray-400 font-medium uppercase tracking-wider">Templates</p>
-                  {templates.map((tmpl) => (
-                    <button
-                      key={tmpl.id}
-                      type="button"
-                      disabled={applyTemplate.isPending}
-                      onClick={() => applyTemplate.mutate(tmpl.id)}
-                      className="w-full text-left px-3 py-2 text-sm transition flex items-center justify-between text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                <Popover.Content className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[70] w-64" sideOffset={4} align="start">
+                  {events.map((event) => (
+                    <button key={event.id} type="button"
+                      onClick={() => { setSelectedEventId(event.id); setDropdownOpen(false) }}
+                      className={`w-full text-left px-3 py-2 text-sm transition flex items-center justify-between ${event.id === activeEventId ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
                     >
-                      <span className="truncate">{tmpl.name}</span>
-                      <span className="text-xs text-gray-400 shrink-0 ml-2">
-                        {applyingTemplateId === tmpl.id ? '…' : `${tmpl.item_count}`}
-                      </span>
+                      <span>{formatDate(event.date)}{event.venue ? `, ${event.venue}` : ''}</span>
+                      {event.id === activeEventId && <Check size={13} className="text-gray-500" />}
                     </button>
                   ))}
                 </Popover.Content>
               </Popover.Portal>
+            )}
             </Popover.Root>
+          </div>
+
+          {/* 3/5 + 2/5 layout */}
+          {activeEventId && (
+            <DndContext
+              sensors={sensors}
+              onDragStart={(e) => setActiveId(e.active.id as string)}
+              onDragEnd={handleDragEnd}
+              onDragCancel={() => setActiveId(null)}
+            >
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 flex-1 min-h-0">
+                {/* Left: timeline calendar */}
+                <div className="flex-[3] min-w-0">
+                  <EventDayCalendar eventId={activeEventId} hideShareLink hideUnscheduled skipDndContext showItemStatus exportFilename={exportFilename} />
+                </div>
+
+                {/* Right: unscheduled + to review */}
+                <div className="w-full sm:w-[260px] flex-shrink-0 flex flex-col gap-8 overflow-y-auto pt-1 pb-6 sm:pb-2">
+                  {/* Unscheduled */}
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Unscheduled</h3>
+                    <DroppableSection id="drop-unscheduled" isUnscheduled>
+                      {unscheduledItems.length === 0 ? (
+                        <p className="text-sm text-gray-300 px-1 py-2">Drag here to unschedule</p>
+                      ) : (
+                        <div className="space-y-2 py-1">
+                          {unscheduledItems.map((item) => (
+                            <DraggableSidebarCard
+                              key={item.id}
+                              id={item.id}
+                              className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-gray-200 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition"
+                              onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
+                            >
+                              <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
+                              {item.contact && <p className="text-xs text-gray-400 truncate">{item.contact.name}</p>}
+                              {item.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{item.description}</p>}
+                            </DraggableSidebarCard>
+                          ))}
+                        </div>
+                      )}
+                    </DroppableSection>
+                  </div>
+
+                  {/* To Review */}
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">To Review</h3>
+                    <DroppableSection id="drop-review">
+                      {reviewItems.length === 0 ? (
+                        <p className="text-sm text-gray-300 px-1 py-2">Drag here to review</p>
+                      ) : (
+                        <div className="space-y-2 py-1">
+                          {reviewItems.map((item) => (
+                            <DraggableSidebarCard
+                              key={item.id}
+                              id={item.id}
+                              className="flex flex-col gap-0.5 px-3 py-2.5 border border-amber-200 border-l-2 border-l-amber-400 rounded-xl hover:bg-amber-50/50 transition"
+                              onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
+                            >
+                              <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
+                              {item.start_time && <p className="text-xs text-gray-400 mt-0.5">{formatTime(item.start_time)}</p>}
+                              {item.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{item.description}</p>}
+                            </DraggableSidebarCard>
+                          ))}
+                        </div>
+                      )}
+                    </DroppableSection>
+                  </div>
+                </div>
+              </div>
+
+              <DragOverlay>
+                {activeId ? (
+                  <div className="w-52 px-3 py-2.5 bg-white border border-gray-300 rounded-xl shadow-lg text-xs font-medium text-gray-700 cursor-grabbing truncate">
+                    {items.find((i) => i.id === activeId)?.title ?? ''}
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           )}
         </div>
-
-        {/* 3/5 + 2/5 layout */}
-        {activeEventId && (
-          <DndContext
-            sensors={sensors}
-            onDragStart={(e) => setActiveId(e.active.id as string)}
-            onDragEnd={handleDragEnd}
-            onDragCancel={() => setActiveId(null)}
-          >
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 flex-1 min-h-0">
-              {/* Left: timeline calendar */}
-              <div className="flex-[3] min-w-0">
-                <EventDayCalendar eventId={activeEventId} hideShareLink hideUnscheduled skipDndContext showItemStatus exportFilename={exportFilename} />
-              </div>
-
-              {/* Right: unscheduled + to review */}
-              <div className="w-full sm:w-[260px] flex-shrink-0 flex flex-col gap-8 overflow-y-auto pt-1 pb-6 sm:pb-2">
-                {/* Unscheduled */}
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">Unscheduled</h3>
-                  <DroppableSection id="drop-unscheduled" isUnscheduled>
-                    {unscheduledItems.length === 0 ? (
-                      <p className="text-sm text-gray-300 px-1 py-2">Drag here to unschedule</p>
-                    ) : (
-                      <div className="space-y-2 py-1">
-                        {unscheduledItems.map((item) => (
-                          <DraggableSidebarCard
-                            key={item.id}
-                            id={item.id}
-                            className="flex flex-col gap-0.5 px-3 py-2.5 border border-dashed border-gray-200 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition"
-                            onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
-                          >
-                            <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
-                            {item.contact && <p className="text-xs text-gray-400 truncate">{item.contact.name}</p>}
-                            {item.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{item.description}</p>}
-                          </DraggableSidebarCard>
-                        ))}
-                      </div>
-                    )}
-                  </DroppableSection>
-                </div>
-
-                {/* To Review */}
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-900 mb-4">To Review</h3>
-                  <DroppableSection id="drop-review">
-                    {reviewItems.length === 0 ? (
-                      <p className="text-sm text-gray-300 px-1 py-2">Drag here to review</p>
-                    ) : (
-                      <div className="space-y-2 py-1">
-                        {reviewItems.map((item) => (
-                          <DraggableSidebarCard
-                            key={item.id}
-                            id={item.id}
-                            className="flex flex-col gap-0.5 px-3 py-2.5 border border-amber-200 border-l-2 border-l-amber-400 rounded-xl hover:bg-amber-50/50 transition"
-                            onClick={() => { setEditingItem(item); setEditModalOpen(true) }}
-                          >
-                            <p className="text-xs font-medium text-gray-700 truncate">{item.title}</p>
-                            {item.start_time && <p className="text-xs text-gray-400 mt-0.5">{formatTime(item.start_time)}</p>}
-                            {item.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{item.description}</p>}
-                          </DraggableSidebarCard>
-                        ))}
-                      </div>
-                    )}
-                  </DroppableSection>
-                </div>
-              </div>
-            </div>
-
-            <DragOverlay>
-              {activeId ? (
-                <div className="w-52 px-3 py-2.5 bg-white border border-gray-300 rounded-xl shadow-lg text-xs font-medium text-gray-700 cursor-grabbing truncate">
-                  {items.find((i) => i.id === activeId)?.title ?? ''}
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-        )}
-      </div>
+      )}
 
       {/* Sidebar item edit modal (unscheduled + review) */}
       <EventTimelineModal
@@ -507,6 +505,6 @@ export function CoupleTimeline({ coupleId, coupleName }: CoupleTimelineProps) {
         loading={updateItem.isPending || deleteItem.isPending}
         showStatus
       />
-    </div>
+    </CoupleTabShell>
   )
 }

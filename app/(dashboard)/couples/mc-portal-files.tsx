@@ -1,12 +1,14 @@
 'use client'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Download, Trash2, Plus, Loader2 } from 'lucide-react'
+import { FileText, Download, Trash2, Plus, Loader2, Paperclip } from 'lucide-react'
 import { useState, useRef } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
 
+import { CoupleTabEmpty, CoupleTabShell } from './couple-tab-shell'
 import {
   addPortalFileAction,
   deletePortalFileAction,
@@ -172,13 +174,29 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
   }
 
   return (
-    <div className="space-y-6">
+    <CoupleTabShell
+      title="Files"
+      stats={files.length > 0 ? [{ label: `${files.length} total` }] : undefined}
+      actions={
+        <Button size="sm" onClick={() => inputRef.current?.click()} disabled={uploading} className="cursor-pointer gap-1.5">
+          {uploading ? (
+            <><Loader2 size={14} strokeWidth={1.5} className="animate-spin" />Uploading…</>
+          ) : (
+            <><Plus size={14} strokeWidth={1.5} />Add file</>
+          )}
+        </Button>
+      }
+    >
       {isLoading ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" aria-hidden="true">
           {[1, 2].map((i) => <div key={i} className="h-[80px] w-[200px] bg-gray-100 rounded-xl animate-pulse" />)}
         </div>
       ) : files.length === 0 ? (
-        <p className="text-sm text-gray-400 py-1">No files uploaded yet.</p>
+        <CoupleTabEmpty
+          icon={Paperclip}
+          title="No files uploaded yet"
+          description="Add a file with the button above and it will show up here."
+        />
       ) : (
         <div className="flex flex-wrap gap-2">
           {files.map((file) => (
@@ -186,31 +204,16 @@ export function McPortalFiles({ coupleId }: { coupleId: string }) {
           ))}
         </div>
       )}
-
-      <div>
-        <input
-          ref={inputRef}
-          type="file"
-          className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0]
-            if (file) await uploadFile(file)
-            if (inputRef.current) inputRef.current.value = ''
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50"
-        >
-          {uploading ? (
-            <><Loader2 size={13} strokeWidth={1.5} className="animate-spin" />Uploading…</>
-          ) : (
-            <><Plus size={13} strokeWidth={1.5} />Add file</>
-          )}
-        </button>
-      </div>
-    </div>
+      <input
+        ref={inputRef}
+        type="file"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0]
+          if (file) await uploadFile(file)
+          if (inputRef.current) inputRef.current.value = ''
+        }}
+      />
+    </CoupleTabShell>
   )
 }

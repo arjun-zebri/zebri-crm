@@ -77,6 +77,65 @@ Redirects to `/login` on success.
 
 ---
 
+# Welcome Onboarding Wizard
+
+Route: Modal overlay during application (no standalone route).
+
+Route group: `(dashboard)` — authenticated, displays after login on first interaction.
+
+Purpose: Eight-step welcome wizard for new users — capture their profile details, then walk them through the core loop (couple → template → send → automation) as animated previews, closing on a personal founder note.
+
+## Gate
+
+The wizard is shown once per user, gated on `user_metadata.welcome_onboarded_at` timestamp. A soft gate using localStorage (key `zebri:welcome-onboarded`) acts as an offline hint to skip the fetch. Every user, regardless of age, has never been stamped on this field, so all existing accounts see the modal once after deploy. A backfill of the gate is the lever to suppress it for old users if needed.
+
+The modal uses `size="2xl"` with `floatingClose` (headerless — the step title sits flush at the top). It is dismissible on every exit path (Finish, Escape, ×, backdrop), each of which stamps the gate.
+
+## Eight Steps
+
+1. **Welcome** — What Zebri is, in a breath, over a bento grid of wedding-photo tiles that pop in one by one (grey placeholders until the real photos land). Zebri wordmark above the heading. "Next" CTA.
+2. **Details** — Name, email (read-only, with an info-glyph tooltip explaining why), business name, phone, signature name, address (`AddressAutocomplete`). Icon-labelled inputs. Prefilled from signup.
+3. **Links** — Website, Instagram, Facebook with icon labels. **Advancing from step 3 is the single save point** (writes `user_metadata` via `auth.updateUser`); a failed write never blocks the flow. On steps 2-3 a **Skip** button closes the whole tour (the dismiss path stamps the gate).
+4. **Preview: Add a couple** — Blank frame → sidebar click → New couple → Add manually → Add Couple modal (dark backdrop, underline fields, one caret at a time, typewriter) → Save → the couple lands on the Kanban board.
+5. **Preview: Create a template** — New template opens the editor modal (Template name + Category, Subject/Body with green `{{token}}` highlights and Insert-variable chips, editor toolbar) → Attach file → PDF lands. Modal opens at final size; content fades in without reflow.
+6. **Preview: Send it in two clicks** — Starts inside the couple profile overlay (vertical tab nav). Emails tab → Send email → template picker popover → compose modal with resolved plain-text subject/body (couple addressed by first name) → Send → the button flips to a green Sent and the animation rests on the composed email.
+7. **Preview: Let it run itself** — Automation canvas: Add trigger → anchored dropdown → New enquiry; Add action → Send email (card lands complete with `Template · Enquiry reply`); Activate flips the header pill to Active.
+8. **Founder note** — Real headshot (`public/headshot.jpeg`), personal note (why Zebri exists, one-tool-for-all vision, community emphasis), real signature (`public/signature.png`). "Finish" CTA.
+
+The previews share a beat-clock animation system: a fake cursor measured onto real elements (`data-cursor` attributes), a trailing content clock so effects land only after the pointer arrives (`useSettledBeat`), one-shot click ripples, and a no-loop rest on the final frame. Reduced motion jumps straight to each preview's finished state.
+
+## File Structure
+
+```
+app/(dashboard)/onboarding/
+  welcome-gate.tsx                      — gate logic (localStorage hint + metadata read)
+  welcome-modal.tsx                     — Modal shell (2xl, floatingClose, fixed-height wrapper)
+  welcome-wizard.tsx                    — step state, single save point, footer chrome host
+  wizard-chrome.tsx                     — progress bar + Skip/Back/Next/Finish
+  use-reduced-motion.ts                 — system prefers-reduced-motion hook
+  steps/
+    step-welcome.tsx                    — step 1
+    step-details.tsx                    — step 2 (owns the WelcomeProfile type)
+    step-links.tsx                      — step 3
+    step-preview.tsx                    — steps 4-7 host (title + copy + script)
+    step-founder.tsx                    — step 8
+  previews/
+    preview-frame.tsx                   — mini app chassis: sidebar rail, cursor engine, overlay slot
+    preview-modal.tsx                   — Backdrop + PreviewModal + EditorToolbar minis
+    typewriter.tsx                      — character-by-character reveal with caret
+    use-preview-script.ts               — beat clock + trailing settled-beat clock
+    script-couple.tsx                   — step 4 script
+    script-template.tsx                 — step 5 script
+    script-send.tsx                     — step 6 script
+    script-automation.tsx               — step 7 script
+```
+
+## Rollout Note
+
+Existing accounts have never been stamped, so every existing user sees the modal once after deploy. A backfill of `welcome_onboarded_at` via admin API or bulk-update script is the lever to suppress the modal for specific users or cohorts if feedback warrants it.
+
+---
+
 # Dashboard
 
 Route: `/dashboard` or `/` (landing page after login)
@@ -282,6 +341,19 @@ Opens as a centered full-screen modal (not a slide-over). Overlay covers the ful
 **Navigation:**
 - Mobile: horizontal scrollable tab strip (`overflow-x-auto`) below header  -  icon + label per tab, `whitespace-nowrap`
 - Desktop: vertical 200px sidebar on left  -  same tabs as icon + label rows
+
+**Tab settings (gear):** A Settings (gear) button sits next to Delete in the
+header (desktop inline row; mobile actions popover), with a smooth rotate/fade
+when toggled. It flips the nav into an inline "settings mode" — a vertical,
+drag-to-reorder list of every tab, each row with an eye / eye-off button to hide
+or show that tab (Overview is locked visible — the guaranteed fallback). Edits
+live in a working draft so the nav updates instantly (no flicker when toggling
+the gear back). The layout is **per-user and global across couples** (not
+per-couple) and is **saved when the modal closes** (overlay / Esc / ✕) to
+`user_public_settings.couple_profile_tabs_config` via
+`updateCoupleProfileTabsConfigAction`. Hidden tabs and order apply everywhere;
+hiding the active tab falls the body back to the first visible tab. Derive logic
+tolerates drift (unknown stored keys dropped, newly added tabs appended).
 
 **Tabs:** Overview, Pulse, Tasks, Contacts, Timeline, Songs, Files, Vows,
 Payments, Contracts, Automations, **Templates**.
@@ -546,9 +618,11 @@ Route: `/payments`
 
 Route group: `(dashboard)`
 
-Purpose: Unified hub for managing quotes and invoices. The MC can view, create, and edit all financial documents (quotes and invoices) in one place with tab-based navigation.
+Purpose: Unified hub for managing proposals, quotes and invoices. The MC can view, create, and edit all financial documents in one place with tab-based navigation.
 
-Header: Title "Payments" + three tabs: **Quotes** | **Invoices** | **Contracts** (Contracts only renders when the user has Pro/Max via `hasContractsAccess(user)`). Search bar + "New Quote" / "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
+Header: Title "Payments" + four tabs: **Proposals** | **Quotes** | **Invoices** | **Contracts** (Proposals is the default tab; Quotes is being retired by the proposals rollout — see `.claude/docs/proposals.md`). Search bar + "New Proposal" / "New Quote" / "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
+
+**Proposals tab (Proposals Phase C+):** `proposals-list.tsx` renders the shared payments table (number PR-NNN, title, couple, status pill draft/sent/accepted/declined with display-only expired derivation, primary-option subtotal, created date). Rows open `ProposalBuilderModal` (`components/builders/proposal-builder-modal.tsx`): couple + expiry meta row, a stack of option cards (each snapshots a package: editable title/description, base items via the shared LineItemsTable, add-ons with the MC's pre-tick checkboxes, display-only terms line "25% deposit · GST incl. · weekend +15%"), packages applied via the shared TemplatePicker, "Add blank option" always available, notes, two-tab live preview (the couple page rendered through the shared `ProposalDocumentBody` block tree so it matches the sent page exactly, incl. banner / custom blocks / Accept styling / footer, + real cover email), ShareAndSend footer (send = `/api/email/send-proposal`). Accepted/declined proposals are locked server-side; the overflow offers "Generate invoice" (accepted: creates a draft invoice from the RECORDED selection with the option's deposit % + GST treatment, provenance `invoices.proposal_id`) and "Duplicate to revise". The couple-facing page is `/proposal/[token]` (option chooser, add-on ticks with live total, two-step accept; accepted view renders the recorded receipt).
 
 **Composition (Phase 2C decomposition):** `app/(dashboard)/payments/page.tsx` is a 262-LOC orchestrator that composes the following co-located sections:
 
@@ -1032,6 +1106,123 @@ as Privacy. Read-only.
 
 ---
 
+# Branding Editor
+
+Route: `/branding`
+
+Route group: `(dashboard)`
+
+Purpose: A Canva-grade design tool for customizing the MC's brand kit and block-based document layouts across proposal, invoice, contract, and couple portal surfaces.
+
+## First-Run Onboarding
+
+Users who have never customized branding see a three-step wizard at `/branding/onboarding/`: **Business** (logo, name, tagline), **Look** (six role-based colours + typography + density), **Documents** (surface enablement). Wizard is gated by `onboarded_at` in user_branding; once complete, the editor shows normally. Users can re-enter onboarding via Settings.
+
+The **Look** step collects exactly six colour pickers (no more, no less): Heading, Subheading, Body text, Background, Primary button, Secondary button. Density (cozy/compact) is shown but corner-radius is NOT a control in onboarding (frozen to defaults; users edit corner-radius in the editor's Global styles section only).
+
+## Layout
+
+Three-pane: **Header** (six surface tabs: Quote, Invoice, Contract, Proposal, Vendor Timeline, Questionnaire) + **Left rail** (brand panel with accordions + Documents panel) + **Canvas** (surface preview). Top-right has Preview button (opens surface in new tab) and Reset button (reverts current surface to template).
+
+## Brand Rail (left sidebar)
+
+1. **Your business** — Logo, favicon, business name, tagline, ABN, phone, website, Instagram/Facebook URLs.
+2. **Brand colours** — Six role-based colour pickers (all required, no toggles):
+   - **Heading colour** — for h1, h2, h3 across all surfaces; default: black (#111827)
+   - **Subheading colour** — for section titles and secondary headings; default: black (#111827)
+   - **Body text colour** — for paragraphs, regular text, and the muted label/metadata alias; default: grey (#6B7280)
+   - **Background colour** — for page backgrounds and surface fills; default: white (#FFFFFF)
+   - **Primary button colour** — for main CTAs (Accept, Pay, etc.); default: black (#111827)
+   - **Secondary button colour** — for supporting CTAs (Decline, etc.); default: grey (#6B7280)
+   Each role has a colour picker + hex input + suggested swatches from the uploaded logo.
+   **Derived aliases** (no longer user-set): accent_color (≡ primary button), muted_color (≡ body text), secondary_text_color (computed from secondary button), page_background (≡ background colour).
+3. **Link colour** (editor-only control) — hyperlink colour; defaults to primary button colour. Not shown in onboarding.
+4. **Typography** — Per role (heading / body): font dropdown (30+ Google fonts), size, weight, colour, alignment, text case, letter-spacing, line-height. Overall scale slider.
+5. **Global styles** — Corner radius, link colour, default button style, base line-height, section spacing, page background.
+
+## Documents Panel (below brand sections)
+
+Toggles to enable/disable individual surfaces. Only enabled surfaces render to their public endpoints. Disabled surfaces return null from get_public_* RPCs. Each surface has a quick-reset link ("Reset to template") that replaces its block tree.
+
+## Canvas (right side)
+
+Renders the selected surface with live sample data. Fixed-core blocks (proposalBody, contractBody, couplePortal, questionnaire, vendorTimeline) are marked "Fixed layout"; chrome blocks (header banner, business name, text, image, spacer, divider, footer, action) are freely positioned above/below.
+
+Per-block toolbar (Canva-style): padding (per side), background colour, border (width/colour/radius), width, horizontal alignment, space above/below. Text-bearing blocks add font/size/weight/colour/alignment/case/letter-spacing/line-height. Block-specific controls (header overlay, action variant/size/radius, divider thickness, etc.) per type.
+
+Blocks inherit global branding (colours, fonts, corner radius, spacing); text blocks allow per-block overrides.
+
+Mobile responsive: on <md breakpoint, sidebar becomes sticky-scrollable, canvas stacks below. Canvas uses container queries to adapt block layouts gracefully on small screens without breaking fixed-core block logic.
+
+## Public-Blocks Slots + Chrome Pattern
+
+The **public renderers** (`components/public-blocks/*`) are the sole markup for each surface. The **editor** injects `InlineText` slots into key text nodes (e.g. business-name text, action button label) to make those fields editable inline on the preview. The editor's toolbar is an overlay chrome that sits above the public renderer without modifying its output.
+
+Slots always render (no conditional gating). Editor slot classes (`edit-mode-*` prefixes) match the static renderers exactly. The `upload-brand-asset` shared helper handles logo/favicon/image uploads to Supabase Storage, returning a public URL synchronously cached.
+
+## Customer Preview
+
+"Preview" button opens `/branding/preview/[surface]` in a new tab via the public block renderers, exactly as customers see it. Device toggle allows mobile (<md) testing. Requires the surface to be enabled.
+
+## Block Palette & Model
+
+The block palette has two labeled groups:
+
+**General blocks** (available on all documents): Text, Divider, Spacer, My details, Image, Tagline, Footer. The Footer block includes per-network toggles (Facebook, Instagram, Twitter, Pinterest, Website) that control whether each social link renders in the public footer. URLs come from account branding settings (not entered per block).
+
+**Document-specific blocks** (surface-only): each document has explicit required and optional blocks. Required blocks can be deleted; deleting one raises a "Not ready to send" flag (a calm NotReadyPanel in the editor listing what is missing in plain language) until the block is re-added. A "Required" chip is informational.
+
+**Deletable-required model**: the editor validates per-surface via two layers. Layer A (template validity) checks required blocks present, invoice at-least-one of Bank details/Pay CTA, and questionnaire mode chosen. Layer B (account prerequisites) checks Stripe Connect (for Pay CTA), bank details in settings (for Bank details), and contract template created (for Contract body). Layer B flags never block editing, only sending.
+
+**Proposal decomposition**: the monolithic `proposalBody` marker was split into five editable blocks: Package header, Package details, Package optional inclusions, Package totals, and Accept CTA (the shared action block). A subtle in-block "See other packages" switcher appears in the Package header when multiple packages were sent.
+
+**Questionnaire mode**: the Questionnaire body block now persists `mode: 'form' | 'oneAtATime'` (replacing the preview-only toggle); public rendering reads this to show regular-form vs one-at-a-time.
+
+**Payment schedule**: now optional on Invoice. `proposalBody` and `headerBanner` remain only in migration code.
+
+## Six Surfaces
+
+- **Proposal** — Package header, Package details, Package optional inclusions (optional), Package totals, Accept CTA
+- **Invoice** — Invoice header, Invoice line items, Invoice totals, Payment schedule (optional), Bank details (required—at least one of Bank details/Pay CTA), Pay CTA (required—at least one)
+- **Contract** — Contract header, Contract body, Sign CTA
+- **Client Portal** — Portal body
+- **Vendor Timeline** — Run sheet body
+- **Questionnaire** — Questionnaire body with mode toggle (form | oneAtATime)
+
+## File Structure
+
+```
+app/(dashboard)/branding/
+  page.tsx                           — orchestrator
+  branding-editor.tsx                — editor state + autosave
+  brand-panel.tsx                    — rail sections
+  business-section.tsx               — Your business accordion
+  blocks/
+    render.tsx                       — editor block renderers (including new Image, Spacer)
+    block-toolbar.tsx                — per-block controls
+    blocks-by-surface.ts             — availability gating
+    block-frame.tsx                  — editor wrapper (applies padding/background/etc)
+    render-image.tsx                 — image block editor
+    render-spacer.tsx                — spacer block editor
+  templates/
+    index.ts                         — template catalogue
+    templates-section.tsx            — Templates accordion picker
+  add-block-palette.tsx              — Add block grouped palette
+
+app/branding/
+  preview/[surface]/page.tsx         — customer preview route (auth, reads branding + sample data)
+
+lib/branding/
+  fonts.ts                           — 30+ Google fonts (FONT_IDS, FONT_LABELS, FONT_STACKS, GOOGLE_FONT_FAMILIES)
+  type-defaults.ts                   — TypeDefaults + resolveTypeDefaults (heading/body type resolution)
+  block-outer-style.ts               — blockOuterStyle(block, branding) pure helper (padding/background/radius)
+  public-blocks/
+    image.tsx                        — public renderer for Image block
+    spacer.tsx                       — public renderer for Spacer block
+```
+
+---
+
 # Public Invoice Page
 
 Route: `/invoice/[token]`
@@ -1165,11 +1356,21 @@ underline tabs matching the Settings chrome):
   table `packages` + `package_items`). Sits before Quotes because
   quotes/invoices are built from packages.
 - **Quotes** — `QuoteTemplateManager` (reusable line-item sets; table
-  `quote_templates` + `quote_template_items`).
+  `quote_templates` + `quote_template_items`). The editor's **"Add
+  from package"** picker snapshots a package's line items in.
 - **Invoices** — `InvoiceTemplatesManager` (reusable invoices; table
   `invoice_templates` + `invoice_template_items`). The editor's
   **"Add from package or quote"** picker snapshots a package's or quote
   template's line items in (referencing by copy, not live FK).
+
+Both tabs are thin wrappers around the shared
+`LineItemTemplateManager` (`line-item-template-manager.tsx`), which
+owns the list, preview, edit modal, starters, and all mutations via the
+kind-parameterised `template-store.ts` (injectable client, integration-
+tested directly). Saves rewrite items wipe-and-reinsert style so a
+drag-reorder inside the edit modal persists, and set `updated_at`
+explicitly (no touch trigger on these tables). Search matches name,
+subtitle, applied notes, and item descriptions.
 - **Timelines** — `TimelineTemplateManager` (reusable run-sheet item
   sets; `timeline_templates` + `timeline_template_items`).
 - **Contracts** — `ContractTemplateManager` (`contract_templates`).
@@ -1179,31 +1380,55 @@ each other). Quotes / Timelines / Contracts moved here out of
 **Settings → Templates** (that tab is removed; `/settings?tab=templates`
 redirects to `/templates`).
 
-The couple-facing **quote and invoice builders** also reference packages:
-their "Apply package or template" picker (shared `TemplatePicker`, fed by
-`useApplySources` — quote templates + packages, namespaced `qt:`/`pkg:`
-ids) snapshots a source's line items + notes into the document. The
-invoice builder previously had no apply-from picker at all; it now shares
-the quote builder's.
+The couple-facing **quote and invoice builders** also reference these
+templates: their "Apply package or template" picker (shared
+`TemplatePicker`, fed by `useApplySources` — namespaced `it:`/`qt:`/
+`pkg:` ids) snapshots a source's line items + notes into the document.
+The quote builder offers quote templates + packages; the invoice
+builder opts into invoice templates too
+(`useApplySources({ includeInvoiceTemplates: true })`), listed first as
+the most specific source. Applied notes always come from a source's
+`description` column (customer-facing); the `notes` column is the
+internal subtitle shown only in the Templates list and is never applied.
 
 ## Emails tab layout
 
 - Header row: email subtitle + "New template" button (`size="sm"` with
   a `Plus` icon, matching the Couples "New couple" button).
-- Library: a slim search box, then templates **grouped by lifecycle
-  stage** (Enquiry · Quote · Booking · Planning · Wedding week ·
-  Follow-up, then an "Other" bucket for un-tagged templates) under
-  quiet uppercase subheaders — matching the calm couple-overview /
-  automations surfaces. Each row shows name + rendered subject; whole-
-  row click opens the editor, and Edit / Duplicate / Delete live in a
-  hover-revealed `⋯` overflow menu (`RowActionsMenu`, `alwaysVisible`
-  so touch users can reach it). No filter chips and no per-row stage
-  chip — the group subheaders carry the stage; search filters by name
-  or subject and only non-empty groups render.
-- Editor modal (fullscreen): left = name, lifecycle Select, subject
+- Library: a slim search box, then templates **grouped by the MC's own
+  categories** (Notion-style, colour-dotted uppercase subheaders in the
+  user's drag order, with a trailing "Uncategorised" bucket) — matching
+  the calm couple-overview / automations surfaces. Each row shows name
+  + rendered subject; whole-row click opens the editor. Search filters
+  by name or subject and only non-empty groups render.
+- **Categories** (`email_template_categories`): user-editable name +
+  colour (8 named palette keys) + drag order. The editor's
+  `CategoryPicker` selects, creates inline, and has an "Edit" mode for
+  rename / recolour / delete / reorder without leaving the modal.
+  Deleting a category uncategorises its templates (FK set-null). Six
+  defaults (the historical lifecycle stages) seed lazily on first load,
+  guarded by `user_metadata.email_categories_initialized` so deleting
+  them all sticks. The old `lifecycle_stage` column is legacy.
+- Editor modal (fullscreen): left = name, **Category** picker, subject
   (mustache, with Insert-variable popover), TipTap body editor wired to
-  the email variable catalogue; right = **live preview** filled with
-  sample data via the shared renderer (`lib/email/templates`).
+  the email variable catalogue (toolbar popover **or typing `{{`** for
+  the inline suggestion list; also a Link button), and an
+  **Attachments** section (upload to the private bucket, listed with
+  remove; works on unsaved drafts too — uploads park unlinked under
+  `{user}/drafts/` and are linked on first save, deleted on discard —
+  files are included on every send of the template, deselectable per
+  send in the compose modal); right = **WYSIWYG preview**: subject row + the full branded
+  email shell (logo/wordmark, brand accents, the MC's fonts, corner
+  radius, footer) rendered into a sandboxed iframe by the same
+  `wrapTemplateHtml` the send route uses, with sample data + the MC's
+  real saved signature filled in. Footer has **Send test to myself**
+  (emails the live draft to the MC's own inbox, `[Test]` prefix,
+  rate-limited) beside Cancel / Save.
+- The **branded shell** applies to real sends too (manual + automation
+  `send_email` wraps), so preview = send. Branding is assembled from
+  `user_metadata` by `buildPublicBranding`
+  (`lib/branding/public-branding.ts`, pure/server-safe) and rides on
+  `ctx.mc.branding`.
 
 ## Page States
 
@@ -1218,13 +1443,15 @@ the quote builder's.
 
 Nothing is auto-seeded. The Emails tab has a **Browse starter
 templates** button (and an empty-state CTA) opening
-`StarterLibraryPanel` — the catalog of ~26 starters (the canonical set
-in `lib/email/starter-templates.ts`, incl. the celebrant AU-legal ones:
-NOIM, document request, ceremony script, certificate info), grouped by
-stage. Catalog entries already in the library are hidden; **Add** (or
+`StarterLibraryPanel` — the catalog of **3 exemplars** (trimmed
+2026-07-09: starters are a guide showing how a template is built, not a
+library — Enquiry acknowledgement, Quote cover email, You're booked
+confirmation; canonical set in `lib/email/starter-templates.ts`).
+Catalog entries already in the library are hidden; **Add** (or
 **Add all**) inserts copies via `addStarterTemplatesAction`, which
 resolves content server-side from the catalog by name (client sends
-names only) and skips duplicates. Migration
+names only), skips duplicates, and files each copy under the user's
+matching default category. Migration
 `20260618000200_clear_seeded_starter_templates.sql` removes the rows
 from the old auto-seed model (only `is_starter` rows; user-created
 templates untouched).
@@ -1239,12 +1466,40 @@ identical:
   also sits beside the header "New" button.
 - **List rows**: borderless, token-styled
   (`rounded-xl px-3 py-2.5 hover:bg-surface-muted`) with a 2-line text
-  block and a `RowActionsMenu` (Edit / Delete). The money tabs keep
-  dnd-kit drag-reorder (muted `GripVertical` handle); contracts have no
-  reorder. (Emails group by lifecycle stage instead of reordering.)
-- **In-modal preview**: the money editors show a live `LineItemPreview`
-  card (shared `template-preview` chrome — name/subtitle header + priced
-  line items + total). Contracts edit in the TipTap editor.
+  block and a `RowActionsMenu` (Edit / Delete). The Quotes / Invoices
+  tabs keep dnd-kit drag-reorder (muted `GripVertical` handle);
+  Packages and Contracts have no reorder (Packages lists in `position`
+  order, which is creation order). (Emails group by lifecycle stage
+  instead of reordering.)
+- **Detail pane actions**: the `TemplatePreviewHeader` `⋯` menu offers
+  Edit / Duplicate / Delete on the Packages, Quotes, and Invoices tabs
+  (Packages adds Archive). Duplicate copies the template + items as
+  "<name> (copy)" placed directly after its source and selects it;
+  Archive (packages only) soft-retires it (`archived_at`: kept under a
+  collapsed "Archived (N)" group at the bottom of the list, out of the
+  builders' pickers, restorable); Delete goes through a `ConfirmDialog`
+  (copy notes that quotes/invoices already created from it keep their
+  snapshot). The header also shows the "Edited X ago" line
+  (`updated_at`, set explicitly on every save — none of these tables
+  has a touch trigger) and, once a package has been applied to quotes,
+  a "Used in N quotes · M accepted" line (`use-package-usage.ts`
+  reading `quotes.source_package_id`).
+- **Edit modals**: Packages, Quotes, and Invoices share the calm
+  modal styling — underline inputs, black section headers, the shared
+  `LineItemsEditor` grid (grip · description · [qty] · amount · remove,
+  borderless with hairline rows, auto-animated add/remove), and a
+  sticky Cancel / Save footer. Packages use `PackageEditForm`; Quotes
+  and Invoices share `TemplateEditForm` (Quotes gets a packages-only
+  `sources` picker; Invoices gets packages + quote templates). The
+  form has both a **Subtitle** (`notes`, internal, shown in the list)
+  and a **Notes** field (`description`, customer-facing, applied to
+  the document). Save is blocked with a quiet hint when a priced line
+  item has no description or the name duplicates another template;
+  fully empty item rows are silently dropped. The read-only
+  `LineItemPreview` lives in the detail pane (with an "Added to the
+  notes when applied" block when notes exist), not inside the modal.
+  Amounts display cents only when non-zero (`formatAUD` in
+  `lib/payments/format.ts`). Contracts edit in the TipTap editor.
 - **Starter catalogs**: each tab has its own opt-in catalog surfaced
   through the shared `StarterCatalogModal` (flat list, no stage grouping).
   Catalogs:
@@ -1258,6 +1513,34 @@ identical:
   server-side, names already owned skipped, rows flagged `is_starter`.
   The legacy single contract default still auto-seeds on signup
   (`seed_default_contract_template`); the contract catalog is additive.
+
+## Packages v2 (commercial fields)
+
+A package is more than a flat item list; the edit modal
+(`package-edit-form.tsx` + `package-items-editor.tsx`) captures:
+
+- **What's included** (`description`): prose shown on the preview and
+  applied as the quote/invoice notes (the `notes` subtitle stays
+  internal and is never applied).
+- **Base line items + optional add-ons**: two drag-sortable sections;
+  each item has quantity × per-unit price (flattened to
+  "N × description" on apply, since builder items carry no qty).
+- **Pricing details**: booking deposit % (pre-fills the invoice
+  builder's payment schedule), weekend loading % (applying appends a
+  transparent "Weekend rate loading (X%)" line the MC deletes
+  off-peak), and a "Prices include GST" flag (applying an inclusive
+  package turns the builder's GST line off; exclusive keeps GST 10%).
+
+The read-only preview (`package-preview.tsx`) mirrors this: inclusions
+prose, base items + total, an "Optional add-ons" group, and a quiet
+terms footer. Pure money math lives in `lib/payments/package-math.ts`.
+
+**Builders**: applying a package with add-ons opens the shared
+`AddOnPickerDialog` (`components/builders/parts/add-on-picker-dialog.tsx`)
+to tick which extras to include (Cancel aborts the apply). The quote
+builder records `sourcePackageId` through `saveQuoteAction` for
+conversion stats; the invoice builder pre-fills the deposit schedule.
+The apply pickers hide archived packages.
 
 ## Variables & the missing-variable rule
 
@@ -1277,7 +1560,7 @@ app/(dashboard)/templates/
   templates-client.tsx      -  tab orchestrator (Emails/Quotes/Timelines/Contracts)
   templates-tabs.tsx        -  underline tab nav
   emails-tab.tsx            -  Emails tab: library + editor modal + New button
-  templates-library.tsx     -  stage-grouped list, search, row actions
+  templates-library.tsx     -  category-grouped list, search, row actions
   templates-skeleton.tsx    -  loading skeleton mirroring the grouped list
   template-editor-modal.tsx -  create/edit (editor + live preview)
   template-preview.tsx      -  shared filled-in preview
@@ -1293,7 +1576,7 @@ lib/email/
   templates.ts              -  render + detectMissingVariables (shared)
   template-variables.ts     -  editor variable list + sample context
   starter-templates.ts      -  canonical starter catalog + starterTemplatesByName
-types/email-template.ts     -  EmailTemplate + LifecycleStage
+types/email-template.ts     -  EmailTemplate + EmailTemplateCategory (+ legacy LifecycleStage)
 ```
 
 ## Manual send — couple "Send email" modal
@@ -1326,3 +1609,105 @@ The editable preview reuses `components/ui/rich-text-editor.tsx`
 Deferred sub-items: static-file attachment upload UI (the route + bucket
 already support `attachmentFileIds`; the upload/attach UI lands with the
 template editor), and inline (template-less) compose.
+
+# Couple Questionnaires
+
+MCs build reusable questionnaires, send them to couples, and read the answers
+back inside the couple profile. Structurally modelled on contracts (template →
+token-gated instance → branded public page). Question types: short text, long
+text, single choice, multiple choice, dropdown, date, time, yes/no, number,
+email, phone, and a non-input section heading. Each template has a display
+mode — `typeform` (one question at a time) or `form` (all on one page) —
+snapshotted onto the instance at send. Schema + validation:
+`lib/questionnaires/`. The renderers themselves are shared feature components
+in `components/questionnaires/` (`question-field`, `typeform-flow`,
+`classic-form`, `experience-preview`, `theme`) so the public page and every
+MC-side preview are pixel-identical.
+
+## Template builder — Templates page → Questionnaires tab
+
+`questionnaire-template-manager.tsx` lists the MC's templates (create from
+scratch, duplicate an existing one, or clone a starter from
+`STARTER_QUESTIONNAIRES`). `questionnaire-builder-modal.tsx` is a two-pane
+modal: the left pane edits name/description, the display-mode toggle, and a
+dnd-kit-sortable question list (`questionnaire-question-row.tsx`, with
+per-question duplicate); the right pane is the real branded couple experience
+(`QuestionnaireExperiencePreview`), interactive but local-only. Save is
+blocked (with inline per-question messages) while a question has no text or a
+choice/dropdown has no options — `questionIssues` in
+`lib/questionnaires/builder-state.ts`.
+
+## Send + view — couple profile → Questionnaires tab
+
+`couple-questionnaires.tsx` lists this couple's questionnaires with a
+lifecycle pill (draft → sent → opened → in progress → completed, driven by
+sent_at / viewed_at / non-empty responses / completed_at) and per-row actions
+(`couple-questionnaire-row.tsx`): copy the share link, resend the cover email
+(`resendCoupleQuestionnaireAction`), and turn the share link off/on. "Send"
+picks a template and opens the send preview
+(`questionnaire-send-preview.tsx`) — two tabs: the couple experience (with a
+desktop/phone width toggle) and the actual cover email
+(`questionnaireHtml` in a sandboxed iframe) — then calls
+`sendCoupleQuestionnaireAction` (`questionnaire-actions.ts`), which snapshots
+the template's questions + display mode into a `couple_questionnaires` row,
+enables the share token, and emails the couple the link. Clicking a row opens
+the answers panel (`couple-questionnaire-answers.tsx`): sent/completed
+metadata, print / save-as-PDF export (`lib/questionnaires/answers-html.ts`),
+and an edit mode so the MC can fill answers on the couple's behalf (saved via
+the RLS-scoped `responses` update).
+
+## Public fill-in page — `/questionnaire/[token]`
+
+Branded with the MC's colours/fonts (`useBrandingHead` + the shared
+questionnaire theme). Two render modes from the instance's display_mode:
+
+- **typeform** — one question per screen, progress bar, keyboard-advance
+  (Enter), choice/yes-no/dropdown answers auto-advance, and a final
+  "Ready to send your answers?" confirmation step.
+- **form** — every question on one page with per-question required errors,
+  scroll-to-first-missing, and the same pre-submit confirmation.
+
+Both modes show a question count under the title, a visible autosave state
+("Saving… / Saved / Couldn't save") for the debounced autosave to
+`/api/questionnaire/save`, and submit to `/api/questionnaire/submit`.
+Long-text answers are fixed-height (6 rows, `resize-none`) and scroll
+internally. Loads via `get_public_questionnaire(token)` (which also stamps
+viewed_at on first open). States: loading, not-found (generic 404 for a
+missing/disabled token), active fill, and a thank-you screen. Files:
+`app/questionnaire/[token]/page.tsx` +
+`_components/{fill-section,use-questionnaire-fill,public-questionnaire}` on
+top of the shared `components/questionnaires/` renderers.
+
+## Other entry points
+
+- **Client portal:** a Questionnaires section lists the couple's sent
+  questionnaires, each linking to the standalone fill-in page
+  (`app/portal/[token]/questionnaires-section.tsx`, fed by
+  `get_portal_questionnaires`).
+- **Automations:** the `send_couple_questionnaire` action sends a
+  questionnaire mid-flow; the `questionnaire_completed` trigger fires when a
+  couple submits (or the MC marks one completed), with an optional
+  per-template filter. `{{questionnaire.link}}` resolves from a send action's
+  output or the completion payload's share token; `{{questionnaire.title}}`
+  from the completion payload.
+
+# Roadmap voting (`/roadmap`)
+
+Standalone page (no dashboard shell, not linked from the sidebar) where
+MCs vote on what Zebri builds next. **Visual-only for now**: it exists
+primarily for the intro video's "You decide" scene; a persisted
+(DB + RLS) version replaces it when community voting goes live.
+
+- **Files:** `app/roadmap/page.tsx` (orchestrator),
+  `roadmap-voting.tsx` (client list), `roadmap-options.ts`
+  (React-free data + share math, unit-tested).
+- **Options:** seven candidate features with seeded percentages that
+  sum to 100, rendered as a leaderboard of cards, each with a Lucide
+  icon, description, share, and progress bar.
+- **Voting:** clicking a card highlights it (`border-brand-fg` +
+  check badge), adds 1% to its share and takes 1% from the
+  highest-seeded other option (total stays 100). Clicking another
+  card moves the vote; clicking the same card withdraws it.
+- **State:** in-memory only; a refresh resets the poll (deliberate,
+  for clean retakes while filming). Route sits behind the normal
+  auth middleware.

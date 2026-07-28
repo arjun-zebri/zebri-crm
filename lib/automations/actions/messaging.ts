@@ -132,7 +132,7 @@ const sendEmail: ActionSpec<z.infer<typeof sendEmailConfigSchema>> = {
       }
       subject = renderEmailSubject(tplSubject, ctx, 'send')
       const rendered = renderEmailTemplate(tplContent, ctx, 'send').html
-      html = config.wrap ? wrapTemplateHtml(rendered, ctx.mc.businessName) : rendered
+      html = config.wrap ? wrapTemplateHtml(rendered, ctx.mc.businessName, ctx.mc.branding) : rendered
     } else {
       subject = renderTemplate(config.subject ?? '', ctx)
       const bodyText = renderTemplate(config.body ?? '', ctx)

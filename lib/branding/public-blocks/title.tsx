@@ -1,77 +1,143 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { resolveTextStyle, type TextStyleDefaults } from '@/app/(dashboard)/branding/blocks/text-style'
+
+// eslint-disable-next-line no-restricted-imports
+import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
+// eslint-disable-next-line no-restricted-imports
 import type { TitleBlock } from '@/app/(dashboard)/branding/blocks/types'
+
 import type { PublicBranding } from '../public-surface'
+import { roleDefaults } from '../type-defaults'
+
 import { fmtDate, pad, type PublicDocData } from './shared'
-import { Html } from './html'
+import { VarChip } from './var-chip'
+
+export interface TitleSlots {
+  /** Editor replaces static title with live InlineText. */
+  title?: ReactNode
+}
 
 export function RenderTitle({
   block,
   branding,
   doc,
+  slots,
+  variablePreview = false,
+  chrome,
 }: {
   block: TitleBlock
   branding: PublicBranding
   doc: PublicDocData
+  slots?: TitleSlots
+  /**
+   * Editor-only: render the auto-filled meta + couple-name as mint `{{ … }}`
+   * chips so they read as variables, not editable placeholders. The sent
+   * document (variablePreview false) resolves them to real values.
+   */
+  variablePreview?: boolean
+  chrome?: ReactNode
 }) {
   const p = pad(branding)
-  const titleDefaults: TextStyleDefaults = {
-    fontFamily: branding.font_heading,
-    fontSize: 36,
-    fontWeight: branding.font_weight,
-    color: branding.text_color || '#111827',
-    align: 'left',
-    lineHeight: 1.1,
-    letterSpacing: -0.01,
-  }
-  const subtitleDefaults: TextStyleDefaults = {
-    fontFamily: branding.font_body,
-    fontSize: 14,
-    fontWeight: branding.font_body_weight,
-    color: branding.muted_color || '#6B7280',
-    align: 'left',
-    lineHeight: 1.5,
-    letterSpacing: 0,
-  }
+  const titleDefaults = roleDefaults(branding, 'docTitle')
+  const subtitleDefaults = roleDefaults(branding, 'subtitle')
   const titleCss = resolveTextStyle(block.titleStyle, titleDefaults)
   const subtitleCss = resolveTextStyle(block.subtitleStyle, subtitleDefaults)
-  const metaAlign = block.titleStyle?.align ?? 'left'
+  // The meta row follows its own alignment override when set, else the title's.
+  const metaAlign = block.metaStyle?.align ?? block.titleStyle?.align ?? 'left'
+  const subtitleAlign = block.subtitleStyle?.align ?? 'left'
 
   return (
     <div className={p.blockY}>
-      <div className={p.docX}>
-        <h1 className="leading-tight tracking-tight" style={titleCss}>{doc.title}</h1>
-        {block.subtitle && (
-          <p className="mt-2" style={subtitleCss}>
-            <Html value={block.subtitle} allowLists={false} />
-          </p>
-        )}
+      <div>
+        {/* No leading or tracking classes: resolveTextStyle always emits both
+            inline from the global settings, so utilities here would be dead
+            CSS that reads as if it were in charge. */}
+        <h1 style={titleCss}>
+          {slots?.title ?? caseText(doc.title, block.titleStyle, titleDefaults)}
+        </h1>
+        {/* Subtitle is the couple's real name (a variable): a chip in the editor,
+            the resolved name on the sent document. Tagged so clicking it in the
+            editor targets the couple-name line for styling. */}
+        {block.showCoupleName && (variablePreview || doc.coupleName) ? (
+          // Wrapper aligns; inner <p> hugs its content so the click-to-style
+          // outline wraps just the couple name, not the full width.
+          <div
+            className="mt-2 flex"
+            style={{ justifyContent: subtitleAlign === 'center' ? 'center' : subtitleAlign === 'right' ? 'flex-end' : 'flex-start' }}
+          >
+            <p data-subtarget="subtitle" style={subtitleCss}>
+              {variablePreview ? (
+                <VarChip label="Couple name" hint="Filled with the couple's name when the document is sent." />
+              ) : (
+                caseText(doc.coupleName ?? '', block.subtitleStyle, subtitleDefaults)
+              )}
+            </p>
+          </div>
+        ) : null}
       </div>
       {(block.showRef || block.showExpires || block.showAbn) && (
+        // Outer row is full-width and only handles alignment; the inner element
+        // carries the data-subtarget tag and hugs its content, so the editor's
+        // click-to-style outline wraps just the ref/date/ABN, not the whole width.
         <div
-          className={`${p.docX} mt-3 flex flex-wrap items-baseline gap-x-8 gap-y-2`}
+          className="mt-3 flex"
           style={{ justifyContent: metaAlign === 'center' ? 'center' : metaAlign === 'right' ? 'flex-end' : 'flex-start' }}
         >
-          {block.showRef && doc.refNumber && <Meta label="Ref" value={doc.refNumber} muted={branding.muted_color} />}
-          {block.showExpires && doc.expiresAt && (
-            <Meta label="Expires" value={fmtDate(doc.expiresAt)} muted={branding.muted_color} />
+        <div data-subtarget="meta" className="flex flex-wrap items-baseline gap-x-4 @sm/doc:gap-x-8 gap-y-2">
+          {/* Ref and Due are per-document values (unknown until send), so they
+              show as variable chips in the editor and resolve on the document. */}
+          {block.showRef && (variablePreview || doc.refNumber) && (
+            <Meta
+              label="Ref"
+              value={variablePreview ? <VarChip label="Ref" hint="The document's reference number, assigned when it's sent." /> : doc.refNumber}
+              branding={branding}
+              style={block.metaStyle}
+            />
           )}
-          {block.showAbn && branding.abn && (
-            <Meta label="ABN" value={branding.abn} muted={branding.muted_color} />
+          {block.showExpires && (variablePreview || doc.expiresAt) && (
+            <Meta
+              label={doc.expiresLabel ?? 'Expires'}
+              value={variablePreview
+                ? <VarChip label={doc.expiresLabel ?? 'Expires'} hint={doc.expiresLabel === 'Due' ? "The invoice's due date." : "The document's expiry date."} />
+                : fmtDate(doc.expiresAt!)}
+              branding={branding}
+              style={block.metaStyle}
+            />
+          )}
+          {/* ABN is branding-kit data: show the real value when set (live-updating
+              as the MC edits it), or a mint chip in the editor when it's blank so
+              they know to fill it. On the sent document a blank ABN just doesn't
+              render (so we never show an empty "ABN" label to the couple). */}
+          {block.showAbn && (variablePreview || branding.abn) && (
+            <Meta
+              label="ABN"
+              value={branding.abn ? branding.abn : <VarChip label="ABN" hint="Your ABN, from Settings → Branding." />}
+              branding={branding}
+              style={block.metaStyle}
+            />
           )}
         </div>
+        </div>
       )}
+      {chrome}
     </div>
   )
 }
 
-function Meta({ label, value, muted }: { label: string; value: ReactNode; muted: string }) {
+
+function Meta({ label, value, branding, style }: { label: string; value: ReactNode; branding: PublicBranding; style?: TitleBlock['metaStyle'] }) {
+  const labelDefaults = roleDefaults(branding, 'sectionLabel')
+  const valueDefaults = roleDefaults(branding, 'body')
+  // The per-block meta style (when set) overrides each role default, so a single
+  // control restyles the whole row while label/value keep their distinct baseline.
+  const labelCss = resolveTextStyle(style ?? {}, labelDefaults)
+  const valueCss = resolveTextStyle(style ?? {}, valueDefaults)
+
   return (
     <div className="flex items-baseline gap-2">
-      <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: muted }}>{label}</span>
-      <span className="text-sm">{value}</span>
+      <span style={labelCss}>{caseText(label, {}, labelDefaults)}</span>
+      <span style={valueCss}>{typeof value === 'string' ? caseText(value, {}, valueDefaults) : value}</span>
     </div>
   )
 }

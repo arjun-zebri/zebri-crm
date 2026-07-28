@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Activity, Minus, Image, User, AlignLeft, PanelBottom } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
-import { BLOCK_LABELS, BLOCK_DESCRIPTIONS, type BlockType } from './types'
+import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical, Package, ListChecks, Calculator, LayoutDashboard, FileSignature, CalendarClock, Clock, ClipboardList } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+
+import type { SurfaceTab } from '@/types/branding-preview'
+
+import { paletteGroupsForSurface } from './blocks-by-surface'
+import { BLOCK_DESCRIPTIONS, blockLabel, type BlockType } from './types'
 
 const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   headerBanner: Image,
@@ -11,74 +15,100 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   tagline: AlignLeft,
   title: Type,
   lineItems: Table,
-  totals: CreditCard,
+  totals: Calculator,
   paymentDetails: Landmark,
   text: Pilcrow,
-  action: Activity,
+  action: CreditCard,
   divider: Minus,
+  image: Image,
+  spacer: MoveVertical,
   footer: PanelBottom,
+  packageHeader: Package,
+  packageDetails: AlignLeft,
+  packageInclusions: ListChecks,
+  packageTotals: Calculator,
+  couplePortal: LayoutDashboard,
+  contractBody: FileSignature,
+  paymentSchedule: CalendarClock,
+  vendorTimelineBody: Clock,
+  questionnaireBody: ClipboardList,
 }
-
-const BLOCK_ORDER: BlockType[] = [
-  'headerBanner',
-  'businessName',
-  'tagline',
-  'title',
-  'lineItems',
-  'totals',
-  'paymentDetails',
-  'text',
-  'action',
-  'divider',
-  'footer',
-]
 
 interface AddBlockPaletteProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAdd: (type: BlockType) => void
   trigger: React.ReactNode
+  /** The surface for which blocks are being added. Controls which blocks are available. */
+  surface: SurfaceTab
 }
 
-export function AddBlockPalette({ open, onOpenChange, onAdd, trigger }: AddBlockPaletteProps) {
+export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }: AddBlockPaletteProps) {
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const filtered = BLOCK_ORDER.filter((type) => {
+  const groups = paletteGroupsForSurface(surface)
+
+  // Build flat list of filtered blocks and track which group each belongs to
+  const flatBlocks: { type: BlockType; group: string }[] = []
+  const groupHeaders: Map<string, number> = new Map() // group name -> first index in flatBlocks
+
+  for (const group of groups) {
     const q = query.toLowerCase().trim()
-    if (!q) return true
-    return (
-      BLOCK_LABELS[type].toLowerCase().includes(q) ||
-      BLOCK_DESCRIPTIONS[type].toLowerCase().includes(q) ||
-      type.toLowerCase().includes(q)
-    )
-  })
+    const filteredTypes = group.types.filter((type) => {
+      if (!q) return true
+      return (
+        blockLabel(type, surface).toLowerCase().includes(q) ||
+        BLOCK_DESCRIPTIONS[type].toLowerCase().includes(q) ||
+        type.toLowerCase().includes(q)
+      )
+    })
+
+    if (filteredTypes.length > 0) {
+      groupHeaders.set(group.label, flatBlocks.length)
+      for (const type of filteredTypes) {
+        flatBlocks.push({ type, group: group.label })
+      }
+    }
+  }
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      setQuery('')
+      setActiveIndex(0)
+    }
+    onOpenChange(newOpen)
+  }
 
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 30)
-      setQuery('')
-      setActiveIndex(0)
     }
   }, [open])
 
   useEffect(() => {
-    if (activeIndex >= filtered.length) setActiveIndex(0)
-  }, [filtered.length, activeIndex])
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveIndex(prev => {
+      if (flatBlocks.length > 0 && prev >= flatBlocks.length) {
+        return 0
+      }
+      return prev
+    })
+  }, [flatBlocks.length])
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setActiveIndex(i => Math.min(i + 1, filtered.length - 1))
+      setActiveIndex(i => Math.min(i + 1, flatBlocks.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActiveIndex(i => Math.max(i - 1, 0))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      const picked = filtered[activeIndex]
+      const picked = flatBlocks[activeIndex]
       if (picked) {
-        onAdd(picked)
+        onAdd(picked.type)
         onOpenChange(false)
       }
     } else if (e.key === 'Escape') {
@@ -87,7 +117,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger }: AddBlock
   }
 
   return (
-    <Popover.Root open={open} onOpenChange={onOpenChange}>
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
@@ -112,33 +142,41 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger }: AddBlock
           </div>
 
           <div className="max-h-[320px] overflow-y-auto p-1">
-            {filtered.length === 0 ? (
+            {flatBlocks.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">No matching blocks</p>
             ) : (
-              filtered.map((type, idx) => {
+              flatBlocks.map(({ type, group }, idx) => {
                 const Icon = BLOCK_ICONS[type] ?? Type
                 const active = idx === activeIndex
+                // Header before the first item of each group present.
+                const showHeader = idx === 0 || flatBlocks[idx - 1]?.group !== group
                 return (
-                  <button
-                    key={type}
-                    type="button"
-                    onMouseEnter={() => setActiveIndex(idx)}
-                    onClick={() => {
-                      onAdd(type)
-                      onOpenChange(false)
-                    }}
-                    className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
-                      active ? 'bg-gray-100' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="w-9 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                      <Icon size={15} strokeWidth={1.75} className="text-gray-500" />
-                    </span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-medium text-gray-900">{BLOCK_LABELS[type]}</span>
-                      <span className="block text-xs text-gray-500 truncate">{BLOCK_DESCRIPTIONS[type]}</span>
-                    </span>
-                  </button>
+                  <div key={type}>
+                    {showHeader ? (
+                      <p className="px-2.5 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-gray-400">
+                        {group}
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      onClick={() => {
+                        onAdd(type)
+                        handleOpenChange(false)
+                      }}
+                      className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
+                        active ? 'bg-gray-100' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="w-9 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                        <Icon size={15} strokeWidth={1.5} className="text-gray-500" />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-medium text-gray-900">{blockLabel(type, surface)}</span>
+                        <span className="block text-xs text-gray-500 truncate">{BLOCK_DESCRIPTIONS[type]}</span>
+                      </span>
+                    </button>
+                  </div>
                 )
               })
             )}

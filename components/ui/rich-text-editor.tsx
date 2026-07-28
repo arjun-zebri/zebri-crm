@@ -7,11 +7,14 @@ import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from
 import type { JSONContent, NodeViewProps } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import {
-  Bold, Italic, List, ListOrdered, Heading1, Heading2, Quote,
+  Bold, Italic, List, ListOrdered, Heading1, Heading2, Link2,
   Undo, Redo, AtSign,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { buildVariableSuggestion } from '@/components/ui/variable-suggestion'
 import { variableLabel } from '@/lib/automations/variables'
 import { CONTRACT_VARIABLES } from '@/lib/contracts/contract-variables'
 import { toPlainJSON } from '@/lib/utils'
@@ -56,6 +59,11 @@ interface RichTextEditorProps {
    * right there. Other surfaces omit this and signatures stay chips.
    */
   signatureHtml?: string | null
+  /**
+   * Compact metrics for shorter documents (email bodies): tighter
+   * padding and a lower min-height than the contract-length default.
+   */
+  dense?: boolean
 }
 
 /** The variable path that injects the MC's email signature. */
@@ -116,6 +124,7 @@ export function RichTextEditor({
   showVariableInserter = true,
   mentionDisplay = 'token',
   signatureHtml,
+  dense = false,
 }: RichTextEditorProps) {
   // When a signature is supplied (compose editor), the mention extension
   // gets a React NodeView so `{{mc.signature}}` renders inline as the rich
@@ -151,11 +160,23 @@ export function RichTextEditor({
               mentionDisplay === 'label' ? variableLabel(id) : `{{${id}}}`,
             ]
           },
+          // Typing `@` or `{{` opens the same variable list inline —
+          // only on surfaces where inserting variables makes sense.
+          ...(showVariableInserter
+            ? {
+                suggestions: [
+                  buildVariableSuggestion(variables, '@'),
+                  buildVariableSuggestion(variables, '{{'),
+                ],
+              }
+            : {}),
         })
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      // StarterKit v3 bundles Link; keep clicks from navigating while
+      // editing (the toolbar Link button manages hrefs instead).
+      StarterKit.configure({ link: { openOnClick: false } }),
       Placeholder.configure({ placeholder }),
       mentionExtension,
     ],
@@ -196,7 +217,10 @@ export function RichTextEditor({
   }
 
   return (
-    <div className={`border border-gray-200 rounded-xl overflow-hidden bg-white ${className}`}>
+    // focus-within mirrors the Input primitive's focus treatment (border
+    // darkens to brand-fg) so clicking into the body reads like clicking
+    // into any other field.
+    <div className={`border border-gray-200 rounded-xl overflow-hidden bg-white transition-colors focus-within:border-brand-fg ${className}`}>
       {editable && (
         <ToolbarRow
           editor={editor}
@@ -207,7 +231,11 @@ export function RichTextEditor({
       )}
       <EditorContent
         editor={editor}
-        className="contract-content p-4 min-h-[320px] text-sm text-gray-900 focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[280px] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-gray-400 [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0"
+        className={`contract-content text-sm text-gray-900 focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-gray-400 [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 ${
+          dense
+            ? 'p-3 min-h-[200px] [&_.ProseMirror]:min-h-[170px]'
+            : 'p-4 min-h-[320px] [&_.ProseMirror]:min-h-[280px]'
+        }`}
       />
     </div>
   )
@@ -235,6 +263,92 @@ function ToolbarButton({
     >
       {children}
     </button>
+  )
+}
+
+/**
+ * Toolbar link control. With text selected (or the caret inside an
+ * existing link) it sets/updates the selection's href; with nothing
+ * selected it inserts the URL itself as a link. A bare domain gets
+ * `https://` prepended so `example.com` still works.
+ */
+function LinkButton({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>> }) {
+  const [open, setOpen] = useState(false)
+  const [url, setUrl] = useState('')
+  const active = editor.isActive('link')
+
+  const apply = () => {
+    const raw = url.trim()
+    if (!raw) return
+    const href = /^(https?:\/\/|mailto:)/i.test(raw) ? raw : `https://${raw}`
+    if (editor.state.selection.empty && !active) {
+      editor
+        .chain()
+        .focus()
+        .insertContent({ type: 'text', text: href, marks: [{ type: 'link', attrs: { href } }] })
+        .insertContent(' ')
+        .run()
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href }).run()
+    }
+    setOpen(false)
+  }
+
+  const remove = () => {
+    editor.chain().focus().extendMarkRange('link').unsetLink().run()
+    setOpen(false)
+  }
+
+  return (
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        // Prefill with the link under the caret so "edit link" works.
+        if (next) setUrl((editor.getAttributes('link')['href'] as string | undefined) ?? '')
+        setOpen(next)
+      }}
+    >
+      <Popover.Trigger
+        title="Link"
+        className={`p-1.5 rounded-md transition cursor-pointer ${
+          active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+        }`}
+      >
+        <Link2 size={16} strokeWidth={1.5} />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          sideOffset={6}
+          className="z-[90] w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-2 animate-fade-in"
+        >
+          <div className="flex items-center gap-1.5">
+            <Input
+              size="sm"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  apply()
+                }
+              }}
+              placeholder="https://…"
+              aria-label="Link URL"
+              autoFocus
+            />
+            <Button size="sm" variant="secondary" onClick={apply}>
+              Set
+            </Button>
+            {active && (
+              <Button size="sm" variant="ghost" onClick={remove}>
+                Remove
+              </Button>
+            )}
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }
 
@@ -297,13 +411,7 @@ function ToolbarRow({
       >
         <ListOrdered size={16} strokeWidth={1.5} />
       </ToolbarButton>
-      <ToolbarButton
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        active={editor.isActive('blockquote')}
-        title="Quote"
-      >
-        <Quote size={16} strokeWidth={1.5} />
-      </ToolbarButton>
+      <LinkButton editor={editor} />
       <div className="w-px h-5 bg-gray-200 mx-1" />
       <ToolbarButton
         onClick={() => editor.chain().focus().undo().run()}
@@ -333,11 +441,8 @@ function ToolbarRow({
           <Popover.Content
             align="end"
             sideOffset={6}
-            className="z-[90] w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 animate-fade-in"
+            className="z-[90] w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-1 animate-fade-in"
           >
-            <div className="px-2 py-1.5 text-xs font-medium text-gray-500">
-              Auto-filled from the couple, quote and settings
-            </div>
             <div className="max-h-72 overflow-y-auto">
               {variables.map((v) => (
                 <button
@@ -347,10 +452,9 @@ function ToolbarRow({
                     onInsertVariable(v.id)
                     setOpen(false)
                   }}
-                  className="w-full text-left px-2 py-1.5 rounded-md hover:bg-gray-50 cursor-pointer"
+                  className="w-full text-left px-2 py-1 rounded-md hover:bg-gray-50 cursor-pointer"
                 >
-                  <p className="text-sm text-gray-900">{v.label}</p>
-                  <p className="text-xs text-gray-500">{v.description}</p>
+                  <p className="truncate text-caption text-gray-900">{v.label}</p>
                 </button>
               ))}
             </div>

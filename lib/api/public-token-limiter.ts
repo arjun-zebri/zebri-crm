@@ -1,6 +1,6 @@
 /**
  * Token-attempt limiter for public-surface routes
- * (`/invoice/[token]`, `/quote/[token]`, `/portal/[token]`,
+ * (`/invoice/[token]`, `/proposal/[token]`, `/portal/[token]`,
  * `/contract/[token]`).
  *
  * Why a separate module from `rate-limit.ts`?

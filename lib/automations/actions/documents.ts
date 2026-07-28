@@ -1,7 +1,7 @@
 /**
  * Document-sharing actions.
  *
- * send_quote / send_contract / send_invoice  flip share_token_enabled
+ * send_proposal / send_contract / send_invoice  flip share_token_enabled
  *                                            to true and send the
  *                                            corresponding email
  *                                            via the existing
@@ -18,7 +18,7 @@
 
 import { z } from 'zod'
 
-import { sendContractEmail, sendInvoiceEmail, sendQuoteEmail } from '@/lib/email'
+import { sendContractEmail, sendInvoiceEmail, sendProposalEmail } from '@/lib/email'
 import { dispatchEmail } from '@/lib/email/dispatch'
 import { resolveSender, type ResolvedSender } from '@/lib/email/sender-identity'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -52,48 +52,58 @@ async function emailRunSheetLink(
 }
 
 // ────────────────────────────────────────────────────────────────
-// send_quote
+// send_proposal
 // ────────────────────────────────────────────────────────────────
 
-const sendQuoteSchema = z.object({
-  /** If omitted, pick the most recent draft quote for this couple. */
-  quoteId: z.string().uuid().optional(),
-  /** Specific saved quote template to render (overrides existing draft contents). */
-  templateId: z.string().optional(),
-  /** Days until the quote expires. */
+const sendProposalSchema = z.object({
+  /** If omitted, pick the most recent draft/sent proposal for this couple. */
+  proposalId: z.string().uuid().optional(),
+  /** Days until the proposal expires. */
   expiryDays: z.number().int().min(1).max(365).optional(),
-  /** Optional personal message above the quote link. */
+  /** Optional personal message above the proposal link. */
   customMessage: z.string().optional(),
-  /** Additional file storage keys to attach (brochure, testimonial doc). */
-  attachAdditionalFiles: z.array(z.string()).optional(),
   /** CC list (assistant / partner). */
   cc: z.array(z.string().email()).optional(),
 }).passthrough()
 
-const sendQuote: ActionSpec<z.infer<typeof sendQuoteSchema>> = {
-  type: 'send_quote',
-  configSchema: sendQuoteSchema,
+const sendProposal: ActionSpec<z.infer<typeof sendProposalSchema>> = {
+  type: 'send_proposal',
+  configSchema: sendProposalSchema,
   async handler(ctx, config) {
     if (!ctx.couple?.email) return { kind: 'ok', output: { skipped: 'no primary email' } }
     const supabase = createAdminClient()
-    const quote = await pickQuote(supabase, ctx, config.quoteId)
-    if (!quote) return { kind: 'ok', output: { skipped: 'no quote found' } }
-    if (!quote.share_token_enabled) {
-      await supabase.from('quotes').update({ share_token_enabled: true } as never).eq('id', quote.id)
+    const proposal = await pickProposal(supabase, ctx, config.proposalId)
+    if (!proposal) return { kind: 'ok', output: { skipped: 'no proposal found' } }
+
+    // Count options to drive email copy (mentions "choose between X options").
+    const { count } = await supabase
+      .from('proposal_options')
+      .select('id', { count: 'exact', head: true })
+      .eq('proposal_id', proposal.id)
+    const optionCount = count ?? 0
+
+    // Flip draft → sent and enable sharing.
+    const updates: Record<string, unknown> = { share_token_enabled: true }
+    if (proposal.status === 'draft') {
+      updates.status = 'sent'
+      updates.email_sent_at = new Date().toISOString()
     }
-    const url = `${APP_URL}/q/${quote.share_token}`
-    await sendQuoteEmail({
+    await supabase.from('proposals').update(updates as never).eq('id', proposal.id)
+
+    const url = `${APP_URL}/proposal/${proposal.share_token}`
+    await sendProposalEmail({
       coupleEmail: ctx.couple.email,
       coupleName: ctx.couple.name,
-      quoteNumber: quote.quote_number,
-      quoteTitle: quote.title,
+      proposalNumber: proposal.proposal_number,
+      proposalTitle: proposal.title,
       shareUrl: url,
       mcBusinessName: ctx.mc.businessName,
+      optionCount,
       sender: await resolveSender(supabase, ctx.userId, ctx.mc.businessName),
     })
-    return { kind: 'ok', output: { quote_id: quote.id, quote_link: url } }
+    return { kind: 'ok', output: { proposal_id: proposal.id, proposal_link: url } }
   },
-  ui: { category: 'payments', label: 'Send quote', description: 'Email the couple a quote', icon: 'FileText' },
+  ui: { category: 'payments', label: 'Send proposal', description: 'Email the couple a proposal', icon: 'FileText' },
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -122,7 +132,7 @@ const sendContract: ActionSpec<z.infer<typeof sendContractSchema>> = {
         .update({ share_token_enabled: true, email_sent_at: new Date().toISOString() } as never)
         .eq('id', contract.id)
     }
-    const url = `${APP_URL}/c/${contract.share_token}`
+    const url = `${APP_URL}/contract/${contract.share_token}`
     await sendContractEmail({
       coupleEmail: ctx.couple.email,
       coupleName: ctx.couple.name,
@@ -164,7 +174,7 @@ const sendInvoice: ActionSpec<z.infer<typeof sendInvoiceSchema>> = {
     if (!invoice.share_token_enabled) {
       await supabase.from('invoices').update({ share_token_enabled: true } as never).eq('id', invoice.id)
     }
-    const url = `${APP_URL}/i/${invoice.share_token}`
+    const url = `${APP_URL}/invoice/${invoice.share_token}`
     await sendInvoiceEmail({
       coupleEmail: ctx.couple.email,
       coupleName: ctx.couple.name,
@@ -282,34 +292,37 @@ const generateRunSheetPdf: ActionSpec<z.infer<typeof generateRunSheetSchema>> = 
 // helpers - pick the row most-likely meant by the user
 // ────────────────────────────────────────────────────────────────
 
-async function pickQuote(
+async function pickProposal(
   supabase: ReturnType<typeof createAdminClient>,
   ctx: RunContext,
   explicitId?: string,
 ) {
   if (explicitId) {
     const { data } = await supabase
-      .from('quotes')
-      .select('id, quote_number, title, share_token, share_token_enabled')
+      .from('proposals')
+      .select('id, proposal_number, title, share_token, status')
       .eq('id', explicitId)
       .eq('user_id', ctx.userId)
       .single()
     return data ?? null
   }
   const triggerPayload = (ctx.triggerEvent.payload as Record<string, unknown>) ?? {}
-  const idFromTrigger = typeof triggerPayload['quote_id'] === 'string' ? (triggerPayload['quote_id'] as string) : null
-  if (idFromTrigger) return pickQuote(supabase, ctx, idFromTrigger)
+  const idFromTrigger = typeof triggerPayload['proposal_id'] === 'string' ? (triggerPayload['proposal_id'] as string) : null
+  if (idFromTrigger) return pickProposal(supabase, ctx, idFromTrigger)
   if (!ctx.couple) return null
+  // Pick the most recent draft or sent proposal.
   const { data } = await supabase
-    .from('quotes')
-    .select('id, quote_number, title, share_token, share_token_enabled')
+    .from('proposals')
+    .select('id, proposal_number, title, share_token, status')
     .eq('couple_id', ctx.couple.id)
     .eq('user_id', ctx.userId)
+    .in('status', ['draft', 'sent'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
   return data ?? null
 }
+
 
 async function pickContract(
   supabase: ReturnType<typeof createAdminClient>,
@@ -370,7 +383,7 @@ async function pickInvoice(
 }
 
 export const documentActions: Partial<Record<ActionType, ActionSpec<any>>> = {
-  send_quote: sendQuote,
+  send_proposal: sendProposal,
   send_contract: sendContract,
   send_invoice: sendInvoice,
   trigger_payment_reminder: triggerPaymentReminder,

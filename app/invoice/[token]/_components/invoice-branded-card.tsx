@@ -1,24 +1,29 @@
 /**
  * Branded-card variant of the public invoice — rendered when the
  * MC has a customised block tree in their branding kit
- * (`invoice.branding_blocks` is non-empty).
+ * (invoice.branding_blocks is non-empty).
  *
- * The block tree is split at the `paymentSchedule` marker:
- *   - blocks BEFORE the marker render the invoice header + items
- *     + totals (via `PublicBlockRenderer`)
+ * The block tree is split at the paymentSchedule marker:
+ *   - blocks BEFORE the marker render the invoice header, items,
+ *     and totals (via PublicBlockRenderer)
  *   - then we insert the Zebri-rendered payment schedule (deposit
- *     + final) OR the single "Pay with card" button
- *   - blocks AFTER the marker render the footer / contact / extras
+ *     and final) OR the single "Pay with card" button
+ *   - blocks AFTER the marker render the footer, contact, and extras
  *
- * The renderer is told `hideAction` because invoices have their
+ * The renderer is told hideAction because invoices have their
  * own multi-step payment UX (deposit/final/full); the block tree's
  * action block (a single primary CTA) wouldn't fit.
  *
  * @module app/invoice/[token]/_components/invoice-branded-card
  */
 import type { Block } from '@/app/(dashboard)/branding/blocks/types';
+import { getRgb } from '@/lib/branding/contrast';
+import { FONT_STACKS } from '@/lib/branding/fonts';
+import type { PublicBranding } from '@/lib/branding/public-branding';
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer';
 import { DENSITY_PAD } from '@/lib/branding/public-surface';
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case';
+import { roleDefaults } from '@/lib/branding/type-defaults';
 
 import { PayWithCardButton } from '../pay-with-card-button';
 
@@ -35,11 +40,11 @@ export interface InvoiceBrandedCardProps {
   showFullButton: boolean;
   showDepositButton: boolean;
   showFinalButton: boolean;
-  buttonColor: string;
-  buttonRadius: number;
-  textColor: string;
-  mutedColor: string;
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding;
   radius: number;
+  /** Action block overrides for button color and radius. Required. */
+  actionStyle: { color: string; radius: number } | null;
 }
 
 export function InvoiceBrandedCard({
@@ -52,41 +57,72 @@ export function InvoiceBrandedCard({
   showFullButton,
   showDepositButton,
   showFinalButton,
-  buttonColor,
-  buttonRadius,
-  textColor,
-  mutedColor,
+  branding,
   radius,
+  actionStyle,
 }: InvoiceBrandedCardProps) {
   const pad = DENSITY_PAD[invoice.density ?? 'cozy'];
+  const sectionLabelDefaults = roleDefaults(branding, 'sectionLabel');
+
+  // Compute border colours from the brand's border_color setting.
+  // Hairlines follow the MC's brand setting rather than Zebri's app-chrome tokens.
+  const borderRgb = getRgb(branding.border_color);
+  const borderColor = borderRgb
+    ? `rgba(${borderRgb[0]}, ${borderRgb[1]}, ${borderRgb[2]}, 1)`
+    : branding.border_color;
+
   const doc = {
     title: invoice.title,
     refNumber: invoice.invoice_number,
-    expiresAt: invoice.due_date,
+    coupleName: invoice.couple_name,
+    eventDate: invoice.event_date,
+    venue: invoice.venue,
+    // Invoices fall DUE, they don't expire. The shared title/meta block labels
+    // this row generically (correct for contracts/quotes); override to "Due".
+    expiresLabel: 'Due',
+    // When a payment schedule exists, the deposit + final due dates render in
+    // the schedule block below, so suppress the header due row to avoid showing
+    // the same date twice on one invoice. Simple invoices still show it here.
+    expiresAt: hasSchedule ? null : invoice.due_date,
     items: invoice.items,
     subtotal: invoice.subtotal,
     taxRate: invoice.tax_rate ?? 0,
   };
 
+  // AU tax invoices must carry an identifying number, so the reference is
+  // mandatory on this surface. Force the title block's ref row on regardless of
+  // any saved toggle (the editor also hides the Ref toggle for invoices).
+  const renderBlocks = preBlocks.map((b) =>
+    b.type === 'title' ? { ...b, showRef: true } : b,
+  );
+
   return (
     <div
-      className="bg-surface shadow-sm border border-border overflow-hidden"
-      style={{ borderRadius: radius }}
+      className="overflow-hidden shadow-sm border"
+      style={{ borderRadius: radius, backgroundColor: branding.surface_color, borderColor }}
     >
       <PublicBlockRenderer
-        blocks={preBlocks}
+        blocks={renderBlocks}
         branding={invoice}
         doc={doc}
         hideAction
       />
 
       {hasSchedule ? (
-        <div className={`${pad.cardSection} border-t border-border`}>
+        <div className={`${pad.cardSection} border-t`} style={{ borderTopColor: borderColor }}>
           <p
-            className="text-xs font-medium uppercase tracking-wider mb-3"
-            style={{ color: mutedColor }}
+            className="mb-3"
+            style={{
+              fontSize: `${sectionLabelDefaults.fontSize}px`,
+              color: sectionLabelDefaults.color,
+              fontFamily: FONT_STACKS[sectionLabelDefaults.fontFamily as never],
+              fontWeight: sectionLabelDefaults.fontWeight,
+              lineHeight: sectionLabelDefaults.lineHeight,
+              letterSpacing: `${sectionLabelDefaults.letterSpacing}px`,
+              textTransform: cssTextTransform(sectionLabelDefaults.textTransform),
+            }}
           >
-            Payment schedule
+            {applyCase('Payment schedule', sectionLabelDefaults.textTransform)}
           </p>
           <InvoicePaymentSchedule
             invoice={invoice}
@@ -94,21 +130,19 @@ export function InvoiceBrandedCard({
             finalAmount={finalAmount}
             showDepositButton={showDepositButton}
             showFinalButton={showFinalButton}
-            textColor={textColor}
-            mutedColor={mutedColor}
-            buttonColor={buttonColor}
-            buttonRadius={buttonRadius}
+            branding={branding}
+            actionStyle={actionStyle}
           />
         </div>
       ) : null}
 
-      {showFullButton ? (
-        <div className={`${pad.cardSection} border-t border-border`}>
+      {showFullButton && actionStyle ? (
+        <div className={`${pad.cardSection} border-t`} style={{ borderTopColor: borderColor }}>
           <PayWithCardButton
             invoiceId={invoice.id}
             shareToken={invoice.share_token}
-            brandColor={buttonColor}
-            radius={buttonRadius}
+            branding={branding}
+            actionStyle={actionStyle}
           />
         </div>
       ) : null}

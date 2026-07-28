@@ -3,10 +3,11 @@
  *
  * Two responsive variants of the same set of controls:
  * - **Mobile (≤ sm)**: name + status pill + `⋯` actions overflow
- *   menu (call/email/whatsapp + portal links + rotate + delete) +
- *   close button.
- * - **Desktop**: name + status pill + inline action row
- *   (delete · portal-links popover · call/email/whatsapp · close).
+ *   menu (call/email/whatsapp + portal links + rotate + document
+ *   downloads + delete) + close button.
+ * - **Desktop**: name + status pill + inline action row (delete ·
+ *   portal-links popover · download popover · call/email/whatsapp ·
+ *   close). Each icon button has a hover `Tooltip`.
  *
  * The header is stateless presentation - the parent passes the
  * `couple` row + callbacks. Status changes call `onSave(couple
@@ -32,12 +33,14 @@ import {
   Pencil,
   Phone,
   RefreshCw,
+  Settings,
   Trash2,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
 import { PiWhatsappLogoLight } from 'react-icons/pi';
 
+import { Tooltip } from '@/components/ui/tooltip';
 import { Couple, CoupleStatusRecord, getStatusClasses } from '@/types/couple';
 
 import { printTimelinePdf, printVowPdf } from './print-couple-docs';
@@ -51,6 +54,10 @@ export interface CoupleProfileHeaderProps {
   onClose: () => void;
   onRotateLinks: () => void;
   onDeleteRequest: () => void;
+  /** Whether the tab settings ("edit tabs") mode is active. */
+  settingsMode: boolean;
+  /** Enter settings mode, or exit and persist the layout. */
+  onSettingsToggle: () => void;
 }
 
 type LinkKind = 'primary' | 'secondary' | 'vendor';
@@ -63,6 +70,8 @@ export function CoupleProfileHeader({
   onClose,
   onRotateLinks,
   onDeleteRequest,
+  settingsMode,
+  onSettingsToggle,
 }: CoupleProfileHeaderProps) {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(couple.name);
@@ -336,6 +345,64 @@ export function CoupleProfileHeader({
 
                 <div className="border-t border-gray-100 mt-1 pt-1">
                   <button
+                    onClick={() => {
+                      void printVowPdf(
+                        couple.id,
+                        'primary',
+                        couple.primary_name ?? couple.name,
+                      );
+                      setActionsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    <span className="truncate">
+                      Vow for {couple.primary_name ?? couple.name}
+                    </span>
+                    <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      void printVowPdf(
+                        couple.id,
+                        'spouse',
+                        couple.secondary_name ?? 'partner',
+                      );
+                      setActionsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    <span className="truncate">
+                      Vow for {couple.secondary_name ?? 'partner'}
+                    </span>
+                    <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      void printTimelinePdf(couple.id, couple.name);
+                      setActionsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    <span>Timeline</span>
+                    <FileDown size={13} strokeWidth={1.5} className="shrink-0" />
+                  </button>
+                </div>
+
+                <div className="border-t border-gray-100 mt-1 pt-1">
+                  <button
+                    onClick={() => {
+                      onSettingsToggle();
+                      setActionsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  >
+                    {settingsMode ? 'Done editing tabs' : 'Edit tabs'}
+                    <Settings size={14} strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                <div className="border-t border-gray-100 mt-1 pt-1">
+                  <button
                     data-testid="delete-couple-btn"
                     onClick={() => {
                       onDeleteRequest();
@@ -354,22 +421,44 @@ export function CoupleProfileHeader({
 
         {/* Desktop: inline action row */}
         <div className="hidden sm:flex items-center">
-          <button
-            onClick={onDeleteRequest}
-            className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
-          >
-            <Trash2 size={16} strokeWidth={1.5} />
-          </button>
+          <Tooltip label={settingsMode ? 'Done editing tabs' : 'Edit tabs'}>
+            <button
+              onClick={onSettingsToggle}
+              aria-label={settingsMode ? 'Done editing tabs' : 'Edit tabs'}
+              className={`p-1.5 rounded-lg transition cursor-pointer ${
+                settingsMode
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Settings
+                size={16}
+                strokeWidth={1.5}
+                className={`transition-transform duration-300 ${
+                  settingsMode ? 'rotate-90' : ''
+                }`}
+              />
+            </button>
+          </Tooltip>
+          <Tooltip label="Delete couple">
+            <button
+              onClick={onDeleteRequest}
+              className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+            >
+              <Trash2 size={16} strokeWidth={1.5} />
+            </button>
+          </Tooltip>
           <div className="w-px h-4 bg-gray-200 mx-2" />
           <Popover.Root open={linkOpen} onOpenChange={setLinkOpen}>
-            <Popover.Trigger asChild>
-              <button
-                title="Portal links"
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-              >
-                <Link size={16} strokeWidth={1.5} />
-              </button>
-            </Popover.Trigger>
+            <Tooltip label="Portal links">
+              <Popover.Trigger asChild>
+                <button
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                >
+                  <Link size={16} strokeWidth={1.5} />
+                </button>
+              </Popover.Trigger>
+            </Tooltip>
             <Popover.Portal>
               <Popover.Content
                 side="bottom"
@@ -414,14 +503,15 @@ export function CoupleProfileHeader({
             </Popover.Portal>
           </Popover.Root>
           <Popover.Root open={pdfOpen} onOpenChange={setPdfOpen}>
-            <Popover.Trigger asChild>
-              <button
-                title="Download documents"
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-              >
-                <FileDown size={16} strokeWidth={1.5} />
-              </button>
-            </Popover.Trigger>
+            <Tooltip label="Download documents">
+              <Popover.Trigger asChild>
+                <button
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                >
+                  <FileDown size={16} strokeWidth={1.5} />
+                </button>
+              </Popover.Trigger>
+            </Tooltip>
             <Popover.Portal>
               <Popover.Content
                 side="bottom"
@@ -464,50 +554,58 @@ export function CoupleProfileHeader({
           </Popover.Root>
           <div className="w-px h-4 bg-gray-200 mx-2" />
           <div className="flex items-center gap-0.5">
-            <a
-              href={hasPhone ? `tel:${couple.phone}` : undefined}
-              className={`p-1.5 rounded-lg transition ${
-                hasPhone
-                  ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer'
-                  : 'text-gray-200 cursor-not-allowed pointer-events-none'
-              }`}
-            >
-              <Phone size={16} strokeWidth={1.5} />
-            </a>
-            <a
-              href={hasEmail ? `mailto:${couple.email}` : undefined}
-              className={`p-1.5 rounded-lg transition ${
-                hasEmail
-                  ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer'
-                  : 'text-gray-200 cursor-not-allowed pointer-events-none'
-              }`}
-            >
-              <Mail size={16} strokeWidth={1.5} />
-            </a>
-            <a
-              href={
-                hasPhone
-                  ? `https://wa.me/${couple.phone.replace(/\D/g, '')}`
-                  : undefined
-              }
-              target={hasPhone ? '_blank' : undefined}
-              rel={hasPhone ? 'noopener noreferrer' : undefined}
-              className={`p-1.5 rounded-lg transition ${
-                hasPhone
-                  ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer'
-                  : 'text-gray-200 cursor-not-allowed pointer-events-none'
-              }`}
-            >
-              <PiWhatsappLogoLight size={17} />
-            </a>
+            <Tooltip label={hasPhone ? 'Call' : 'No phone number'}>
+              <a
+                href={hasPhone ? `tel:${couple.phone}` : undefined}
+                className={`p-1.5 rounded-lg transition ${
+                  hasPhone
+                    ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer'
+                    : 'text-gray-200 cursor-not-allowed pointer-events-none'
+                }`}
+              >
+                <Phone size={16} strokeWidth={1.5} />
+              </a>
+            </Tooltip>
+            <Tooltip label={hasEmail ? 'Email' : 'No email address'}>
+              <a
+                href={hasEmail ? `mailto:${couple.email}` : undefined}
+                className={`p-1.5 rounded-lg transition ${
+                  hasEmail
+                    ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer'
+                    : 'text-gray-200 cursor-not-allowed pointer-events-none'
+                }`}
+              >
+                <Mail size={16} strokeWidth={1.5} />
+              </a>
+            </Tooltip>
+            <Tooltip label={hasPhone ? 'WhatsApp' : 'No phone number'}>
+              <a
+                href={
+                  hasPhone
+                    ? `https://wa.me/${couple.phone.replace(/\D/g, '')}`
+                    : undefined
+                }
+                target={hasPhone ? '_blank' : undefined}
+                rel={hasPhone ? 'noopener noreferrer' : undefined}
+                className={`p-1.5 rounded-lg transition ${
+                  hasPhone
+                    ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer'
+                    : 'text-gray-200 cursor-not-allowed pointer-events-none'
+                }`}
+              >
+                <PiWhatsappLogoLight size={17} />
+              </a>
+            </Tooltip>
           </div>
           <div className="w-px h-4 bg-gray-200 mx-2" />
-          <button
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
-          >
-            <X size={18} strokeWidth={1.5} />
-          </button>
+          <Tooltip label="Close">
+            <button
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+            >
+              <X size={18} strokeWidth={1.5} />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Mobile close button */}

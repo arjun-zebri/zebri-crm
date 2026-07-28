@@ -1,17 +1,20 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { FileSignature } from 'lucide-react'
+import { FileSignature, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
 import { ContractBuilderModal } from '@/components/builders/contract-builder-modal'
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import {
   contractCoupleLimit,
   STARTER_CONTRACT_COUPLE_LIMIT,
 } from '@/lib/payments/subscription'
 import { createClient } from '@/lib/supabase/client'
+
+import { CoupleTabEmpty, CoupleTabShell, tabStat, type TabStat } from './couple-tab-shell'
 
 interface Contract {
   id: string
@@ -135,26 +138,40 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
     },
   })
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}
-      </div>
-    )
-  }
-
   const all = contracts || []
+  const signedCount = all.filter((c) => c.status === 'signed').length
+  const sentCount = all.filter((c) => c.status === 'sent').length
+  const draftCount = all.filter((c) => c.status === 'draft').length
+  const stats: TabStat[] = [{ label: `${all.length} total` }]
+  if (signedCount > 0) stats.push({ label: `${signedCount} signed`, tone: 'success' })
+  if (sentCount > 0) stats.push({ label: `${sentCount} sent` })
+  if (draftCount > 0) stats.push({ label: tabStat(draftCount, 'draft') })
 
   return (
     <>
-      <div>
-        {all.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-gray-400 mb-3">No contracts yet.</p>
-            {atLimit ? (
+      <CoupleTabShell
+        title="Contracts"
+        stats={all.length > 0 ? stats : undefined}
+        actions={
+          !atLimit ? (
+            <Button size="sm" onClick={() => createContract.mutate()} disabled={createContract.isPending} className="cursor-pointer gap-1.5">
+              <Plus size={14} strokeWidth={1.5} />
+              New Contract
+            </Button>
+          ) : null
+        }
+      >
+        {isLoading ? (
+          <div className="space-y-2" aria-hidden="true">
+            {[1, 2].map((i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}
+          </div>
+        ) : all.length === 0 ? (
+          atLimit ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-gray-400 mb-3">Free plan limit reached</p>
               <div className="text-xs text-gray-500 space-y-2">
                 <p>
-                  Free plan limit reached — contracts for {STARTER_CONTRACT_COUPLE_LIMIT} couples.
+                  Contracts for {STARTER_CONTRACT_COUPLE_LIMIT} couples max on the free plan.
                 </p>
                 <Link
                   href="/settings/billing"
@@ -163,16 +180,14 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
                   Upgrade to Pro
                 </Link>
               </div>
-            ) : (
-              <button
-                onClick={() => createContract.mutate()}
-                disabled={createContract.isPending}
-                className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer disabled:opacity-50"
-              >
-                {createContract.isPending ? 'Creating…' : '+ New Contract'}
-              </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            <CoupleTabEmpty
+              icon={FileSignature}
+              title="No contracts yet"
+              description="Create a new contract with the button above."
+            />
+          )
         ) : (
           <div>
             <div className="space-y-1 mb-3">
@@ -202,7 +217,7 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
             </button>
           </div>
         )}
-      </div>
+      </CoupleTabShell>
 
       {!!activeContractId && (
         <ContractBuilderModal

@@ -14,13 +14,13 @@ import { useQuery } from '@tanstack/react-query'
 import { Mail } from 'lucide-react'
 import { useState } from 'react'
 
-import { Empty } from '@/components/ui/empty'
 import { ErrorState } from '@/components/ui/error-state'
 import { StatePill, type StatePillTone } from '@/components/ui/state-pill'
 import { createClient } from '@/lib/supabase/client'
 import { formatRelativeTime } from '@/lib/utils'
 
 import { CoupleSendEmail } from './couple-send-email'
+import { CoupleTabEmpty, CoupleTabShell, type TabStat } from './couple-tab-shell'
 import { CoupleTemplatePicker } from './couple-template-picker'
 
 /** One logged send. */
@@ -63,13 +63,23 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
     },
   })
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2">
-        <CoupleTemplatePicker mode="test" onPick={(templateId) => setActive({ mode: 'test', templateId })} />
-        <CoupleTemplatePicker mode="send" onPick={(templateId) => setActive({ mode: 'send', templateId })} />
-      </div>
+  const sentCount = emails.filter((e) => e.status === 'sent').length
+  const failedCount = emails.filter((e) => e.status === 'failed').length
+  const stats: TabStat[] = [{ label: `${emails.length} total` }]
+  if (sentCount > 0) stats.push({ label: `${sentCount} sent`, tone: 'success' })
+  if (failedCount > 0) stats.push({ label: `${failedCount} failed` })
 
+  return (
+    <CoupleTabShell
+      title="Emails"
+      stats={emails.length > 0 ? stats : undefined}
+      actions={
+        <>
+          <CoupleTemplatePicker mode="test" onPick={(templateId) => setActive({ mode: 'test', templateId })} />
+          <CoupleTemplatePicker mode="send" onPick={(templateId) => setActive({ mode: 'send', templateId })} />
+        </>
+      }
+    >
       {isLoading ? (
         <div className="space-y-3" aria-hidden="true">
           {[0, 1, 2].map((i) => (
@@ -86,9 +96,7 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
       ) : isError ? (
         <ErrorState title="Couldn't load emails" onRetry={refetch} />
       ) : emails.length === 0 ? (
-        <Empty
-          size="sm"
-          className="min-h-[36vh]"
+        <CoupleTabEmpty
           icon={Mail}
           title="No emails sent yet"
           description="Send this couple a template above. Sent templates will show up here."
@@ -132,6 +140,6 @@ export function CoupleEmails({ coupleId, coupleName }: CoupleEmailsProps) {
           coupleName={coupleName}
         />
       )}
-    </div>
+    </CoupleTabShell>
   )
 }

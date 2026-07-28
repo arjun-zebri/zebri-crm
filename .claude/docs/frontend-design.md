@@ -337,6 +337,134 @@ p-6
 
 ------------------------------------------------------------------------
 
+# Branding Editor Typography System (2026-07-15)
+
+## Font catalogue
+
+`lib/branding/fonts.ts` provides 30+ curated Google fonts, each usable as heading or body:
+
+- **FONT_IDS**: union of all available font IDs (e.g. `inter`, `poppins`, `montserrat`, `raleway`, `nunito`, `spectral`, `eb_garamond`, `cardo`, `dm_mono`, `figtree`, etc.)
+- **FONT_LABELS**: human-readable label per ID
+- **FONT_STACKS**: CSS font-family stack (Google Font family + fallbacks)
+- **GOOGLE_FONT_FAMILIES**: Google Fonts API family descriptor (with weight axis)
+- **HeadingFont / BodyFont**: type aliases for FontId (backward compatible; both roles share one list)
+
+## Type role defaults
+
+`lib/branding/type-defaults.ts` resolves global type rules for each role (heading / body):
+
+```ts
+interface RoleType {
+  font: FontId
+  sizePx: number
+  weight: FontWeight
+  color: string
+  align: TextAlign
+  textTransform: 'none' | 'uppercase' | 'capitalize'
+  letterSpacing: number
+  lineHeight: number
+}
+
+interface TypeDefaults {
+  heading: RoleType
+  body: RoleType
+}
+
+resolveTypeDefaults(b: PublicBranding): TypeDefaults
+```
+
+Each role resolves its effective style from the global branding scalars: `heading_size`, `body_size`, `heading_case`, `body_case`, `heading_letter_spacing`, `body_line_height`, plus existing `font_heading/font_body/font_weight/font_body_weight/text_color`.
+
+## Per-text-element styling
+
+Text-bearing blocks (business name, tagline, text, action, line items, etc.) resolve their effective style in layered order:
+
+1. Global type default (role heading or body)
+2. Block TextStyle override (optional, per-block)
+3. Inline element style (e.g. individual action label text)
+
+`TextStyle` interface:
+
+```ts
+interface TextStyle {
+  font?: FontId
+  sizePx?: number
+  weight?: FontWeight
+  color?: string
+  align?: TextAlign
+  textTransform?: 'none' | 'uppercase' | 'capitalize'
+  letterSpacing?: number
+  lineHeight?: number
+}
+```
+
+## Stylable proposal labels
+
+`lib/branding/proposal-labels.ts` upgrades fixed-core proposal labels from plain strings to `{ text, style }`:
+
+```ts
+interface StyledLabel {
+  text: string
+  style?: TextStyle
+}
+
+type ProposalLabels = Record<LabelKey, StyledLabel>
+
+resolveProposalLabels(raw: unknown): ProposalLabels
+```
+
+Back-compat reader accepts both legacy `Record<LabelKey, string>` and new `Record<LabelKey, StyledLabel>` shapes. Used by `EditableLabel` in the branding editor (click-to-edit on the canvas) and by `ProposalPageView` on the public page.
+
+------------------------------------------------------------------------
+
+# Branding Editor Per-Block Controls (2026-07-15)
+
+Every block in the editor exposes a unified Canva-style toolbar:
+
+## Shared block controls (BaseBlock)
+
+Applied by `blockOuterStyle(block, branding)` in both the editor (`BlockFrame`) and public renderer (`BlockOuter`) so they can't drift:
+
+- **Padding:** top, right, bottom, left (px slider per side)
+- **Background:** colour (ColorPopover)
+- **Border:** width (px), colour, radius (px)
+- **Width:** max width in px + horizontal alignment (left/centre/right)
+- **Spacing:** space above, space below (px slider)
+
+## Block type-specific controls
+
+Each block type offers additional controls audited per surface:
+
+- **Header banner:** image (upload), fit (cover/contain), focal point (X/Y/scale), height (px), overlay colour + opacity, rounding
+- **Business name:** layout variant, logo size, alignment
+- **Tagline:** full text controls (font, size, weight, colour, alignment, case, letter-spacing, line-height)
+- **Text:** full text controls + link colour usage
+- **Image:** fit, focal point, height, width, alignment, padding, background
+- **Spacer:** height (px)
+- **Divider:** thickness (px), colour, style (solid/dashed/dotted), width, alignment
+- **Action button:** variant (fill/outline), size (sm/md/lg), radius, alignment, label text + styling
+- **Line items:** row style (lines/stripes/plain), header + item text controls, column spread
+- **Totals:** heading/label/value text controls, show/hide rows
+- **Payment details:** heading/label/value text controls
+- **Footer:** note + contact text controls, show/hide contact lines
+
+------------------------------------------------------------------------
+
+# Global Styles (Branding Editor)
+
+The **Global styles** accordion exposes branding defaults applied to every surface:
+
+- **Corner radius** (px) — applied to blocks via BaseBlock border-radius
+- **Link colour** (hex) — default link text colour when no block override
+- **Button style** — variant (fill/outline), size (sm/md/lg), radius (px)
+- **Base line-height** (unitless) — fallback for body text when not overridden per block
+- **Section spacing** (px) — default space between blocks
+- **Page background** — colour (hex) or optional texture ID
+
+Density (cozy/compact) is read-only; the stored value is honoured on render but the control is removed. All new fields resolve in `_user_branding` and merge into public RPC payloads.
+
+------------------------------------------------------------------------
+
 # Tables
 
 Clean Notion-style tables: no card wrapper (no border/rounded-xl container), white header with bottom border, sentence-case header text (not uppercase), plain text pagination.

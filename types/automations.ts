@@ -23,6 +23,8 @@
 
 import type { JSONContent } from '@tiptap/react'
 
+import type { PublicBranding } from '@/lib/branding/public-branding'
+
 import type { Json } from './database'
 
 // ────────────────────────────────────────────────────────────────
@@ -49,13 +51,12 @@ export type TriggerType =
   | 'couple_stage_changed'
   | 'booking_cancelled'
   // Quotes
-  | 'quote_created'
-  | 'quote_sent'
-  | 'quote_accepted'
-  | 'quote_declined'
-  | 'quote_due' // emitted by the tick
-  | 'quote_overdue' // emitted by the tick
-  | 'quote_viewed_but_not_responded' // emitted by the tick
+  // Proposals
+  | 'proposal_sent'
+  | 'proposal_accepted'
+  | 'proposal_declined'
+  | 'proposal_due' // emitted by the tick
+  | 'proposal_overdue' // emitted by the tick
   // Invoices / payments
   | 'invoice_created'
   | 'invoice_sent'
@@ -120,6 +121,7 @@ export type TriggerType =
   | 'couple_uploaded_file'
   | 'couple_added_song_to_playlist'
   | 'couple_completed_vows'
+  | 'questionnaire_completed'
   // App / billing meta
   | 'subscription_status_changed'
   | 'subscription_trial_ending'
@@ -189,9 +191,11 @@ export type ActionType =
   | 'create_calendar_event'
   | 'create_reminder'
   // Payments
-  | 'send_quote'
+  | 'send_proposal'
   | 'send_contract'
   | 'send_invoice'
+  // Couple questionnaires
+  | 'send_couple_questionnaire'
   | 'trigger_payment_reminder'
   // Post-event
   | 'send_thank_you_message'
@@ -222,10 +226,8 @@ export type ActionType =
   | 'remove_from_segment'
   | 'enqueue_for_newsletter'
   // Payments
-  | 'create_invoice_from_quote'
-  | 'create_quote_from_template'
+  | 'create_invoice_from_proposal'
   | 'create_contract_from_template'
-  | 'void_quote'
   | 'void_invoice'
   | 'revoke_contract'
   | 'apply_discount'
@@ -516,6 +518,13 @@ export interface McSnapshot {
    * subject or plain-text channel.
    */
   signature?: JSONContent | null
+  /**
+   * The MC's resolved branding (colours, fonts, logo, radius) assembled
+   * from `user_metadata` via `buildPublicBranding`. Drives the branded
+   * email shell so previews and sends look identical. Optional so older
+   * fixtures still typecheck; a missing value gets the neutral shell.
+   */
+  branding?: PublicBranding | null
 }
 
 // ────────────────────────────────────────────────────────────────

@@ -18,8 +18,8 @@ and bank-detail fields live in **user-writable** Supabase
    bypass + `subscription_status` paywall check.
 2. **`lib/payments/subscription`** — entitlement function reads from
    user_metadata.
-3. **~5 Postgres RPCs** (`get_public_quote`, `get_public_invoice`,
-   `get_public_contract`, `get_portal_data`, branding/invoice/quote
+3. **~5 Postgres RPCs** (`get_public_proposal`, `get_public_invoice`,
+   `get_public_contract`, `get_portal_data`, branding/invoice
    formatters) — read `raw_user_meta_data` for bank account name/BSB/
    number, `stripe_connect_enabled`, business_name → surfaced on the
    client-facing public pages.
@@ -104,7 +104,7 @@ happen in a later tightening phase.
 
 ### Payments server actions — validation audit (Phase 2C.2)
 
-The Quote + Invoice builder modals now route every mutation through
+The Proposal + Invoice builder modals now route every mutation through
 typed server actions in `app/(dashboard)/payments/actions.ts`. RLS
 provides cross-tenant denial; the Zod schemas reject malformed
 inputs at the boundary. No rate-limit needed (authenticated,
@@ -113,10 +113,11 @@ already carry their own limits in `STRIPE_RATE_LIMITS`).
 
 | Action | Zod | Notes |
 |---|---|---|
-| `saveQuoteAction` | ✅ `saveQuoteSchema` (quoteId nullable, coupleId uuid, items[]) | Transactional: update quote + replace quote_items |
 | `saveInvoiceAction` | ✅ `saveInvoiceSchema` (invoiceId nullable, coupleId uuid, payment schedule, items[]) | Writes `quantity=1, unit_price=amount` for forward-compat with existing invoice_items columns |
-| `deleteQuoteAction` | ✅ `z.uuid()` | Cascade handles items |
 | `deleteInvoiceAction` | ✅ `z.uuid()` | Cascade handles items |
+| `saveProposalAction` | ✅ `saveProposalSchema` (proposalId nullable, coupleId uuid, options[1..6] each with items[≤100]) | Transactional wipe-and-reinsert of the option/item tree. **Rejects accepted/declined proposals** — the agreement record is immutable; revisions go through duplicate |
+| `deleteProposalAction` | ✅ `z.uuid()` | Cascade handles options + items |
+| `duplicateProposalAction` | ✅ `z.uuid()` | Clones as fresh draft: new PR number, new share token, cleared acceptance |
 
 Status-change mutations (mark paid / revert / cancel) stay inline
 in the modals as one-line UPDATEs — they're RLS-protected by the
@@ -130,17 +131,20 @@ anyway, but we cap on our side so the alert fires on our schedule.
 
 | Route | Zod | Rate-limit | Notes |
 |---|---|---|---|
-| `app/api/email/send-quote/route.ts` | ✅ `z.object({ quoteId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendQuote`; hit fires `email_rate_limit_hit` | RLS scopes the quote SELECT to the authenticated user |
+| `app/api/email/send-proposal/route.ts` | ✅ `z.object({ proposalId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendProposal`; hit fires `email_rate_limit_hit` (`action: 'sendProposal'`) | Same RLS scoping; 400s on accepted/declined proposals (responses are final). Share-enable + draft→sent flip independently (the send-quote regression class) |
 | `app/api/email/send-invoice/route.ts` | ✅ `z.object({ invoiceId: z.uuid() })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendInvoice` | Same RLS scoping |
 | `app/api/email/send-contract/route.ts` | ☐ Phase 3 (Contracts) | ☐ Phase 3 | Not in 2C scope |
 | `app/api/email/send-template/route.ts` | ✅ `z.object({ coupleId, templateId?, inlineSubject?, inlineBody?, overrides, sendAnyway, attachmentFileIds })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendTemplate`; hit fires `email_rate_limit_hit` (`action: 'sendTemplate'`) | RLS scopes template + couple loads to the caller. **Safety property:** the send is **blocked (422)** when `detectMissingVariables` finds an unresolved variable, unless `sendAnyway` is set — re-checked server-side so the client can't bypass it. Static attachments downloaded via the owner-only `email-template-files` bucket |
 | `app/api/email/send-contract-reminders/route.ts` | n/a (cron) | n/a (cron-secret gated) | Already uses `isCronAuthorized` |
 
-### Public RPC audit — `get_public_quote` / `get_public_invoice` (Phase 2C)
+### Public RPC audit — `get_public_proposal` / `get_public_invoice`
 
-These two `security definer` functions back the public-facing
-`/quote/[token]` and `/invoice/[token]` pages. Couples aren't
-authenticated; the share token IS the capability. Findings:
+These `security definer` functions back the public-facing
+`/proposal/[token]` and `/invoice/[token]` pages. (This audit was
+originally run against `get_public_quote` in Phase 2C; the proposal
+RPC copies the same model and the quote RPCs were dropped with the
+quotes feature.) Couples aren't authenticated; the share token IS
+the capability. Findings:
 
 **Tokens (✅ acceptable):**
 - `share_token` column is `uuid` with `gen_random_uuid()` default —
@@ -152,9 +156,10 @@ authenticated; the share token IS the capability. Findings:
   enable/disable toggle works without re-issuing URLs.
 
 **Field selection (✅ minimal):**
-- `get_public_quote` returns: id, title, quote_number, status,
-  subtotal, tax_rate, discount_*, notes, expires_at, accepted_at,
-  couple_name, items. No user_id, no stripe_customer_id, no
+- `get_public_proposal` returns: id, title, proposal_number, status,
+  notes, expires_at, accepted_at, accepted_option_id,
+  accepted_addon_selection, couple_name, options (each with items),
+  branding. No user_id, no share_token, no stripe_customer_id, no
   internal flags leaked.
 - `get_public_invoice` returns the same shape + due_date / payment
   schedule fields + bank details (account_name, bsb, account_number)
@@ -248,7 +253,7 @@ interface stays stable so call sites don't change.
 ### Public token-attempt limiter — `@/lib/api/public-token-limiter` (Phase 2D.2)
 
 Sits in front of the unauthenticated share-token surfaces
-(`/invoice/[token]`, `/quote/[token]`, `/portal/[token]`). Counts
+(`/invoice/[token]`, `/proposal/[token]`, `/portal/[token]`). Counts
 **invalid** token attempts per IP — successful loads of a valid
 token are free. Two cooperating bands:
 
@@ -261,9 +266,9 @@ token are free. Two cooperating bands:
   attempts 12, 13, 14, …).
 
 Wired today: `/portal/[token]` (server component, easy hookup).
-**Not yet wired** on `/invoice/[token]` / `/quote/[token]` — those
+**Not yet wired** on `/invoice/[token]` / `/proposal/[token]` — those
 pages are client components that call `get_public_invoice` /
-`get_public_quote` directly from the browser, so the limiter would
+`get_public_proposal` directly from the browser, so the limiter would
 need a server-fetch refactor (convert to RSC + Client component
 child for interactivity). Tracked as a follow-up. The
 unique-share-token capability model is the primary defence; the
@@ -364,7 +369,7 @@ attempts/hour. Valid-token loads are free.
 
 The `/timeline/[token]` surface is **unauthenticated** — MCs share
 the URL with vendors (photographers, caterers, etc.) so they have
-the wedding-day run-of-show. Like the portal and quote surfaces,
+the wedding-day run-of-show. Like the portal and proposal surfaces,
 the share token IS the capability.
 
 The page calls one `SECURITY DEFINER` RPC:
@@ -399,19 +404,24 @@ to match the production browser path:
   when event B is enabled simultaneously.
 - MC contact block reflects the event owner, not the caller.
 
-Same follow-up as the quote surface: extending the public token-
+Same follow-up as the proposal surface: extending the public token-
 attempt limiter (currently `/portal/[token]` only) to cover
 `/timeline/[token]` is tracked for completeness.
 
-### Public Quote RPC security model (Phase 9)
+### Public Proposal RPC security model
 
-The `/quote/[token]` surface is the same shape as the portal:
-**unauthenticated**, with the share token as the capability. The
-public quote page calls three `SECURITY DEFINER` RPCs directly:
+The `/proposal/[token]` surface is the same shape as the portal:
+**unauthenticated**, with the share token as the capability. (This
+model was established for `/quote/[token]` in Phase 9 and carried
+over verbatim when proposals replaced quotes.) The public proposal
+page calls three `SECURITY DEFINER` RPCs directly:
 
-- `get_public_quote(token uuid) → jsonb` — read the payload.
-- `accept_quote(token uuid) → jsonb` — transition status to `accepted`.
-- `decline_quote(token uuid) → jsonb` — transition status to `declined`.
+- `get_public_proposal(token uuid) → jsonb` — read the payload.
+- `accept_proposal(token uuid, chosen_option_id uuid, addon_selection jsonb) → jsonb`
+  — record the couple's option + add-on choice, transition status to
+  `accepted`, advance the couple to `confirmed`, create the follow-up
+  task, and emit the `proposal_accepted` automation event.
+- `decline_proposal(token uuid) → jsonb` — transition status to `declined`.
 
 Each RPC's guard is the same WHERE clause inside its body:
 
@@ -422,26 +432,24 @@ WHERE share_token = token AND share_token_enabled = true
 Consequences identical to the portal model: invalid token →
 no-op / `not_found`; disabled token → no-op / `not_found`;
 anti-confused-deputy holds because the affected row is selected
-by the token, not by a caller-supplied id.
+by the token, not by a caller-supplied id. `accept_proposal`
+additionally validates that `chosen_option_id` belongs to the
+token's proposal and that every `addon_selection` key is an add-on
+item of that option (`invalid_option` / `invalid_selection`), so a
+caller cannot graft another proposal's option or items onto their
+acceptance.
 
-**Tested guards** — `tests/integration/payments/public-quote-rpcs.test.ts`
-(Phase 9, 13 tests) runs against the **anon-key Supabase client**
-(no auth headers) to match the production browser path. Covers:
-
-- `get_public_quote` — random token returns null, valid+enabled
-  returns the quote payload, valid+disabled returns null.
-- `accept_quote` — random → `{error: "not_found"}`, disabled →
-  `{error: "not_found"}`, valid transitions to `accepted` +
-  populates `accepted_at`, second call → `{error: "already_actioned"}`,
-  past `expires_at` → `{error: "expired"}`. Cross-couple probe:
-  holding token A and calling `accept_quote(A)` does NOT
-  transition couple B's quote.
-- `decline_quote` — symmetric coverage. Cross-couple probe also
-  verified.
+**Tested guards** — `tests/integration/payments/public-proposal-rpcs.test.ts`
+(14 tests) runs against the **anon-key Supabase client** (no auth
+headers) to match the production browser path. Covers random /
+disabled / expired tokens, double-action, cross-proposal option and
+add-on grafting, the couple-status advance, task creation, the
+automation event, and cross-tenant RLS denial on all three
+proposal tables.
 
 The public token-attempt limiter currently fronts `/portal/[token]`
-only (see prior section). Extending it to `/quote/[token]` and
-`/invoice/[token]` is tracked as a follow-up — quote tokens are
+only (see prior section). Extending it to `/proposal/[token]` and
+`/invoice/[token]` is tracked as a follow-up — proposal tokens are
 also UUIDs, so brute-force probability is identical to the
 portal's, but for completeness the limiter should cover them too.
 
@@ -451,6 +459,21 @@ portal's, but for completeness the limiter should cover them too.
 |---|---|---|---|
 | `app/api/stripe/invoice-payment/route.ts` | ✅ `bodySchema` (invoiceId UUID, shareToken min/max, paymentType enum) | ✅ 10/min/IP via `inMemoryLimiter` | Generic 404 on missing-or-mismatched-token (no info leak). `success_url` carries `session_id={CHECKOUT_SESSION_ID}` for the payment-success re-verification. `metadata.connected_account_id` cross-checked on the success page. Stripe-failure path uses `logger.error`; raw error message NOT returned to the couple (returns generic 502). |
 | `app/invoice/payment-success/page.tsx` | n/a (server component) | n/a | Server-side `stripe.checkout.sessions.retrieve(session_id, { expand: ['payment_intent'] })`. Five-check verification: invoice exists + MC has Connect account + session.metadata.invoice_id matches + session.metadata.connected_account_id matches + payment_intent.status === 'succeeded'. Any mismatch → notFound() + `payment_success_param_tampered` Slack alert. Idempotent. |
+
+### Public questionnaire routes — Couple questionnaires
+
+| Route | Zod | Rate-limit | Notes |
+|---|---|---|---|
+| `app/api/questionnaire/save/route.ts` | ✅ `questionnaireWriteSchema` (token UUID + `responses` record) | ✅ 30/min/IP via `inMemoryLimiter` (autosave fires often) | Calls `save_questionnaire_progress` (SECURITY DEFINER, token-gated). Generic error on RPC failure; detail logged. Refuses once completed. |
+| `app/api/questionnaire/submit/route.ts` | ✅ `questionnaireWriteSchema` | ✅ 5/min/IP via `inMemoryLimiter` (one-shot) | Calls `submit_questionnaire` (SECURITY DEFINER). Typed RPC errors (`already_completed`) surfaced as 400; transport failures return generic 500 with `logger.error`. |
+
+Both are unauthenticated — the share token IS the capability, validated DB-side
+against `share_token_enabled = true`. The public page (`/questionnaire/[token]`)
+loads via the `get_public_questionnaire` RPC (anon, branding-merged).
+`/questionnaire` and `/api/questionnaire` are on the middleware
+`PUBLIC_ROUTES` allowlist (added 2026-07-05 — before that the middleware
+bounced logged-out couples to `/login`). The MC can revoke access per
+questionnaire via the "Turn link off" row action (`share_token_enabled`).
 
 ---
 
@@ -466,10 +489,9 @@ DELETE (sampled clean across the migrations).
 | `events` | ✅ | `user_id` | ✅ `tests/integration/rls/events.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `contacts` | ✅ | `user_id` | ✅ `tests/integration/rls/contacts.test.ts` (Phase 5, 5 tests) | Contacts |
 | `tasks` | ✅ | `user_id` | ✅ `tests/integration/rls/tasks.test.ts` (Phase 4B, 5 tests) | Tasks |
-| `quotes` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) + `tests/integration/payments/public-quote-rpcs.test.ts` (Phase 9 — public RPC guards) | Payments / Quotes |
-| `quote_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments / Quotes |
-| `quote_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
-| `quote_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
+| `proposals` | ✅ | `user_id` | ✅ `tests/integration/payments/public-proposal-rpcs.test.ts` (Proposals Phase A — public RPC guards + cross-tenant denial) | Payments / Proposals |
+| `proposal_options` | ✅ | `user_id` | ✅ `tests/integration/payments/public-proposal-rpcs.test.ts` (Proposals Phase A) | Payments / Proposals |
+| `proposal_option_items` | ✅ | `user_id` | ✅ `tests/integration/payments/public-proposal-rpcs.test.ts` (Proposals Phase A) | Payments / Proposals |
 | `invoices` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `invoice_items` | ✅ | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `contracts` | ✅ | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (Phase 3.2 — exercises owner-only RPC paths) | Contracts |
@@ -477,11 +499,14 @@ DELETE (sampled clean across the migrations).
 | `contract_audit_log` | ✅ (SELECT-only for owner; no write policies — Phase 3.2) | `user_id` | ✅ `tests/integration/contracts/contract-audit-log.test.ts` (5 tests) | Contracts |
 | `email_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/email-templates.test.ts` (7 tests — incl. starter seeding) | Email Templates |
 | `email_template_files` | ✅ | `user_id` | ☐ (added with static-upload flow) | Email Templates |
+| `email_template_categories` | ✅ | `user_id` | ✅ `tests/integration/rls/email-template-categories.test.ts` (6 tests — cross-tenant read/rename/delete/insert denial + category-delete set-null keeps templates) | Email Templates |
 | `packages` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (6 tests) | Templates |
 | `package_items` | ✅ | `user_id` | ✅ `tests/integration/rls/packages.test.ts` (covered via parent) | Templates |
 | `invoice_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (6 tests) | Templates |
 | `invoice_template_items` | ✅ | `user_id` | ✅ `tests/integration/rls/invoice-templates.test.ts` (covered via parent) | Templates |
 | `couple_emails` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-emails.test.ts` (6 tests) | Couples & Events |
+| `questionnaire_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/questionnaire-templates.test.ts` (6 tests) | Questionnaires |
+| `couple_questionnaires` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-questionnaires.test.ts` (8 tests — RLS + public RPC token gating + submit/double-submit) + `tests/integration/rls/portal-questionnaires.test.ts` (3 tests — portal RPC) | Questionnaires |
 | `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
@@ -498,7 +523,7 @@ DELETE (sampled clean across the migrations).
 | `portal_song_categories` | ✅ | `user_id` | ✅ `tests/integration/rls/portal-songs.test.ts` (Phase 4D) | Client Portal |
 | `stripe_customers` | ✅ (RLS enabled, no policy — service-role only) | `user_id` | ✅ `tests/integration/rls/payments-tables.test.ts` (Phase 2C) | Payments |
 | `stripe_events` | ✅ (RLS enabled, no policy — service-role only, Phase 2A) | n/a (system-global) | n/a | Payments |
-| `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) | Branding |
+| `user_branding` | ✅ | `user_id` | ✅ `tests/integration/rls/user-branding.test.ts` (Phase 11, 5 tests) + `tests/integration/branding/user-branding-helper.test.ts` (Phase 11, 4 tests — `_user_branding` helper) + `tests/integration/branding/user-branding-rls.test.ts` (cross-tenant denial + RPC scoping, 4 tests) | Branding |
 | `user_public_settings` | ✅ | `user_id` | ✅ `tests/integration/rls/user-public-settings.test.ts` (5 tests — cross-tenant read/update/insert denial incl. encrypted OAuth tokens + global subdomain uniqueness) | Settings — Public Page |
 | `automations` | ✅ | `user_id` | ✅ `tests/integration/automations/run-now.test.ts` (cross-tenant: cannot manually run another MC's automation) | Automations |
 | `automation_events` | ✅ (SELECT-only; writes via SECURITY DEFINER RPC + service-role) | `user_id` | ✅ exercised by `run-now.test.ts` (manual-fire event opens only the owner's run) | Automations |
@@ -520,12 +545,31 @@ the provider. Scopes are minimal (Google `gmail.send` send-only; Microsoft
 `Mail.Send`).
 
 The Templates starter-add server actions (`addStarterPackagesAction`,
-`addStarterQuoteTemplatesAction`, `addStarterInvoiceTemplatesAction`,
-`addStarterContractsAction`) are Zod-validated, run through the
+`addStarterInvoiceTemplatesAction`, `addStarterContractsAction`) are Zod-validated, run through the
 RLS-scoped server client, resolve content server-side by name (the client
 never sends body/amount data), skip names the MC already owns, and flag
 inserted rows `is_starter`. Behaviour covered by
 `tests/integration/templates/starter-actions.test.ts` (6 tests).
+
+**Email-template editor surfaces** (Templates → Emails, 2026-07):
+
+- Category CRUD (`category-actions.ts`) — Zod-validated, RLS-scoped;
+  `createTemplateAction` / `updateTemplateAction` verify `category_id`
+  ownership with an RLS read (`ownCategoryId`) before writing, since the
+  FK alone proves existence, not ownership. Foreign ids degrade to null.
+- Test send (`test-send-action.ts`) — the recipient is **always the
+  session user's own email** (never client-supplied, so the action can't
+  relay), rate-limited 5/min per user, Zod on input, `[Test]` subject
+  prefix, never logged to `couple_emails`.
+- Attachments (`attachment-actions.ts`) — the binary uploads browser →
+  private bucket (RLS path policies + 25 MB / MIME enforcement at the
+  bucket); the metadata action derives the storage path server-side from
+  the session user + validated ids and gates on template ownership.
+  Draft uploads (unsaved template) register with `template_id` null
+  under `{user}/drafts/`; `linkTemplateFilesAction` re-parents only
+  **unlinked** rows after re-checking target-template ownership, and
+  the editor deletes drafts on discard. Deleting removes object then
+  row. A failed register rolls the orphaned object back client-side.
 
 **Per-page DoD requires** an integration test of the
 `couples.test.ts` shape (owner reads ok / other tenant cannot

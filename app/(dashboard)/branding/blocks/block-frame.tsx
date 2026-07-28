@@ -1,18 +1,24 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
 import * as Popover from '@radix-ui/react-popover'
+import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+
+import { blockOuterStyle, HPAD_EXEMPT_TYPES } from '@/lib/branding/block-outer-style'
+import { DENSITY_PADDING } from '@/types/branding-preview'
+import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
+
 import { BlockToolbar } from './block-toolbar'
+import { isDeletable } from './policy'
 import type { Block } from './types'
-import type { BrandPreviewState } from '@/types/branding-preview'
 
 interface BlockFrameProps {
   id: string
   block: Block
   state: BrandPreviewState
+  surface: SurfaceTab
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   selected: boolean
   multiSelected: boolean
@@ -29,6 +35,7 @@ export function BlockFrame({
   id,
   block,
   state,
+  surface,
   updateBlock,
   selected,
   multiSelected,
@@ -47,8 +54,86 @@ export function BlockFrame({
 
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const [resizing, setResizing] = useState(false)
+  const [editing, setEditing] = useState(false)
+  // Which styleable sub-element inside this block is targeted by the toolbar's
+  // style controls. Driven by clicking a `data-subtarget`-tagged element in the
+  // preview (direct manipulation) rather than a toolbar switcher. Null = the
+  // control's own default target.
+  const [activeSubTarget, setActiveSubTarget] = useState<string | null>(null)
+  const blockRef = useRef<HTMLDivElement>(null)
 
   const selectionColor = state.brandColor || '#111827'
+
+  // Note: no reset-on-deselect effect (it would setState in an effect). The
+  // highlight below is guarded by `selected`, so it clears when the block is
+  // deselected; the remembered target is simply sticky per block, which reads
+  // fine — re-selecting a block returns you to the part you last styled.
+
+  // Outline the targeted sub-element so it's obvious what the toolbar's style
+  // controls affect. Uses `outline` (not `border`) so it never reflows the
+  // print-accurate preview, and re-runs every commit so it survives the
+  // preview re-rendering mid-edit. Also gives tagged parts a pointer cursor so
+  // they read as clickable.
+  useEffect(() => {
+    const el = blockRef.current
+    if (!el) return
+    const parts = el.querySelectorAll<HTMLElement>('[data-subtarget]')
+    parts.forEach((n) => {
+      n.style.cursor = 'pointer'
+      n.style.outline = ''
+      n.style.outlineOffset = ''
+    })
+    if (selected && activeSubTarget) {
+      // Outline every element carrying the active target — some blocks repeat a
+      // target (e.g. the three label cells in payment details).
+      el.querySelectorAll<HTMLElement>(`[data-subtarget="${activeSubTarget}"]`).forEach((active) => {
+        active.style.outline = `2px solid ${selectionColor}`
+        active.style.outlineOffset = '3px'
+      })
+    }
+  })
+
+  // Listen for text focus event from InlineText; select this block if not already selected
+  useEffect(() => {
+    const onTextFocus = (e: Event) => {
+      if (e instanceof CustomEvent && e.type === 'zebri:text-focus' && !selected) {
+        onSelect(false)
+      }
+    }
+    const el = blockRef.current
+    if (el) {
+      el.addEventListener('zebri:text-focus', onTextFocus)
+      return () => el.removeEventListener('zebri:text-focus', onTextFocus)
+    }
+  }, [selected, onSelect])
+
+  // Track whether an editable field inside this block has focus, so the green
+  // selection outline can hide while editing (it otherwise obscures the very
+  // background/colours the user is adjusting).
+  useEffect(() => {
+    const el = blockRef.current
+    if (!el) return
+    const isEditable = (n: EventTarget | null) => {
+      const t = n as HTMLElement | null
+      return !!t && (t.isContentEditable || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')
+    }
+    const onFocusIn = (e: FocusEvent) => {
+      if (isEditable(e.target)) setEditing(true)
+    }
+    const onFocusOut = () => {
+      // Let focus settle, then keep editing true only if it stayed on an
+      // editable field within this block.
+      requestAnimationFrame(() => {
+        setEditing(el.contains(document.activeElement) && isEditable(document.activeElement))
+      })
+    }
+    el.addEventListener('focusin', onFocusIn)
+    el.addEventListener('focusout', onFocusOut)
+    return () => {
+      el.removeEventListener('focusin', onFocusIn)
+      el.removeEventListener('focusout', onFocusOut)
+    }
+  }, [])
 
   const startResize = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -74,31 +159,41 @@ export function BlockFrame({
   const borderWidth = block.borderWidth ?? 0
   const borderColor = block.borderColor || '#E5E7EB'
   const blockRadius = block.blockRadius
+  const outerStyle = blockOuterStyle(block, { cornerRadius: state.cornerRadius })
 
   const blockNode = (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node)
+        blockRef.current = node
+      }}
       data-block-id={id}
       data-selected={selected || undefined}
       style={{
+        ...outerStyle,
         transform: CSS.Transform.toString(transform),
         transition,
         zIndex: isDragging ? 30 : selected ? 20 : undefined,
         willChange: isDragging ? 'transform' : undefined,
-        borderWidth,
-        borderStyle: borderWidth ? 'solid' : undefined,
-        borderColor: borderWidth ? borderColor : undefined,
-        borderRadius: blockRadius ?? (borderWidth ? state.cornerRadius : undefined),
-        minHeight: block.type !== 'headerBanner' && block.blockHeightPx ? block.blockHeightPx : undefined,
-        display: block.type !== 'headerBanner' && block.blockHeightPx ? 'flex' : undefined,
-        flexDirection: block.type !== 'headerBanner' && block.blockHeightPx ? 'column' : undefined,
-        justifyContent: block.type !== 'headerBanner' && block.blockHeightPx
+        borderWidth: borderWidth || outerStyle.borderWidth,
+        borderStyle: (borderWidth || outerStyle.borderWidth) ? 'solid' : undefined,
+        borderColor: (borderWidth || outerStyle.borderWidth) ? borderColor : undefined,
+        borderRadius: blockRadius ?? (borderWidth ? state.cornerRadius : outerStyle.borderRadius),
+        minHeight: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx ? block.blockHeightPx : undefined,
+        display: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx ? 'flex' : undefined,
+        flexDirection: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx ? 'column' : undefined,
+        justifyContent: block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && block.blockHeightPx
           ? (block.blockVAlign === 'top' ? 'flex-start' : block.blockVAlign === 'bottom' ? 'flex-end' : 'center')
           : undefined,
       }}
       onClick={(e) => {
         e.stopPropagation()
         onSelect(e.shiftKey || e.metaKey || e.ctrlKey)
+        // Target the clicked sub-element (title, subtitle, a totals row, …) so
+        // the toolbar styles it; clicking anywhere else in the block clears back
+        // to the control's default target.
+        const part = (e.target as HTMLElement).closest('[data-subtarget]')
+        setActiveSubTarget(part && blockRef.current?.contains(part) ? part.getAttribute('data-subtarget') : null)
       }}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -113,13 +208,17 @@ export function BlockFrame({
         aria-hidden
         className={`absolute inset-0 pointer-events-none rounded-md transition`}
         style={{
-          borderWidth: selected || multiSelected ? 2 : 1,
+          borderWidth: !editing && (selected || multiSelected) ? 2 : 1,
           borderStyle: 'solid',
-          borderColor: selected
-            ? selectionColor
-            : multiSelected
-              ? `${selectionColor}99`
-              : 'transparent',
+          // While editing an inner field, drop the brand-coloured outline so it
+          // does not obscure the block's own background/colours.
+          borderColor: editing
+            ? 'transparent'
+            : selected
+              ? selectionColor
+              : multiSelected
+                ? `${selectionColor}99`
+                : 'transparent',
         }}
       />
       <div
@@ -145,10 +244,20 @@ export function BlockFrame({
         </button>
       </div>
 
-      {children}
+      {/* Horizontal document padding is applied once here (matching the public
+          BlockOuter), not inside each block, so the whole document shares one
+          inset. Only the empty spacer is exempt. */}
+      {HPAD_EXEMPT_TYPES.has(block.type) ? (
+        children
+      ) : (
+        <div className={DENSITY_PADDING[state.density].docX}>{children}</div>
+      )}
 
-      {/* Block resize handle — shown for all block types except headerBanner (which has its own) */}
-      {block.type !== 'headerBanner' && (
+      {/* Block resize handle — shown for all block types except headerBanner,
+          image, and spacer, which each carry their own resize handle. Giving
+          those a second (block-frame) handle also stamped a minHeight floor
+          that fought their own resize, so the container could not shrink. */}
+      {block.type !== 'headerBanner' && block.type !== 'image' && block.type !== 'spacer' && (
         <BlockResizeHandle onMouseDown={startResize} active={resizing} />
       )}
 
@@ -210,7 +319,9 @@ export function BlockFrame({
             <BlockToolbar
               block={block}
               state={state}
+              surface={surface}
               updateBlock={updateBlock}
+              activeSubTarget={activeSubTarget}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
               onResetBlock={onResetBlock}
@@ -222,6 +333,8 @@ export function BlockFrame({
         <ContextMenu
           x={menuPos.x}
           y={menuPos.y}
+          block={block}
+          surface={surface}
           onClose={() => setMenuPos(null)}
           onDuplicate={onDuplicate}
           onDelete={onDelete}
@@ -235,6 +348,8 @@ export function BlockFrame({
 function ContextMenu({
   x,
   y,
+  block,
+  surface,
   onClose,
   onDuplicate,
   onDelete,
@@ -242,6 +357,8 @@ function ContextMenu({
 }: {
   x: number
   y: number
+  block: Block
+  surface: SurfaceTab
   onClose: () => void
   onDuplicate: () => void
   onDelete: () => void
@@ -265,11 +382,17 @@ function ContextMenu({
   const left = Math.min(x, (typeof window === 'undefined' ? 9999 : window.innerWidth) - 220)
   const top = Math.min(y, (typeof window === 'undefined' ? 9999 : window.innerHeight) - 160)
 
+  const canDelete = isDeletable(block, surface)
+
   const items: Array<{ label: string; icon: React.ReactNode; onClick: () => void; danger?: boolean }> = [
     { label: 'Reset to theme', icon: <RotateCcw size={12} strokeWidth={1.75} />, onClick: onResetBlock },
     { label: 'Duplicate', icon: <Copy size={12} strokeWidth={1.75} />, onClick: onDuplicate },
-    { label: 'Delete', icon: <Trash2 size={12} strokeWidth={1.75} />, onClick: onDelete, danger: true },
   ]
+
+  // Only add Delete if the block is deletable
+  if (canDelete) {
+    items.push({ label: 'Delete', icon: <Trash2 size={12} strokeWidth={1.75} />, onClick: onDelete, danger: true })
+  }
 
   return (
     <div

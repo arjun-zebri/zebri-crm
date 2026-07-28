@@ -98,14 +98,15 @@ export function BuilderMetaRow({
         />
       ) : null}
 
-      {/* Date — calendar icon sits on the left to match the
-          couple picker / terms picker icons. */}
+      {/* Date — `meta` variant + left icon so the trigger reads as a
+          sibling of the couple picker / terms picker. */}
       <DatePicker
         value={dateValue ?? ''}
         onChange={(next) => onDateChange(next || null)}
         placeholder={dateLabel}
         disabled={!canEdit}
         iconPosition="left"
+        variant="meta"
         {...(datePrefix ? { displayPrefix: datePrefix } : {})}
       />
     </div>

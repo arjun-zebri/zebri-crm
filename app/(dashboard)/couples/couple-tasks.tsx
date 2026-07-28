@@ -14,7 +14,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { ListTodo, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { ColumnHeader } from '@/app/(dashboard)/tasks/group-section';
@@ -37,7 +37,9 @@ import {
   useUpdateTaskStatus,
   useUpdateTaskType,
 } from '@/app/(dashboard)/tasks/use-task-options';
+import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
+import { isPastDue } from '@/lib/utils';
 import { TaskPriority } from '@/types/task';
 
 import {
@@ -45,6 +47,7 @@ import {
   deleteCoupleTaskAction,
   updateCoupleTaskAction,
 } from './actions';
+import { CoupleTabEmpty, CoupleTabShell, type TabStat } from './couple-tab-shell';
 
 interface CoupleTasksProps {
   coupleId: string;
@@ -238,31 +241,47 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
   });
 
   const editingTask = (tasks || []).find((t) => t.id === editingTaskId);
-
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-9 bg-gray-100 rounded animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
   const all = tasks || [];
 
+  const addTask = () =>
+    insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' });
+
+  // "Open" = anything not in the canonical done status (custom statuses count
+  // as open). See TaskStatus in types/task.ts.
+  const openCount = all.filter((t) => t.status !== 'done').length;
+  const doneCount = all.length - openCount;
+  // Overdue = a still-open task whose due date has passed.
+  const overdueCount = all.filter(
+    (t) => t.status !== 'done' && isPastDue(t.due_date),
+  ).length;
+  const stats: TabStat[] = [{ label: `${all.length} total` }];
+  if (doneCount > 0) stats.push({ label: `${doneCount} done`, tone: 'success' });
+  if (openCount > 0) stats.push({ label: `${openCount} open` });
+  if (overdueCount > 0) stats.push({ label: `${overdueCount} overdue`, tone: 'danger' });
+
   return (
-    <>
-      {all.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-sm text-gray-400 mb-3">No tasks yet.</p>
-          <button
-            onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
-            className="text-xs text-gray-500 border border-gray-200 rounded-xl px-2.5 py-1 hover:bg-gray-50 transition cursor-pointer"
-          >
-            + Add task
-          </button>
+    <CoupleTabShell
+      title="Tasks"
+      stats={all.length > 0 ? stats : undefined}
+      actions={
+        <Button size="sm" onClick={addTask} className="cursor-pointer gap-1.5">
+          <Plus size={14} strokeWidth={1.5} />
+          New task
+        </Button>
+      }
+    >
+      {isLoading ? (
+        <div className="space-y-2" aria-hidden="true">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-9 bg-gray-100 rounded animate-pulse" />
+          ))}
         </div>
+      ) : all.length === 0 ? (
+        <CoupleTabEmpty
+          icon={ListTodo}
+          title="No tasks yet"
+          description="Add a task with the button above and it will show up here."
+        />
       ) : (
         <div>
           <ColumnHeader
@@ -318,7 +337,7 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
             />
           ))}
           <button
-            onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
+            onClick={addTask}
             className="w-full flex items-center gap-2 pl-3.5 pr-2 py-2 text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer"
           >
             <Plus size={13} strokeWidth={1.5} />
@@ -357,6 +376,6 @@ export function CoupleTasks({ coupleId }: CoupleTasksProps) {
           setEditingTaskId(null);
         }}
       />
-    </>
+    </CoupleTabShell>
   );
 }

@@ -1,47 +1,51 @@
 /**
  * Packages tab — reusable service bundles.
  *
- * A package is a named set of priced line items the MC can drop into a
- * quote or invoice. CRUD + drag-reorder, mirroring the Quotes tab so the
- * two sibling surfaces feel identical. Backed by `packages` /
- * `package_items` (owner-scoped RLS).
+ * A package is a named set of priced line items (plus optional add-ons
+ * and pricing terms: booking deposit, weekend loading, GST-inclusive
+ * flag) the MC drops into quotes and invoices. A master list selects a
+ * package; the detail pane previews it read-only with conversion stats
+ * and duplicate / archive / confirm-delete actions.
+ * Backed by `packages` / `package_items` (owner-scoped RLS).
  *
  * @module app/(dashboard)/templates/packages-manager
  */
 'use client'
 
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2, GripVertical, Pencil, Package as PackageIcon, Library } from 'lucide-react'
+import { Archive, ArchiveRestore, ChevronDown, ChevronRight, Copy, Library, Package as PackageIcon, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Empty } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
-import { Modal } from '@/components/ui/modal'
 import { RowActionsMenu } from '@/components/ui/row-actions-menu'
 import { useToast } from '@/components/ui/toast'
+import { packageTotals } from '@/lib/payments/package-math'
 import { STARTER_PACKAGES } from '@/lib/payments/starter-line-item-templates'
 import { createClient } from '@/lib/supabase/client'
+import { formatRelativeTime } from '@/lib/utils'
 
-import { LineItemPreview } from './line-item-preview'
+import { categoryColorClasses } from './category-colors'
+import { PackageEditForm, type PackageDraft, type PackageFormValue } from './package-edit-form'
+import { PackagePreview } from './package-preview'
 import { addStarterPackagesAction } from './starter-actions'
 import { StarterCatalogModal } from './starter-catalog-modal'
+import { TemplatesActions } from './templates-actions-slot'
+import { TemplatesTwoPane } from './templates-two-pane'
+import { usePackageCategories } from './use-package-categories'
+import { usePackageUsage } from './use-package-usage'
 
 /** A single priced line item within a package. */
 interface PackageItem {
   id: string
   description: string
   amount: number
+  /** Unit count; rows created before packages v2 read as null → 1. */
+  quantity: number | null
+  /** True for an optional add-on offered alongside the base package. */
+  optional: boolean | null
 }
 
 /** A package summary row (counts/total derived from its items). */
@@ -50,17 +54,18 @@ interface Package {
   name: string
   description: string | null
   notes: string | null
+  /** User category (see `package_categories`); null = uncategorised. */
+  category_id: string | null
   position: number
+  updated_at: string | null
+  deposit_percent: number | null
+  gst_inclusive: boolean | null
+  archived_at: string | null
+  weekend_loading_percent: number | null
+  is_popular: boolean | null
   item_count?: number
   total?: number
 }
-
-interface PackageWithItems extends Package {
-  items: PackageItem[]
-}
-
-const noArrowsClass =
-  '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
 
 /** AUD — Zebri is an Australian product. */
 function formatCurrency(amount: number) {
@@ -74,205 +79,59 @@ function formatCurrency(amount: number) {
 
 function PackageRow({
   pkg,
-  onEdit,
-  onDelete,
+  selected,
+  onSelect,
 }: {
   pkg: Package
-  onEdit: (id: string) => void
-  onDelete: (id: string) => void
+  selected: boolean
+  onSelect: (id: string) => void
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: pkg.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition: transition ? transition.replace('all', 'transform') : undefined,
-    opacity: isDragging ? 0.5 : 1,
-  } as React.CSSProperties
+  const archived = !!pkg.archived_at
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-surface-muted"
+      className={`group flex items-center gap-2 rounded-xl px-2 transition ${selected ? 'bg-surface-muted' : 'hover:bg-surface-muted'}`}
     >
       <button
         type="button"
-        {...attributes}
-        {...listeners}
-        className="shrink-0 cursor-grab active:cursor-grabbing text-text-subtle transition"
+        onClick={() => onSelect(pkg.id)}
+        aria-current={selected ? 'true' : undefined}
+        className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-2.5 text-left ${archived ? 'opacity-60' : ''}`}
       >
-        <GripVertical size={16} strokeWidth={1.5} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-text">{pkg.name}</span>
+          <span className="block truncate text-xs text-text-subtle">{pkg.notes || ''}</span>
+        </span>
+        <span className="shrink-0 text-right">
+          {(pkg.total ?? 0) > 0 ? (
+            <span className="block text-sm font-medium tabular-nums text-text">{formatCurrency(pkg.total ?? 0)}</span>
+          ) : null}
+          <span className="block text-xs text-text-muted">
+            {pkg.item_count || 0} item{(pkg.item_count || 0) !== 1 ? 's' : ''}
+          </span>
+        </span>
       </button>
-
-      <button type="button" onClick={() => onEdit(pkg.id)} className="min-w-0 flex-1 cursor-pointer text-left">
-        <p className="truncate text-sm font-medium text-text">{pkg.name}</p>
-        <p className="truncate text-xs text-text-subtle">{pkg.notes || ''}</p>
-      </button>
-
-      <div className="text-right shrink-0">
-        {(pkg.total ?? 0) > 0 ? <p className="text-sm font-medium text-text">{formatCurrency(pkg.total ?? 0)}</p> : null}
-        <p className="text-xs text-text-muted">
-          {pkg.item_count || 0} item{(pkg.item_count || 0) !== 1 ? 's' : ''}
-        </p>
-      </div>
-
-      <RowActionsMenu
-        alwaysVisible
-        actions={[
-          { label: 'Edit', icon: <Pencil size={15} strokeWidth={1.5} />, onSelect: () => onEdit(pkg.id) },
-          {
-            label: 'Delete',
-            destructive: true,
-            icon: <Trash2 size={15} strokeWidth={1.5} />,
-            onSelect: () => onDelete(pkg.id),
-          },
-        ]}
-      />
     </div>
   )
 }
 
-interface EditPackageFormProps {
-  pkg: PackageWithItems
-  onSave: (data: { name: string; notes: string | null; items: PackageItem[] }) => void
-  onCancel: () => void
-  isSaving: boolean
-}
+/** Meta line for the detail card: "Used in N proposals · M accepted ·
+ *  Edited X ago". Usage parts hide until there is history. */
+function PackageCaption({ packageId, updatedAt }: { packageId: string; updatedAt?: string | null }) {
+  const { data } = usePackageUsage(packageId)
+  // Capture "now" once at mount via a lazy initializer (Date.now() during
+  // render is impure); the relative "Edited X ago" recomputes from props.
+  const [nowMs] = useState(() => Date.now())
 
-function EditPackageForm({ pkg, onSave, onCancel, isSaving }: EditPackageFormProps) {
-  const [name, setName] = useState(pkg.name)
-  const [notes, setNotes] = useState(pkg.notes || '')
-  const [items, setItems] = useState<PackageItem[]>(pkg.items)
-
-  const total = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
-
-  const addItem = () => setItems([...items, { id: `new-${Date.now()}`, description: '', amount: 0 }])
-
-  const updateItem = (id: string, field: 'description' | 'amount', value: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, [field]: field === 'amount' ? parseFloat(value) || 0 : value } : item,
-      ),
-    )
+  const parts: string[] = []
+  if (data && data.total > 0) {
+    parts.push(`Used in ${String(data.total)} proposal${data.total !== 1 ? 's' : ''}`)
+    if (data.accepted > 0) parts.push(`${String(data.accepted)} accepted`)
   }
+  if (updatedAt) parts.push(`Edited ${formatRelativeTime(updatedAt, nowMs)}`)
+  if (parts.length === 0) return null
 
-  const removeItem = (id: string) => setItems((prev) => prev.filter((item) => item.id !== id))
-
-  const handleSave = () => {
-    if (!name.trim()) return
-    onSave({ name: name.trim(), notes: notes.trim() || null, items })
-  }
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-text mb-2">
-            Package name <span className="text-danger">*</span>
-          </label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Gold Package"
-            disabled={isSaving}
-            autoFocus
-            size="sm"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-text mb-2">Subtitle</label>
-          <Input
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Short description shown on the package list"
-            disabled={isSaving}
-            size="sm"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-text mb-2">Line Items</label>
-          <div className="space-y-2">
-            {items.length === 0 ? (
-              <p className="text-xs text-text-subtle py-1">No items yet</p>
-            ) : (
-              <>
-                <div className="grid grid-cols-[1fr_auto_auto] gap-x-2 mb-1 px-0.5">
-                  <span className="text-xs text-text-muted">Description</span>
-                  <span className="text-xs text-text-muted w-28 text-right">Amount</span>
-                  <span className="w-8" />
-                </div>
-                {items.map((item) => (
-                  <div key={item.id} className="grid grid-cols-[1fr_auto_auto] gap-x-2 items-center">
-                    <Input
-                      type="text"
-                      value={item.description}
-                      onChange={(e) => updateItem(item.id, 'description', e.target.value)}
-                      placeholder="e.g., MC Ceremony"
-                      disabled={isSaving}
-                      size="sm"
-                    />
-                    <div className="flex items-center gap-1 border border-border rounded-xl px-3 py-2 bg-card w-28">
-                      <span className="text-sm text-text-muted">$</span>
-                      <input
-                        type="number"
-                        value={item.amount || ''}
-                        onChange={(e) => updateItem(item.id, 'amount', e.target.value)}
-                        placeholder="0"
-                        step="0.01"
-                        className={`w-full text-sm text-text bg-transparent focus:outline-none ${noArrowsClass}`}
-                        disabled={isSaving}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.id)}
-                      className="p-2 text-text-subtle hover:text-danger transition w-8 flex items-center justify-center cursor-pointer"
-                      disabled={isSaving}
-                    >
-                      <Trash2 size={14} strokeWidth={1.5} />
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
-            <button
-              type="button"
-              onClick={addItem}
-              disabled={isSaving}
-              className="text-sm text-text-muted hover:text-text transition cursor-pointer disabled:opacity-50 flex items-center gap-1 py-1"
-            >
-              <Plus size={14} strokeWidth={1.5} />
-              Add line item
-            </button>
-          </div>
-
-          {items.length > 0 && (
-            <div className="flex justify-end pt-3 border-t border-border mt-3">
-              <div className="text-right">
-                <span className="text-xs text-text-muted mr-3">Total</span>
-                <span className="text-sm font-semibold text-text">{formatCurrency(total)}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="hidden lg:block">
-        <LineItemPreview name={name} subtitle={notes} items={items} />
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4 border-t border-border col-span-full">
-        <Button onClick={onCancel} disabled={isSaving} variant="outline" size="sm">
-          Cancel
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving || !name.trim()} size="sm">
-          Save
-        </Button>
-      </div>
-    </div>
-  )
+  return <p className="text-xs text-text-muted">{parts.join(' · ')}</p>
 }
 
 /**
@@ -288,6 +147,39 @@ export function PackagesManager() {
   const [isCreating, setIsCreating] = useState(false)
   const [showStarters, setShowStarters] = useState(false)
   const [localPackages, setLocalPackages] = useState<Package[]>([])
+  const [search, setSearch] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [showArchived, setShowArchived] = useState(false)
+
+  const isSearching = search.trim().length > 0
+  const matches = (p: Package) => p.name.toLowerCase().includes(search.trim().toLowerCase())
+  const active = localPackages.filter((p) => !p.archived_at)
+  const archived = localPackages.filter((p) => !!p.archived_at)
+  const visibleActive = isSearching ? active.filter(matches) : active
+  const visibleArchived = isSearching ? archived.filter(matches) : archived
+
+  const { data: categories = [] } = usePackageCategories()
+
+  // Group active packages by category (user drag order + trailing
+  // "Uncategorised"), like the Emails library. With no categories at
+  // all the list stays flat — a lone "Uncategorised" header is noise.
+  const known = new Set(categories.map((c) => c.id))
+  const groups = [
+    ...categories.map((c) => ({
+      key: c.id,
+      label: c.name,
+      dotClass: categoryColorClasses(c.color).dot,
+      items: visibleActive.filter((p) => p.category_id === c.id),
+    })),
+    {
+      key: 'uncategorised',
+      label: 'Uncategorised',
+      dotClass: null as string | null,
+      items: visibleActive.filter((p) => !p.category_id || !known.has(p.category_id)),
+    },
+  ].filter((g) => g.items.length > 0)
+  const showGroupHeaders = categories.length > 0
 
   useEffect(() => {
     const getUser = async () => {
@@ -328,7 +220,13 @@ export function PackagesManager() {
       if (error) throw error
       const grouped: Record<string, PackageItem[]> = {}
       for (const item of data ?? []) {
-        ;(grouped[item.package_id] ??= []).push({ id: item.id, description: item.description, amount: item.amount })
+        ;(grouped[item.package_id] ??= []).push({
+          id: item.id,
+          description: item.description,
+          amount: item.amount,
+          quantity: item.quantity ?? null,
+          optional: item.optional ?? null,
+        })
       }
       return grouped
     },
@@ -340,38 +238,61 @@ export function PackagesManager() {
       setLocalPackages(
         packages.map((p) => {
           const items = allItems?.[p.id] || []
-          return { ...p, item_count: items.length, total: items.reduce((sum, item) => sum + (item.amount || 0), 0) }
+          // The list row shows the base price; add-ons are extras.
+          return { ...p, item_count: items.length, total: packageTotals(items).base }
         }),
       )
     }
   }, [packages, allItems])
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['packages'] })
+    queryClient.invalidateQueries({ queryKey: ['package-items'] })
+  }
+
+  /** Rows for a bulk `package_items` insert. Keys must be uniform on
+   *  every row or PostgREST silently drops the request. */
+  const itemRows = (packageId: string, uid: string, items: PackageDraft['items']) =>
+    items.map((item, i) => ({
+      package_id: packageId,
+      user_id: uid,
+      description: item.description,
+      amount: item.amount,
+      quantity: item.quantity || 1,
+      optional: item.optional,
+      position: (i + 1) * 1000,
+    }))
+
   const createMutation = useMutation({
-    mutationFn: async (data: { name: string; notes: string | null; items: PackageItem[] }) => {
+    mutationFn: async (draft: PackageDraft) => {
       if (!userId) throw new Error('User not authenticated')
       const { data: pkg, error: insertError } = await supabase
         .from('packages')
-        .insert({ user_id: userId, name: data.name, notes: data.notes, position: (packages?.length ?? 0) * 1000 })
+        .insert({
+          user_id: userId,
+          name: draft.name,
+          notes: draft.notes,
+          description: draft.description,
+          category_id: draft.category_id,
+          deposit_percent: draft.deposit_percent,
+          gst_inclusive: draft.gst_inclusive,
+          weekend_loading_percent: draft.weekend_loading_percent,
+          is_popular: draft.is_popular,
+          position: (packages?.length ?? 0) * 1000,
+        })
         .select('id')
         .single()
       if (insertError) throw insertError
-      if (data.items.length > 0) {
-        const { error: itemsError } = await supabase.from('package_items').insert(
-          data.items.map((item, i) => ({
-            package_id: pkg.id,
-            user_id: userId,
-            description: item.description,
-            amount: item.amount,
-            position: (i + 1) * 1000,
-          })),
-        )
+      if (draft.items.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('package_items')
+          .insert(itemRows(pkg.id, userId, draft.items))
         if (itemsError) throw itemsError
       }
       return pkg
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['packages'] })
-      queryClient.invalidateQueries({ queryKey: ['package-items'] })
+      invalidate()
       setIsCreating(false)
       toast('Package created.')
     },
@@ -379,51 +300,46 @@ export function PackagesManager() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async (data: { id: string; name: string; notes: string | null; items: PackageItem[] }) => {
+    mutationFn: async ({ id, draft }: { id: string; draft: PackageDraft }) => {
       if (!userId) throw new Error('User not authenticated')
       const { error: updateError } = await supabase
         .from('packages')
-        .update({ name: data.name, notes: data.notes })
-        .eq('id', data.id)
+        .update({
+          name: draft.name,
+          notes: draft.notes,
+          description: draft.description,
+          category_id: draft.category_id,
+          deposit_percent: draft.deposit_percent,
+          gst_inclusive: draft.gst_inclusive,
+          weekend_loading_percent: draft.weekend_loading_percent,
+          is_popular: draft.is_popular,
+          // No touch trigger on packages; set explicitly so the
+          // preview's "Edited X ago" reflects edits, not creation.
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
         .eq('user_id', userId)
       if (updateError) throw updateError
 
-      const oldItems = allItems?.[data.id] || []
-      const itemsToDelete = oldItems.filter((oi) => !data.items.find((ni) => ni.id === oi.id))
-      if (itemsToDelete.length > 0) {
-        const { error: deleteError } = await supabase
+      // Wipe-and-reinsert keeps the form's ordering + section split as
+      // the source of truth without resolving row deltas. Nothing
+      // references package_items (quotes/invoices snapshot by copy),
+      // so regenerated ids are harmless. Same pattern as saveQuoteAction.
+      const { error: deleteError } = await supabase
+        .from('package_items')
+        .delete()
+        .eq('package_id', id)
+        .eq('user_id', userId)
+      if (deleteError) throw deleteError
+      if (draft.items.length > 0) {
+        const { error: insertError } = await supabase
           .from('package_items')
-          .delete()
-          .in('id', itemsToDelete.map((i) => i.id))
-        if (deleteError) throw deleteError
-      }
-
-      const newItems = data.items.filter((i) => i.id.startsWith('new-'))
-      if (newItems.length > 0) {
-        const { error: insertError } = await supabase.from('package_items').insert(
-          newItems.map((item, i) => ({
-            package_id: data.id,
-            user_id: userId,
-            description: item.description,
-            amount: item.amount,
-            position: (oldItems.length + i + 1) * 1000,
-          })),
-        )
+          .insert(itemRows(id, userId, draft.items))
         if (insertError) throw insertError
-      }
-
-      const updatedItems = data.items.filter((i) => !i.id.startsWith('new-'))
-      for (const item of updatedItems) {
-        const { error: updateItemError } = await supabase
-          .from('package_items')
-          .update({ description: item.description, amount: item.amount })
-          .eq('id', item.id)
-        if (updateItemError) throw updateItemError
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['packages'] })
-      queryClient.invalidateQueries({ queryKey: ['package-items'] })
+      invalidate()
       setEditingId(null)
       toast('Package updated.')
     },
@@ -437,58 +353,108 @@ export function PackagesManager() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['packages'] })
-      queryClient.invalidateQueries({ queryKey: ['package-items'] })
+      invalidate()
+      setConfirmDeleteId(null)
       toast('Package deleted.')
     },
     onError: (err) => toast(err instanceof Error ? err.message : 'Failed to delete package', 'error'),
   })
 
+  const duplicateMutation = useMutation({
+    mutationFn: async (source: Package) => {
+      if (!userId) throw new Error('User not authenticated')
+      // Place the copy directly after its source in the position order.
+      const { data: pkg, error: insertError } = await supabase
+        .from('packages')
+        .insert({
+          user_id: userId,
+          name: `${source.name} (copy)`,
+          description: source.description,
+          notes: source.notes,
+          category_id: source.category_id,
+          deposit_percent: source.deposit_percent,
+          gst_inclusive: source.gst_inclusive ?? true,
+          weekend_loading_percent: source.weekend_loading_percent,
+          position: source.position + 1,
+        })
+        .select('id')
+        .single()
+      if (insertError) throw insertError
+      const items = allItems?.[source.id] ?? []
+      if (items.length > 0) {
+        const { error: itemsError } = await supabase.from('package_items').insert(
+          items.map((item, i) => ({
+            package_id: pkg.id,
+            user_id: userId,
+            description: item.description,
+            amount: item.amount,
+            quantity: item.quantity ?? 1,
+            optional: !!item.optional,
+            position: (i + 1) * 1000,
+          })),
+        )
+        if (itemsError) throw itemsError
+      }
+      return pkg.id as string
+    },
+    onSuccess: (newId) => {
+      invalidate()
+      setSelectedId(newId)
+      toast('Package duplicated.')
+    },
+    onError: (err) => toast(err instanceof Error ? err.message : 'Failed to duplicate package', 'error'),
+  })
+
+  const archiveMutation = useMutation({
+    mutationFn: async (pkg: Package) => {
+      if (!userId) throw new Error('User not authenticated')
+      const { error } = await supabase
+        .from('packages')
+        .update({ archived_at: pkg.archived_at ? null : new Date().toISOString() })
+        .eq('id', pkg.id)
+        .eq('user_id', userId)
+      if (error) throw error
+      return !pkg.archived_at
+    },
+    onSuccess: (nowArchived) => {
+      invalidate()
+      if (nowArchived) setShowArchived(true)
+      toast(nowArchived ? 'Package archived.' : 'Package restored.')
+    },
+    onError: (err) => toast(err instanceof Error ? err.message : 'Failed to update package', 'error'),
+  })
+
   const handleAddStarters = async (names: string[]): Promise<number> => {
     const res = await addStarterPackagesAction(names)
     if (!res.ok) throw new Error(res.error)
-    queryClient.invalidateQueries({ queryKey: ['packages'] })
-    queryClient.invalidateQueries({ queryKey: ['package-items'] })
+    invalidate()
     return res.data.added
   }
 
-  const reorderMutation = useMutation({
-    mutationFn: async (reordered: Package[]) => {
-      if (!userId) throw new Error('User not authenticated')
-      for (let i = 0; i < reordered.length; i++) {
-        const row = reordered[i]
-        if (!row) continue
-        const { error } = await supabase
-          .from('packages')
-          .update({ position: (i + 1) * 1000 })
-          .eq('id', row.id)
-          .eq('user_id', userId)
-        if (error) throw error
-      }
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['packages'] }),
+  const handleSave = async (draft: PackageDraft) => {
+    if (editingId) await updateMutation.mutateAsync({ id: editingId, draft })
+    else await createMutation.mutateAsync(draft)
+  }
+
+  const toFormValue = (pkg: Package): PackageFormValue => ({
+    name: pkg.name,
+    notes: pkg.notes,
+    description: pkg.description,
+    category_id: pkg.category_id,
+    deposit_percent: pkg.deposit_percent,
+    gst_inclusive: pkg.gst_inclusive ?? true,
+    weekend_loading_percent: pkg.weekend_loading_percent,
+    is_popular: pkg.is_popular ?? false,
+    items: (allItems?.[pkg.id] ?? []).map((item) => ({
+      id: item.id,
+      description: item.description,
+      amount: item.amount,
+      quantity: item.quantity ?? 1,
+      optional: !!item.optional,
+    })),
   })
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIndex = localPackages.findIndex((t) => t.id === active.id)
-    const newIndex = localPackages.findIndex((t) => t.id === over.id)
-    const reordered = arrayMove(localPackages, oldIndex, newIndex)
-    setLocalPackages(reordered)
-    await reorderMutation.mutateAsync(reordered)
-  }
-
-  const handleSave = async (data: { name: string; notes: string | null; items: PackageItem[] }) => {
-    if (editingId) await updateMutation.mutateAsync({ id: editingId, ...data })
-    else await createMutation.mutateAsync(data)
-  }
-
   const editing = localPackages.find((t) => t.id === editingId)
-  const editingPackage: PackageWithItems | null =
-    editingId && editing ? { ...editing, items: allItems?.[editingId] || [] } : null
 
   const openCreate = () => {
     setEditingId(null)
@@ -497,7 +463,7 @@ export function PackagesManager() {
 
   if (isLoading) {
     return (
-      <div className="max-w-2xl space-y-3 animate-pulse">
+      <div className="space-y-3 animate-pulse">
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-12 bg-surface-muted rounded-xl" />
         ))}
@@ -507,44 +473,62 @@ export function PackagesManager() {
 
   const existingNames = new Set(localPackages.map((p) => p.name))
 
-  return (
-    <div className="max-w-4xl space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-xl font-semibold text-text">Packages</h3>
-          <p className="text-sm text-text-muted mt-1">Reusable service bundles you can drop into quotes and invoices.</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
-            <Library size={14} strokeWidth={1.5} />
-            Browse starters
-          </Button>
-          <Button size="sm" onClick={openCreate} className="gap-1.5">
-            <Plus size={14} strokeWidth={1.5} />
-            New Package
-          </Button>
-        </div>
-      </div>
+  const effectiveId =
+    selectedId && localPackages.some((t) => t.id === selectedId) ? selectedId : (active[0]?.id ?? null)
+  const selectedPkg = localPackages.find((t) => t.id === effectiveId) ?? null
 
-      <Modal isOpen={isCreating} onClose={() => setIsCreating(false)} title="New Package">
-        <EditPackageForm
-          pkg={{ id: 'new', name: '', description: null, notes: null, position: 0, items: [] }}
+  const emptyForm: PackageFormValue = {
+    name: '',
+    notes: null,
+    description: null,
+    category_id: null,
+    deposit_percent: null,
+    gst_inclusive: true,
+    weekend_loading_percent: null,
+    is_popular: false,
+    items: [],
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <TemplatesActions>
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search packages…"
+          size="sm"
+          className="w-36 sm:w-48"
+        />
+        <Button size="sm" variant="outline" onClick={() => setShowStarters(true)} className="gap-1.5">
+          <Library size={14} strokeWidth={1.5} />
+          Browse starters
+        </Button>
+        <Button size="sm" onClick={openCreate} className="gap-1.5">
+          <Plus size={14} strokeWidth={1.5} />
+          New Package
+        </Button>
+      </TemplatesActions>
+
+      {isCreating && (
+        <PackageEditForm
+          title="New Package"
+          value={emptyForm}
           onSave={handleSave}
-          onCancel={() => setIsCreating(false)}
+          onClose={() => setIsCreating(false)}
           isSaving={createMutation.isPending}
         />
-      </Modal>
+      )}
 
-      <Modal isOpen={!!editingId} onClose={() => setEditingId(null)} title="Edit Package">
-        {editingPackage && (
-          <EditPackageForm
-            pkg={editingPackage}
-            onSave={handleSave}
-            onCancel={() => setEditingId(null)}
-            isSaving={updateMutation.isPending}
-          />
-        )}
-      </Modal>
+      {editingId && editing && (
+        <PackageEditForm
+          key={editingId}
+          title="Edit Package"
+          value={toFormValue(editing)}
+          onSave={handleSave}
+          onClose={() => setEditingId(null)}
+          isSaving={updateMutation.isPending}
+        />
+      )}
 
       <StarterCatalogModal
         isOpen={showStarters}
@@ -557,43 +541,159 @@ export function PackagesManager() {
         onAdd={handleAddStarters}
       />
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={localPackages.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-2">
-            {localPackages.length === 0 ? (
-              <Empty
-                size="sm"
-                className="min-h-[40vh]"
-                icon={PackageIcon}
-                title="No packages yet"
-                description="Save a set of line items as a reusable package."
-                action={
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setShowStarters(true)}>
-                      Browse starter packages
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Delete package?"
+        description={`This permanently deletes "${localPackages.find((p) => p.id === confirmDeleteId)?.name ?? 'this package'}" and its line items. Quotes and invoices already created from it keep their copy. Archiving keeps it out of the way without losing it.`}
+        onConfirm={() => confirmDeleteId && deleteMutation.mutate(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
+        loading={deleteMutation.isPending}
+      />
+
+      {localPackages.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center pb-[10vh]">
+          <Empty
+            size="sm"
+            icon={PackageIcon}
+            title="No packages yet"
+            description="Save the services you sell as reusable packages, then drop them straight into quotes and invoices."
+          />
+        </div>
+      ) : (
+        <TemplatesTwoPane
+          selected={!!selectedId}
+          onBack={() => setSelectedId(null)}
+          list={
+            <>
+              {visibleActive.length === 0 && visibleArchived.length === 0 ? (
+                <p className="py-8 text-center text-sm text-text-subtle">No matches.</p>
+              ) : showGroupHeaders ? (
+                <div className="space-y-5">
+                  {groups.map((group) => (
+                    <section key={group.key}>
+                      <h3 className="flex items-center gap-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+                        {group.dotClass && <span className={`h-2 w-2 rounded-full ${group.dotClass}`} />}
+                        {group.label}
+                      </h3>
+                      <div className="mt-1 space-y-1">
+                        {group.items.map((pkg) => (
+                          <PackageRow
+                            key={pkg.id}
+                            pkg={pkg}
+                            selected={pkg.id === effectiveId}
+                            onSelect={setSelectedId}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {visibleActive.map((pkg) => (
+                    <PackageRow
+                      key={pkg.id}
+                      pkg={pkg}
+                      selected={pkg.id === effectiveId}
+                      onSelect={setSelectedId}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {archived.length > 0 && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowArchived((v) => !v)}
+                    className="flex items-center gap-1 py-1 text-xs text-text-muted transition hover:text-text cursor-pointer"
+                  >
+                    {showArchived ? (
+                      <ChevronDown size={14} strokeWidth={1.5} />
+                    ) : (
+                      <ChevronRight size={14} strokeWidth={1.5} />
+                    )}
+                    Archived ({archived.length})
+                  </button>
+                  {showArchived && (
+                    <div className="mt-1 space-y-1">
+                      {visibleArchived.map((pkg) => (
+                        <PackageRow
+                          key={pkg.id}
+                          pkg={pkg}
+                          selected={pkg.id === effectiveId}
+                          onSelect={setSelectedId}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          }
+          detail={
+            selectedPkg ? (
+              <PackagePreview
+                name={selectedPkg.name}
+                subtitle={selectedPkg.notes}
+                archived={!!selectedPkg.archived_at}
+                category={categories.find((c) => c.id === selectedPkg.category_id) ?? null}
+                meta={<PackageCaption packageId={selectedPkg.id} updatedAt={selectedPkg.updated_at} />}
+                actions={
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => {
+                        setIsCreating(false)
+                        setEditingId(selectedPkg.id)
+                      }}
+                    >
+                      <Pencil size={14} strokeWidth={1.5} />
+                      Edit
                     </Button>
-                    <Button size="sm" onClick={openCreate}>
-                      New Package
-                    </Button>
-                  </div>
+                    <RowActionsMenu
+                      alwaysVisible
+                      actions={[
+                        {
+                          label: 'Duplicate',
+                          icon: <Copy size={15} strokeWidth={1.5} />,
+                          onSelect: () => duplicateMutation.mutate(selectedPkg),
+                        },
+                        {
+                          label: selectedPkg.archived_at ? 'Unarchive' : 'Archive',
+                          icon: selectedPkg.archived_at ? (
+                            <ArchiveRestore size={15} strokeWidth={1.5} />
+                          ) : (
+                            <Archive size={15} strokeWidth={1.5} />
+                          ),
+                          onSelect: () => archiveMutation.mutate(selectedPkg),
+                        },
+                        {
+                          label: 'Delete',
+                          destructive: true,
+                          icon: <Trash2 size={15} strokeWidth={1.5} />,
+                          onSelect: () => setConfirmDeleteId(selectedPkg.id),
+                        },
+                      ]}
+                    />
+                  </>
                 }
+                items={allItems?.[selectedPkg.id] ?? []}
+                description={selectedPkg.description}
+                depositPercent={selectedPkg.deposit_percent}
+                gstInclusive={selectedPkg.gst_inclusive ?? true}
+                weekendLoadingPercent={selectedPkg.weekend_loading_percent}
               />
             ) : (
-              localPackages.map((pkg) => (
-                <PackageRow
-                  key={pkg.id}
-                  pkg={pkg}
-                  onEdit={(id) => {
-                    setIsCreating(false)
-                    setEditingId(id)
-                  }}
-                  onDelete={(id) => deleteMutation.mutate(id)}
-                />
-              ))
-            )}
-          </div>
-        </SortableContext>
-      </DndContext>
+              <div className="flex h-full items-center justify-center pb-[10vh]">
+                <p className="text-sm text-text-subtle">Select a package to preview.</p>
+              </div>
+            )
+          }
+        />
+      )}
     </div>
   )
 }

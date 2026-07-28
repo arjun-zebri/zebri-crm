@@ -1,8 +1,13 @@
 'use client'
 
+import { createBrowserClient } from '@supabase/ssr'
 import { Upload, FileText, Trash2, Loader2, Download, Image } from 'lucide-react'
 import { useState, useRef } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
+
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 
 import type { PortalFile } from './page'
 
@@ -16,12 +21,12 @@ function anonSupabase() {
 /**
  * Returns the appropriate icon for a file based on its extension.
  */
-function getFileIcon(filename: string) {
+function getFileIcon(filename: string, color: string) {
   const ext = filename.split('.').pop()?.toLowerCase() ?? ''
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
-    return <Image size={16} strokeWidth={1.5} className="text-text-muted" />
+    return <Image size={16} strokeWidth={1.5} style={{ color }} />
   }
-  return <FileText size={16} strokeWidth={1.5} className="text-text-muted" />
+  return <FileText size={16} strokeWidth={1.5} style={{ color }} />
 }
 
 function formatSize(bytes: number | null): string {
@@ -34,13 +39,17 @@ function formatSize(bytes: number | null): string {
 interface FilesSectionProps {
   token: string
   initialFiles: PortalFile[]
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
-export function FilesSection({ token, initialFiles }: FilesSectionProps) {
+export function FilesSection({ token, initialFiles, branding }: FilesSectionProps) {
   const [files, setFiles] = useState<PortalFile[]>(initialFiles)
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const bodyDefaults = roleDefaults(branding, 'body')
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
 
   const uploadFile = async (file: File) => {
     setUploading(true)
@@ -90,13 +99,13 @@ export function FilesSection({ token, initialFiles }: FilesSectionProps) {
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`block border-2 border-dashed rounded-card px-6 py-8 text-center cursor-pointer transition ${
-          dragOver
-            ? 'border-brand-fg bg-surface-emphasis'
-            : uploading
-              ? 'border-border opacity-60 pointer-events-none'
-              : 'border-border hover:border-border-strong hover:bg-surface-muted'
-        }`}
+        className="block rounded-card px-6 py-8 text-center cursor-pointer transition border-2 border-dashed"
+        style={{
+          borderColor: dragOver ? branding.brand_color : branding.border_color,
+          backgroundColor: dragOver ? `${branding.brand_color}10` : 'transparent',
+          opacity: uploading ? 0.6 : 1,
+          pointerEvents: uploading ? 'none' : 'auto',
+        }}
       >
         <input
           ref={inputRef}
@@ -107,16 +116,44 @@ export function FilesSection({ token, initialFiles }: FilesSectionProps) {
         />
         {uploading ? (
           <div className="flex flex-col items-center gap-2">
-            <Loader2 size={20} strokeWidth={1.5} className="animate-spin text-text-muted" />
-            <p className="text-body text-text-muted">Uploading…</p>
+            <Loader2 size={20} strokeWidth={1.5} className="animate-spin" style={{ color: finePrintDefaults.color }} />
+            <p
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
+            >
+              Uploading...
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <Upload size={20} strokeWidth={1.5} className={dragOver ? 'text-brand-fg' : 'text-text-subtle'} />
-            <p className="text-body text-text-muted">
+            <Upload size={20} strokeWidth={1.5} style={{ color: dragOver ? branding.brand_color : finePrintDefaults.color }} />
+            <p
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
+            >
               {dragOver ? 'Drop file here' : <>Drop a file here or <span className="hidden md:inline">click to upload</span><span className="md:hidden">tap to upload</span></>}
             </p>
-            <p className="text-caption text-text-subtle">Up to 20 MB per file.</p>
+            <p
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                fontWeight: finePrintDefaults.fontWeight,
+                lineHeight: finePrintDefaults.lineHeight,
+              }}
+            >
+              Up to 20 MB per file.
+            </p>
           </div>
         )}
       </label>
@@ -127,28 +164,57 @@ export function FilesSection({ token, initialFiles }: FilesSectionProps) {
           {files.map((file) => (
             <div
               key={file.id}
-              className="flex items-center gap-3 border border-border rounded-card px-4 py-3 bg-surface hover:bg-surface-muted transition"
+              className="flex items-center gap-3 rounded-card px-4 py-3 transition hover:opacity-80"
+              style={{
+                border: `1px solid ${branding.border_color}`,
+                backgroundColor: branding.surface_color,
+              }}
             >
-              {getFileIcon(file.name)}
+              {getFileIcon(file.name, finePrintDefaults.color)}
               <div className="flex-1 min-w-0">
-                <p className="text-body text-text truncate">{file.name}</p>
+                <p
+                  className="truncate"
+                  style={{
+                    fontSize: `${bodyDefaults.fontSize}px`,
+                    color: bodyDefaults.color,
+                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                    fontWeight: bodyDefaults.fontWeight,
+                    lineHeight: bodyDefaults.lineHeight,
+                  }}
+                >
+                  {file.name}
+                </p>
                 {file.file_size && (
-                  <p className="text-caption text-text-subtle">{formatSize(file.file_size)}</p>
+                  <p
+                    style={{
+                      fontSize: `${finePrintDefaults.fontSize}px`,
+                      color: finePrintDefaults.color,
+                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                      fontWeight: finePrintDefaults.fontWeight,
+                      lineHeight: finePrintDefaults.lineHeight,
+                    }}
+                  >
+                    {formatSize(file.file_size)}
+                  </p>
                 )}
               </div>
               <a
                 href={file.file_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2.5 text-text-subtle hover:text-text-muted transition cursor-pointer shrink-0"
+                className="p-2.5 transition cursor-pointer shrink-0 hover:opacity-60"
                 title="Download"
+                style={{ color: finePrintDefaults.color }}
               >
                 <Download size={16} strokeWidth={1.5} />
               </a>
               <button
                 onClick={() => deleteFile(file.id)}
-                className="p-2.5 text-text-subtle hover:text-danger transition cursor-pointer shrink-0"
+                className="p-2.5 transition cursor-pointer shrink-0 hover:opacity-60"
                 title="Remove"
+                style={{ color: finePrintDefaults.color }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = STATUS_COLORS.error }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = finePrintDefaults.color }}
               >
                 <Trash2 size={16} strokeWidth={1.5} />
               </button>

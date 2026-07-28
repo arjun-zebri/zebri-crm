@@ -58,8 +58,12 @@ export function ContractBrandedCard({
 
   return (
     <div
-      className="bg-surface shadow-sm border border-border overflow-hidden"
-      style={{ borderRadius: radius }}
+      className="shadow-sm border overflow-hidden"
+      style={{
+        backgroundColor: contract.surface_color,
+        borderRadius: radius,
+        borderColor: contract.border_color,
+      }}
     >
       {preBlocks.length > 0 ? (
         <PublicBlockRenderer
@@ -68,6 +72,9 @@ export function ContractBrandedCard({
           doc={{
             title: contract.title,
             refNumber: contract.contract_number,
+            coupleName: contract.couple_name,
+            eventDate: contract.event_date,
+            venue: contract.venue,
             expiresAt: contract.expires_at,
             items: [],
             subtotal: 0,
@@ -78,7 +85,8 @@ export function ContractBrandedCard({
       ) : null}
 
       <div
-        className={`${pad.cardSection} space-y-8 border-t border-border`}
+        className={`${pad.cardSection} space-y-8 border-t`}
+        style={{ borderTopColor: contract.border_color }}
       >
         <ContractBodySection
           contract={contract}
@@ -95,6 +103,9 @@ export function ContractBrandedCard({
           doc={{
             title: contract.title,
             refNumber: contract.contract_number,
+            coupleName: contract.couple_name,
+            eventDate: contract.event_date,
+            venue: contract.venue,
             expiresAt: contract.expires_at,
             items: [],
             subtotal: 0,

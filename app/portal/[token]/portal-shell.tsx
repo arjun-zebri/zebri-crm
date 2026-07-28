@@ -1,9 +1,12 @@
 'use client'
 
-import { LayoutDashboard, Users2, Clock, Music, FileText, FileSignature, Receipt, Heart } from 'lucide-react'
+import { LayoutDashboard, Users2, Clock, Music, FileText, FileSignature, Receipt, Heart, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
 
 import { PortalSectionNav } from '@/app/(dashboard)/couples/portal-section-nav'
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 
 import { ContactsSection } from './contacts-section'
 import { ContractsSection } from './contracts-section'
@@ -11,6 +14,7 @@ import { FilesSection } from './files-section'
 import { OverviewSection } from './overview-section'
 import type { PortalData } from './page'
 import { PaymentsSection } from './payments-section'
+import { QuestionnairesSection } from './questionnaires-section'
 import { SongsSection } from './songs-section'
 import { TimelineSection } from './timeline-section'
 import { VowsSection } from './vows-section'
@@ -21,6 +25,7 @@ const ALL_SECTIONS = [
   { id: 'contacts', label: 'Contacts', icon: <Users2 />, subtitle: 'Your wedding party and vendor contacts' },
   { id: 'payments', label: 'Payments', icon: <Receipt />, subtitle: 'Quotes and invoices' },
   { id: 'contracts', label: 'Contracts', icon: <FileSignature />, subtitle: 'Review and sign your agreements' },
+  { id: 'questionnaires', label: 'Questionnaires', icon: <ClipboardList />, subtitle: 'A few questions to help plan your day' },
   { id: 'songs', label: 'Songs', icon: <Music />, subtitle: 'Music for each part of your ceremony and reception' },
   { id: 'files', label: 'Files', icon: <FileText />, subtitle: 'Contracts, seating charts, photos. Anything your MC needs.' },
   { id: 'vows', label: 'Vows', icon: <Heart />, subtitle: 'Write your vows for the ceremony' },
@@ -29,13 +34,28 @@ const ALL_SECTIONS = [
 interface PortalShellProps {
   token: string
   initialData: PortalData
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
-export function PortalShell({ token, initialData }: PortalShellProps) {
+export function PortalShell({ token, initialData, branding }: PortalShellProps) {
+  // Type scale from branding.
+  const sectionHeadingDefaults = roleDefaults(branding, 'sectionHeading')
+  const bodyDefaults = roleDefaults(branding, 'body')
+
   const enabledSections = initialData.enabled_sections
+  // Questionnaires is a newer section, so it won't appear in an MC's saved
+  // enabled-sections list yet. Surface it whenever the couple actually has one
+  // so a sent questionnaire is never hidden.
+  const hasQuestionnaires = (initialData.questionnaires?.length ?? 0) > 0
   const SECTIONS = enabledSections === null || enabledSections === undefined
     ? ALL_SECTIONS
-    : ALL_SECTIONS.filter(s => s.id === 'overview' || enabledSections.includes(s.id))
+    : ALL_SECTIONS.filter(
+        (s) =>
+          s.id === 'overview' ||
+          enabledSections.includes(s.id) ||
+          (s.id === 'questionnaires' && hasQuestionnaires),
+      )
 
   const [activeSection, setActiveSection] = useState('overview')
   const active = SECTIONS.find((s) => s.id === activeSection) ?? SECTIONS[0]
@@ -50,8 +70,9 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
           count: s.id === 'overview' ? initialData.events.length
             : s.id === 'timeline' ? initialData.timeline_items.length
             : s.id === 'contacts' ? initialData.contacts.length + initialData.people.length
-            : s.id === 'payments' ? (initialData.payments.quotes.length + initialData.payments.invoices.length)
+            : s.id === 'payments' ? ((initialData.payments.proposals?.length || 0) + initialData.payments.invoices.length)
             : s.id === 'contracts' ? (initialData.contracts?.length ?? 0)
+            : s.id === 'questionnaires' ? (initialData.questionnaires?.length ?? 0)
             : s.id === 'songs' ? initialData.songs.length
             : s.id === 'files' ? initialData.files.length
             : s.id === 'vows' ? initialData.vows.length
@@ -63,8 +84,30 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
 
       <div className="flex-1 min-w-0">
         <div className="mb-5">
-          <h2 className="text-lg font-semibold text-text">{active.label}</h2>
-          <p className="text-sm text-text-muted mt-0.5">{active.subtitle}</p>
+          <h2
+            className="font-semibold"
+            style={{
+              fontSize: `${sectionHeadingDefaults.fontSize}px`,
+              color: sectionHeadingDefaults.color,
+              fontFamily: FONT_STACKS[sectionHeadingDefaults.fontFamily as never],
+              fontWeight: sectionHeadingDefaults.fontWeight,
+              lineHeight: sectionHeadingDefaults.lineHeight,
+            }}
+          >
+            {active.label}
+          </h2>
+          <p
+            className="mt-0.5"
+            style={{
+              fontSize: `${bodyDefaults.fontSize}px`,
+              color: bodyDefaults.color,
+              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+              fontWeight: bodyDefaults.fontWeight,
+              lineHeight: bodyDefaults.lineHeight,
+            }}
+          >
+            {active.subtitle}
+          </p>
         </div>
 
         {activeSection === 'overview' && (
@@ -81,6 +124,7 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
               phone: initialData.secondary_phone ?? '',
             }}
             events={initialData.events}
+            branding={branding}
           />
         )}
         {activeSection === 'timeline' && (
@@ -89,22 +133,26 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
             initialItems={initialData.timeline_items}
             events={initialData.events}
             hasEvent={!!initialData.event}
+            branding={branding}
           />
         )}
         {activeSection === 'contacts' && (
-          <ContactsSection token={token} initialContacts={initialData.contacts} initialPeople={initialData.people} />
+          <ContactsSection token={token} initialContacts={initialData.contacts} initialPeople={initialData.people} branding={branding} />
         )}
         {activeSection === 'payments' && (
-          <PaymentsSection payments={initialData.payments} />
+          <PaymentsSection payments={initialData.payments} branding={branding} />
         )}
         {activeSection === 'contracts' && (
-          <ContractsSection contracts={initialData.contracts ?? []} />
+          <ContractsSection contracts={initialData.contracts ?? []} branding={branding} />
+        )}
+        {activeSection === 'questionnaires' && (
+          <QuestionnairesSection questionnaires={initialData.questionnaires ?? []} branding={branding} />
         )}
         {activeSection === 'songs' && (
-          <SongsSection token={token} initialSongs={initialData.songs} initialCategories={initialData.song_categories} />
+          <SongsSection token={token} initialSongs={initialData.songs} initialCategories={initialData.song_categories} branding={branding} />
         )}
         {activeSection === 'files' && (
-          <FilesSection token={token} initialFiles={initialData.files} />
+          <FilesSection token={token} initialFiles={initialData.files} branding={branding} />
         )}
         {activeSection === 'vows' && (
           <VowsSection
@@ -113,6 +161,7 @@ export function PortalShell({ token, initialData }: PortalShellProps) {
             viewer={initialData.viewer}
             primaryName={initialData.primary_name}
             secondaryName={initialData.secondary_name}
+            branding={branding}
           />
         )}
       </div>

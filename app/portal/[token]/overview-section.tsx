@@ -3,6 +3,11 @@
 import { Check, Loader2, Plus } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
+import { FONT_STACKS } from '@/lib/branding/fonts'
+import type { PublicBranding } from '@/lib/branding/public-surface'
+import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { roleDefaults } from '@/lib/branding/type-defaults'
 import { createClient } from '@/lib/supabase/client'
 
 import { ContactDetailsCard, type ContactTriple } from './contact-details-card'
@@ -17,6 +22,8 @@ interface OverviewSectionProps {
   /** Persisted secondary partner contact triple. */
   secondary: ContactTriple
   events: PortalEvent[]
+  /** Global branding for type scale, colours, and fonts. */
+  branding: PublicBranding
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -26,12 +33,12 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
  * timeline of the couple's events.
  *
  * Either partner can edit both triples (no privacy boundary on contact
- * info — vow privacy is handled separately). Each field commits on blur;
+ * info - vow privacy is handled separately). Each field commits on blur;
  * we persist the whole couple-details set in one RPC call and surface a
  * lightweight Saving / Saved / error affordance. Borderless throughout to
  * match the couple-modal Overview.
  */
-export function OverviewSection({ token, primary, secondary, events }: OverviewSectionProps) {
+export function OverviewSection({ token, primary, secondary, events, branding }: OverviewSectionProps) {
   const supabase = createClient()
   const [primaryTriple, setPrimaryTriple] = useState<ContactTriple>(primary)
   const [secondaryTriple, setSecondaryTriple] = useState<ContactTriple>(secondary)
@@ -103,16 +110,31 @@ export function OverviewSection({ token, primary, secondary, events }: OverviewS
     setEditingEvent(null)
   }
 
+  const labelDefaults = roleDefaults(branding, 'sectionLabel')
+  const labelColor = labelDefaults.color
+
   return (
     <div className="max-w-xl space-y-10">
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-caption font-semibold uppercase tracking-wider text-text">Your details</h3>
-          <SaveIndicator status={status} />
+          <h3
+            style={{
+              fontSize: `${labelDefaults.fontSize}px`,
+              color: labelColor,
+              fontFamily: FONT_STACKS[labelDefaults.fontFamily as never],
+              fontWeight: labelDefaults.fontWeight,
+              lineHeight: labelDefaults.lineHeight,
+              letterSpacing: `${labelDefaults.letterSpacing}px`,
+              textTransform: cssTextTransform(labelDefaults.textTransform),
+            }}
+          >
+            {applyCase('Your details', labelDefaults.textTransform)}
+          </h3>
+          <SaveIndicator status={status} branding={branding} />
         </div>
         <div className="space-y-4">
-          <ContactDetailsCard label="Primary contact" value={primaryTriple} onSave={savePrimary} />
-          <ContactDetailsCard label="Secondary contact" value={secondaryTriple} onSave={saveSecondary} />
+          <ContactDetailsCard label="Primary contact" value={primaryTriple} onSave={savePrimary} branding={branding} />
+          <ContactDetailsCard label="Secondary contact" value={secondaryTriple} onSave={saveSecondary} branding={branding} />
         </div>
       </div>
 
@@ -122,10 +144,23 @@ export function OverviewSection({ token, primary, secondary, events }: OverviewS
           onClick={openAddEvent}
           className="group flex items-center gap-1.5 mb-4 cursor-pointer"
         >
-          <h3 className="text-caption font-semibold uppercase tracking-wider text-text group-hover:text-text-muted transition">Events</h3>
-          <Plus size={13} strokeWidth={2} className="text-text group-hover:text-text-muted transition" />
+          <h3
+            className="group-hover:opacity-75 transition"
+            style={{
+              fontSize: `${labelDefaults.fontSize}px`,
+              color: labelColor,
+              fontFamily: FONT_STACKS[labelDefaults.fontFamily as never],
+              fontWeight: labelDefaults.fontWeight,
+              lineHeight: labelDefaults.lineHeight,
+              letterSpacing: `${labelDefaults.letterSpacing}px`,
+              textTransform: cssTextTransform(labelDefaults.textTransform),
+            }}
+          >
+            {applyCase('Events', labelDefaults.textTransform)}
+          </h3>
+          <Plus size={13} strokeWidth={1.5} style={{ color: labelColor }} className="group-hover:opacity-75 transition" />
         </button>
-        <EventsList events={eventList} onAdd={openAddEvent} onEdit={openEditEvent} />
+        <EventsList events={eventList} onAdd={openAddEvent} onEdit={openEditEvent} branding={branding} />
       </div>
 
       {eventModalOpen && (
@@ -135,6 +170,7 @@ export function OverviewSection({ token, primary, secondary, events }: OverviewS
           onSave={handleSaveEvent}
           event={editingEvent}
           saving={savingEvent}
+          branding={branding}
         />
       )}
     </div>
@@ -142,25 +178,57 @@ export function OverviewSection({ token, primary, secondary, events }: OverviewS
 }
 
 /** Inline Saving / Saved / error affordance beside the details heading. */
-function SaveIndicator({ status }: { status: SaveStatus }) {
+function SaveIndicator({ status, branding }: { status: SaveStatus; branding: PublicBranding }) {
+  const finePrintDefaults = roleDefaults(branding, 'finePrint')
+
   if (status === 'saving') {
     return (
-      <span className="flex items-center gap-1.5 text-caption text-text-subtle">
+      <span
+        className="flex items-center gap-1.5"
+        style={{
+          fontSize: `${finePrintDefaults.fontSize}px`,
+          color: finePrintDefaults.color,
+          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+          fontWeight: finePrintDefaults.fontWeight,
+          lineHeight: finePrintDefaults.lineHeight,
+        }}
+      >
         <Loader2 size={13} strokeWidth={1.5} className="animate-spin" />
-        Saving…
+        Saving...
       </span>
     )
   }
   if (status === 'saved') {
     return (
-      <span className="flex items-center gap-1.5 text-caption text-success">
+      <span
+        className="flex items-center gap-1.5"
+        style={{
+          fontSize: `${finePrintDefaults.fontSize}px`,
+          color: STATUS_COLORS.success,
+          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+          fontWeight: finePrintDefaults.fontWeight,
+          lineHeight: finePrintDefaults.lineHeight,
+        }}
+      >
         <Check size={13} strokeWidth={1.5} />
         Saved
       </span>
     )
   }
   if (status === 'error') {
-    return <span className="text-caption text-danger">Couldn’t save — try again</span>
+    return (
+      <span
+        style={{
+          fontSize: `${finePrintDefaults.fontSize}px`,
+          color: STATUS_COLORS.error,
+          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+          fontWeight: finePrintDefaults.fontWeight,
+          lineHeight: finePrintDefaults.lineHeight,
+        }}
+      >
+        Couldn&apos;t save - try again
+      </span>
+    )
   }
   return null
 }

@@ -35,7 +35,7 @@ export interface BuilderPreviewPaneProps {
   /** Used by the payment-page tab to load the right block tree +
    *  default fonts. Quote builder passes 'quote'; invoice
    *  'invoice'; contract 'contract'. */
-  surface: 'quote' | 'invoice' | 'contract';
+  surface: 'proposal' | 'invoice' | 'contract';
   /** Couple's email for the "To:" line of the email preview.
    *  Optional — when missing the preview shows a placeholder. */
   coupleEmail?: string | null | undefined;

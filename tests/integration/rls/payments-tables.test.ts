@@ -2,22 +2,23 @@
  * Phase 2C — cross-tenant RLS proof for the payments surface.
  *
  * Two test users, one anon client each. User A arranges fixtures
- * (a quote with a line item, an invoice with a line item, a quote
- * template with a template item) + we upsert User A's stripe_customers
+ * (an invoice with a line item) + we upsert User A's stripe_customers
  * row via the service-role client (the table itself has RLS enabled
  * with no policy — client access is denied for everyone, including
  * the owner — and the webhook is the only legitimate writer). Then
  * User B's client attempts to read / write / delete every row and
  * we assert it can't see / change anything.
  *
- * Covers the 7 payments tables called out in [[phase_2_payments]] §5:
- *   - quotes
- *   - quote_items
- *   - quote_templates
- *   - quote_template_items
+ * Covers:
  *   - invoices
  *   - invoice_items
  *   - stripe_customers
+ *
+ * The quote tables this suite used to cover were dropped with the
+ * proposals rollout; the successor tables' cross-tenant denial lives
+ * in `tests/integration/payments/public-proposal-rpcs.test.ts`
+ * (proposals / proposal_options / proposal_option_items) and
+ * `tests/integration/templates/packages-v2.test.ts` (provenance).
  *
  * This locks in the §5 DoD RLS-matrix tick for the /payments page.
  */
@@ -31,12 +32,8 @@ describe('RLS: payments-surface tenant isolation', () => {
 
   // Owned by userA.
   let coupleAId: string;
-  let quoteAId: string;
-  let quoteItemAId: string;
   let invoiceAId: string;
   let invoiceItemAId: string;
-  let templateAId: string;
-  let templateItemAId: string;
 
   // The Pro plan clears the starter 5-couple cap so insert-tests
   // don't trip on it. RLS itself is plan-agnostic.
@@ -46,7 +43,7 @@ describe('RLS: payments-surface tenant isolation', () => {
     userA = await createTestUser({}, { account_type: 'vendor', ...pro });
     userB = await createTestUser({}, { account_type: 'vendor', ...pro });
 
-    // Couple is the parent for quotes + invoices.
+    // Couple is the parent for invoices.
     const { data: couple, error: cErr } = await userA.client
       .from('couples')
       .insert({ user_id: userA.id, name: 'A Couple', status: 'new' })
@@ -54,37 +51,6 @@ describe('RLS: payments-surface tenant isolation', () => {
       .single();
     expect(cErr).toBeNull();
     coupleAId = couple!.id;
-
-    // Quote + quote_item. `share_token` has a uuid default so we
-    // leave it unset to avoid clashing with the seed.
-    const { data: quote, error: qErr } = await userA.client
-      .from('quotes')
-      .insert({
-        user_id: userA.id,
-        couple_id: coupleAId,
-        title: 'Wedding Quote',
-        quote_number: 'Q-A-001',
-        status: 'draft',
-        subtotal: 5000,
-      })
-      .select('id')
-      .single();
-    expect(qErr).toBeNull();
-    quoteAId = quote!.id;
-
-    const { data: qi, error: qiErr } = await userA.client
-      .from('quote_items')
-      .insert({
-        user_id: userA.id,
-        quote_id: quoteAId,
-        description: 'Ceremony',
-        amount: 5000,
-        position: 0,
-      })
-      .select('id')
-      .single();
-    expect(qiErr).toBeNull();
-    quoteItemAId = qi!.id;
 
     // Invoice + invoice_item.
     const { data: invoice, error: iErr } = await userA.client
@@ -118,32 +84,6 @@ describe('RLS: payments-surface tenant isolation', () => {
     expect(iiErr).toBeNull();
     invoiceItemAId = ii!.id;
 
-    // Quote template + template_item.
-    const { data: tpl, error: tErr } = await userA.client
-      .from('quote_templates')
-      .insert({
-        user_id: userA.id,
-        name: 'Standard',
-      })
-      .select('id')
-      .single();
-    expect(tErr).toBeNull();
-    templateAId = tpl!.id;
-
-    const { data: ti, error: tiErr } = await userA.client
-      .from('quote_template_items')
-      .insert({
-        user_id: userA.id,
-        template_id: templateAId,
-        description: 'Reception',
-        amount: 3000,
-        position: 0,
-      })
-      .select('id')
-      .single();
-    expect(tiErr).toBeNull();
-    templateItemAId = ti!.id;
-
     // stripe_customers is service-role only — write directly with
     // the admin client (this mirrors what the webhook handler does
     // in production).
@@ -157,73 +97,6 @@ describe('RLS: payments-surface tenant isolation', () => {
   afterAll(async () => {
     await userA?.cleanup();
     await userB?.cleanup();
-  });
-
-  /* ─── quotes ───────────────────────────────────────────────── */
-
-  it('quotes: User B cannot SELECT User A row', async () => {
-    const { data } = await userB.client.from('quotes').select('id').eq('id', quoteAId);
-    expect(data).toEqual([]);
-  });
-
-  it('quotes: User B UPDATE silently affects 0 rows', async () => {
-    const { error } = await userB.client
-      .from('quotes')
-      .update({ title: 'Hijacked' })
-      .eq('id', quoteAId);
-    expect(error).toBeNull();
-    // Confirm User A's title is unchanged.
-    const { data } = await userA.client.from('quotes').select('title').eq('id', quoteAId).single();
-    expect(data?.title).toBe('Wedding Quote');
-  });
-
-  it('quotes: User B DELETE silently affects 0 rows', async () => {
-    await userB.client.from('quotes').delete().eq('id', quoteAId);
-    const { data } = await userA.client.from('quotes').select('id').eq('id', quoteAId);
-    expect(data).toHaveLength(1);
-  });
-
-  /* ─── quote_items ──────────────────────────────────────────── */
-
-  it('quote_items: User B cannot SELECT User A row', async () => {
-    const { data } = await userB.client
-      .from('quote_items')
-      .select('id')
-      .eq('id', quoteItemAId);
-    expect(data).toEqual([]);
-  });
-
-  it('quote_items: User B INSERT for User A row is blocked by the user_id check', async () => {
-    // Even if User B forges User A's quote_id, RLS demands
-    // user_id = auth.uid() — so the INSERT fails.
-    const { error } = await userB.client.from('quote_items').insert({
-      user_id: userA.id, // attempt to spoof
-      quote_id: quoteAId,
-      description: 'Injected',
-      amount: 1,
-      position: 99,
-    });
-    expect(error).not.toBeNull();
-  });
-
-  /* ─── quote_templates ──────────────────────────────────────── */
-
-  it('quote_templates: User B cannot SELECT User A row', async () => {
-    const { data } = await userB.client
-      .from('quote_templates')
-      .select('id')
-      .eq('id', templateAId);
-    expect(data).toEqual([]);
-  });
-
-  /* ─── quote_template_items ─────────────────────────────────── */
-
-  it('quote_template_items: User B cannot SELECT User A row', async () => {
-    const { data } = await userB.client
-      .from('quote_template_items')
-      .select('id')
-      .eq('id', templateItemAId);
-    expect(data).toEqual([]);
   });
 
   /* ─── invoices ─────────────────────────────────────────────── */

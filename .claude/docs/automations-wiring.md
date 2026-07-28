@@ -54,6 +54,7 @@ unhides it). Order is value-first.
 |   ☑    | P1  | `couple_uploaded_file`          | Shipped — AFTER INSERT trigger on `portal_files` (migration `20260615000000`). file_type/section/size filters dropped |
 |   ☑    | P2  | `couple_added_song_to_playlist` | Shipped — AFTER INSERT trigger on `portal_songs` (migration `20260615000000`). playlistKey/songCount filters dropped |
 |   ☑    | P3  | `couple_completed_vows`         | Shipped — full vows feature (migration `20260615000100`): `vows` table + RLS + `save_portal_vow` RPC + DB-trigger event + couple portal section + MC settings toggle. `who` filter (primary/spouse) |
+|   ☑    | P4  | `questionnaire_completed`       | Shipped — AFTER UPDATE trigger on `couple_questionnaires` (migration `20260705000000`) fires on the status flip to `completed` (public submit or MC marking done). Optional `questionnaireTemplateId` filter; payload carries template_id/title/share_token so `{{questionnaire.title}}` / `{{questionnaire.link}}` resolve |
 |   ☑    | AC1 | `generate_run_sheet_pdf`        | Shipped — emails the run-sheet (timeline) link instead of a server PDF (no PDF stack). Best-effort email + returns the link |
 |   ☑    | AC2 | `create_invoice_from_quote`     | Shipped — drafts a `draft` invoice + line items from a quote; `paymentSchedule` seeds the deposit (50% default) |
 

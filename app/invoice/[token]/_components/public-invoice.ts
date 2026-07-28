@@ -35,6 +35,8 @@ export interface PublicInvoice extends PublicBranding {
   notes: string | null;
   paid_at: string | null;
   couple_name: string;
+  event_date: string | null;
+  venue: string | null;
   bank_account_name: string | null;
   bank_bsb: string | null;
   bank_account_number: string | null;

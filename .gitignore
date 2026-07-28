@@ -51,3 +51,12 @@ supabase/.temp/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Superpowers SDD session scratch
+.superpowers/
+
+# Celebrant register scrape: personal contact details of ~10k real people.
+# Never track; regenerate locally with `npm run scrape:celebrants`.
+scripts/celebrants/.cache/
+scripts/celebrants/out/
+.claude/worktrees/

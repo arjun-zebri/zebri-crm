@@ -23,7 +23,7 @@ function automation(overrides: Partial<AutomationRow>): AutomationRow {
     user_id: 'u',
     name: overrides.name ?? 'Quote follow-up',
     description: null,
-    trigger_type: (overrides.trigger_type ?? 'quote_accepted') as never,
+    trigger_type: (overrides.trigger_type ?? 'proposal_accepted') as never,
     trigger_config: {} as never,
     status: overrides.status ?? 'active',
     template_slug: null,
@@ -110,7 +110,7 @@ describe('buildHomePayload', () => {
     expect(row.runCount).toBe(2)
     expect(row.lastFiredAt).toBe('2026-06-04T10:00:00Z')
     expect(row.nextWakeAt).toBe('2026-06-10T09:00:00Z')
-    expect(row.triggerLabel).toBe('Quote accepted')
+    expect(row.triggerLabel).toBe('Proposal accepted')
   })
 
   it('couples-in-flows: groups by couple, sorts by soonest wake', () => {

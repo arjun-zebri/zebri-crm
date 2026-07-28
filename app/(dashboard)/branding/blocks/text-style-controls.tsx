@@ -2,6 +2,7 @@
 
 import * as Popover from '@radix-ui/react-popover'
 import { AlignLeft, AlignCenter, AlignRight, Italic, Underline, Type, ChevronDown } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { ColorPopover } from '@/components/ui/color-popover'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -16,13 +17,26 @@ import {
   type BodyFont,
   type FontWeight,
 } from '@/lib/branding/fonts'
+import type { TextCase } from '@/lib/branding/text-case'
 
 import { Select, type SelectOption } from '../components/select'
 import { Slider } from '../components/slider'
 
 
+
 import { TEXT_COLOR_PRESETS, type TextStyleDefaults } from './text-style'
-import type { TextStyle, TextAlign } from './types'
+import type { TextStyle } from './types'
+
+/** Case options for the block-level toolbar, sharing the rail's glyph +
+ *  wording so the two capitalisation controls read identically. 'None' keeps
+ *  a per-block escape hatch (unlike the global rail, which has no as-typed). */
+const CASE_OPTIONS: Array<{ id: TextCase; glyph: string; tooltip: string }> = [
+  { id: 'none', glyph: 'As', tooltip: 'As typed' },
+  { id: 'sentence', glyph: 'Aa', tooltip: 'Capitalise first letter' },
+  { id: 'capitalize', glyph: 'Ab', tooltip: 'Capitalise each word' },
+  { id: 'uppercase', glyph: 'AA', tooltip: 'Uppercase' },
+  { id: 'lowercase', glyph: 'aa', tooltip: 'Lowercase' },
+]
 
 interface TextStyleControlsProps {
   style: TextStyle | undefined
@@ -30,6 +44,9 @@ interface TextStyleControlsProps {
   onChange: (patch: TextStyle) => void
   fontKind?: 'heading' | 'body' | 'all'
   expanded?: boolean
+  /** Optional control rendered immediately after the text colour picker (e.g.
+   *  the block background colour), so the two colour controls sit together. */
+  bgSlot?: ReactNode
 }
 
 export function TextStyleControls({
@@ -38,6 +55,7 @@ export function TextStyleControls({
   onChange,
   fontKind = 'all',
   expanded = false,
+  bgSlot,
 }: TextStyleControlsProps) {
   const eff = {
     fontFamily: style?.fontFamily ?? defaults.fontFamily,
@@ -49,6 +67,7 @@ export function TextStyleControls({
     letterSpacing: style?.letterSpacing ?? defaults.letterSpacing,
     italic: style?.italic ?? false,
     underline: style?.underline ?? false,
+    textTransform: style?.textTransform ?? defaults.textTransform ?? 'none',
   }
 
   const fontOptions: SelectOption<HeadingFont | BodyFont>[] = Array.from(
@@ -62,11 +81,12 @@ export function TextStyleControls({
   return (
     <div className="flex items-center gap-1">
       {/* Font family */}
-      <div className="w-[140px] shrink-0">
+      <div className="w-[120px] shrink-0">
         <Select<HeadingFont | BodyFont>
           value={eff.fontFamily}
           options={fontOptions}
           onChange={(v) => onChange({ fontFamily: v })}
+          size="xs"
         />
       </div>
 
@@ -141,24 +161,28 @@ export function TextStyleControls({
         </>
       )}
 
-      {/* Color */}
-      <ColorPopover
-        value={eff.color}
-        onChange={(v) => onChange({ color: v })}
-        swatches={TEXT_COLOR_PRESETS}
-        trigger={
-          <button
-            type="button"
-            title="Text color"
-            className="inline-flex items-center gap-1 px-1.5 h-8 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
-          >
-            <span
-              className="w-4 h-4 rounded ring-1 ring-black/10"
-              style={{ background: eff.color }}
-            />
-          </button>
-        }
-      />
+      {/* Color — Tooltip wraps the whole ColorPopover so the hover label works
+          without breaking the trigger's open-onClick. */}
+      <Tooltip label="Text colour">
+        <ColorPopover
+          value={eff.color}
+          onChange={(v) => onChange({ color: v })}
+          swatches={TEXT_COLOR_PRESETS}
+          trigger={
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 px-1.5 h-8 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200"
+            >
+              <span
+                className="w-4 h-4 rounded ring-1 ring-black/10"
+                style={{ background: eff.color }}
+              />
+            </button>
+          }
+        />
+      </Tooltip>
+
+      {bgSlot}
 
       <Divider />
 
@@ -203,6 +227,25 @@ export function TextStyleControls({
             format={(v) => `${(v * 1000).toFixed(0)}`}
             onChange={(v) => onChange({ letterSpacing: v })}
           />
+          <Divider />
+          <div className="inline-flex items-center bg-gray-50 rounded-md border border-gray-200">
+            {CASE_OPTIONS.map((t) => (
+              <Tooltip key={t.id} label={t.tooltip}>
+                <button
+                  type="button"
+                  onClick={() => onChange({ textTransform: t.id })}
+                  aria-label={t.tooltip}
+                  className={`px-2 py-1 text-xs transition cursor-pointer ${
+                    eff.textTransform === t.id
+                      ? 'bg-white text-gray-900 shadow-sm rounded-md m-0.5 font-medium'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {t.glyph}
+                </button>
+              </Tooltip>
+            ))}
+          </div>
         </>
       )}
     </div>
@@ -258,7 +301,7 @@ function NumberStepper({
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - step))}
-        className="w-6 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-sm"
+        className="w-5 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-xs"
         aria-label="Decrease"
       >
         −
@@ -274,12 +317,12 @@ function NumberStepper({
           if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v)))
         }}
         aria-label={ariaLabel}
-        className="w-10 h-full text-xs text-center bg-transparent text-gray-900 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="w-8 h-full text-xs text-center bg-transparent text-gray-900 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + step))}
-        className="w-6 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-sm"
+        className="w-5 h-full text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition cursor-pointer text-xs"
         aria-label="Increase"
       >
         +
