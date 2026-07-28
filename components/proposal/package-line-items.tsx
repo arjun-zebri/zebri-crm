@@ -10,7 +10,7 @@
  */
 'use client'
 
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import { resolveTextStyle, caseText } from '@/app/(dashboard)/branding/blocks/text-style'
 import type { PackageLineItemsBlock } from '@/app/(dashboard)/branding/blocks/types'
@@ -34,9 +34,12 @@ import { useProposalBlock } from './proposal-block-context'
 export function PackageLineItems({
   block,
   variablePreview = false,
+  headingSlot,
 }: {
   block: PackageLineItemsBlock
   variablePreview?: boolean
+  /** Editor slot: an inline editor for the heading text. */
+  headingSlot?: ReactNode
 }) {
   const { options, chosenId, branding } = useProposalBlock()
 
@@ -56,8 +59,8 @@ export function PackageLineItems({
   const rowBorder = rowStyle === 'lines' ? 'border-b last:border-b-0' : ''
 
   const heading = (
-    <p className="pb-3 border-b" style={{ ...headerCss, borderBottomColor: branding.border_color }}>
-      {caseText('Included services', block.headerStyle, headerDefaults)}
+    <p data-subtarget="header" className="pb-3 border-b" style={{ ...headerCss, borderBottomColor: branding.border_color }}>
+      {headingSlot ?? caseText(block.heading || 'Included services', block.headerStyle, headerDefaults)}
     </p>
   )
 
@@ -68,7 +71,8 @@ export function PackageLineItems({
         {[0, 1].map((i) => (
           <div
             key={`ph-${i}`}
-            className={`flex justify-between items-start gap-4 ${p.rowY} ${rowBorder}`}
+            data-subtarget="item"
+            className={`flex justify-between items-start gap-4 ${p.rowY} ${rowBorder} mt-2 first:mt-0`}
             style={rowBorder ? { borderBottomColor: branding.border_color } : {}}
           >
             <div className="flex-1 min-w-0">
@@ -97,7 +101,8 @@ export function PackageLineItems({
       {baseItemsList.map((item) => (
         <div
           key={item.id}
-          className={`flex justify-between items-start gap-4 ${p.rowY} ${rowBorder}`}
+          data-subtarget="item"
+          className={`flex justify-between items-start gap-4 ${p.rowY} ${rowBorder} mt-2 first:mt-0`}
           style={rowBorder ? { borderBottomColor: branding.border_color } : {}}
         >
           <div className="flex-1 min-w-0 break-words">

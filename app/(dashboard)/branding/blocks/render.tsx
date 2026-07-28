@@ -1228,10 +1228,21 @@ export function RenderPackageDetails({ block, state }: RenderProps<PackageDetail
 }
 
 /** Editor preview for the packageLineItems block. */
-export function RenderPackageLineItems({ block, state }: RenderProps<PackageLineItemsBlock>) {
+export function RenderPackageLineItems({ block, state, updateBlock }: RenderProps<PackageLineItemsBlock>) {
   return (
     <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageLineItems block={block} variablePreview />
+      <PackageLineItems
+        block={block}
+        variablePreview
+        headingSlot={
+          <InlineText
+            value={block.heading || 'Included services'}
+            onChange={(v) => updateBlock<PackageLineItemsBlock>(block.id, { heading: v })}
+            placeholder="Included services"
+            as="span"
+          />
+        }
+      />
     </ProposalBlockProvider>
   )
 }

@@ -376,6 +376,8 @@ export interface PackageInclusionsBlock extends BaseBlock {
 export interface PackageLineItemsBlock extends BaseBlock {
   type: 'packageLineItems'
   showHeader?: boolean
+  /** Editable section heading. Defaults to "Included services". */
+  heading?: string
   rowStyle?: 'lines' | 'stripes' | 'plain'
   headerStyle?: TextStyle
   itemStyle?: TextStyle
