@@ -121,6 +121,7 @@ describe('repairAllSurfaces', () => {
     expect(result.proposal.map((b) => b.type)).toEqual([
       'packageHeader',
       'packageDetails',
+      'packageLineItems',
       'packageInclusions',
       'packageTotals',
     ])

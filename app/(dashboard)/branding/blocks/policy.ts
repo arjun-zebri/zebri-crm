@@ -21,7 +21,7 @@ export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
 /** Blocks whose content comes from live document data, not template text. */
 const DATA_BOUND: ReadonlySet<BlockType> = new Set([
   'paymentSchedule', 'lineItems', 'totals',
-  'packageInclusions', 'packageTotals',
+  'packageLineItems', 'packageInclusions', 'packageTotals',
 ] as const)
 
 /** Required non-conditional blocks per surface (the CTA `action` is required

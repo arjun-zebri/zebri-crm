@@ -15,7 +15,7 @@
  */
 'use client';
 
-import { Globe, Mail, Monitor, Smartphone } from 'lucide-react';
+import { ExternalLink, Globe, Mail, Monitor, Palette, Smartphone } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ProposalDocumentBody } from '@/components/proposal/proposal-document-body';
@@ -94,6 +94,28 @@ export function ProposalPreviewPane(props: ProposalPreviewPaneProps) {
             <Smartphone size={13} strokeWidth={1.5} />
           </button>
         </div>
+      </div>
+      {/* Branded-as line — matches the invoice / quote builder preview. */}
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5 text-xs text-text-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <Palette size={12} strokeWidth={1.5} className="text-text-subtle" />
+          {props.businessName ? (
+            <>
+              Branded as <span className="text-text">{props.businessName}</span>
+            </>
+          ) : (
+            <span className="italic">Using default branding</span>
+          )}
+        </span>
+        <a
+          href="/branding"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-text-muted hover:text-text transition-colors"
+        >
+          Update branding
+          <ExternalLink size={11} strokeWidth={1.5} />
+        </a>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto bg-surface-muted p-4">
         {tab === 'page' ? (

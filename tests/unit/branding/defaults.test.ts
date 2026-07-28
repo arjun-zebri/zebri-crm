@@ -6,7 +6,7 @@ const types = (bs: { type: string }[]) => bs.map((b) => b.type)
 describe('defaultBlocksFor', () => {
   it('proposal seeds the five real blocks in spec order (§3)', () => {
     expect(types(defaultBlocksFor('proposal'))).toEqual([
-      'businessName', 'packageHeader', 'packageDetails', 'packageInclusions', 'packageTotals', 'action', 'footer',
+      'businessName', 'packageHeader', 'packageDetails', 'packageLineItems', 'packageInclusions', 'packageTotals', 'action', 'footer',
     ])
   })
 
@@ -24,7 +24,7 @@ describe('defaultBlocksFor', () => {
   })
 
   it('blockTemplate builds each new proposal block', () => {
-    for (const t of ['packageHeader', 'packageDetails', 'packageInclusions', 'packageTotals'] as const) {
+    for (const t of ['packageHeader', 'packageDetails', 'packageLineItems', 'packageInclusions', 'packageTotals'] as const) {
       expect(blockTemplate(t)).toMatchObject({ type: t })
     }
   })

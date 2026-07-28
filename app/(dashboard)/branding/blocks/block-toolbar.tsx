@@ -186,6 +186,8 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
       return <PaymentDetailsControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'lineItems':
       return <LineItemsControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
+    case 'packageLineItems':
+      return <LineItemsControls block={block as unknown as LineItemsBlock} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'divider':
       return <DividerControls block={block} updateBlock={updateBlock} />
     case 'footer':

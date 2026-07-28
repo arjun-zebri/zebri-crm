@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { PackageDetails } from '@/components/proposal/package-details'
 import { PackageHeader } from '@/components/proposal/package-header'
+import { PackageLineItems } from '@/components/proposal/package-line-items'
 import { PackageInclusions } from '@/components/proposal/package-inclusions'
 import { PackageTotals } from '@/components/proposal/package-totals'
 import {
@@ -54,6 +55,7 @@ import type {
   ImageBlock,
   PackageHeaderBlock,
   PackageDetailsBlock,
+  PackageLineItemsBlock,
   PackageInclusionsBlock,
   PackageTotalsBlock,
   QuestionnaireBodyBlock,
@@ -1221,6 +1223,15 @@ export function RenderPackageDetails({ block, state }: RenderProps<PackageDetail
   return (
     <ProposalBlockProvider value={sampleProposalContext(state)}>
       <PackageDetails block={block} variablePreview />
+    </ProposalBlockProvider>
+  )
+}
+
+/** Editor preview for the packageLineItems block. */
+export function RenderPackageLineItems({ block, state }: RenderProps<PackageLineItemsBlock>) {
+  return (
+    <ProposalBlockProvider value={sampleProposalContext(state)}>
+      <PackageLineItems block={block} variablePreview />
     </ProposalBlockProvider>
   )
 }

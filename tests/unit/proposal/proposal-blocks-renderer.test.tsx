@@ -129,6 +129,7 @@ const option2: PublicProposalOption = {
 const packageBlocks: Block[] = [
   { id: 'ph', type: 'packageHeader' } as Block,
   { id: 'pd', type: 'packageDetails' } as Block,
+  { id: 'pli', type: 'packageLineItems', showHeader: true } as Block,
   { id: 'pi', type: 'packageInclusions' } as Block,
   { id: 'pt', type: 'packageTotals' } as Block,
   { id: 'ac', type: 'action', primary: 'Accept', secondary: 'Decline' } as Block,
@@ -227,5 +228,15 @@ describe('ProposalBlocksRenderer — package stacking', () => {
     // Static CTA per package (the accept label) + one shared Decline.
     expect(screen.getAllByText('Accept')).toHaveLength(2)
     expect(screen.getByText('Decline')).toBeInTheDocument()
+  })
+
+  it('renders the packageLineItems block with base items from the option', () => {
+    renderTree([option1])
+
+    // Package line items block should render with the header
+    expect(screen.getByTestId('package-line-items')).toBeInTheDocument()
+    // Base items from option1: Photography (3000) and Videography (2000)
+    expect(screen.getByText('Photography')).toBeInTheDocument()
+    expect(screen.getByText('Videography')).toBeInTheDocument()
   })
 })

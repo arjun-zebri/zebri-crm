@@ -84,6 +84,8 @@ export function blockTemplate(type: BlockType, surface?: string): Block {
       return { id: newId('ph'), type: 'packageHeader' }
     case 'packageDetails':
       return { id: newId('pd2'), type: 'packageDetails' }
+    case 'packageLineItems':
+      return { id: newId('pli'), type: 'packageLineItems', showHeader: true }
     case 'packageInclusions':
       return { id: newId('pi'), type: 'packageInclusions' }
     case 'packageTotals':
@@ -113,6 +115,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
       { id: newId('bn'), type: 'businessName' },
       { id: newId('ph'), type: 'packageHeader' },
       { id: newId('pd2'), type: 'packageDetails' },
+      { id: newId('pli'), type: 'packageLineItems', showHeader: true },
       { id: newId('pi'), type: 'packageInclusions' },
       { id: newId('pt'), type: 'packageTotals' },
       { id: newId('ac'), type: 'action', ...actionDefaults('proposal') },
@@ -301,6 +304,27 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
   // into the four real package blocks (header, details, inclusions, totals).
   if (surface === 'proposal') {
     migrated = expandProposalBody(migrated)
+
+    // Insert packageLineItems block after packageDetails if the tree has package
+    // blocks but no packageLineItems yet. Idempotent — runs harmlessly when the
+    // data is already in the new shape.
+    const hasPackageBlocks = migrated.some((b) => b.type === 'packageDetails')
+    const hasLineItems = migrated.some((b) => b.type === 'packageLineItems')
+    if (hasPackageBlocks && !hasLineItems) {
+      const detailsIdx = migrated.findIndex((b) => b.type === 'packageDetails')
+      if (detailsIdx >= 0) {
+        const lineItemsBlock: Block = {
+          id: `pli_${Math.random().toString(36).slice(2, 9)}`,
+          type: 'packageLineItems',
+          showHeader: true,
+        }
+        migrated = [
+          ...migrated.slice(0, detailsIdx + 1),
+          lineItemsBlock,
+          ...migrated.slice(detailsIdx + 1),
+        ]
+      }
+    }
   }
 
   return migrated

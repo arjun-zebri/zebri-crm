@@ -29,6 +29,7 @@ import {
 
 import { PackageDetails } from './package-details'
 import { PackageHeader } from './package-header'
+import { PackageLineItems } from './package-line-items'
 import { PackageInclusions } from './package-inclusions'
 import { PackageTotals } from './package-totals'
 import { ProposalBlockProvider } from './proposal-block-context'
@@ -38,6 +39,7 @@ import { StaticAcceptCta } from './proposal-page-view'
 const PACKAGE_TYPES: ReadonlySet<Block['type']> = new Set([
   'packageHeader',
   'packageDetails',
+  'packageLineItems',
   'packageInclusions',
   'packageTotals',
 ])
@@ -311,6 +313,8 @@ function PackageBlockBody({ block }: { block: Block }) {
       return <PackageHeader block={block} />
     case 'packageDetails':
       return <PackageDetails block={block} />
+    case 'packageLineItems':
+      return <PackageLineItems block={block} />
     case 'packageInclusions':
       return <PackageInclusions block={block} />
     case 'packageTotals':

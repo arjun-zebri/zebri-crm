@@ -43,6 +43,7 @@ import {
   RenderLineItems,
   RenderPackageDetails,
   RenderPackageHeader,
+  RenderPackageLineItems,
   RenderPackageInclusions,
   RenderPackageTotals,
   RenderPaymentDetails,
@@ -509,6 +510,8 @@ function renderBlock(
       return <RenderPackageHeader block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'packageDetails':
       return <RenderPackageDetails block={block} state={state} surface={surface} updateBlock={updateBlock} />
+    case 'packageLineItems':
+      return <RenderPackageLineItems block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'packageInclusions':
       return <RenderPackageInclusions block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'packageTotals':

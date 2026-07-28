@@ -24,7 +24,7 @@ describe('repairBlocks (redesign)', () => {
       { id: 'ac', type: 'action', primary: 'Accept', secondary: null },
     ]
     const out = types(repairBlocks('proposal', input))
-    expect(out).toEqual(['businessName', 'packageHeader', 'packageDetails', 'packageInclusions', 'packageTotals', 'action'])
+    expect(out).toEqual(['businessName', 'packageHeader', 'packageDetails', 'packageLineItems', 'packageInclusions', 'packageTotals', 'action'])
   })
 
   it('is idempotent', () => {

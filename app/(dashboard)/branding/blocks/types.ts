@@ -44,6 +44,7 @@ export type BlockType =
   | 'proposalBody'        // deprecated: decomposed into the four package blocks; kept for repair
   | 'packageHeader'
   | 'packageDetails'
+  | 'packageLineItems'
   | 'packageInclusions'
   | 'packageTotals'
   | 'vendorTimelineBody'
@@ -371,6 +372,16 @@ export interface PackageInclusionsBlock extends BaseBlock {
   itemStyle?: TextStyle
 }
 
+/** The package's included (base) services, displayed as styled line items. */
+export interface PackageLineItemsBlock extends BaseBlock {
+  type: 'packageLineItems'
+  showHeader?: boolean
+  rowStyle?: 'lines' | 'stripes' | 'plain'
+  headerStyle?: TextStyle
+  itemStyle?: TextStyle
+  colSpread?: boolean
+}
+
 /** Live-recalculating price summary (subtotal, GST, total) for the chosen
  *  option + current add-on selection. */
 export interface PackageTotalsBlock extends BaseBlock {
@@ -423,6 +434,7 @@ export type Block =
   | ProposalBodyBlock
   | PackageHeaderBlock
   | PackageDetailsBlock
+  | PackageLineItemsBlock
   | PackageInclusionsBlock
   | PackageTotalsBlock
   | VendorTimelineBodyBlock
@@ -450,6 +462,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   proposalBody: 'Proposal',
   packageHeader: 'Package header',
   packageDetails: 'Package details',
+  packageLineItems: 'Package line items',
   packageInclusions: 'Package optional inclusions',
   packageTotals: 'Package totals',
   vendorTimelineBody: 'Run sheet',
@@ -497,6 +510,7 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   proposalBody: 'Packages, chooser and accept (fixed)',
   packageHeader: 'Package name and chooser',
   packageDetails: 'Package description',
+  packageLineItems: 'The package\'s included services',
   packageInclusions: 'Optional add-ons the couple can toggle',
   packageTotals: 'Subtotal, GST and total',
   vendorTimelineBody: 'The vendor run sheet (live timeline data)',

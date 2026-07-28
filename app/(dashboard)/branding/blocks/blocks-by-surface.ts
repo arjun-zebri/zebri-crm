@@ -17,7 +17,7 @@ export const GENERAL_BLOCKS: BlockType[] = [
 
 /** Document-specific blocks per surface (spec §2.2). */
 export const DOC_SPECIFIC_BY_SURFACE: Record<SurfaceTab, BlockType[]> = {
-  proposal: ['packageHeader', 'packageDetails', 'packageInclusions', 'packageTotals', 'action'],
+  proposal: ['packageHeader', 'packageDetails', 'packageLineItems', 'packageInclusions', 'packageTotals', 'action'],
   invoice: ['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action'],
   contract: ['title', 'contractBody', 'action'],
   portal: ['couplePortal'],
