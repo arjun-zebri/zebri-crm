@@ -79,7 +79,7 @@ export function RenderPaymentDetails({
     value ? <Html value={value} allowLists={false} /> : variablePreview ? <VarChip label={chip} hint={hint} /> : null
 
   return (
-    <div className={`${p.docX} ${p.blockY} relative`}>
+    <div className={`${p.blockY} relative`}>
       {/* Container is a <div> (not <p>): rich text renders block-level <p>, so a
           <p> wrapper would nest invalidly and break hydration. */}
       <div className="mb-3 [&_p]:m-0" style={headingCss}>

@@ -20,7 +20,7 @@ import {
 // eslint-disable-next-line no-restricted-imports
 import type { Block, QuestionnaireBodyBlock } from '@/app/(dashboard)/branding/blocks/types'
 // eslint-disable-next-line no-restricted-imports
-import { BLOCK_LABELS } from '@/app/(dashboard)/branding/blocks/types'
+import { blockLabel } from '@/app/(dashboard)/branding/blocks/types'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 /** Readiness state of the MC's account: which gating features are enabled or configured. */
@@ -37,7 +37,7 @@ export interface AccountReadiness {
 export interface ReadinessIssue {
   /** Category of issue: missing required block, at-least-one constraint, questionnaire mode, or account prerequisite. */
   kind: 'missing-required' | 'need-at-least-one' | 'questionnaire-mode' | 'account'
-  /** Plain-language message (no block type codes, only human labels from BLOCK_LABELS). */
+  /** Plain-language message (no block type codes, only human labels from blockLabel). */
   message: string
 }
 
@@ -86,7 +86,7 @@ export function evaluateSurface(
     // One issue per missing block, labelled with its human name, so the panel
     // can render them as a bulleted list of the blocks that are still needed.
     for (const type of missing) {
-      issues.push({ kind: 'missing-required', message: BLOCK_LABELS[type] })
+      issues.push({ kind: 'missing-required', message: blockLabel(type, surface) })
     }
   }
 

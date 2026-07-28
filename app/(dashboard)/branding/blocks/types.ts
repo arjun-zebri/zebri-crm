@@ -458,6 +458,26 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   spacer: 'Spacer',
 }
 
+/**
+ * Surface-specific overrides for {@link BLOCK_LABELS}. The action block is a
+ * payment CTA on invoices ("Pay with card") but an accept/decline CTA on
+ * proposals ("Accept proposal"), so its label depends on the document.
+ */
+const BLOCK_LABEL_OVERRIDES: Record<string, Partial<Record<BlockType, string>>> = {
+  proposal: { action: 'Accept proposal' },
+}
+
+/**
+ * Human label for a block type, specialised per surface where it differs, else
+ * the surface-agnostic {@link BLOCK_LABELS} entry.
+ *
+ * @param type - The block type.
+ * @param surface - The document surface (e.g. 'proposal', 'invoice'); optional.
+ */
+export function blockLabel(type: BlockType, surface?: string): string {
+  return (surface ? BLOCK_LABEL_OVERRIDES[surface]?.[type] : undefined) ?? BLOCK_LABELS[type]
+}
+
 export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   headerBanner: 'Full-width banner image',
   businessName: 'Logo and business name',

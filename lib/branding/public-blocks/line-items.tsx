@@ -51,14 +51,14 @@ export function RenderLineItems({
     const emptyDefaults = roleDefaults(branding, 'body')
     const emptyCss = resolveTextStyle({}, emptyDefaults)
     return (
-      <div className={`${p.docX} ${p.blockY}`}>
+      <div className={`${p.blockY}`}>
         <p style={emptyCss}>{caseText('No line items.', {}, emptyDefaults)}</p>
       </div>
     )
   }
 
   return (
-    <div className={`${p.docX} ${p.blockY} relative`}>
+    <div className={`${p.blockY} relative`}>
       {/* data-subtarget tags the header + item rows for click-to-style in the editor; inert on the public surface. */}
       {showHeader && (
         <div data-subtarget="header" className="flex justify-between items-center pb-3 border-b gap-4" style={{ borderBottomColor: branding.border_color }}>

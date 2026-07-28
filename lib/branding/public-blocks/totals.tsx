@@ -71,7 +71,7 @@ export function RenderTotals({
   const spread = block.colSpread ?? true
 
   return (
-    <div className={`${p.docX} ${p.blockY} relative`}>
+    <div className={`${p.blockY} relative`}>
       <div className="space-y-1.5 pt-3 border-t" style={{ borderTopColor: branding.border_color }} data-testid="totals-rule">
         {block.showSubtotal && (
           <div className="pt-2">

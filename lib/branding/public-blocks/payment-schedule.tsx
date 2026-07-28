@@ -48,7 +48,7 @@ export function RenderPaymentSchedule({
   ]
 
   return (
-    <div className={`${p.docX} ${p.blockY}`}>
+    <div className={`${p.blockY}`}>
       <p className="mb-3" style={headingCss}>
         {caseText(block.heading ?? 'Payment schedule', block.headingStyle, headingDefaults)}
       </p>

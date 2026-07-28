@@ -6,7 +6,8 @@ import * as Popover from '@radix-ui/react-popover'
 import { Plus, GripVertical, Copy, Trash2, RotateCcw } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 
-import { blockOuterStyle } from '@/lib/branding/block-outer-style'
+import { blockOuterStyle, HPAD_EXEMPT_TYPES } from '@/lib/branding/block-outer-style'
+import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
 import { BlockToolbar } from './block-toolbar'
@@ -243,7 +244,14 @@ export function BlockFrame({
         </button>
       </div>
 
-      {children}
+      {/* Horizontal document padding is applied once here (matching the public
+          BlockOuter), not inside each block, so the whole document shares one
+          inset. Only the empty spacer is exempt. */}
+      {HPAD_EXEMPT_TYPES.has(block.type) ? (
+        children
+      ) : (
+        <div className={DENSITY_PADDING[state.density].docX}>{children}</div>
+      )}
 
       {/* Block resize handle — shown for all block types except headerBanner,
           image, and spacer, which each carry their own resize handle. Giving

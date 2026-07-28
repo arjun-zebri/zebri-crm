@@ -143,7 +143,7 @@ test.describe('proposals composer', () => {
     await couplePage.goto(shareUrl!, { waitUntil: 'networkidle' })
     await expect(couplePage.getByText('Full-day hosting')).toBeVisible({ timeout: 15000 })
     await expect(couplePage.getByLabel(/Include Rehearsal attendance/i)).toBeChecked()
-    await couplePage.getByRole('button', { name: /Accept & reserve/i }).click()
+    await couplePage.getByRole('button', { name: /^Accept$/i }).click()
     await couplePage.getByRole('button', { name: /Yes, accept/i }).click()
     await expect(couplePage.getByText('Proposal accepted')).toBeVisible({ timeout: 15000 })
     await couplePage.context().close()

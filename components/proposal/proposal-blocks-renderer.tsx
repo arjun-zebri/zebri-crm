@@ -14,7 +14,7 @@ import { ReactNode } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import type { PublicBranding } from '@/lib/branding/public-branding'
-import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
+import { BlockOuter, PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type { ProposalViewBranding, PublicProposalOption } from '@/lib/payments/proposal-view'
 
 import { PackageDetails } from './package-details'
@@ -93,12 +93,17 @@ export function ProposalBlocksRenderer({
     state,
   }
 
+  // No wrapper spacing: horizontal document padding comes from BlockOuter and
+  // vertical rhythm from each block's `blockY`, exactly like the invoice tree,
+  // so the padding is uniform across all documents.
   return (
     <ProposalBlockProvider value={contextValue}>
-      <div className="space-y-6">
-        {blocks.map((block) => (
-          <BlockSwitch key={block.id} block={block} branding={branding} view={view} renderAccept={renderAccept} />
-        ))}
+      <div>
+        {blocks
+          .filter((block) => !block.hidden)
+          .map((block) => (
+            <BlockSwitch key={block.id} block={block} branding={branding} view={view} renderAccept={renderAccept} />
+          ))}
       </div>
     </ProposalBlockProvider>
   )
@@ -117,14 +122,33 @@ interface BlockSwitchProps {
 
 function BlockSwitch({ block, branding, view, renderAccept }: BlockSwitchProps) {
   switch (block.type) {
+    // Package-specific blocks are routed through BlockOuter (the same wrapper
+    // PublicBlockRenderer applies to every other block) so per-block padding,
+    // background, border, and spacing overrides work identically here.
     case 'packageHeader':
-      return <PackageHeader />
+      return (
+        <BlockOuter block={block} branding={branding}>
+          <PackageHeader block={block} />
+        </BlockOuter>
+      )
     case 'packageDetails':
-      return <PackageDetails />
+      return (
+        <BlockOuter block={block} branding={branding}>
+          <PackageDetails block={block} />
+        </BlockOuter>
+      )
     case 'packageInclusions':
-      return <PackageInclusions />
+      return (
+        <BlockOuter block={block} branding={branding}>
+          <PackageInclusions block={block} />
+        </BlockOuter>
+      )
     case 'packageTotals':
-      return <PackageTotals />
+      return (
+        <BlockOuter block={block} branding={branding}>
+          <PackageTotals block={block} />
+        </BlockOuter>
+      )
     case 'action':
       if (renderAccept) {
         return (

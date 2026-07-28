@@ -4,7 +4,7 @@ import { type ReactNode } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
-import { blockOuterStyle, hasOuterStyle } from './block-outer-style'
+import { blockOuterStyle, hasOuterStyle, HPAD_EXEMPT_TYPES } from './block-outer-style'
 import { RenderAction } from './public-blocks/action'
 import { RenderBusinessName } from './public-blocks/business-name'
 import { RenderDivider } from './public-blocks/divider'
@@ -15,6 +15,7 @@ import { RenderLineItems } from './public-blocks/line-items'
 import { RenderPaymentDetails } from './public-blocks/payment-details'
 import { RenderPaymentSchedule } from './public-blocks/payment-schedule'
 import {
+  pad,
   type PublicDocData,
   type ActionSlotProps,
 } from './public-blocks/shared'
@@ -51,7 +52,13 @@ export function PublicBlockRenderer(props: PublicRendererProps) {
   )
 }
 
-function BlockOuter({
+/**
+ * Wrap a block in its per-block outer styles (padding, background, border,
+ * radius, alignment, spacing). Exported so surfaces that render blocks outside
+ * {@link PublicBlockRenderer} (the proposal renderer, which substitutes its own
+ * package blocks) apply the exact same outer treatment and can't drift.
+ */
+export function BlockOuter({
   block,
   branding,
   children,
@@ -60,8 +67,17 @@ function BlockOuter({
   branding: PublicBranding
   children: ReactNode
 }) {
-  // Fast path: if no outer style is set, render without wrapper to preserve byte-identical output
-  if (!hasOuterStyle(block)) return <>{children}</>
+  // Horizontal document padding lives here, in one place, not in each block.
+  // Every block is inset by the shared docX except the full-bleed types, which
+  // render edge-to-edge. Vertical rhythm (blockY) stays inside each block.
+  const inner = HPAD_EXEMPT_TYPES.has(block.type) ? (
+    children
+  ) : (
+    <div className={pad(branding).docX}>{children}</div>
+  )
+
+  // Fast path: if no outer style is set, skip the style wrapper.
+  if (!hasOuterStyle(block)) return <>{inner}</>
 
   const style = blockOuterStyle(block, { cornerRadius: branding.corner_radius })
   return (
@@ -69,7 +85,7 @@ function BlockOuter({
       style={style}
       className={style.borderRadius !== undefined || block.borderWidth ? 'overflow-hidden' : ''}
     >
-      {children}
+      {inner}
     </div>
   )
 }

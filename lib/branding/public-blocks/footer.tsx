@@ -100,7 +100,7 @@ export function RenderFooter({
   const noteGap = block.noteGap ?? 12
 
   return (
-    <div className={`${p.docX} ${p.blockY} mt-6 pt-5`}>
+    <div className={`${p.blockY} mt-6 pt-5`}>
       {/* Rich text renders block-level <p>, so the container must be a <div>
           (a <p> here would nest <p>/<div> inside <p> and break hydration).
           Reset inner paragraph margins so a single note line keeps its spacing. */}

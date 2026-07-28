@@ -33,7 +33,7 @@ export function RenderTagline({
   const p = pad(branding)
   const defaults = roleDefaults(branding, 'subtitle')
   return (
-    <div className={`${p.docX} ${p.blockY}`}>
+    <div className={`${p.blockY}`}>
       <p style={resolveTextStyle(block.textStyle, defaults)}>
         {slots?.text ?? (
           <Html value={branding.tagline!} allowLists={false} />

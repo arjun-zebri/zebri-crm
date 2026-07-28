@@ -106,7 +106,7 @@ export function RenderBusinessName({
 
   if (layout === 'logo') {
     return (
-      <div className={`${p.docX} ${p.blockY} flex ${justify} relative`}>
+      <div className={`${p.blockY} flex ${justify} relative`}>
         {logoNode}
         {chrome}
       </div>
@@ -114,7 +114,7 @@ export function RenderBusinessName({
   }
   if (layout === 'name') {
     return (
-      <div className={`${p.docX} ${p.blockY} flex ${justify} relative`}>
+      <div className={`${p.blockY} flex ${justify} relative`}>
         {nameNode}
         {chrome}
       </div>
@@ -122,7 +122,7 @@ export function RenderBusinessName({
   }
   if (layout === 'stacked') {
     return (
-      <div className={`${p.docX} ${p.blockY} flex flex-col gap-2 ${items} relative`}>
+      <div className={`${p.blockY} flex flex-col gap-2 ${items} relative`}>
         {logoNode}
         {nameNode}
         {chrome}
@@ -130,7 +130,7 @@ export function RenderBusinessName({
     )
   }
   return (
-    <div className={`${p.docX} ${p.blockY} flex items-center gap-4 ${justify} relative`}>
+    <div className={`${p.blockY} flex items-center gap-4 ${justify} relative`}>
       {logoNode}
       {nameNode}
       {chrome}

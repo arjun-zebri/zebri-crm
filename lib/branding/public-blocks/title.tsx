@@ -49,7 +49,7 @@ export function RenderTitle({
 
   return (
     <div className={p.blockY}>
-      <div className={p.docX}>
+      <div>
         {/* No leading or tracking classes: resolveTextStyle always emits both
             inline from the global settings, so utilities here would be dead
             CSS that reads as if it were in charge. */}
@@ -81,7 +81,7 @@ export function RenderTitle({
         // carries the data-subtarget tag and hugs its content, so the editor's
         // click-to-style outline wraps just the ref/date/ABN, not the whole width.
         <div
-          className={`${p.docX} mt-3 flex`}
+          className="mt-3 flex"
           style={{ justifyContent: metaAlign === 'center' ? 'center' : metaAlign === 'right' ? 'flex-end' : 'flex-start' }}
         >
         <div data-subtarget="meta" className="flex flex-wrap items-baseline gap-x-4 @sm/doc:gap-x-8 gap-y-2">

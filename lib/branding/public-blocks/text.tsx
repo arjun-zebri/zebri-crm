@@ -43,7 +43,7 @@ export function RenderText({
   const p = pad(branding)
   const defaults = roleDefaults(branding, 'body')
   return (
-    <div className={`${p.docX} ${p.blockY} [&_p]:m-0`} style={resolveTextStyle(block.textStyle, defaults)}>
+    <div className={`${p.blockY} [&_p]:m-0`} style={resolveTextStyle(block.textStyle, defaults)}>
       {slots?.text ?? (
         <div
           className="break-words"

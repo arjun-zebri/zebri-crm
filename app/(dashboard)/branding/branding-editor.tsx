@@ -691,7 +691,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
-    const newBlock = blockTemplate(type)
+    const newBlock = blockTemplate(type, docSurface)
     const list = state.blocks[docSurface] ?? []
     if (insertAfterId) {
       const idx = list.findIndex((b) => b.id === insertAfterId)

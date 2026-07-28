@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 import { paletteGroupsForSurface } from './blocks-by-surface'
-import { BLOCK_LABELS, BLOCK_DESCRIPTIONS, type BlockType } from './types'
+import { BLOCK_DESCRIPTIONS, blockLabel, type BlockType } from './types'
 
 const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   headerBanner: Image,
@@ -59,7 +59,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
     const filteredTypes = group.types.filter((type) => {
       if (!q) return true
       return (
-        BLOCK_LABELS[type].toLowerCase().includes(q) ||
+        blockLabel(type, surface).toLowerCase().includes(q) ||
         BLOCK_DESCRIPTIONS[type].toLowerCase().includes(q) ||
         type.toLowerCase().includes(q)
       )
@@ -172,7 +172,7 @@ export function AddBlockPalette({ open, onOpenChange, onAdd, trigger, surface }:
                         <Icon size={15} strokeWidth={1.5} className="text-gray-500" />
                       </span>
                       <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-medium text-gray-900">{BLOCK_LABELS[type]}</span>
+                        <span className="block text-sm font-medium text-gray-900">{blockLabel(type, surface)}</span>
                         <span className="block text-xs text-gray-500 truncate">{BLOCK_DESCRIPTIONS[type]}</span>
                       </span>
                     </button>

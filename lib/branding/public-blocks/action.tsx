@@ -111,7 +111,7 @@ export function RenderAction({
     ) : null
 
   return (
-    <div className={`${p.docX} ${p.blockY}`}>
+    <div className={`${p.blockY}`}>
       {noteNode}
       <div className={`flex flex-col gap-2 @sm/doc:flex-row @sm/doc:gap-3 ${justifyClass}`}>
       <button

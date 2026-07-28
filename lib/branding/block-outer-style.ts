@@ -5,6 +5,16 @@ import type { CSSProperties } from 'react'
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 
 /**
+ * Block types exempt from the shared horizontal document padding. Only the
+ * spacer is exempt — it is empty vertical space, so left/right padding is moot.
+ * Every visible block, banners and images included, is inset by the single
+ * shared horizontal document padding applied once at the block wrapper
+ * (BlockOuter / BlockFrame), so the whole document has one consistent inset and
+ * blocks never carry their own left/right padding.
+ */
+export const HPAD_EXEMPT_TYPES: ReadonlySet<Block['type']> = new Set(['spacer'])
+
+/**
  * Compute the outer wrapper styles for a block based on its padding, background,
  * border, alignment, and spacing fields. Returns only defined properties.
  * Used by both the editor (BlockFrame) and public renderer (BlockOuter) to

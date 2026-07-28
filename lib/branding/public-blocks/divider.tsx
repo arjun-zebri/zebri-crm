@@ -24,7 +24,7 @@ export function RenderDivider({
   const lineStyle = block.lineStyle ?? 'solid'
   const widthPct = block.widthPct ?? 100
   return (
-    <div className={`${p.docX} ${p.blockY} flex justify-start`}>
+    <div className={`${p.blockY} flex justify-start`}>
       <hr
         style={{
           borderTopWidth: thickness,

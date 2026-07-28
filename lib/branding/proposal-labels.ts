@@ -66,8 +66,8 @@ export const PROPOSAL_LABEL_DEFAULTS: ProposalLabels = {
   selected: { text: 'Your package' },
   addOns: { text: 'Add to your day' },
   addOnsHint: { text: 'Tap to include. Your total updates instantly.' },
-  accept: { text: 'Accept & reserve our date' },
-  decline: { text: 'Decline this proposal' },
+  accept: { text: 'Accept' },
+  decline: { text: 'Decline' },
 }
 
 /**

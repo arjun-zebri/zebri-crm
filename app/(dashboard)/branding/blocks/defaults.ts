@@ -26,7 +26,19 @@ function richPlainText(value: unknown): string {
 let counter = 0
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`
 
-export function blockTemplate(type: BlockType): Block {
+/**
+ * Default primary/secondary labels for an action block, by surface. Proposals
+ * accept or decline; invoices and every other surface pay, with no decline.
+ *
+ * @param surface - The document surface the action block belongs to.
+ */
+export function actionDefaults(surface?: string): { primary: string; secondary: string | null } {
+  return surface === 'proposal'
+    ? { primary: 'Accept', secondary: 'Decline' }
+    : { primary: 'Pay now', secondary: null }
+}
+
+export function blockTemplate(type: BlockType, surface?: string): Block {
   switch (type) {
     case 'headerBanner':
       return { id: newId('hb'), type: 'headerBanner' }
@@ -53,7 +65,7 @@ export function blockTemplate(type: BlockType): Block {
       // only and an untouched text block renders nothing on the public document.
       return { id: newId('tx'), type: 'text', text: textDoc('') }
     case 'action':
-      return { id: newId('ac'), type: 'action', primary: 'Pay now', secondary: null }
+      return { id: newId('ac'), type: 'action', ...actionDefaults(surface) }
     case 'divider':
       return { id: newId('dv'), type: 'divider' }
     case 'footer':
@@ -103,7 +115,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
       { id: newId('pd2'), type: 'packageDetails' },
       { id: newId('pi'), type: 'packageInclusions' },
       { id: newId('pt'), type: 'packageTotals' },
-      { id: newId('ac'), type: 'action', primary: 'Accept & reserve our date', secondary: null },
+      { id: newId('ac'), type: 'action', ...actionDefaults('proposal') },
       { id: newId('ft'), type: 'footer', closingNote: textDoc('Thank you for thinking of us.') },
     ]
   }
@@ -209,6 +221,20 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
     migrated = migrated.map((b) =>
       b.type === 'action' && b.secondary !== null ? ({ ...b, secondary: null } as Block) : b,
     )
+  }
+
+  // Proposals are accepted or declined, never paid. An action block still
+  // carrying the old surface-blind "Pay now" default (or the "Secondary"
+  // placeholder) leaked from the invoice-shaped template; give it the proposal
+  // accept/decline wording. Idempotent — only the exact legacy strings match.
+  if (surface === 'proposal') {
+    migrated = migrated.map((b) => {
+      if (b.type !== 'action') return b
+      let next = b
+      if (next.primary === 'Pay now') next = { ...next, ...actionDefaults('proposal') }
+      if (next.secondary === 'Secondary') next = { ...next, secondary: 'Decline' }
+      return next
+    })
   }
 
   // Contract surface migration (Phase 3.1):
