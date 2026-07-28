@@ -39,7 +39,9 @@ export function PackageInclusions({
   block: PackageInclusionsBlock
   variablePreview?: boolean
 }) {
-  const { options, chosenId, selection, onToggle, branding } = useProposalBlock()
+  const { options, chosenId, selection: rawSelection, onToggle, branding } = useProposalBlock()
+  // Defensive: a preview may seed the context before selection is ready.
+  const selection = rawSelection ?? {}
 
   const p = pad(branding)
   const headingDefaults = roleDefaults(branding, 'sectionLabel')

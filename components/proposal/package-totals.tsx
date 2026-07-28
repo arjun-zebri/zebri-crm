@@ -51,7 +51,9 @@ export function PackageTotals({
   block: PackageTotalsBlock
   variablePreview?: boolean
 }) {
-  const { options, chosenId, selection, branding } = useProposalBlock()
+  const { options, chosenId, selection: rawSelection, branding } = useProposalBlock()
+  // Defensive: a preview may seed the context before selection is ready.
+  const selection = rawSelection ?? {}
 
   const p = pad(branding)
   const rowDefaults = roleDefaults(branding, 'body')

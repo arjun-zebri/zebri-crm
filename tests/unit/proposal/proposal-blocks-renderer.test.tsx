@@ -224,7 +224,8 @@ describe('ProposalBlocksRenderer — package stacking', () => {
       />,
     )
 
-    expect(screen.getAllByRole('button', { name: /accept/i })).toHaveLength(2)
+    // Static CTA per package (the accept label) + one shared Decline.
+    expect(screen.getAllByText('Accept')).toHaveLength(2)
     expect(screen.getByText('Decline')).toBeInTheDocument()
   })
 })

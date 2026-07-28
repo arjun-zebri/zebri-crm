@@ -18,7 +18,6 @@
 import { ReactNode, useState } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { getTextColor } from '@/lib/branding/contrast'
 import { pad } from '@/lib/branding/public-blocks/shared'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import { PublicBlockRenderer, BlockOuter } from '@/lib/branding/public-renderer'
@@ -33,6 +32,7 @@ import { PackageHeader } from './package-header'
 import { PackageInclusions } from './package-inclusions'
 import { PackageTotals } from './package-totals'
 import { ProposalBlockProvider } from './proposal-block-context'
+import { StaticAcceptCta } from './proposal-page-view'
 
 /** The package-specific block types that make up the per-package region. */
 const PACKAGE_TYPES: ReadonlySet<Block['type']> = new Set([
@@ -206,7 +206,17 @@ function PackageStack({
       ))}
       {state === 'active' ? (
         <div className={`${p.docX} ${p.blockY}`}>
-          {renderDecline ? renderDecline({ style }) : <StaticDecline style={style} view={view} />}
+          {renderDecline ? (
+            renderDecline({ style })
+          ) : (
+            <StaticAcceptCta
+              expiresAt={null}
+              branding={view}
+              publicBranding={branding}
+              style={style}
+              hideAccept
+            />
+          )}
         </div>
       ) : null}
     </div>
@@ -280,58 +290,17 @@ function StackedPackage({
           {renderPackageAccept ? (
             renderPackageAccept({ option, selection, style })
           ) : (
-            <StaticAccept style={style} view={view} />
+            <StaticAcceptCta
+              expiresAt={expiresAt}
+              branding={view}
+              publicBranding={branding}
+              style={style}
+              hideDecline
+            />
           )}
         </div>
       ) : null}
     </ProposalBlockProvider>
-  )
-}
-
-/**
- * Non-interactive Accept button shown in previews (editor / composer) where no
- * live accept handler is wired. Styled from the action block, labelled from its
- * primary text.
- */
-function StaticAccept({ style, view }: { style: AcceptStyle; view: ProposalViewBranding }) {
-  return (
-    <button
-      type="button"
-      disabled
-      className="w-full py-3.5 cursor-default"
-      style={{
-        backgroundColor: style.color,
-        color: getTextColor(style.color),
-        borderRadius: Math.min(style.radius, 14),
-        fontSize: '15px',
-        fontWeight: 500,
-        fontFamily: view.bodyFontFamily,
-      }}
-    >
-      {style.primaryLabel || 'Accept'}
-    </button>
-  )
-}
-
-/**
- * Non-interactive Decline link shown once in previews where no live decline
- * handler is wired.
- */
-function StaticDecline({ style, view }: { style: AcceptStyle; view: ProposalViewBranding }) {
-  return (
-    <div className="text-center">
-      <span
-        style={{
-          color: view.mutedColor,
-          fontSize: '13px',
-          textDecoration: 'underline',
-          textUnderlineOffset: '2px',
-          fontFamily: view.bodyFontFamily,
-        }}
-      >
-        {style.secondaryLabel || 'Decline'}
-      </span>
-    </div>
   )
 }
 

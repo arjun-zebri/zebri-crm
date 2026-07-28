@@ -350,6 +350,8 @@ export function StaticAcceptCta({
   publicBranding,
   onEditLabel,
   style,
+  hideDecline = false,
+  hideAccept = false,
 }: {
   expiresAt: string | null;
   branding: ProposalViewBranding;
@@ -358,6 +360,10 @@ export function StaticAcceptCta({
   style?:
     | { color?: string; radius?: number; primaryLabel?: string; secondaryLabel?: string | null }
     | undefined;
+  /** Hide the decline link — for a per-package Accept in a stack. */
+  hideDecline?: boolean;
+  /** Render only the decline link — the single bottom Decline of a stack. */
+  hideAccept?: boolean;
 }) {
   const labels = resolveProposalLabels(branding.labels);
   const bodyDefaults = roleDefaults(publicBranding, 'body');
@@ -366,6 +372,33 @@ export function StaticAcceptCta({
   const buttonRadius = Math.min(style?.radius ?? branding.radius, 14);
   const acceptLabel = style?.primaryLabel || labels.accept.text;
   const declineLabel = style?.secondaryLabel || labels.decline.text;
+
+  const declineLink = (
+    <EditableLabel
+      value={declineLabel}
+      onCommit={onEditLabel && ((v) => onEditLabel('decline', v))}
+      placeholder={PROPOSAL_LABEL_DEFAULTS.decline.text}
+      cornerRadius={branding.cornerRadius}
+      className="underline underline-offset-2"
+      style={{
+        fontSize: `${finePrintDefaults.fontSize}px`,
+        color: branding.mutedColor,
+        ...resolveTextStyle(labels.decline.style, {
+          fontFamily: 'work_sans',
+          fontSize: finePrintDefaults.fontSize,
+          fontWeight: 400,
+          color: branding.mutedColor,
+          align: 'center',
+          lineHeight: 1.4,
+          letterSpacing: 0,
+        }),
+      }}
+    />
+  );
+
+  // Decline-only: the single Decline shown once at the bottom of a stack.
+  if (hideAccept) return <div className="text-center">{declineLink}</div>;
+
   return (
     <div>
       <EditableLabel
@@ -396,28 +429,7 @@ export function StaticAcceptCta({
           This proposal is held for you until {formatDate(expiresAt)}
         </p>
       ) : null}
-      <div className="mt-4 text-center">
-        <EditableLabel
-          value={declineLabel}
-          onCommit={onEditLabel && ((v) => onEditLabel('decline', v))}
-          placeholder={PROPOSAL_LABEL_DEFAULTS.decline.text}
-          cornerRadius={branding.cornerRadius}
-          className="underline underline-offset-2"
-          style={{
-            fontSize: `${finePrintDefaults.fontSize}px`,
-            color: branding.mutedColor,
-            ...resolveTextStyle(labels.decline.style, {
-              fontFamily: 'work_sans',
-              fontSize: finePrintDefaults.fontSize,
-              fontWeight: 400,
-              color: branding.mutedColor,
-              align: 'center',
-              lineHeight: 1.4,
-              letterSpacing: 0,
-            }),
-          }}
-        />
-      </div>
+      {!hideDecline ? <div className="mt-4 text-center">{declineLink}</div> : null}
     </div>
   );
 }
