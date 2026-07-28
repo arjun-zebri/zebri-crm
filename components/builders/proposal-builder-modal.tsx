@@ -101,7 +101,11 @@ export function ProposalBuilderModal({
   const { toast } = useToast();
 
   const isNew = proposalId === 'new' || proposalId === null;
-  const effectiveId = isNew ? null : proposalId;
+  // Adopt the id of a proposal first saved from the "new" state, so the detail
+  // query — and with it the share link + Copy link / Open / Mark-as-sent
+  // actions — light up without reopening the modal.
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const effectiveId = isNew ? savedId : proposalId;
 
   /* ─── form state ────────────────────────────────────────────── */
   const [title, setTitle] = useState('');
@@ -148,7 +152,10 @@ export function ProposalBuilderModal({
 
   /* ─── hydrate from DB ───────────────────────────────────────── */
   useEffect(() => {
-    if (isNew) {
+    // Reset only while there is genuinely no proposal yet (truly new). Once a
+    // new proposal is saved, effectiveId adopts its id, so we fall through to
+    // populate from the loaded row instead of wiping the just-saved form.
+    if (!effectiveId) {
       setTitle('');
       setNotes('');
       setExpiresAt(null);
@@ -169,7 +176,13 @@ export function ProposalBuilderModal({
       setDirty(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on identity, not object refs
-  }, [proposal?.id, isNew, initialCoupleId, couples]);
+  }, [proposal?.id, effectiveId, initialCoupleId, couples]);
+
+  // Forget the adopted id when the modal closes, so the next "new" open starts
+  // fresh rather than reloading the previously-saved proposal.
+  useEffect(() => {
+    if (!isOpen) setSavedId(null);
+  }, [isOpen]);
 
   useEffect(() => {
     if (optionDrafts) setOptions(optionDrafts);
@@ -231,6 +244,7 @@ export function ProposalBuilderModal({
       return result.data.id;
     },
     onSuccess: (id) => {
+      setSavedId(id);
       invalidate(id);
       toast('Proposal saved');
       setDirty(false);
@@ -254,6 +268,7 @@ export function ProposalBuilderModal({
       return targetId;
     },
     onSuccess: (id) => {
+      setSavedId(id);
       toast('Sent to couple');
       invalidate(id);
     },
@@ -275,6 +290,7 @@ export function ProposalBuilderModal({
       return targetId;
     },
     onSuccess: (id) => {
+      setSavedId(id);
       invalidate(id);
       toast('Marked as sent');
     },
