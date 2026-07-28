@@ -465,6 +465,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
  */
 const BLOCK_LABEL_OVERRIDES: Record<string, Partial<Record<BlockType, string>>> = {
   proposal: { action: 'Accept proposal' },
+  contract: { title: 'Contract header', action: 'Sign contract' },
 }
 
 /**

@@ -18,6 +18,7 @@
 import { ReactNode, useState } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { getTextColor } from '@/lib/branding/contrast'
 import { pad } from '@/lib/branding/public-blocks/shared'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 import { PublicBlockRenderer, BlockOuter } from '@/lib/branding/public-renderer'
@@ -203,8 +204,10 @@ function PackageStack({
           showDivider={idx > 0}
         />
       ))}
-      {state === 'active' && renderDecline ? (
-        <div className={`${p.docX} ${p.blockY}`}>{renderDecline({ style })}</div>
+      {state === 'active' ? (
+        <div className={`${p.docX} ${p.blockY}`}>
+          {renderDecline ? renderDecline({ style }) : <StaticDecline style={style} view={view} />}
+        </div>
       ) : null}
     </div>
   )
@@ -272,10 +275,63 @@ function StackedPackage({
           <PackageBlockBody block={block} />
         </BlockOuter>
       ))}
-      {interactive && renderPackageAccept ? (
-        <div className={`${p.docX} ${p.blockY}`}>{renderPackageAccept({ option, selection, style })}</div>
+      {interactive ? (
+        <div className={`${p.docX} ${p.blockY}`}>
+          {renderPackageAccept ? (
+            renderPackageAccept({ option, selection, style })
+          ) : (
+            <StaticAccept style={style} view={view} />
+          )}
+        </div>
       ) : null}
     </ProposalBlockProvider>
+  )
+}
+
+/**
+ * Non-interactive Accept button shown in previews (editor / composer) where no
+ * live accept handler is wired. Styled from the action block, labelled from its
+ * primary text.
+ */
+function StaticAccept({ style, view }: { style: AcceptStyle; view: ProposalViewBranding }) {
+  return (
+    <button
+      type="button"
+      disabled
+      className="w-full py-3.5 cursor-default"
+      style={{
+        backgroundColor: style.color,
+        color: getTextColor(style.color),
+        borderRadius: Math.min(style.radius, 14),
+        fontSize: '15px',
+        fontWeight: 500,
+        fontFamily: view.bodyFontFamily,
+      }}
+    >
+      {style.primaryLabel || 'Accept'}
+    </button>
+  )
+}
+
+/**
+ * Non-interactive Decline link shown once in previews where no live decline
+ * handler is wired.
+ */
+function StaticDecline({ style, view }: { style: AcceptStyle; view: ProposalViewBranding }) {
+  return (
+    <div className="text-center">
+      <span
+        style={{
+          color: view.mutedColor,
+          fontSize: '13px',
+          textDecoration: 'underline',
+          textUnderlineOffset: '2px',
+          fontFamily: view.bodyFontFamily,
+        }}
+      >
+        {style.secondaryLabel || 'Decline'}
+      </span>
+    </div>
   )
 }
 

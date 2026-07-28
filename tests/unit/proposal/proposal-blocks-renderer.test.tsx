@@ -209,4 +209,22 @@ describe('ProposalBlocksRenderer — package stacking', () => {
     const { container } = renderTree([])
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('shows a static Accept per package and one Decline in previews (no live handlers)', () => {
+    // A preview passes no renderPackageAccept / renderDecline — the buttons must
+    // still show (regression guard: the stack must fall back to static CTAs).
+    render(
+      <ProposalBlocksRenderer
+        blocks={packageBlocks}
+        branding={brandingFixture()}
+        view={viewBrandingFixture()}
+        options={[option1, option2]}
+        state="active"
+        expiresAt={null}
+      />,
+    )
+
+    expect(screen.getAllByRole('button', { name: /accept/i })).toHaveLength(2)
+    expect(screen.getByText('Decline')).toBeInTheDocument()
+  })
 })

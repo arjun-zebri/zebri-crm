@@ -752,7 +752,13 @@ export function RenderAction({
       <InlineText
         value={block.note ?? ''}
         onChange={(v) => updateBlock<ActionBlock>(block.id, { note: v })}
-        placeholder="Add a note above the button, e.g. how to pay…"
+        placeholder={
+          surface === 'invoice'
+            ? 'Add a note above the button, e.g. how to pay…'
+            : surface === 'proposal'
+              ? 'Add a note above the button, e.g. what happens next…'
+              : 'Add a note above the button…'
+        }
         as="span"
       />
     ),
