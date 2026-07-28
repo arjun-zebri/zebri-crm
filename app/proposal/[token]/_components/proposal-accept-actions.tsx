@@ -49,7 +49,7 @@ export interface ProposalAcceptActionsProps {
   /** Render only the decline button (the shared bottom Decline for the stack). */
   hideAccept?: boolean;
   /** Fill colour for the Decline (secondary) button; defaults to branding secondary. */
-  secondaryColor?: string;
+  secondaryColor?: string | undefined;
 }
 
 export function ProposalAcceptActions({

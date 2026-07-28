@@ -20,8 +20,8 @@ export interface ProposalBlockContextValue {
   options: PublicProposalOption[]
   chosenId: string
   selection: Record<string, boolean>
-  onChoose?: (optionId: string) => void
-  onToggle?: (itemId: string, next: boolean) => void
+  onChoose?: ((optionId: string) => void) | undefined
+  onToggle?: ((itemId: string, next: boolean) => void) | undefined
   branding: PublicBranding
   view: ProposalViewBranding
   expiresAt: string | null

@@ -77,11 +77,11 @@ export interface PublicDocData {
 }
 
 export interface ActionSlotProps {
-  onPrimary?: () => void
-  onSecondary?: () => void
-  primaryLabel?: string
-  secondaryLabel?: string | null
-  primaryDisabled?: boolean
-  primaryLoading?: boolean
-  hideAction?: boolean
+  onPrimary?: (() => void) | undefined
+  onSecondary?: (() => void) | undefined
+  primaryLabel?: string | undefined
+  secondaryLabel?: string | null | undefined
+  primaryDisabled?: boolean | undefined
+  primaryLoading?: boolean | undefined
+  hideAction?: boolean | undefined
 }

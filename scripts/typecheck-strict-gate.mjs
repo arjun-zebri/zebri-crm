@@ -56,7 +56,12 @@ import { execSync } from 'node:child_process';
 // resolved two more inference sites on the branding page (287 -> 285).
 // Welcome onboarding wizard: extracted usePreviewScript, useReducedMotion, and
 // preview shape utilities into pure modules (286 -> 286). Locking in at 286.
-const STRICT_BUDGET = 286;
+// Proposals single/multi-package + branding batch drifted the count up to 297
+// (new proposal surfaces passed `undefined` into optional props, plus grandfathered
+// noUncheckedIndexedAccess in contrast/extract-colors). Fixed by widening the
+// proposal/action-slot optional prop types to `| undefined` and guarding the pure
+// colour helpers (297 -> 281). Locking in at 281.
+const STRICT_BUDGET = 281;
 
 function runTscStrict() {
   try {

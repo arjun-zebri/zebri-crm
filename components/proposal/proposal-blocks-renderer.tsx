@@ -77,17 +77,19 @@ export interface ProposalBlocksRendererProps {
   /** Expiry timestamp if known. */
   expiresAt: string | null
   /** Accepted view: the recorded option, so only that package renders. */
-  acceptedOptionId?: string | null
+  acceptedOptionId?: string | null | undefined
   /** Accepted view: the recorded add-on selection for that package. */
-  acceptedSelection?: Record<string, boolean>
+  acceptedSelection?: Record<string, boolean> | undefined
   /** Render the Accept CTA for one package with its live add-on selection. */
-  renderPackageAccept?: (ctx: {
-    option: PublicProposalOption
-    selection: Record<string, boolean>
-    style: AcceptStyle
-  }) => ReactNode
+  renderPackageAccept?:
+    | ((ctx: {
+        option: PublicProposalOption
+        selection: Record<string, boolean>
+        style: AcceptStyle
+      }) => ReactNode)
+    | undefined
   /** Render the single Decline shown once at the bottom of the stack. */
-  renderDecline?: (ctx: { style: AcceptStyle }) => ReactNode
+  renderDecline?: ((ctx: { style: AcceptStyle }) => ReactNode) | undefined
 }
 
 /**
@@ -170,7 +172,7 @@ interface PackageStackProps {
   view: ProposalViewBranding
   state: 'active' | 'accepted' | 'declined' | 'expired'
   expiresAt: string | null
-  acceptedSelection?: Record<string, boolean>
+  acceptedSelection?: Record<string, boolean> | undefined
   style: AcceptStyle
   renderPackageAccept?: ProposalBlocksRendererProps['renderPackageAccept']
   renderDecline?: ProposalBlocksRendererProps['renderDecline']
