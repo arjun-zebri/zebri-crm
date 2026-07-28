@@ -739,7 +739,7 @@ status (text, not null, default 'draft', check: draft | sent | accepted | declin
 notes (text, nullable)
 expires_at (date, nullable)
 share_token (uuid, not null, default gen_random_uuid())
-share_token_enabled (boolean, not null, default false)  -  enabled by the send action
+share_token_enabled (boolean, not null, default true)  -  link is live from creation so the MC can copy/share it out-of-band without emailing (default flipped false→true + all rows back-filled by `20260728000000_proposals_share_token_enabled_by_default`, mirroring quotes/invoices/contracts). The send action still sets it true idempotently.
 accepted_option_id (uuid, nullable, FK proposal_options.id, on delete set null)
 accepted_addon_selection (jsonb, nullable)  -  `{option_item_id: bool}` for the chosen option's add-ons
 accepted_at (timestamptz, nullable)

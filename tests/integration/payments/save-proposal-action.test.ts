@@ -277,7 +277,10 @@ describe('duplicateProposalAction — integration', () => {
       expect(clone?.status).toBe('draft');
       expect(clone?.proposal_number).toBe('PR-002');
       expect(clone?.accepted_at).toBeNull();
-      expect(clone?.share_token_enabled).toBe(false);
+      // Share link is live from creation (default true, per
+      // 20260728000000_proposals_share_token_enabled_by_default) so the MC
+      // can copy and hand out the link without going through email.
+      expect(clone?.share_token_enabled).toBe(true);
       expect(clone?.share_token).not.toBe(original?.share_token);
 
       const { data: options } = await admin
