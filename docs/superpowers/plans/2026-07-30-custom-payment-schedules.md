@@ -387,8 +387,12 @@ function stageCents(
 /**
  * Resolve template stages against an invoice total and issue date.
  *
- * Returns every validation failure at once rather than the first, so the
- * builder can surface them all instead of making the MC fix them one at a time.
+ * Validation runs in stages and returns as soon as one fails: structure first,
+ * then fixed-amount feasibility, then the sum check. Each stage's checks are
+ * only meaningful once the earlier ones hold, so reporting them together would
+ * produce noise. With two `remainder` stages, for instance, "what is left over"
+ * has no answer, so no amount check can say anything useful.
+ * `structuralErrors` does collect all of its own findings before returning.
  * Zero stages is valid and means a single-payment invoice.
  */
 export function resolveStages(
