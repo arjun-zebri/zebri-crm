@@ -2714,7 +2714,15 @@ In `components/builders/invoice-builder-modal.tsx`:
 3. Replace `hasDepositSchedule` with `invoiceStages.stages.length > 0` at both line 229 and line 641.
 4. Delete the `deposit_percent` / `deposit_due_date` / `final_due_date` fields from the save payload at lines 430-432.
 5. Delete the auto-save-before-mark-paid workaround at lines 280-292 and the comment at line 487 that explains it. Stages persist independently of the Save button now, so the case it guarded cannot arise.
-6. Replace the `final_paid_at` write in the mark-fully-paid mutation at line 525 with a plain `{ status: 'paid', paid_at: now }`.
+6. Remove **every** `final_paid_at` and `deposit_paid_at` reference in the modal, not just one. Migration B drops both columns, so all five sites have to move to stage semantics:
+
+   - **line 90**, the invoice row type: drop both fields, add `invoice_payment_stages`.
+   - **lines 286-289**, the `hasSched` hydration. The "or a payment was recorded against it" clause exists only to paper over the auto-save workaround being removed in step 5. Hydration becomes `stages.length > 0` and the whole disjunction goes.
+   - **line 525**, `markPaid` (mark the whole invoice paid): mark every *unpaid* stage paid, then set `{ status: 'paid', paid_at: now }`.
+   - **line 560**, `markFinalPaid`: **delete this mutation entirely.** Under N stages it is redundant, because the timeline's per-stage Mark paid button calls `markStagePaid(stageId)` from Task 3. Keeping a "mark the final one paid" special case reintroduces the two-stage assumption this whole feature removes.
+   - **line 577**, `revertPaid`: see the rule below.
+
+   **`revertPaid` semantics, decided here because the original plan did not cover it.** It sets the invoice back to `sent` and clears `invoices.paid_at`, and it clears `paid_at` on stages **only where `stripe_payment_intent_id` is null**. A stage settled through Stripe records money that actually arrived, and the app must never silently un-record it: the MC's undo of their own manual mark-paid cannot retract a real card payment. If any Stripe-settled stage survives the revert, the invoice goes to `deposit_paid` rather than `sent`, so status still matches the stage rows. Without this rule the invoice could sit at `sent` with every stage paid, which no other code path can produce and the public page cannot represent.
 7. Replace the whole `depositEnabled ? <PaymentSchedule .../> : <button>Add payment schedule</button>` block at lines 858-900 with a single always-rendered `<PaymentSchedule />` passing the hook's values. The "+ Add payment schedule" affordance is gone: the timeline now shows its own empty state and the Add stage button.
 8. In the modal's Save handler, `await invoiceStages.persist()` after the invoice row update.
 9. Replace `paymentSchedule: depositEnabled ? {...}` in the preview payload at line 704 with the stages array shape Task 10 defines.
