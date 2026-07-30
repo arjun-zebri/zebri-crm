@@ -116,6 +116,7 @@ export function buildSampleContext(opts: SampleContextOptions = {}): RunContext 
       spousePhone: null,
       timezone: 'Australia/Sydney',
     },
+    invoice: null,
     mc: {
       userId: 'sample',
       businessName: businessName?.trim() || 'Your business',

@@ -140,6 +140,7 @@ export async function buildManualSendContext(
       error_message: null,
     },
     couple,
+    invoice: null,
     mc: {
       userId: user.id,
       businessName: (meta['business_name'] as string) ?? 'Your business',

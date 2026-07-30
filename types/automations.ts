@@ -475,6 +475,13 @@ export interface RunContext {
   /** Pre-resolved couple snapshot for use by variable + recipient resolvers. */
   couple: CoupleSnapshot | null
 
+  /**
+   * Invoice snapshot for payment-related conditions and variables.
+   * Resolved based on triggerEvent.payload.invoice_id (if present) or the
+   * couple's most recent non-cancelled invoice. Null if neither resolves.
+   */
+  invoice: InvoiceSnapshot | null
+
   /** The MC's profile / branding for `{{mc.*}}` variables. */
   mc: McSnapshot
 
@@ -496,6 +503,20 @@ export interface CoupleSnapshot {
   spousePhone: string | null
   /** Couple-local IANA timezone for quiet-hours math. */
   timezone: string
+}
+
+/**
+ * Invoice snapshot for automation conditions.
+ *
+ * Carries the invoice id and the paid_at timestamp of its first
+ * (lowest position) payment stage. Used by the has_paid_deposit
+ * condition to determine if the couple has settled the initial
+ * payment milestone.
+ */
+export interface InvoiceSnapshot {
+  id: string
+  /** paid_at timestamp of the first (position=1) stage, or null if unpaid. */
+  firstStagePaidAt: string | null
 }
 
 export interface McSnapshot {
