@@ -512,8 +512,9 @@ Used by the couple timer (see `page-specs.md` "Time tracking").
   category picker, trigger fixed at `w-56` so it does not stretch to the
   dialog width, with the popover matching the trigger width. Each row is a
   single hover/selected surface spanning the rename and delete icons (a
-  background on the name button alone read as a half-painted row), and the
-  selected row carries a check rather than relying on the tint. Filters as you type, offers `Create "<typed>"` only when
+  background on the name button alone read as a half-painted row); the
+  selected row is marked by that tint plus a medium weight, with no check
+  icon. Filters as you type, offers `Create "<typed>"` only when
   the name is genuinely new, and each row has inline rename and delete.
   Categories are **plain chips with no colour**: couple statuses are this
   product's coloured vocabulary and a second colour system would compete

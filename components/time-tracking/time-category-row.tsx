@@ -5,6 +5,10 @@
  * background on the name button alone left the rename and delete icons
  * outside the highlight, which read as a half-painted row.
  *
+ * Selection is carried by that surface plus a medium weight, with no
+ * check icon: in a short single-select list the tint is unambiguous and
+ * the icon only added noise beside the hover controls.
+ *
  * Rename is inline rather than a nested dialog, because the picker is
  * already a popover and stacking a modal on top of it to change one word
  * would be heavier than the edit itself.
@@ -13,7 +17,7 @@
  */
 'use client';
 
-import { Check, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Input } from '@/components/ui/input';
@@ -87,13 +91,6 @@ export function TimeCategoryRow({
       >
         {category.name}
       </button>
-      {selected ? (
-        <Check
-          size={12}
-          strokeWidth={1.5}
-          className="shrink-0 text-text-muted group-hover:hidden"
-        />
-      ) : null}
       <button
         type="button"
         onClick={() => {
