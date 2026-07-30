@@ -53,8 +53,8 @@ const INVOICE_DOC: DocumentVariable[] = [
   { id: 'subtotal', label: 'Subtotal', group: 'Amounts', format: 'currency', source: 'Calculated from the invoice line items.' },
   { id: 'tax', label: 'Tax', group: 'Amounts', format: 'currency', source: 'The GST calculated on the invoice.' },
   { id: 'total', label: 'Total', group: 'Amounts', format: 'currency', source: 'The invoice total (line items plus tax).' },
-  { id: 'deposit_amount', label: 'Deposit amount', group: 'Amounts', format: 'currency', source: 'The deposit amount from the payment schedule.' },
-  { id: 'deposit_due_date', label: 'Deposit due date', group: 'Amounts', format: 'date', source: 'The deposit due date from the payment schedule.' },
+  { id: 'deposit_amount', label: 'Deposit amount', group: 'Amounts', format: 'currency', source: 'The first payment on the invoice\'s schedule.' },
+  { id: 'deposit_due_date', label: 'Deposit due date', group: 'Amounts', format: 'date', source: 'The first payment\'s due date.' },
   { id: 'final_amount', label: 'Final amount', group: 'Amounts', format: 'currency', source: 'The final balance from the payment schedule.' },
   { id: 'final_due_date', label: 'Final due date', group: 'Amounts', format: 'date', source: 'The final balance due date from the payment schedule.' },
 ]

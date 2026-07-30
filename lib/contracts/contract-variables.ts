@@ -1,8 +1,8 @@
-import { generateHTML } from '@tiptap/html'
-import StarterKit from '@tiptap/starter-kit'
 import Mention from '@tiptap/extension-mention'
-import sanitizeHtml from 'sanitize-html'
+import { generateHTML } from '@tiptap/html'
 import type { JSONContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import sanitizeHtml from 'sanitize-html'
 
 export interface ContractVariable {
   id: string
@@ -16,7 +16,7 @@ export const CONTRACT_VARIABLES: ContractVariable[] = [
   { id: 'event_date', label: 'Event date', description: 'Earliest wedding event date' },
   { id: 'venue', label: 'Venue', description: 'Earliest event venue' },
   { id: 'total_amount', label: 'Total amount', description: 'Total from the linked proposal' },
-  { id: 'deposit_amount', label: 'Deposit amount', description: 'Deposit owed (default 25% of total)' },
+  { id: 'deposit_amount', label: 'Deposit amount', description: 'First payment on the schedule' },
   { id: 'mc_business_name', label: 'Your business name', description: 'Your business name from settings' },
   { id: 'mc_signature_name', label: 'Your signature name', description: 'Your typed signature name from settings' },
   { id: 'today', label: "Today's date", description: 'Date the contract was sent' },
@@ -56,15 +56,19 @@ function formatCurrency(n: number): string {
 export function buildContractVariables(input: {
   couple: { name: string; email: string | null }
   firstEvent: { date: string | null; venue: string | null } | null
-  /** Linked ACCEPTED proposal: `total` is the recorded selection's
-   *  subtotal, `depositPercent` the accepted option's rule. */
-  proposal?: { total: number; depositPercent: number | null } | null
+  /** Linked ACCEPTED proposal. `total` is the recorded selection's subtotal. */
+  proposal?: { total: number } | null
+  /**
+   * First stage of the schedule that will govern this contract's invoice.
+   * Sourced from the invoice's stages when one exists, otherwise from the MC's
+   * default saved schedule resolved against the proposal total. Null means the
+   * MC has no schedule at all, in which case the contract cannot state a
+   * deposit figure and renders a dash.
+   */
+  firstStage: { amountCents: number; dueDate: string | null } | null
   userMeta: Record<string, unknown>
-  depositPercent: number
 }): ContractVariableValues {
   const total = input.proposal ? Number(input.proposal.total) || 0 : 0
-  const effectiveDepositPct = input.proposal?.depositPercent ?? input.depositPercent ?? 25
-  const deposit = (total * (effectiveDepositPct || 25)) / 100
   const hasMoneySource = !!input.proposal
 
   return {
@@ -73,7 +77,10 @@ export function buildContractVariables(input: {
     event_date: formatDate(input.firstEvent?.date ?? null),
     venue: input.firstEvent?.venue || '-',
     total_amount: hasMoneySource ? formatCurrency(total) : '-',
-    deposit_amount: hasMoneySource ? formatCurrency(deposit) : '-',
+    deposit_amount:
+      hasMoneySource && input.firstStage
+        ? formatCurrency(input.firstStage.amountCents / 100)
+        : '-',
     mc_business_name: (input.userMeta.business_name as string) || '-',
     mc_signature_name:
       (input.userMeta.mc_signature_name as string) ||

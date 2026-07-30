@@ -33,7 +33,9 @@ import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendContractEmail } from '@/lib/email';
 import { emailBrandingForUser } from '@/lib/email/branding';
 import { resolveSender } from '@/lib/email/sender-identity';
+import { resolveStages } from '@/lib/payments/resolve-stages';
 import { createClient } from '@/lib/supabase/server';
+import type { TemplateStage } from '@/types/payment-schedule';
 
 // 10 / min / IP. Each call sends a real email (Resend spend) and
 // flips contract state — looser than the public sign/decline limit
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
   const { data: contract, error: contractError } = await supabase
     .from('contracts')
     .select(
-      'id, title, contract_number, content, status, share_token, expires_at, couple_id, couples(name, email, primary_email)',
+      'id, title, contract_number, content, status, share_token, expires_at, couple_id, proposal_id, couples(name, email, primary_email)',
     )
     .eq('id', contractId)
     .eq('user_id', user.id)
@@ -109,15 +111,49 @@ export async function POST(request: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  const depositPercent = Number(
-    (user.user_metadata?.default_deposit_percent as number | undefined) ?? 25,
-  );
+  // Resolve the first stage of the payment schedule.
+  let firstStage: { amountCents: number; dueDate: string | null } | null = null;
+  let proposalTotal: number | null = null;
+
+  if (contract.proposal_id) {
+    const { data: proposal } = await supabase
+      .from('proposals')
+      .select('subtotal')
+      .eq('id', contract.proposal_id)
+      .maybeSingle();
+    if (proposal) {
+      proposalTotal = Number(proposal.subtotal);
+    }
+  }
+
+  const { data: defaultSchedule } = await supabase
+    .from('payment_schedules')
+    .select('id, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_days)')
+    .eq('user_id', user.id)
+    .eq('is_default', true)
+    .maybeSingle();
+
+  if (defaultSchedule && proposalTotal !== null) {
+    const templateStages: TemplateStage[] = Array.isArray(defaultSchedule.payment_schedule_stages)
+      ? defaultSchedule.payment_schedule_stages.map((s: { label: string; amount_type: string; amount_value: number | null; due_offset_days: number }) => ({
+          label: s.label,
+          amountType: s.amount_type as 'percent' | 'fixed' | 'remainder',
+          amountValue: s.amount_value,
+          dueOffsetDays: s.due_offset_days,
+        }))
+      : [];
+
+    const issueDate = new Date().toISOString().slice(0, 10);
+    const resolved = resolveStages(templateStages, Math.round(proposalTotal * 100), issueDate);
+    firstStage = resolved.ok ? (resolved.stages[0] ? { amountCents: resolved.stages[0].amountCents, dueDate: resolved.stages[0].dueDate } : null) : null;
+  }
 
   const vars = buildContractVariables({
     couple: { name: couple.name, email: couple.email },
     firstEvent: firstEvent ?? null,
+    proposal: proposalTotal !== null ? { total: proposalTotal } : null,
     userMeta: user.user_metadata ?? {},
-    depositPercent,
+    firstStage,
   });
 
   // `contract.content` is generated as Json; the renderer expects

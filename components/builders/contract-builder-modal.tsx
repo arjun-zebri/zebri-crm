@@ -65,8 +65,10 @@ import {
   buildContractVariables,
   renderContractHtml,
 } from '@/lib/contracts/contract-variables';
+import { resolveStages } from '@/lib/payments/resolve-stages';
 import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
+import type { TemplateStage } from '@/types/payment-schedule';
 
 interface Contract {
   id: string;
@@ -101,12 +103,6 @@ interface ContractTemplate {
 interface FirstEventRow {
   date: string | null;
   venue: string | null;
-}
-
-interface LinkedProposalRow {
-  subtotal: number;
-  discount_type: 'percentage' | 'fixed' | null;
-  discount_value: number | null;
 }
 
 const STATE_PILL: Record<string, StatePillProps> = {
@@ -241,8 +237,8 @@ export function ContractBuilderModal({
     },
   });
 
-  // Optional: the linked ACCEPTED proposal — its recorded subtotal +
-  // the accepted option's deposit rule feed the same variables.
+  // Optional: the linked ACCEPTED proposal — its recorded subtotal
+  // feeds the same variables.
   const { data: linkedProposal } = useQuery({
     queryKey: ['contract-linked-proposal', linkedProposalId],
     enabled: isOpen && !!linkedProposalId,
@@ -250,20 +246,41 @@ export function ContractBuilderModal({
       if (!linkedProposalId) return null;
       const { data } = await supabase
         .from('proposals')
-        .select(
-          'subtotal, proposal_options!proposals_accepted_option_id_fkey(deposit_percent)',
-        )
+        .select('subtotal')
         .eq('id', linkedProposalId)
         .maybeSingle();
       if (!data) return null;
-      const option = Array.isArray(data.proposal_options)
-        ? data.proposal_options[0]
-        : data.proposal_options;
       return {
         total: Number(data.subtotal),
-        depositPercent:
-          option?.deposit_percent != null ? Number(option.deposit_percent) : null,
       };
+    },
+  });
+
+  // Load the MC's default payment schedule for resolving the first stage
+  // in the preview pane.
+  const { data: defaultSchedule } = useQuery({
+    queryKey: ['default-payment-schedule'],
+    enabled: isOpen,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('payment_schedules')
+        .select('id, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_days)')
+        .eq('is_default', true)
+        .maybeSingle();
+      if (!data) return null;
+      const stages = (data.payment_schedule_stages ?? []).map((s: {
+        position: number;
+        label: string;
+        amount_type: string;
+        amount_value: number | null;
+        due_offset_days: number;
+      }) => ({
+        label: s.label,
+        amountType: s.amount_type,
+        amountValue: s.amount_value,
+        dueOffsetDays: s.due_offset_days,
+      })) as TemplateStage[];
+      return { id: data.id, stages };
     },
   });
 
@@ -279,7 +296,7 @@ export function ContractBuilderModal({
     setExpiresAt(contract.expires_at);
     setLinkedProposalId(contract.proposal_id ?? null);
     setDirty(false);
-  }, [contract?.id]);
+  }, [contract]);
 
   /* ─── derived ───────────────────────────────────────────────── */
   const status = contract?.status ?? 'draft';
@@ -309,18 +326,33 @@ export function ContractBuilderModal({
     if (!canEdit && contract?.locked_content_html) {
       return contract.locked_content_html;
     }
-    const depositPercent = Number(
-      (userMeta.default_deposit_percent as number | undefined) ?? 25,
-    );
+
+    // Resolve the first stage from the default schedule if a proposal is linked.
+    let firstStage: { amountCents: number; dueDate: string | null } | null = null;
+    if (linkedProposal && defaultSchedule?.stages.length) {
+      const issueDate = new Date().toISOString().slice(0, 10);
+      const resolved = resolveStages(
+        defaultSchedule.stages,
+        Math.round(linkedProposal.total * 100),
+        issueDate,
+      );
+      if (resolved.ok && resolved.stages[0]) {
+        firstStage = {
+          amountCents: resolved.stages[0].amountCents,
+          dueDate: resolved.stages[0].dueDate,
+        };
+      }
+    }
+
     const vars = buildContractVariables({
       couple: { name: coupleName, email: null },
       firstEvent: firstEvent ?? null,
       proposal: linkedProposal ?? null,
       userMeta,
-      depositPercent,
+      firstStage,
     });
     return renderContractHtml(content, vars);
-  }, [canEdit, contract?.locked_content_html, content, coupleName, firstEvent, linkedProposal, userMeta]);
+  }, [canEdit, contract?.locked_content_html, content, coupleName, defaultSchedule, firstEvent, linkedProposal, userMeta]);
 
   /* ─── mutations ─────────────────────────────────────────────── */
   const save = useMutation({
