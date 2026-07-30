@@ -422,8 +422,12 @@ redefinition applies to `deposit_amount` and `deposit_due_date` in
 
 ## 9. Migration
 
-A single migration, ordered so the destructive steps run after the backfill in
-the same transaction. A failed backfill takes the drops down with it.
+Two migrations, both landing in the same PR and the same `supabase db push` run.
+Splitting them is what lets the application code be written and tested against
+stage rows while the old columns still exist, rather than every consumer breaking
+at once.
+
+### Migration A, additive
 
 1. Create `payment_schedules`, `payment_schedule_stages`, `invoice_payment_stages`
    with RLS, policies and indexes as in section 3.
@@ -431,26 +435,53 @@ the same transaction. A failed backfill takes the drops down with it.
    `deposit_paid_at` becomes two stage rows, a `percent` deposit and a
    `remainder` final, carrying existing due dates, paid timestamps and resolved
    `amount_cents`. Invoices without a schedule get no rows.
-3. Backfill saved schedules: for each user with a `default_deposit_percent`,
-   create one schedule named "Default" with `is_default = true`, holding that
-   percentage plus a remainder stage.
-4. Drop `deposit_percent` from `packages` and from `proposal_options`. Nothing
-   replaces them.
-5. Drop `deposit_percent`, `deposit_due_date`, `deposit_paid_at`,
-   `final_due_date`, `final_paid_at` from `invoices`.
-6. Replace `get_public_invoice` (returns `stages`), `get_public_proposal` (loses
-   `deposit_percent`), and `sign_contract`, which currently computes
-   `coalesce(v_proposal.option_deposit_percent, 25)` at
-   `supabase/migrations/20260711000000_drop_quotes_feature.sql:108` and instead
-   copies the user's default schedule onto the invoice it spawns. Where the user
-   has no default schedule, the spawned invoice gets no stages and behaves as a
-   single-payment invoice.
+3. Backfill saved schedules: create one `is_default` schedule named "Default" for
+   **every** user, holding `coalesce(default_deposit_percent, 25)` as a percent
+   stage at offset 7 days plus a remainder stage at offset 30.
 
-Steps 4 and 5 need an explicit marker or `scripts/check-migrations.sh` rejects
+   Every user, not only those with the setting, because
+   `default_deposit_percent` turns out never to be written by the application.
+   It is read in exactly two places, both with a `?? 25` fallback
+   (`app/api/email/send-contract/route.ts:113`,
+   `components/builders/contract-builder-modal.tsx:313`), and no Settings UI sets
+   it. Backfilling only the users who have it would leave almost everyone with no
+   default schedule, so `sign_contract` would spawn stageless invoices where it
+   previously applied the hardcoded 25%. Seeding every user preserves that
+   fallback as real data. Offset 7 mirrors the `current_date + interval '7 days'`
+   the older `sign_contract` used for `deposit_due_date`.
+
+### Migration B, destructive
+
+4. Guard: assert every invoice that has a non-null `deposit_percent` or
+   `deposit_paid_at` now has at least one `invoice_payment_stages` row, and
+   `raise exception` otherwise. This replaces the single-transaction property the
+   two-migration split gives up. Migration B refuses to drop anything if
+   Migration A's backfill did not land.
+5. Drop `deposit_percent` from `packages` and from `proposal_options`. Nothing
+   replaces them.
+6. Drop `deposit_percent`, `deposit_due_date`, `deposit_paid_at`,
+   `final_due_date`, `final_paid_at` from `invoices`.
+7. Replace `get_public_invoice` (returns `stages`, drops the five deposit keys),
+   `get_public_proposal` (loses `deposit_percent`), and `sign_contract`.
+
+`sign_contract` currently computes `coalesce(v_proposal.option_deposit_percent, 25)`
+and inserts an invoice whose `subtotal` is *already* only the deposit
+(`round(v_proposal.subtotal * v_deposit_pct / 100, 2)`) while also setting
+`deposit_percent` on it, at
+`supabase/migrations/20260711000000_drop_quotes_feature.sql:108-121`. That
+double-counts: a $5,000 proposal at 25% yields a $1,250 invoice the public page
+then labels "Deposit (25%) = $312.50". The replacement inserts the proposal's
+**full** subtotal and stamps the user's default schedule onto it, so the couple
+gets one invoice for the whole engagement, paid down stage by stage. The title
+changes from "Deposit invoice for X" to "Invoice for X". Where the user somehow
+has no default schedule, the invoice gets no stages and behaves as a
+single-payment invoice.
+
+Steps 5 and 6 need an explicit marker or `scripts/check-migrations.sh` rejects
 the deploy:
 
 ```sql
--- @ALLOW_DESTRUCTIVE: replaced by invoice_payment_stages, backfilled in step 2
+-- @ALLOW_DESTRUCTIVE: replaced by invoice_payment_stages, backfilled in migration A
 ```
 
 Deployed through CI `supabase db push`, never the Supabase web SQL editor.
@@ -474,14 +505,23 @@ surfaces. The full list:
 | `lib/payments/proposal-view.ts:36` | drop `deposit_percent` |
 | `components/builders/parts/proposal-option-card.tsx:72` | drop the deposit terms chip |
 | `components/builders/parts/use-apply-sources.ts` | drop `depositPercent` from both sources |
-| `app/(dashboard)/templates/package-edit-form.tsx:236` | remove the "Booking deposit" field |
+| `app/(dashboard)/templates/package-edit-form.tsx:37,53,94,111,236` | remove the "Booking deposit" field and its draft state |
+| `app/(dashboard)/templates/packages-manager.tsx:61,277,312,375,444,485,685` | drop `deposit_percent` from the row type, drafts, duplicate, and preview |
+| `app/(dashboard)/payments/actions.ts:135,494,587,631` | drop `deposit_percent` from invoice writes and the proposal-option copy |
+| `app/invoice/[token]/page.tsx:98-100` | `hasSchedule` and the amount split come from stages |
+| `app/invoice/[token]/_components/public-invoice.ts:44` | `PublicInvoice` gains `stages`, loses five deposit keys |
+| `app/api/stripe/invoice-payment/route.ts:84,133` | select stages, drop `deposit_percent` |
+| `app/branding/preview/[surface]/page.tsx:56,71` | both sample invoices, not one |
 | `app/(dashboard)/payments/invoices-list.tsx` | relabel `deposit_paid` to "Part paid" |
-| Settings | remove the `default_deposit_percent` field |
 
-The two `user_metadata` reads are worth calling out. A deposit percentage is not
-a trust-level field, so this is not a §7.4 privilege hole, but `user_metadata` is
-user-writable and moving the default onto a `payment_schedules` row removes both
-reads for free.
+There is **no Settings UI** for `default_deposit_percent`, contrary to what
+section 1 implies. It is never written by the application, only read in the two
+places above with a `?? 25` fallback. Nothing to remove from Settings; the
+migration's job is to turn that implicit 25% into a real default schedule row.
+The two `user_metadata` reads are still worth calling out: a deposit percentage
+is not a trust-level field, so this is not a §7.4 privilege hole, but
+`user_metadata` is user-writable and moving the default onto a
+`payment_schedules` row removes both reads for free.
 
 One accepted consequence: the couple no longer sees payment terms on the
 proposal, because `proposal-option-card.tsx:72` loses its "30% deposit" chip. The
@@ -544,6 +584,12 @@ revisiting this design.
 by same-transaction ordering, the replay-from-zero integration test, and the fact
 that the backfill is a pure function of columns that are not written during the
 migration.
+
+**The invoice `sign_contract` spawns changes amount.** It goes from the deposit
+figure to the proposal's full subtotal with a schedule attached. This is the right
+shape and it fixes the double-count described in section 9, but any MC who signs a
+contract during the release window sees a different number than they would have
+the day before. Belongs in release notes alongside the reminder change.
 
 **Reminder behaviour changes for existing automations.** An MC with a live
 `invoice_due` automation will start receiving events for stages that previously
