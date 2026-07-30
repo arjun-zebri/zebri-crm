@@ -1,44 +1,59 @@
 /**
  * `invoice_overdue` time-based emitter (A4).
  *
- * Fires when an invoice with status `'sent'` (a balance is still
- * outstanding) has sat past its `due_date` for the threshold
- * configured on an active `invoice_overdue` automation. The threshold
- * is `max(1, daysOverdueMin ?? 1)` — see
- * {@link invoiceOverdueThresholdDays} — so "overdue" always means
- * strictly past the due date; the due date itself belongs to
- * `invoice_due` with `days: 0`. Direct sibling of the A2
- * `quote_overdue` emitter.
+ * Fires when an invoice with status `'sent'` or `'deposit_paid'` (i.e. a balance
+ * is still outstanding — it hasn't been fully paid or cancelled) has sat past its
+ * due date for the threshold configured on an active `invoice_overdue` automation.
+ * The threshold is `max(1, daysOverdueMin ?? 1)` — see
+ * {@link invoiceOverdueThresholdDays} — so "overdue" always means strictly past
+ * the due date; the due date itself belongs to `invoice_due` with `days: 0`.
+ *
+ * Operates on two sources:
+ *
+ * 1. **Payment stages**: When an invoice has N payment stages, each unpaid stage
+ *    (paid_at is null) on a `'sent'` or `'deposit_paid'` invoice can fire when
+ *    its due_date falls past the threshold. The emitter includes stage metadata
+ *    in the payload so downstream triggers and templates can distinguish the
+ *    balance by position and label.
+ * 2. **Stageless invoices**: Invoices with no stage rows (legacy single-payment
+ *    model) fire off their own top-level `due_date`, exactly as before. This is
+ *    backward compatible with existing automations and single-payment invoices.
+ *
+ * Direct sibling of the A2 `quote_overdue` emitter.
  *
  * # Emit semantics
  *
- *   - One event per (invoice, threshold, calendar day). An invoice
- *     fires once when it crosses each active threshold — not every
- *     day it remains overdue. Two automations with the same threshold
- *     share one event; different thresholds get separate events on
- *     their respective days.
- *   - Payload carries `days_overdue` so the trigger's match() can
- *     narrow to "this automation's threshold" — same pattern as
- *     `quote_overdue`'s `days_overdue` and `invoice_due`'s
- *     `days_until_due`.
+ *   - One event per (invoice-or-stage, threshold, calendar day). An invoice or
+ *     stage fires once when it crosses each active threshold — not every day it
+ *     remains overdue. When two stages of the same invoice fall overdue on the
+ *     same day, they emit two separate events (deduped by stage_id in addition
+ *     to days_overdue).
+ *   - Payload carries `days_overdue` so the trigger's match() can narrow to
+ *     "this automation's threshold" — same pattern as `quote_overdue`'s
+ *     `days_overdue` and `invoice_due`'s `days_until_due`.
+ *   - Payload carries stage metadata (stage_id, stage_label, stage_position,
+ *     stage_count, stage_amount_cents) when firing for a stage. All fields are
+ *     null for stageless invoices.
  *   - Idempotency: an event with the same
- *     (`source_id`, `event_type`, `days_overdue`) already emitted
- *     today is skipped.
+ *     (`source_id`, `event_type`, `days_overdue`, `stage_id`) already emitted
+ *     today is skipped. Across ticks this means each stage/invoice gets at most
+ *     one event per (threshold, day).
+ *
+ * # Why deposit_paid is included
+ *
+ *   The invoice status flips to `'deposit_paid'` the moment the first stage is
+ *   paid. Filtering only `'sent'` would mean the remaining balance is never
+ *   chased. Filtering both `'sent'` and `'deposit_paid'` keeps reminders live
+ *   until every stage is settled (status becomes `'paid'`).
  *
  * # Known limitations
  *
- *   - Anchored on the top-level `due_date` only. Payment-schedule
- *     installment dates (`deposit_due_date` / `final_due_date`) are
- *     not yet wired. The `isFinalBalance` and
- *     `daysUntilEventOp`/`daysUntilEventValue` config fields are
- *     accepted by the schema but **not enforced** here — the emitter
- *     payload carries no event-date anchor, and final-balance
+ *   - `isFinalBalance` and `daysUntilEventOp`/`daysUntilEventValue` config
+ *     fields are accepted by the schema but **not enforced** here — final-balance
  *     tracking is out of A4's scope.
- *   - Only `status = 'sent'` invoices are candidates (draft hasn't
- *     reached the couple; paid / cancelled have no balance).
  *   - Day boundaries are UTC (same caveat as `quote_due`).
- *   - Fires forward only: an invoice already deeper overdue than the
- *     threshold when the automation is activated will not retro-fire.
+ *   - Fires forward only: an invoice already deeper overdue than the threshold
+ *     when the automation is activated will not retro-fire.
  *
  * @module lib/automations/time-emitters/invoice-overdue
  */
@@ -53,14 +68,20 @@ import type { Database } from '@/types/database'
 
 import type { TimeEmitter } from './index'
 
-/** An invoice row that could potentially fire. */
-interface CandidateInvoice {
-  id: string
-  user_id: string
-  couple_id: string | null
-  invoice_number: string | null
-  due_date: string | null
+/** An invoice-or-stage that could fire today. */
+interface Candidate {
+  invoiceId: string
+  userId: string
+  coupleId: string | null
+  invoiceNumber: string | null
   subtotal: number | null
+  dueDate: string | null
+  /** Null for a stageless invoice firing off its own due_date. */
+  stageId: string | null
+  stageLabel: string | null
+  stagePosition: number | null
+  stageCount: number | null
+  stageAmountCents: number | null
 }
 
 /** Lower bound for "today" in UTC, for the per-day dedupe window. */
@@ -143,13 +164,18 @@ async function collectActiveThresholds(
 
 /**
  * Has an event already been emitted today for this
- * (invoice, days_overdue) bucket? Prevents re-emit across ticks
+ * (invoice-or-stage, days_overdue) bucket? Prevents re-emit across ticks
  * within the same calendar day.
+ *
+ * Why stage_id must be part of the dedupe: when two stages of the same invoice
+ * fall overdue on the same day, they must emit two separate events. Deduping only
+ * on (source_id, days_overdue) would collapse them into one.
  */
 async function alreadyEmittedToday(
   supabase: SupabaseClient<Database>,
   invoiceId: string,
   daysOverdue: number,
+  stageId: string | null,
   dayStart: string,
 ): Promise<boolean> {
   const { data, error } = await supabase
@@ -166,58 +192,151 @@ async function alreadyEmittedToday(
   // ergonomic via PostgREST, and the per-day window is already tiny.
   for (const row of (data ?? []) as Array<{
     id: string
-    payload: { days_overdue?: unknown } | null
+    payload: { days_overdue?: unknown; stage_id?: unknown } | null
   }>) {
-    if (Number(row.payload?.days_overdue) === daysOverdue) return true
+    if (
+      Number(row.payload?.days_overdue) === daysOverdue &&
+      (row.payload?.stage_id ?? null) === stageId
+    ) {
+      return true
+    }
   }
   return false
 }
 
 /**
- * Find invoices for `userId` that cross the `daysOverdue` threshold
- * today. Only `sent` invoices are candidates — draft / paid /
- * cancelled invoices aren't an outstanding balance to chase.
+ * Candidates for `userId` at the given overdue threshold.
+ *
+ * Two sources, because both must keep working:
+ *
+ *  1. Unpaid stage rows falling overdue on the target date, on invoices that are
+ *     still `sent` or part paid. `deposit_paid` is included deliberately: the old
+ *     `status = 'sent'` filter meant an invoice went silent the moment its first
+ *     payment landed, so the balance was never chased.
+ *  2. Invoices with no stage rows at all, firing off their own `due_date`
+ *     exactly as before. A single-payment invoice has no stage to anchor on.
  */
 async function loadCandidates(
   supabase: SupabaseClient<Database>,
   userId: string,
   daysOverdue: number,
-): Promise<CandidateInvoice[]> {
+): Promise<Candidate[]> {
   const targetDate = dueDateForOverdueDays(daysOverdue)
-  const { data, error } = await supabase
+
+  const { data: stageRows, error: stageError } = await supabase
+    .from('invoice_payment_stages')
+    .select(
+      'id, invoice_id, position, label, amount_cents, due_date, invoices!inner(id, user_id, couple_id, invoice_number, subtotal, status)',
+    )
+    .eq('user_id', userId)
+    .is('paid_at', null)
+    .eq('due_date', targetDate)
+  if (stageError) throw new Error(`load invoice stages: ${stageError.message}`)
+
+  const eligible = (stageRows ?? []).filter((row) => {
+    const status = (row.invoices as { status: string }).status
+    return status === 'sent' || status === 'deposit_paid'
+  })
+
+  // stage_count is needed for the isFinalBalance narrowing in triggers.ts.
+  const counts = new Map<string, number>()
+  if (eligible.length > 0) {
+    const { data: allStages } = await supabase
+      .from('invoice_payment_stages')
+      .select('invoice_id')
+      .in('invoice_id', [...new Set(eligible.map((r) => r.invoice_id))])
+    for (const row of allStages ?? []) {
+      counts.set(row.invoice_id, (counts.get(row.invoice_id) ?? 0) + 1)
+    }
+  }
+
+  const fromStages: Candidate[] = eligible.map((row) => {
+    const inv = row.invoices as {
+      user_id: string
+      couple_id: string | null
+      invoice_number: string | null
+      subtotal: number | null
+    }
+    return {
+      invoiceId: row.invoice_id,
+      userId: inv.user_id,
+      coupleId: inv.couple_id,
+      invoiceNumber: inv.invoice_number,
+      subtotal: inv.subtotal,
+      dueDate: row.due_date,
+      stageId: row.id,
+      stageLabel: row.label,
+      stagePosition: row.position,
+      stageCount: counts.get(row.invoice_id) ?? 1,
+      stageAmountCents: row.amount_cents,
+    }
+  })
+
+  const { data: stageless, error: stagelessError } = await supabase
     .from('invoices')
     .select('id, user_id, couple_id, invoice_number, due_date, subtotal')
     .eq('user_id', userId)
     .eq('status', 'sent')
     .eq('due_date', targetDate)
+  if (stagelessError) throw new Error(`load invoices: ${stagelessError.message}`)
 
-  if (error) throw new Error(`load invoices: ${error.message}`)
-  return (data ?? []) as CandidateInvoice[]
+  const withStages = new Set<string>()
+  if ((stageless ?? []).length > 0) {
+    const { data } = await supabase
+      .from('invoice_payment_stages')
+      .select('invoice_id')
+      .in('invoice_id', (stageless ?? []).map((i) => i.id))
+    for (const row of data ?? []) withStages.add(row.invoice_id)
+  }
+
+  const fromInvoices: Candidate[] = (stageless ?? [])
+    .filter((i) => !withStages.has(i.id))
+    .map((i) => ({
+      invoiceId: i.id,
+      userId: i.user_id,
+      coupleId: i.couple_id,
+      invoiceNumber: i.invoice_number,
+      subtotal: i.subtotal,
+      dueDate: i.due_date,
+      stageId: null,
+      stageLabel: null,
+      stagePosition: null,
+      stageCount: null,
+      stageAmountCents: null,
+    }))
+
+  return [...fromStages, ...fromInvoices]
 }
 
 /**
- * Emit a single `invoice_overdue` event. The RPC bypasses RLS via
- * SECURITY DEFINER — correct for a system-initiated tick.
+ * Emit a single `invoice_overdue` event for an invoice-or-stage at the given
+ * threshold. The RPC bypasses RLS via SECURITY DEFINER, which is exactly what
+ * we want — the tick is system-initiated.
  */
 async function emit(
   supabase: SupabaseClient<Database>,
-  invoice: CandidateInvoice,
+  candidate: Candidate,
   daysOverdue: number,
 ): Promise<void> {
   const { error } = await supabase.rpc('emit_automation_event' as never, {
-    p_user_id: invoice.user_id,
+    p_user_id: candidate.userId,
     p_source_table: 'invoices',
-    p_source_id: invoice.id,
+    p_source_id: candidate.invoiceId,
     p_event_type: 'invoice_overdue',
     p_payload: {
-      invoice_id: invoice.id,
-      invoice_number: invoice.invoice_number,
-      couple_id: invoice.couple_id,
-      due_date: invoice.due_date,
-      subtotal: invoice.subtotal,
+      invoice_id: candidate.invoiceId,
+      invoice_number: candidate.invoiceNumber,
+      couple_id: candidate.coupleId,
+      due_date: candidate.dueDate,
+      subtotal: candidate.subtotal,
       days_overdue: daysOverdue,
+      stage_id: candidate.stageId,
+      stage_label: candidate.stageLabel,
+      stage_position: candidate.stagePosition,
+      stage_count: candidate.stageCount,
+      stage_amount_cents: candidate.stageAmountCents,
     } as never,
-    p_couple_id: invoice.couple_id,
+    p_couple_id: candidate.coupleId,
   } as never)
   if (error) throw new Error(`emit invoice_overdue: ${error.message}`)
 }
@@ -237,18 +356,19 @@ export const invoiceOverdueEmitter: TimeEmitter = {
     for (const [userId, thresholds] of grouped) {
       for (const daysOverdue of thresholds) {
         const candidates = await loadCandidates(supabase, userId, daysOverdue)
-        for (const invoice of candidates) {
+        for (const candidate of candidates) {
           if (
             await alreadyEmittedToday(
               supabase,
-              invoice.id,
+              candidate.invoiceId,
               daysOverdue,
+              candidate.stageId,
               dayStart,
             )
           ) {
             continue
           }
-          await emit(supabase, invoice, daysOverdue)
+          await emit(supabase, candidate, daysOverdue)
           emitted += 1
         }
       }

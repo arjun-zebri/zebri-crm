@@ -458,6 +458,23 @@ const paymentReceived = amountSpec('payment_received', {
   icon: 'CreditCard',
 })
 
+/**
+ * Does this event's stage satisfy an `isFinalBalance` filter?
+ *
+ * A stageless invoice has no `stage_position`, and the whole invoice is
+ * effectively its own final balance, so it passes. Otherwise only the last
+ * stage does. This field has been in the config schema since the triggers
+ * shipped but was never read, because the emitters anchored on the invoice's
+ * own due_date and had no notion of a stage.
+ */
+function matchesFinalBalance(payload: Record<string, unknown>, isFinalBalance?: boolean): boolean {
+  if (!isFinalBalance) return true
+  const position = Number(payload.stage_position)
+  const count = Number(payload.stage_count)
+  if (!Number.isFinite(position) || !Number.isFinite(count)) return true
+  return position === count
+}
+
 const invoiceDue: TriggerSpec<{
   days: number
   notificationCount?: number
@@ -477,12 +494,15 @@ const invoiceDue: TriggerSpec<{
   // `payload.days_until_due`; narrowing here means an automation with
   // `days=3` only fires for the 3-days-before event, not the `days=0`
   // event on the same invoice. Mirrors `quote_due`. `isFinalBalance`
-  // is accepted but not yet enforced — the emitter anchors on the
-  // top-level `due_date`, not payment-schedule installments.
+  // is now enforced, narrowing to only the last stage when set.
   match: (event, config) => {
     const payload = p(event)
     const emitted = Number(payload.days_until_due)
-    return Number.isFinite(emitted) && emitted === config.days
+    return (
+      Number.isFinite(emitted) &&
+      emitted === config.days &&
+      matchesFinalBalance(payload, config.isFinalBalance)
+    )
   },
   ui: { category: 'payment', label: 'Invoice due', description: 'When an invoice reaches its due date', icon: 'Hourglass' },
 }
@@ -522,10 +542,9 @@ const invoiceOverdue: TriggerSpec<{
   // time-emitters/invoice-overdue.ts`. The emitter stamps the overdue
   // depth in `payload.days_overdue`; narrowing here means an
   // automation with min=7 only fires for the day-7 event, not the
-  // day-1 one. Mirrors `quote_overdue`. `isFinalBalance` and the
-  // `daysUntilEvent*` filters are accepted but not yet enforced — the
-  // emitter anchors on the top-level `due_date` and carries no
-  // event-date anchor in its payload.
+  // day-1 one. Mirrors `quote_overdue`. `isFinalBalance` is now
+  // enforced, narrowing to only the last stage when set. The
+  // `daysUntilEvent*` filters are accepted but not yet enforced.
   match: (event, config) => {
     const payload = p(event)
     const emitted = Number(payload.days_overdue)
@@ -535,6 +554,7 @@ const invoiceOverdue: TriggerSpec<{
     if (config.daysOverdueMax !== undefined && emitted > config.daysOverdueMax) {
       return false
     }
+    if (!matchesFinalBalance(payload, config.isFinalBalance)) return false
     return true
   },
   ui: { category: 'payment', label: 'Invoice overdue', description: 'When an invoice passes its due date without payment', icon: 'AlertTriangle' },

@@ -66,3 +66,31 @@ describe('invoice_due trigger match()', () => {
     expect(spec!.match(bad, { days: 3 })).toBe(false)
   })
 })
+
+describe('invoice_due isFinalBalance narrowing', () => {
+  const spec = getTriggerSpec('invoice_due')
+
+  function stageEvent(position: number, count: number): AutomationEventRow {
+    return {
+      ...makeEvent(3),
+      payload: { invoice_id: 'i', days_until_due: 3, stage_position: position, stage_count: count } as never,
+    }
+  }
+
+  it('fires for the last stage when isFinalBalance is set', () => {
+    expect(spec!.match(stageEvent(3, 3), { days: 3, isFinalBalance: true })).toBe(true)
+  })
+
+  it('does not fire for an earlier stage when isFinalBalance is set', () => {
+    expect(spec!.match(stageEvent(2, 3), { days: 3, isFinalBalance: true })).toBe(false)
+  })
+
+  it('fires for any stage when isFinalBalance is unset', () => {
+    expect(spec!.match(stageEvent(2, 3), { days: 3 })).toBe(true)
+  })
+
+  it('fires for a stageless invoice when isFinalBalance is set', () => {
+    // No stages means the whole invoice is the final balance.
+    expect(spec!.match(makeEvent(3), { days: 3, isFinalBalance: true })).toBe(true)
+  })
+})

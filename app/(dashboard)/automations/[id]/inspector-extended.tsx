@@ -423,9 +423,33 @@ const BookingCancelledExtra: (p: { config: Cfg; setConfig: SetCfg }) => null = (
 
 const PaymentDocFiltersExtra: (p: { config: Cfg; setConfig: SetCfg; forPayment: boolean }) => null = () => null
 
-const DueExtra: (p: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) => null = () => null
+function DueExtra({ config, setConfig, isInvoice }: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) {
+  if (!isInvoice) return null
+  return (
+    <>
+      <Check
+        label="Only the final payment"
+        checked={(config['isFinalBalance'] as boolean) ?? false}
+        onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })}
+      />
+      <Hint>Skip the earlier stages and only chase the last one.</Hint>
+    </>
+  )
+}
 
-const OverdueExtra: (p: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) => null = () => null
+function OverdueExtra({ config, setConfig, isInvoice }: { config: Cfg; setConfig: SetCfg; isInvoice: boolean }) {
+  if (!isInvoice) return null
+  return (
+    <>
+      <Check
+        label="Only the final payment"
+        checked={(config['isFinalBalance'] as boolean) ?? false}
+        onChange={(v) => setConfig({ ...config, isFinalBalance: v || undefined })}
+      />
+      <Hint>Skip the earlier stages and only chase the last one.</Hint>
+    </>
+  )
+}
 
 function PaymentFailedExtra({ config, setConfig }: { config: Cfg; setConfig: SetCfg }) {
   return (
