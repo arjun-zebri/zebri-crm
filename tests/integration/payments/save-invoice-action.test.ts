@@ -52,9 +52,6 @@ describe('saveInvoiceAction — integration', () => {
         dueDate: '2026-06-01',
         taxRate: 10,
         discount: null,
-        depositPercent: null,
-        depositDueDate: null,
-        finalDueDate: null,
         stripePaymentEnabled: false,
         items: [
           { id: 'new-1', description: 'Ceremony', amount: 5000, position: 0 },
@@ -105,9 +102,6 @@ describe('saveInvoiceAction — integration', () => {
         dueDate: null,
         taxRate: 0,
         discount: null,
-        depositPercent: 30,
-        depositDueDate: '2026-05-15',
-        finalDueDate: '2026-07-20',
         stripePaymentEnabled: true,
         items: [{ id: 'new-1', description: 'All inclusive', amount: 10000, position: 0 }],
       });
@@ -117,12 +111,11 @@ describe('saveInvoiceAction — integration', () => {
       const admin = serviceClient();
       const { data: inv } = await admin
         .from('invoices')
-        .select('deposit_percent, deposit_due_date, final_due_date, stripe_payment_enabled')
+        .select('stripe_payment_enabled')
         .eq('id', result.data.id)
         .single();
-      expect(Number(inv?.deposit_percent)).toBe(30);
-      expect(inv?.deposit_due_date).toBe('2026-05-15');
-      expect(inv?.final_due_date).toBe('2026-07-20');
+      // The deposit / final-balance columns are no longer written here. Payment
+      // terms live on invoice_payment_stages, covered by schedule-actions.test.ts.
       expect(inv?.stripe_payment_enabled).toBe(true);
     } finally {
       await user.cleanup();
@@ -145,9 +138,6 @@ describe('saveInvoiceAction — integration', () => {
         dueDate: null,
         taxRate: 0,
         discount: null,
-        depositPercent: null,
-        depositDueDate: null,
-        finalDueDate: null,
         stripePaymentEnabled: false,
         items: [{ id: 'new-1', description: 'Item', amount: 100, position: 0 }],
       });
@@ -165,9 +155,6 @@ describe('saveInvoiceAction — integration', () => {
         dueDate: null,
         taxRate: 0,
         discount: null,
-        depositPercent: null,
-        depositDueDate: null,
-        finalDueDate: null,
         stripePaymentEnabled: false,
         items: [{ id: 'new-x', description: 'Injected', amount: 999, position: 0 }],
       });

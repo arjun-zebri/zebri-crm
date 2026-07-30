@@ -117,9 +117,6 @@ describe('saveInvoiceAction — proposal provenance', () => {
       dueDate: null,
       taxRate: 0,
       discount: null,
-      depositPercent: 25,
-      depositDueDate: null,
-      finalDueDate: null,
       stripePaymentEnabled: false,
       proposalId: a.proposalId,
       items: [

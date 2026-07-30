@@ -61,7 +61,6 @@ function draftInput(coupleId: string): SaveProposalInput {
         title: 'Full Day MC',
         description: 'Ceremony and reception, start to finish',
         sourcePackageId: null,
-        depositPercent: 25,
         gstInclusive: true,
         weekendLoadingPercent: 15,
         isPopular: true,
@@ -75,7 +74,6 @@ function draftInput(coupleId: string): SaveProposalInput {
         title: 'Ceremony Only',
         description: null,
         sourcePackageId: null,
-        depositPercent: null,
         gstInclusive: true,
         weekendLoadingPercent: null,
         isPopular: false,
@@ -115,12 +113,13 @@ describe('saveProposalAction — integration', () => {
 
       const { data: options } = await admin
         .from('proposal_options')
-        .select('id, title, position, subtotal, deposit_percent, is_popular')
+        .select('id, title, position, subtotal, is_popular')
         .eq('proposal_id', result.data.id)
         .order('position');
       expect(options).toHaveLength(2);
       expect(options?.[0]?.title).toBe('Full Day MC');
-      expect(Number(options?.[0]?.deposit_percent)).toBe(25);
+      // Options no longer carry a deposit rule. Payment terms are the invoice's
+      // schedule, not a property of the proposal the couple accepted.
       // The MC's "most popular" pick round-trips onto the option.
       expect(options?.[0]?.is_popular).toBe(true);
       expect(options?.[1]?.is_popular).toBe(false);
@@ -155,7 +154,6 @@ describe('saveProposalAction — integration', () => {
             title: 'Single Option',
             description: null,
             sourcePackageId: null,
-            depositPercent: 50,
             gstInclusive: false,
             weekendLoadingPercent: null,
             isPopular: false,
