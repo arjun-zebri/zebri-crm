@@ -71,6 +71,7 @@ export function CoupleTimeRow({ entry, onEdit, onDelete }: CoupleTimeRowProps) {
 
       {running ? null : (
         <RowActionsMenu
+          size="sm"
           actions={[
             { label: 'Edit', onSelect: onEdit },
             { label: 'Delete', onSelect: onDelete, destructive: true },

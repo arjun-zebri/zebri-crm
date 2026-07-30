@@ -120,7 +120,11 @@ export function CoupleTimeEntryModal({
       <div className="flex flex-col gap-4">
         <div>
           <span className="mb-1 block text-caption text-text-muted">Date</span>
-          <DatePicker value={date} onChange={setDate} placeholder="Select date" />
+          {/* Matches the category picker's width: a full-width date field
+              also stretches its calendar, since the day cells are square. */}
+          <div className="w-56 max-w-full">
+            <DatePicker value={date} onChange={setDate} placeholder="Select date" />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

@@ -98,6 +98,9 @@ function buildCalendarGrid(year: number, month: number): Date[][] {
 
 const DROPDOWN_HEIGHT = 330
 
+/** Widest the calendar may get, regardless of how wide its trigger is. */
+const DROPDOWN_MAX_WIDTH = 320
+
 export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right', displayPrefix, variant = 'outlined', defaultViewDate }: DatePickerProps) {
   const [open, setOpen] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
@@ -131,8 +134,11 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
         // Match the trigger width so the calendar lines up with the
         // input it belongs to. Floor at 260px so narrow triggers
         // (e.g. half-row meta controls) still leave room for 7 day
-        // columns to render comfortably.
-        const width = Math.max(260, rect.width)
+        // columns to render comfortably, and never wider than
+        // DROPDOWN_MAX_WIDTH: the day cells are `aspect-square`, so a
+        // calendar matched to a full-width date field inflates into
+        // 60px tiles.
+        const width = Math.min(DROPDOWN_MAX_WIDTH, Math.max(260, rect.width))
         const left = rect.left + width > window.innerWidth - 8
           ? Math.max(8, rect.right - width)
           : rect.left
@@ -340,7 +346,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
           {triggerContent}
         </button>
         {open && (
-          <div className="absolute top-full left-0 right-0 mt-1 min-w-[260px] bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 animate-fade-in">
+          <div className="absolute top-full left-0 right-0 mt-1 min-w-[260px] max-w-[320px] bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-20 animate-fade-in">
             {calendarBody}
           </div>
         )}
