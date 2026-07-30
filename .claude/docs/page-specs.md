@@ -355,8 +355,57 @@ per-couple) and is **saved when the modal closes** (overlay / Esc / ✕) to
 hiding the active tab falls the body back to the first visible tab. Derive logic
 tolerates drift (unknown stored keys dropped, newly added tabs appended).
 
-**Tabs:** Overview, Pulse, Tasks, Contacts, Timeline, Songs, Files, Vows,
-Payments, Contracts, Automations, **Templates**.
+**Tabs:** Overview, Pulse, Tasks, **Time**, Contacts, Timeline, Songs, Files,
+Vows, Payments, Contracts, Automations, **Templates**.
+
+### Time tracking (couple timer)
+
+Lets an MC time the work they put into a couple and charge accordingly.
+Hours only: there are no rates, amounts, or invoice line items.
+
+**Header clock.** A `Timer` icon button in the profile header (desktop
+inline row, and a matching row in the mobile `⋯` menu). `Clock` is not
+used because Timeline already owns it. Three states:
+- nothing running: ghost icon, `aria-label="Start timing"`;
+- running for this couple: active treatment (as settings mode) with the
+  ticking `HH:MM:SS` beside it, `aria-label="Stop timing"`;
+- running for another couple: an informational chip naming that couple
+  and its elapsed time, beside a Start button for this one. Starting here
+  stops the other, so switching couples stays a single click.
+
+**Running pill.** While a timer runs, a fixed pill sits top-right on every
+dashboard page (`z-[90]`; `top-3` desktop, `top-16` on mobile to clear the
+56px top bar) showing the couple name, ticking elapsed, and Stop. It
+cannot be dismissed, so a forgotten timer stays visible.
+
+One control at a time: the couple-profile overlay claims the timer surface
+while open (`claimSurface()`), which hides the pill, because the pill's
+corner is where that overlay puts its ✕. Closing the profile restores it.
+
+**Stopping.** The session saves immediately, then a small dialog asks what
+was worked on, with a type-to-create category picker. Both fields are
+optional and Skip keeps the session (annotate it later from the Time tab).
+Nothing is ever lost by skipping.
+
+**Persistence.** The running timer is a row with `ended_at is null`, so it
+survives reloads, tab closes, and device switches. Elapsed is measured
+against the server clock (`server_now` at read time), never the device's.
+
+**Runaway timers.** A session over 8 hours is clamped to `started_at + 8h`
+on the next read, flagged `auto_stopped`, and the row shows
+"Auto-stopped at 8h" for correction.
+
+**Time tab.** Header shows the grand total plus a per-category breakdown
+("4h 12m tracked · Meeting 2h 10m · Uncategorised 12m"). Rows are one
+session each: date, `start to end`, category chip, note, duration, and a
+`⋯` for Edit / Delete. A running row reads "Running" and has no `⋯` (stop
+it from the pill or the header). "Add time" logs a session that was never
+timed live (date, start, end, category, note, with the duration derived
+live). Sub-minute durations render in seconds, never `0m`.
+
+**Shadow mode.** All timer controls are hidden while an admin is
+impersonating, so a support session cannot write onto the MC's timesheet.
+The Time tab still shows their existing sessions.
 
 The **Templates** tab (Mail icon, after Automations) is where the MC
 emails this couple. Header has two actions: **Send email** (compose from

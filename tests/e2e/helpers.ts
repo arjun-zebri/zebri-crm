@@ -87,9 +87,21 @@ export async function openImportCouplesModal(page: Page) {
   await page.waitForSelector('h2:has-text("Import couples")')
 }
 
+/**
+ * Open a couple's profile from the couples page.
+ *
+ * Works in either view: the List view renders a table row, the default
+ * Board view renders a kanban card, so the row locator is tried first and
+ * the card is the fallback.
+ */
 export async function openCoupleProfile(page: Page, name: string) {
   await search(page, name)
-  await page.locator(`table tbody tr:has-text("${name}")`).first().click()
+  const row = page.locator(`table tbody tr:has-text("${name}")`).first()
+  if (await row.count()) {
+    await row.click()
+  } else {
+    await page.getByText(name, { exact: false }).first().click()
+  }
   await page.waitForSelector('[data-testid="couple-profile-panel"]')
 }
 
@@ -109,7 +121,7 @@ export async function deleteCouple(page: Page, name: string) {
 
 export async function navigateToProfileTab(
   page: Page,
-  tab: 'Overview' | 'Tasks' | 'Payments' | 'Names' | 'Timeline' | 'Songs' | 'Files'
+  tab: 'Overview' | 'Tasks' | 'Time' | 'Payments' | 'Names' | 'Timeline' | 'Songs' | 'Files'
 ) {
   await page.locator('[data-testid="couple-profile-panel"]').locator(`button:has-text("${tab}")`).click()
   await page.waitForLoadState('networkidle')
@@ -154,14 +166,38 @@ export const addVendor = addContact
 /** @deprecated Use deleteContact instead */
 export const deleteVendor = deleteContact
 
+/**
+ * Start the couple timer from the open profile header and wait until the
+ * control flips to its running state.
+ */
+export async function startCoupleTimer(page: Page) {
+  await page.getByRole('button', { name: 'Start timing' }).first().click()
+  await page.getByRole('button', { name: 'Stop timing' }).first().waitFor()
+}
+
+/** Stop the running timer from the floating pill. */
+export async function stopCoupleTimerFromPill(page: Page) {
+  await page
+    .locator('[data-testid="timer-pill"]')
+    .getByRole('button', { name: 'Stop timing' })
+    .click()
+}
+
+/**
+ * Fill the page's search box.
+ *
+ * Matches any placeholder starting with "Search" (the couples toolbar
+ * says "Search couples...", tasks says "Search tasks...") so one helper
+ * covers every list surface.
+ */
 export async function search(page: Page, term: string) {
-  const searchInput = page.locator('input[placeholder="Search..."]').first()
+  const searchInput = page.locator('input[placeholder^="Search"]').first()
   await searchInput.fill(term)
   await page.waitForLoadState('networkidle')
 }
 
 export async function clearSearch(page: Page) {
-  const searchInput = page.locator('input[placeholder="Search..."]').first()
+  const searchInput = page.locator('input[placeholder^="Search"]').first()
   await searchInput.clear()
   await searchInput.press('Escape')
   await page.waitForLoadState('networkidle')

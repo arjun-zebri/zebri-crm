@@ -24,6 +24,7 @@ import {
   useContext,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 
@@ -66,14 +67,49 @@ export function useTimerSurface(): TimerSurface {
   return value;
 }
 
+/**
+ * Whether an admin is impersonating an MC right now.
+ *
+ * `zebri_is_shadowing` is set with `httpOnly: false` so the browser can
+ * read it, which keeps the dashboard layout a synchronous server
+ * component: awaiting `cookies()` there made the segment dynamic and the
+ * sidebar intermittently lost the root QueryClientProvider.
+ */
+function readShadowCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie
+    .split('; ')
+    .some((entry) => entry === 'zebri_is_shadowing=1');
+}
+
+/** The cookie only changes across a full navigation, so nothing to watch. */
+const subscribeToNothing = () => () => {};
+
 export interface TimerProviderProps {
-  shadowing: boolean;
+  /**
+   * Force the shadow state. Omit in the app (the cookie is read on
+   * mount); tests pass it explicitly.
+   */
+  shadowing?: boolean;
   children: ReactNode;
 }
 
-export function TimerProvider({ shadowing, children }: TimerProviderProps) {
+export function TimerProvider({
+  shadowing: shadowingProp,
+  children,
+}: TimerProviderProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  // Read through `useSyncExternalStore` so the server snapshot is `false`
+  // and the client snapshot is the real cookie: no hydration mismatch and
+  // no setState in an effect. A shadow session therefore issues at most
+  // one timer read before the controls disappear, and can never write.
+  const cookieShadowing = useSyncExternalStore(
+    subscribeToNothing,
+    readShadowCookie,
+    () => false,
+  );
+  const shadowing = shadowingProp ?? cookieShadowing;
   const { running, clockOffsetMs } = useRunningTimer(!shadowing);
   const [pending, setPending] = useState<StoppedSession | null>(null);
   const [claims, setClaims] = useState(0);

@@ -486,3 +486,39 @@ type PreviewScriptProps = {
   prefersReducedMotion?: boolean;
 };
 ```
+
+## Time-tracking components  -  `components/time-tracking/*`
+
+Used by the couple timer (see `page-specs.md` "Time tracking").
+
+- **`TimerProvider`**  -  mounted once in the dashboard layout. Owns the
+  start/stop mutations, the running-timer query, the stop-note dialog, and
+  the pill, so any surface can start a timer without prop drilling. Reads
+  the `zebri_is_shadowing` cookie itself via `useSyncExternalStore` (it is
+  set `httpOnly: false` for exactly this), which keeps the dashboard
+  layout a synchronous server component. Exposes `useTimerSurface()`:
+  `{ shadowing, running, clockOffsetMs, isRunningFor, start, stop,
+  claimSurface }`. `claimSurface()` increments a counter and returns its
+  release function; the pill hides while the count is above zero, which is
+  how the couple-profile overlay takes over the control.
+- **`TimerPill`**  -  the fixed top-right running pill
+  (`data-testid="timer-pill"`). Owns the only one-second interval;
+  elapsed is always recomputed from `started_at` plus the clock offset, so
+  it cannot drift.
+- **`StopNoteDialog`**  -  the timesheet prompt shown after a stop. The
+  inner form is keyed by entry id so a second stop cannot inherit the
+  previous note or category.
+- **`TimeCategoryPicker`** + **`TimeCategoryRow`**  -  type-to-create
+  category picker. Filters as you type, offers `Create "<typed>"` only
+  when the name is genuinely new, and each row has inline rename and
+  delete. Categories are **plain chips with no colour**: couple statuses
+  are this product's coloured vocabulary and a second colour system would
+  compete with them.
+- **`useTimerTick(active, clockOffsetMs)`**  -  the shared one-second tick.
+  It lives in a hook rather than the provider because a ticking provider
+  would re-render the whole dashboard once a second.
+
+Pure duration maths (`formatElapsed`, `formatDuration`, `entryDurationMs`,
+`sumByCategory`, the 8h cap helpers) lives in `lib/time-tracking/format.ts`
+and is unit-tested directly.
+

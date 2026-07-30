@@ -508,6 +508,8 @@ DELETE (sampled clean across the migrations).
 | `questionnaire_templates` | ✅ | `user_id` | ✅ `tests/integration/rls/questionnaire-templates.test.ts` (6 tests) | Questionnaires |
 | `couple_questionnaires` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-questionnaires.test.ts` (8 tests — RLS + public RPC token gating + submit/double-submit) + `tests/integration/rls/portal-questionnaires.test.ts` (3 tests — portal RPC) | Questionnaires |
 | `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
+| `couple_time_entries` | ✅ (owner, and the couple must be the writer's own; see the note below) | `user_id` | ✅ `tests/integration/couples/time-actions.test.ts` (10 tests: cross-tenant read/insert/update/delete denial, one-running-timer index, couple-delete cascade, category-delete set-null) | Couples & Events |
+| `time_categories` | ✅ | `user_id` | ✅ `tests/integration/couples/time-actions.test.ts` (case-insensitive uniqueness plus cross-tenant denial) | Couples & Events |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
@@ -531,6 +533,14 @@ DELETE (sampled clean across the migrations).
 | `automation_runs` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cross-tenant retry/cancel/pause/resume are no-ops) | Automations |
 | `automation_waits` | ✅ | `user_id` | ✅ `tests/integration/automations/run-controls.test.ts` (cancel consumes; resume reads — exercised via the control actions) | Automations |
 | `automation_audit_log` | ✅ (SELECT-only for owner; writes service-role) | `user_id` | ☐ (read RLS-scoped by the couple Automations feed) | Automations |
+
+**`couple_time_entries` WITH CHECK is not just `auth.uid() = user_id`.**
+Foreign keys ignore RLS, so an owner-only check still let a user insert a
+row pointing at *another* MC's `couple_id`, meaning their own timesheet
+referencing someone else's couple. The policy therefore also requires `exists (select 1 from
+couples c where c.id = couple_id and c.user_id = auth.uid())`. The
+integration test above asserts the denial; it was found by that test, not
+by review.
 
 **Connect-your-own-mailbox (OAuth) controls** (Settings → Public Page →
 Email; routes `app/api/oauth/{authorize,callback}`): the Gmail/Outlook

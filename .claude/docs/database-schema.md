@@ -914,6 +914,12 @@ oauth_connected_at, created_at, updated_at,
 **couple_profile_tabs_config** (jsonb, not null, default
 `{"hidden_tabs":[],"tab_order":[]}`).
 
+**time_categories_seeded** (boolean, not null, default false) marks that
+the six starter time categories have been created for this user. Keying
+off an empty `time_categories` table instead would resurrect them for a
+user who deliberately deleted all six. Migration:
+`20260730120000_create_couple_time_tracking.sql`.
+
 `couple_profile_tabs_config` is the MC's per-user, global-across-couples layout
 for the couple profile tab nav: `hidden_tabs` (tab keys hidden everywhere,
 never includes `overview`) and `tab_order` (ordered tab keys; empty means the
@@ -937,3 +943,70 @@ callback route + the Public Page server actions
 (`app/(dashboard)/settings/public/actions.ts`).
 
 Migration: `20260621000000_create_user_public_settings.sql`.
+
+------------------------------------------------------------------------
+
+## couple_time_entries / time_categories (Couple profile Time tab)
+
+Per-couple work sessions so an MC can see how much time a couple has
+absorbed and charge accordingly. No rates or amounts live here: the
+feature reports hours only.
+
+### couple_time_entries
+
+Columns: id (uuid pk), user_id (uuid, not null, fk auth.users, cascade),
+couple_id (uuid, not null, fk couples, cascade), started_at (timestamptz,
+not null), **ended_at (timestamptz, nullable; null means the timer is
+RUNNING)**, category_id (uuid, nullable, fk time_categories, `on delete
+set null`), note (text, nullable, max 2000 chars), auto_stopped (boolean,
+not null, default false), created_at (timestamptz).
+
+Duration is never stored. It is always `ended_at - started_at`, so
+"editing a duration" moves `ended_at`. A manual back-fill is simply a row
+created with both timestamps.
+
+Constraint `couple_time_entries_ends_after_start`: `ended_at is null or
+ended_at > started_at`.
+
+Indexes:
+- `couple_time_entries_user_couple_started_idx (user_id, couple_id,
+  started_at desc)`: the Time tab read.
+- `couple_time_entries_category_idx (category_id)`: the FK index.
+- **`couple_time_entries_one_running_per_user`: unique on `(user_id)
+  where ended_at is null`.** This makes "one running timer per user" a
+  database invariant: two tabs racing on Start makes the second insert
+  fail loudly instead of silently producing two live timers.
+
+RLS: one `for all` policy. `using (auth.uid() = user_id)`, and
+`with check (auth.uid() = user_id and exists (select 1 from couples c
+where c.id = couple_id and c.user_id = auth.uid()))`. The EXISTS clause
+matters because foreign keys ignore RLS: without it a user could log time
+against another MC's couple id. Proven by
+`tests/integration/couples/time-actions.test.ts`.
+
+`auto_stopped` is set by the 8-hour cap. `getRunningTimerAction` clamps a
+session older than 8h to `started_at + 8h` on read and flags it, so a
+timer left on overnight logs 8h and is visibly marked for correction. No
+cron is involved.
+
+### time_categories
+
+Columns: id (uuid pk), user_id (uuid, not null, fk auth.users, cascade),
+name (text, not null, max 40 chars), position (integer, not null, default 0),
+created_at (timestamptz).
+
+Unique index `time_categories_user_lower_name_key (user_id, lower(name))`
+so "Travel" and "travel" cannot both exist and the type-to-create picker
+can resolve a typed name to an existing row. No colour column: categories
+are deliberately plain text chips (couple statuses are this product's
+coloured vocabulary).
+
+Deleting a category keeps its sessions and leaves them uncategorised
+(`on delete set null`). Deleting a label must never destroy tracked time.
+
+Seeded once per user with Meeting / Call / Admin / Travel / Rehearsal /
+Ceremony, gated on `user_public_settings.time_categories_seeded` so a user
+who deletes all six does not get them resurrected.
+
+Written by `app/(dashboard)/couples/time-actions.ts`. Migration:
+`20260730120000_create_couple_time_tracking.sql`.
