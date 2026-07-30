@@ -63,16 +63,17 @@ export interface PublicDocData {
   discountType?: 'percentage' | 'fixed' | null
   discountValue?: number | null
   /**
-   * Invoice deposit / final-balance schedule. When present, the `paymentSchedule`
-   * block renders the two stages with these amounts and due dates. Null/undefined
-   * means no schedule, so the block renders nothing.
+   * Invoice payment stages. When present, the `paymentSchedule` block renders
+   * one row per stage. Null or undefined means no schedule, so the block
+   * renders nothing. Previously a fixed deposit + final pair.
    */
   paymentSchedule?: {
-    depositPercent: number
-    depositAmount: number
-    depositDueDate: string | null
-    finalAmount: number
-    finalDueDate: string | null
+    stages: Array<{
+      label: string
+      amountCents: number
+      dueDate: string | null
+      paidAt: string | null
+    }>
   } | null
 }
 

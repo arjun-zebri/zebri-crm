@@ -315,13 +315,9 @@ export interface PaymentScheduleBlock extends BaseBlock {
   type: 'paymentSchedule'
   /** Editable subheading shown above the schedule. Defaults to "Payment schedule". */
   heading?: string
-  /** Editable label for the deposit line. Defaults to "Deposit". */
-  depositLabel?: string
-  /** Editable label for the final-balance line. Defaults to "Final balance". */
-  finalLabel?: string
   /** Styling for the subheading (targeted by clicking it in the preview). */
   headingStyle?: TextStyle
-  /** Styling for the two line labels (targeted by clicking a line in the preview). */
+  /** Styling for the stage line labels (targeted by clicking a line in the preview). */
   lineStyle?: TextStyle
   /** Styling for the amount + due-date values (targeted by clicking either in the
    *  preview). */
@@ -507,7 +503,7 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   divider: 'Horizontal rule',
   footer: 'Business contact and closing line',
   couplePortal: 'The couple-facing portal (fixed)',
-  paymentSchedule: 'Deposit & final balance (live invoice data)',
+  paymentSchedule: 'Payment stages (live invoice data)',
   contractBody: 'The contract body (fixed — edited per couple)',
   proposalBody: 'Packages, chooser and accept (fixed)',
   packageHeader: 'Package name and chooser',

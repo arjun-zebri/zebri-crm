@@ -1004,12 +1004,12 @@ export function RenderCouplePortal({ state }: { state: BrandPreviewState }) {
  * visually unambiguous this block isn't editable on the branding surface.
  */
 /**
- * Editor render for the invoice payment schedule. The subheading and the two line
- * labels (deposit, final balance) are editable text stored on the block and
- * click-to-style targets; the amounts and due dates are per-invoice data filled
- * when the invoice is sent, so they render as mint `{{ … }}` chips (the line-items
- * idiom). Public rendering of the schedule is deferred (the public renderer omits
- * this block), so this is editor-only chrome.
+ * Editor render for the invoice payment schedule. The subheading is editable
+ * text stored on the block and a click-to-style target; the stage labels,
+ * amounts and due dates are filled from the live invoice data when the invoice
+ * is sent, so they render as sample text and mint `{{ … }}` chips (the
+ * line-items idiom). Public rendering of the schedule is deferred (the public
+ * renderer omits this block), so this is editor-only chrome.
  */
 export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps<PaymentScheduleBlock>) {
   const branding = publicBrandingFromEditorState(state)
@@ -1022,18 +1022,20 @@ export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps
   // one style target so they can be resized together.
   const valueCss = resolveTextStyle(block.valueStyle, bodyDefaults)
 
+  // Sample stage data to show realistic preview. Labels come from the invoice
+  // builder, not from the block, so they render as static text here.
   const stages = [
     {
-      value: block.depositLabel ?? 'Deposit',
-      placeholder: 'Deposit',
-      onChange: (v: string) => updateBlock<PaymentScheduleBlock>(block.id, { depositLabel: v }),
-      dueHint: "The deposit's due date, from the invoice.",
+      label: 'Deposit',
+      dueHint: 'The deposit due date, from the invoice.',
     },
     {
-      value: block.finalLabel ?? 'Final balance',
-      placeholder: 'Final balance',
-      onChange: (v: string) => updateBlock<PaymentScheduleBlock>(block.id, { finalLabel: v }),
-      dueHint: "The final balance's due date, from the invoice.",
+      label: 'Progress payment',
+      dueHint: 'The progress payment due date, from the invoice.',
+    },
+    {
+      label: 'Final balance',
+      dueHint: 'The final balance due date, from the invoice.',
     },
   ]
 
@@ -1056,14 +1058,14 @@ export function RenderPaymentSchedule({ block, state, updateBlock }: RenderProps
           {/* Label + due date sit on one line (due date beside, not under). */}
           <div className="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
             <span data-subtarget="line" style={lineCss}>
-              <InlineText value={stage.value} onChange={stage.onChange} placeholder={stage.placeholder} as="span" />
+              {stage.label}
             </span>
             <span data-subtarget="value" style={valueCss}>
               <VarChip label="Due date" hint={stage.dueHint} />
             </span>
           </div>
           <span className="shrink-0" data-subtarget="value" style={valueCss}>
-            <VarChip label="Amount" hint="Filled from the invoice's deposit percent and total." />
+            <VarChip label="Amount" hint="Filled from the invoice's payment stages." />
           </span>
         </div>
       ))}

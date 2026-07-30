@@ -103,13 +103,13 @@ function sampleInvoiceDoc(): PublicDocData {
     ],
     subtotal: 2750,
     taxRate: 10,
-    // Sample deposit/final schedule so the paymentSchedule block previews with data.
+    // Sample three-stage payment schedule so the paymentSchedule block previews realistically.
     paymentSchedule: {
-      depositPercent: 50,
-      depositAmount: 1512.5,
-      depositDueDate: depositDue,
-      finalAmount: 1512.5,
-      finalDueDate: finalDue,
+      stages: [
+        { label: 'Deposit', amountCents: 125_000, dueDate: depositDue, paidAt: null },
+        { label: 'Progress payment', amountCents: 250_000, dueDate: finalDue, paidAt: null },
+        { label: 'Final balance', amountCents: 125_000, dueDate: new Date(Date.now() + 42 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ?? '', paidAt: null },
+      ],
     },
   }
 }

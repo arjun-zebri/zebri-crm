@@ -35,13 +35,14 @@ export interface PreviewDoc {
   expiresAt?: string | null;
   /** Invoice-only: when the invoice is due. */
   dueDate?: string | null;
-  /** Invoice-only: deposit / final-balance schedule when the MC enabled one. */
+  /** Invoice-only: payment stages when the MC enabled them. */
   paymentSchedule?: {
-    depositPercent: number;
-    depositAmount: number;
-    depositDueDate: string | null;
-    finalAmount: number;
-    finalDueDate: string | null;
+    stages: Array<{
+      label: string;
+      amountCents: number;
+      dueDate: string | null;
+      paidAt: string | null;
+    }>;
   } | null;
   /** Invoice-only bank-transfer details (from user_metadata). */
   bankAccountName?: string | null;
