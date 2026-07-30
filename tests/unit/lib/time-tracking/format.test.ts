@@ -20,6 +20,7 @@ function entry(over: Partial<TimeEntry> = {}): TimeEntry {
     started_at: '2026-07-30T02:00:00.000Z',
     ended_at: '2026-07-30T02:48:00.000Z',
     category_id: null,
+    category_color: null,
     category_name: null,
     note: null,
     auto_stopped: false,

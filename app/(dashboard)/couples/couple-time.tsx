@@ -19,10 +19,11 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ErrorState } from '@/components/ui/error-state';
 import { Loading } from '@/components/ui/loading';
-import { formatDuration, sumByCategory, totalMs } from '@/lib/time-tracking/format';
+import { formatDuration, totalMs } from '@/lib/time-tracking/format';
 import type { TimeEntry } from '@/types/time-tracking';
 
 import { CoupleTabEmpty, CoupleTabShell, type TabStat } from './couple-tab-shell';
+import { CoupleTimeBreakdown } from './couple-time-breakdown';
 import { CoupleTimeEntryModal } from './couple-time-entry-modal';
 import { CoupleTimeRow } from './couple-time-row';
 import { useCoupleTime } from './use-couple-time';
@@ -38,17 +39,11 @@ export function CoupleTime({ coupleId }: CoupleTimeProps) {
   const [editing, setEditing] = useState<TimeEntry | null>(null);
   const [deleting, setDeleting] = useState<TimeEntry | null>(null);
 
-  // Total first, then the biggest categories: the sub-line is meant to
-  // answer "where did the hours go" at a glance.
+  // Just the total here. The per-category split moved into the
+  // breakdown bar below, which shows proportion as well as magnitude;
+  // repeating it as chips would say the same thing twice.
   const stats: TabStat[] | undefined = entries.length
-    ? [
-        { label: `${formatDuration(totalMs(entries))} tracked` },
-        // Zero-length buckets (a session that only just started) would
-        // add a chip that says nothing.
-        ...sumByCategory(entries)
-          .filter((c) => c.ms > 0)
-          .map((c) => ({ label: `${c.label} ${formatDuration(c.ms)}` })),
-      ]
+    ? [{ label: `${formatDuration(totalMs(entries))} tracked` }]
     : undefined;
 
   const openAdd = () => {
@@ -86,6 +81,7 @@ export function CoupleTime({ coupleId }: CoupleTimeProps) {
         />
       ) : (
         <div>
+          <CoupleTimeBreakdown entries={entries} />
           {entries.map((entry) => (
             <CoupleTimeRow
               key={entry.id}

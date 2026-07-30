@@ -20,7 +20,12 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { ColorPopover } from '@/components/ui/color-popover';
 import { Input } from '@/components/ui/input';
+import {
+  DEFAULT_CATEGORY_COLORS,
+  UNCATEGORISED_COLOR,
+} from '@/lib/time-tracking/colors';
 import type { TimeCategory } from '@/types/time-tracking';
 
 export interface TimeCategoryRowProps {
@@ -29,6 +34,7 @@ export interface TimeCategoryRowProps {
   selected: boolean;
   onSelect: () => void;
   onRename: (name: string) => void;
+  onRecolor: (color: string) => void;
   onDelete: () => void;
 }
 
@@ -37,6 +43,7 @@ export function TimeCategoryRow({
   selected,
   onSelect,
   onRename,
+  onRecolor,
   onDelete,
 }: TimeCategoryRowProps) {
   const [editing, setEditing] = useState(false);
@@ -82,6 +89,25 @@ export function TimeCategoryRow({
         selected ? 'bg-surface-emphasis' : 'hover:bg-surface-emphasis'
       }`}
     >
+      {/* The swatch is its own control, not part of the select button:
+          clicking a category's colour should open the picker, not
+          silently reassign the session you are labelling. */}
+      <ColorPopover
+        value={category.color ?? UNCATEGORISED_COLOR}
+        onChange={onRecolor}
+        swatches={DEFAULT_CATEGORY_COLORS}
+        // Above the category popover this swatch lives inside (z-95),
+        // or the picker opens behind the list that launched it.
+        zClassName="z-[110]"
+        trigger={
+          <button
+            type="button"
+            aria-label={`Colour for ${category.name}`}
+            className="mr-1.5 size-3 shrink-0 cursor-pointer rounded-full ring-1 ring-black/10 transition hover:scale-110"
+            style={{ background: category.color ?? UNCATEGORISED_COLOR }}
+          />
+        }
+      />
       <button
         type="button"
         onClick={onSelect}

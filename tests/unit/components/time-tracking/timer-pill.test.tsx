@@ -18,6 +18,7 @@ vi.mock('@/app/(dashboard)/couples/time-actions', () => ({
   createTimeCategoryAction: vi.fn(),
   renameTimeCategoryAction: vi.fn(),
   deleteTimeCategoryAction: vi.fn(),
+  setTimeCategoryColorAction: vi.fn(),
 }));
 
 const START = '2026-07-30T02:00:00.000Z';

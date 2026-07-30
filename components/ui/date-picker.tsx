@@ -34,6 +34,11 @@ interface DatePickerProps {
    *  scroll to the couple's existing event date when adding a second
    *  event on the same day. */
   defaultViewDate?: string
+  /** Trigger and calendar scale. `md` (default) is the historic size.
+   *  `sm` matches `Input size="sm"` — 32px tall, 12px text, control
+   *  radius — and shrinks the calendar to suit, so a date field sitting
+   *  in a compact form does not open a calendar built for a larger one. */
+  size?: 'sm' | 'md'
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -98,10 +103,25 @@ function buildCalendarGrid(year: number, month: number): Date[][] {
 
 const DROPDOWN_HEIGHT = 330
 
-/** Widest the calendar may get, regardless of how wide its trigger is. */
-const DROPDOWN_MAX_WIDTH = 320
+/**
+ * Width bounds for the calendar, per size. The day cells are
+ * `aspect-square`, so width drives height: matched to a full-width date
+ * field the calendar inflates into 60px tiles. The floor keeps seven
+ * columns legible under a narrow trigger.
+ */
+const DROPDOWN_WIDTH = {
+  sm: { min: 220, max: 264 },
+  md: { min: 260, max: 320 },
+} as const
 
-export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right', displayPrefix, variant = 'outlined', defaultViewDate }: DatePickerProps) {
+/** Calendar width for a trigger of `triggerWidth`, clamped to its size. */
+function calendarWidth(size: 'sm' | 'md', triggerWidth: number): number {
+  const { min, max } = DROPDOWN_WIDTH[size]
+  return Math.min(max, Math.max(min, triggerWidth))
+}
+
+export function DatePicker({ value, onChange, placeholder, className, inline, calendarOnly, disabled, iconPosition = 'right', displayPrefix, variant = 'outlined', defaultViewDate, size = 'md' }: DatePickerProps) {
+  const isSmall = size === 'sm'
   const [open, setOpen] = useState(false)
   const [viewYear, setViewYear] = useState(new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(new Date().getMonth())
@@ -132,13 +152,8 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
           : rect.bottom + 4
 
         // Match the trigger width so the calendar lines up with the
-        // input it belongs to. Floor at 260px so narrow triggers
-        // (e.g. half-row meta controls) still leave room for 7 day
-        // columns to render comfortably, and never wider than
-        // DROPDOWN_MAX_WIDTH: the day cells are `aspect-square`, so a
-        // calendar matched to a full-width date field inflates into
-        // 60px tiles.
-        const width = Math.min(DROPDOWN_MAX_WIDTH, Math.max(260, rect.width))
+        // input it belongs to, within the bounds for this size.
+        const width = calendarWidth(size, rect.width)
         const left = rect.left + width > window.innerWidth - 8
           ? Math.max(8, rect.right - width)
           : rect.left
@@ -146,7 +161,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
         setDropdownPos({ top, left, width })
       }
     }
-  }, [open, value, inline])
+  }, [open, value, inline, size])
 
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
@@ -173,7 +188,9 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
         const top = spaceBelow < DROPDOWN_HEIGHT
           ? rect.top - DROPDOWN_HEIGHT - 4
           : rect.bottom + 4
-        const width = Math.max(260, rect.width)
+        // Same clamp as the open-time measurement: without the upper
+        // bound the calendar would widen the moment the page scrolled.
+        const width = calendarWidth(size, rect.width)
         const left = rect.left + width > window.innerWidth - 8
           ? Math.max(8, rect.right - width)
           : rect.left
@@ -189,7 +206,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       document.removeEventListener('mousedown', handleMouseDown)
       document.removeEventListener('scroll', handleScroll, { capture: true })
     }
-  }, [open, inline])
+  }, [open, inline, size])
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
@@ -220,7 +237,9 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     const isToday = ymd === todayYMD
     const isCurrentMonth = date.getMonth() === viewMonth
 
-    const base = 'w-full aspect-square flex items-center justify-center text-sm cursor-pointer transition rounded-lg'
+    const base = `w-full aspect-square flex items-center justify-center ${
+      isSmall ? 'text-caption rounded-control' : 'text-sm rounded-lg'
+    } cursor-pointer transition`
     if (isSelected) return `${base} bg-black text-white`
     if (isToday) return `${base} bg-gray-100 text-gray-900 hover:bg-gray-200`
     if (!isCurrentMonth) return `${base} text-gray-300 hover:bg-gray-50`
@@ -242,6 +261,11 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     ? 'border border-border rounded-control px-2.5 py-1.5 bg-surface'
     : isUnderline
     ? 'border-0 border-b rounded-none px-0 py-2 bg-transparent'
+    : isSmall
+    ? // Deliberately the Input `sm` geometry — 32px tall, control
+      // radius — so a date field reads as a sibling of the text fields
+      // beside it rather than a slightly rounder, slightly taller one.
+      'border rounded-control px-2.5 h-8 bg-surface'
     : 'border rounded-xl px-3 py-2'
   const stateChrome = disabled
     ? isMeta
@@ -255,16 +279,23 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     ? open
       ? 'border-gray-400'
       : 'border-gray-200 hover:border-gray-300 focus:border-gray-400'
+    : isSmall
+    ? // Same focus treatment as `Input`: the border darkens, no ring.
+      // The outlined default's green ring is a leftover from the builder
+      // modals and reads as an alert next to neutral token chrome.
+      open
+      ? 'border-border-strong'
+      : 'border-border hover:bg-surface-muted focus-visible:border-brand-fg'
     : open && inline
     ? 'border-green-300 ring-2 ring-green-100 bg-white hover:bg-white'
     : 'border-gray-200 hover:bg-gray-50 focus:border-green-300 focus:ring-2 focus:ring-green-100'
   const triggerClass = `flex items-center ${
     isMeta ? 'justify-start gap-1.5' : triggerLayout
-  } w-full text-sm focus:outline-none ${
+  } w-full ${isSmall ? 'text-caption' : 'text-sm'} focus:outline-none ${
     isMeta ? 'transition-colors' : 'transition'
   } cursor-pointer ${baseChrome} ${stateChrome} ${className ?? ''}`
 
-  const calendarIcon = isMeta ? (
+  const calendarIcon = isMeta || isSmall ? (
     <CalendarDays className="w-3.5 h-3.5 text-text-subtle flex-shrink-0" strokeWidth={1.5} />
   ) : (
     <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
@@ -296,20 +327,20 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
       {/* Month header */}
       <div className="flex items-center justify-between mb-2">
         <button type="button" onClick={prevMonth} className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer">
-          <ChevronLeft className="w-4 h-4 text-gray-600" strokeWidth={1.5} />
+          <ChevronLeft className={`${isSmall ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-gray-600`} strokeWidth={1.5} />
         </button>
-        <span className="text-sm font-medium text-gray-900">
+        <span className={`${isSmall ? 'text-caption' : 'text-sm'} font-medium text-gray-900`}>
           {MONTH_NAMES[viewMonth]} {viewYear}
         </span>
         <button type="button" onClick={nextMonth} className="p-1 rounded-lg hover:bg-gray-100 transition cursor-pointer">
-          <ChevronRight className="w-4 h-4 text-gray-600" strokeWidth={1.5} />
+          <ChevronRight className={`${isSmall ? 'w-3.5 h-3.5' : 'w-4 h-4'} text-gray-600`} strokeWidth={1.5} />
         </button>
       </div>
 
       {/* Day-of-week labels */}
       <div className="grid grid-cols-7 mb-1">
         {DAY_LABELS.map((d) => (
-          <div key={d} className="text-center text-xs text-gray-400 py-1">{d}</div>
+          <div key={d} className={`text-center text-caption text-gray-400 ${isSmall ? 'py-0.5' : 'py-1'}`}>{d}</div>
         ))}
       </div>
 
@@ -359,7 +390,7 @@ export function DatePicker({ value, onChange, placeholder, className, inline, ca
     <div
       ref={dropdownRef}
       style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 200 }}
-      className="bg-white border border-gray-200 rounded-xl shadow-lg p-3 animate-fade-in"
+      className={`bg-white border border-gray-200 rounded-xl shadow-lg ${isSmall ? 'p-2.5' : 'p-3'} animate-fade-in`}
     >
       {calendarBody}
     </div>,

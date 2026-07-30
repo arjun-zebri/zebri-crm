@@ -993,13 +993,32 @@ cron is involved.
 
 Columns: id (uuid pk), user_id (uuid, not null, fk auth.users, cascade),
 name (text, not null, max 40 chars), position (integer, not null, default 0),
-created_at (timestamptz).
+**color (text, nullable)**, created_at (timestamptz).
 
 Unique index `time_categories_user_lower_name_key (user_id, lower(name))`
 so "Travel" and "travel" cannot both exist and the type-to-create picker
-can resolve a typed name to an existing row. No colour column: categories
-are deliberately plain text chips (couple statuses are this product's
-coloured vocabulary).
+can resolve a typed name to an existing row.
+
+`color` is a user-chosen uppercase `#RRGGBB`, constrained by
+`time_categories_color_hex` (`color is null or color ~ '^#[0-9A-F]{6}$'`).
+Note this is a **raw hex, not a named palette key** like
+`couple_statuses.color` or `task_groups.color`: categories follow the
+branding model, where the MC picks any colour through the shared
+`ColorPopover`. The original "plain text only" rule was about not adding
+a second *fixed* palette beside the couple statuses; a colour the MC
+chooses is their own vocabulary, and the Time tab's breakdown bar needs
+segments a reader can tell apart.
+
+New categories are assigned the first unused slot of
+`DEFAULT_CATEGORY_COLORS` (`lib/time-tracking/colors.ts`) server-side, so
+a chart is readable before anyone opens a picker. That order is the
+validated categorical order from the dataviz palette and must not be
+re-sorted — adjacent pairs are what clear the colour-blind separation
+floor. Nullable rather than defaulted, because a row written before the
+column existed genuinely has no colour and renders in the neutral fill.
+
+Migration: `20260730140000_time_category_colors.sql`, which also
+back-fills existing rows by position.
 
 Deleting a category keeps its sessions and leaves them uncategorised
 (`on delete set null`). Deleting a label must never destroy tracked time.

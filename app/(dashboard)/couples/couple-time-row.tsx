@@ -42,13 +42,28 @@ export function CoupleTimeRow({ entry, onEdit, onDelete }: CoupleTimeRowProps) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-caption">
           <span className="text-text">{dayLabel(entry.started_at)}</span>
-          <span className="text-text-muted">
-            {timeLabel(entry.started_at)}
-            {' to '}
-            {entry.ended_at ? timeLabel(entry.ended_at) : 'now'}
-          </span>
+          {/* Only a live session shows a clock time. A finished row is
+              day plus duration: manual entries are logged as "an hour
+              and a half", so their stored instants are an anchor, not
+              something the MC chose, and printing them back would read
+              as a record of when the work happened. */}
+          {running ? (
+            <span className="text-text-muted">
+              from {timeLabel(entry.started_at)}
+            </span>
+          ) : null}
           {entry.category_name ? (
-            <span className="rounded-lg bg-surface-emphasis px-2 py-0.5 text-text-muted">
+            <span className="flex items-center gap-1.5 rounded-lg bg-surface-emphasis px-2 py-0.5 text-text-muted">
+              {/* The dot ties the row to its segment in the breakdown
+                  bar. The name stays, so the colour is a second cue
+                  rather than the only one. */}
+              {entry.category_color ? (
+                <span
+                  aria-hidden
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ background: entry.category_color }}
+                />
+              ) : null}
               {entry.category_name}
             </span>
           ) : null}

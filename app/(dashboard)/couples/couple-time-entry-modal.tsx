@@ -1,10 +1,20 @@
 /**
  * Add or edit one tracked session by hand.
  *
- * Date plus start and end times, with the duration derived and shown
- * live: an MC filling this in is thinking "I worked 2 to 3", not "I
- * worked 60 minutes". Times are read in the viewer's timezone, which is
- * the local reading they intend.
+ * Date plus duration, not start and end times. Someone writing up a
+ * venue walkthrough that evening knows it took about an hour and a
+ * half; making them reconstruct "2:10 to 3:40" is arithmetic in
+ * service of two numbers the timesheet never shows.
+ *
+ * The stored row still has both instants, because the live timer
+ * produces them and the totals are computed from them. This form
+ * anchors them instead of asking:
+ *
+ * - Editing keeps the session where it already sat, moving only its
+ *   end, so correcting a duration never silently reschedules the work.
+ * - A new entry ends at the current time of day on the chosen date,
+ *   which for "today" means it ends now. An entry that ends in the
+ *   future would be a stranger reading than one that ends on the hour.
  *
  * @module app/(dashboard)/couples/couple-time-entry-modal
  */
@@ -15,10 +25,11 @@ import { useState } from 'react';
 import { TimeCategoryPicker } from '@/components/time-tracking/time-category-picker';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
-import { formatDuration } from '@/lib/time-tracking/format';
+import { entryDurationMs } from '@/lib/time-tracking/format';
 import type { TimeEntry } from '@/types/time-tracking';
+
+import { CoupleTimeDurationField } from './couple-time-duration-field';
 
 export interface CoupleTimeEntryModalProps {
   isOpen: boolean;
@@ -44,12 +55,41 @@ function localDate(iso: string): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
-/** `HH:MM` in local time, which is what `<input type="time">` expects. */
-function localTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(
-    d.getMinutes(),
-  ).padStart(2, '0')}`;
+/** Whole minutes, rounded, for seeding the field from an existing row. */
+function entryMinutes(entry: TimeEntry): number {
+  return Math.max(1, Math.round(entryDurationMs(entry, Date.now()) / 60_000));
+}
+
+/**
+ * Turn the form's date and duration back into the pair of instants the
+ * row stores. See the module note for why the anchor differs between
+ * adding and editing. Returns null when the date is unparseable.
+ */
+function toInstants(
+  date: string,
+  minutes: number,
+  entry: TimeEntry | undefined,
+): { startedAt: Date; endedAt: Date } | null {
+  const [y, m, d] = date.split('-').map(Number);
+  if (!y || !m || !d) return null;
+
+  if (entry) {
+    const original = new Date(entry.started_at);
+    const startedAt = new Date(
+      y,
+      m - 1,
+      d,
+      original.getHours(),
+      original.getMinutes(),
+      original.getSeconds(),
+      0,
+    );
+    return { startedAt, endedAt: new Date(startedAt.getTime() + minutes * 60_000) };
+  }
+
+  const now = new Date();
+  const endedAt = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), 0, 0);
+  return { startedAt: new Date(endedAt.getTime() - minutes * 60_000), endedAt };
 }
 
 export function CoupleTimeEntryModal({
@@ -62,9 +102,8 @@ export function CoupleTimeEntryModal({
   const [date, setDate] = useState(
     entry ? localDate(entry.started_at) : localDate(new Date().toISOString()),
   );
-  const [start, setStart] = useState(entry ? localTime(entry.started_at) : '');
-  const [end, setEnd] = useState(
-    entry?.ended_at ? localTime(entry.ended_at) : '',
+  const [minutes, setMinutes] = useState<number | null>(
+    entry ? entryMinutes(entry) : null,
   );
   const [categoryId, setCategoryId] = useState<string | null>(
     entry?.category_id ?? null,
@@ -72,26 +111,19 @@ export function CoupleTimeEntryModal({
   const [note, setNote] = useState(entry?.note ?? '');
   const [error, setError] = useState<string | null>(null);
 
-  const startedAt = date && start ? new Date(`${date}T${start}`) : null;
-  const endedAt = date && end ? new Date(`${date}T${end}`) : null;
-  const valid =
-    startedAt !== null &&
-    endedAt !== null &&
-    !Number.isNaN(startedAt.getTime()) &&
-    !Number.isNaN(endedAt.getTime()) &&
-    endedAt > startedAt;
+  const instants = minutes === null ? null : toInstants(date, minutes, entry);
 
   const handleSave = async () => {
-    if (!valid || !startedAt || !endedAt) return;
+    if (!instants) return;
     setError(null);
     const ok = await onSave({
-      started_at: startedAt.toISOString(),
-      ended_at: endedAt.toISOString(),
+      started_at: instants.startedAt.toISOString(),
+      ended_at: instants.endedAt.toISOString(),
       category_id: categoryId,
       note: note.trim() || null,
     });
     if (ok) onClose();
-    else setError('Could not save this entry. Check the times and try again.');
+    else setError('Could not save this entry. Check the duration and try again.');
   };
 
   return (
@@ -108,7 +140,7 @@ export function CoupleTimeEntryModal({
           </Button>
           <Button
             size="sm"
-            disabled={!valid}
+            disabled={instants === null}
             loading={saving}
             onClick={() => void handleSave()}
           >
@@ -120,35 +152,19 @@ export function CoupleTimeEntryModal({
       <div className="flex flex-col gap-4">
         <div>
           <span className="mb-1 block text-caption text-text-muted">Date</span>
-          {/* Matches the category picker's width: a full-width date field
+          {/* Matches the duration field's width: a full-width date field
               also stretches its calendar, since the day cells are square. */}
           <div className="w-56 max-w-full">
-            <DatePicker value={date} onChange={setDate} placeholder="Select date" />
+            <DatePicker
+              value={date}
+              onChange={setDate}
+              size="sm"
+              placeholder="Select date"
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Start"
-            size="sm"
-            type="time"
-            value={start}
-            onChange={(e) => setStart(e.target.value)}
-          />
-          <Input
-            label="End"
-            size="sm"
-            type="time"
-            value={end}
-            onChange={(e) => setEnd(e.target.value)}
-          />
-        </div>
-
-        <p className="text-caption text-text-muted">
-          {valid && startedAt && endedAt
-            ? `Duration ${formatDuration(endedAt.getTime() - startedAt.getTime())}`
-            : 'End must be after start.'}
-        </p>
+        <CoupleTimeDurationField value={minutes} onChange={setMinutes} />
 
         <div>
           <span className="mb-1 block text-caption text-text-muted">
@@ -166,11 +182,11 @@ export function CoupleTimeEntryModal({
           </label>
           <textarea
             id="time-entry-note"
-            rows={7}
+            rows={6}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Venue walkthrough, script draft, travel"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-caption text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
+            className="w-full resize-none rounded-control border border-border bg-surface px-3 py-2 text-caption text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
           />
         </div>
 

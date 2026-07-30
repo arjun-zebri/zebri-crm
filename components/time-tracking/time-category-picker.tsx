@@ -3,9 +3,13 @@
  *
  * Filters the user's categories as they type and offers
  * `Create "<typed>"` when nothing matches, so labelling a session never
- * requires a detour into settings. Categories are deliberately plain
- * text: a colour per category would compete with the couple statuses,
- * which are the coloured vocabulary in this product.
+ * requires a detour into settings.
+ *
+ * Each row carries a colour swatch that opens the same picker branding
+ * uses. Categories were originally plain text so as not to compete with
+ * the couple statuses, but that reasoning applied to a fixed app palette;
+ * a colour the MC chooses is their own vocabulary, and the Time tab's
+ * breakdown bar needs segments a reader can tell apart.
  *
  * @module components/time-tracking/time-category-picker
  */
@@ -27,7 +31,7 @@ export interface TimeCategoryPickerProps {
 }
 
 export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps) {
-  const { categories, create, rename, remove } = useTimeCategories();
+  const { categories, create, rename, recolor, remove } = useTimeCategories();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   // Name of a category being created right now. The trigger shows it
@@ -80,14 +84,29 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="flex w-56 max-w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-caption transition hover:bg-surface-muted"
+          // Deliberately the `Input size="sm"` geometry — 32px tall,
+          // control radius, 2.5 padding — so the trigger reads as a
+          // sibling of the date and duration fields it sits between
+          // rather than a rounder, taller control of its own.
+          className="flex h-8 w-56 max-w-full cursor-pointer items-center justify-between gap-2 rounded-control border border-border bg-surface px-2.5 text-left text-caption transition hover:bg-surface-muted"
         >
-          <span
-            className={
-              selected || pendingName ? 'truncate text-text' : 'text-text-subtle'
-            }
-          >
-            {pendingName ?? selected?.name ?? 'Add category'}
+          <span className="flex min-w-0 items-center gap-1.5">
+            {selected?.color ? (
+              <span
+                aria-hidden
+                className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                style={{ background: selected.color }}
+              />
+            ) : null}
+            <span
+              className={
+                selected || pendingName
+                  ? 'truncate text-text'
+                  : 'text-text-subtle'
+              }
+            >
+              {pendingName ?? selected?.name ?? 'Add category'}
+            </span>
           </span>
           <ChevronDown
             size={14}
@@ -108,8 +127,11 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               size="sm"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search categories"
-              aria-label="Search categories"
+              // The field both filters and creates, so the placeholder
+              // says so: "Search categories" hid the type-to-create
+              // affordance behind typing something that matched nothing.
+              placeholder="Search or add new"
+              aria-label="Search or add new"
             />
           </div>
 
@@ -121,6 +143,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
                 selected={category.id === value}
                 onSelect={() => select(category.id)}
                 onRename={(name) => rename(category.id, name)}
+                onRecolor={(color) => recolor(category.id, color)}
                 onDelete={() => {
                   remove(category.id);
                   // The entry keeps its history but loses the label, so

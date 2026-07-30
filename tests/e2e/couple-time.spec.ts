@@ -97,7 +97,7 @@ test.describe('Couple time tracking', () => {
       .getByLabel('What did you work on?')
       .fill('Venue walkthrough call')
     await page.getByRole('button', { name: 'Add category' }).click()
-    await page.getByPlaceholder('Search categories').fill('Site visit')
+    await page.getByPlaceholder('Search or add new').fill('Site visit')
     await page.getByRole('button', { name: /Create "Site visit"/ }).click()
     await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page.getByLabel('What did you work on?')).toBeHidden()
@@ -151,26 +151,32 @@ test.describe('Couple time tracking', () => {
     const panel = page.locator('[data-testid="couple-profile-panel"]')
 
     await panel.getByRole('button', { name: 'Add time' }).click()
-    await page.getByLabel('Start', { exact: true }).fill('09:00')
-    await page.getByLabel('End', { exact: true }).fill('10:30')
+    await page.getByLabel('Duration', { exact: true }).fill('1h 30m')
     await page.getByLabel('Note', { exact: true }).fill('Ceremony script draft')
-    await expect(page.getByText('Duration 1h 30m')).toBeVisible()
     await page.getByRole('button', { name: 'Save', exact: true }).click()
 
     await expect(panel.getByText('Ceremony script draft')).toBeVisible()
     await expect(panel.getByText('1h 30m tracked')).toBeVisible()
 
-    // Edit it down to an hour.
+    // Edit it down to an hour, two quarter-hour steps on the stepper.
     await panel.getByRole('button', { name: 'Row actions' }).first().click()
-    await page.getByRole('button', { name: 'Edit' }).click()
-    await page.getByLabel('End', { exact: true }).fill('10:00')
+    // `exact` matters: accessible-name matching is substring by default,
+    // and the profile header carries an "Edit tabs" button.
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    const less = page.getByRole('button', { name: 'Less by 15 minutes' })
+    await less.click()
+    await less.click()
+    await expect(page.getByLabel('Duration', { exact: true })).toHaveValue('1h')
     await page.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(panel.getByText('1h tracked')).toBeVisible()
 
     // Then remove it.
     await panel.getByRole('button', { name: 'Row actions' }).first().click()
-    await page.getByRole('button', { name: 'Delete' }).first().click()
-    await page.getByRole('button', { name: 'Delete' }).last().click()
+    // `exact` again: the header's destructive icon is named "Delete
+    // couple", so a substring match would delete the couple instead of
+    // the row and leave nothing to assert against.
+    await page.getByRole('button', { name: 'Delete', exact: true }).first().click()
+    await page.getByRole('button', { name: 'Delete', exact: true }).last().click()
     await expect(panel.getByText('No time tracked yet')).toBeVisible()
   })
 

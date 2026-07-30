@@ -55,6 +55,7 @@ function runningTimer(coupleName: string): RunningTimer {
       ended_at: null,
       category_id: null,
       category_name: null,
+    category_color: null,
       note: null,
       auto_stopped: false,
     },

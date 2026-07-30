@@ -20,7 +20,9 @@ import {
   deleteTimeCategoryAction,
   listTimeCategoriesAction,
   renameTimeCategoryAction,
+  setTimeCategoryColorAction,
 } from '@/app/(dashboard)/couples/time-actions';
+import { nextCategoryColor } from '@/lib/time-tracking/colors';
 import type { TimeCategory } from '@/types/time-tracking';
 
 /** Query key for the category list. */
@@ -86,7 +88,18 @@ export function useTimeCategories() {
       await queryClient.cancelQueries({ queryKey: TIME_CATEGORIES_KEY });
       const previous = rows();
       const pendingId = `${PENDING_ID_PREFIX}${name}`;
-      write([...previous, { id: pendingId, name, position: previous.length }]);
+      // Colour is assigned server-side (first free slot), so the
+      // placeholder predicts it rather than showing grey for one frame
+      // and then jumping to the real hue.
+      write([
+        ...previous,
+        {
+          id: pendingId,
+          name,
+          position: previous.length,
+          color: nextCategoryColor(previous.map((c) => c.color)),
+        },
+      ]);
       return { previous, pendingId };
     },
     onError: (_error, _name, context) => {
@@ -119,6 +132,25 @@ export function useTimeCategories() {
     onSettled: () => settle(true),
   });
 
+  const recolorMutation = useMutation({
+    mutationFn: async (input: { id: string; color: string }) => {
+      const result = await setTimeCategoryColorAction(input);
+      if (!result.ok) throw new Error(result.error);
+    },
+    onMutate: async ({ id, color }) => {
+      await queryClient.cancelQueries({ queryKey: TIME_CATEGORIES_KEY });
+      const previous = rows();
+      write(previous.map((r) => (r.id === id ? { ...r, color } : r)));
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context) write(context.previous);
+    },
+    // Entry rows carry the flattened colour for their category dot, so a
+    // recolour has to refresh them the same way a rename does.
+    onSettled: () => settle(true),
+  });
+
   const removeMutation = useMutation({
     mutationFn: async (id: string) => {
       const result = await deleteTimeCategoryAction(id);
@@ -147,6 +179,8 @@ export function useTimeCategories() {
       }
     },
     rename: (id: string, name: string) => renameMutation.mutate({ id, name }),
+    recolor: (id: string, color: string) =>
+      recolorMutation.mutate({ id, color }),
     remove: (id: string) => removeMutation.mutate(id),
   };
 }

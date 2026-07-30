@@ -10,6 +10,13 @@ interface ColorPopoverProps {
   swatches?: readonly string[]
   trigger: React.ReactNode
   align?: 'start' | 'end' | 'center'
+  /** Stacking class for the panel. Override when the trigger already
+   *  lives inside a portalled layer that outranks the default — a
+   *  swatch inside another popover needs to beat that popover, or the
+   *  picker opens underneath the list it was opened from. Replaces the
+   *  default rather than appending, since two z-utilities on one element
+   *  resolve by stylesheet order, not by class order. */
+  zClassName?: string
 }
 
 export function ColorPopover({
@@ -18,6 +25,7 @@ export function ColorPopover({
   swatches = [],
   trigger,
   align = 'start',
+  zClassName = 'z-[70]',
 }: ColorPopoverProps) {
   return (
     <Popover.Root>
@@ -26,7 +34,7 @@ export function ColorPopover({
         <Popover.Content
           align={align}
           sideOffset={6}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-[70] w-[280px] animate-modal-in"
+          className={`bg-white border border-gray-200 rounded-xl shadow-xl p-3 ${zClassName} w-[280px] animate-modal-in`}
         >
           <ColorPickerBody value={value} onChange={onChange} swatches={swatches} />
         </Popover.Content>

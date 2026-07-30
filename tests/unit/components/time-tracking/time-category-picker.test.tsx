@@ -65,7 +65,7 @@ describe('TimeCategoryPicker', () => {
     renderPicker({ value: null, onChange: vi.fn() });
     await userEvent.click(screen.getByRole('button', { name: /category/i }));
     await userEvent.type(
-      await screen.findByPlaceholderText(/search categories/i),
+      await screen.findByPlaceholderText(/search or add new/i),
       'trav',
     );
     expect(screen.getByRole('button', { name: 'Travel' })).toBeInTheDocument();
@@ -83,7 +83,7 @@ describe('TimeCategoryPicker', () => {
     renderPicker({ value: null, onChange });
     await userEvent.click(screen.getByRole('button', { name: /category/i }));
     await userEvent.type(
-      await screen.findByPlaceholderText(/search categories/i),
+      await screen.findByPlaceholderText(/search or add new/i),
       'Vows',
     );
     await userEvent.click(
@@ -97,7 +97,7 @@ describe('TimeCategoryPicker', () => {
     renderPicker({ value: null, onChange: vi.fn() });
     await userEvent.click(screen.getByRole('button', { name: /category/i }));
     await userEvent.type(
-      await screen.findByPlaceholderText(/search categories/i),
+      await screen.findByPlaceholderText(/search or add new/i),
       'meeting',
     );
     expect(
@@ -159,7 +159,7 @@ describe('TimeCategoryPicker', () => {
     renderPicker({ value: null, onChange: vi.fn() });
     await userEvent.click(screen.getByRole('button', { name: /category/i }));
     await userEvent.type(
-      await screen.findByPlaceholderText(/search categories/i),
+      await screen.findByPlaceholderText(/search or add new/i),
       'Vows',
     );
     await userEvent.click(screen.getByRole('button', { name: /create "vows"/i }));
@@ -168,7 +168,7 @@ describe('TimeCategoryPicker', () => {
       await screen.findByRole('button', { name: /vows/i }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByPlaceholderText(/search categories/i),
+      screen.queryByPlaceholderText(/search or add new/i),
     ).not.toBeInTheDocument();
   });
 

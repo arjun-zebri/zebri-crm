@@ -18,6 +18,11 @@ import { z } from 'zod';
 
 import { logger } from '@/lib/alerts/logger';
 import { createClient } from '@/lib/supabase/server';
+import {
+  DEFAULT_CATEGORY_COLORS,
+  nextCategoryColor,
+  normalizeCategoryColor,
+} from '@/lib/time-tracking/colors';
 import { capReachedAt, isOverCap } from '@/lib/time-tracking/format';
 import type { Database } from '@/types/database';
 import type {
@@ -31,7 +36,7 @@ import type { ActionResult } from './actions';
 
 /** Columns every entry read selects, including the flattened category. */
 const ENTRY_SELECT =
-  'id, couple_id, started_at, ended_at, category_id, note, auto_stopped, time_categories(name)';
+  'id, couple_id, started_at, ended_at, category_id, note, auto_stopped, time_categories(name, color)';
 
 /** Shape PostgREST returns for {@link ENTRY_SELECT}. */
 interface EntryRow {
@@ -42,7 +47,13 @@ interface EntryRow {
   category_id: string | null;
   note: string | null;
   auto_stopped: boolean;
-  time_categories: { name: string } | { name: string }[] | null;
+  time_categories: CategoryEmbed | CategoryEmbed[] | null;
+}
+
+/** The joined category columns an entry read carries. */
+interface CategoryEmbed {
+  name: string;
+  color: string | null;
 }
 
 /** Generated Update shape for a time entry, used by the patch builder. */
@@ -71,6 +82,7 @@ function toEntry(row: EntryRow): TimeEntry {
     ended_at: row.ended_at,
     category_id: row.category_id,
     category_name: embedded(row.time_categories)?.name ?? null,
+    category_color: embedded(row.time_categories)?.color ?? null,
     note: row.note,
     auto_stopped: row.auto_stopped,
   };
@@ -405,6 +417,9 @@ export async function deleteCoupleTimeEntryAction(
   return { ok: true, data: null };
 }
 
+/** Columns every category read selects. */
+const CATEGORY_SELECT = 'id, name, position, color';
+
 /** The categories every user starts with, in display order. */
 const STARTER_CATEGORIES = [
   'Meeting',
@@ -436,10 +451,16 @@ export async function listTimeCategoriesAction(): Promise<
 
   if (!settings?.time_categories_seeded) {
     const { error: seedError } = await supabase.from('time_categories').insert(
+      // Colour comes from the slot, so every MC's starter six land on
+      // the same validated hues and the breakdown bar is readable
+      // before anyone opens a picker.
       STARTER_CATEGORIES.map((name, position) => ({
         user_id: user.id,
         name,
         position,
+        color:
+          DEFAULT_CATEGORY_COLORS[position % DEFAULT_CATEGORY_COLORS.length] ??
+          null,
       })),
     );
     // A duplicate-name collision here means a concurrent seed already
@@ -464,7 +485,7 @@ export async function listTimeCategoriesAction(): Promise<
 
   const { data, error } = await supabase
     .from('time_categories')
-    .select('id, name, position')
+    .select(CATEGORY_SELECT)
     .order('position', { ascending: true });
 
   if (error || !data) {
@@ -495,7 +516,7 @@ export async function createTimeCategoryAction(
 
   const { data: existing } = await supabase
     .from('time_categories')
-    .select('id, name, position')
+    .select(CATEGORY_SELECT)
     .ilike('name', parsed.data)
     .maybeSingle();
   if (existing) return { ok: true, data: existing };
@@ -509,10 +530,18 @@ export async function createTimeCategoryAction(
     .limit(1);
   const position = last && last.length > 0 ? (last[0]?.position ?? 0) + 1 : 0;
 
+  // Take the first unused slot rather than the next one by position, so
+  // a category created after a deletion reuses the freed colour instead
+  // of duplicating a hue that is still on screen.
+  const { data: inUse } = await supabase
+    .from('time_categories')
+    .select('color');
+  const color = nextCategoryColor((inUse ?? []).map((row) => row.color));
+
   const { data, error } = await supabase
     .from('time_categories')
-    .insert({ user_id: user.id, name: parsed.data, position })
-    .select('id, name, position')
+    .insert({ user_id: user.id, name: parsed.data, position, color })
+    .select(CATEGORY_SELECT)
     .single();
 
   if (error || !data) {
@@ -542,7 +571,7 @@ export async function renameTimeCategoryAction(input: {
     .from('time_categories')
     .update({ name: parsed.data.name })
     .eq('id', parsed.data.id)
-    .select('id, name, position')
+    .select(CATEGORY_SELECT)
     .single();
 
   if (error || !data) {
@@ -552,6 +581,48 @@ export async function renameTimeCategoryAction(input: {
       { userId: user.id, categoryId: parsed.data.id },
     );
     return { ok: false, error: 'Could not rename the category.' };
+  }
+  return { ok: true, data };
+}
+
+/**
+ * Set one category's colour.
+ *
+ * Separate from {@link renameTimeCategoryAction} because the picker
+ * commits colour live as the MC drags the hue strip, while a rename
+ * commits once on blur. Folding them together would fire a name write
+ * on every pointer move.
+ */
+export async function setTimeCategoryColorAction(input: {
+  id: string;
+  color: string;
+}): Promise<ActionResult<TimeCategory>> {
+  const parsed = z.object({ id: uuid, color: z.string() }).safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: firstIssue(parsed.error, 'Invalid colour.') };
+  }
+  // Normalise before the write so the column's CHECK is never the thing
+  // that reports a malformed hex to the user.
+  const color = normalizeCategoryColor(parsed.data.color);
+  if (!color) return { ok: false, error: 'That is not a valid colour.' };
+
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: 'Not signed in.' };
+
+  const { data, error } = await supabase
+    .from('time_categories')
+    .update({ color })
+    .eq('id', parsed.data.id)
+    .select(CATEGORY_SELECT)
+    .single();
+
+  if (error || !data) {
+    logger.error(
+      '[couples/time-actions] setTimeCategoryColorAction failed',
+      error,
+      { userId: user.id, categoryId: parsed.data.id },
+    );
+    return { ok: false, error: 'Could not save the colour.' };
   }
   return { ok: true, data };
 }

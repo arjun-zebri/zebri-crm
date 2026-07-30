@@ -9,11 +9,19 @@
  * @module types/time-tracking
  */
 
-/** One of the user's own work categories (plain text, no colour). */
+/**
+ * One of the user's own work categories.
+ *
+ * `color` is a user-chosen `#RRGGBB` (the branding model, not a named
+ * palette key like `couple_statuses.color`), null only for rows written
+ * before colours existed. It drives the Time tab's breakdown bar.
+ */
 export interface TimeCategory {
   id: string;
   name: string;
   position: number;
+  /** Uppercase `#RRGGBB`, or null for a category with no colour yet. */
+  color: string | null;
 }
 
 /** One work session against a couple. `ended_at === null` means running. */
@@ -27,6 +35,9 @@ export interface TimeEntry {
   category_id: string | null;
   /** Flattened from the joined category row; null when uncategorised. */
   category_name: string | null;
+  /** Flattened alongside the name so the breakdown bar can colour a
+   *  segment without a second read. Null when uncategorised. */
+  category_color: string | null;
   note: string | null;
   /** True when the 8h cap stopped this session rather than the user. */
   auto_stopped: boolean;

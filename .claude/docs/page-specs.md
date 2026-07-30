@@ -400,13 +400,63 @@ against the server clock (`server_now` at read time), never the device's.
 on the next read, flagged `auto_stopped`, and the row shows
 "Auto-stopped at 8h" for correction.
 
-**Time tab.** Header shows the grand total plus a per-category breakdown
-("4h 12m tracked · Meeting 2h 10m · Uncategorised 12m"). Rows are one
-session each: date, `start to end`, category chip, note, duration, and a
-`⋯` for Edit / Delete. A running row reads "Running" and has no `⋯` (stop
-it from the pill or the header). "Add time" logs a session that was never
-timed live (date, start, end, category, note, with the duration derived
-live). Sub-minute durations render in seconds, never `0m`.
+**Time tab.** Header shows the grand total ("4h 12m tracked") and, below
+it, the breakdown bar. Rows are one
+session each: date, category chip, note, duration, and a `⋯` for Edit /
+Delete. A running row reads "Running", shows "from 2:14 pm", and has no
+`⋯` (stop it from the pill or the header). Sub-minute durations render in
+seconds, never `0m`.
+
+Only a running row prints a clock time. A finished row is day plus
+duration: manual entries are logged as a length, so their stored instants
+are an anchor rather than a time the MC chose, and printing them back
+would read as a record of when the work happened.
+
+**Breakdown bar.** One thin horizontal stacked bar under the total, plus
+a legend naming each segment with its duration and share. Part-to-whole
+across a handful of categories, so a stacked bar rather than a donut:
+proportion reads at a glance and it costs a row of the header instead of
+a panel. The total stays a plain number beside it — a chart of a single
+value is decoration, and the total is what the MC bills from.
+
+Rules that keep it honest:
+
+- **Nothing is drawn below two segments.** One segment is a solid block
+  that says nothing the total has not already said.
+- **Largest first**, tail past five folded into a neutral "Other", and
+  **uncategorised always pinned last** in the neutral fill. Uncategorised
+  is the actionable gap, not a category, so it never competes for the
+  eye's first stop and is never folded away.
+- **Colour is never the only carrier of identity.** Every segment has a
+  legend row with its name, and each timesheet row repeats its category's
+  dot beside the name. Three palette slots sit below 3:1 contrast on
+  white, so those labels are what makes the bar accessible.
+
+Colours come from the category, chosen by the MC through the same
+`ColorPopover` branding uses (swatch on each picker row → hex field, hue
+strip, eyedropper). Defaults are assigned from the validated categorical
+order in `lib/time-tracking/colors.ts`, first unused slot wins, so a bar
+is readable before anyone opens a picker.
+
+**Add / edit time.** Date, duration, category, note. The form asks how
+long the work took, not when it started and stopped: someone writing up a
+venue walkthrough that evening knows "about an hour and a half", and
+reconstructing "2:10 to 3:40" is arithmetic in service of two numbers the
+timesheet never shows. Duration is a quarter-hour stepper either side of a
+free-text field that reads `90`, `1h 30m`, `1:30` and `1.5h`, normalising
+to `1h 30m` on blur. Stepping from an off-grid value snaps onto the grid
+(1h 07m − → 1h). Zero is not saveable, so Save stays disabled until the
+field parses.
+
+The row still stores two instants, because the live timer produces them
+and every total is computed from them. The form anchors rather than asks:
+editing keeps the session where it sat and moves only its end, so
+correcting a duration never silently reschedules the work; a new entry
+ends at the current time of day on the chosen date.
+
+Every control in the form is `text-caption` on `rounded-control`, 32px
+tall, including the date trigger (`DatePicker size="sm"`), whose calendar
+matches the trigger's width rather than inflating with it.
 
 **Shadow mode.** All timer controls are hidden while an admin is
 impersonating, so a support session cannot write onto the MC's timesheet.

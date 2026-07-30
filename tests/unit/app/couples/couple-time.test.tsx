@@ -17,6 +17,7 @@ vi.mock('@/app/(dashboard)/couples/time-actions', () => ({
   createTimeCategoryAction: vi.fn(),
   renameTimeCategoryAction: vi.fn(),
   deleteTimeCategoryAction: vi.fn(),
+  setTimeCategoryColorAction: vi.fn(),
 }));
 
 function renderTab() {
@@ -88,11 +89,23 @@ describe('CoupleTime', () => {
       ],
     });
     renderTab();
+    // The header keeps only the total; the split moved into the
+    // breakdown bar, whose legend names each segment beside its share.
     expect(await screen.findByText('2h 3m tracked')).toBeInTheDocument();
-    expect(screen.getByText('Meeting 48m')).toBeInTheDocument();
-    expect(screen.getByText('Uncategorised 1h 15m')).toBeInTheDocument();
+
+    const legend = screen.getByRole('img', { name: /tracked time by category/i });
+    expect(legend).toHaveAccessibleName(
+      expect.stringContaining('Uncategorised 1h 15m'),
+    );
+    expect(legend).toHaveAccessibleName(expect.stringContaining('Meeting 48m'));
+
+    // Identity is never colour alone: each segment is named in the
+    // legend. "Meeting" appears twice — legend plus the row's own chip.
+    expect(screen.getAllByText('Meeting')).toHaveLength(2);
+    expect(screen.getByText('Uncategorised')).toBeInTheDocument();
+    expect(screen.getByText('61%')).toBeInTheDocument();
+
     expect(screen.getByText('Venue walkthrough call')).toBeInTheDocument();
-    expect(screen.getByText('48m')).toBeInTheDocument();
   });
 
   it('flags an auto-stopped session', async () => {
