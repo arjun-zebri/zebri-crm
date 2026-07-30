@@ -17,6 +17,7 @@ import {
   setDefaultSchedule,
   updateSchedule,
 } from '@/app/(dashboard)/payments/schedule-actions'
+import { createClient } from '@/lib/supabase/server'
 
 import { createTestUser, serviceClient, type DbClient, type TestUser } from '../helpers/supabase'
 
@@ -27,8 +28,6 @@ vi.mock('@/lib/supabase/server', () => ({
     return activeUser.client
   }),
 }))
-
-import { createClient } from '@/lib/supabase/server'
 
 const pro = { account_type: 'vendor', subscription_status: 'active', subscription_plan: 'pro' }
 
