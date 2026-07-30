@@ -1,5 +1,5 @@
 /**
- * Unit tests for `app/api/stripe/invoice-payment/route` — the rate-limit,
+ * Unit tests for `app/api/stripe/invoice-payment/route` - the rate-limit,
  * Zod validation, invoice lookup, stage selection, and metadata assembly
  * branches. The Stripe SDK happy path is intentionally not exercised (it's
  * a network call covered by manual smoke); these tests pin the gates that
@@ -88,20 +88,25 @@ function req(body: Record<string, unknown>, headers: Record<string, string> = {}
 }
 
 describe('POST /api/stripe/invoice-payment', () => {
+  const invoiceId = '550e8400-e29b-41d4-a716-446655440000';
+  const stageId1 = '550e8400-e29b-41d4-a716-446655440001';
+  const stageId2 = '550e8400-e29b-41d4-a716-446655440002';
+  const userId = '550e8400-e29b-41d4-a716-446655440003';
+
   const invoiceRow = {
-    id: 'inv1',
+    id: invoiceId,
     title: 'Wedding',
     subtotal: 5000,
     tax_rate: 10,
     status: 'sent',
     stripe_payment_enabled: true,
     share_token: 'tok-12345678',
-    user_id: 'mc1',
-    couple_id: 'c1',
+    user_id: userId,
+    couple_id: '550e8400-e29b-41d4-a716-446655440004',
   };
 
   const mcUser = {
-    id: 'mc1',
+    id: userId,
     app_metadata: {
       stripe_connect_account_id: 'acct_1',
       stripe_connect_enabled: true,
@@ -109,8 +114,8 @@ describe('POST /api/stripe/invoice-payment', () => {
   };
 
   const stages = [
-    { id: 'st1', position: 1, label: 'Deposit', amount_cents: 150_000, paid_at: null },
-    { id: 'st2', position: 2, label: 'Final', amount_cents: 350_000, paid_at: null },
+    { id: stageId1, position: 1, label: 'Deposit', amount_cents: 150_000, paid_at: null },
+    { id: stageId2, position: 2, label: 'Final', amount_cents: 350_000, paid_at: null },
   ];
 
   it('charges one stage and records its id in metadata', async () => {
@@ -120,17 +125,17 @@ describe('POST /api/stripe/invoice-payment', () => {
 
     const { POST } = await loadRoute();
     const res = await POST(req({
-      invoiceId: 'inv1',
+      invoiceId,
       shareToken: 'tok-12345678',
       paymentType: 'stage',
-      stageId: 'st1',
+      stageId: stageId1,
     }));
 
     expect(res.status).toBe(200);
     expect(createSessionMock).toHaveBeenCalled();
     const args = createSessionMock.mock.calls[0]![0];
     expect(args.line_items[0].price_data.unit_amount).toBe(150_000);
-    expect(args.metadata.stage_ids).toBe('st1');
+    expect(args.metadata.stage_ids).toBe(stageId1);
   });
 
   it('rejects paying a later stage before the earliest unpaid one', async () => {
@@ -140,10 +145,10 @@ describe('POST /api/stripe/invoice-payment', () => {
 
     const { POST } = await loadRoute();
     const res = await POST(req({
-      invoiceId: 'inv1',
+      invoiceId,
       shareToken: 'tok-12345678',
       paymentType: 'stage',
-      stageId: 'st2',
+      stageId: stageId2,
     }));
 
     expect(res.status).toBe(400);
@@ -157,7 +162,7 @@ describe('POST /api/stripe/invoice-payment', () => {
 
     const { POST } = await loadRoute();
     const res = await POST(req({
-      invoiceId: 'inv1',
+      invoiceId,
       shareToken: 'tok-12345678',
       paymentType: 'remaining',
     }));
@@ -166,7 +171,7 @@ describe('POST /api/stripe/invoice-payment', () => {
     expect(createSessionMock).toHaveBeenCalled();
     const args = createSessionMock.mock.calls[0]![0];
     expect(args.line_items[0].price_data.unit_amount).toBe(500_000);
-    expect(args.metadata.stage_ids).toBe('st1,st2');
+    expect(args.metadata.stage_ids).toBe(`${stageId1},${stageId2}`);
   });
 
   it('rejects a stage payment with no stageId', async () => {
@@ -174,7 +179,7 @@ describe('POST /api/stripe/invoice-payment', () => {
 
     const { POST } = await loadRoute();
     const res = await POST(req({
-      invoiceId: 'inv1',
+      invoiceId,
       shareToken: 'tok-12345678',
       paymentType: 'stage',
     }));
@@ -190,7 +195,7 @@ describe('POST /api/stripe/invoice-payment', () => {
 
     const { POST } = await loadRoute();
     const res = await POST(req({
-      invoiceId: 'inv1',
+      invoiceId,
       shareToken: 'tok-12345678',
       paymentType: 'remaining',
     }));
@@ -198,15 +203,15 @@ describe('POST /api/stripe/invoice-payment', () => {
     expect(res.status).toBe(200);
     expect(createSessionMock).toHaveBeenCalled();
     const args = createSessionMock.mock.calls[0]![0];
-    // subtotal 5000, tax 10% = 550, total = 5550, in cents = 555000
-    expect(args.line_items[0].price_data.unit_amount).toBe(555_000);
+    // subtotal 5000, tax 10% = 500, total = 5500, in cents = 550000
+    expect(args.line_items[0].price_data.unit_amount).toBe(550_000);
     expect(args.metadata.stage_ids).toBe('');
   });
 
   it('charges only the earliest unpaid stage when position 1 is already paid', async () => {
     const paidStages = [
-      { id: 'st1', position: 1, label: 'Deposit', amount_cents: 150_000, paid_at: '2026-07-01' },
-      { id: 'st2', position: 2, label: 'Final', amount_cents: 350_000, paid_at: null },
+      { id: stageId1, position: 1, label: 'Deposit', amount_cents: 150_000, paid_at: '2026-07-01' },
+      { id: stageId2, position: 2, label: 'Final', amount_cents: 350_000, paid_at: null },
     ];
 
     invoiceQueryMock.mockResolvedValue({ data: invoiceRow, error: null });
@@ -215,16 +220,16 @@ describe('POST /api/stripe/invoice-payment', () => {
 
     const { POST } = await loadRoute();
     const res = await POST(req({
-      invoiceId: 'inv1',
+      invoiceId,
       shareToken: 'tok-12345678',
       paymentType: 'stage',
-      stageId: 'st2',
+      stageId: stageId2,
     }));
 
     expect(res.status).toBe(200);
     expect(createSessionMock).toHaveBeenCalled();
     const args = createSessionMock.mock.calls[0]![0];
     expect(args.line_items[0].price_data.unit_amount).toBe(350_000);
-    expect(args.metadata.stage_ids).toBe('st2');
+    expect(args.metadata.stage_ids).toBe(stageId2);
   });
 });
