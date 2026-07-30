@@ -95,3 +95,48 @@ describe('invoice_overdue trigger match()', () => {
     expect(spec!.match(makeEvent('three'), {})).toBe(false)
   })
 })
+
+describe('invoice_overdue isFinalBalance narrowing', () => {
+  const spec = getTriggerSpec('invoice_overdue')
+
+  /**
+   * Create a staged event with stage_is_final computed from position and count.
+   *
+   * In the real emitter, stage_is_final is computed by finding the max position
+   * per invoice. This helper computes it based on whether position === count,
+   * which is true for contiguous positions but could be false for non-contiguous
+   * ones — the whole point of the stage_is_final field.
+   */
+  function stageEvent(
+    position: number,
+    count: number,
+  ): AutomationEventRow {
+    return {
+      ...makeEvent(1),
+      payload: {
+        invoice_id: 'i',
+        days_overdue: 1,
+        stage_position: position,
+        stage_count: count,
+        stage_is_final: position === count,
+      } as never,
+    }
+  }
+
+  it('fires for the last stage when isFinalBalance is set', () => {
+    expect(spec!.match(stageEvent(3, 3), { isFinalBalance: true })).toBe(true)
+  })
+
+  it('does not fire for an earlier stage when isFinalBalance is set', () => {
+    expect(spec!.match(stageEvent(2, 3), { isFinalBalance: true })).toBe(false)
+  })
+
+  it('fires for any stage when isFinalBalance is unset', () => {
+    expect(spec!.match(stageEvent(2, 3), {})).toBe(true)
+  })
+
+  it('fires for a stageless invoice when isFinalBalance is set', () => {
+    // No stages means the whole invoice is the final balance.
+    expect(spec!.match(makeEvent(1), { isFinalBalance: true })).toBe(true)
+  })
+})

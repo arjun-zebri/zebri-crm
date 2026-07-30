@@ -353,4 +353,27 @@ describe('invoice_overdue time-emitter', () => {
     const r2 = await runTimeEmitters(serviceClient())
     expect(r2.emitted.invoice_overdue).toBe(0)
   })
+
+  it('correctly identifies the final stage with non-contiguous positions', async () => {
+    // Regression: when positions are {1, 3} and count is 2,
+    // the old `position === count` logic fails to identify position 3 as final.
+    // With the fix, stage_is_final is stamped on the payload based on max position.
+    const coupleId = await seedCouple(user)
+    const invoiceId = await seedInvoice(user, coupleId, null, 'sent')
+    await seedStage(user, invoiceId, 1, isoDateOffset(-1), null)
+    await seedStage(user, invoiceId, 3, isoDateOffset(-1), null)
+    await seedInvoiceOverdueAutomation(user, { daysOverdueMin: 1 })
+
+    const result = await runTimeEmitters(serviceClient())
+    expect(result.emitted.invoice_overdue).toBe(2)
+
+    const events = await invoiceOverdueEventsFor(invoiceId)
+    expect(events).toHaveLength(2)
+
+    const stage1Event = events.find((e) => e.payload.stage_position === 1)
+    const stage3Event = events.find((e) => e.payload.stage_position === 3)
+
+    expect(stage1Event?.payload.stage_is_final).toBe(false)
+    expect(stage3Event?.payload.stage_is_final).toBe(true)
+  })
 })

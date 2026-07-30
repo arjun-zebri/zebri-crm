@@ -70,10 +70,24 @@ describe('invoice_due trigger match()', () => {
 describe('invoice_due isFinalBalance narrowing', () => {
   const spec = getTriggerSpec('invoice_due')
 
+  /**
+   * Create a staged event with stage_is_final computed from position and count.
+   *
+   * In the real emitter, stage_is_final is computed by finding the max position
+   * per invoice. This helper computes it based on whether position === count,
+   * which is true for contiguous positions but could be false for non-contiguous
+   * ones — the whole point of the stage_is_final field.
+   */
   function stageEvent(position: number, count: number): AutomationEventRow {
     return {
       ...makeEvent(3),
-      payload: { invoice_id: 'i', days_until_due: 3, stage_position: position, stage_count: count } as never,
+      payload: {
+        invoice_id: 'i',
+        days_until_due: 3,
+        stage_position: position,
+        stage_count: count,
+        stage_is_final: position === count,
+      } as never,
     }
   }
 

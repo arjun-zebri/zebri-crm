@@ -461,18 +461,18 @@ const paymentReceived = amountSpec('payment_received', {
 /**
  * Does this event's stage satisfy an `isFinalBalance` filter?
  *
- * A stageless invoice has no `stage_position`, and the whole invoice is
- * effectively its own final balance, so it passes. Otherwise only the last
- * stage does. This field has been in the config schema since the triggers
- * shipped but was never read, because the emitters anchored on the invoice's
- * own due_date and had no notion of a stage.
+ * The emitter stamps `stage_is_final` on the payload based on the
+ * maximum position in the invoice's stages. For stageless invoices
+ * (no stage rows), all fields are null and the whole invoice passes.
+ * Why stage_is_final instead of inferring from position/count: stage
+ * positions are not guaranteed contiguous — an invoice could have
+ * positions {1, 3} with count 2, making position === count unreliable.
  */
 function matchesFinalBalance(payload: Record<string, unknown>, isFinalBalance?: boolean): boolean {
   if (!isFinalBalance) return true
-  const position = Number(payload.stage_position)
-  const count = Number(payload.stage_count)
-  if (!Number.isFinite(position) || !Number.isFinite(count)) return true
-  return position === count
+  const isFinal = payload.stage_is_final
+  if (isFinal === undefined) return true
+  return Boolean(isFinal)
 }
 
 const invoiceDue: TriggerSpec<{

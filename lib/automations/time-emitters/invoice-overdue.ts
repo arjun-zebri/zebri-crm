@@ -68,7 +68,15 @@ import type { Database } from '@/types/database'
 
 import type { TimeEmitter } from './index'
 
-/** An invoice-or-stage that could fire today. */
+/**
+ * An invoice-or-stage that could fire today.
+ *
+ * Why stage_is_final is computed: `stage_count` is a row count and stage
+ * positions are not guaranteed contiguous (positions could be {1, 3} with
+ * no position 2). The old inference `position === count` was wrong in that
+ * case. Instead we compute the maximum position per invoice in the emitter
+ * (which reads all stage rows anyway) and stamp stage_is_final on the payload.
+ */
 interface Candidate {
   invoiceId: string
   userId: string
@@ -82,6 +90,8 @@ interface Candidate {
   stagePosition: number | null
   stageCount: number | null
   stageAmountCents: number | null
+  /** True when this stage's position equals the maximum position for its invoice. */
+  isFinal: boolean
 }
 
 /** Lower bound for "today" in UTC, for the per-day dedupe window. */
@@ -238,15 +248,19 @@ async function loadCandidates(
     return status === 'sent' || status === 'deposit_paid'
   })
 
-  // stage_count is needed for the isFinalBalance narrowing in triggers.ts.
+  // stage_count and max_position are needed to determine finality.
+  // max_position (not stage_count) determines which stage is final.
   const counts = new Map<string, number>()
+  const maxPositions = new Map<string, number>()
   if (eligible.length > 0) {
     const { data: allStages } = await supabase
       .from('invoice_payment_stages')
-      .select('invoice_id')
+      .select('invoice_id, position')
       .in('invoice_id', [...new Set(eligible.map((r) => r.invoice_id))])
     for (const row of allStages ?? []) {
       counts.set(row.invoice_id, (counts.get(row.invoice_id) ?? 0) + 1)
+      const currentMax = maxPositions.get(row.invoice_id) ?? 0
+      maxPositions.set(row.invoice_id, Math.max(currentMax, row.position))
     }
   }
 
@@ -257,8 +271,10 @@ async function loadCandidates(
       invoice_number: string | null
       subtotal: number | null
     }
+    const invoiceId = row.invoice_id
+    const maxPos = maxPositions.get(invoiceId) ?? row.position
     return {
-      invoiceId: row.invoice_id,
+      invoiceId,
       userId: inv.user_id,
       coupleId: inv.couple_id,
       invoiceNumber: inv.invoice_number,
@@ -267,8 +283,9 @@ async function loadCandidates(
       stageId: row.id,
       stageLabel: row.label,
       stagePosition: row.position,
-      stageCount: counts.get(row.invoice_id) ?? 1,
+      stageCount: counts.get(invoiceId) ?? 1,
       stageAmountCents: row.amount_cents,
+      isFinal: row.position === maxPos,
     }
   })
 
@@ -303,6 +320,7 @@ async function loadCandidates(
       stagePosition: null,
       stageCount: null,
       stageAmountCents: null,
+      isFinal: true,
     }))
 
   return [...fromStages, ...fromInvoices]
@@ -312,6 +330,9 @@ async function loadCandidates(
  * Emit a single `invoice_overdue` event for an invoice-or-stage at the given
  * threshold. The RPC bypasses RLS via SECURITY DEFINER, which is exactly what
  * we want — the tick is system-initiated.
+ *
+ * The payload includes stage_is_final so downstream triggers can determine
+ * finality without inferring it from position/count.
  */
 async function emit(
   supabase: SupabaseClient<Database>,
@@ -335,6 +356,7 @@ async function emit(
       stage_position: candidate.stagePosition,
       stage_count: candidate.stageCount,
       stage_amount_cents: candidate.stageAmountCents,
+      stage_is_final: candidate.isFinal,
     } as never,
     p_couple_id: candidate.coupleId,
   } as never)
