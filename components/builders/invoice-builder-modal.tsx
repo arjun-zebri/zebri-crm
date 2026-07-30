@@ -63,6 +63,7 @@ import {
   type ApplyItem,
   type ApplySource,
 } from '@/components/builders/parts/use-apply-sources';
+import { useInvoiceStages } from '@/components/builders/parts/use-invoice-stages';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
@@ -83,11 +84,6 @@ interface Invoice {
   tax_rate: number | null;
   discount_type: 'percentage' | 'fixed' | null;
   discount_value: number | null;
-  deposit_percent: number | null;
-  deposit_due_date: string | null;
-  deposit_paid_at: string | null;
-  final_due_date: string | null;
-  final_paid_at: string | null;
   paid_at: string | null;
   stripe_payment_enabled: boolean;
   share_token: string;
@@ -96,9 +92,21 @@ interface Invoice {
   couple_id: string;
   couple_name: string;
   event_id: string | null;
+  created_at: string;
   /** Provenance: the accepted proposal this invoice was generated
    *  from, if any. Never feeds rendering. */
   proposal_id?: string | null;
+  /** Payment stages on this invoice. */
+  invoice_payment_stages?: Array<{
+    id: string;
+    position: number;
+    label: string;
+    amount_type: 'percent' | 'fixed' | 'remainder';
+    amount_value: number | null;
+    amount_cents: number;
+    due_date: string | null;
+    paid_at: string | null;
+  }>;
 }
 
 export interface InvoiceBuilderModalProps {
@@ -151,10 +159,6 @@ export function InvoiceBuilderModal({
   const [taxRate, setTaxRate] = useState<number | null>(null);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | null>(null);
   const [discountValue, setDiscountValue] = useState<number | null>(null);
-  const [depositEnabled, setDepositEnabled] = useState(false);
-  const [depositPercent, setDepositPercent] = useState(50);
-  const [depositDueDate, setDepositDueDate] = useState('');
-  const [finalDueDate, setFinalDueDate] = useState('');
   const [stripePaymentEnabled, setStripePaymentEnabled] = useState(false);
   const [stripeConnectOn, setStripeConnectOn] = useState(false);
   // A picked package whose add-ons still need choosing before apply.
@@ -175,7 +179,7 @@ export function InvoiceBuilderModal({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
-        .select('*, couple:couple_id(name)')
+        .select('*, couple:couple_id(name), invoice_payment_stages(*)')
         .eq('id', effectiveId!)
         .single();
       if (error) throw error;
@@ -226,7 +230,6 @@ export function InvoiceBuilderModal({
   const status = isOverdue ? 'overdue' : rawStatus;
   const canEdit = !['paid', 'cancelled'].includes(rawStatus);
   const templateOptions = applySources?.options ?? [];
-  const hasDepositSchedule = depositEnabled && !!depositDueDate;
   const shareEnabled = invoice?.share_token_enabled ?? false;
   const shareUrl =
     typeof window !== 'undefined' && invoice?.share_token
@@ -258,10 +261,6 @@ export function InvoiceBuilderModal({
       setTaxRate(null);
       setDiscountType(null);
       setDiscountValue(null);
-      setDepositEnabled(false);
-      setDepositPercent(50);
-      setDepositDueDate('');
-      setFinalDueDate('');
       setStripePaymentEnabled(false);
       setProposalId(null);
       setDirty(false);
@@ -277,19 +276,6 @@ export function InvoiceBuilderModal({
       setTaxRate(invoice.tax_rate != null && invoice.tax_rate > 0 ? invoice.tax_rate : null);
       setDiscountType(invoice.discount_type);
       setDiscountValue(invoice.discount_value);
-      // The schedule is "enabled" if we have the percent + due dates
-      // stored, OR if a payment has actually been recorded against
-      // it (covers the case where mark-paid fired before the schedule
-      // was persisted via Save changes — see the auto-save in
-      // markDepositPaid/markFinalPaid below).
-      const hasSched =
-        (invoice.deposit_percent != null && invoice.deposit_due_date != null) ||
-        invoice.deposit_paid_at != null ||
-        invoice.final_paid_at != null;
-      setDepositEnabled(hasSched);
-      setDepositPercent(invoice.deposit_percent ?? 50);
-      setDepositDueDate(invoice.deposit_due_date ?? '');
-      setFinalDueDate(invoice.final_due_date ?? '');
       setStripePaymentEnabled(invoice.stripe_payment_enabled);
       setProposalId(invoice.proposal_id ?? null);
       setDirty(false);
@@ -312,8 +298,39 @@ export function InvoiceBuilderModal({
   const effectiveTaxRate = taxRate ?? 0;
   const tax = taxableAmount * (effectiveTaxRate / 100);
   const total = taxableAmount + tax;
-  const depositAmount = total * (depositPercent / 100);
-  const finalAmount = total - depositAmount;
+
+  /* ─── payment stages hook ────────────────────────────────────── */
+
+  // Convert database rows to InvoiceStage shape expected by the hook.
+  const mapStageRows = (
+    rows: Array<{
+      id: string;
+      position: number;
+      label: string;
+      amount_type: 'percent' | 'fixed' | 'remainder';
+      amount_value: number | null;
+      amount_cents: number;
+      due_date: string | null;
+      paid_at: string | null;
+    }>,
+  ) =>
+    rows.map((row) => ({
+      id: row.id,
+      position: row.position,
+      label: row.label,
+      amountType: row.amount_type as 'percent' | 'fixed' | 'remainder',
+      amountValue: row.amount_value,
+      amountCents: row.amount_cents,
+      dueDate: row.due_date,
+      paidAt: row.paid_at,
+    }))
+
+  const invoiceStages = useInvoiceStages({
+    invoiceId: invoice?.id ?? null,
+    totalCents: Math.round(total * 100),
+    issueDate: (invoice?.created_at ?? new Date().toISOString()).slice(0, 10),
+    initialStages: mapStageRows(invoice?.invoice_payment_stages ?? []),
+  })
 
   /* ─── handlers ──────────────────────────────────────────────── */
 
@@ -386,21 +403,11 @@ export function InvoiceBuilderModal({
       // GST-inclusive prices already carry the tax; adding 10% on top
       // would misquote. Exclusive packages keep GST on top.
       setTaxRate(source.package.gstInclusive ? null : 10);
-      // The package's booking-deposit rule pre-fills the payment
-      // schedule; due dates stay the MC's call.
-      if (source.package.depositPercent != null) {
-        setDepositEnabled(true);
-        setDepositPercent(source.package.depositPercent);
-      }
     }
     if (source.proposal) {
       // Invoicing what the couple agreed to: the accepted option's
       // terms carry over, and the invoice records its provenance.
       setTaxRate(source.proposal.gstInclusive ? null : 10);
-      if (source.proposal.depositPercent != null) {
-        setDepositEnabled(true);
-        setDepositPercent(source.proposal.depositPercent);
-      }
       setProposalId(source.proposal.id);
     } else {
       setProposalId(null);
@@ -427,9 +434,9 @@ export function InvoiceBuilderModal({
           discountType && discountValue != null && discountValue > 0
             ? { type: discountType, value: discountValue }
             : null,
-        depositPercent: depositEnabled ? depositPercent : null,
-        depositDueDate: depositEnabled ? depositDueDate || null : null,
-        finalDueDate: depositEnabled ? finalDueDate || null : null,
+        depositPercent: null,
+        depositDueDate: null,
+        finalDueDate: null,
         stripePaymentEnabled,
         proposalId,
         items: items.map((item, idx) => ({
@@ -441,7 +448,9 @@ export function InvoiceBuilderModal({
       };
       const result = await saveInvoiceAction(input);
       if (!result.ok) throw new Error(result.error);
-      return result.data.id;
+      const newId = result.data.id;
+      await invoiceStages.persist();
+      return newId;
     },
     onSuccess: (newId) => {
       queryClient.invalidateQueries({ queryKey: ['invoice', newId] });
@@ -519,10 +528,14 @@ export function InvoiceBuilderModal({
   const markPaid = useMutation({
     mutationFn: async () => {
       const id = await ensureSaved();
+      // Mark all unpaid stages as paid
+      for (const stage of invoiceStages.stages.filter((s) => !s.paidAt)) {
+        await invoiceStages.markPaid(stage.id);
+      }
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('invoices')
-        .update({ status: 'paid', paid_at: now, final_paid_at: hasDepositSchedule ? now : null })
+        .update({ status: 'paid', paid_at: now })
         .eq('id', id);
       if (error) throw error;
     },
@@ -551,30 +564,19 @@ export function InvoiceBuilderModal({
     onError: () => toast('Failed to mark deposit as paid', 'error'),
   });
 
-  const markFinalPaid = useMutation({
-    mutationFn: async () => {
-      const id = await ensureSaved();
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from('invoices')
-        .update({ status: 'paid', paid_at: now, final_paid_at: now })
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
-      toast('Final payment marked as paid');
-    },
-    onError: () => toast('Failed to mark final payment as paid', 'error'),
-  });
-
   const revertPaid = useMutation({
     mutationFn: async () => {
       if (!effectiveId) return;
+      // Revert stages that were manually marked paid (no Stripe settlement).
+      // Stages settled through Stripe record real money, so we never undo those.
+      await supabase
+        .from('invoice_payment_stages')
+        .update({ paid_at: null })
+        .eq('invoice_id', effectiveId)
+        .is('stripe_payment_intent_id', null);
       const { error } = await supabase
         .from('invoices')
-        .update({ status: 'sent', paid_at: null, final_paid_at: null })
+        .update({ status: 'sent', paid_at: null })
         .eq('id', effectiveId);
       if (error) throw error;
     },
@@ -638,18 +640,11 @@ export function InvoiceBuilderModal({
   // they're affirmative state transitions, not destructive ones, so
   // even an overdue invoice gets a success-toned CTA. The status
   // pill alone communicates the overdue state.
-  if (rawStatus === 'sent' && hasDepositSchedule) {
+  if (rawStatus === 'sent' && invoiceStages.stages.length > 0) {
     primaryAction = {
       label: 'Mark deposit paid',
       onClick: () => markDepositPaid.mutate(),
       loading: markDepositPaid.isPending,
-      variant: 'success',
-    };
-  } else if (rawStatus === 'deposit_paid') {
-    primaryAction = {
-      label: 'Mark final paid',
-      onClick: () => markFinalPaid.mutate(),
-      loading: markFinalPaid.isPending,
       variant: 'success',
     };
   } else if (rawStatus === 'sent' || isOverdue) {
@@ -701,15 +696,9 @@ export function InvoiceBuilderModal({
         : null,
     notes: notes || null,
     dueDate: dueDate,
-    paymentSchedule: depositEnabled
-      ? {
-          depositPercent,
-          depositAmount,
-          depositDueDate: depositDueDate || null,
-          finalAmount: total - depositAmount,
-          finalDueDate: finalDueDate || null,
-        }
-      : null,
+    // TODO: Task 10 will update PreviewDoc to support N-stage payment schedules.
+    // For now, the preview does not render payment stages; use null.
+    paymentSchedule: null,
     shareUrl: shareUrl ?? `https://example.com/invoice/${invoice?.share_token ?? 'preview'}`,
     stripePaymentEnabled,
   };
@@ -848,64 +837,28 @@ export function InvoiceBuilderModal({
           />
         </div>
 
-        {/* Payment schedule — auto-animate swaps between the schedule
-            timeline and the "+ Add payment schedule" affordance.
-            Each branch is wrapped in a keyed div so auto-animate
-            consistently sees a sibling add/remove on every toggle
-            (without the wrappers, the second toggle skips the
-            animation because the observer doesn't pick up the type
-            change cleanly). */}
+        {/* Payment schedule - N-stage payment timeline */}
         <div ref={scheduleSlotRef} className="mt-8">
-          {depositEnabled ? (
-            <div key="schedule">
-              <PaymentSchedule
-                canEdit={canEdit}
-                depositPercent={depositPercent}
-                depositDueDate={depositDueDate}
-                finalDueDate={finalDueDate}
-                depositPaidAt={invoice?.deposit_paid_at ?? null}
-                finalPaidAt={invoice?.final_paid_at ?? null}
-                depositAmount={depositAmount}
-                finalAmount={finalAmount}
-                onDepositPercentChange={(v) => {
-                  setDepositPercent(v);
-                  setDirty(true);
-                }}
-                onDepositDueDateChange={(v) => {
-                  setDepositDueDate(v);
-                  setDirty(true);
-                }}
-                onFinalDueDateChange={(v) => {
-                  setFinalDueDate(v);
-                  setDirty(true);
-                }}
-                onMarkDepositPaid={() => markDepositPaid.mutate()}
-                onMarkFinalPaid={() => markFinalPaid.mutate()}
-                onRemove={() => {
-                  setDepositEnabled(false);
-                  setDepositDueDate('');
-                  setFinalDueDate('');
-                  setDirty(true);
-                }}
-                markDepositPending={markDepositPaid.isPending}
-                markFinalPending={markFinalPaid.isPending}
-              />
-            </div>
-          ) : canEdit ? (
-            <button
-              key="add-schedule"
-              type="button"
-              onClick={() => {
-                setDepositEnabled(true);
-                setDepositDueDate(addDays(0));
-                setFinalDueDate(dueDate ?? addDays(60));
-                setDirty(true);
-              }}
-              className="inline-flex items-center gap-1.5 text-body text-text-muted hover:text-text transition-colors cursor-pointer"
-            >
-              + Add payment schedule
-            </button>
-          ) : null}
+          <PaymentSchedule
+            canEdit={canEdit}
+            stages={invoiceStages.stages}
+            schedules={invoiceStages.schedules}
+            schedulesLoading={invoiceStages.schedulesLoading}
+            schedulesError={invoiceStages.schedulesError}
+            validationError={invoiceStages.validationError}
+            markPendingStageId={invoiceStages.markPendingStageId}
+            onStagesChange={(stages) => {
+              invoiceStages.setStages(stages);
+              setDirty(true);
+            }}
+            onApplySchedule={invoiceStages.applySchedule}
+            onSaveAsSchedule={invoiceStages.saveAsSchedule}
+            onUpdateApplied={invoiceStages.updateApplied}
+            onMarkPaid={invoiceStages.markPaid}
+            onRenameSchedule={invoiceStages.renameSchedule}
+            onDeleteSchedule={invoiceStages.deleteSchedule}
+            onSetDefaultSchedule={invoiceStages.setDefaultSchedule}
+          />
         </div>
 
         {/* Card payments toggle — only when Stripe Connect is on */}

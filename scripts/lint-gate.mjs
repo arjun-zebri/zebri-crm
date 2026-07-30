@@ -59,7 +59,10 @@ import { execSync } from 'node:child_process';
 // and fixed import-order across public block renderers → 75 → 72.
 // Branding overhaul phase-a completion: strict type compliance fixes +
 // render consolidation clearances → 72 → 66 → 64 (page.tsx any-casts fixed).
-const ERROR_BUDGET = 64;
+// Payment schedules phase: replaced two-stage deposit model with N-stage
+// payment timeline; rewrite of payment-schedule.tsx removed set-state-in-effect
+// error → 64 → 63.
+const ERROR_BUDGET = 63;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
