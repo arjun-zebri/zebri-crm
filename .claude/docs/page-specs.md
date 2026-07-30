@@ -384,13 +384,13 @@ corner is where that overlay puts its ✕. Closing the profile restores it.
 
 **Stopping.** The session saves immediately, then a dialog asks what was
 worked on: **Category first** (a `w-56` type-to-create picker, since it is
-the one-tap decision) then a roomy, vertically resizable note. Both are
-optional and Skip keeps the session (annotate it later from the Time tab).
-Nothing is ever lost by skipping. The dialog is `size="md"` and every
-control in it uses the app's body size (`text-body`, 14px), matching the
-couple modal and the tasks panel; only the field labels are captions.
-Category create / rename / delete are optimistic, so the list never waits
-on the server.
+the one-tap decision) then a tall, fixed-size note (`resize-none`). Both
+are optional and Skip keeps the session (annotate it later from the Time
+tab). Nothing is ever lost by skipping. The dialog is `size="md"` (512px)
+and every control in it, trigger, search field, rows, and note, uses
+`text-caption` so nothing reads as oversized against the labels. Category
+create / rename / delete are optimistic, so the list never waits on the
+server.
 
 **Persistence.** The running timer is a row with `ended_at is null`, so it
 survives reloads, tab closes, and device switches. Elapsed is measured

@@ -1,6 +1,10 @@
 /**
  * One row inside {@link TimeCategoryPicker}: select, rename, delete.
  *
+ * The whole row is a single hover/selected surface. Putting the
+ * background on the name button alone left the rename and delete icons
+ * outside the highlight, which read as a half-painted row.
+ *
  * Rename is inline rather than a nested dialog, because the picker is
  * already a popover and stacking a modal on top of it to change one word
  * would be heavier than the edit itself.
@@ -47,9 +51,10 @@ export function TimeCategoryRow({
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1 px-2 py-1">
+      <div className="flex items-center gap-1 px-1.5 py-0.5">
         <Input
           autoFocus
+          size="sm"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -63,31 +68,32 @@ export function TimeCategoryRow({
           aria-label={`Rename ${category.name}`}
           className="min-w-0 flex-1"
         />
-        <button
-          type="button"
-          onClick={commit}
-          aria-label={`Save ${category.name}`}
-          className="shrink-0 cursor-pointer rounded-lg p-1 text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
-        >
-          <Check size={13} strokeWidth={1.5} />
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="group flex items-center gap-1 px-1">
+    <div
+      className={`group mx-1.5 flex items-center gap-0.5 rounded-lg pl-2 pr-1 transition ${
+        selected ? 'bg-surface-emphasis' : 'hover:bg-surface-emphasis'
+      }`}
+    >
       <button
         type="button"
         onClick={onSelect}
-        className={`min-w-0 flex-1 cursor-pointer truncate rounded-lg px-2 py-1.5 text-left text-body transition ${
-          selected
-            ? 'bg-surface-emphasis font-medium text-text'
-            : 'text-text-muted hover:bg-surface-emphasis hover:text-text'
+        className={`min-w-0 flex-1 cursor-pointer truncate py-1.5 text-left text-caption transition ${
+          selected ? 'font-medium text-text' : 'text-text-muted'
         }`}
       >
         {category.name}
       </button>
+      {selected ? (
+        <Check
+          size={12}
+          strokeWidth={1.5}
+          className="shrink-0 text-text-muted group-hover:hidden"
+        />
+      ) : null}
       <button
         type="button"
         onClick={() => {
@@ -95,7 +101,7 @@ export function TimeCategoryRow({
           setEditing(true);
         }}
         aria-label={`Rename ${category.name}`}
-        className="shrink-0 cursor-pointer rounded-lg p-1 text-text-subtle opacity-0 transition group-hover:opacity-100 hover:bg-surface-emphasis hover:text-text focus:opacity-100"
+        className="shrink-0 cursor-pointer rounded-md p-1 text-text-subtle opacity-0 transition hover:text-text focus:opacity-100 group-hover:opacity-100"
       >
         <Pencil size={12} strokeWidth={1.5} />
       </button>
@@ -103,7 +109,7 @@ export function TimeCategoryRow({
         type="button"
         onClick={onDelete}
         aria-label={`Delete ${category.name}`}
-        className="shrink-0 cursor-pointer rounded-lg p-1 text-text-subtle opacity-0 transition group-hover:opacity-100 hover:bg-surface-emphasis hover:text-danger focus:opacity-100"
+        className="shrink-0 cursor-pointer rounded-md p-1 text-text-subtle opacity-0 transition hover:text-danger focus:opacity-100 group-hover:opacity-100"
       >
         <Trash2 size={12} strokeWidth={1.5} />
       </button>

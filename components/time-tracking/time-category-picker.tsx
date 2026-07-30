@@ -80,7 +80,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="flex w-56 max-w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-body transition hover:bg-surface-muted"
+          className="flex w-56 max-w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-caption transition hover:bg-surface-muted"
         >
           <span
             className={
@@ -100,11 +100,12 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="z-[95] w-64 rounded-xl border border-border bg-card py-1 shadow-lg"
+          className="z-[95] w-[var(--radix-popover-trigger-width)] rounded-xl border border-border bg-card py-1 shadow-lg"
         >
           <div className="px-2 pb-1 pt-1">
             <Input
               autoFocus
+              size="sm"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search categories"
@@ -112,7 +113,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
             />
           </div>
 
-          <div className="max-h-56 overflow-y-auto py-0.5">
+          <div className="max-h-64 overflow-y-auto py-1">
             {filtered.map((category) => (
               <TimeCategoryRow
                 key={category.id}
@@ -129,7 +130,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               />
             ))}
             {filtered.length === 0 && !canCreate ? (
-              <p className="px-3 py-2 text-body text-text-subtle">
+              <p className="px-3.5 py-2 text-caption text-text-subtle">
                 No categories yet.
               </p>
             ) : null}
@@ -140,7 +141,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               <button
                 type="button"
                 onClick={handleCreate}
-                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-body text-text-muted transition hover:bg-surface-emphasis hover:text-text"
+                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-caption text-text-muted transition hover:bg-surface-emphasis hover:text-text"
               >
                 <Plus size={13} strokeWidth={1.5} />
                 <span className="truncate">Create &quot;{trimmed}&quot;</span>
@@ -153,7 +154,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               <button
                 type="button"
                 onClick={() => select(null)}
-                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-body text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
+                className="mx-1.5 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-caption text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
               >
                 <X size={13} strokeWidth={1.5} />
                 Clear

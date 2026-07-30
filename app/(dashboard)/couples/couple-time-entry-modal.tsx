@@ -126,12 +126,14 @@ export function CoupleTimeEntryModal({
         <div className="grid grid-cols-2 gap-3">
           <Input
             label="Start"
+            size="sm"
             type="time"
             value={start}
             onChange={(e) => setStart(e.target.value)}
           />
           <Input
             label="End"
+            size="sm"
             type="time"
             value={end}
             onChange={(e) => setEnd(e.target.value)}
@@ -160,11 +162,11 @@ export function CoupleTimeEntryModal({
           </label>
           <textarea
             id="time-entry-note"
-            rows={6}
+            rows={7}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Venue walkthrough, script draft, travel"
-            className="w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-body text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
+            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-caption text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
           />
         </div>
 
