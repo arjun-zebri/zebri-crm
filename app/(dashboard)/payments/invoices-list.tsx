@@ -30,7 +30,7 @@ const INVOICE_STATUS_STYLES: Record<string, string> = {
 const INVOICE_STATUS_LABELS: Record<string, string> = {
   draft: 'Draft',
   sent: 'Sent',
-  deposit_paid: 'Deposit Paid',
+  deposit_paid: 'Part paid',
   paid: 'Paid',
   overdue: 'Overdue',
   cancelled: 'Cancelled',

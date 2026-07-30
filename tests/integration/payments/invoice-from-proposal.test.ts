@@ -66,7 +66,6 @@ async function arrangeAcceptedProposal(): Promise<Arranged> {
       user_id: user.id,
       position: 1,
       title: 'Full Day MC',
-      deposit_percent: 25,
       gst_inclusive: true,
       subtotal: 1600,
     })
@@ -129,7 +128,7 @@ describe('saveInvoiceAction — proposal provenance', () => {
 
     const { data: row } = await serviceClient()
       .from('invoices')
-      .select('proposal_id, subtotal, deposit_percent')
+      .select('id, proposal_id, subtotal')
       .eq('id', result.data.id)
       .single();
     expect(row?.proposal_id).toBe(a.proposalId);
@@ -138,8 +137,8 @@ describe('saveInvoiceAction — proposal provenance', () => {
   });
 });
 
-describe('sign_contract — proposal-linked deposit invoice', () => {
-  it('creates the deposit invoice from the recorded selection + option deposit rule', async () => {
+describe('sign_contract — proposal-linked invoice with stages', () => {
+  it('creates an invoice for the full proposal amount with the default schedule', async () => {
     const a = await arrangeAcceptedProposal();
     cleanupQueue.push(a.user.cleanup);
     const admin = serviceClient();
@@ -169,14 +168,21 @@ describe('sign_contract — proposal-linked deposit invoice', () => {
 
     const { data: invoice } = await admin
       .from('invoices')
-      .select('subtotal, deposit_percent, title, status')
+      .select('id, subtotal, title, status')
       .eq('proposal_id', a.proposalId)
       .single();
-    // 25% of the recorded $2,000 selection.
-    expect(Number(invoice?.subtotal)).toBe(500);
-    expect(Number(invoice?.deposit_percent)).toBe(25);
+    // Full amount of the recorded selection.
+    expect(Number(invoice?.subtotal)).toBe(2000);
     expect(invoice?.status).toBe('draft');
-    expect(invoice?.title).toContain('Deposit invoice');
+    expect(invoice?.title).toMatch(/^Invoice for/);
+
+    // Verify stages were stamped
+    const { data: stages } = await admin
+      .from('invoice_payment_stages')
+      .select('position, amount_cents')
+      .eq('invoice_id', invoice!.id)
+      .order('position');
+    expect(stages?.length).toBeGreaterThan(0);
   });
 
   it('does not duplicate the deposit invoice on a second linked contract', async () => {

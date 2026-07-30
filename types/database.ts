@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       admin_audit_log: {
@@ -1441,16 +1466,11 @@ export type Database = {
         Row: {
           couple_id: string
           created_at: string
-          deposit_due_date: string | null
-          deposit_paid_at: string | null
-          deposit_percent: number | null
           discount_type: string | null
           discount_value: number | null
           due_date: string | null
           email_sent_at: string | null
           event_id: string | null
-          final_due_date: string | null
-          final_paid_at: string | null
           id: string
           invoice_number: string
           notes: string | null
@@ -1470,16 +1490,11 @@ export type Database = {
         Insert: {
           couple_id: string
           created_at?: string
-          deposit_due_date?: string | null
-          deposit_paid_at?: string | null
-          deposit_percent?: number | null
           discount_type?: string | null
           discount_value?: number | null
           due_date?: string | null
           email_sent_at?: string | null
           event_id?: string | null
-          final_due_date?: string | null
-          final_paid_at?: string | null
           id?: string
           invoice_number: string
           notes?: string | null
@@ -1499,16 +1514,11 @@ export type Database = {
         Update: {
           couple_id?: string
           created_at?: string
-          deposit_due_date?: string | null
-          deposit_paid_at?: string | null
-          deposit_percent?: number | null
           discount_type?: string | null
           discount_value?: number | null
           due_date?: string | null
           email_sent_at?: string | null
           event_id?: string | null
-          final_due_date?: string | null
-          final_paid_at?: string | null
           id?: string
           invoice_number?: string
           notes?: string | null
@@ -1628,7 +1638,6 @@ export type Database = {
           archived_at: string | null
           category_id: string | null
           created_at: string
-          deposit_percent: number | null
           description: string | null
           gst_inclusive: boolean
           id: string
@@ -1645,7 +1654,6 @@ export type Database = {
           archived_at?: string | null
           category_id?: string | null
           created_at?: string
-          deposit_percent?: number | null
           description?: string | null
           gst_inclusive?: boolean
           id?: string
@@ -1662,7 +1670,6 @@ export type Database = {
           archived_at?: string | null
           category_id?: string | null
           created_at?: string
-          deposit_percent?: number | null
           description?: string | null
           gst_inclusive?: boolean
           id?: string
@@ -1976,7 +1983,6 @@ export type Database = {
       proposal_options: {
         Row: {
           created_at: string
-          deposit_percent: number | null
           description: string | null
           gst_inclusive: boolean
           id: string
@@ -1991,7 +1997,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          deposit_percent?: number | null
           description?: string | null
           gst_inclusive?: boolean
           id?: string
@@ -2006,7 +2011,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          deposit_percent?: number | null
           description?: string | null
           gst_inclusive?: boolean
           id?: string
@@ -2376,6 +2380,7 @@ export type Database = {
       }
       time_categories: {
         Row: {
+          color: string | null
           created_at: string
           id: string
           name: string
@@ -2383,6 +2388,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           id?: string
           name: string
@@ -2390,6 +2396,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -3069,6 +3076,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

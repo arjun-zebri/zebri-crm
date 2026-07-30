@@ -312,7 +312,6 @@ const createInvoiceFromProposal: ActionSpec<z.infer<typeof createInvoiceFromProp
 
     // Tax rate: 10 if GST not included, 0 if already included.
     const taxRate = opt.gst_inclusive ? 0 : 10
-    const depositPercent = config.paymentSchedule === 'full' ? null : 50
     const dueDate = config.dueDate ?? null
 
     const { data: inserted, error: insErr } = await supabase
@@ -327,8 +326,6 @@ const createInvoiceFromProposal: ActionSpec<z.infer<typeof createInvoiceFromProp
         due_date: dueDate,
         subtotal: opt.subtotal,
         tax_rate: taxRate,
-        deposit_percent: depositPercent,
-        deposit_due_date: depositPercent ? dueDate : null,
       } as never)
       .select('id')
       .single()
