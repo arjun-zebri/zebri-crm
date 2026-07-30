@@ -112,7 +112,12 @@ export async function closeProfile(page: Page) {
 
 export async function deleteCouple(page: Page, name: string) {
   await openCoupleProfile(page, name)
-  await page.locator('[data-testid="delete-couple-btn"]').click()
+  // By accessible name, not `[data-testid="delete-couple-btn"]`: that id
+  // is on the item inside the ⋯ popover, which Radix only mounts while
+  // the popover is open, so on desktop the click waited on an element
+  // that was never in the DOM. The name matches the header icon and the
+  // popover item, so this works at both breakpoints.
+  await page.getByRole('button', { name: 'Delete couple' }).first().click()
   // ConfirmDialog appears — click the Delete confirm button
   await page.locator('button:has-text("Delete")').last().click()
   await page.waitForSelector('[data-testid="couple-profile-panel"]', { state: 'hidden' })
@@ -123,7 +128,16 @@ export async function navigateToProfileTab(
   page: Page,
   tab: 'Overview' | 'Tasks' | 'Time' | 'Payments' | 'Names' | 'Timeline' | 'Songs' | 'Files'
 ) {
-  await page.locator('[data-testid="couple-profile-panel"]').locator(`button:has-text("${tab}")`).click()
+  // Exact accessible name, not a substring match. The panel also renders
+  // the couple-name button and a Timeline tab, so `has-text("Time")`
+  // resolved to five elements (including a couple called "Timer Test")
+  // and tripped strict mode. `.first()` takes the desktop rail; the
+  // mobile rail duplicates the same controls.
+  await page
+    .locator('[data-testid="couple-profile-panel"]')
+    .getByRole('button', { name: tab, exact: true })
+    .first()
+    .click()
   await page.waitForLoadState('networkidle')
 }
 

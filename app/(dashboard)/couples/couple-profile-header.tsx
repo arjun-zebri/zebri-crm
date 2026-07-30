@@ -471,8 +471,13 @@ export function CoupleProfileHeader({
             </button>
           </Tooltip>
           <Tooltip label="Delete couple">
+            {/* `Tooltip` is a hover-only visual, so it contributes no
+                accessible name. Without this the destructive control in
+                the header announces as an unnamed button, unlike the
+                timer and edit-tabs icons beside it. */}
             <button
               onClick={onDeleteRequest}
+              aria-label="Delete couple"
               className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
             >
               <Trash2 size={16} strokeWidth={1.5} />
