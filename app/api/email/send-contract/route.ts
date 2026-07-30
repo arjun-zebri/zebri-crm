@@ -33,9 +33,8 @@ import { resolveCoupleEmail } from '@/lib/couples/email';
 import { sendContractEmail } from '@/lib/email';
 import { emailBrandingForUser } from '@/lib/email/branding';
 import { resolveSender } from '@/lib/email/sender-identity';
-import { resolveStages } from '@/lib/payments/resolve-stages';
+import { loadDefaultScheduleFirstStage } from '@/lib/payments/load-default-schedule';
 import { createClient } from '@/lib/supabase/server';
-import type { TemplateStage } from '@/types/payment-schedule';
 
 // 10 / min / IP. Each call sends a real email (Resend spend) and
 // flips contract state — looser than the public sign/decline limit
@@ -137,36 +136,38 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { data: defaultSchedule, error: scheduleError } = await supabase
-    .from('payment_schedules')
-    .select('id, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_days)')
-    .eq('user_id', user.id)
-    .eq('is_default', true)
-    .maybeSingle();
-
-  if (scheduleError) {
-    logger.error('[email/send-contract] Failed to fetch default schedule', scheduleError, {
-      contractId,
-    });
-    return NextResponse.json(
-      { error: 'Failed to fetch payment schedule' },
-      { status: 500 },
-    );
-  }
-
-  if (defaultSchedule && proposalTotal !== null) {
-    const templateStages: TemplateStage[] = Array.isArray(defaultSchedule.payment_schedule_stages)
-      ? defaultSchedule.payment_schedule_stages.map((s) => ({
-          label: s.label,
-          amountType: s.amount_type as 'percent' | 'fixed' | 'remainder',
-          amountValue: s.amount_value,
-          dueOffsetDays: s.due_offset_days,
-        }))
-      : [];
-
+  if (proposalTotal !== null) {
     const issueDate = new Date().toISOString().slice(0, 10);
-    const resolved = resolveStages(templateStages, Math.round(proposalTotal * 100), issueDate);
-    firstStage = resolved.ok ? (resolved.stages[0] ? { amountCents: resolved.stages[0].amountCents, dueDate: resolved.stages[0].dueDate } : null) : null;
+    const result = await loadDefaultScheduleFirstStage(supabase, user.id, Math.round(proposalTotal * 100), issueDate);
+
+    if (result.ok) {
+      // Schedule loaded and validated successfully
+      if (result.firstStage) {
+        firstStage = {
+          amountCents: result.firstStage.amountCents,
+          dueDate: result.firstStage.dueDate,
+        };
+      }
+      // result.ok=true but firstStage=null is valid (schedule has no stages)
+    } else if (result.reason === 'read_error') {
+      // Infrastructure error: abort the send
+      logger.error('[email/send-contract] Failed to fetch default schedule', result.error, {
+        contractId,
+      });
+      return NextResponse.json(
+        { error: 'Failed to fetch payment schedule' },
+        { status: 500 },
+      );
+    } else if (result.reason === 'validation_error') {
+      // MC's saved schedule is broken (invalid percentages, etc).
+      // Log but continue and render `-` so the issue is visible.
+      logger.error('[email/send-contract] Default schedule validation failed', result.error, {
+        contractId,
+        userId: user.id,
+      });
+      // firstStage stays null, renders as dash
+    }
+    // reason='no_schedule' falls through silently; firstStage stays null
   }
 
   const vars = buildContractVariables({

@@ -65,10 +65,9 @@ import {
   buildContractVariables,
   renderContractHtml,
 } from '@/lib/contracts/contract-variables';
-import { resolveStages } from '@/lib/payments/resolve-stages';
+import { loadDefaultScheduleFirstStage } from '@/lib/payments/load-default-schedule';
 import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
-import type { TemplateStage } from '@/types/payment-schedule';
 
 interface Contract {
   id: string;
@@ -256,27 +255,39 @@ export function ContractBuilderModal({
     },
   });
 
-  // Load the MC's default payment schedule for resolving the first stage
-  // in the preview pane. Distinguish between no schedule (rare) and a failed
-  // read (error, surfaces via useQuery error state).
-  const { data: defaultSchedule, error: scheduleError } = useQuery({
-    queryKey: ['default-payment-schedule'],
-    enabled: isOpen,
+  // Resolve the first stage of the MC's default schedule for the preview pane.
+  // Load and resolve both happen here rather than in the render memo below,
+  // because loadDefaultScheduleFirstStage is async and a memo cannot await.
+  // Keyed on the proposal total: the first stage is a percentage of it, so a
+  // different linked proposal means a different figure.
+  const { data: firstStageData, error: scheduleError } = useQuery({
+    queryKey: ['default-schedule-first-stage', linkedProposal?.total ?? null],
+    enabled: isOpen && !!linkedProposal,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('payment_schedules')
-        .select('id, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_days)')
-        .eq('is_default', true)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return null;
-      const stages = (data.payment_schedule_stages ?? []).map((s) => ({
-        label: s.label,
-        amountType: s.amount_type as 'percent' | 'fixed' | 'remainder',
-        amountValue: s.amount_value,
-        dueOffsetDays: s.due_offset_days,
-      })) as TemplateStage[];
-      return { id: data.id, stages };
+      if (!linkedProposal) return null;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const issueDate = new Date().toISOString().slice(0, 10);
+      const result = await loadDefaultScheduleFirstStage(
+        supabase,
+        user.id,
+        Math.round(linkedProposal.total * 100),
+        issueDate,
+      );
+
+      // Only an infrastructure failure is worth interrupting the MC for. A
+      // missing or invalid schedule renders as a dash, matching the send
+      // route, which logs the invalid case to Slack rather than blocking.
+      if (!result.ok) {
+        if (result.reason === 'read_error') throw result.error;
+        return null;
+      }
+      return result.firstStage
+        ? { amountCents: result.firstStage.amountCents, dueDate: result.firstStage.dueDate }
+        : null;
     },
   });
 
@@ -330,32 +341,15 @@ export function ContractBuilderModal({
       return contract.locked_content_html;
     }
 
-    // Resolve the first stage from the default schedule if a proposal is linked.
-    let firstStage: { amountCents: number; dueDate: string | null } | null = null;
-    if (linkedProposal && defaultSchedule?.stages.length) {
-      const issueDate = new Date().toISOString().slice(0, 10);
-      const resolved = resolveStages(
-        defaultSchedule.stages,
-        Math.round(linkedProposal.total * 100),
-        issueDate,
-      );
-      if (resolved.ok && resolved.stages[0]) {
-        firstStage = {
-          amountCents: resolved.stages[0].amountCents,
-          dueDate: resolved.stages[0].dueDate,
-        };
-      }
-    }
-
     const vars = buildContractVariables({
       couple: { name: coupleName, email: null },
       firstEvent: firstEvent ?? null,
       proposal: linkedProposal ?? null,
       userMeta,
-      firstStage,
+      firstStage: firstStageData ?? null,
     });
     return renderContractHtml(content, vars);
-  }, [canEdit, contract?.locked_content_html, content, coupleName, defaultSchedule, firstEvent, linkedProposal, userMeta]);
+  }, [canEdit, contract?.locked_content_html, content, coupleName, firstStageData, firstEvent, linkedProposal, userMeta]);
 
   /* ─── mutations ─────────────────────────────────────────────── */
   const save = useMutation({
