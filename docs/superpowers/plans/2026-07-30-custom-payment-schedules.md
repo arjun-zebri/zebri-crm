@@ -1367,8 +1367,17 @@ export async function updateSchedule(input: {
 
   if (parsed.stages) {
     // Template stages carry no payment state, so a wholesale replace is safe
-    // here in a way it is not for invoice stages.
-    await supabase.from('payment_schedule_stages').delete().eq('schedule_id', parsed.id)
+    // here in a way it is not for invoice stages. The delete's error must still
+    // be checked: if it fails and the insert succeeds, the schedule ends up
+    // holding both the old and the new stages, and resolveStages would then see
+    // duplicate positions and produce nonsense amounts.
+    const { error: clearStagesError } = await supabase
+      .from('payment_schedule_stages')
+      .delete()
+      .eq('schedule_id', parsed.id)
+    if (clearStagesError) {
+      throw new Error(`Could not replace the schedule stages: ${clearStagesError.message}`)
+    }
     await insertStages(supabase, user.id, parsed.id, parsed.stages)
   }
 }
@@ -1396,11 +1405,17 @@ export async function setDefaultSchedule(id: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not signed in')
 
-  await supabase
+  // Check this error before setting the new flag. If the clear fails silently,
+  // the set below trips the payment_schedules_one_default partial unique index
+  // and the MC sees a constraint violation instead of the real cause.
+  const { error: clearError } = await supabase
     .from('payment_schedules')
     .update({ is_default: false })
     .eq('user_id', user.id)
     .eq('is_default', true)
+  if (clearError) {
+    throw new Error(`Could not clear the previous default schedule: ${clearError.message}`)
+  }
 
   const { error } = await supabase
     .from('payment_schedules')
@@ -1428,10 +1443,16 @@ export async function replaceInvoiceStages(input: {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not signed in')
 
-  const { data: existing } = await supabase
+  // This read's error is the dangerous one in this module. An unchecked failure
+  // here yields an empty paid-position set, and the delete below would then
+  // remove a PAID stage. Abort rather than fall through.
+  const { data: existing, error: existingError } = await supabase
     .from('invoice_payment_stages')
     .select('id, position, paid_at')
     .eq('invoice_id', parsed.invoiceId)
+  if (existingError) {
+    throw new Error(`Could not read the existing payment stages: ${existingError.message}`)
+  }
 
   const paidPositions = new Set(
     (existing ?? []).filter((r) => r.paid_at !== null).map((r) => r.position),
