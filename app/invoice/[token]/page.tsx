@@ -193,32 +193,32 @@ export default function PublicInvoicePage() {
           />
         ) : null}
 
-        {invoice &&
+        {invoiceWithOrderedStages &&
         pageState !== 'not_found' &&
         pageState !== 'cancelled' &&
         pageState !== 'loading' ? (
-          invoice.branding_blocks && invoice.branding_blocks.length > 0 ? (
+          invoiceWithOrderedStages.branding_blocks && invoiceWithOrderedStages.branding_blocks.length > 0 ? (
             <InvoiceBrandedCard
-              invoice={invoiceWithOrderedStages!}
+              invoice={invoiceWithOrderedStages}
               preBlocks={preBlocks}
               postBlocks={postBlocks}
               hasSchedule={hasSchedule}
               nextPayableStageId={nextPayableStageId}
               showPayButtons={showPayButtons}
-              branding={invoice}
+              branding={invoiceWithOrderedStages}
               radius={radius}
               actionStyle={actionStyle}
             />
           ) : (
             <InvoiceFallbackCard
-              invoice={invoiceWithOrderedStages!}
+              invoice={invoiceWithOrderedStages}
               pageState={pageState}
               hasSchedule={hasSchedule}
               taxAmount={taxAmount}
               total={total}
               nextPayableStageId={nextPayableStageId}
               showPayButtons={showPayButtons}
-              branding={invoice}
+              branding={invoiceWithOrderedStages}
               radius={radius}
               actionStyle={actionStyle}
             />
