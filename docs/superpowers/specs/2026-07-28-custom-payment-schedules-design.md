@@ -435,9 +435,19 @@ at once.
    `deposit_paid_at` becomes two stage rows, a `percent` deposit and a
    `remainder` final, carrying existing due dates, paid timestamps and resolved
    `amount_cents`. Invoices without a schedule get no rows.
-3. Backfill saved schedules: create one `is_default` schedule named "Default" for
-   **every** user, holding `coalesce(default_deposit_percent, 25)` as a percent
-   stage at offset 7 days plus a remainder stage at offset 30.
+3. Seed saved schedules: an idempotent `seed_default_payment_schedule(uuid)`
+   function that creates one `is_default` schedule named "Default" holding
+   `coalesce(default_deposit_percent, 25)` as a percent stage at offset 7 days
+   plus a remainder stage at offset 30. Wire it to an `after insert on
+   auth.users` trigger **and** run it in a loop over existing users.
+
+   The trigger is not optional. A one-off backfill covers only the users who
+   exist when the migration runs, so every subsequent signup would have no
+   default schedule and `sign_contract` would spawn them stageless invoices.
+   This mirrors `seed_default_contract_template` +
+   `on_new_user_seed_contract_template` in
+   `20260525000000_recovery_phase3_phase4_schema_drift.sql`, which is the
+   established pattern in this codebase for a per-user default.
 
    Every user, not only those with the setting, because
    `default_deposit_percent` turns out never to be written by the application.

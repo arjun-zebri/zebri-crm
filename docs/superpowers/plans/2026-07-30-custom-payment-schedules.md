@@ -651,7 +651,14 @@ select
 from legacy l
 join deposit_rows d on d.invoice_id = l.id;
 
--- ── Backfill 2: one default schedule per MC ───────────────────────────────
+-- ── Default schedule per MC: function, trigger, and backfill ─────────────
+--
+-- Three parts, mirroring seed_default_contract_template in
+-- 20260525000000_recovery_phase3_phase4_schema_drift.sql:358-596, which is this
+-- codebase's established pattern for per-user defaults. A one-off backfill
+-- would only cover users who existed at migration time, so every new signup
+-- would have no default schedule and sign_contract would spawn stageless
+-- invoices for them. The auth.users trigger is what makes it forward-safe.
 --
 -- Every user, not only those with default_deposit_percent set. That key turns
 -- out never to be written by the app: it is read in exactly two places, both
@@ -659,28 +666,58 @@ join deposit_rows d on d.invoice_id = l.id;
 -- who have it would leave nearly everyone without a default, so sign_contract
 -- would spawn stageless invoices where it previously applied a hardcoded 25%.
 -- This turns that implicit fallback into real data.
-with seeded as (
+create or replace function public.seed_default_payment_schedule(p_user_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_schedule_id uuid;
+  v_deposit_pct numeric;
+begin
+  -- Idempotent, so the trigger and the backfill loop below cannot produce a
+  -- second schedule for the same user (the partial unique index would reject
+  -- it anyway, but failing the whole signup transaction is not acceptable).
+  if exists (select 1 from public.payment_schedules where user_id = p_user_id) then
+    return;
+  end if;
+
+  select coalesce((raw_user_meta_data ->> 'default_deposit_percent')::numeric, 25)
+    into v_deposit_pct
+  from auth.users
+  where id = p_user_id;
+
   insert into public.payment_schedules (user_id, name, is_default)
-  select u.id, 'Default', true
-  from auth.users u
-  where not exists (
-    select 1 from public.payment_schedules ps where ps.user_id = u.id
-  )
-  returning id, user_id
-)
-insert into public.payment_schedule_stages (
-  user_id, schedule_id, position, label, amount_type, amount_value, due_offset_days
-)
-select s.user_id, s.id, 1, 'Deposit', 'percent',
-       coalesce((u.raw_user_meta_data ->> 'default_deposit_percent')::numeric, 25),
-       -- 7 days mirrors the `current_date + interval '7 days'` the older
-       -- sign_contract used for deposit_due_date.
-       7
-from seeded s
-join auth.users u on u.id = s.user_id
-union all
-select s.user_id, s.id, 2, 'Final balance', 'remainder', null, 30
-from seeded s;
+  values (p_user_id, 'Default', true)
+  returning id into v_schedule_id;
+
+  insert into public.payment_schedule_stages (
+    user_id, schedule_id, position, label, amount_type, amount_value, due_offset_days
+  ) values
+    -- 7 days mirrors the `current_date + interval '7 days'` the older
+    -- sign_contract used for deposit_due_date.
+    (p_user_id, v_schedule_id, 1, 'Deposit', 'percent', coalesce(v_deposit_pct, 25), 7),
+    (p_user_id, v_schedule_id, 2, 'Final balance', 'remainder', null, 30);
+end $$;
+
+revoke all on function public.seed_default_payment_schedule(uuid) from public;
+revoke all on function public.seed_default_payment_schedule(uuid) from anon, authenticated;
+
+create or replace function public.trigger_seed_payment_schedule()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin perform public.seed_default_payment_schedule(new.id); return new; end;
+$$;
+
+drop trigger if exists on_new_user_seed_payment_schedule on auth.users;
+create trigger on_new_user_seed_payment_schedule
+  after insert on auth.users for each row
+  execute function public.trigger_seed_payment_schedule();
+
+-- Back-fill every existing user.
+do $$
+declare r record;
+begin
+  for r in select id from auth.users loop
+    perform public.seed_default_payment_schedule(r.id);
+  end loop;
+end $$;
 ```
 
 - [ ] **Step 2: Reset the local database and verify the migration applies**
@@ -702,7 +739,25 @@ Expected: `types/database.ts` now contains `payment_schedules`, `payment_schedul
 
 - [ ] **Step 4: Write the failing RLS integration test**
 
-Create `tests/integration/payments/payment-schedules-rls.test.ts`. Follow the existing helper imports used by the other specs in `tests/integration/` (a two-user fixture plus per-user clients):
+**Test helper API, verified against `tests/integration/helpers/supabase.ts`.** The pseudo-names in the test code below are placeholders; substitute these real ones mechanically:
+
+| Placeholder in the code below | Real API |
+|---|---|
+| `adminClient()` | `serviceClient()` — service role, bypasses RLS, setup and teardown only |
+| `createTestUser()` | `createTestUser(metadata, appMetadata)` returning `TestUser` |
+| `clientFor(bob)` | `bob.client` — already signed in as that user |
+| (teardown) | `await user.cleanup()` in `afterAll`, which cascades owned rows |
+
+`TestUser` is `{ id, email, client, cleanup }`. Pass paid app metadata so the user looks like a real subscriber, matching `tests/integration/rls/couple-statuses.test.ts`:
+
+```ts
+const pro = { subscription_status: 'active', subscription_plan: 'pro' }
+const userA = await createTestUser({}, pro)
+```
+
+**Put the RLS spec at `tests/integration/rls/payment-schedules.test.ts`**, not under `payments/`. Every existing RLS spec lives in `tests/integration/rls/` and is titled `describe('RLS: <table> tenant isolation')`. Follow that convention. Read `tests/integration/rls/couple-statuses.test.ts` first and mirror its shape.
+
+Note the `on_new_user_seed_payment_schedule` trigger from Step 1: a freshly created test user already has a "Default" schedule before your test inserts anything. Account for it rather than asserting an empty table.
 
 ```ts
 /**
@@ -922,6 +977,32 @@ describe('legacy invoice backfill', () => {
       .select('id')
       .eq('invoice_id', plain!.id)
     expect(data).toEqual([])
+  })
+
+  it('seeds a brand-new signup a default schedule via the trigger', async () => {
+    // The migration's backfill loop only covers users who existed when it ran.
+    // This asserts the auth.users trigger covers everyone after that, which is
+    // what stops sign_contract spawning stageless invoices for new MCs.
+    const fresh = await createTestUser()
+    const admin = adminClient()
+    const { data } = await admin
+      .from('payment_schedules')
+      .select('id, name, is_default')
+      .eq('user_id', fresh.id)
+    expect(data).toHaveLength(1)
+    expect(data![0]).toMatchObject({ name: 'Default', is_default: true })
+    await fresh.cleanup()
+  })
+
+  it('is idempotent: seeding twice leaves one schedule', async () => {
+    const admin = adminClient()
+    await admin.rpc('seed_default_payment_schedule', { p_user_id: user.id })
+    const { data } = await admin
+      .from('payment_schedules')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('is_default', true)
+    expect(data).toHaveLength(1)
   })
 
   it('seeds every user a default schedule with a remainder stage', async () => {
