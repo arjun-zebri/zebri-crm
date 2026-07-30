@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/alerts/logger';
 import { createClient } from '@/lib/supabase/server';
 import { capReachedAt, isOverCap } from '@/lib/time-tracking/format';
+import type { Database } from '@/types/database';
 import type {
   RunningTimer,
   StoppedSession,
@@ -43,6 +44,9 @@ interface EntryRow {
   auto_stopped: boolean;
   time_categories: { name: string } | { name: string }[] | null;
 }
+
+/** Generated Update shape for a time entry, used by the patch builder. */
+type EntryUpdate = Database['public']['Tables']['couple_time_entries']['Update'];
 
 /** {@link EntryRow} plus the embedded couple name, for the pill. */
 type EntryWithCoupleRow = EntryRow & {
@@ -344,9 +348,23 @@ export async function updateCoupleTimeEntryAction(
   const { supabase, user } = await requireUser();
   if (!user) return { ok: false, error: 'Not signed in.' };
 
+  // Copy only the keys actually present. Spreading the parsed patch
+  // would carry explicit `undefined` values, which the generated Update
+  // type rejects under `exactOptionalPropertyTypes`.
+  const patch: EntryUpdate = {};
+  const requested = parsed.data.patch;
+  if (requested.started_at !== undefined) {
+    patch.started_at = requested.started_at;
+  }
+  if (requested.ended_at !== undefined) patch.ended_at = requested.ended_at;
+  if (requested.category_id !== undefined) {
+    patch.category_id = requested.category_id;
+  }
+  if (requested.note !== undefined) patch.note = requested.note;
+
   const { data, error } = await supabase
     .from('couple_time_entries')
-    .update(parsed.data.patch)
+    .update(patch)
     .eq('id', parsed.data.id)
     .select(ENTRY_SELECT)
     .single();
