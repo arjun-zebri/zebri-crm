@@ -547,23 +547,6 @@ export function InvoiceBuilderModal({
     onError: () => toast('Failed to mark as paid', 'error'),
   });
 
-  const markDepositPaid = useMutation({
-    mutationFn: async () => {
-      const id = await ensureSaved();
-      const { error } = await supabase
-        .from('invoices')
-        .update({ status: 'deposit_paid', deposit_paid_at: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
-      queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
-      toast('Deposit marked as paid');
-    },
-    onError: () => toast('Failed to mark deposit as paid', 'error'),
-  });
-
   const revertPaid = useMutation({
     mutationFn: async () => {
       if (!effectiveId) return;
@@ -640,14 +623,7 @@ export function InvoiceBuilderModal({
   // they're affirmative state transitions, not destructive ones, so
   // even an overdue invoice gets a success-toned CTA. The status
   // pill alone communicates the overdue state.
-  if (rawStatus === 'sent' && invoiceStages.stages.length > 0) {
-    primaryAction = {
-      label: 'Mark deposit paid',
-      onClick: () => markDepositPaid.mutate(),
-      loading: markDepositPaid.isPending,
-      variant: 'success',
-    };
-  } else if (rawStatus === 'sent' || isOverdue) {
+  if (rawStatus === 'sent' || isOverdue) {
     primaryAction = {
       label: 'Mark paid',
       onClick: () => markPaid.mutate(),
