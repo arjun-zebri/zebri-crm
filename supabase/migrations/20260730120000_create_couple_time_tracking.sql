@@ -58,11 +58,25 @@ create unique index if not exists couple_time_entries_one_running_per_user
 
 alter table public.couple_time_entries enable row level security;
 
+-- Owning the row is necessary but not sufficient: the couple it points
+-- at has to be the writer's too. Foreign keys ignore RLS, so without the
+-- EXISTS clause a user could log time against another MC's couple id
+-- (their own timesheet, someone else's couple), which is a cross-tenant
+-- write even though it leaks nothing back. The subquery is itself
+-- RLS-filtered, so it only ever sees the writer's own couples.
 drop policy if exists "Users manage own time entries" on public.couple_time_entries;
 create policy "Users manage own time entries"
   on public.couple_time_entries for all
   using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1
+      from public.couples c
+      where c.id = couple_id
+        and c.user_id = auth.uid()
+    )
+  );
 
 -- Seed-once marker for the starter category set. Without it, a user who
 -- deletes all their categories would have them resurrected on the next
