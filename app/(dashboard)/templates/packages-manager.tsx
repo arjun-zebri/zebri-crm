@@ -58,7 +58,6 @@ interface Package {
   category_id: string | null
   position: number
   updated_at: string | null
-  deposit_percent: number | null
   gst_inclusive: boolean | null
   archived_at: string | null
   weekend_loading_percent: number | null
@@ -274,7 +273,6 @@ export function PackagesManager() {
           notes: draft.notes,
           description: draft.description,
           category_id: draft.category_id,
-          deposit_percent: draft.deposit_percent,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
           is_popular: draft.is_popular,
@@ -309,7 +307,6 @@ export function PackagesManager() {
           notes: draft.notes,
           description: draft.description,
           category_id: draft.category_id,
-          deposit_percent: draft.deposit_percent,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
           is_popular: draft.is_popular,
@@ -372,7 +369,6 @@ export function PackagesManager() {
           description: source.description,
           notes: source.notes,
           category_id: source.category_id,
-          deposit_percent: source.deposit_percent,
           gst_inclusive: source.gst_inclusive ?? true,
           weekend_loading_percent: source.weekend_loading_percent,
           position: source.position + 1,
@@ -441,7 +437,6 @@ export function PackagesManager() {
     notes: pkg.notes,
     description: pkg.description,
     category_id: pkg.category_id,
-    deposit_percent: pkg.deposit_percent,
     gst_inclusive: pkg.gst_inclusive ?? true,
     weekend_loading_percent: pkg.weekend_loading_percent,
     is_popular: pkg.is_popular ?? false,
@@ -482,7 +477,6 @@ export function PackagesManager() {
     notes: null,
     description: null,
     category_id: null,
-    deposit_percent: null,
     gst_inclusive: true,
     weekend_loading_percent: null,
     is_popular: false,
@@ -682,7 +676,6 @@ export function PackagesManager() {
                 }
                 items={allItems?.[selectedPkg.id] ?? []}
                 description={selectedPkg.description}
-                depositPercent={selectedPkg.deposit_percent}
                 gstInclusive={selectedPkg.gst_inclusive ?? true}
                 weekendLoadingPercent={selectedPkg.weekend_loading_percent}
               />

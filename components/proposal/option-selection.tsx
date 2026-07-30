@@ -291,13 +291,9 @@ export function ProposalSelection({
             {formatCurrency(total)}
           </span>
         </div>
-        {option.deposit_percent || !option.gst_inclusive ? (
+        {!option.gst_inclusive ? (
           <p className="mt-2" style={{ fontSize: `${finePrintDefaults.fontSize}px`, color: panelMuted }}>
-            {option.deposit_percent
-              ? `${formatCurrency((total * Number(option.deposit_percent)) / 100)} deposit reserves your date`
-              : ''}
-            {option.deposit_percent && !option.gst_inclusive ? ' · ' : ''}
-            {!option.gst_inclusive ? 'GST is added on the invoice' : ''}
+            GST is added on the invoice
           </p>
         ) : null}
       </div>

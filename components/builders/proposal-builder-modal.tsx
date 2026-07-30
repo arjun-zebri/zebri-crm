@@ -78,7 +78,6 @@ function blankOption(): ProposalOptionDraft {
     title: '',
     description: null,
     sourcePackageId: null,
-    depositPercent: null,
     gstInclusive: true,
     weekendLoadingPercent: null,
     isPopular: false,
@@ -217,7 +216,6 @@ export function ProposalBuilderModal({
           title: option.title.trim() || 'Package',
           description: option.description,
           sourcePackageId: option.sourcePackageId,
-          depositPercent: option.depositPercent,
           gstInclusive: option.gstInclusive,
           weekendLoadingPercent: option.weekendLoadingPercent,
           isPopular: option.isPopular,
@@ -356,7 +354,6 @@ export function ProposalBuilderModal({
           due_date: dueDate.toISOString().split('T')[0]!,
           notes: proposal.notes,
           tax_rate: chosenOption.gstInclusive ? 0 : 10,
-          deposit_percent: chosenOption.depositPercent,
         })
         .select('id')
         .single();
@@ -415,7 +412,6 @@ export function ProposalBuilderModal({
         title: name,
         description: null,
         sourcePackageId: source.package?.id ?? null,
-        depositPercent: source.package?.depositPercent ?? null,
         gstInclusive: source.package?.gstInclusive ?? true,
         weekendLoadingPercent: source.package?.weekendLoadingPercent ?? null,
         isPopular: source.package?.isPopular ?? false,

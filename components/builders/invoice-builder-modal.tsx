@@ -434,9 +434,6 @@ export function InvoiceBuilderModal({
           discountType && discountValue != null && discountValue > 0
             ? { type: discountType, value: discountValue }
             : null,
-        depositPercent: null,
-        depositDueDate: null,
-        finalDueDate: null,
         stripePaymentEnabled,
         proposalId,
         items: items.map((item, idx) => ({

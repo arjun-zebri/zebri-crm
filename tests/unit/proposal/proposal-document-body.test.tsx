@@ -72,7 +72,6 @@ const optionFixture = (): PublicProposalOption => ({
   id: 'opt-1',
   title: 'Gold Package',
   description: 'Premium service package',
-  deposit_percent: 50,
   gst_inclusive: true,
   is_popular: true,
   subtotal: 5000,

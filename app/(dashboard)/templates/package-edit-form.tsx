@@ -34,7 +34,6 @@ export interface PackageDraft {
   notes: string | null
   description: string | null
   category_id: string | null
-  deposit_percent: number | null
   gst_inclusive: boolean
   weekend_loading_percent: number | null
   /** Marketing flag: highlighted as "Most popular" when a proposal
@@ -50,7 +49,6 @@ export interface PackageFormValue {
   notes: string | null
   description: string | null
   category_id: string | null
-  deposit_percent: number | null
   gst_inclusive: boolean
   weekend_loading_percent: number | null
   is_popular: boolean
@@ -91,7 +89,6 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
   const [categoryId, setCategoryId] = useState<string | null>(value.category_id)
   const [baseItems, setBaseItems] = useState<EditableItem[]>(value.items.filter((i) => !i.optional))
   const [addOns, setAddOns] = useState<EditableItem[]>(value.items.filter((i) => i.optional))
-  const [depositPercent, setDepositPercent] = useState(value.deposit_percent?.toString() ?? '')
   const [weekendLoading, setWeekendLoading] = useState(value.weekend_loading_percent?.toString() ?? '')
   const [gstInclusive, setGstInclusive] = useState(value.gst_inclusive)
   const [isPopular, setIsPopular] = useState(value.is_popular)
@@ -108,7 +105,6 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
       notes: notes.trim() || null,
       description: description.trim() || null,
       category_id: categoryId,
-      deposit_percent: parsePercent(depositPercent),
       gst_inclusive: gstInclusive,
       weekend_loading_percent: parsePercent(weekendLoading),
       is_popular: isPopular,
@@ -231,13 +227,7 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
 
         <div>
           <SectionLabel label="Pricing details" hint="Pre-fills the builders when applied" />
-          <div className="grid grid-cols-2 gap-4">
-            <PercentField
-              label="Booking deposit"
-              value={depositPercent}
-              onChange={setDepositPercent}
-              disabled={isSaving}
-            />
+          <div className="grid grid-cols-1 gap-4">
             <PercentField
               label="Weekend loading"
               value={weekendLoading}

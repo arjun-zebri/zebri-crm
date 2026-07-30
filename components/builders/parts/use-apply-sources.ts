@@ -41,7 +41,6 @@ export interface ApplyItem {
 /** Package-level pricing terms that pre-fill builder controls on apply. */
 export interface ApplyPackageMeta {
   id: string
-  depositPercent: number | null
   gstInclusive: boolean
   weekendLoadingPercent: number | null
   /** "Most popular" marketing flag, snapshotted into the option. */
@@ -51,8 +50,6 @@ export interface ApplyPackageMeta {
 /** Accepted-proposal terms that pre-fill the invoice on apply. */
 export interface ApplyProposalMeta {
   id: string
-  /** The accepted option's snapshotted terms. */
-  depositPercent: number | null
   gstInclusive: boolean
 }
 
@@ -173,7 +170,6 @@ export function useApplySources({
             package: null,
             proposal: {
               id: p.id,
-              depositPercent: option.deposit_percent != null ? Number(option.deposit_percent) : null,
               gstInclusive: option.gst_inclusive,
             },
           }
@@ -207,7 +203,6 @@ export function useApplySources({
           addOns: bucket.addOns,
           package: {
             id: p.id,
-            depositPercent: p.deposit_percent ?? null,
             gstInclusive: p.gst_inclusive ?? true,
             weekendLoadingPercent: p.weekend_loading_percent ?? null,
             isPopular: p.is_popular ?? false,

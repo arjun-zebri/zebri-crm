@@ -26,8 +26,6 @@ export interface ProposalOptionDraft {
   description: string | null;
   /** Provenance: the package this option snapshotted from. */
   sourcePackageId: string | null;
-  /** Commercial terms snapshotted from the package at apply time. */
-  depositPercent: number | null;
   gstInclusive: boolean;
   weekendLoadingPercent: number | null;
   /** "Most popular" highlight — snapshotted from the package, editable
@@ -69,7 +67,6 @@ export function ProposalOptionCard({
   onRemove,
 }: ProposalOptionCardProps) {
   const terms: string[] = [];
-  if (option.depositPercent) terms.push(`${String(option.depositPercent)}% deposit`);
   terms.push(option.gstInclusive ? 'GST incl.' : '+ GST');
   if (option.weekendLoadingPercent) terms.push(`weekend +${String(option.weekendLoadingPercent)}%`);
 

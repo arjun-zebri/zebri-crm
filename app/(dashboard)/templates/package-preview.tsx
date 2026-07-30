@@ -33,7 +33,6 @@ interface PackagePreviewProps {
   /** Actions rendered top-right of the card (e.g. Edit + overflow menu). */
   actions?: ReactNode
   items: PackagePricedItem[]
-  depositPercent?: number | null
   gstInclusive?: boolean
   weekendLoadingPercent?: number | null
 }
@@ -62,7 +61,6 @@ export function PackagePreview({
   meta,
   actions,
   items,
-  depositPercent,
   gstInclusive = true,
   weekendLoadingPercent,
 }: PackagePreviewProps) {
@@ -71,7 +69,6 @@ export function PackagePreview({
   const totals = packageTotals(items)
 
   const terms: string[] = [gstInclusive ? 'prices include GST' : 'GST added at invoice']
-  if (depositPercent) terms.push(`${String(depositPercent)}% deposit secures the date`)
   if (weekendLoadingPercent) terms.push(`weekend rate +${String(weekendLoadingPercent)}%`)
 
   return (

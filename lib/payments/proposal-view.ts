@@ -33,7 +33,6 @@ export interface PublicProposalOption {
   id: string;
   title: string;
   description: string | null;
-  deposit_percent: number | null;
   gst_inclusive: boolean;
   /** "Most popular" highlight — badged in the chooser, but only when
    *  the proposal offers more than one option. */

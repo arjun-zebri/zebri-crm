@@ -137,7 +137,6 @@ function toViewOption(option: ProposalOptionDraft, index: number): PublicProposa
     id: option.key,
     title: option.title || `Option ${String(index + 1)}`,
     description: option.description,
-    deposit_percent: option.depositPercent,
     gst_inclusive: option.gstInclusive,
     is_popular: option.isPopular,
     subtotal: optionBaseTotal(option),
