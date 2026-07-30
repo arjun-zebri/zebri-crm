@@ -32,6 +32,7 @@ import {
   Paperclip,
   Receipt,
   Sparkles,
+  Timer,
   Users,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -65,6 +66,13 @@ const NAV_ITEMS: CoupleProfileNavItem[] = [
     key: 'tasks',
     label: 'Tasks',
     icon: <CheckSquare size={18} strokeWidth={1.5} />,
+  },
+  {
+    key: 'time',
+    label: 'Time',
+    // `Clock` already belongs to the Timeline tab; two identical icons in
+    // one nav is a usability bug, so the stopwatch gets `Timer`.
+    icon: <Timer size={18} strokeWidth={1.5} />,
   },
   {
     key: 'contacts',
