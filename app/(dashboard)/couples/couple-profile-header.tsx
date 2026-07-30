@@ -34,6 +34,7 @@ import {
   Phone,
   RefreshCw,
   Settings,
+  Timer,
   Trash2,
   X,
 } from 'lucide-react';
@@ -43,6 +44,10 @@ import { PiWhatsappLogoLight } from 'react-icons/pi';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Couple, CoupleStatusRecord, getStatusClasses } from '@/types/couple';
 
+import {
+  CoupleTimerControl,
+  useCoupleTimerControl,
+} from './couple-timer-control';
 import { printTimelinePdf, printVowPdf } from './print-couple-docs';
 
 export interface CoupleProfileHeaderProps {
@@ -80,6 +85,9 @@ export function CoupleProfileHeader({
   const [linkOpen, setLinkOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
   const [copied, setCopied] = useState<CopiedKind>(null);
+  // Mobile reuses the desktop control's state so the overflow row and
+  // the inline button can never disagree about what is running.
+  const timer = useCoupleTimerControl(couple.id);
 
   const hasPhone = !!couple.phone;
   const hasEmail = !!couple.email;
@@ -309,6 +317,24 @@ export function CoupleProfileHeader({
                   <PiWhatsappLogoLight size={15} />
                 </a>
 
+                {timer.shadowing ? null : (
+                  <div className="border-t border-gray-100 mt-1 pt-1">
+                    <button
+                      onClick={() => {
+                        timer.toggle();
+                        setActionsOpen(false);
+                      }}
+                      aria-label={timer.label}
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                    >
+                      {timer.runningHere
+                        ? `Stop timing (${timer.elapsed})`
+                        : 'Start timing'}
+                      <Timer size={14} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                )}
+
                 <div className="border-t border-gray-100 mt-1 pt-1">
                   {linkTargets.map((t) => (
                     <button
@@ -421,6 +447,10 @@ export function CoupleProfileHeader({
 
         {/* Desktop: inline action row */}
         <div className="hidden sm:flex items-center">
+          <CoupleTimerControl coupleId={couple.id} />
+          {timer.shadowing ? null : (
+            <div className="w-px h-4 bg-gray-200 mx-2" />
+          )}
           <Tooltip label={settingsMode ? 'Done editing tabs' : 'Edit tabs'}>
             <button
               onClick={onSettingsToggle}
