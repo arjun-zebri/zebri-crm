@@ -282,4 +282,125 @@ describe('schedule actions', () => {
       activeUser = null
     }
   })
+
+  it('updateSchedule with both name and stages', async () => {
+    activeUser = user
+    try {
+      const { id } = await createSchedule({
+        name: 'Original',
+        stages: [
+          { label: 'Half', amountType: 'percent', amountValue: 50, dueOffsetDays: 0 },
+          { label: 'Half', amountType: 'remainder', amountValue: null, dueOffsetDays: 30 },
+        ],
+      })
+      await updateSchedule({
+        id,
+        name: 'Updated both',
+        stages: [
+          { label: 'Third', amountType: 'percent', amountValue: 33, dueOffsetDays: 0 },
+          { label: 'Third', amountType: 'percent', amountValue: 33, dueOffsetDays: 30 },
+          { label: 'Last', amountType: 'remainder', amountValue: null, dueOffsetDays: 60 },
+        ],
+      })
+
+      const all = await listSchedules()
+      const updated = all.find((s) => s.id === id)
+      expect(updated?.name).toBe('Updated both')
+      expect(updated?.stages).toHaveLength(3)
+      expect(updated?.stages[0]?.label).toBe('Third')
+    } finally {
+      activeUser = null
+    }
+  })
+
+  it('replaceInvoiceStages with empty incoming list clears unpaid stages', async () => {
+    activeUser = user
+    try {
+      const admin = serviceClient()
+
+      // Create a couple and invoice
+      const { data: couple } = await admin
+        .from('couples')
+        .insert({ user_id: user.id, name: 'Test couple 3', status: 'new' })
+        .select('id')
+        .single()
+
+      const { data: invoice } = await admin
+        .from('invoices')
+        .insert({
+          user_id: user.id,
+          couple_id: couple!.id,
+          title: 'Empty replace test',
+          invoice_number: '003',
+          subtotal: 1000,
+          status: 'sent',
+        })
+        .select('id')
+        .single()
+
+      // Insert initial stages
+      await replaceInvoiceStages({
+        invoiceId: invoice!.id,
+        stages: [
+          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01' },
+          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01' },
+        ],
+      })
+
+      // Replace with empty list clears unpaid stages
+      await replaceInvoiceStages({
+        invoiceId: invoice!.id,
+        stages: [],
+      })
+
+      const { data: remaining } = await admin
+        .from('invoice_payment_stages')
+        .select('id')
+        .eq('invoice_id', invoice!.id)
+
+      expect(remaining).toHaveLength(0)
+    } finally {
+      activeUser = null
+    }
+  })
+
+  it('createSchedule validation error messages are readable', async () => {
+    activeUser = user
+    try {
+      await expect(
+        createSchedule({
+          name: 'Bad',
+          stages: [
+            { label: 'Only stage', amountType: 'remainder', amountValue: null, dueOffsetDays: 0 },
+          ],
+        }),
+      ).rejects.toThrow('single stage')
+    } finally {
+      activeUser = null
+    }
+  })
+
+  it('updateSchedule validation error messages are readable', async () => {
+    activeUser = user
+    try {
+      const { id } = await createSchedule({
+        name: 'Valid',
+        stages: [
+          { label: 'Half', amountType: 'percent', amountValue: 50, dueOffsetDays: 0 },
+          { label: 'Half', amountType: 'remainder', amountValue: null, dueOffsetDays: 30 },
+        ],
+      })
+
+      await expect(
+        updateSchedule({
+          id,
+          stages: [
+            { label: 'Only stage', amountType: 'remainder', amountValue: null, dueOffsetDays: 0 },
+          ],
+        }),
+      ).rejects.toThrow('single stage')
+    } finally {
+      activeUser = null
+    }
+  })
 })

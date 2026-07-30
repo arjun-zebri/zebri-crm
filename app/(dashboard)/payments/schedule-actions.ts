@@ -131,7 +131,8 @@ export async function updateSchedule(input: {
   if (parsed.stages) {
     // Template stages carry no payment state, so a wholesale replace is safe
     // here in a way it is not for invoice stages.
-    await supabase.from('payment_schedule_stages').delete().eq('schedule_id', parsed.id)
+    const { error: deleteError } = await supabase.from('payment_schedule_stages').delete().eq('schedule_id', parsed.id)
+    if (deleteError) throw new Error(`Could not clear the schedule stages: ${deleteError.message}`)
     await insertStages(supabase, user.id, parsed.id, parsed.stages)
   }
 }
@@ -163,17 +164,20 @@ export async function setDefaultSchedule(id: string): Promise<void> {
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not signed in')
 
-  await supabase
+  // Clear the existing default flag first; if this fails, the set would hit the
+  // unique index constraint with a confusing error, so we must check and fail here.
+  const { error: clearError } = await supabase
     .from('payment_schedules')
     .update({ is_default: false })
     .eq('user_id', user.id)
     .eq('is_default', true)
+  if (clearError) throw new Error(`Could not clear the previous default schedule: ${clearError.message}`)
 
-  const { error } = await supabase
+  const { error: setError } = await supabase
     .from('payment_schedules')
     .update({ is_default: true })
     .eq('id', scheduleId)
-  if (error) throw new Error(`Could not set the default schedule: ${error.message}`)
+  if (setError) throw new Error(`Could not set the default schedule: ${setError.message}`)
 }
 
 /**
@@ -197,10 +201,14 @@ export async function replaceInvoiceStages(input: {
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not signed in')
 
-  const { data: existing } = await supabase
+  // Read existing stages to identify paid rows that must be protected from deletion.
+  // If this read fails, the paid-position set would be silently empty, causing the
+  // function to delete paid stages; we must abort instead.
+  const { data: existing, error: selectError } = await supabase
     .from('invoice_payment_stages')
     .select('id, position, paid_at')
     .eq('invoice_id', parsed.invoiceId)
+  if (selectError) throw new Error(`Could not load the invoice's payment stages: ${selectError.message}`)
 
   const paidPositions = new Set(
     (existing ?? []).filter((r) => r.paid_at !== null).map((r) => r.position),
@@ -208,7 +216,8 @@ export async function replaceInvoiceStages(input: {
 
   const unpaidIds = (existing ?? []).filter((r) => r.paid_at === null).map((r) => r.id)
   if (unpaidIds.length > 0) {
-    await supabase.from('invoice_payment_stages').delete().in('id', unpaidIds)
+    const { error: deleteError } = await supabase.from('invoice_payment_stages').delete().in('id', unpaidIds)
+    if (deleteError) throw new Error(`Could not delete the unpaid stages: ${deleteError.message}`)
   }
 
   const rows = parsed.stages
