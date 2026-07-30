@@ -95,27 +95,14 @@ export default function PublicInvoicePage() {
   /* ─── Derived values (cheap, recomputed on every render) ─── */
   const taxAmount = invoice ? invoice.subtotal * ((invoice.tax_rate || 0) / 100) : 0;
   const total = invoice ? invoice.subtotal + taxAmount : 0;
-  const hasSchedule = invoice?.deposit_percent != null;
-  const depositAmount = hasSchedule
-    ? total * ((invoice!.deposit_percent ?? 0) / 100)
-    : 0;
-  const finalAmount = hasSchedule ? total - depositAmount : 0;
+  const stages = invoice?.stages ?? [];
+  const hasSchedule = stages.length > 0;
+  // Compute the ID of the earliest unpaid stage: the only payable one.
+  const nextPayableStageId = stages.find((s) => !s.paid_at)?.id ?? null;
   const stripeReady =
     invoice?.stripe_payment_enabled && invoice?.stripe_connect_enabled;
-  const showFullButton =
-    !!stripeReady && !hasSchedule && pageState !== 'paid' && pageState !== 'cancelled';
-  const showDepositButton =
-    !!stripeReady &&
-    hasSchedule &&
-    !invoice?.deposit_paid_at &&
-    pageState !== 'paid' &&
-    pageState !== 'cancelled';
-  const showFinalButton =
-    !!stripeReady &&
-    hasSchedule &&
-    !!invoice?.deposit_paid_at &&
-    !invoice?.final_paid_at &&
-    pageState !== 'cancelled';
+  const showPayButtons =
+    !!stripeReady && pageState !== 'paid' && pageState !== 'cancelled';
 
   /* ─── Branding-derived values ─── */
   const pageBg = invoice?.surface_color || '#fafafa';
@@ -210,11 +197,8 @@ export default function PublicInvoicePage() {
               preBlocks={preBlocks}
               postBlocks={postBlocks}
               hasSchedule={hasSchedule}
-              depositAmount={depositAmount}
-              finalAmount={finalAmount}
-              showFullButton={showFullButton}
-              showDepositButton={showDepositButton}
-              showFinalButton={showFinalButton}
+              nextPayableStageId={nextPayableStageId}
+              showPayButtons={showPayButtons}
               branding={invoice}
               radius={radius}
               actionStyle={actionStyle}
@@ -226,11 +210,8 @@ export default function PublicInvoicePage() {
               hasSchedule={hasSchedule}
               taxAmount={taxAmount}
               total={total}
-              depositAmount={depositAmount}
-              finalAmount={finalAmount}
-              showFullButton={showFullButton}
-              showDepositButton={showDepositButton}
-              showFinalButton={showFinalButton}
+              nextPayableStageId={nextPayableStageId}
+              showPayButtons={showPayButtons}
               branding={invoice}
               radius={radius}
               actionStyle={actionStyle}

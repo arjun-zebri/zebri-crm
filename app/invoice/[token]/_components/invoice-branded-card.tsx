@@ -35,11 +35,9 @@ export interface InvoiceBrandedCardProps {
   preBlocks: Block[];
   postBlocks: Block[];
   hasSchedule: boolean;
-  depositAmount: number;
-  finalAmount: number;
-  showFullButton: boolean;
-  showDepositButton: boolean;
-  showFinalButton: boolean;
+  /** Id of the earliest unpaid stage, the only one with a live Pay button. */
+  nextPayableStageId: string | null;
+  showPayButtons: boolean;
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding;
   radius: number;
@@ -52,11 +50,8 @@ export function InvoiceBrandedCard({
   preBlocks,
   postBlocks,
   hasSchedule,
-  depositAmount,
-  finalAmount,
-  showFullButton,
-  showDepositButton,
-  showFinalButton,
+  nextPayableStageId,
+  showPayButtons,
   branding,
   radius,
   actionStyle,
@@ -126,17 +121,15 @@ export function InvoiceBrandedCard({
           </p>
           <InvoicePaymentSchedule
             invoice={invoice}
-            depositAmount={depositAmount}
-            finalAmount={finalAmount}
-            showDepositButton={showDepositButton}
-            showFinalButton={showFinalButton}
+            nextPayableStageId={nextPayableStageId}
+            showPayButtons={showPayButtons}
             branding={branding}
             actionStyle={actionStyle}
           />
         </div>
       ) : null}
 
-      {showFullButton && actionStyle ? (
+      {!hasSchedule && showPayButtons && actionStyle ? (
         <div className={`${pad.cardSection} border-t`} style={{ borderTopColor: borderColor }}>
           <PayWithCardButton
             invoiceId={invoice.id}

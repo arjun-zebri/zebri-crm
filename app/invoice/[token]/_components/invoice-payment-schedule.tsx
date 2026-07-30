@@ -1,12 +1,19 @@
 /**
- * Vertical deposit + final-balance schedule, used by both rendering
- * paths (branded block-tree + hardcoded fallback). Previously
- * duplicated in two places inside page.tsx; extracted here so
- * there's one truth.
+ * Multi-stage payment schedule, used by both rendering paths
+ * (branded block-tree + hardcoded fallback). Maps over `invoice.stages`
+ * to render N payment rows instead of the previous hardcoded
+ * deposit + final model.
  *
- * The "Paid" check next to a stage uses STATUS_COLORS.success;
- * brand colours flow through the PayWithCardButton via the
- * branding prop.
+ * Rules:
+ * - Only the earliest unpaid stage gets a Pay button; the route
+ *   enforces this server-side.
+ * - Later unpaid stages show "Available once the previous payment clears".
+ * - Paid stages show a Paid check and no button.
+ * - A pay-in-full action appears below the list only when multiple
+ *   stages remain unpaid.
+ *
+ * The "Paid" check uses STATUS_COLORS.success; brand colours flow
+ * through the PayWithCardButton via the branding prop.
  *
  * @module app/invoice/[token]/_components/invoice-payment-schedule
  */
@@ -24,10 +31,9 @@ import { formatCurrency, formatDate, type PublicInvoice } from './public-invoice
 
 export interface InvoicePaymentScheduleProps {
   invoice: PublicInvoice;
-  depositAmount: number;
-  finalAmount: number;
-  showDepositButton: boolean;
-  showFinalButton: boolean;
+  /** Id of the earliest unpaid stage, the only one with a live Pay button. */
+  nextPayableStageId: string | null;
+  showPayButtons: boolean;
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding;
   /** Action block overrides for button color and radius. Required. */
@@ -36,172 +42,136 @@ export interface InvoicePaymentScheduleProps {
 
 export function InvoicePaymentSchedule({
   invoice,
-  depositAmount,
-  finalAmount,
-  showDepositButton,
-  showFinalButton,
+  nextPayableStageId,
+  showPayButtons,
   branding,
   actionStyle,
 }: InvoicePaymentScheduleProps) {
   const bodyDefaults = roleDefaults(branding, 'body');
   const finePrintDefaults = roleDefaults(branding, 'finePrint');
 
-  // Compute soft-opacity border for deposit/final schedule rows.
+  // Compute soft-opacity border for schedule rows.
   // Composited from branding colour to avoid Zebri app-chrome tokens.
   const borderRgb = getRgb(branding.border_color);
   const borderColorHalf = borderRgb
     ? `rgba(${borderRgb[0]}, ${borderRgb[1]}, ${borderRgb[2]}, 0.5)`
     : branding.border_color;
 
+  const stages = invoice.stages ?? [];
+  // Count how many stages remain unpaid to determine pay-in-full visibility.
+  const unpaidCount = stages.filter((s) => !s.paid_at).length;
+
   return (
     <div className="space-y-2">
-      {/* Deposit */}
-      <div className="py-2.5 border-b" style={{ borderBottomColor: borderColorHalf }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <span
-              style={{
-                fontSize: `${bodyDefaults.fontSize}px`,
-                color: bodyDefaults.color,
-                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                fontWeight: bodyDefaults.fontWeight,
-                lineHeight: bodyDefaults.lineHeight,
-              }}
-            >
-              Deposit ({invoice.deposit_percent}%)
-            </span>
-            {invoice.deposit_due_date ? (
+      {stages.map((stage, idx) => (
+        <div
+          key={stage.id}
+          className={`py-2.5 ${idx < stages.length - 1 ? 'border-b' : ''}`}
+          style={idx < stages.length - 1 ? { borderBottomColor: borderColorHalf } : undefined}
+        >
+          <div className="flex items-center justify-between">
+            <div>
               <span
-                className="block"
                 style={{
-                  fontSize: `${finePrintDefaults.fontSize}px`,
-                  color: finePrintDefaults.color,
-                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                  fontWeight: finePrintDefaults.fontWeight,
-                  lineHeight: finePrintDefaults.lineHeight,
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  color: bodyDefaults.color,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  lineHeight: bodyDefaults.lineHeight,
                 }}
               >
-                Due {formatDate(invoice.deposit_due_date)}
+                {stage.label}
               </span>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className="font-medium tabular-nums"
-              style={{
-                fontSize: `${bodyDefaults.fontSize}px`,
-                color: bodyDefaults.color,
-                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                fontWeight: bodyDefaults.fontWeight,
-                lineHeight: bodyDefaults.lineHeight,
-              }}
-            >
-              {formatCurrency(depositAmount)}
-            </span>
-            {invoice.deposit_paid_at ? (
+              {stage.due_date ? (
+                <span
+                  className="block"
+                  style={{
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    color: finePrintDefaults.color,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                  }}
+                >
+                  Due {formatDate(stage.due_date)}
+                </span>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
               <span
-                className="flex items-center gap-1"
+                className="font-medium tabular-nums"
                 style={{
-                  fontSize: `${finePrintDefaults.fontSize}px`,
-                  color: STATUS_COLORS.success,
-                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                  fontWeight: finePrintDefaults.fontWeight,
-                  lineHeight: finePrintDefaults.lineHeight,
+                  fontSize: `${bodyDefaults.fontSize}px`,
+                  color: bodyDefaults.color,
+                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                  fontWeight: bodyDefaults.fontWeight,
+                  lineHeight: bodyDefaults.lineHeight,
                 }}
               >
-                <CheckCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
-                Paid
+                {formatCurrency(stage.amount_cents / 100)}
               </span>
-            ) : null}
+              {stage.paid_at ? (
+                <span
+                  className="flex items-center gap-1"
+                  style={{
+                    fontSize: `${finePrintDefaults.fontSize}px`,
+                    color: STATUS_COLORS.success,
+                    fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                    fontWeight: finePrintDefaults.fontWeight,
+                    lineHeight: finePrintDefaults.lineHeight,
+                  }}
+                >
+                  <CheckCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  Paid
+                </span>
+              ) : null}
+            </div>
           </div>
+          {/* Only the earliest unpaid stage is payable; later ones show
+              an explanatory message instead. */}
+          {showPayButtons && actionStyle && stage.id === nextPayableStageId ? (
+            <div className="mt-2">
+              <PayWithCardButton
+                invoiceId={invoice.id}
+                shareToken={invoice.share_token}
+                branding={branding}
+                actionStyle={actionStyle}
+                paymentType="stage"
+                stageId={stage.id}
+                label={`Pay ${stage.label.toLowerCase()}`}
+              />
+            </div>
+          ) : !stage.paid_at && stage.id !== nextPayableStageId ? (
+            <span
+              className="mt-2 block"
+              style={{
+                fontSize: `${finePrintDefaults.fontSize}px`,
+                color: finePrintDefaults.color,
+                fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
+                fontWeight: finePrintDefaults.fontWeight,
+                lineHeight: finePrintDefaults.lineHeight,
+              }}
+            >
+              Available once the previous payment clears
+            </span>
+          ) : null}
         </div>
-        {showDepositButton && actionStyle ? (
-          <div className="mt-2">
-            <PayWithCardButton
-              invoiceId={invoice.id}
-              shareToken={invoice.share_token}
-              branding={branding}
-              actionStyle={actionStyle}
-              paymentType="deposit"
-              label="Pay deposit"
-            />
-          </div>
-        ) : null}
-      </div>
+      ))}
 
-      {/* Final balance */}
-      <div className="py-2.5">
-        <div className="flex items-center justify-between">
-          <div>
-            <span
-              style={{
-                fontSize: `${bodyDefaults.fontSize}px`,
-                color: bodyDefaults.color,
-                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                fontWeight: bodyDefaults.fontWeight,
-                lineHeight: bodyDefaults.lineHeight,
-              }}
-            >
-              Final balance ({100 - (invoice.deposit_percent ?? 0)}%)
-            </span>
-            {invoice.final_due_date ? (
-              <span
-                className="block"
-                style={{
-                  fontSize: `${finePrintDefaults.fontSize}px`,
-                  color: finePrintDefaults.color,
-                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                  fontWeight: finePrintDefaults.fontWeight,
-                  lineHeight: finePrintDefaults.lineHeight,
-                }}
-              >
-                Due {formatDate(invoice.final_due_date)}
-              </span>
-            ) : null}
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className="font-medium tabular-nums"
-              style={{
-                fontSize: `${bodyDefaults.fontSize}px`,
-                color: bodyDefaults.color,
-                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                fontWeight: bodyDefaults.fontWeight,
-                lineHeight: bodyDefaults.lineHeight,
-              }}
-            >
-              {formatCurrency(finalAmount)}
-            </span>
-            {invoice.final_paid_at ? (
-              <span
-                className="flex items-center gap-1"
-                style={{
-                  fontSize: `${finePrintDefaults.fontSize}px`,
-                  color: STATUS_COLORS.success,
-                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                  fontWeight: finePrintDefaults.fontWeight,
-                  lineHeight: finePrintDefaults.lineHeight,
-                }}
-              >
-                <CheckCircle className="w-3.5 h-3.5" strokeWidth={1.5} />
-                Paid
-              </span>
-            ) : null}
-          </div>
+      {/* Pay-in-full action: only show when multiple stages remain unpaid.
+          With a single stage, the stage's own button would duplicate this. */}
+      {showPayButtons && actionStyle && unpaidCount > 1 ? (
+        <div className="pt-2">
+          <PayWithCardButton
+            invoiceId={invoice.id}
+            shareToken={invoice.share_token}
+            branding={branding}
+            actionStyle={actionStyle}
+            paymentType="remaining"
+            label="Pay remaining balance"
+          />
         </div>
-        {showFinalButton && actionStyle ? (
-          <div className="mt-2">
-            <PayWithCardButton
-              invoiceId={invoice.id}
-              shareToken={invoice.share_token}
-              branding={branding}
-              actionStyle={actionStyle}
-              paymentType="final"
-              label="Pay balance"
-            />
-          </div>
-        ) : null}
-      </div>
+      ) : null}
     </div>
   );
 }

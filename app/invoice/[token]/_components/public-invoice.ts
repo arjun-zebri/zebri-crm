@@ -24,6 +24,16 @@ export interface InvoiceItem {
   position: number;
 }
 
+/** One payment stage on a public invoice, as returned by `get_public_invoice`. */
+export interface PublicInvoiceStage {
+  id: string;
+  position: number;
+  label: string;
+  amount_cents: number;
+  due_date: string | null;
+  paid_at: string | null;
+}
+
 export interface PublicInvoice extends PublicBranding {
   id: string;
   invoice_number: string;
@@ -41,11 +51,7 @@ export interface PublicInvoice extends PublicBranding {
   bank_bsb: string | null;
   bank_account_number: string | null;
   items: InvoiceItem[];
-  deposit_percent: number | null;
-  deposit_due_date: string | null;
-  deposit_paid_at: string | null;
-  final_due_date: string | null;
-  final_paid_at: string | null;
+  stages: PublicInvoiceStage[];
   stripe_payment_enabled: boolean;
   stripe_connect_enabled: boolean;
   share_token: string;
