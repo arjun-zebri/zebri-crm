@@ -1,0 +1,155 @@
+/**
+ * Type-to-create category picker for a time entry.
+ *
+ * Filters the user's categories as they type and offers
+ * `Create "<typed>"` when nothing matches, so labelling a session never
+ * requires a detour into settings. Categories are deliberately plain
+ * text: a colour per category would compete with the couple statuses,
+ * which are the coloured vocabulary in this product.
+ *
+ * @module components/time-tracking/time-category-picker
+ */
+'use client';
+
+import * as Popover from '@radix-ui/react-popover';
+import { ChevronDown, Plus, X } from 'lucide-react';
+import { useState } from 'react';
+
+import { Input } from '@/components/ui/input';
+
+import { TimeCategoryRow } from './time-category-row';
+import { useTimeCategories } from './use-time-categories';
+
+export interface TimeCategoryPickerProps {
+  /** Currently selected category id, or null for uncategorised. */
+  value: string | null;
+  onChange: (categoryId: string | null) => void;
+}
+
+export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps) {
+  const { categories, create, rename, remove } = useTimeCategories();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const trimmed = query.trim();
+  const filtered = trimmed
+    ? categories.filter((c) =>
+        c.name.toLowerCase().includes(trimmed.toLowerCase()),
+      )
+    : categories;
+  // Only offer Create when the typed name is genuinely new: retyping an
+  // existing name should select it, not appear to make a duplicate.
+  const canCreate =
+    trimmed.length > 0 &&
+    !categories.some((c) => c.name.toLowerCase() === trimmed.toLowerCase());
+
+  const selected = categories.find((c) => c.id === value);
+
+  const close = () => {
+    setOpen(false);
+    setQuery('');
+  };
+
+  const select = (categoryId: string | null) => {
+    onChange(categoryId);
+    close();
+  };
+
+  const handleCreate = async () => {
+    const created = await create(trimmed);
+    if (created) select(created.id);
+  };
+
+  return (
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setQuery('');
+      }}
+    >
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-caption transition hover:bg-surface-muted"
+        >
+          <span className={selected ? 'text-text' : 'text-text-subtle'}>
+            {selected ? selected.name : 'Add category'}
+          </span>
+          <ChevronDown
+            size={14}
+            strokeWidth={1.5}
+            className="shrink-0 text-text-subtle"
+          />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          sideOffset={4}
+          align="start"
+          className="z-[95] w-[var(--radix-popover-trigger-width)] min-w-56 rounded-xl border border-border bg-card py-1 shadow-lg"
+        >
+          <div className="px-2 pb-1 pt-1">
+            <Input
+              autoFocus
+              size="sm"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search categories"
+              aria-label="Search categories"
+            />
+          </div>
+
+          <div className="max-h-56 overflow-y-auto py-0.5">
+            {filtered.map((category) => (
+              <TimeCategoryRow
+                key={category.id}
+                category={category}
+                selected={category.id === value}
+                onSelect={() => select(category.id)}
+                onRename={(name) => rename(category.id, name)}
+                onDelete={() => {
+                  remove(category.id);
+                  // The entry keeps its history but loses the label, so
+                  // the picker must not keep showing a dead selection.
+                  if (category.id === value) onChange(null);
+                }}
+              />
+            ))}
+            {filtered.length === 0 && !canCreate ? (
+              <p className="px-3 py-2 text-caption text-text-subtle">
+                No categories yet.
+              </p>
+            ) : null}
+          </div>
+
+          {canCreate ? (
+            <div className="border-t border-border pt-1">
+              <button
+                type="button"
+                onClick={() => void handleCreate()}
+                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-caption text-text-muted transition hover:bg-surface-emphasis hover:text-text"
+              >
+                <Plus size={13} strokeWidth={1.5} />
+                <span className="truncate">Create &quot;{trimmed}&quot;</span>
+              </button>
+            </div>
+          ) : null}
+
+          {value ? (
+            <div className="border-t border-border pt-1">
+              <button
+                type="button"
+                onClick={() => select(null)}
+                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-caption text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
+              >
+                <X size={13} strokeWidth={1.5} />
+                Clear
+              </button>
+            </div>
+          ) : null}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
