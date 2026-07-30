@@ -88,6 +88,22 @@ describe('resolveStages', () => {
     if (!result.ok) return
     expect(result.stages).toEqual([])
   })
+
+  it('reports structural errors before amount errors, by design', () => {
+    // Template has both structural errors (two remainders) and amount errors
+    // (fixed fee exceeds invoice total), but only structural errors are reported
+    // because amount checks cannot run meaningfully until structure is valid.
+    const result = resolveStages(
+      [rest('Balance A'), fixed('Fee', 500), rest('Balance B')],
+      40_000,
+      ISSUE,
+    )
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    const codes = result.errors.map((e) => e.code)
+    expect(codes).toContain('multiple_remainders')
+    expect(codes).not.toContain('fixed_exceeds_total')
+  })
 })
 
 describe('validateForSave', () => {

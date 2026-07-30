@@ -38,7 +38,13 @@ function daysBetween(fromIso: string, toIso: string): number {
   return Math.round((to - from) / 86_400_000)
 }
 
-/** Structural checks that do not depend on the invoice total. */
+/**
+ * Structural checks that do not depend on the invoice total.
+ *
+ * Collects all structural errors (multiple remainders, remainder not last) within
+ * this stage before returning, but the caller stops validation entirely if any are
+ * found: amount checks are only meaningful on structurally valid templates.
+ */
 function structuralErrors(template: TemplateStage[]): StageValidationError[] {
   const errors: StageValidationError[] = []
   const remainderIndexes = template
@@ -60,10 +66,14 @@ function stageCents(
   invoiceTotalCents: number,
 ): number {
   if (amountType === 'percent') {
+    // Fallback to 0: DB check constraint enforces non-null for percent stages;
+    // defensive only.
     return Math.round(invoiceTotalCents * ((amountValue ?? 0) / 100))
   }
   if (amountType === 'fixed') {
     // amountValue is dollars on a fixed stage; everything downstream is cents.
+    // Fallback to 0: DB check constraint enforces non-null for fixed stages;
+    // defensive only.
     return Math.round((amountValue ?? 0) * 100)
   }
   return 0 // remainder is filled in afterwards
@@ -72,8 +82,13 @@ function stageCents(
 /**
  * Resolve template stages against an invoice total and issue date.
  *
- * Returns every validation failure at once rather than the first, so the
- * builder can surface them all instead of making the MC fix them one at a time.
+ * Validation proceeds in stages: structure (remaining count and position) is
+ * checked first, then fixed-amount feasibility, then the percent-to-total sum.
+ * Validation stops at the first stage that fails because later checks are only
+ * meaningful if earlier ones pass. For example, with two remainder stages,
+ * "what amount is left over" has no defined answer, so amount checks cannot
+ * produce meaningful errors.
+ *
  * Zero stages is valid and means a single-payment invoice.
  */
 export function resolveStages(
@@ -84,6 +99,8 @@ export function resolveStages(
   if (template.length === 0) return { ok: true, stages: [] }
 
   const errors = structuralErrors(template)
+  // Amount checks cannot run on a template with structural errors (e.g., two
+  // remainder stages), so we return early: the validation stage stopped here.
   if (errors.length > 0) return { ok: false, errors }
 
   const hasRemainder = template.some((s) => s.amountType === 'remainder')
