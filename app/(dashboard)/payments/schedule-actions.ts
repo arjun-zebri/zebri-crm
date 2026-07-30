@@ -11,6 +11,7 @@
 
 import { z } from 'zod'
 
+import { deriveInvoiceStatusFromStages } from '@/lib/payments/invoice-status'
 import { validateForSave } from '@/lib/payments/resolve-stages'
 import { createClient } from '@/lib/supabase/server'
 import type { PaymentSchedule, ResolvedStage, TemplateStage } from '@/types/payment-schedule'
@@ -242,15 +243,55 @@ export async function replaceInvoiceStages(input: {
 
 /**
  * Record a manual (non-Stripe) payment against one stage.
+ *
+ * Updates the invoice's status if this payment settles more (or all) stages.
+ * The status derivation is unified with the webhook via deriveInvoiceStatusFromStages,
+ * so marking the last stage paid will actually advance the invoice status.
  */
 export async function markStagePaid(stageId: string): Promise<void> {
   const supabase = await createClient()
-  const { error } = await supabase
+  const validatedStageId = z.string().uuid().parse(stageId)
+  const now = new Date().toISOString()
+
+  // Mark the stage paid only if it is not already paid (replay guard).
+  const { data: stage, error: stageError } = await supabase
     .from('invoice_payment_stages')
-    .update({ paid_at: new Date().toISOString() })
-    .eq('id', z.string().uuid().parse(stageId))
+    .select('id, invoice_id, paid_at')
+    .eq('id', validatedStageId)
     .is('paid_at', null)
-  if (error) throw new Error(`Could not mark the stage paid: ${error.message}`)
+    .single()
+
+  if (stageError || !stage) {
+    throw new Error(`Could not find the unpaid stage: ${stageError?.message ?? 'not found'}`)
+  }
+
+  const { error: updateError } = await supabase
+    .from('invoice_payment_stages')
+    .update({ paid_at: now })
+    .eq('id', validatedStageId)
+  if (updateError) throw new Error(`Could not mark the stage paid: ${updateError.message}`)
+
+  // Read all stages for the invoice to derive the new status.
+  const { data: allStages, error: stagesError } = await supabase
+    .from('invoice_payment_stages')
+    .select('id, paid_at')
+    .eq('invoice_id', stage.invoice_id)
+
+  if (stagesError) {
+    throw new Error(`Could not load stages for status update: ${stagesError.message}`)
+  }
+
+  // Derive the new status from the remaining unpaid stages and update the invoice if changed.
+  const newStatus = deriveInvoiceStatusFromStages(allStages ?? [])
+  if (newStatus !== undefined) {
+    const { error: invoiceError } = await supabase
+      .from('invoices')
+      .update({ status: newStatus })
+      .eq('id', stage.invoice_id)
+    if (invoiceError) {
+      throw new Error(`Could not update invoice status: ${invoiceError.message}`)
+    }
+  }
 }
 
 /**

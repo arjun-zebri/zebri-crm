@@ -154,6 +154,17 @@ export type AlertEvent =
       sessionId: string;
       reason: string;
     })
+  | (BaseEvent & {
+      // A Checkout session for an invoice included stage IDs in metadata
+      // that do not correspond to any stage rows on that invoice. Money
+      // has already moved, so this is a reconciliation emergency: the
+      // session metadata and the database disagree about what stages this
+      // payment settles. Humans must intervene.
+      type: 'invoice_payment_stage_mismatch';
+      severity: 'error';
+      invoiceId: string;
+      missingStageIds: string[];
+    })
 
   // ───── Email / Resend ──────────────────────────────────────────────
   | (BaseEvent & {
