@@ -43,9 +43,11 @@ export function CoupleTime({ coupleId }: CoupleTimeProps) {
   const stats: TabStat[] | undefined = entries.length
     ? [
         { label: `${formatDuration(totalMs(entries))} tracked` },
-        ...sumByCategory(entries).map((c) => ({
-          label: `${c.label} ${formatDuration(c.ms)}`,
-        })),
+        // Zero-length buckets (a session that only just started) would
+        // add a chip that says nothing.
+        ...sumByCategory(entries)
+          .filter((c) => c.ms > 0)
+          .map((c) => ({ label: `${c.label} ${formatDuration(c.ms)}` })),
       ]
     : undefined;
 

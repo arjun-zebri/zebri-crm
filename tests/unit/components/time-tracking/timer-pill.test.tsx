@@ -120,7 +120,7 @@ describe('TimerPill via TimerProvider', () => {
       await screen.findByRole('button', { name: /stop timing/i }),
     );
     expect(
-      await screen.findByPlaceholderText(/what did you work on/i),
+      await screen.findByLabelText(/what did you work on/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/12m/)).toBeInTheDocument();
   });
@@ -143,7 +143,7 @@ describe('TimerPill via TimerProvider', () => {
       await screen.findByRole('button', { name: /stop timing/i }),
     );
     await userEvent.type(
-      await screen.findByPlaceholderText(/what did you work on/i),
+      await screen.findByLabelText(/what did you work on/i),
       'Venue call',
     );
     await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
@@ -174,7 +174,7 @@ describe('TimerPill via TimerProvider', () => {
     expect(updateMock).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(
-        screen.queryByPlaceholderText(/what did you work on/i),
+        screen.queryByLabelText(/what did you work on/i),
       ).not.toBeInTheDocument(),
     );
   });

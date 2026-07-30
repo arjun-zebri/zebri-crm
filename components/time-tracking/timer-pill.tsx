@@ -33,11 +33,11 @@ export function TimerPill({ hidden }: TimerPillProps) {
   return (
     <div
       data-testid="timer-pill"
-      className="fixed right-3 top-16 z-[90] flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-lg md:top-3"
+      className="fixed right-3 top-16 z-[90] flex items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 py-1.5 shadow-lg md:top-3"
     >
       <Timer size={14} strokeWidth={1.5} className="shrink-0 text-text-muted" />
       <div className="min-w-0">
-        <p className="max-w-[10rem] truncate text-caption text-text">
+        <p className="max-w-[7.5rem] truncate text-caption text-text sm:max-w-[10rem]">
           {running.couple_name}
         </p>
         <p className="font-mono text-body tabular-nums text-text">

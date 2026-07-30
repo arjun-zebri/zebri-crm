@@ -119,7 +119,7 @@ function StopNoteForm({
             rows={3}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="What did you work on?"
+            placeholder="Venue walkthrough, script draft, travel"
             className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-body text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
           />
         </div>

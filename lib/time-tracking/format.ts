@@ -35,12 +35,15 @@ export function formatElapsed(ms: number): string {
 }
 
 /**
- * Human duration for lists and totals: `48m`, `1h 15m`, `2h`. Seconds
- * are floored away, so a 59-second session reads `0m` rather than
- * pretending to be a minute.
+ * Human duration for lists and totals: `42s`, `48m`, `1h 15m`, `2h`.
+ *
+ * Sub-minute sessions report seconds rather than flooring to `0m`: a
+ * quick phone call is real tracked time, and "0m" reads as a bug.
  */
 export function formatDuration(ms: number): string {
-  const minutes = Math.max(0, Math.floor(ms / 60_000));
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   if (hours === 0) return `${rest}m`;

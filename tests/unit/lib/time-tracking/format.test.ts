@@ -58,8 +58,13 @@ describe('formatDuration', () => {
     expect(formatDuration(2 * 3_600_000)).toBe('2h');
   });
 
-  it('floors seconds into the minute below', () => {
-    expect(formatDuration(59_000)).toBe('0m');
+  it('reports sub-minute durations in seconds, never as 0m', () => {
+    expect(formatDuration(59_000)).toBe('59s');
+    expect(formatDuration(0)).toBe('0s');
+  });
+
+  it('floors seconds away once past a minute', () => {
+    expect(formatDuration(61_000)).toBe('1m');
   });
 });
 
