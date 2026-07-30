@@ -318,7 +318,7 @@ async function processInvoicePayment(
     // Stamp the stages that were just paid with paid_at and stripe_payment_intent_id.
     // Use .is('paid_at', null) so a replayed webhook cannot overwrite an existing paid_at.
     // Stripe retries webhooks frequently, so this guard is essential.
-    const { data: stamped, error: stampError } = await adminClient
+    const { error: stampError } = await adminClient
       .from('invoice_payment_stages')
       .update({ paid_at: now, stripe_payment_intent_id: paymentIntentId })
       .in('id', stageIds)
@@ -340,11 +340,34 @@ async function processInvoicePayment(
       return
     }
 
-    // Money has already moved by the time this webhook runs, so a mismatch between
-    // the session's stage ids and the rows we could stamp needs a human rather than
-    // a silent partial write. Compare what we stamped against what we expected.
-    const stampedIds = new Set((stamped ?? []).map((r) => r.id))
-    const missing = stageIds.filter((id: string) => !stampedIds.has(id))
+    // Verify that all requested stage IDs actually exist on this invoice. This is separate
+    // from whether they were stamped: "nothing stamped" means they were already paid (replay),
+    // which is benign and does not require an alert. "doesn't exist on this invoice" is a
+    // genuine mismatch (money moved via Stripe but records disagree about what stages were paid).
+    // Filter by invoice_id as well, so a stage id belonging to another invoice is caught
+    // rather than silently accepted: the session metadata is the only thing telling us which
+    // stages to stamp, and we must verify they belong to the named invoice.
+    const { data: existingStages, error: existingError } = await adminClient
+      .from('invoice_payment_stages')
+      .select('id, invoice_id')
+      .in('id', stageIds)
+      .eq('invoice_id', invoiceId)
+
+    if (existingError) {
+      logger.error('[stripe/webhook] stage existence check failed', { error: existingError, invoiceId })
+      // Return early without deriving status or updating the invoice. Same reasoning as above:
+      // we cannot know whether the stages exist, so we cannot safely derive status.
+      await sendAlert({
+        type: 'invoice_payment_status_indeterminate',
+        severity: 'error',
+        invoiceId,
+        failureReason: `stage existence check failed: ${existingError.message}`,
+      })
+      return
+    }
+
+    const existingIds = new Set((existingStages ?? []).map((r) => r.id))
+    const missing = stageIds.filter((id: string) => !existingIds.has(id))
     if (missing.length > 0) {
       await sendAlert({
         type: 'invoice_payment_stage_mismatch',
