@@ -97,8 +97,11 @@ export default function PublicInvoicePage() {
   const total = invoice ? invoice.subtotal + taxAmount : 0;
   const stages = invoice?.stages ?? [];
   const hasSchedule = stages.length > 0;
-  // Compute the ID of the earliest unpaid stage: the only payable one.
-  const nextPayableStageId = stages.find((s) => !s.paid_at)?.id ?? null;
+  // Sort stages by position before finding the payable one. The API route
+  // orders by position server-side; the page must derive the earliest unpaid
+  // stage the same way or pay buttons land on stages the route will reject.
+  const orderedStages = [...stages].sort((a, b) => a.position - b.position);
+  const nextPayableStageId = orderedStages.find((s) => !s.paid_at)?.id ?? null;
   const stripeReady =
     invoice?.stripe_payment_enabled && invoice?.stripe_connect_enabled;
   const showPayButtons =
@@ -191,32 +194,40 @@ export default function PublicInvoicePage() {
         pageState !== 'not_found' &&
         pageState !== 'cancelled' &&
         pageState !== 'loading' ? (
-          invoice.branding_blocks && invoice.branding_blocks.length > 0 ? (
-            <InvoiceBrandedCard
-              invoice={invoice}
-              preBlocks={preBlocks}
-              postBlocks={postBlocks}
-              hasSchedule={hasSchedule}
-              nextPayableStageId={nextPayableStageId}
-              showPayButtons={showPayButtons}
-              branding={invoice}
-              radius={radius}
-              actionStyle={actionStyle}
-            />
-          ) : (
-            <InvoiceFallbackCard
-              invoice={invoice}
-              pageState={pageState}
-              hasSchedule={hasSchedule}
-              taxAmount={taxAmount}
-              total={total}
-              nextPayableStageId={nextPayableStageId}
-              showPayButtons={showPayButtons}
-              branding={invoice}
-              radius={radius}
-              actionStyle={actionStyle}
-            />
-          )
+          // Pass invoice with sorted stages so components render in payment order
+          // regardless of RPC sort stability.
+          (() => {
+            const invoiceWithOrderedStages = {
+              ...invoice,
+              stages: orderedStages,
+            };
+            return invoice.branding_blocks && invoice.branding_blocks.length > 0 ? (
+              <InvoiceBrandedCard
+                invoice={invoiceWithOrderedStages}
+                preBlocks={preBlocks}
+                postBlocks={postBlocks}
+                hasSchedule={hasSchedule}
+                nextPayableStageId={nextPayableStageId}
+                showPayButtons={showPayButtons}
+                branding={invoice}
+                radius={radius}
+                actionStyle={actionStyle}
+              />
+            ) : (
+              <InvoiceFallbackCard
+                invoice={invoiceWithOrderedStages}
+                pageState={pageState}
+                hasSchedule={hasSchedule}
+                taxAmount={taxAmount}
+                total={total}
+                nextPayableStageId={nextPayableStageId}
+                showPayButtons={showPayButtons}
+                branding={invoice}
+                radius={radius}
+                actionStyle={actionStyle}
+              />
+            );
+          })()
         ) : null}
       </div>
     </div>
