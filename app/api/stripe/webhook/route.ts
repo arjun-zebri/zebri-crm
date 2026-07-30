@@ -326,6 +326,18 @@ async function processInvoicePayment(
       .select('id')
     if (stampError) {
       logger.error('[stripe/webhook] stage stamp failed', { error: stampError, invoiceId })
+      // Return early without deriving status or updating the invoice. The stage stamping
+      // is idempotent (guarded by .is('paid_at', null)), so Stripe will retry this webhook
+      // and succeed next time. If we mark the invoice with an uncertain status now, we risk
+      // silent corruption: the next retry might see a different state but won't touch the
+      // invoice again (status already advanced). So we wait for the retry to establish facts.
+      await sendAlert({
+        type: 'invoice_payment_status_indeterminate',
+        severity: 'error',
+        invoiceId,
+        failureReason: `stage stamping failed: ${stampError.message}`,
+      })
+      return
     }
 
     // Money has already moved by the time this webhook runs, so a mismatch between
@@ -343,18 +355,29 @@ async function processInvoicePayment(
     }
   }
 
-  // Derive the invoice status from how many stages remain, rather than hardcoding it
-  // per payment type. A stageless invoice has nothing left to pay, so it is fully paid.
-  const { data: remaining, error: remainingError } = await adminClient
+  // Read all stage rows for the invoice to determine status. The helper needs the full set
+  // (both paid and unpaid) to correctly distinguish "all paid" from "some paid".
+  const { data: allStages, error: stagesError } = await adminClient
     .from('invoice_payment_stages')
     .select('id, paid_at')
     .eq('invoice_id', invoiceId)
 
-  if (remainingError) {
-    logger.error('[stripe/webhook] remaining stages query failed', { error: remainingError, invoiceId })
+  if (stagesError) {
+    logger.error('[stripe/webhook] invoice stages query failed', { error: stagesError, invoiceId })
+    // Return early without deriving status or updating the invoice. Money has moved and the
+    // stages may or may not be paid, but we cannot know. Stripe will retry this webhook; the
+    // stage stamping above is idempotent and the next attempt will succeed in reading stages.
+    // Proceeding with an empty-array assumption would silently corrupt the invoice's status.
+    await sendAlert({
+      type: 'invoice_payment_status_indeterminate',
+      severity: 'error',
+      invoiceId,
+      failureReason: `stages query failed: ${stagesError.message}`,
+    })
+    return
   }
 
-  const newStatus = deriveInvoiceStatusFromStages(remaining ?? [])
+  const newStatus = deriveInvoiceStatusFromStages(allStages ?? [])
   const updateFields: Record<string, unknown> = {}
 
   if (newStatus === 'paid') {

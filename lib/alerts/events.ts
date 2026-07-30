@@ -165,6 +165,18 @@ export type AlertEvent =
       invoiceId: string;
       missingStageIds: string[];
     })
+  | (BaseEvent & {
+      // The webhook succeeded (money moved via Stripe), but we cannot
+      // determine the invoice's new status because a database query failed.
+      // The stage stamping is idempotent and will re-run on the next
+      // Checkout retry, so the invoice will eventually reach the correct
+      // status. This alert is for visibility: the invoice is in a
+      // temporarily inconsistent state.
+      type: 'invoice_payment_status_indeterminate';
+      severity: 'error';
+      invoiceId: string;
+      failureReason: string;
+    })
 
   // ───── Email / Resend ──────────────────────────────────────────────
   | (BaseEvent & {
