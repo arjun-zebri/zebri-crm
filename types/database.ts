@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admin_audit_log: {
@@ -1287,6 +1262,56 @@ export type Database = {
           },
         ]
       }
+      invoice_payment_stages: {
+        Row: {
+          amount_cents: number
+          amount_type: string
+          amount_value: number | null
+          due_date: string | null
+          id: string
+          invoice_id: string
+          label: string
+          paid_at: string | null
+          position: number
+          stripe_payment_intent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          amount_type: string
+          amount_value?: number | null
+          due_date?: string | null
+          id?: string
+          invoice_id: string
+          label: string
+          paid_at?: string | null
+          position: number
+          stripe_payment_intent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          amount_type?: string
+          amount_value?: number | null
+          due_date?: string | null
+          id?: string
+          invoice_id?: string
+          label?: string
+          paid_at?: string | null
+          position?: number
+          stripe_payment_intent_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_payment_stages_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_template_items: {
         Row: {
           amount: number
@@ -1608,6 +1633,71 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_schedule_stages: {
+        Row: {
+          amount_type: string
+          amount_value: number | null
+          due_offset_days: number
+          id: string
+          label: string
+          position: number
+          schedule_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_type: string
+          amount_value?: number | null
+          due_offset_days?: number
+          id?: string
+          label: string
+          position: number
+          schedule_id: string
+          user_id: string
+        }
+        Update: {
+          amount_type?: string
+          amount_value?: number | null
+          due_offset_days?: number
+          id?: string
+          label?: string
+          position?: number
+          schedule_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_schedule_stages_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_schedules: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       portal_files: {
         Row: {
@@ -2544,6 +2634,7 @@ export type Database = {
         }
         Returns: Json
       }
+      backfill_invoice_payment_stages: { Args: never; Returns: number }
       contracts_due_for_reminder: {
         Args: never
         Returns: {
@@ -2755,6 +2846,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
+      seed_default_payment_schedule: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       sign_contract: {
         Args: {
           p_signer_ip: string
@@ -2896,9 +2991,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
