@@ -702,9 +702,17 @@ export function InvoiceBuilderModal({
         : null,
     notes: notes || null,
     dueDate: dueDate,
-    // TODO: Task 10 will update PreviewDoc to support N-stage payment schedules.
-    // For now, the preview does not render payment stages; use null.
-    paymentSchedule: null,
+    paymentSchedule:
+      invoiceStages.stages.length > 0
+        ? {
+            stages: invoiceStages.stages.map((s) => ({
+              label: s.label,
+              amountCents: s.amountCents,
+              dueDate: s.dueDate,
+              paidAt: s.paidAt,
+            })),
+          }
+        : null,
     shareUrl: shareUrl ?? `https://example.com/invoice/${invoice?.share_token ?? 'preview'}`,
     stripePaymentEnabled,
   };
