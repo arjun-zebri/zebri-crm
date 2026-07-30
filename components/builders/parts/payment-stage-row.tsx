@@ -76,7 +76,7 @@ export function PaymentStageRow({
       />
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-body font-medium text-text">{stage.label}</span>
-        <span className="text-caption text-text-muted tabular-nums">
+        <span className="text-sm text-text-muted tabular-nums">
           {stage.amountType === 'remainder' ? 'remainder' : `${String(stage.amountValue ?? 0)}${unit}`}
           {' · '}
           {formatCurrency(stage.amountCents)}
