@@ -44,7 +44,10 @@ however they like.
 
 ## Data model
 
-Two migrations plus one column on an existing table.
+One migration file: two new tables plus one column on an existing table.
+A single ordered file (rather than one per table) is the simplest
+guarantee that `couple_time_entries.category_id`'s FK target exists when
+it is created.
 
 ### `couple_time_entries`
 
