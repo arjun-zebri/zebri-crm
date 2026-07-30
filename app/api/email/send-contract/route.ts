@@ -111,31 +111,52 @@ export async function POST(request: NextRequest) {
     .limit(1)
     .maybeSingle();
 
-  // Resolve the first stage of the payment schedule.
+  // Resolve the first stage of the payment schedule. Distinguish between a
+  // genuinely absent schedule (rare, but renders `-`) and a failed read (error).
   let firstStage: { amountCents: number; dueDate: string | null } | null = null;
   let proposalTotal: number | null = null;
 
   if (contract.proposal_id) {
-    const { data: proposal } = await supabase
+    const { data: proposal, error: proposalError } = await supabase
       .from('proposals')
       .select('subtotal')
       .eq('id', contract.proposal_id)
       .maybeSingle();
+    if (proposalError) {
+      logger.error('[email/send-contract] Failed to fetch linked proposal', proposalError, {
+        contractId,
+        proposalId: contract.proposal_id,
+      });
+      return NextResponse.json(
+        { error: 'Failed to fetch contract proposal details' },
+        { status: 500 },
+      );
+    }
     if (proposal) {
       proposalTotal = Number(proposal.subtotal);
     }
   }
 
-  const { data: defaultSchedule } = await supabase
+  const { data: defaultSchedule, error: scheduleError } = await supabase
     .from('payment_schedules')
     .select('id, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_days)')
     .eq('user_id', user.id)
     .eq('is_default', true)
     .maybeSingle();
 
+  if (scheduleError) {
+    logger.error('[email/send-contract] Failed to fetch default schedule', scheduleError, {
+      contractId,
+    });
+    return NextResponse.json(
+      { error: 'Failed to fetch payment schedule' },
+      { status: 500 },
+    );
+  }
+
   if (defaultSchedule && proposalTotal !== null) {
     const templateStages: TemplateStage[] = Array.isArray(defaultSchedule.payment_schedule_stages)
-      ? defaultSchedule.payment_schedule_stages.map((s: { label: string; amount_type: string; amount_value: number | null; due_offset_days: number }) => ({
+      ? defaultSchedule.payment_schedule_stages.map((s) => ({
           label: s.label,
           amountType: s.amount_type as 'percent' | 'fixed' | 'remainder',
           amountValue: s.amount_value,

@@ -257,32 +257,35 @@ export function ContractBuilderModal({
   });
 
   // Load the MC's default payment schedule for resolving the first stage
-  // in the preview pane.
-  const { data: defaultSchedule } = useQuery({
+  // in the preview pane. Distinguish between no schedule (rare) and a failed
+  // read (error, surfaces via useQuery error state).
+  const { data: defaultSchedule, error: scheduleError } = useQuery({
     queryKey: ['default-payment-schedule'],
     enabled: isOpen,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('payment_schedules')
         .select('id, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_days)')
         .eq('is_default', true)
         .maybeSingle();
+      if (error) throw error;
       if (!data) return null;
-      const stages = (data.payment_schedule_stages ?? []).map((s: {
-        position: number;
-        label: string;
-        amount_type: string;
-        amount_value: number | null;
-        due_offset_days: number;
-      }) => ({
+      const stages = (data.payment_schedule_stages ?? []).map((s) => ({
         label: s.label,
-        amountType: s.amount_type,
+        amountType: s.amount_type as 'percent' | 'fixed' | 'remainder',
         amountValue: s.amount_value,
         dueOffsetDays: s.due_offset_days,
       })) as TemplateStage[];
       return { id: data.id, stages };
     },
   });
+
+  // Show error if schedule load fails
+  useEffect(() => {
+    if (scheduleError) {
+      toast('Failed to load payment schedule', 'error');
+    }
+  }, [scheduleError, toast]);
 
   /* ─── hydrate state from DB ─────────────────────────────────── */
   useEffect(() => {
