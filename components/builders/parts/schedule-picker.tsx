@@ -55,7 +55,7 @@ function summarise(schedule: PaymentSchedule): string {
  * Presents a list of saved schedules to apply, plus a "No schedule" entry for
  * single-payment invoices. An Edit mode allows inline rename, delete, and
  * set-as-default operations. Deliberately does not support schedule creation
- * here—schedules are created by building stages on an invoice and saving them,
+ * here: schedules are created by building stages on an invoice and saving them,
  * ensuring the library contains only schedules the MC has actually used.
  *
  * See {@link SchedulePickerProps}.
