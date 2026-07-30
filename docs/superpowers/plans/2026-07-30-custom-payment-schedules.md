@@ -19,6 +19,8 @@
 - **`npm run typecheck` must stay at 0 errors.** `npm run typecheck:strict` and `npm run lint:gate` budgets must only ever decrease; ratchet them down when this work reduces them.
 - **Design system only:** semantic tokens (`bg-surface`, `text-text-muted`, `border-border`), primitives from `components/ui/` instead of raw `<button>` / `<input>` / `<select>`, `rounded-xl` on buttons, `strokeWidth={1.5}` on Lucide icons, `cursor-pointer` on interactive elements, no inline `style={{}}` outside the public branded surfaces that already use it.
 - **Components ~150 lines max.** Split when larger.
+- **Never call a state setter directly inside `useEffect`.** `react-hooks/set-state-in-effect` is an ESLint **error** here, and the error budget must reach 0 before warnings are touched, so one new instance fails the gate. Derive the value during render with `useMemo`, or make the input uncontrolled with a `key` derived from the committed value. The current `components/builders/parts/payment-schedule.tsx:88` holds one such error today; because Tasks 5 and 6 rewrite that file, the count should drop from **64 to 63**. Ratchet `scripts/lint-gate.mjs` down when it does.
+- **Raw `<button>` is fine; raw `<input>` and `<select>` are fine too.** CLAUDE.md says ESLint warns on raw HTML form controls, but no such rule exists in `eslint.config.mjs`: the only `no-restricted-syntax` rule forbids Tailwind arbitrary colour values such as `bg-[#fff]`. `category-picker-base.tsx` lints clean using raw buttons. Prefer the `components/ui/` primitives for consistency, but do not contort a popover row to avoid a raw button, and do not expect the linter to catch it either way.
 - **Migrations are the source of truth.** Deploy via CI `supabase db push` only, never the Supabase web SQL editor. Destructive SQL needs an `-- @ALLOW_DESTRUCTIVE: <reason>` marker or `scripts/check-migrations.sh` rejects the deploy.
 - **Money is stored in dollars** on `invoices.subtotal` (numeric), but stage amounts resolve to **integer cents** in `invoice_payment_stages.amount_cents`. For `amount_type = 'fixed'`, `amount_value` is **dollars**. Do not mix the two units.
 - **Local Supabase for tests:** `supabase start` (Docker). After any `supabase db reset`, run the DML-grant repair SQL or integration tests silently skip with permission-denied errors.
@@ -1996,7 +1998,6 @@ Create `components/builders/parts/payment-stage-row.tsx`. Lift `FIELD_CLS`, `for
 'use client'
 
 import { GripVertical, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
 
 import { DatePicker } from '@/components/ui/date-picker'
 import { Select } from '@/components/ui/select'
@@ -2037,14 +2038,6 @@ export function PaymentStageRow({
 }: PaymentStageRowProps) {
   const paid = Boolean(stage.paidAt)
   const editable = canEdit && !paid
-
-  // Local text state so the parent is not re-resolved on every keystroke;
-  // both fields commit on blur.
-  const [label, setLabel] = useState(stage.label)
-  const [amount, setAmount] = useState(String(stage.amountValue ?? ''))
-  useEffect(() => setLabel(stage.label), [stage.label])
-  useEffect(() => setAmount(String(stage.amountValue ?? '')), [stage.amountValue])
-
   const unit = stage.amountType === 'percent' ? '%' : '$'
 
   return (
@@ -2091,11 +2084,18 @@ export function PaymentStageRow({
 
       {editable && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
+          {/* Uncontrolled, with a key derived from the committed value, rather
+              than local state kept in sync by an effect. Mirroring props into
+              state inside a useEffect trips `react-hooks/set-state-in-effect`,
+              which is an ESLint *error* in this repo, and the key achieves the
+              same result: the field shows the committed value, the MC types
+              without re-resolving the whole schedule on every keystroke, and
+              blur commits. */}
           <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            onBlur={() => {
-              const next = label.trim()
+            key={`label-${stage.label}`}
+            defaultValue={stage.label}
+            onBlur={(e) => {
+              const next = e.target.value.trim()
               if (next && next !== stage.label) onChange({ label: next })
             }}
             aria-label="Stage label"
@@ -2125,12 +2125,12 @@ export function PaymentStageRow({
           ) : (
             <div className={`${FIELD_CLS} gap-1`}>
               <input
+                key={`amount-${String(stage.amountValue ?? '')}`}
                 type="number"
                 min={0}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                onBlur={() => {
-                  const next = Number(amount)
+                defaultValue={stage.amountValue ?? ''}
+                onBlur={(e) => {
+                  const next = Number(e.target.value)
                   if (Number.isFinite(next) && next !== stage.amountValue) {
                     onChange({ amountValue: next })
                   }
@@ -2530,7 +2530,7 @@ Create `components/builders/parts/use-invoice-stages.ts`:
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import {
   createSchedule,
@@ -2571,7 +2571,9 @@ export function useInvoiceStages(input: {
   const { invoiceId, totalCents, issueDate, initialStages } = input
   const queryClient = useQueryClient()
 
-  const [stages, setStages] = useState<InvoiceStage[]>(initialStages)
+  // `draft` holds only what the MC edits: labels, amount types, values, dates.
+  // Amounts are NOT stored here; see the `stages` memo below.
+  const [draft, setDraft] = useState<InvoiceStage[]>(initialStages)
   const [appliedScheduleId, setAppliedScheduleId] = useState<string | null>(null)
   const [isModified, setIsModified] = useState(false)
 
@@ -2579,8 +2581,8 @@ export function useInvoiceStages(input: {
 
   /** Template view of the current stages, for re-resolution and saving. */
   const template = useMemo<TemplateStage[]>(
-    () => toTemplateStages(stages, issueDate),
-    [stages, issueDate],
+    () => toTemplateStages(draft, issueDate),
+    [draft, issueDate],
   )
 
   const resolved = useMemo(
@@ -2590,32 +2592,38 @@ export function useInvoiceStages(input: {
 
   const validationError = resolved.ok ? null : messageFor(resolved.errors[0]?.code ?? '')
 
-  // Re-resolve amounts when the invoice total moves. Paid stages keep their
-  // frozen amount and date; only unpaid ones follow the new total.
-  useEffect(() => {
-    if (!resolved.ok) return
-    setStages((current) =>
-      current.map((s, i) => {
-        if (s.paidAt) return s
-        const next = resolved.stages[i]
-        return next ? { ...s, amountCents: next.amountCents } : s
-      }),
+  /**
+   * Stages with their amounts derived during render.
+   *
+   * An amount is a pure function of (stage shape, invoice total, issue date), so
+   * deriving it here means changing a line item re-resolves the unpaid stages
+   * automatically, with no effect and no second render. Mirroring the resolved
+   * amounts back into state inside a `useEffect` would trip
+   * `react-hooks/set-state-in-effect`, which is an ESLint error in this repo,
+   * and it is the wrong shape anyway: derived data does not belong in state.
+   *
+   * A paid stage keeps the `amountCents` it was loaded with. That is the figure
+   * the couple was actually charged, and it must not move when the MC later
+   * edits an unrelated line item.
+   */
+  const stages = useMemo<InvoiceStage[]>(() => {
+    if (!resolved.ok) return draft
+    return draft.map((s, i) =>
+      s.paidAt ? s : { ...s, amountCents: resolved.stages[i]?.amountCents ?? s.amountCents },
     )
-    // resolved is derived from stages, so depending on it directly would loop.
-    // Keying on the total is what we actually mean by "the total changed".
-  }, [totalCents]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [draft, resolved])
 
   const applySchedule = useCallback(
     (schedule: PaymentSchedule | null) => {
       setAppliedScheduleId(schedule?.id ?? null)
       setIsModified(false)
       if (!schedule) {
-        setStages((current) => current.filter((s) => s.paidAt))
+        setDraft((current) => current.filter((s) => s.paidAt))
         return
       }
       const next = resolveStages(schedule.stages, totalCents, issueDate)
       if (!next.ok) return
-      setStages(
+      setDraft(
         next.stages.map((s) => ({
           ...s,
           id: `applied-${String(s.position)}`,
@@ -2627,7 +2635,7 @@ export function useInvoiceStages(input: {
   )
 
   const changeStages = useCallback((next: InvoiceStage[]) => {
-    setStages(next.map((s, i) => ({ ...s, position: i + 1 })))
+    setDraft(next.map((s, i) => ({ ...s, position: i + 1 })))
     setIsModified(true)
   }, [])
 
@@ -2647,7 +2655,7 @@ export function useInvoiceStages(input: {
   const markPaidMutation = useMutation({
     mutationFn: async (stageId: string) => markStagePaid(stageId),
     onSuccess: (_data, stageId) => {
-      setStages((current) =>
+      setDraft((current) =>
         current.map((s) => (s.id === stageId ? { ...s, paidAt: new Date().toISOString() } : s)),
       )
     },
