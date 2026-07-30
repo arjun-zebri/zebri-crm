@@ -528,16 +528,17 @@ export function InvoiceBuilderModal({
   const markPaid = useMutation({
     mutationFn: async () => {
       const id = await ensureSaved();
-      // Mark all unpaid stages as paid
-      for (const stage of invoiceStages.stages.filter((s) => !s.paidAt)) {
-        await invoiceStages.markPaid(stage.id);
-      }
+      // Mark all unpaid stages as paid. The hook's mutations handle errors internally
+      // via toast; we queue them all and proceed to the invoice update.
+      invoiceStages.stages.filter((s) => !s.paidAt).forEach((stage) => {
+        invoiceStages.markPaid(stage.id);
+      });
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('invoices')
         .update({ status: 'paid', paid_at: now })
         .eq('id', id);
-      if (error) throw error;
+      if (error) throw new Error('Failed to mark invoice as paid: ' + error.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
@@ -552,16 +553,34 @@ export function InvoiceBuilderModal({
       if (!effectiveId) return;
       // Revert stages that were manually marked paid (no Stripe settlement).
       // Stages settled through Stripe record real money, so we never undo those.
-      await supabase
+      // After reverting manual stages, check if any Stripe-settled stages remain.
+      // If so, the invoice must go to 'deposit_paid' not 'sent': an invoice at
+      // 'sent' with a paid stage is a state no other path produces, the public
+      // page cannot render it coherently, and reminder emitters would chase money
+      // already received. Only set status to 'sent' when all stages are reverted.
+      const { error: stageError } = await supabase
         .from('invoice_payment_stages')
         .update({ paid_at: null })
         .eq('invoice_id', effectiveId)
         .is('stripe_payment_intent_id', null);
-      const { error } = await supabase
+      if (stageError) throw new Error('Failed to revert payment stages: ' + stageError.message);
+
+      // Check whether any Stripe-settled stages remain paid.
+      const { data: remainingStages, error: readError } = await supabase
+        .from('invoice_payment_stages')
+        .select('paid_at')
+        .eq('invoice_id', effectiveId)
+        .not('stripe_payment_intent_id', 'is', null);
+      if (readError) throw new Error('Failed to check payment stages: ' + readError.message);
+
+      // If any Stripe-settled stage is still paid, invoice goes to 'deposit_paid'.
+      // Otherwise revert to 'sent'.
+      const hasStripeSettledPaid = (remainingStages ?? []).some((s) => s.paid_at !== null);
+      const { error: invoiceError } = await supabase
         .from('invoices')
-        .update({ status: 'sent', paid_at: null })
+        .update({ status: hasStripeSettledPaid ? 'deposit_paid' : 'sent', paid_at: null })
         .eq('id', effectiveId);
-      if (error) throw error;
+      if (invoiceError) throw new Error('Failed to update invoice status: ' + invoiceError.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
