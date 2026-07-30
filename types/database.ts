@@ -900,6 +900,57 @@ export type Database = {
         }
         Relationships: []
       }
+      couple_time_entries: {
+        Row: {
+          auto_stopped: boolean
+          category_id: string | null
+          couple_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          note: string | null
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_stopped?: boolean
+          category_id?: string | null
+          couple_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          started_at: string
+          user_id: string
+        }
+        Update: {
+          auto_stopped?: boolean
+          category_id?: string | null
+          couple_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "couple_time_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "time_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "couple_time_entries_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       couples: {
         Row: {
           created_at: string
@@ -2323,6 +2374,30 @@ export type Database = {
           },
         ]
       }
+      time_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       timeline_items: {
         Row: {
           contact_id: string | null
@@ -2496,6 +2571,7 @@ export type Database = {
           oauth_status: string
           oauth_token_expires_at: string | null
           subdomain: string | null
+          time_categories_seeded: boolean
           updated_at: string
           user_id: string
         }
@@ -2513,6 +2589,7 @@ export type Database = {
           oauth_status?: string
           oauth_token_expires_at?: string | null
           subdomain?: string | null
+          time_categories_seeded?: boolean
           updated_at?: string
           user_id: string
         }
@@ -2530,6 +2607,7 @@ export type Database = {
           oauth_status?: string
           oauth_token_expires_at?: string | null
           subdomain?: string | null
+          time_categories_seeded?: boolean
           updated_at?: string
           user_id?: string
         }
