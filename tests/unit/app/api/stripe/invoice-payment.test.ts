@@ -232,4 +232,25 @@ describe('POST /api/stripe/invoice-payment', () => {
     expect(args.line_items[0].price_data.unit_amount).toBe(350_000);
     expect(args.metadata.stage_ids).toBe(stageId2);
   });
+
+  it('rejects a remaining payment when all stages are already paid', async () => {
+    const allPaidStages = [
+      { id: stageId1, position: 1, label: 'Deposit', amount_cents: 150_000, paid_at: '2026-07-01' },
+      { id: stageId2, position: 2, label: 'Final', amount_cents: 350_000, paid_at: '2026-07-02' },
+    ];
+
+    invoiceQueryMock.mockResolvedValue({ data: invoiceRow, error: null });
+    stagesQueryMock.mockResolvedValue({ data: allPaidStages, error: null });
+    getUserByIdMock.mockResolvedValue({ data: { user: mcUser }, error: null });
+
+    const { POST } = await loadRoute();
+    const res = await POST(req({
+      invoiceId,
+      shareToken: 'tok-12345678',
+      paymentType: 'remaining',
+    }));
+
+    expect(res.status).toBe(400);
+    expect(createSessionMock).not.toHaveBeenCalled();
+  });
 });

@@ -156,13 +156,23 @@ export async function POST(request: NextRequest) {
 
   const unpaid = (stageRows ?? []).filter((s) => s.paid_at === null);
 
+  // If the invoice has stage rows but they're all paid, reject with 400.
+  // This handles the case where an MC marks stages paid one-by-one without
+  // changing the invoice status (e.g., status is still 'sent' or 'deposit_paid').
+  if (stageRows && stageRows.length > 0 && unpaid.length === 0) {
+    return NextResponse.json(
+      { error: 'All payment stages have been settled' },
+      { status: 400 },
+    );
+  }
+
   let amountCents: number;
   let productName: string;
   let stageIds: string[];
 
   if (unpaid.length === 0) {
-    // No schedule at all: a single-payment invoice for the whole total.
-    // Compute from subtotal and tax rate since there are no stage rows to read.
+    // Genuinely stageless invoice: compute from subtotal and tax rate.
+    // No stage rows exist for this invoice, so charge the whole total.
     const total = invoice.subtotal + invoice.subtotal * ((invoice.tax_rate ?? 0) / 100);
     amountCents = Math.round(total * 100);
     productName = invoice.title || 'Invoice';
