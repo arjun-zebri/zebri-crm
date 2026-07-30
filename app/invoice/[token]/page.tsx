@@ -102,6 +102,9 @@ export default function PublicInvoicePage() {
   // stage the same way or pay buttons land on stages the route will reject.
   const orderedStages = [...stages].sort((a, b) => a.position - b.position);
   const nextPayableStageId = orderedStages.find((s) => !s.paid_at)?.id ?? null;
+  // Components render from this, so stages appear in payment order regardless of
+  // how the RPC happened to return them.
+  const invoiceWithOrderedStages = invoice ? { ...invoice, stages: orderedStages } : null;
   const stripeReady =
     invoice?.stripe_payment_enabled && invoice?.stripe_connect_enabled;
   const showPayButtons =
@@ -194,40 +197,32 @@ export default function PublicInvoicePage() {
         pageState !== 'not_found' &&
         pageState !== 'cancelled' &&
         pageState !== 'loading' ? (
-          // Pass invoice with sorted stages so components render in payment order
-          // regardless of RPC sort stability.
-          (() => {
-            const invoiceWithOrderedStages = {
-              ...invoice,
-              stages: orderedStages,
-            };
-            return invoice.branding_blocks && invoice.branding_blocks.length > 0 ? (
-              <InvoiceBrandedCard
-                invoice={invoiceWithOrderedStages}
-                preBlocks={preBlocks}
-                postBlocks={postBlocks}
-                hasSchedule={hasSchedule}
-                nextPayableStageId={nextPayableStageId}
-                showPayButtons={showPayButtons}
-                branding={invoice}
-                radius={radius}
-                actionStyle={actionStyle}
-              />
-            ) : (
-              <InvoiceFallbackCard
-                invoice={invoiceWithOrderedStages}
-                pageState={pageState}
-                hasSchedule={hasSchedule}
-                taxAmount={taxAmount}
-                total={total}
-                nextPayableStageId={nextPayableStageId}
-                showPayButtons={showPayButtons}
-                branding={invoice}
-                radius={radius}
-                actionStyle={actionStyle}
-              />
-            );
-          })()
+          invoice.branding_blocks && invoice.branding_blocks.length > 0 ? (
+            <InvoiceBrandedCard
+              invoice={invoiceWithOrderedStages!}
+              preBlocks={preBlocks}
+              postBlocks={postBlocks}
+              hasSchedule={hasSchedule}
+              nextPayableStageId={nextPayableStageId}
+              showPayButtons={showPayButtons}
+              branding={invoice}
+              radius={radius}
+              actionStyle={actionStyle}
+            />
+          ) : (
+            <InvoiceFallbackCard
+              invoice={invoiceWithOrderedStages!}
+              pageState={pageState}
+              hasSchedule={hasSchedule}
+              taxAmount={taxAmount}
+              total={total}
+              nextPayableStageId={nextPayableStageId}
+              showPayButtons={showPayButtons}
+              branding={invoice}
+              radius={radius}
+              actionStyle={actionStyle}
+            />
+          )
         ) : null}
       </div>
     </div>
