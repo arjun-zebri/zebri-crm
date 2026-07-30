@@ -18,7 +18,7 @@ import {
   updateSchedule,
 } from '@/app/(dashboard)/payments/schedule-actions'
 
-import { createTestUser, serviceClient, type TestUser } from '../helpers/supabase'
+import { createTestUser, serviceClient, type DbClient, type TestUser } from '../helpers/supabase'
 
 let activeUser: TestUser | null = null
 vi.mock('@/lib/supabase/server', () => ({
@@ -27,6 +27,8 @@ vi.mock('@/lib/supabase/server', () => ({
     return activeUser.client
   }),
 }))
+
+import { createClient } from '@/lib/supabase/server'
 
 const pro = { account_type: 'vendor', subscription_status: 'active', subscription_plan: 'pro' }
 
@@ -400,6 +402,104 @@ describe('schedule actions', () => {
         }),
       ).rejects.toThrow('single stage')
     } finally {
+      activeUser = null
+    }
+  })
+
+  it('aborts before deleting when the select of existing stages fails', async () => {
+    activeUser = user
+    try {
+      const admin = serviceClient()
+
+      // Arrange: Create a couple, invoice, and two stages (one paid, one unpaid)
+      const { data: couple } = await admin
+        .from('couples')
+        .insert({ user_id: user.id, name: 'Abort read-fail test', status: 'new' })
+        .select('id')
+        .single()
+
+      const { data: invoice } = await admin
+        .from('invoices')
+        .insert({
+          user_id: user.id,
+          couple_id: couple!.id,
+          title: 'Abort on read fail test',
+          invoice_number: '888',
+          subtotal: 1000,
+          status: 'sent',
+        })
+        .select('id')
+        .single()
+
+      // Create initial stages via successful call
+      await replaceInvoiceStages({
+        invoiceId: invoice!.id,
+        stages: [
+          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01' },
+          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01' },
+        ],
+      })
+
+      // Mark first stage as paid
+      await admin
+        .from('invoice_payment_stages')
+        .update({ paid_at: '2026-08-02T00:00:00Z' })
+        .eq('invoice_id', invoice!.id)
+        .eq('position', 1)
+
+      // Create a wrapper that makes select on invoice_payment_stages fail
+      const failingQuery = {
+        select: () => ({
+          eq: () => Promise.resolve({ data: null, error: { message: 'simulated read failure' } }),
+        }),
+      }
+
+      const realClient = activeUser!.client
+      const wrappedClient = {
+        ...realClient,
+        from: (tableName: string) => {
+          if (tableName === 'invoice_payment_stages') {
+            return failingQuery as unknown as ReturnType<typeof realClient.from>
+          }
+          return realClient.from(tableName as unknown as never)
+        },
+      } as unknown as DbClient
+
+      // Temporarily replace the mock to use the failing client
+      const mockCreateClient = vi.mocked(createClient)
+      mockCreateClient.mockImplementationOnce(async () => wrappedClient)
+
+      // Act & Assert 1: Call should reject with read failure
+      await expect(
+        replaceInvoiceStages({
+          invoiceId: invoice!.id,
+          stages: [
+            { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01' },
+            { position: 2, label: 'Replaced final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-10-01' },
+          ],
+        }),
+      ).rejects.toThrow('simulated read failure')
+
+      // Assert 2: Database state unchanged (abort happened before delete)
+      // This is the critical assertion proving the function aborted before deleting.
+      const { data: remaining } = await admin
+        .from('invoice_payment_stages')
+        .select('position, label, paid_at')
+        .eq('invoice_id', invoice!.id)
+        .order('position')
+
+      expect(remaining).toHaveLength(2)
+      expect(remaining![0]!.position).toBe(1)
+      expect(remaining![0]!.paid_at).not.toBeNull()
+      expect(remaining![1]!.position).toBe(2)
+      expect(remaining![1]!.label).toBe('Final')
+    } finally {
+      // Restore the mock for subsequent tests
+      const mockCreateClient = vi.mocked(createClient)
+      mockCreateClient.mockImplementation(async () => {
+        if (!activeUser) throw new Error('No active test user')
+        return activeUser.client
+      })
       activeUser = null
     }
   })
