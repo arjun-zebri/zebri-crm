@@ -509,11 +509,16 @@ Used by the couple timer (see `page-specs.md` "Time tracking").
   inner form is keyed by entry id so a second stop cannot inherit the
   previous note or category.
 - **`TimeCategoryPicker`** + **`TimeCategoryRow`**  -  type-to-create
-  category picker. Filters as you type, offers `Create "<typed>"` only
-  when the name is genuinely new, and each row has inline rename and
-  delete. Categories are **plain chips with no colour**: couple statuses
-  are this product's coloured vocabulary and a second colour system would
-  compete with them.
+  category picker, trigger fixed at `w-56` so it does not stretch to the
+  dialog width. Filters as you type, offers `Create "<typed>"` only when
+  the name is genuinely new, and each row has inline rename and delete.
+  Categories are **plain chips with no colour**: couple statuses are this
+  product's coloured vocabulary and a second colour system would compete
+  with them. Every write is **optimistic** (`useTimeCategories`): create,
+  rename, and delete all land in the list before the round-trip and roll
+  back on failure. A created category shows on the trigger immediately via
+  a local pending name, while `value` keeps holding only real ids, so
+  saving during that window can never send a placeholder to the server.
 - **`useTimerTick(active, clockOffsetMs)`**  -  the shared one-second tick.
   It lives in a hook rather than the provider because a ticking provider
   would re-render the whole dashboard once a second.

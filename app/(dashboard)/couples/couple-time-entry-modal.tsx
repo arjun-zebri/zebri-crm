@@ -98,7 +98,7 @@ export function CoupleTimeEntryModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      size="sm"
+      size="md"
       nested
       title={entry ? 'Edit time' : 'Add time'}
       footer={
@@ -160,11 +160,11 @@ export function CoupleTimeEntryModal({
           </label>
           <textarea
             id="time-entry-note"
-            rows={3}
+            rows={6}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Venue walkthrough, script draft, travel"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-body text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
+            className="w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-body text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
           />
         </div>
 

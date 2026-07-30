@@ -153,6 +153,68 @@ describe('TimeCategoryPicker', () => {
     await waitFor(() => expect(deleteMock).toHaveBeenCalledWith('cat-1'));
   });
 
+  it('shows a created category immediately, before the server responds', async () => {
+    // The action never settles: the UI must not wait for it.
+    createMock.mockReturnValue(new Promise(() => {}));
+    renderPicker({ value: null, onChange: vi.fn() });
+    await userEvent.click(screen.getByRole('button', { name: /category/i }));
+    await userEvent.type(
+      await screen.findByPlaceholderText(/search categories/i),
+      'Vows',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /create "vows"/i }));
+    // Trigger shows the typed name straight away, popover closed.
+    expect(
+      await screen.findByRole('button', { name: /vows/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText(/search categories/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it('removes a deleted category immediately, before the server responds', async () => {
+    deleteMock.mockReturnValue(new Promise(() => {}));
+    renderPicker({ value: null, onChange: vi.fn() });
+    await userEvent.click(screen.getByRole('button', { name: /category/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /delete meeting/i }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Meeting' }),
+      ).not.toBeInTheDocument(),
+    );
+    // Travel is untouched.
+    expect(screen.getByRole('button', { name: 'Travel' })).toBeInTheDocument();
+  });
+
+  it('renames a category immediately, before the server responds', async () => {
+    renameMock.mockReturnValue(new Promise(() => {}));
+    renderPicker({ value: null, onChange: vi.fn() });
+    await userEvent.click(screen.getByRole('button', { name: /category/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /rename meeting/i }),
+    );
+    const input = screen.getByDisplayValue('Meeting');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'Client meeting{Enter}');
+    expect(
+      await screen.findByRole('button', { name: 'Client meeting' }),
+    ).toBeInTheDocument();
+  });
+
+  it('rolls the list back when a delete fails', async () => {
+    deleteMock.mockResolvedValue({ ok: false, error: 'nope' });
+    renderPicker({ value: null, onChange: vi.fn() });
+    await userEvent.click(screen.getByRole('button', { name: /category/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /delete meeting/i }),
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Meeting' }),
+    ).toBeInTheDocument();
+  });
+
   it('clears the selection when the selected category is deleted', async () => {
     deleteMock.mockResolvedValue({ ok: true, data: null });
     const onChange = vi.fn();

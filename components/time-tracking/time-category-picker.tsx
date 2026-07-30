@@ -30,6 +30,10 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
   const { categories, create, rename, remove } = useTimeCategories();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  // Name of a category being created right now. The trigger shows it
+  // immediately; `value` only ever holds a real id, so saving during that
+  // window can never send a placeholder to the server.
+  const [pendingName, setPendingName] = useState<string | null>(null);
 
   const trimmed = query.trim();
   const filtered = trimmed
@@ -55,9 +59,14 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
     close();
   };
 
-  const handleCreate = async () => {
-    const created = await create(trimmed);
-    if (created) select(created.id);
+  const handleCreate = () => {
+    const name = trimmed;
+    setPendingName(name);
+    close();
+    void create(name).then((created) => {
+      setPendingName(null);
+      if (created) onChange(created.id);
+    });
   };
 
   return (
@@ -71,10 +80,14 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-caption transition hover:bg-surface-muted"
+          className="flex w-56 max-w-full cursor-pointer items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-body transition hover:bg-surface-muted"
         >
-          <span className={selected ? 'text-text' : 'text-text-subtle'}>
-            {selected ? selected.name : 'Add category'}
+          <span
+            className={
+              selected || pendingName ? 'truncate text-text' : 'text-text-subtle'
+            }
+          >
+            {pendingName ?? selected?.name ?? 'Add category'}
           </span>
           <ChevronDown
             size={14}
@@ -87,12 +100,11 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
         <Popover.Content
           sideOffset={4}
           align="start"
-          className="z-[95] w-[var(--radix-popover-trigger-width)] min-w-56 rounded-xl border border-border bg-card py-1 shadow-lg"
+          className="z-[95] w-64 rounded-xl border border-border bg-card py-1 shadow-lg"
         >
           <div className="px-2 pb-1 pt-1">
             <Input
               autoFocus
-              size="sm"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search categories"
@@ -117,7 +129,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               />
             ))}
             {filtered.length === 0 && !canCreate ? (
-              <p className="px-3 py-2 text-caption text-text-subtle">
+              <p className="px-3 py-2 text-body text-text-subtle">
                 No categories yet.
               </p>
             ) : null}
@@ -127,8 +139,8 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
             <div className="border-t border-border pt-1">
               <button
                 type="button"
-                onClick={() => void handleCreate()}
-                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-caption text-text-muted transition hover:bg-surface-emphasis hover:text-text"
+                onClick={handleCreate}
+                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-body text-text-muted transition hover:bg-surface-emphasis hover:text-text"
               >
                 <Plus size={13} strokeWidth={1.5} />
                 <span className="truncate">Create &quot;{trimmed}&quot;</span>
@@ -141,7 +153,7 @@ export function TimeCategoryPicker({ value, onChange }: TimeCategoryPickerProps)
               <button
                 type="button"
                 onClick={() => select(null)}
-                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-caption text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
+                className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-body text-text-subtle transition hover:bg-surface-emphasis hover:text-text"
               >
                 <X size={13} strokeWidth={1.5} />
                 Clear

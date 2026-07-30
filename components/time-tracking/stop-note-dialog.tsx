@@ -83,7 +83,7 @@ function StopNoteForm({
     <Modal
       isOpen
       onClose={onClose}
-      size="sm"
+      size="md"
       nested
       title={
         <span className="text-body">
@@ -106,6 +106,14 @@ function StopNoteForm({
       }
     >
       <div className="flex flex-col gap-4">
+        {/* Category first: it is the one-tap decision, and the note is the
+            long-form field the eye should land on last. */}
+        <div>
+          <span className="mb-1 block text-caption text-text-muted">
+            Category
+          </span>
+          <TimeCategoryPicker value={categoryId} onChange={setCategoryId} />
+        </div>
         <div>
           <label
             htmlFor="stop-note"
@@ -116,18 +124,12 @@ function StopNoteForm({
           <textarea
             id="stop-note"
             autoFocus
-            rows={3}
+            rows={6}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Venue walkthrough, script draft, travel"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-body text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
+            className="w-full resize-y rounded-xl border border-border bg-surface px-3 py-2 text-body text-text outline-none transition placeholder:text-text-subtle focus:border-border-strong"
           />
-        </div>
-        <div>
-          <span className="mb-1 block text-caption text-text-muted">
-            Category
-          </span>
-          <TimeCategoryPicker value={categoryId} onChange={setCategoryId} />
         </div>
       </div>
     </Modal>
