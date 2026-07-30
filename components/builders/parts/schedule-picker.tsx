@@ -20,6 +20,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type { PaymentSchedule } from '@/types/payment-schedule'
 
+/**
+ * Props for the `SchedulePicker` component.
+ * Carries the list of saved schedules, loading and error states, and mutation
+ * callbacks for applying, renaming, deleting, and setting schedules as default.
+ */
 export interface SchedulePickerProps {
   schedules: PaymentSchedule[]
   loading: boolean
@@ -44,6 +49,17 @@ function summarise(schedule: PaymentSchedule): string {
     .join(' . ')
 }
 
+/**
+ * Popover control for applying and managing saved payment schedules.
+ *
+ * Presents a list of saved schedules to apply, plus a "No schedule" entry for
+ * single-payment invoices. An Edit mode allows inline rename, delete, and
+ * set-as-default operations. Deliberately does not support schedule creation
+ * here—schedules are created by building stages on an invoice and saving them,
+ * ensuring the library contains only schedules the MC has actually used.
+ *
+ * See {@link SchedulePickerProps}.
+ */
 export function SchedulePicker({
   schedules,
   loading,
