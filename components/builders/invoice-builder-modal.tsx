@@ -528,12 +528,20 @@ export function InvoiceBuilderModal({
   const markPaid = useMutation({
     mutationFn: async () => {
       const id = await ensureSaved();
-      // Mark all unpaid stages as paid. The hook's mutations handle errors internally
-      // via toast; we queue them all and proceed to the invoice update.
-      invoiceStages.stages.filter((s) => !s.paidAt).forEach((stage) => {
-        invoiceStages.markPaid(stage.id);
-      });
+      // Mark all unpaid stages as paid in a single update. This write must be awaited
+      // and checked before updating the invoice status, because an invoice at 'paid'
+      // with unpaid stages would stop the reminder emitters from chasing money the
+      // couple still owes. The 'paid_at is null' filter is idempotent, so a double
+      // click cannot overwrite a timestamp.
       const now = new Date().toISOString();
+      const { error: stageError } = await supabase
+        .from('invoice_payment_stages')
+        .update({ paid_at: now })
+        .eq('invoice_id', id)
+        .is('paid_at', null);
+      if (stageError) throw new Error('Failed to mark payment stages as paid: ' + stageError.message);
+
+      // Now update the invoice status only after stages are confirmed paid.
       const { error } = await supabase
         .from('invoices')
         .update({ status: 'paid', paid_at: now })
@@ -576,16 +584,19 @@ export function InvoiceBuilderModal({
       // If any Stripe-settled stage is still paid, invoice goes to 'deposit_paid'.
       // Otherwise revert to 'sent'.
       const hasStripeSettledPaid = (remainingStages ?? []).some((s) => s.paid_at !== null);
+      const nextStatus = hasStripeSettledPaid ? 'deposit_paid' : 'sent';
       const { error: invoiceError } = await supabase
         .from('invoices')
-        .update({ status: hasStripeSettledPaid ? 'deposit_paid' : 'sent', paid_at: null })
+        .update({ status: nextStatus, paid_at: null })
         .eq('id', effectiveId);
       if (invoiceError) throw new Error('Failed to update invoice status: ' + invoiceError.message);
+      return nextStatus;
     },
-    onSuccess: () => {
+    onSuccess: (nextStatus) => {
       queryClient.invalidateQueries({ queryKey: ['invoice', effectiveId] });
       queryClient.invalidateQueries({ queryKey: ['all-invoices'] });
-      toast('Reverted to sent');
+      const message = nextStatus === 'deposit_paid' ? 'Reverted to deposit paid' : 'Reverted to sent';
+      toast(message);
     },
     onError: () => toast('Failed to revert', 'error'),
   });
