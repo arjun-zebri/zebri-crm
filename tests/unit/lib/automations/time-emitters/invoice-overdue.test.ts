@@ -43,7 +43,7 @@ describe('invoiceOverdueThresholdDays()', () => {
   })
 
   it('clamps a configured min of 0 up to 1', () => {
-    // "Overdue" means strictly past the due date — a 0 threshold would
+    // "Overdue" means strictly past the due date, and a 0 threshold would
     // collide with `invoice_due` (days=0) on the due date itself.
     expect(invoiceOverdueThresholdDays({ daysOverdueMin: 0 })).toBe(1)
   })
@@ -100,16 +100,18 @@ describe('invoice_overdue isFinalBalance narrowing', () => {
   const spec = getTriggerSpec('invoice_overdue')
 
   /**
-   * Create a staged event with stage_is_final computed from position and count.
+   * Create a staged event.
    *
-   * In the real emitter, stage_is_final is computed by finding the max position
-   * per invoice. This helper computes it based on whether position === count,
-   * which is true for contiguous positions but could be false for non-contiguous
-   * ones — the whole point of the stage_is_final field.
+   * `isFinal` defaults to `position === count`, which is what the emitter stamps
+   * for a contiguously numbered schedule. Pass it explicitly to model a gapped
+   * schedule, where the two disagree. Do not reintroduce `position === count` as
+   * the only source: that inference is the bug this field exists to remove, and
+   * a helper that hardcodes it cannot detect a regression back to it.
    */
   function stageEvent(
     position: number,
     count: number,
+    isFinal = position === count,
   ): AutomationEventRow {
     return {
       ...makeEvent(1),
@@ -118,7 +120,7 @@ describe('invoice_overdue isFinalBalance narrowing', () => {
         days_overdue: 1,
         stage_position: position,
         stage_count: count,
-        stage_is_final: position === count,
+        stage_is_final: isFinal,
       } as never,
     }
   }
@@ -138,5 +140,19 @@ describe('invoice_overdue isFinalBalance narrowing', () => {
   it('fires for a stageless invoice when isFinalBalance is set', () => {
     // No stages means the whole invoice is the final balance.
     expect(spec!.match(makeEvent(1), { isFinalBalance: true })).toBe(true)
+  })
+
+  it('fires for the highest position even when it does not equal the stage count', () => {
+    // A gapped schedule: positions {1, 3} with a count of 2. The old
+    // `position === count` inference matched no stage at all here, so an MC who
+    // asked to chase only the final payment silently got nothing. This is the
+    // overdue path, so the silent failure was an unpaid balance never chased.
+    expect(spec!.match(stageEvent(3, 2, true), { isFinalBalance: true })).toBe(true)
+  })
+
+  it('does not fire for a lower position in a gapped schedule', () => {
+    // The mirror of the above: position 1 of {1, 3} happens to be neither the
+    // count nor the max, and must still be excluded.
+    expect(spec!.match(stageEvent(1, 2, false), { isFinalBalance: true })).toBe(false)
   })
 })

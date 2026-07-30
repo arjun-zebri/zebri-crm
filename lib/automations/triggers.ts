@@ -461,12 +461,16 @@ const paymentReceived = amountSpec('payment_received', {
 /**
  * Does this event's stage satisfy an `isFinalBalance` filter?
  *
- * The emitter stamps `stage_is_final` on the payload based on the
- * maximum position in the invoice's stages. For stageless invoices
- * (no stage rows), all fields are null and the whole invoice passes.
- * Why stage_is_final instead of inferring from position/count: stage
- * positions are not guaranteed contiguous — an invoice could have
- * positions {1, 3} with count 2, making position === count unreliable.
+ * The emitter stamps `stage_is_final` on the payload from the maximum position
+ * among the invoice's stages. A stageless invoice has null stage fields but is
+ * stamped `stage_is_final: true`, since its single implied payment is also its
+ * final one.
+ *
+ * Why a stamped boolean rather than inferring from position and count: stage
+ * positions are not guaranteed contiguous, so an invoice can hold positions
+ * {1, 3} with a count of 2, and `position === count` then matches no stage at
+ * all. The emitter is the only place that sees every row, so it is the only
+ * place that can answer this correctly.
  */
 function matchesFinalBalance(payload: Record<string, unknown>, isFinalBalance?: boolean): boolean {
   if (!isFinalBalance) return true

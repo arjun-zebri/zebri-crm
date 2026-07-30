@@ -3,7 +3,7 @@
  *
  * The end-to-end behaviour (DB read, dedupe, emit RPC) lives in the
  * matching integration spec at
- * `tests/integration/automations/invoice-due-emitter.test.ts` — that
+ * `tests/integration/automations/invoice-due-emitter.test.ts`, which
  * exercises real RLS and real schema. These tests focus on the pure
  * logic that decides whether a given event matches a given config
  * (the per-lead-time narrowing), mirroring the A1 `quote_due` spec.
@@ -46,14 +46,14 @@ describe('invoice_due trigger match()', () => {
 
   it('rejects when lead-time differs', () => {
     // Two automations with different lead-times must not both fire for
-    // the same emitted event — that would collapse `days=0` and
+    // the same emitted event, which would collapse `days=0` and
     // `days=7` into one recipient blast.
     expect(spec!.match(makeEvent(3), { days: 7 })).toBe(false)
     expect(spec!.match(makeEvent(0), { days: 3 })).toBe(false)
   })
 
   it('rejects when payload lacks days_until_due', () => {
-    // Defensive — an event without the lead-time field is not a
+    // Defensive: an event without the lead-time field is not a
     // time-emitted `invoice_due` we can route.
     expect(spec!.match(makeEvent(undefined), { days: 0 })).toBe(false)
   })
@@ -71,14 +71,19 @@ describe('invoice_due isFinalBalance narrowing', () => {
   const spec = getTriggerSpec('invoice_due')
 
   /**
-   * Create a staged event with stage_is_final computed from position and count.
+   * Create a staged event.
    *
-   * In the real emitter, stage_is_final is computed by finding the max position
-   * per invoice. This helper computes it based on whether position === count,
-   * which is true for contiguous positions but could be false for non-contiguous
-   * ones — the whole point of the stage_is_final field.
+   * `isFinal` defaults to `position === count`, which is what the emitter stamps
+   * for a contiguously numbered schedule. Pass it explicitly to model a gapped
+   * schedule, where the two disagree. Do not reintroduce `position === count` as
+   * the only source: that inference is the bug this field exists to remove, and
+   * a helper that hardcodes it cannot detect a regression back to it.
    */
-  function stageEvent(position: number, count: number): AutomationEventRow {
+  function stageEvent(
+    position: number,
+    count: number,
+    isFinal = position === count,
+  ): AutomationEventRow {
     return {
       ...makeEvent(3),
       payload: {
@@ -86,7 +91,7 @@ describe('invoice_due isFinalBalance narrowing', () => {
         days_until_due: 3,
         stage_position: position,
         stage_count: count,
-        stage_is_final: position === count,
+        stage_is_final: isFinal,
       } as never,
     }
   }
@@ -106,5 +111,22 @@ describe('invoice_due isFinalBalance narrowing', () => {
   it('fires for a stageless invoice when isFinalBalance is set', () => {
     // No stages means the whole invoice is the final balance.
     expect(spec!.match(makeEvent(3), { days: 3, isFinalBalance: true })).toBe(true)
+  })
+
+  it('fires for the highest position even when it does not equal the stage count', () => {
+    // A gapped schedule: positions {1, 3} with a count of 2. The old
+    // `position === count` inference matched no stage at all here, so an MC who
+    // asked to chase only the final payment silently got nothing.
+    expect(
+      spec!.match(stageEvent(3, 2, true), { days: 3, isFinalBalance: true }),
+    ).toBe(true)
+  })
+
+  it('does not fire for a lower position in a gapped schedule', () => {
+    // The mirror of the above: position 1 of {1, 3} happens to be neither the
+    // count nor the max, and must still be excluded.
+    expect(
+      spec!.match(stageEvent(1, 2, false), { days: 3, isFinalBalance: true }),
+    ).toBe(false)
   })
 })
