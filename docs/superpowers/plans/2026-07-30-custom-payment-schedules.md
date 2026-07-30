@@ -1780,6 +1780,8 @@ git commit -m "feat(payments): add saved schedule picker popover"
 
 Generalises the existing two-row timeline. The visual language (dots, dashed connector, state pills) is already right and must be preserved.
 
+**Task 5 and Task 6 are one deliverable and share one commit**, made at the end of Task 6. Nothing is committed at the end of Task 5, because the modal still passes the old props until Task 6 rewires it and the Global Constraints require a green typecheck on every commit. An implementer given Task 5 continues into Task 6 without stopping.
+
 **Files:**
 - Create: `components/builders/parts/payment-stage-row.tsx`
 - Modify: `components/builders/parts/payment-schedule.tsx`
@@ -1789,7 +1791,7 @@ Generalises the existing two-row timeline. The visual language (dots, dashed con
 - Consumes: `InvoiceStage` from `@/types/payment-schedule`; `SchedulePicker` from Task 4.
 - Produces:
   - `PaymentStageRow` with props `{ stage: InvoiceStage; canEdit: boolean; isNextUnpaid: boolean; markPending: boolean; onChange: (patch: Partial<InvoiceStage>) => void; onRemove: () => void; onMarkPaid: () => void }`
-  - `PaymentSchedule` rewritten to props `{ canEdit: boolean; stages: InvoiceStage[]; schedules: PaymentSchedule[]; schedulesLoading: boolean; schedulesError: string | null; validationError: string | null; markPendingStageId: string | null; onStagesChange: (stages: InvoiceStage[]) => void; onApplySchedule: (schedule: PaymentScheduleType | null) => void; onSaveAsSchedule: () => void; onUpdateApplied: (() => void) | null; onMarkPaid: (stageId: string) => void; onRenameSchedule: ...; onDeleteSchedule: ...; onSetDefaultSchedule: ... }`
+  - `PaymentSchedule` rewritten to props `{ canEdit: boolean; stages: InvoiceStage[]; schedules: PaymentSchedule[]; schedulesLoading: boolean; schedulesError: string | null; validationError: string | null; markPendingStageId: string | null; onStagesChange: (stages: InvoiceStage[]) => void; onApplySchedule: (schedule: PaymentScheduleType | null) => void; onSaveAsSchedule: (name: string) => void; onUpdateApplied: (() => void) | null; onMarkPaid: (stageId: string) => void; onRenameSchedule: ...; onDeleteSchedule: ...; onSetDefaultSchedule: ... }`
 
 Name the imported schedule type `PaymentScheduleType` inside this file to avoid colliding with the exported `PaymentSchedule` component.
 
@@ -2104,7 +2106,8 @@ export interface PaymentScheduleProps {
   markPendingStageId: string | null
   onStagesChange: (stages: InvoiceStage[]) => void
   onApplySchedule: (schedule: PaymentScheduleType | null) => void
-  onSaveAsSchedule: () => void
+  /** Name comes from the inline footer form; see Step 7. */
+  onSaveAsSchedule: (name: string) => void
   /** Present only when an applied schedule has been modified. */
   onUpdateApplied: (() => void) | null
   onMarkPaid: (stageId: string) => void
@@ -2237,19 +2240,154 @@ export function PaymentSchedule({
 }
 ```
 
-- [ ] **Step 6: Run the full unit suite to catch fallout**
+- [ ] **Step 6: Wire drag-reorder with dnd-kit**
 
-Run: `npx vitest run --project unit`
-Expected: the old `payment-schedule` consumers now fail to typecheck. That is expected and Task 6 fixes them. Confirm no *other* unit test regressed.
+The row renders a `GripVertical` handle, so it has to actually reorder. Follow the pattern already in `app/(dashboard)/templates/category-picker-base.tsx` (`DndContext` + `SortableContext` + `arrayMove`).
 
-- [ ] **Step 7: Commit**
+In `payment-stage-row.tsx`, make the row sortable:
 
-```bash
-git add components/builders/parts/payment-stage-row.tsx components/builders/parts/payment-schedule.tsx tests/unit/components/builders/payment-stage-row.test.tsx
-git commit -m "feat(payments): generalise the payment timeline to N stages"
+```tsx
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+// …inside PaymentStageRow, before the return:
+const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  id: stage.id,
+  // A paid stage cannot move: its position is part of the payment record.
+  disabled: !editable,
+})
 ```
 
-Typecheck will not be clean at this commit because `invoice-builder-modal.tsx` still passes the old props. Task 6 restores it. This is the one deliberately red commit in the plan; do not attempt to fix the modal here.
+Apply `ref={setNodeRef}` and `style={{ transform: CSS.Transform.toString(transform), transition }}` to the row's outer `div`, add `opacity-50` while `isDragging`, and spread `{...attributes} {...listeners}` onto the handle span, changing it from `aria-hidden` to a real control:
+
+```tsx
+<span
+  {...attributes}
+  {...listeners}
+  aria-label={`Reorder ${stage.label}`}
+  className="cursor-grab text-text-subtle active:cursor-grabbing"
+>
+  <GripVertical size={14} strokeWidth={1.5} />
+</span>
+```
+
+This is the one place the plan permits an inline `style={{}}`: dnd-kit computes a live transform per frame, so it cannot be a Tailwind class.
+
+In `payment-schedule.tsx`, wrap the row list:
+
+```tsx
+<DndContext
+  collisionDetection={closestCenter}
+  onDragEnd={(event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const ids = stages.map((s) => s.id)
+    // onStagesChange renumbers position from array order, so moving the item
+    // is the whole operation.
+    onStagesChange(
+      arrayMove(stages, ids.indexOf(String(active.id)), ids.indexOf(String(over.id))),
+    )
+  }}
+>
+  <SortableContext items={stages.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+    {/* existing stages.map(...) */}
+  </SortableContext>
+</DndContext>
+```
+
+Add to the row test file:
+
+```tsx
+it('exposes a reorder handle on an editable stage', () => {
+  setup(unpaid)
+  expect(screen.getByLabelText(/reorder deposit/i)).toBeInTheDocument()
+})
+
+it('has no reorder handle on a paid stage', () => {
+  setup(paid)
+  expect(screen.queryByLabelText(/reorder/i)).not.toBeInTheDocument()
+})
+```
+
+A remainder dragged out of last place trips the existing `remainder_not_last` validation, which already surfaces inline through `validationError`. No extra handling needed.
+
+- [ ] **Step 7: Add the save-as-schedule name prompt**
+
+`useInvoiceStages` exposes `saveAsSchedule(name: string)`, so the timeline has to collect a name. Use an inline footer form, mirroring the inline create form in `category-picker-base.tsx` rather than opening a dialog over the modal. Change the prop to `onSaveAsSchedule: (name: string) => void` and replace the plain "Save this as a schedule" button with:
+
+```tsx
+const [naming, setNaming] = useState(false)
+const [newName, setNewName] = useState('')
+
+// …in the footer, in place of the save button:
+{naming ? (
+  <span className="flex items-center gap-2">
+    <Input
+      size="sm"
+      value={newName}
+      onChange={(e) => setNewName(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          commitName()
+        }
+        if (e.key === 'Escape') setNaming(false)
+      }}
+      placeholder="Schedule name"
+      aria-label="Schedule name"
+      autoFocus
+    />
+    <Button size="sm" variant="secondary" className="h-7 text-caption" onClick={commitName}>
+      Save
+    </Button>
+  </span>
+) : (
+  <button
+    type="button"
+    onClick={() => setNaming(true)}
+    className="cursor-pointer text-caption text-text-muted transition-colors hover:text-text"
+  >
+    Save this as a schedule
+  </button>
+)}
+```
+
+where `commitName` is:
+
+```tsx
+const commitName = () => {
+  const name = newName.trim()
+  if (!name) return
+  onSaveAsSchedule(name)
+  setNaming(false)
+  setNewName('')
+}
+```
+
+Add to the timeline's own test coverage (create `tests/unit/components/builders/payment-schedule.test.tsx` if it does not exist):
+
+```tsx
+it('collects a name before saving a schedule', async () => {
+  const props = setup({ stages: [stageA, stageB] })
+  await userEvent.click(screen.getByRole('button', { name: /save this as a schedule/i }))
+  await userEvent.type(screen.getByLabelText(/schedule name/i), '30 / 70 split')
+  await userEvent.click(screen.getByRole('button', { name: /^save$/i }))
+  expect(props.onSaveAsSchedule).toHaveBeenCalledWith('30 / 70 split')
+})
+
+it('does not save an empty name', async () => {
+  const props = setup({ stages: [stageA, stageB] })
+  await userEvent.click(screen.getByRole('button', { name: /save this as a schedule/i }))
+  await userEvent.click(screen.getByRole('button', { name: /^save$/i }))
+  expect(props.onSaveAsSchedule).not.toHaveBeenCalled()
+})
+```
+
+- [ ] **Step 8: Continue straight into Task 6, then commit once**
+
+Do **not** commit here. The modal still passes the old deposit props, so the tree does not typecheck until Task 6's rewiring lands, and the Global Constraints require typecheck at 0 on every commit. Task 5 and Task 6 are one deliverable ("the builder edits N stages") and share a single commit, made at the end of Task 6.
+
+Run `npx vitest run --project unit tests/unit/components/builders/` and confirm the new component tests pass before moving on. A typecheck failure confined to `invoice-builder-modal.tsx` is expected at this point.
 
 ---
 
@@ -2483,8 +2621,14 @@ Start the dev server, open a couple, go to the Payments tab, open an invoice. Co
 
 ```bash
 npm run typecheck && npm run lint:gate
-git add components/builders/parts/use-invoice-stages.ts components/builders/invoice-builder-modal.tsx
-git commit -m "feat(payments): wire N-stage schedules into the invoice builder"
+# One commit for Tasks 5 and 6 together: the components and the rewiring are a
+# single deliverable, and the tree does not typecheck between them.
+git add components/builders/parts/payment-stage-row.tsx \
+        components/builders/parts/payment-schedule.tsx \
+        components/builders/parts/use-invoice-stages.ts \
+        components/builders/invoice-builder-modal.tsx \
+        tests/unit/components/builders/
+git commit -m "feat(payments): edit N-stage payment schedules in the invoice builder"
 ```
 
 ---
@@ -3974,11 +4118,12 @@ The PR body must call out the two production behaviour changes: reminders now fi
 
 **Spec coverage.** Every section maps to a task: §3 data model to Task 2; §4 resolver to Task 1; §5 payment flow to Tasks 7 and 8; §6 reminders to Tasks 12, 13 and 14; §7 authoring to Tasks 3, 4, 5 and 6; §8 rendering to Tasks 9, 10 and 11; §9 migration to Tasks 2 and 16; §10 fallout to Tasks 9, 10, 11, 15 and 16; §11 testing to Tasks 1, 2, 3, 12, 13 and 17; §13 definition of done to Task 17.
 
-**Two known gaps, both deliberate and flagged in place rather than left silent:**
+**Three gaps found in the first self-review, all now closed in the plan text:**
 
-1. **Drag-reorder is specced but not built.** §7 says a drag handle reorders stages, and `PaymentStageRow` renders one, but no task wires `@dnd-kit` to it. Either add it to Task 5 during execution or cut the handle: shipping a visible handle that does nothing is worse than shipping neither.
-2. **The "Save as schedule" name prompt has no component.** Task 6's hook exposes `saveAsSchedule(name)` and Task 5's timeline calls `onSaveAsSchedule()` with no argument. Whoever executes Task 6 must add the small name-prompt step (an inline input in the footer, matching `CategoryPickerBase`'s inline create form) and reconcile the two signatures.
+1. **Drag-reorder was specced but not built.** Closed: Task 5 Step 6 wires `@dnd-kit` sortable into the row and the timeline, reusing the `category-picker-base.tsx` pattern, with two new row tests.
+2. **The "Save as schedule" name prompt had no component**, and `onSaveAsSchedule()` did not match the hook's `saveAsSchedule(name)`. Closed: Task 5 Step 7 adds the inline footer form and the prop is now `(name: string) => void`.
+3. **Task 5 ended on a commit that fails typecheck**, contradicting the Global Constraint that typecheck stays at 0. Closed: Tasks 5 and 6 are one deliverable sharing one commit at the end of Task 6, so no broken commit enters the branch.
 
 **Type consistency.** `InvoiceStage` is used by the row, the timeline and the hook; `TemplateStage` by the resolver, the actions and the hook; `ResolvedStage` by the resolver and `replaceInvoiceStages`. `PaymentSchedule` is both a type and a component, so Task 5 aliases the type to `PaymentScheduleType` at its import. `Candidate` is shared verbatim between the two emitters.
 
-**Sequencing.** Task 5 ends on a deliberately red typecheck, restored by Task 6. That is called out in Task 5's final step so nobody tries to fix the modal early. Migration B lands at Task 16, after every consumer reads stages, which is what keeps Tasks 7 through 15 green.
+**Sequencing.** Tasks 5 and 6 run as one dispatch and one commit, so the tree never lands in a state that fails typecheck. Migration B lands at Task 16, after every consumer reads stages, which is what keeps Tasks 7 through 15 green.
