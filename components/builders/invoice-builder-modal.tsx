@@ -853,6 +853,8 @@ export function InvoiceBuilderModal({
           <PaymentSchedule
             canEdit={canEdit}
             stages={invoiceStages.stages}
+            totalCents={Math.round(total * 100)}
+            defaultSchedule={invoiceStages.defaultSchedule}
             schedules={invoiceStages.schedules}
             schedulesLoading={invoiceStages.schedulesLoading}
             schedulesError={invoiceStages.schedulesError}
@@ -862,11 +864,13 @@ export function InvoiceBuilderModal({
               invoiceStages.setStages(stages);
               setDirty(true);
             }}
-            onApplySchedule={invoiceStages.applySchedule}
-            onSaveAsSchedule={invoiceStages.saveAsSchedule}
-            onUpdateApplied={invoiceStages.updateApplied}
+            onApplySchedule={(schedule) => {
+              invoiceStages.applySchedule(schedule);
+              setDirty(true);
+            }}
             onMarkPaid={invoiceStages.markPaid}
-            onRenameSchedule={invoiceStages.renameSchedule}
+            onCreateSchedule={invoiceStages.createSchedule}
+            onUpdateSchedule={invoiceStages.updateSchedule}
             onDeleteSchedule={invoiceStages.deleteSchedule}
             onSetDefaultSchedule={invoiceStages.setDefaultSchedule}
           />

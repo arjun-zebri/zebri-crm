@@ -57,8 +57,6 @@ export function useInvoiceStages(input: {
   // `draft` holds only what the MC edits: labels, amount types, values, dates.
   // Amounts are NOT stored here; see the `stages` memo below.
   const [draft, setDraft] = useState<InvoiceStage[]>(initialStages)
-  const [appliedScheduleId, setAppliedScheduleId] = useState<string | null>(null)
-  const [isModified, setIsModified] = useState(false)
 
   const schedulesQuery = useQuery({ queryKey: ['payment-schedules'], queryFn: listSchedules })
 
@@ -98,8 +96,6 @@ export function useInvoiceStages(input: {
 
   const applySchedule = useCallback(
     (schedule: PaymentSchedule | null) => {
-      setAppliedScheduleId(schedule?.id ?? null)
-      setIsModified(false)
       if (!schedule) {
         setDraft((current) => current.filter((s) => s.paidAt))
         return
@@ -119,20 +115,18 @@ export function useInvoiceStages(input: {
 
   const changeStages = useCallback((next: InvoiceStage[]) => {
     setDraft(next.map((s, i) => ({ ...s, position: i + 1 })))
-    setIsModified(true)
   }, [])
 
-  const saveAsMutation = useMutation({
-    mutationFn: async (name: string) => createSchedule({ name, stages: template }),
+  // Library writes take explicit stages from the schedule editor, never the
+  // current invoice: the library and the invoice are two separate scopes.
+  const createMutation = useMutation({
+    mutationFn: (input: { name: string; stages: TemplateStage[] }) => createSchedule(input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['payment-schedules'] }),
   })
 
-  const updateAppliedMutation = useMutation({
-    mutationFn: async (id: string) => updateSchedule({ id, stages: template }),
-    onSuccess: () => {
-      setIsModified(false)
-      void queryClient.invalidateQueries({ queryKey: ['payment-schedules'] })
-    },
+  const updateMutation = useMutation({
+    mutationFn: (input: { id: string; name?: string; stages?: TemplateStage[] }) => updateSchedule(input),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['payment-schedules'] }),
   })
 
   const markPaidMutation = useMutation({
@@ -144,10 +138,6 @@ export function useInvoiceStages(input: {
     },
   })
 
-  const renameMutation = useMutation({
-    mutationFn: async (v: { id: string; name: string }) => updateSchedule(v),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['payment-schedules'] }),
-  })
   const deleteMutation = useMutation({
     mutationFn: deleteSchedule,
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['payment-schedules'] }),
@@ -170,19 +160,19 @@ export function useInvoiceStages(input: {
     schedules: schedulesQuery.data ?? [],
     schedulesLoading: schedulesQuery.isLoading,
     schedulesError: schedulesQuery.error ? 'Could not load your saved schedules.' : null,
+    /** The MC's default schedule, so the invoice empty state can name it. */
+    defaultSchedule: (schedulesQuery.data ?? []).find((s) => s.isDefault) ?? null,
     validationError,
-    appliedScheduleId,
-    isModified,
     applySchedule,
-    saveAsSchedule: (name: string) => saveAsMutation.mutate(name),
-    updateApplied: appliedScheduleId && isModified
-      ? () => updateAppliedMutation.mutate(appliedScheduleId)
-      : null,
     markPaid: (stageId: string) => markPaidMutation.mutate(stageId),
     markPendingStageId: markPaidMutation.isPending ? (markPaidMutation.variables ?? null) : null,
-    renameSchedule: (id: string, name: string) => renameMutation.mutate({ id, name }),
-    deleteSchedule: (id: string) => deleteMutation.mutate(id),
-    setDefaultSchedule: (id: string) => defaultMutation.mutate(id),
+    // Async wrappers so the modal can await a write and toast on failure.
+    createSchedule: (input: { name: string; stages: TemplateStage[] }) =>
+      createMutation.mutateAsync(input).then(() => undefined),
+    updateSchedule: (input: { id: string; name?: string; stages?: TemplateStage[] }) =>
+      updateMutation.mutateAsync(input).then(() => undefined),
+    deleteSchedule: (id: string) => deleteMutation.mutateAsync(id).then(() => undefined),
+    setDefaultSchedule: (id: string) => defaultMutation.mutateAsync(id).then(() => undefined),
     persist,
   }
 }
