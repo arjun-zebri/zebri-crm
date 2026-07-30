@@ -284,6 +284,77 @@ describe('schedule actions', () => {
     }
   })
 
+  it('calling markStagePaid twice preserves the first timestamp and does not throw', async () => {
+    activeUser = user
+    try {
+      const admin = serviceClient()
+
+      // Create a couple first (required for invoices)
+      const { data: couple } = await admin
+        .from('couples')
+        .insert({ user_id: user.id, name: 'Test couple mark twice', status: 'new' })
+        .select('id')
+        .single()
+
+      const { data: invoice } = await admin
+        .from('invoices')
+        .insert({
+          user_id: user.id,
+          couple_id: couple!.id,
+          title: 'Mark twice test',
+          invoice_number: '999',
+          subtotal: 1000,
+          status: 'sent',
+        })
+        .select('id')
+        .single()
+
+      await replaceInvoiceStages({
+        invoiceId: invoice!.id,
+        stages: [
+          { position: 1, label: 'Deposit', amountType: 'percent', amountValue: 50, amountCents: 50_000, dueDate: '2026-08-01' },
+          { position: 2, label: 'Final', amountType: 'remainder', amountValue: null, amountCents: 50_000, dueDate: '2026-09-01' },
+        ],
+      })
+
+      const { data: stages } = await admin
+        .from('invoice_payment_stages')
+        .select('id')
+        .eq('invoice_id', invoice!.id)
+        .eq('position', 1)
+        .single()
+
+      // First mark: should succeed
+      await markStagePaid(stages!.id)
+
+      const { data: afterFirst } = await admin
+        .from('invoice_payment_stages')
+        .select('paid_at')
+        .eq('id', stages!.id)
+        .single()
+
+      const firstTimestamp = afterFirst?.paid_at
+      expect(firstTimestamp).not.toBeNull()
+
+      // Slight delay to ensure timestamps would differ if written again
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // Second mark: should not throw and should not update the timestamp
+      await markStagePaid(stages!.id)
+
+      const { data: afterSecond } = await admin
+        .from('invoice_payment_stages')
+        .select('paid_at')
+        .eq('id', stages!.id)
+        .single()
+
+      // Timestamp should be unchanged: atomic replay guard preserved it
+      expect(afterSecond?.paid_at).toBe(firstTimestamp)
+    } finally {
+      activeUser = null
+    }
+  })
+
   it('updateSchedule with both name and stages', async () => {
     activeUser = user
     try {

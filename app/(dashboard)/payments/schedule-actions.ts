@@ -247,35 +247,42 @@ export async function replaceInvoiceStages(input: {
  * Updates the invoice's status if this payment settles more (or all) stages.
  * The status derivation is unified with the webhook via deriveInvoiceStatusFromStages,
  * so marking the last stage paid will actually advance the invoice status.
+ *
+ * The update is atomic with the replay guard: two concurrent calls both check
+ * paid_at is null, but only one's update succeeds. The second call returns early
+ * without touching the invoice.
  */
 export async function markStagePaid(stageId: string): Promise<void> {
   const supabase = await createClient()
   const validatedStageId = z.string().uuid().parse(stageId)
   const now = new Date().toISOString()
 
-  // Mark the stage paid only if it is not already paid (replay guard).
-  const { data: stage, error: stageError } = await supabase
-    .from('invoice_payment_stages')
-    .select('id, invoice_id, paid_at')
-    .eq('id', validatedStageId)
-    .is('paid_at', null)
-    .single()
-
-  if (stageError || !stage) {
-    throw new Error(`Could not find the unpaid stage: ${stageError?.message ?? 'not found'}`)
-  }
-
-  const { error: updateError } = await supabase
+  // Mark the stage paid atomically: update with guard, and return the invoice_id
+  // in the same statement. Zero rows returned means it was already paid (replay),
+  // which is benign.
+  const { data: updated, error: updateError } = await supabase
     .from('invoice_payment_stages')
     .update({ paid_at: now })
     .eq('id', validatedStageId)
-  if (updateError) throw new Error(`Could not mark the stage paid: ${updateError.message}`)
+    .is('paid_at', null)
+    .select('invoice_id')
+    .maybeSingle()
+
+  if (updateError) {
+    throw new Error(`Could not mark the stage paid: ${updateError.message}`)
+  }
+
+  // If nothing was updated, the stage was already paid (replay). Return without
+  // touching the invoice.
+  if (!updated) {
+    return
+  }
 
   // Read all stages for the invoice to derive the new status.
   const { data: allStages, error: stagesError } = await supabase
     .from('invoice_payment_stages')
     .select('id, paid_at')
-    .eq('invoice_id', stage.invoice_id)
+    .eq('invoice_id', updated.invoice_id)
 
   if (stagesError) {
     throw new Error(`Could not load stages for status update: ${stagesError.message}`)
@@ -287,7 +294,7 @@ export async function markStagePaid(stageId: string): Promise<void> {
     const { error: invoiceError } = await supabase
       .from('invoices')
       .update({ status: newStatus })
-      .eq('id', stage.invoice_id)
+      .eq('id', updated.invoice_id)
     if (invoiceError) {
       throw new Error(`Could not update invoice status: ${invoiceError.message}`)
     }

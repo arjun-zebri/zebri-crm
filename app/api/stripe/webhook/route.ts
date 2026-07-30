@@ -416,6 +416,17 @@ async function processInvoicePayment(
     const { error: invoiceError } = await adminClient.from('invoices').update(updateFields).eq('id', invoiceId)
     if (invoiceError) {
       logger.error('[stripe/webhook] invoice status update failed', { error: invoiceError, invoiceId })
+      // Return early without mirroring the event price. The invoice status is now unknown
+      // (we know the stages were stamped but we cannot confirm the status was written),
+      // so we must not make dependent writes. Stripe will retry; the next attempt will
+      // succeed in updating the invoice and will run the mirror.
+      await sendAlert({
+        type: 'invoice_payment_status_indeterminate',
+        severity: 'error',
+        invoiceId,
+        failureReason: `invoice status update failed: ${invoiceError.message}`,
+      })
+      return
     }
   }
 
