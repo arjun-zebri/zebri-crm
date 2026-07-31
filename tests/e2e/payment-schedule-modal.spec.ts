@@ -1,21 +1,20 @@
 /**
- * Invoice builder — payment schedule modal redesign e2e.
+ * Invoice builder — payment schedule modal (v2 redesign) e2e.
  *
- * Covers the MC-side flow the redesign introduced: the empty state applies the
- * default schedule in one tap, "Change" is the single door into the library,
- * the library duplicates and edits a schedule in a focused editor, and
- * re-applying the edited schedule is reflected on the invoice timeline. The
- * flow creates and deletes its own throwaway schedule, so it never mutates the
- * seeded "Default" and stays repeatable against a real database.
+ * Covers the single-modal flow: the empty invoice offers one "Add schedule"
+ * button, the modal opens pre-loaded with the MC's default, Apply writes the
+ * timeline onto the invoice, and reopening via "Change" edits an offset and
+ * re-applies. One surface, no stacking. It does not save the invoice or mutate
+ * the library, so it is self-contained and repeatable.
  *
- * NOTE: needs the payment_schedules migration on the target DB
- * (20260730000000). Against a dev server pointed at the remote DB this passes
- * only after the CI migration deploy; otherwise run it against an isolated
- * local Supabase (see the project's live-verification recipe).
+ * NOTE: needs the payment_schedules tables + the time-unit columns on the
+ * target DB (migrations 20260730000000 and 20260731010000). Against a dev
+ * server pointed at the remote DB this passes only after the CI migration
+ * deploy; otherwise run it against an isolated local Supabase.
  */
 import { expect, test } from '@playwright/test'
 
-import { login, uniqueName } from './helpers'
+import { login } from './helpers'
 
 /**
  * Open the invoice builder on a fresh draft with a couple selected and one
@@ -41,60 +40,27 @@ async function openPricedInvoice(page: import('@playwright/test').Page) {
 }
 
 test.describe('invoice builder: payment schedule modal', () => {
-  test('apply the default, duplicate and edit it, and reflect it on the invoice', async ({
-    page,
-  }) => {
+  test('add a schedule, apply the default, then edit and re-apply', async ({ page }) => {
     await login(page)
     await openPricedInvoice(page)
 
-    // Empty state: one tap applies the MC's named default schedule.
-    await page.getByRole('button', { name: /Apply .*Default/i }).click()
-
-    // The timeline and its always-visible running total appear.
-    await expect(page.getByText(/Stages total .* of \$4,000\.00/i)).toBeVisible()
-    await expect(page.getByRole('button', { name: /Add stage/i })).toBeVisible()
-
-    // "Change" is the only door into the library.
-    await page.getByRole('button', { name: 'Change' }).click()
-    await expect(page.getByRole('heading', { name: 'Payment schedule' })).toBeVisible()
-
-    // Duplicate the seeded default into a throwaway with valid stages, so the
-    // edit below never mutates the shared "Default".
-    await page.getByRole('button', { name: /Row actions/i }).first().click()
-    await page.getByRole('button', { name: /^Duplicate$/i }).click()
-
-    // Edit the copy: rename it and shift a due offset, then save to the library.
-    const scheduleName = uniqueName('Plan')
-    await page
-      .getByRole('button', { name: /Default copy/i })
-      .locator('..')
-      .getByRole('button', { name: /Row actions/i })
-      .click()
-    await page.getByRole('button', { name: /^Edit$/i }).click()
-
-    const nameField = page.getByLabel('Schedule name')
-    await nameField.fill(scheduleName)
-    await page.getByLabel('Days after issue').last().fill('45')
-    await page.getByRole('button', { name: /^Save$/i }).click()
-
-    // Back on the list, applying the edited schedule closes the modal and the
-    // invoice reflects it (the running total still balances against the total).
-    await page.getByRole('button', { name: new RegExp(scheduleName, 'i') }).click()
-    await expect(page.getByRole('heading', { name: 'Payment schedule' })).toBeHidden()
+    // Empty state: one button opens the modal, pre-loaded with the default.
+    await page.getByRole('button', { name: /add schedule/i }).click()
+    await expect(page.getByLabelText('Schedule name')).toBeVisible()
     await expect(page.getByText(/Stages total .* of \$4,000\.00/i)).toBeVisible()
 
-    // Clean up the throwaway schedule so the library does not accumulate junk.
+    // Apply writes the timeline onto the invoice and closes the modal.
+    await page.getByRole('button', { name: /^apply$/i }).click()
+    await expect(page.getByRole('button', { name: /^apply$/i })).toBeHidden()
+    await expect(page.getByText(/Stages total .* of \$4,000\.00/i)).toBeVisible()
+
+    // Reopen via the single "Change" door and edit the first stage's offset.
     await page.getByRole('button', { name: 'Change' }).click()
-    await page
-      .getByRole('button', { name: new RegExp(scheduleName, 'i') })
-      .locator('..')
-      .getByRole('button', { name: /Row actions/i })
-      .click()
-    await page.getByRole('button', { name: /^Delete$/i }).click()
-    await page
-      .locator('div[role="dialog"]', { hasText: 'Delete schedule?' })
-      .getByRole('button', { name: /^Delete$/i })
-      .click()
-    await expect(page.getByRole('button', { name: new RegExp(scheduleName, 'i') })).toBeHidden()
+    await page.getByLabelText('Offset amount').first().fill('14')
+
+    // Re-apply; the invoice still balances against the total.
+    await page.getByRole('button', { name: /^apply$/i }).click()
+    await expect(page.getByRole('button', { name: /^apply$/i })).toBeHidden()
+    await expect(page.getByText(/Stages total .* of \$4,000\.00/i)).toBeVisible()
   })
 })
