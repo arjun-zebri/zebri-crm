@@ -12,18 +12,18 @@ const defaultSchedule: PaymentScheduleType = {
   name: 'Default',
   isDefault: true,
   stages: [
-    { label: 'Deposit', amountType: 'percent', amountValue: 25, dueOffsetDays: 0 },
-    { label: 'Final', amountType: 'remainder', amountValue: null, dueOffsetDays: 30 },
+    { label: 'Deposit', amountType: 'percent', amountValue: 25, offsetValue: 0, offsetUnit: 'day' },
+    { label: 'Final', amountType: 'remainder', amountValue: null, offsetValue: 30, offsetUnit: 'day' },
   ],
 }
 
 const stageA: InvoiceStage = {
-  id: 's1', position: 1, label: 'Deposit', amountType: 'percent',
-  amountValue: 25, amountCents: 140_000, dueDate: '2026-08-01', paidAt: null,
+  id: 's1', position: 1, label: 'Deposit', amountType: 'percent', amountValue: 25,
+  amountCents: 140_000, dueDate: '2026-08-01', offsetValue: 0, offsetUnit: 'day', paidAt: null,
 }
 const stageB: InvoiceStage = {
-  id: 's2', position: 2, label: 'Final', amountType: 'remainder',
-  amountValue: null, amountCents: 420_000, dueDate: '2026-09-01', paidAt: null,
+  id: 's2', position: 2, label: 'Final', amountType: 'remainder', amountValue: null,
+  amountCents: 420_000, dueDate: '2026-09-01', offsetValue: 30, offsetUnit: 'day', paidAt: null,
 }
 
 function setup(overrides: Partial<Parameters<typeof PaymentSchedule>[0]> = {}) {
@@ -31,6 +31,7 @@ function setup(overrides: Partial<Parameters<typeof PaymentSchedule>[0]> = {}) {
     canEdit: true,
     stages: [stageA, stageB],
     totalCents: 560_000,
+    issueDate: '2026-06-12',
     defaultSchedule,
     schedules: [defaultSchedule],
     schedulesLoading: false,
@@ -38,10 +39,9 @@ function setup(overrides: Partial<Parameters<typeof PaymentSchedule>[0]> = {}) {
     validationError: null,
     markPendingStageId: null,
     onStagesChange: vi.fn(),
-    onApplySchedule: vi.fn(),
+    onApplyTemplate: vi.fn(),
     onMarkPaid: vi.fn(),
     onCreateSchedule: vi.fn().mockResolvedValue(undefined),
-    onUpdateSchedule: vi.fn().mockResolvedValue(undefined),
     onDeleteSchedule: vi.fn().mockResolvedValue(undefined),
     onSetDefaultSchedule: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -51,37 +51,29 @@ function setup(overrides: Partial<Parameters<typeof PaymentSchedule>[0]> = {}) {
 }
 
 describe('PaymentSchedule', () => {
-  it('offers the default schedule by name in the empty state', () => {
+  it('offers a single Add schedule button when empty', () => {
     setup({ stages: [] })
-    expect(screen.getByRole('button', { name: /apply .*default/i })).toBeInTheDocument()
-    expect(screen.getByText('25%, then remainder')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /add schedule/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /change/i })).not.toBeInTheDocument()
   })
 
-  it('applies the default when the primary button is clicked', async () => {
-    const props = setup({ stages: [] })
-    await userEvent.click(screen.getByRole('button', { name: /apply .*default/i }))
-    expect(props.onApplySchedule).toHaveBeenCalledWith(defaultSchedule)
+  it('opens the modal from Add schedule', async () => {
+    setup({ stages: [] })
+    await userEvent.click(screen.getByRole('button', { name: /add schedule/i }))
+    // The modal's Apply button is unambiguous (the section h4 also reads
+    // "Payment schedule", so we do not assert on the heading here).
+    expect(screen.getByRole('button', { name: /^apply$/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/schedule name/i)).toBeInTheDocument()
   })
 
-  it('offers Add payment schedule when there is no default', () => {
-    setup({ stages: [], defaultSchedule: null })
-    expect(screen.getByRole('button', { name: /add payment schedule/i })).toBeInTheDocument()
-  })
-
-  it('shows a matching running total', () => {
+  it('shows a matching running total when applied', () => {
     setup()
     expect(screen.getByText(/stages total .*\$5,600\.00 of \$5,600\.00/i)).toBeInTheDocument()
   })
 
-  it('surfaces a validation error when the stage total is short', () => {
-    setup({ totalCents: 600_000, validationError: 'The stages do not add up to the invoice total.' })
-    expect(screen.getByText(/do not add up/i)).toBeInTheDocument()
-  })
-
-  it('opens the library from Change', async () => {
+  it('opens the modal from Change', async () => {
     setup()
     await userEvent.click(screen.getByRole('button', { name: /change/i }))
-    // The library modal renders its list, which offers New schedule.
-    expect(screen.getByRole('button', { name: /new schedule/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^apply$/i })).toBeInTheDocument()
   })
 })

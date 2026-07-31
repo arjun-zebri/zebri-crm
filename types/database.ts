@@ -1344,6 +1344,8 @@ export type Database = {
           amount_type: string
           amount_value: number | null
           due_date: string | null
+          due_offset_unit: string | null
+          due_offset_value: number | null
           id: string
           invoice_id: string
           label: string
@@ -1357,6 +1359,8 @@ export type Database = {
           amount_type: string
           amount_value?: number | null
           due_date?: string | null
+          due_offset_unit?: string | null
+          due_offset_value?: number | null
           id?: string
           invoice_id: string
           label: string
@@ -1370,6 +1374,8 @@ export type Database = {
           amount_type?: string
           amount_value?: number | null
           due_date?: string | null
+          due_offset_unit?: string | null
+          due_offset_value?: number | null
           id?: string
           invoice_id?: string
           label?: string
@@ -1697,6 +1703,8 @@ export type Database = {
           amount_type: string
           amount_value: number | null
           due_offset_days: number
+          due_offset_unit: string
+          due_offset_value: number
           id: string
           label: string
           position: number
@@ -1707,6 +1715,8 @@ export type Database = {
           amount_type: string
           amount_value?: number | null
           due_offset_days?: number
+          due_offset_unit?: string
+          due_offset_value?: number
           id?: string
           label: string
           position: number
@@ -1717,6 +1727,8 @@ export type Database = {
           amount_type?: string
           amount_value?: number | null
           due_offset_days?: number
+          due_offset_unit?: string
+          due_offset_value?: number
           id?: string
           label?: string
           position?: number

@@ -6,7 +6,7 @@ import type { TemplateStage } from '@/types/payment-schedule'
 const s = (
   amountType: TemplateStage['amountType'],
   amountValue: number | null,
-): TemplateStage => ({ label: 'x', amountType, amountValue, dueOffsetDays: 0 })
+): TemplateStage => ({ label: 'x', amountType, amountValue, offsetValue: 0, offsetUnit: 'day' })
 
 describe('describeSchedule', () => {
   it('joins a percent stage and a remainder with "then remainder"', () => {

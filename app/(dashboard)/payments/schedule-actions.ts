@@ -20,16 +20,15 @@ const templateStageSchema = z.object({
   label: z.string().min(1).max(80),
   amountType: z.enum(['percent', 'fixed', 'remainder']),
   amountValue: z.number().nonnegative().nullable(),
-  dueOffsetDays: z.number().int().min(0).max(3650),
+  offsetValue: z.number().int().min(0).max(120),
+  offsetUnit: z.enum(['day', 'week', 'month']),
 })
 
-const resolvedStageSchema = templateStageSchema
-  .omit({ dueOffsetDays: true })
-  .extend({
-    position: z.number().int().min(1),
-    amountCents: z.number().int().nonnegative(),
-    dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
-  })
+const resolvedStageSchema = templateStageSchema.extend({
+  position: z.number().int().min(1),
+  amountCents: z.number().int().nonnegative(),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+})
 
 /**
  * Throw the resolver's save-time validation as a readable error.
@@ -50,7 +49,7 @@ export async function listSchedules(): Promise<PaymentSchedule[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('payment_schedules')
-    .select('id, name, is_default, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_days)')
+    .select('id, name, is_default, payment_schedule_stages(position, label, amount_type, amount_value, due_offset_value, due_offset_unit)')
     .order('name')
   if (error) throw new Error(`Could not load schedules: ${error.message}`)
 
@@ -64,7 +63,8 @@ export async function listSchedules(): Promise<PaymentSchedule[]> {
         label: s.label,
         amountType: s.amount_type as TemplateStage['amountType'],
         amountValue: s.amount_value === null ? null : Number(s.amount_value),
-        dueOffsetDays: s.due_offset_days,
+        offsetValue: s.due_offset_value,
+        offsetUnit: s.due_offset_unit as TemplateStage['offsetUnit'],
       })),
   }))
 }
@@ -232,6 +232,8 @@ export async function replaceInvoiceStages(input: {
       amount_value: s.amountValue,
       amount_cents: s.amountCents,
       due_date: s.dueDate,
+      due_offset_value: s.offsetValue,
+      due_offset_unit: s.offsetUnit,
     }))
 
   if (rows.length === 0) return
@@ -319,7 +321,10 @@ async function insertStages(
       label: s.label,
       amount_type: s.amountType,
       amount_value: s.amountValue,
-      due_offset_days: s.dueOffsetDays,
+      // `due_offset_days` is deprecated and defaults to 0; new writes use the
+      // value + unit columns.
+      due_offset_value: s.offsetValue,
+      due_offset_unit: s.offsetUnit,
     })),
   )
   if (error) throw new Error(`Could not save the schedule stages: ${error.message}`)

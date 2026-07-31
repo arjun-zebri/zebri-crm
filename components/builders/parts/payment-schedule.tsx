@@ -1,11 +1,11 @@
 /**
- * The invoice builder's payment-schedule section: a local, presentational view
- * of this invoice's stages plus one door into the reusable library.
+ * The invoice builder's payment-schedule section.
  *
- * The library is explicit and the invoice is local: editing a saved schedule
- * never changes this invoice, and tweaking a stage here never changes the
- * library. "Change" is the only route into the library, so the MC always knows
- * which surface a control affects.
+ * Empty: a single "Add schedule" button that opens the modal (pre-loaded with
+ * the MC's default so the common case is open-and-Apply). Applied: the resolved
+ * timeline with mark-paid, drag-to-reorder, and an always-visible running
+ * total, plus one "Change" door back into the modal. The modal is the only
+ * place schedules are built or managed.
  *
  * @module components/builders/parts/payment-schedule
  */
@@ -13,11 +13,10 @@
 
 import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core'
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { describeSchedule } from '@/lib/payments/describe-schedule'
+import { useToast } from '@/components/ui/toast'
 import type {
   InvoiceStage,
   PaymentSchedule as PaymentScheduleType,
@@ -25,9 +24,9 @@ import type {
 } from '@/types/payment-schedule'
 
 import { PaymentStageRow } from './payment-stage-row'
-import { ScheduleLibraryModal } from './schedule-library-modal'
+import { ScheduleModal } from './schedule-modal'
+import type { StageDraft } from './schedule-stage-row'
 
-/** Format integer cents as AUD currency. */
 function formatCurrency(cents: number): string {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(cents / 100)
 }
@@ -37,7 +36,7 @@ export interface PaymentScheduleProps {
   canEdit: boolean
   stages: InvoiceStage[]
   totalCents: number
-  /** The MC's default schedule, so the empty state can name it. */
+  issueDate: string
   defaultSchedule: PaymentScheduleType | null
   schedules: PaymentScheduleType[]
   schedulesLoading: boolean
@@ -46,10 +45,10 @@ export interface PaymentScheduleProps {
   validationError: string | null
   markPendingStageId: string | null
   onStagesChange: (stages: InvoiceStage[]) => void
-  onApplySchedule: (schedule: PaymentScheduleType | null) => void
+  /** Resolve the template against this invoice and set its stages. */
+  onApplyTemplate: (stages: TemplateStage[]) => void
   onMarkPaid: (stageId: string) => void
   onCreateSchedule: (input: { name: string; stages: TemplateStage[] }) => Promise<void>
-  onUpdateSchedule: (input: { id: string; name?: string; stages?: TemplateStage[] }) => Promise<void>
   onDeleteSchedule: (id: string) => Promise<void>
   onSetDefaultSchedule: (id: string) => Promise<void>
 }
@@ -60,6 +59,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
     canEdit,
     stages,
     totalCents,
+    issueDate,
     defaultSchedule,
     schedules,
     schedulesLoading,
@@ -67,46 +67,48 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
     validationError,
     markPendingStageId,
     onStagesChange,
-    onApplySchedule,
+    onApplyTemplate,
     onMarkPaid,
     onCreateSchedule,
-    onUpdateSchedule,
     onDeleteSchedule,
     onSetDefaultSchedule,
   } = props
 
-  const [libraryOpen, setLibraryOpen] = useState(false)
+  const { toast } = useToast()
+  const [modalOpen, setModalOpen] = useState(false)
 
   const nextUnpaidId = stages.find((s) => !s.paidAt)?.id ?? null
-  const hasPaidStage = stages.some((s) => s.paidAt)
   const stageSumCents = stages.reduce((acc, s) => acc + s.amountCents, 0)
   const totalMatches = stageSumCents === totalCents
 
+  const initialStages: StageDraft[] = stages.map((s) => ({
+    key: s.id,
+    label: s.label,
+    amountType: s.amountType,
+    amountValue: s.amountValue,
+    offsetValue: s.offsetValue,
+    offsetUnit: s.offsetUnit,
+    paidAt: s.paidAt,
+  }))
+
+  // Save to library always creates; a name collision appends " copy" so it
+  // never overwrites a schedule the MC reuses.
+  const handleSaveToLibrary = async (input: { name: string; stages: TemplateStage[] }) => {
+    const exists = schedules.some((s) => s.name === input.name)
+    await onCreateSchedule({ name: exists ? `${input.name} copy` : input.name, stages: input.stages })
+  }
+
+  // Delete with an undo toast that re-creates the schedule from the copy.
+  const handleDeleteSchedule = async (schedule: PaymentScheduleType) => {
+    await onDeleteSchedule(schedule.id)
+    toast(`Deleted "${schedule.name}".`, 'success', {
+      label: 'Undo',
+      onClick: () => void onCreateSchedule({ name: schedule.name, stages: schedule.stages }),
+    })
+  }
+
   const patchStage = (id: string, patch: Partial<InvoiceStage>) => {
     onStagesChange(stages.map((s) => (s.id === id ? { ...s, ...patch } : s)))
-  }
-
-  const addStage = () => {
-    const hasRemainder = stages.some((s) => s.amountType === 'remainder')
-    onStagesChange([
-      ...stages,
-      {
-        // Client-only id until persisted; replaceInvoiceStages keys on position.
-        id: `new-${String(stages.length + 1)}`,
-        position: stages.length + 1,
-        label: `Payment ${String(stages.length + 1)}`,
-        amountType: hasRemainder ? 'percent' : 'remainder',
-        amountValue: hasRemainder ? 0 : null,
-        amountCents: 0,
-        dueDate: null,
-        paidAt: null,
-      },
-    ])
-  }
-
-  const applyFromModal = (schedule: PaymentScheduleType) => {
-    onApplySchedule(schedule)
-    setLibraryOpen(false)
   }
 
   return (
@@ -118,7 +120,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
         {canEdit && stages.length > 0 && (
           <button
             type="button"
-            onClick={() => setLibraryOpen(true)}
+            onClick={() => setModalOpen(true)}
             className="cursor-pointer text-sm text-text-muted transition-colors hover:text-text"
           >
             Change
@@ -129,29 +131,10 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
       {stages.length === 0 ? (
         <div className="space-y-3">
           <p className="text-sm text-text-muted">The couple pays this invoice in one payment.</p>
-          {canEdit &&
-            (defaultSchedule ? (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <Button variant="primary" size="sm" onClick={() => onApplySchedule(defaultSchedule)}>
-                  Apply “{defaultSchedule.name}”
-                </Button>
-                <span className="text-caption text-text-muted">
-                  {describeSchedule(defaultSchedule.stages)}
-                </span>
-              </div>
-            ) : (
-              <Button variant="primary" size="sm" onClick={() => setLibraryOpen(true)}>
-                Add payment schedule
-              </Button>
-            ))}
-          {canEdit && defaultSchedule && (
-            <button
-              type="button"
-              onClick={() => setLibraryOpen(true)}
-              className="block cursor-pointer text-sm text-text-muted transition-colors hover:text-text"
-            >
-              Choose another schedule
-            </button>
+          {canEdit && (
+            <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
+              Add schedule
+            </Button>
           )}
         </div>
       ) : (
@@ -161,8 +144,6 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
             const { active, over } = event
             if (!over || active.id === over.id) return
             const ids = stages.map((s) => s.id)
-            // onStagesChange renumbers position from array order, so moving the
-            // item is the whole operation.
             onStagesChange(
               arrayMove(stages, ids.indexOf(String(active.id)), ids.indexOf(String(over.id))),
             )
@@ -192,24 +173,8 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
       )}
 
       {stages.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {canEdit ? (
-            <button
-              type="button"
-              onClick={addStage}
-              className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-text-muted transition-colors hover:text-text"
-            >
-              <Plus size={15} strokeWidth={1.5} /> Add stage
-            </button>
-          ) : (
-            <span />
-          )}
-          {/* A schedule that does not add up is the single most consequential
-              mistake on this screen, so the running total is always visible and
-              turns to a plain warning when it disagrees with the invoice. */}
-          <span
-            className={`text-sm tabular-nums ${totalMatches ? 'text-text-muted' : 'text-warning'}`}
-          >
+        <div className="flex items-center justify-end">
+          <span className={`text-sm tabular-nums ${totalMatches ? 'text-text-muted' : 'text-warning'}`}>
             Stages total {formatCurrency(stageSumCents)} of {formatCurrency(totalCents)}
           </span>
         </div>
@@ -217,19 +182,26 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
 
       {validationError && <p className="text-sm text-danger">{validationError}</p>}
 
-      <ScheduleLibraryModal
-        open={libraryOpen}
-        onClose={() => setLibraryOpen(false)}
-        schedules={schedules}
-        loading={schedulesLoading}
-        error={schedulesError}
-        hasPaidStage={hasPaidStage}
-        onApply={applyFromModal}
-        onCreate={onCreateSchedule}
-        onUpdate={onUpdateSchedule}
-        onDelete={onDeleteSchedule}
-        onSetDefault={onSetDefaultSchedule}
-      />
+      {canEdit && (
+        <ScheduleModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          totalCents={totalCents}
+          issueDate={issueDate}
+          initialStages={initialStages}
+          defaultSchedule={defaultSchedule}
+          schedules={schedules}
+          schedulesLoading={schedulesLoading}
+          schedulesError={schedulesError}
+          onApply={(template) => {
+            onApplyTemplate(template)
+            setModalOpen(false)
+          }}
+          onSaveToLibrary={handleSaveToLibrary}
+          onDeleteSchedule={handleDeleteSchedule}
+          onSetDefaultSchedule={onSetDefaultSchedule}
+        />
+      )}
     </div>
   )
 }

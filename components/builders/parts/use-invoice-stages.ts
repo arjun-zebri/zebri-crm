@@ -22,10 +22,9 @@ import {
   markStagePaid,
   replaceInvoiceStages,
   setDefaultSchedule,
-  updateSchedule,
 } from '@/app/(dashboard)/payments/schedule-actions'
 import { resolveStages, toTemplateStages } from '@/lib/payments/resolve-stages'
-import type { InvoiceStage, PaymentSchedule, TemplateStage } from '@/types/payment-schedule'
+import type { InvoiceStage, TemplateStage } from '@/types/payment-schedule'
 
 /** Human-readable text for a resolver validation failure. */
 function messageFor(code: string): string {
@@ -61,10 +60,7 @@ export function useInvoiceStages(input: {
   const schedulesQuery = useQuery({ queryKey: ['payment-schedules'], queryFn: listSchedules })
 
   /** Template view of the current stages, for re-resolution and saving. */
-  const template = useMemo<TemplateStage[]>(
-    () => toTemplateStages(draft, issueDate),
-    [draft, issueDate],
-  )
+  const template = useMemo<TemplateStage[]>(() => toTemplateStages(draft), [draft])
 
   const resolved = useMemo(
     () => resolveStages(template, totalCents, issueDate),
@@ -94,13 +90,14 @@ export function useInvoiceStages(input: {
     )
   }, [draft, resolved])
 
-  const applySchedule = useCallback(
-    (schedule: PaymentSchedule | null) => {
-      if (!schedule) {
-        setDraft((current) => current.filter((s) => s.paidAt))
-        return
-      }
-      const next = resolveStages(schedule.stages, totalCents, issueDate)
+  /**
+   * Resolve a template against this invoice and set it as the stages. Called by
+   * the modal's Apply. Paid stages are preserved in the database at persist time
+   * by `replaceInvoiceStages`; here the draft takes the newly resolved shape.
+   */
+  const applyTemplate = useCallback(
+    (stagesTemplate: TemplateStage[]) => {
+      const next = resolveStages(stagesTemplate, totalCents, issueDate)
       if (!next.ok) return
       setDraft(
         next.stages.map((s) => ({
@@ -117,15 +114,11 @@ export function useInvoiceStages(input: {
     setDraft(next.map((s, i) => ({ ...s, position: i + 1 })))
   }, [])
 
-  // Library writes take explicit stages from the schedule editor, never the
-  // current invoice: the library and the invoice are two separate scopes.
+  // Library writes take explicit stages from the modal, never the current
+  // invoice: the library and the invoice are two separate scopes. Save always
+  // creates (the modal handles name collisions), so there is no update path.
   const createMutation = useMutation({
     mutationFn: (input: { name: string; stages: TemplateStage[] }) => createSchedule(input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['payment-schedules'] }),
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: (input: { id: string; name?: string; stages?: TemplateStage[] }) => updateSchedule(input),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['payment-schedules'] }),
   })
 
@@ -163,14 +156,12 @@ export function useInvoiceStages(input: {
     /** The MC's default schedule, so the invoice empty state can name it. */
     defaultSchedule: (schedulesQuery.data ?? []).find((s) => s.isDefault) ?? null,
     validationError,
-    applySchedule,
+    applyTemplate,
     markPaid: (stageId: string) => markPaidMutation.mutate(stageId),
     markPendingStageId: markPaidMutation.isPending ? (markPaidMutation.variables ?? null) : null,
     // Async wrappers so the modal can await a write and toast on failure.
     createSchedule: (input: { name: string; stages: TemplateStage[] }) =>
       createMutation.mutateAsync(input).then(() => undefined),
-    updateSchedule: (input: { id: string; name?: string; stages?: TemplateStage[] }) =>
-      updateMutation.mutateAsync(input).then(() => undefined),
     deleteSchedule: (id: string) => deleteMutation.mutateAsync(id).then(() => undefined),
     setDefaultSchedule: (id: string) => defaultMutation.mutateAsync(id).then(() => undefined),
     persist,

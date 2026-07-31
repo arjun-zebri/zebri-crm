@@ -105,6 +105,8 @@ interface Invoice {
     amount_value: number | null;
     amount_cents: number;
     due_date: string | null;
+    due_offset_value: number | null;
+    due_offset_unit: string | null;
     paid_at: string | null;
   }>;
 }
@@ -301,7 +303,17 @@ export function InvoiceBuilderModal({
 
   /* ─── payment stages hook ────────────────────────────────────── */
 
-  // Convert database rows to InvoiceStage shape expected by the hook.
+  const issueDate = (invoice?.created_at ?? new Date().toISOString()).slice(0, 10);
+
+  // Whole-day gap between two ISO dates, for the legacy-row offset fallback.
+  const daysBetween = (fromIso: string, toIso: string) =>
+    Math.round(
+      (Date.parse(`${toIso}T00:00:00Z`) - Date.parse(`${fromIso}T00:00:00Z`)) / 86_400_000,
+    );
+
+  // Convert database rows to InvoiceStage shape expected by the hook. Rows saved
+  // before the time-unit migration have no offset columns, so the offset is
+  // reverse-computed in days from the concrete due date.
   const mapStageRows = (
     rows: Array<{
       id: string;
@@ -311,6 +323,8 @@ export function InvoiceBuilderModal({
       amount_value: number | null;
       amount_cents: number;
       due_date: string | null;
+      due_offset_value: number | null;
+      due_offset_unit: string | null;
       paid_at: string | null;
     }>,
   ) =>
@@ -322,13 +336,16 @@ export function InvoiceBuilderModal({
       amountValue: row.amount_value,
       amountCents: row.amount_cents,
       dueDate: row.due_date,
+      offsetValue:
+        row.due_offset_value ?? (row.due_date ? daysBetween(issueDate, row.due_date) : 0),
+      offsetUnit: (row.due_offset_unit as 'day' | 'week' | 'month' | null) ?? 'day',
       paidAt: row.paid_at,
     }))
 
   const invoiceStages = useInvoiceStages({
     invoiceId: invoice?.id ?? null,
     totalCents: Math.round(total * 100),
-    issueDate: (invoice?.created_at ?? new Date().toISOString()).slice(0, 10),
+    issueDate,
     initialStages: mapStageRows(invoice?.invoice_payment_stages ?? []),
   })
 
@@ -854,6 +871,7 @@ export function InvoiceBuilderModal({
             canEdit={canEdit}
             stages={invoiceStages.stages}
             totalCents={Math.round(total * 100)}
+            issueDate={issueDate}
             defaultSchedule={invoiceStages.defaultSchedule}
             schedules={invoiceStages.schedules}
             schedulesLoading={invoiceStages.schedulesLoading}
@@ -864,13 +882,12 @@ export function InvoiceBuilderModal({
               invoiceStages.setStages(stages);
               setDirty(true);
             }}
-            onApplySchedule={(schedule) => {
-              invoiceStages.applySchedule(schedule);
+            onApplyTemplate={(template) => {
+              invoiceStages.applyTemplate(template);
               setDirty(true);
             }}
             onMarkPaid={invoiceStages.markPaid}
             onCreateSchedule={invoiceStages.createSchedule}
-            onUpdateSchedule={invoiceStages.updateSchedule}
             onDeleteSchedule={invoiceStages.deleteSchedule}
             onSetDefaultSchedule={invoiceStages.setDefaultSchedule}
           />

@@ -7,7 +7,8 @@ import type { InvoiceStage } from '@/types/payment-schedule'
 
 const unpaid: InvoiceStage = {
   id: 's1', position: 1, label: 'Deposit', amountType: 'percent',
-  amountValue: 30, amountCents: 150_000, dueDate: '2026-08-01', paidAt: null,
+  amountValue: 30, amountCents: 150_000, dueDate: '2026-08-01',
+  offsetValue: 7, offsetUnit: 'day', paidAt: null,
 }
 const paid: InvoiceStage = { ...unpaid, id: 's0', paidAt: '2026-07-02T00:00:00Z' }
 

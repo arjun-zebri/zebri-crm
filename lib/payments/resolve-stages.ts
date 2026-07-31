@@ -6,7 +6,7 @@
  *
  * @module lib/payments/resolve-stages
  */
-import type { ResolvedStage, StageAmountType, TemplateStage } from '@/types/payment-schedule'
+import type { OffsetUnit, ResolvedStage, StageAmountType, TemplateStage } from '@/types/payment-schedule'
 
 /** Why a schedule cannot be applied or saved. */
 export type StageValidationError =
@@ -21,21 +21,34 @@ export type ResolveResult =
   | { ok: true; stages: ResolvedStage[] }
   | { ok: false; errors: StageValidationError[] }
 
-/** Add whole days to an ISO `YYYY-MM-DD` date, returning the same format. */
-function addDays(isoDate: string, days: number): string {
+/**
+ * Add a `<value> <unit>` offset to an ISO `YYYY-MM-DD` date.
+ *
+ * `day` and `week` are fixed-length. `month` adds calendar months and clamps to
+ * the end of a shorter target month, so issue Jan 31 + 1 month lands on Feb 28
+ * rather than spilling into March. UTC arithmetic throughout: a local-time Date
+ * would shift the calendar day for anyone east of Greenwich, which is every
+ * Australian user.
+ */
+function addOffset(isoDate: string, value: number, unit: OffsetUnit): string {
   const [y, m, d] = isoDate.split('-').map(Number)
-  // UTC arithmetic throughout: a local-time Date would shift the calendar day
-  // for anyone east of Greenwich, which is every Australian user.
   const base = new Date(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1))
-  base.setUTCDate(base.getUTCDate() + days)
+  if (unit === 'day') {
+    base.setUTCDate(base.getUTCDate() + value)
+  } else if (unit === 'week') {
+    base.setUTCDate(base.getUTCDate() + value * 7)
+  } else {
+    // Move to the first, shift whole months, then clamp the day so a short
+    // target month cannot roll the date into the following month.
+    const day = base.getUTCDate()
+    base.setUTCDate(1)
+    base.setUTCMonth(base.getUTCMonth() + value)
+    const lastDay = new Date(
+      Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, 0),
+    ).getUTCDate()
+    base.setUTCDate(Math.min(day, lastDay))
+  }
   return base.toISOString().slice(0, 10)
-}
-
-/** Whole-day difference between two ISO `YYYY-MM-DD` dates. */
-function daysBetween(fromIso: string, toIso: string): number {
-  const from = Date.parse(`${fromIso}T00:00:00Z`)
-  const to = Date.parse(`${toIso}T00:00:00Z`)
-  return Math.round((to - from) / 86_400_000)
 }
 
 /**
@@ -153,7 +166,9 @@ export function resolveStages(
       amountType: s.amountType,
       amountValue: s.amountValue,
       amountCents: cents[i] ?? 0,
-      dueDate: addDays(issueDate, s.dueOffsetDays),
+      dueDate: addOffset(issueDate, s.offsetValue, s.offsetUnit),
+      offsetValue: s.offsetValue,
+      offsetUnit: s.offsetUnit,
     })),
   }
 }
@@ -161,16 +176,17 @@ export function resolveStages(
 /**
  * Convert resolved invoice stages back into a portable template.
  *
- * This is the "Save this as a schedule" direction: concrete dates become
- * offsets from the invoice's issue date so the schedule can be applied to a
- * future invoice with a different issue date and total.
+ * This is the "Save to library" direction. The offset value + unit are stored
+ * on the resolved stage, so they map straight through and the schedule keeps
+ * the MC's chosen unit when applied to a future invoice.
  */
-export function toTemplateStages(stages: ResolvedStage[], issueDate: string): TemplateStage[] {
+export function toTemplateStages(stages: ResolvedStage[]): TemplateStage[] {
   return stages.map((s) => ({
     label: s.label,
     amountType: s.amountType,
     amountValue: s.amountValue,
-    dueOffsetDays: s.dueDate ? daysBetween(issueDate, s.dueDate) : 0,
+    offsetValue: s.offsetValue,
+    offsetUnit: s.offsetUnit,
   }))
 }
 
