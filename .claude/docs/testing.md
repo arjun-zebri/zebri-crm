@@ -81,35 +81,35 @@ seed). The integration project runs serially in one process (shared DB).
 - `tests/integration/branding/account-readiness.test.ts` — Layer B validation: Stripe Connect, bank details, contract template prerequisites gate "ready to send" per surface.
 - `tests/integration/branding/social-urls-rpc.test.ts` — `_user_branding()` exposes twitter_url, pinterest_url, website_url from `raw_user_meta_data`.
 
-### Payment schedule modal specs (2026-07-30 redesign)
+### Payment schedule modal specs (2026-07-31 redesign)
 
 Unit (`tests/unit/`), all with semantic selectors:
+- `lib/payments/resolve-stages.test.ts` — resolution + validation, plus the
+  new `<value> <unit>` offsets: day / week / month, and month-end clamping
+  (Jan 31 + 1 month = Feb 28).
 - `lib/payments/describe-schedule.test.ts` — `describeSchedule` across
   remainder, single-stage, fixed, and percentage combinations.
-- `components/builders/schedule-template-row.test.tsx` — label/offset edits,
-  the value field hides for a remainder. The amount-type control is a Radix
-  `Select`; its option selection is **not** drivable in jsdom (same as
-  `select.test.tsx`), so the switch-clears-value behaviour is asserted by
-  rendering each state, not by opening the dropdown.
-- `components/builders/schedule-editor.test.tsx` — Save disabled with a stated
-  reason (two remainders, percentages > 100, empty), dirty reporting, add stage.
-- `components/builders/schedule-library-list.test.tsx` — click-to-apply,
-  overflow actions, New schedule, `describeSchedule` summaries.
-- `components/builders/schedule-library-modal.test.tsx` — apply closes, Edit
-  opens the editor + saves an update, unsaved-changes guard prompts, delete
-  confirms, the paid-stage note.
-- `components/builders/payment-schedule.test.tsx` (rewritten) — empty state
-  names the default, applies it, the running total, "Change" opens the library.
-- `schedule-picker.test.tsx` was **removed** with the retired picker.
+- `components/builders/schedule-stage-row.test.tsx` — label / offset edits, the
+  value field hides for a remainder, a paid row locks. The amount-type and unit
+  controls are Radix `Select`s; their option selection is **not** drivable in
+  jsdom (same as `select.test.tsx`), so state is asserted by rendering.
+- `components/builders/schedule-modal.test.tsx` — seeds from the default, the
+  running total, Add payment, Apply fires the resolved template + closes, Save
+  to library, Apply disabled with a warning for an unresolvable schedule.
+- `components/builders/payment-schedule.test.tsx` — empty state offers one "Add
+  schedule" button that opens the modal; applied state shows the running total
+  and "Change" reopens it.
+- The v1 library specs (`schedule-library-modal` / `schedule-library-list` /
+  `schedule-editor` / `schedule-template-row` / `schedule-picker`) were
+  **removed** with those retired parts.
 
 E2E: `tests/e2e/payment-schedule-modal.spec.ts` — one flow across desktop +
-Mobile Chrome/Safari: apply the default, duplicate + edit a schedule, re-apply,
-confirm the invoice reflects it, then delete the throwaway. Self-cleaning so it
-never mutates the seeded "Default". **Deferred to CI / isolated local
-Supabase:** `npm run dev` targets the remote DB, which lacks the
-`payment_schedules` tables (migration `20260730000000`) until the CI deploy;
-running it against that DB fails on missing schema. No new integration tests —
-`schedule-actions.ts` is unchanged and already covered by
+Mobile Chrome/Safari: Add schedule opens the modal pre-loaded with the default,
+Apply writes the timeline, then Change edits an offset and re-applies. Self-
+contained (no invoice save, no library mutation). **Deferred to CI / isolated
+local Supabase:** `npm run dev` targets the remote DB, which lacks the
+`payment_schedules` tables + time-unit columns (migrations `20260730000000`
+and `20260731010000`) until the CI deploy. Integration coverage stays in
 `tests/integration/payments/schedule-actions.test.ts`.
 
 **New key selectors for blocks:**

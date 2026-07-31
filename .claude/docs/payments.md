@@ -210,31 +210,35 @@ rows where `quantity > 1`.
 ### Custom payment schedules (invoice builder)
 
 An invoice can be split into N stages (deposit + progress + final, etc.).
-Two scopes, deliberately kept distinct:
+The authoring UI is a **single modal** (2026-07-31 redesign,
+`schedule-modal.tsx`), reached from the invoice's one "Add schedule" /
+"Change" button:
 
-- **The library is explicit.** Saved schedules (`payment_schedules` +
-  `payment_schedule_stages`) are reusable templates, managed only in the
-  schedule library modal, reached from the invoice via a single "Change"
-  door. Every MC is seeded a default named "Default"
-  (migration `20260730000000`, plus an `auth.users` trigger for new
-  signups).
-- **The invoice is local.** Applying a schedule copies its stages onto
-  this invoice (`invoice_payment_stages`, amounts frozen at apply time).
-  Editing a stage here never touches the library, and editing a library
-  schedule never touches an already-applied invoice — to adopt a new
-  shape the MC re-applies the schedule.
+- **Apply to the invoice only.** The modal edits a template-shaped draft
+  and, on Apply, resolves it against this invoice's total + issue date and
+  writes `invoice_payment_stages` (amounts frozen at apply time). The
+  Start-from dropdown loads a saved schedule as a starting point.
+- **Save to library is explicit.** A separate action persists the current
+  draft as a new named `payment_schedules` template; it always creates
+  (a name collision appends " copy"), so it never silently rewrites a
+  reused schedule. Every MC is seeded a default named "Default"
+  (migration `20260730000000` + an `auth.users` trigger).
+- **Flexible timing.** A stage falls due `<value> <unit>` after issue,
+  where unit is day / week / month, stored in `due_offset_value` +
+  `due_offset_unit` (migration `20260731010000`; `due_offset_days` is
+  deprecated). `month` resolves to a real calendar month, clamped to the
+  end of a short month. `invoice_payment_stages` carry the same columns so
+  the chosen unit round-trips when the modal reopens.
 
-Design + rationale: `docs/superpowers/specs/2026-07-30-payment-schedule-modal-design.md`.
-No schema change and no new server action shipped with the 2026-07-30 UI
-redesign — the surface is a rewrite over the existing
-`schedule-actions.ts` (`listSchedules` / `createSchedule` /
-`updateSchedule` / `deleteSchedule` / `setDefaultSchedule` /
-`replaceInvoiceStages` / `markStagePaid`) and the pure resolver in
-`lib/payments/resolve-stages.ts`. Row summaries come from the pure
-`lib/payments/describe-schedule.ts` helper, never prose in the DB, so a
-summary cannot drift from its stages. `replaceInvoiceStages` deletes only
-unpaid rows, so re-applying a schedule to a part-paid invoice cannot erase
-a recorded payment.
+Design + rationale: `docs/superpowers/specs/2026-07-31-payment-schedule-modal-v2-design.md`
+(supersedes the 2026-07-30 UI). The server actions in `schedule-actions.ts`
+(`listSchedules` / `createSchedule` / `deleteSchedule` /
+`setDefaultSchedule` / `replaceInvoiceStages` / `markStagePaid`) and the
+pure resolver in `lib/payments/resolve-stages.ts` are extended, not
+rewritten. Row summaries come from the pure
+`lib/payments/describe-schedule.ts` helper, never prose in the DB.
+`replaceInvoiceStages` deletes only unpaid rows, so re-applying a schedule
+to a part-paid invoice cannot erase a recorded payment.
 
 **Still note:** card payment via Stripe Connect covers the full invoice
 total only; when a schedule is active the "Pay with card" button is
