@@ -177,6 +177,7 @@ export function useUpdateCouple() {
           notes: couple.notes,
           status: couple.status,
           lead_source: couple.lead_source,
+          referral_source: couple.referral_source ?? null,
           kanban_position: couple.kanban_position,
         }),
       ),

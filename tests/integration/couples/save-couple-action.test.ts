@@ -103,6 +103,29 @@ describe('createCoupleAction — integration', () => {
     }
   });
 
+  it('persists referral_source (how did you hear about me)', async () => {
+    const user = await createTestUser({}, pro);
+    activeUser = user;
+    try {
+      const result = await createCoupleAction({
+        ...validInput,
+        referral_source: 'Instagram',
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(result.error);
+
+      const admin = serviceClient();
+      const { data: row } = await admin
+        .from('couples')
+        .select('referral_source')
+        .eq('id', result.data.id)
+        .single();
+      expect(row?.referral_source).toBe('Instagram');
+    } finally {
+      await user.cleanup();
+    }
+  });
+
   it('returns 401-style failure when no auth session', async () => {
     // No active user — server-mock throws; the action wraps with
     // its `Not signed in.` branch. We exercise it by leaving

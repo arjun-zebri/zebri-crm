@@ -91,6 +91,8 @@ const coupleInputSchema = z.object({
   // out-of-band values.
   status: z.string().trim().min(1).max(100),
   lead_source: z.string().trim().max(100).nullable().default(null),
+  // "How did you hear about me" - free text, surfaced on the couple profile.
+  referral_source: z.string().trim().max(200).nullable().default(null),
   kanban_position: z.number().default(0),
 });
 
