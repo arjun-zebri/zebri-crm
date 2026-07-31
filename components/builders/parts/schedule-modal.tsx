@@ -22,7 +22,7 @@ import { useToast } from '@/components/ui/toast'
 import { resolveStages, validateForSave } from '@/lib/payments/resolve-stages'
 import type { PaymentSchedule, TemplateStage } from '@/types/payment-schedule'
 
-import { ScheduleStageRow, type StageDraft } from './schedule-stage-row'
+import { ScheduleStageRow, STAGE_ROW_GRID, type StageDraft } from './schedule-stage-row'
 import { ScheduleStartDropdown } from './schedule-start-dropdown'
 
 /** Props for {@link ScheduleModal}. */
@@ -120,19 +120,22 @@ function ScheduleModalBody({
   const removeStage = (key: string) => setDraft((cur) => cur.filter((s) => s.key !== key))
   const addStage = () =>
     setDraft((cur) => {
-      const hasRemainder = cur.some((s) => s.amountType === 'remainder')
-      return [
-        ...cur,
-        {
-          key: nextKey(),
-          label: `Payment ${String(cur.length + 1)}`,
-          amountType: hasRemainder ? 'percent' : 'remainder',
-          amountValue: hasRemainder ? 0 : null,
-          offsetValue: 0,
-          offsetUnit: 'day',
-          paidAt: null,
-        },
-      ]
+      // A remainder must stay last, so a new stage is a percent inserted just
+      // before it; with no remainder yet, the new stage becomes the remainder.
+      const remainderIdx = cur.findIndex((s) => s.amountType === 'remainder')
+      const newStage: StageDraft = {
+        key: nextKey(),
+        label: `Payment ${String(cur.length + 1)}`,
+        amountType: remainderIdx >= 0 ? 'percent' : 'remainder',
+        amountValue: remainderIdx >= 0 ? 0 : null,
+        offsetValue: 0,
+        offsetUnit: 'day',
+        paidAt: null,
+      }
+      if (remainderIdx < 0) return [...cur, newStage]
+      const copy = [...cur]
+      copy.splice(remainderIdx, 0, newStage)
+      return copy
     })
 
   // Loading a saved schedule keeps any paid stages locked at the front.
@@ -200,20 +203,30 @@ function ScheduleModalBody({
         />
       </div>
 
-      <div className="relative pl-6">
-        <div
-          aria-hidden
-          className="absolute left-[3px] top-3 bottom-3 w-px border-l border-dashed border-border"
-        />
-        <div ref={listRef} className="space-y-3">
-          {draft.map((s) => (
-            <ScheduleStageRow
-              key={s.key}
-              stage={s}
-              onChange={(p) => patch(s.key, p)}
-              onRemove={() => removeStage(s.key)}
-            />
-          ))}
+      <div>
+        {draft.length > 0 && (
+          <div className={`hidden pb-2 text-caption text-text-muted ${STAGE_ROW_GRID}`}>
+            <span aria-hidden />
+            <span>Stage</span>
+            <span>Amount</span>
+            <span>Due after issue</span>
+          </div>
+        )}
+        <div className="relative">
+          <div
+            aria-hidden
+            className="absolute left-[0.3rem] top-2 bottom-2 hidden w-px border-l border-dashed border-border sm:block"
+          />
+          <div ref={listRef} className="space-y-2.5">
+            {draft.map((s) => (
+              <ScheduleStageRow
+                key={s.key}
+                stage={s}
+                onChange={(p) => patch(s.key, p)}
+                onRemove={() => removeStage(s.key)}
+              />
+            ))}
+          </div>
         </div>
         <button
           type="button"

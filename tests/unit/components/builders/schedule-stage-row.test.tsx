@@ -49,10 +49,10 @@ describe('ScheduleStageRow', () => {
     expect(props.onRemove).toHaveBeenCalled()
   })
 
-  it('locks a paid stage: read-only, no remove, shows Paid', () => {
+  it('locks a paid stage: read-only, no remove', () => {
     setup({ paidAt: '2026-07-02T00:00:00Z' })
     expect(screen.getByLabelText(/stage label/i)).toBeDisabled()
+    expect(screen.getByLabelText(/offset amount/i)).toBeDisabled()
     expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument()
-    expect(screen.getByText(/paid/i)).toBeInTheDocument()
   })
 })
