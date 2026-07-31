@@ -941,6 +941,7 @@ export type Database = {
           primary_email: string | null
           primary_name: string | null
           primary_phone: string | null
+          referral_source: string | null
           secondary_email: string | null
           secondary_name: string | null
           secondary_phone: string | null
@@ -964,6 +965,7 @@ export type Database = {
           primary_email?: string | null
           primary_name?: string | null
           primary_phone?: string | null
+          referral_source?: string | null
           secondary_email?: string | null
           secondary_name?: string | null
           secondary_phone?: string | null
@@ -987,6 +989,7 @@ export type Database = {
           primary_email?: string | null
           primary_name?: string | null
           primary_phone?: string | null
+          referral_source?: string | null
           secondary_email?: string | null
           secondary_name?: string | null
           secondary_phone?: string | null
@@ -1472,6 +1475,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_capture_forms: {
+        Row: {
+          capture_token: string
+          created_at: string
+          enabled: boolean
+          id: string
+          target_status_slug: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capture_token?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          target_status_slug?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capture_token?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          target_status_slug?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       package_categories: {
         Row: {
@@ -2623,6 +2656,7 @@ export type Database = {
       generate_contract_number: { Args: { p_user_id: string }; Returns: string }
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
       generate_proposal_number: { Args: { p_user_id: string }; Returns: string }
+      get_lead_form: { Args: { token: string }; Returns: Json }
       get_portal_data: { Args: { token: string }; Returns: Json }
       get_portal_questionnaires: { Args: { token: string }; Returns: Json }
       get_public_contract: { Args: { token: string }; Returns: Json }
@@ -2764,6 +2798,7 @@ export type Database = {
         }
         Returns: Json
       }
+      submit_lead: { Args: { p_payload: Json; token: string }; Returns: Json }
       submit_questionnaire: {
         Args: { p_responses: Json; token: string }
         Returns: Json
