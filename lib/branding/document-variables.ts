@@ -65,12 +65,6 @@ const CONTRACT_DOC: DocumentVariable[] = [
   { id: 'signer_name', label: 'Signer name', group: 'Document', format: 'text', source: "The signer's name on the contract." },
 ]
 
-const PROPOSAL_DOC: DocumentVariable[] = [
-  { id: 'proposal_number', label: 'Proposal number', group: 'Document', format: 'text', source: 'The proposal number, assigned when the proposal is sent.' },
-  { id: 'expiry_date', label: 'Expiry date', group: 'Document', format: 'date', source: "The document's expiry date." },
-  { id: 'total', label: 'Total', group: 'Amounts', format: 'currency', source: 'The total of the selected package.' },
-]
-
 /**
  * Variables offered on each surface. Line-item tables and totals stay
  * structured blocks; these are the text-shaped values that become inline chips.
@@ -78,7 +72,6 @@ const PROPOSAL_DOC: DocumentVariable[] = [
 export const VARIABLES_BY_SURFACE: Record<SurfaceTab, DocumentVariable[]> = {
   invoice: [...COUPLE, ...INVOICE_DOC, ...BUSINESS],
   contract: [...COUPLE, ...CONTRACT_DOC, ...BUSINESS],
-  proposal: [...COUPLE, ...PROPOSAL_DOC, ...BUSINESS],
   portal: [...COUPLE, ...BUSINESS],
   vendorTimeline: [...COUPLE, ...BUSINESS],
   questionnaire: [...COUPLE, ...BUSINESS],

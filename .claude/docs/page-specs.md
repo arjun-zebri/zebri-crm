@@ -478,9 +478,8 @@ point moved here off the Overview's General section.)
 - Right: Events list + Vendors/Contacts list
 
 **Payments tab:**
-- Two-column grid (`grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-16`): Quotes | Invoices
+- Invoices list for the couple, with a "+ New Invoice" button opening the builder in couple context
 - Invoice due date hidden on mobile (`hidden sm:inline`) to prevent row overflow
-- Totals row: `grid-cols-1 sm:grid-cols-2`
 
 **Timeline tab:**
 - Event dropdown at top; calendar + sidebar stacked on mobile (`flex-col sm:flex-row`)
@@ -722,40 +721,20 @@ Route: `/payments`
 
 Route group: `(dashboard)`
 
-Purpose: Unified hub for managing proposals, quotes and invoices. The MC can view, create, and edit all financial documents in one place with tab-based navigation.
+Purpose: Unified hub for managing invoices and contracts. The MC can view, create, and edit both in one place with tab-based navigation.
 
-Header: Title "Payments" + four tabs: **Proposals** | **Quotes** | **Invoices** | **Contracts** (Proposals is the default tab; Quotes is being retired by the proposals rollout — see `.claude/docs/proposals.md`). Search bar + "New Proposal" / "New Quote" / "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
+Header: Title "Payments" + two tabs: **Invoices** | **Contracts** (Invoices is the default tab). The active tab is the `PaymentsTab` type (`'invoices' | 'contracts'`, in `use-payments-shortcut.ts`). Search bar + "New Invoice" / "New Contract" button (label changes based on active tab). Pressing `/` outside an input focuses the search box; Escape clears it.
 
-**Proposals tab (Proposals Phase C+):** `proposals-list.tsx` renders the shared payments table (number PR-NNN, title, couple, status pill draft/sent/accepted/declined with display-only expired derivation, primary-option subtotal, created date). Rows open `ProposalBuilderModal` (`components/builders/proposal-builder-modal.tsx`): couple + expiry meta row, a stack of option cards (each snapshots a package: editable title/description, base items via the shared LineItemsTable, add-ons with the MC's pre-tick checkboxes, display-only terms line "25% deposit · GST incl. · weekend +15%"), packages applied via the shared TemplatePicker, "Add blank option" always available, notes, two-tab live preview (the couple page rendered through the shared `ProposalDocumentBody` block tree so it matches the sent page exactly, incl. banner / custom blocks / Accept styling / footer, + real cover email), ShareAndSend footer (send = `/api/email/send-proposal`). Accepted/declined proposals are locked server-side; the overflow offers "Generate invoice" (accepted: creates a draft invoice from the RECORDED selection with the option's deposit % + GST treatment, provenance `invoices.proposal_id`) and "Duplicate to revise". The couple-facing page is `/proposal/[token]` (option chooser, add-on ticks with live total, two-step accept; accepted view renders the recorded receipt).
+Invoices are fully **manual** — the MC builds each one by hand (optionally starting from a saved invoice template or package). Nothing seeds an invoice or a payment schedule automatically; signing a contract does not create an invoice.
 
-**Composition (Phase 2C decomposition):** `app/(dashboard)/payments/page.tsx` is a 262-LOC orchestrator that composes the following co-located sections:
+**Composition (Phase 2C decomposition):** `app/(dashboard)/payments/page.tsx` is an orchestrator that composes the following co-located sections:
 
 - `payments-header.tsx` — title row, search toolbar, tab strip.
-- `payments-table.tsx` — shared desktop-table / mobile-list primitive consumed by every tab.
-- `payments-footer.tsx` — fixed bottom count + (for quotes/invoices) money total.
-- `quotes-list.tsx`, `invoices-list.tsx`, `contracts-list.tsx` — per-tab row mapping + status pill catalogues.
-- `new-contract-popover.tsx` — inline "pick a couple" popover for the Contracts tab New button.
-- `use-payments-data.ts` — React Query hooks for the three lists.
-- `use-payments-shortcut.ts` — `/` keyboard shortcut + Escape-to-clear.
-
-The Quote/Invoice/Contract builder modals are unchanged in 2C — their decomposition into `components/builders/parts/` is deferred to **PR 2C.2** (the modals are 1047 + 1465 LOC each; structurally reviewable in isolation).
-
-## Quotes Tab
-
-Table Columns (matching couples/vendors style):
-- Number (quote #, gray text)
-- Title
-- Couple (name)
-- Status (badge: gray=draft, blue=sent, emerald=accepted, red=declined, amber=expired). "Expired" begins the day *after* `expires_at` — a quote expiring today is still active (derived via `isPastDue` in `@/lib/utils`).
-- Total (right-aligned, currency formatted AUD)
-- Expiry Date (right-aligned, formatted date)
-
-**Actions:**
-- Click row → opens QuoteBuilderModal for editing
-- "New Quote" button → opens couple picker dropdown, then QuoteBuilderModal
-- Search bar filters across: title, quote number, couple name, status
-
-**Empty state:** Quote icon + "No quotes yet. Create one from a couple's profile."
+- `payments-table.tsx` — shared desktop-table / mobile-list primitive consumed by both tabs.
+- `payments-footer.tsx` — fixed bottom count + (for invoices) money total.
+- `invoices-list.tsx`, `contracts-list.tsx` — per-tab row mapping + status pill catalogues.
+- `use-payments-data.ts` — React Query hooks for the two lists.
+- `use-payments-shortcut.ts` — `PaymentsTab` type + `/` keyboard shortcut + Escape-to-clear.
 
 ## Invoices Tab
 
@@ -776,10 +755,10 @@ Table Columns (matching couples/vendors style):
 
 ## Modals
 
-Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phase 2C.2** redesigned both into a **two-pane layout**: edit form on the left, live preview on the right. The modal uses the `fullscreen` size (`max-w-7xl`) on desktop; below the `lg:` breakpoint (1024px) the panes stack vertically with the preview as a collapsible section below the form.
+InvoiceBuilderModal is rendered on this page (and reused on the couple profile). **Phase 2C.2** redesigned it into a **two-pane layout**: edit form on the left, live preview on the right. The modal uses the `fullscreen` size (`max-w-7xl`) on desktop; below the `lg:` breakpoint (1024px) the panes stack vertically with the preview as a collapsible section below the form.
 
 ### Shared shell (`builder-modal-shell.tsx`)
-- Top of the modal: document number (e.g. `Q-001` / `INV-001`) + inline `StatePill` (the same tonal pill used on the Billing tab).
+- Top of the modal: document number (e.g. `INV-001`) + inline `StatePill` (the same tonal pill used on the Billing tab).
 - Right side of the header: status-aware contextual primary CTA + `⋯` overflow menu for destructive / revert actions.
 - Body: hero title input (large unbordered text — Notion-style) followed by the composed parts.
 - Footer (spans both panes): `share-and-send` row (link affordance + Save + primary Send to couple). While the doc is still a draft, a subtle "Mark as sent" text button sits next to Copy link / Open — it flips the status draft→sent **without** firing an email (for MCs who shared the link out-of-band via SMS/WhatsApp). It leaves `email_sent_at` null, so the primary stays "Send to couple".
@@ -790,8 +769,8 @@ Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phas
 - Sub-header: "Branded as {Business Name} · Update branding ↗" — the link opens `/branding` in a new tab so the user can tweak + come back without losing the modal.
 - Three tabs, each rendering live (the form state flows directly into the preview every render):
   - **PDF**: `<PreviewPdf>` — renders the same HTML that `buildPdfHtml()` produces for the print dialog, inside a sandboxed iframe.
-  - **Email**: `<PreviewEmail>` — `From/To/Subject` envelope above a sandboxed iframe carrying the templated email body (`quoteHtml()` / `invoiceHtml()` from `@/lib/email`).
-  - **Payment page**: `<PreviewPaymentPage>` — uses the same `PublicBlockRenderer` the public `/quote/[token]` and `/invoice/[token]` routes use, fed by `useCurrentBranding(surface)`. Pixel-faithful preview of what the couple sees.
+  - **Email**: `<PreviewEmail>` — `From/To/Subject` envelope above a sandboxed iframe carrying the templated email body (`invoiceHtml()` from `@/lib/email`).
+  - **Payment page**: `<PreviewPaymentPage>` — uses the same `PublicBlockRenderer` the public `/invoice/[token]` route uses, fed by `useCurrentBranding(surface)`. Pixel-faithful preview of what the couple sees.
 - The pane is collapsible — clicking the `<` chevron toggles a slim vertical bar with a `>` chevron to expand again. Useful when the MC wants to focus on just the form.
 
 ### Branding integration (`useCurrentBranding`)
@@ -799,22 +778,11 @@ Both QuoteBuilderModal and InvoiceBuilderModal are rendered on this page. **Phas
 - Falls back to the `minimal` theme preset for any unset fields.
 - `buildPublicBranding(metadata)` is pure + exported for tests.
 
-### `QuoteBuilderModal`
-- Meta row: couple picker + expiry date.
-- **Template picker**: prominent "Start from template" card above the items area when the quote is empty; collapses to a smaller "Apply template" link in the items header once items exist.
-- Line items table: description + amount columns only. Drag-reorder via dnd-kit. "+ Add item" inline.
-- "+ Add discount" / "+ Apply 10% GST" link buttons below the items — expand inline when configured.
-- Totals panel: Subtotal · (optional Discount) · (optional GST 10%) · **Total** (bold).
-- Notes & terms textarea at the bottom.
-- Overflow menu: "Convert to invoice" (when accepted) · "Delete quote".
-- Save flow: `Save changes` (footer, secondary) + `Send to couple` (footer, primary). Send saves any dirty changes, ensures the share token is enabled, flips a draft to `sent`, and fires the email in one click. After first send, the primary becomes `Resend` + a small "Sent {date}" timestamp. A draft also shows a "Mark as sent" link (flips status without emailing — see the shell footer note above).
-- State pill map: Draft (muted) · Sent (info + hollow dot) · Accepted (success + filled dot) · Declined (danger) · Expired (muted).
-
 ### `InvoiceBuilderModal`
-Same shell + meta row pattern, plus:
-- Meta row adds: payment terms (Net 7/14/30/due-on-receipt/custom) + due date. Net terms auto-fill the due date.
+- Meta row: couple picker + payment terms (Net 7/14/30/due-on-receipt/custom) + due date. Net terms auto-fill the due date.
+- **Template picker**: prominent "Start from template" card above the items area when the invoice is empty; collapses to a smaller "Apply template" link in the items header once items exist. Sources are the MC's invoice templates + packages.
 - Line items table: description + amount only (quantity removed in 2C.2 — `saveInvoiceAction` writes `quantity = 1, unit_price = amount` for forward compat with the existing schema).
-- Discount + GST controls identical to the quote modal.
+- "+ Add discount" / "+ Apply 10% GST" link buttons below the items — expand inline when configured. Totals panel: Subtotal · (optional Discount) · (optional GST 10%) · **Total** (bold).
 - **Payment schedule**: vertical timeline. `● Deposit ─┊─ ○ Final` with state pill + amount + due date + inline "Mark paid" affordance per stage. Filled dot when paid, hollow when due. "+ Add payment schedule" link button when none is configured.
 - **Card payments toggle**: only visible if `stripeConnectEnabled(user)` is true (read via `@/lib/auth/entitlements` — `app_metadata.stripe_connect_enabled`; never the user-writable `user_metadata`). Toggle + helper text in a token-styled row.
 - **Contextual header CTA** (status-aware):
@@ -828,16 +796,14 @@ Same shell + meta row pattern, plus:
 
 ### Server actions (`app/(dashboard)/payments/actions.ts`)
 Mutations no longer happen inline. Saves flow through:
-- `saveQuoteAction(input)` — Zod-validated, RLS-scoped, transactional (replace-line-items pattern).
-- `saveInvoiceAction(input)` — same shape, plus payment schedule fields + `quantity=1`/`unit_price=amount` invariant.
-- `deleteQuoteAction(id)` / `deleteInvoiceAction(id)` — RLS-scoped destructive.
+- `saveInvoiceAction(input)` — Zod-validated, RLS-scoped, transactional (replace-line-items pattern), plus payment schedule fields + `quantity=1`/`unit_price=amount` invariant.
+- `deleteInvoiceAction(id)` — RLS-scoped destructive.
 - Status mutations (mark sent / mark paid / revert / cancel) remain inline one-line UPDATEs in the modal — they don't justify their own server actions. "Mark sent" flips a draft to `sent` + ensures `share_token_enabled`, without sending an email.
 
 ## Couple Profile Integration
 
-- Couple Profile "Quotes" tab: Shows couple's quotes, "+ New Quote" button opens modal in couple context
 - Couple Profile "Invoices" tab: Shows couple's invoices, "+ New Invoice" button opens modal in couple context
-- Both tabs can click rows to open modals for editing
+- Rows can be clicked to open the modal for editing
 
 ---
 
@@ -1216,7 +1182,7 @@ Route: `/branding`
 
 Route group: `(dashboard)`
 
-Purpose: A Canva-grade design tool for customizing the MC's brand kit and block-based document layouts across proposal, invoice, contract, and couple portal surfaces.
+Purpose: A Canva-grade design tool for customizing the MC's brand kit and block-based document layouts across invoice, contract, client portal, run sheet, and questionnaire surfaces.
 
 ## First-Run Onboarding
 
@@ -1226,7 +1192,7 @@ The **Look** step collects exactly six colour pickers (no more, no less): Headin
 
 ## Layout
 
-Three-pane: **Header** (six surface tabs: Quote, Invoice, Contract, Proposal, Vendor Timeline, Questionnaire) + **Left rail** (brand panel with accordions + Documents panel) + **Canvas** (surface preview). Top-right has Preview button (opens surface in new tab) and Reset button (reverts current surface to template).
+Three-pane: **Header** (five surface tabs: Invoice, Contract, Portal, Run sheet, Questionnaire) + **Left rail** (brand panel with accordions + Documents panel) + **Canvas** (surface preview). Top-right has Preview button (opens surface in new tab) and Reset button (reverts current surface to template).
 
 ## Brand Rail (left sidebar)
 
@@ -1250,7 +1216,7 @@ Toggles to enable/disable individual surfaces. Only enabled surfaces render to t
 
 ## Canvas (right side)
 
-Renders the selected surface with live sample data. Fixed-core blocks (proposalBody, contractBody, couplePortal, questionnaire, vendorTimeline) are marked "Fixed layout"; chrome blocks (header banner, business name, text, image, spacer, divider, footer, action) are freely positioned above/below.
+Renders the selected surface with live sample data. Fixed-core blocks (contractBody, couplePortal, questionnaire, vendorTimeline) are marked "Fixed layout"; chrome blocks (header banner, business name, text, image, spacer, divider, footer, action) are freely positioned above/below.
 
 Per-block toolbar (Canva-style): padding (per side), background colour, border (width/colour/radius), width, horizontal alignment, space above/below. Text-bearing blocks add font/size/weight/colour/alignment/case/letter-spacing/line-height. Block-specific controls (header overlay, action variant/size/radius, divider thickness, etc.) per type.
 
@@ -1278,15 +1244,12 @@ The block palette has two labeled groups:
 
 **Deletable-required model**: the editor validates per-surface via two layers. Layer A (template validity) checks required blocks present, invoice at-least-one of Bank details/Pay CTA, and questionnaire mode chosen. Layer B (account prerequisites) checks Stripe Connect (for Pay CTA), bank details in settings (for Bank details), and contract template created (for Contract body). Layer B flags never block editing, only sending.
 
-**Proposal decomposition**: the monolithic `proposalBody` marker was split into five editable blocks: Package header, Package details, Package optional inclusions, Package totals, and Accept CTA (the shared action block). A subtle in-block "See other packages" switcher appears in the Package header when multiple packages were sent.
-
 **Questionnaire mode**: the Questionnaire body block now persists `mode: 'form' | 'oneAtATime'` (replacing the preview-only toggle); public rendering reads this to show regular-form vs one-at-a-time.
 
-**Payment schedule**: now optional on Invoice. `proposalBody` and `headerBanner` remain only in migration code.
+**Payment schedule**: now optional on Invoice. The shared `action` block survives (Invoice Pay CTA, Contract Sign CTA); `headerBanner` remains only in migration code.
 
-## Six Surfaces
+## Five Surfaces
 
-- **Proposal** — Package header, Package details, Package optional inclusions (optional), Package totals, Accept CTA
 - **Invoice** — Invoice header, Invoice line items, Invoice totals, Payment schedule (optional), Bank details (required—at least one of Bank details/Pay CTA), Pay CTA (required—at least one)
 - **Contract** — Contract header, Contract body, Sign CTA
 - **Client Portal** — Portal body

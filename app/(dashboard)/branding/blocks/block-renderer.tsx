@@ -21,7 +21,6 @@ import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import { RenderDivider as PublicRenderDivider } from '@/lib/branding/public-blocks/divider'
 import { RenderFooter as PublicRenderFooter } from '@/lib/branding/public-blocks/footer'
 import { RenderTagline as PublicRenderTagline } from '@/lib/branding/public-blocks/tagline'
@@ -40,11 +39,6 @@ import {
   RenderHeaderBanner,
   RenderImage,
   RenderLineItems,
-  RenderPackageDetails,
-  RenderPackageHeader,
-  RenderPackageLineItems,
-  RenderPackageInclusions,
-  RenderPackageTotals,
   RenderPaymentDetails,
   RenderPaymentSchedule,
   RenderQuestionnaireBody,
@@ -75,8 +69,6 @@ interface BlockRendererProps {
   removeHeader?: () => void | Promise<void>
   uploadImage?: (file: File, blockId: string) => Promise<void>
   removeImage?: (blockId: string) => void | Promise<void>
-  /** Proposal surface only: edit the fixed core's section labels. */
-  onEditProposalLabel?: ProposalLabelEdit
 }
 
 export function BlockRenderer({
@@ -99,7 +91,6 @@ export function BlockRenderer({
   removeHeader,
   uploadImage,
   removeImage,
-  onEditProposalLabel,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -234,7 +225,6 @@ export function BlockRenderer({
               if (
                 block.type === 'couplePortal' ||
                 block.type === 'contractBody' ||
-                block.type === 'proposalBody' ||
                 block.type === 'vendorTimelineBody' ||
                 block.type === 'questionnaireBody'
               ) {
@@ -243,16 +233,12 @@ export function BlockRenderer({
                     ? 'Couple portal (fixed)'
                     : block.type === 'contractBody'
                       ? 'Contract body (fixed)'
-                      : block.type === 'proposalBody'
-                        ? 'Proposal (fixed)'
-                        : block.type === 'vendorTimelineBody'
-                          ? 'Run sheet (fixed)'
-                          : 'Questionnaire (fixed)';
+                      : block.type === 'vendorTimelineBody'
+                        ? 'Run sheet (fixed)'
+                        : 'Questionnaire (fixed)';
                 return (
                   <div key={block.id} aria-label={fixedLabel} className="group relative">
-                    {renderBlock(block, state, updateBlock, {
-                      onEditProposalLabel,
-                    }, surface)}
+                    {renderBlock(block, state, updateBlock, {}, surface)}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -338,7 +324,6 @@ interface RenderExtras {
   removeHeader?: () => void | Promise<void>
   uploadImage?: (file: File, blockId: string) => Promise<void>
   removeImage?: (blockId: string) => void | Promise<void>
-  onEditProposalLabel?: ProposalLabelEdit | undefined
 }
 
 interface SpacerWithResizeProps {
@@ -506,16 +491,6 @@ function renderBlock(
       return <RenderVendorTimelineBody state={state} />
     case 'questionnaireBody':
       return <RenderQuestionnaireBody block={block} state={state} updateBlock={updateBlock} />
-    case 'packageHeader':
-      return <RenderPackageHeader block={block} state={state} surface={surface} updateBlock={updateBlock} />
-    case 'packageDetails':
-      return <RenderPackageDetails block={block} state={state} surface={surface} updateBlock={updateBlock} />
-    case 'packageLineItems':
-      return <RenderPackageLineItems block={block} state={state} surface={surface} updateBlock={updateBlock} />
-    case 'packageInclusions':
-      return <RenderPackageInclusions block={block} state={state} surface={surface} updateBlock={updateBlock} />
-    case 'packageTotals':
-      return <RenderPackageTotals block={block} state={state} surface={surface} updateBlock={updateBlock} />
     case 'image':
       return (
         <RenderImage

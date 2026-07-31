@@ -1,7 +1,7 @@
 'use client'
 
 import * as Popover from '@radix-ui/react-popover'
-import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical, Package, ListChecks, Calculator, LayoutDashboard, FileSignature, CalendarClock, Clock, ClipboardList } from 'lucide-react'
+import { Search, ImageIcon, Type, Table, CreditCard, Landmark, Pilcrow, Minus, Image, User, AlignLeft, PanelBottom, MoveVertical, Calculator, LayoutDashboard, FileSignature, CalendarClock, Clock, ClipboardList } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import type { SurfaceTab } from '@/types/branding-preview'
@@ -23,10 +23,6 @@ const BLOCK_ICONS: Partial<Record<BlockType, typeof ImageIcon>> = {
   image: Image,
   spacer: MoveVertical,
   footer: PanelBottom,
-  packageHeader: Package,
-  packageDetails: AlignLeft,
-  packageInclusions: ListChecks,
-  packageTotals: Calculator,
   couplePortal: LayoutDashboard,
   contractBody: FileSignature,
   paymentSchedule: CalendarClock,

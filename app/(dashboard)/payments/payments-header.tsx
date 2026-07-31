@@ -11,7 +11,7 @@
  */
 'use client';
 
-import { FileSignature, FileText, PackageOpen, Plus, Receipt, Search, X } from 'lucide-react';
+import { FileSignature, Plus, Receipt, Search, X } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 
 import type { PaymentsTab } from './use-payments-shortcut';
@@ -23,13 +23,9 @@ export interface PaymentsHeaderProps {
   search: string;
   onSearchChange: (value: string) => void;
   searchInputRef: RefObject<HTMLInputElement | null>;
-  /** Click handler for the "New" button. For the Contracts tab the
-   *  parent wires this to a popover trigger via `newButtonOverride`. */
+  /** Click handler for the "New" button. Every tab opens its builder
+   *  modal straight away; the couple is chosen inside the modal. */
   onNew: () => void;
-  /** When the active tab is Contracts the page passes a Popover.Trigger
-   *  here so the popover anchors correctly. The header still renders
-   *  the standard button if undefined. */
-  newButtonOverride?: ReactNode;
 }
 
 export function PaymentsHeader({
@@ -40,16 +36,10 @@ export function PaymentsHeader({
   onSearchChange,
   searchInputRef,
   onNew,
-  newButtonOverride,
 }: PaymentsHeaderProps) {
-  const newLabel =
-    activeTab === 'proposals'
-      ? 'proposal'
-      : activeTab === 'invoices'
-        ? 'invoice'
-        : 'contract';
+  const newLabel = activeTab === 'invoices' ? 'invoice' : 'contract';
 
-  const mobileNewButton = newButtonOverride ?? (
+  const mobileNewButton = (
     <button
       onClick={onNew}
       className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
@@ -59,7 +49,7 @@ export function PaymentsHeader({
     </button>
   );
 
-  const desktopNewButton = newButtonOverride ?? (
+  const desktopNewButton = (
     <button
       onClick={onNew}
       className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
@@ -114,12 +104,6 @@ export function PaymentsHeader({
 
       {/* Tabs */}
       <div className="flex items-center gap-6 border-b border-gray-200 mt-6">
-        <TabButton
-          active={activeTab === 'proposals'}
-          onClick={() => onTabChange('proposals')}
-          icon={<PackageOpen size={15} strokeWidth={1.5} />}
-          label="Proposals"
-        />
         <TabButton
           active={activeTab === 'invoices'}
           onClick={() => onTabChange('invoices')}

@@ -81,14 +81,12 @@ describe('OnboardingWizard', () => {
     })
 
     // Verify all surface toggles are shown and initially checked
-    const proposalCheckbox = within(dialog).getByLabelText('Proposals')
     const invoiceCheckbox = within(dialog).getByLabelText('Invoices')
     const contractCheckbox = within(dialog).getByLabelText('Contracts')
     const portalCheckbox = within(dialog).getByLabelText('Client portal')
     const runSheetCheckbox = within(dialog).getByLabelText('Run sheet')
     const questionnaireCheckbox = within(dialog).getByLabelText('Questionnaires')
 
-    expect(proposalCheckbox).toBeChecked()
     expect(invoiceCheckbox).toBeChecked()
     expect(contractCheckbox).toBeChecked()
     expect(portalCheckbox).toBeChecked()
@@ -100,7 +98,6 @@ describe('OnboardingWizard', () => {
     expect(invoiceCheckbox).not.toBeChecked()
 
     // Verify other surfaces remain checked
-    expect(proposalCheckbox).toBeChecked()
     expect(contractCheckbox).toBeChecked()
 
     // Click Next to go to Step 4 (editor demo)
@@ -133,7 +130,7 @@ describe('OnboardingWizard', () => {
     // Verify invoice is NOT in enabledSurfaces
     const call = onComplete.mock.calls[0][0]
     expect(call.enabledSurfaces).toEqual(
-      expect.arrayContaining(['proposal', 'contract', 'portal', 'vendorTimeline', 'questionnaire']),
+      expect.arrayContaining(['contract', 'portal', 'vendorTimeline', 'questionnaire']),
     )
     expect(call.enabledSurfaces).not.toContain('invoice')
   })
@@ -166,8 +163,8 @@ describe('OnboardingWizard', () => {
     // Get all checkboxes
     const checkboxes = within(dialog).getAllByRole('checkbox')
 
-    // Uncheck 5 of the 6 surfaces
-    for (let i = 0; i < 5; i++) {
+    // Uncheck 4 of the 5 surfaces
+    for (let i = 0; i < 4; i++) {
       if (checkboxes[i].getAttribute('checked') !== null) {
         await user.click(checkboxes[i])
       }
@@ -204,7 +201,6 @@ describe('OnboardingWizard', () => {
 
     const call = onComplete.mock.calls[0][0]
     expect(call.enabledSurfaces).toEqual([
-      'proposal',
       'invoice',
       'contract',
       'portal',

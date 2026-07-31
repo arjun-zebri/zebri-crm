@@ -5,12 +5,6 @@ import { defaultBlocksFor, blockTemplate } from '@/app/(dashboard)/branding/bloc
 const types = (bs: { type: string }[]) => bs.map((b) => b.type)
 
 describe('defaultBlocksFor', () => {
-  it('proposal seeds the five real blocks in spec order (§3)', () => {
-    expect(types(defaultBlocksFor('proposal'))).toEqual([
-      'businessName', 'packageHeader', 'packageDetails', 'packageLineItems', 'packageInclusions', 'packageTotals', 'action', 'footer',
-    ])
-  })
-
   it('invoice seeds both bank details and pay CTA', () => {
     const t = types(defaultBlocksFor('invoice'))
     expect(t).toContain('paymentDetails')
@@ -24,8 +18,8 @@ describe('defaultBlocksFor', () => {
     expect(qb).toMatchObject({ type: 'questionnaireBody', mode: 'form' })
   })
 
-  it('blockTemplate builds each new proposal block', () => {
-    for (const t of ['packageHeader', 'packageDetails', 'packageLineItems', 'packageInclusions', 'packageTotals'] as const) {
+  it('blockTemplate builds each document-specific block', () => {
+    for (const t of ['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails'] as const) {
       expect(blockTemplate(t)).toMatchObject({ type: t })
     }
   })

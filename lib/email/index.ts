@@ -5,7 +5,6 @@ import {
   contractHtml,
   contractReminderHtml,
   invoiceHtml,
-  proposalHtml,
   questionnaireHtml,
 } from "./html";
 import { DEFAULT_FROM, type ResolvedSender } from "./sender-identity";
@@ -15,7 +14,7 @@ export type { EmailAttachment } from "./dispatch";
 // them from `@/lib/email`. Client code (e.g. the email preview) must import
 // them from `@/lib/email/html` directly to avoid bundling the transport
 // layer (Resend + nodemailer) into the browser.
-export { contractHtml, invoiceHtml, proposalHtml, questionnaireHtml, wrapTemplateHtml } from "./html";
+export { contractHtml, invoiceHtml, questionnaireHtml, wrapTemplateHtml } from "./html";
 
 /**
  * Default transport for couple-facing mail: Resend, from the shared Zebri
@@ -48,28 +47,6 @@ export async function sendTemplateEmail(opts: {
     ...(opts.bcc ? { bcc: opts.bcc } : {}),
     ...(opts.attachments ? { attachments: opts.attachments } : {}),
   });
-}
-
-export async function sendProposalEmail(opts: {
-  coupleEmail: string;
-  coupleName: string;
-  proposalNumber: string;
-  proposalTitle: string;
-  shareUrl: string;
-  mcBusinessName: string;
-  /** Drives the email copy: >1 invites choosing between options. */
-  optionCount: number;
-  /** Resolved transport. Defaults to the shared Zebri address (Resend). */
-  sender?: ResolvedSender;
-  /** Optional sender's branding for branded emails. */
-  branding?: PublicBranding | null;
-}): Promise<{ ok: boolean; error?: string }> {
-  const res = await dispatchEmail(opts.sender ?? DEFAULT_SENDER, {
-    to: opts.coupleEmail,
-    subject: `Proposal from ${opts.mcBusinessName} - ${opts.proposalNumber}`,
-    html: proposalHtml(opts, opts.branding),
-  });
-  return res.ok ? { ok: true } : { ok: false, error: res.error ?? "Send failed" };
 }
 
 export async function sendQuestionnaireEmail(opts: {

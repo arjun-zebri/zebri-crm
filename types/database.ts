@@ -600,7 +600,6 @@ export type Database = {
           locked_content_html: string | null
           mc_signature_name: string | null
           notes: string | null
-          proposal_id: string | null
           reminder_count: number
           share_token: string
           share_token_enabled: boolean
@@ -629,7 +628,6 @@ export type Database = {
           locked_content_html?: string | null
           mc_signature_name?: string | null
           notes?: string | null
-          proposal_id?: string | null
           reminder_count?: number
           share_token?: string
           share_token_enabled?: boolean
@@ -658,7 +656,6 @@ export type Database = {
           locked_content_html?: string | null
           mc_signature_name?: string | null
           notes?: string | null
-          proposal_id?: string | null
           reminder_count?: number
           share_token?: string
           share_token_enabled?: boolean
@@ -678,13 +675,6 @@ export type Database = {
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contracts_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -1477,12 +1467,12 @@ export type Database = {
           due_date: string | null
           email_sent_at: string | null
           event_id: string | null
+          gst_inclusive: boolean
           id: string
           invoice_number: string
           notes: string | null
           paid_at: string | null
           payment_terms: string | null
-          proposal_id: string | null
           share_token: string
           share_token_enabled: boolean
           status: string
@@ -1501,12 +1491,12 @@ export type Database = {
           due_date?: string | null
           email_sent_at?: string | null
           event_id?: string | null
+          gst_inclusive?: boolean
           id?: string
           invoice_number: string
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null
-          proposal_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -1525,12 +1515,12 @@ export type Database = {
           due_date?: string | null
           email_sent_at?: string | null
           event_id?: string | null
+          gst_inclusive?: boolean
           id?: string
           invoice_number?: string
           notes?: string | null
           paid_at?: string | null
           payment_terms?: string | null
-          proposal_id?: string | null
           share_token?: string
           share_token_enabled?: boolean
           status?: string
@@ -1554,13 +1544,6 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -1941,185 +1924,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "portal_songs_couple_id_fkey"
-            columns: ["couple_id"]
-            isOneToOne: false
-            referencedRelation: "couples"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proposal_option_items: {
-        Row: {
-          amount: number
-          created_at: string
-          default_included: boolean
-          description: string
-          id: string
-          is_addon: boolean
-          option_id: string
-          position: number
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          default_included?: boolean
-          description: string
-          id?: string
-          is_addon?: boolean
-          option_id: string
-          position: number
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          default_included?: boolean
-          description?: string
-          id?: string
-          is_addon?: boolean
-          option_id?: string
-          position?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposal_option_items_option_id_fkey"
-            columns: ["option_id"]
-            isOneToOne: false
-            referencedRelation: "proposal_options"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proposal_options: {
-        Row: {
-          created_at: string
-          description: string | null
-          gst_inclusive: boolean
-          id: string
-          is_popular: boolean
-          position: number
-          proposal_id: string
-          source_package_id: string | null
-          subtotal: number
-          title: string
-          user_id: string
-          weekend_loading_percent: number | null
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          gst_inclusive?: boolean
-          id?: string
-          is_popular?: boolean
-          position: number
-          proposal_id: string
-          source_package_id?: string | null
-          subtotal?: number
-          title: string
-          user_id: string
-          weekend_loading_percent?: number | null
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          gst_inclusive?: boolean
-          id?: string
-          is_popular?: boolean
-          position?: number
-          proposal_id?: string
-          source_package_id?: string | null
-          subtotal?: number
-          title?: string
-          user_id?: string
-          weekend_loading_percent?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposal_options_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposal_options_source_package_id_fkey"
-            columns: ["source_package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proposals: {
-        Row: {
-          accepted_addon_selection: Json | null
-          accepted_at: string | null
-          accepted_option_id: string | null
-          couple_id: string
-          created_at: string
-          email_sent_at: string | null
-          expires_at: string | null
-          id: string
-          notes: string | null
-          proposal_number: string
-          share_token: string
-          share_token_enabled: boolean
-          status: string
-          subtotal: number
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          accepted_addon_selection?: Json | null
-          accepted_at?: string | null
-          accepted_option_id?: string | null
-          couple_id: string
-          created_at?: string
-          email_sent_at?: string | null
-          expires_at?: string | null
-          id?: string
-          notes?: string | null
-          proposal_number: string
-          share_token?: string
-          share_token_enabled?: boolean
-          status?: string
-          subtotal?: number
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          accepted_addon_selection?: Json | null
-          accepted_at?: string | null
-          accepted_option_id?: string | null
-          couple_id?: string
-          created_at?: string
-          email_sent_at?: string | null
-          expires_at?: string | null
-          id?: string
-          notes?: string | null
-          proposal_number?: string
-          share_token?: string
-          share_token_enabled?: boolean
-          status?: string
-          subtotal?: number
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposals_accepted_option_id_fkey"
-            columns: ["accepted_option_id"]
-            isOneToOne: false
-            referencedRelation: "proposal_options"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_couple_id_fkey"
             columns: ["couple_id"]
             isOneToOne: false
             referencedRelation: "couples"
@@ -2723,14 +2527,6 @@ export type Database = {
         Args: { p_surface: string; p_user_id: string }
         Returns: Json
       }
-      accept_proposal: {
-        Args: {
-          addon_selection?: Json
-          chosen_option_id: string
-          token: string
-        }
-        Returns: Json
-      }
       backfill_invoice_payment_stages: { Args: never; Returns: number }
       contracts_due_for_reminder: {
         Args: never
@@ -2761,7 +2557,6 @@ export type Database = {
             }
             Returns: Json
           }
-      decline_proposal: { Args: { token: string }; Returns: Json }
       delete_portal_file: {
         Args: { p_id: string; p_token: string }
         Returns: undefined
@@ -2810,12 +2605,10 @@ export type Database = {
       expire_contracts: { Args: never; Returns: string[] }
       generate_contract_number: { Args: { p_user_id: string }; Returns: string }
       generate_invoice_number: { Args: { p_user_id: string }; Returns: string }
-      generate_proposal_number: { Args: { p_user_id: string }; Returns: string }
       get_portal_data: { Args: { token: string }; Returns: Json }
       get_portal_questionnaires: { Args: { token: string }; Returns: Json }
       get_public_contract: { Args: { token: string }; Returns: Json }
       get_public_invoice: { Args: { token: string }; Returns: Json }
-      get_public_proposal: { Args: { token: string }; Returns: Json }
       get_public_questionnaire: { Args: { token: string }; Returns: Json }
       get_public_timeline: { Args: { token: string }; Returns: Json }
       get_vendor_timeline: { Args: { token: string }; Returns: Json }

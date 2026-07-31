@@ -76,9 +76,8 @@ seed). The integration project runs serially in one process (shared DB).
 - `tests/e2e/branding-mobile-overflow.spec.ts` — mobile responsive: canvas scales at <md breakpoint, toolbar scrolls without overflow.
 
 **Document Blocks Phase C (deferred to CI):**
-- `tests/e2e/branding-proposal-blocks.spec.ts` — proposal decomposition: Package header, details, optional inclusions, totals, Accept CTA blocks render; in-block package chooser appears when multiple packages present.
 - `tests/e2e/branding-block-readiness.spec.ts` — readiness validation: deleting a required block shows "Not ready to send" panel with plain-language missing items; panel clears when block is re-added.
-- `tests/integration/branding/blocks-repair.test.ts` — repair/migration: `repairBlocks` maps legacy `headerBanner` → Image, old `action` → CTA blocks, and `proposalBody` → five proposal blocks; sweep migrates all user rows idempotently.
+- `tests/integration/branding/blocks-repair.test.ts` — repair/migration: `repairBlocks` maps legacy `headerBanner` → Image and old `action` → CTA blocks; sweep migrates all user rows idempotently.
 - `tests/integration/branding/account-readiness.test.ts` — Layer B validation: Stripe Connect, bank details, contract template prerequisites gate "ready to send" per surface.
 - `tests/integration/branding/social-urls-rpc.test.ts` — `_user_branding()` exposes twitter_url, pinterest_url, website_url from `raw_user_meta_data`.
 
@@ -278,6 +277,41 @@ Tests that require data use a pre-saved auth state (see `fixtures/`). Never hard
 4. `data-testid`  -  last resort for complex components
 
 Avoid `nth()`, index-based selectors, or brittle CSS class selectors.
+
+### Responsive dual-render: filter on visibility, not `.first()`
+
+Several list components render **both** layouts into the DOM and hide one
+with a responsive class — `payments-table.tsx` emits a mobile card stack
+*and* a `<table>`, for example. Two consequences bite e2e tests:
+
+- `getByText('…').first()` can resolve to the node the current viewport has
+  hidden, so `waitFor()` / `click()` time out while a screenshot at the
+  point of failure shows the content plainly visible.
+- `getByRole('row')` finds rows on a mobile viewport (the table is present,
+  just hidden), so a mobile test fails for a structural reason rather than
+  a real one.
+
+Filter on visibility so one locator works on every viewport:
+
+```typescript
+// Good  -  matches whichever layout is actually rendered
+const entry = page.getByText(title).filter({ visible: true }).first();
+
+// Bad  -  may grab the hidden layout's node
+const entry = page.getByText(title).first();
+```
+
+Where the list also truncates long labels, filter the list down first (the
+search box) so the visible match is unambiguous.
+
+### Give data-dependent reveals a generous first assertion
+
+A UI that holds a skeleton until several queries resolve can exceed the 5s
+default `expect` timeout, especially on WebKit. Put an explicit
+`{ timeout: 30_000 }` on the **first** assertion that waits for the reveal
+and leave the assertions after it at the tight default — that still pins
+"these appear together" without making the test a latency benchmark. See
+`tests/e2e/invoice-gst-inclusive.spec.ts`.
 
 ### Test the user journey, not implementation
 ```typescript

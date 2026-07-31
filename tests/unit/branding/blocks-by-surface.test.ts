@@ -9,11 +9,10 @@ describe('blocks-by-surface', () => {
     expect(GENERAL_BLOCKS).toEqual(['text', 'divider', 'spacer', 'businessName', 'image', 'tagline', 'footer'])
   })
 
-  it('proposal doc-specific palette lists the four package blocks + accept CTA', () => {
-    const proposal = blocksForSurface('proposal')
-    expect(proposal).toEqual(expect.arrayContaining(['packageHeader', 'packageDetails', 'packageInclusions', 'packageTotals', 'action']))
-    expect(proposal).not.toContain('headerBanner')
-    expect(proposal).not.toContain('proposalBody')
+  it('invoice doc-specific palette lists the invoice blocks and excludes retired markers', () => {
+    const invoice = blocksForSurface('invoice')
+    expect(invoice).toEqual(expect.arrayContaining(['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action']))
+    expect(invoice).not.toContain('headerBanner')
   })
 
   it('exposes two labelled palette groups', () => {

@@ -108,9 +108,9 @@ changes; the parent modals own the actual form state + mutations.
 | `builder-modal-shell.tsx` | Modal frame + hero title input + state pill + ⋯ overflow menu + contextual primary CTA |
 | `builder-meta-row.tsx` | Couple picker + payment terms (invoice) + expiry / due date |
 | `line-items-table.tsx` | description + amount table; dnd-kit reorder; empty-state CTA |
-| `totals-panel.tsx` | Subtotal / (optional) Discount / (optional) GST / Total |
+| `totals-panel.tsx` | Subtotal / (optional) Discount / (optional) GST / Total / (optional) muted `note` line under the total (invoices pass "Prices include GST") |
 | `discount-control.tsx` | Collapsed "+ Add discount" link → inline editor with % / $ switch |
-| `tax-control.tsx` | "+ Apply 10% GST" toggle |
+| `tax-control.tsx` | Tax chip + popover: rate input and a "Prices include GST" checkbox (shown only when the caller passes `onGstInclusiveChange`). Chip reads `Tax` / `GST 10%` / `GST 10% incl.` / `GST incl.`. Opening the popover no longer pre-applies 10% — the rate applies on Done, so ticking the checkbox alone cannot add GST |
 | `notes-field.tsx` | Tokenised textarea wrapper |
 | `share-and-send.tsx` | Footer: share-link affordance + Save + primary "Send to couple" CTA |
 | `payment-schedule.tsx` | Invoice payment section: empty-state (one-tap "Apply <default>" + "Choose another"), the drag-reorder stage timeline, an always-visible running total that warns when the stages do not sum to the invoice, and a single "Change" door into the library |
@@ -122,16 +122,43 @@ changes; the parent modals own the actual form state + mutations.
 | `template-picker.tsx` | Quote templates — empty-state card + inline popover variants |
 | `builder-preview-pane.tsx` | Right pane: PDF / Email / Payment page tabs + "Update branding" link (Phase 2C.2 redesign) |
 | `preview-pdf.tsx` | PDF preview — renders `buildPdfHtml()` output in a sandboxed iframe |
-| `preview-email.tsx` | Email preview — `From/To/Subject` envelope + `quoteHtml()`/`invoiceHtml()` body in a sandboxed iframe |
+| `preview-email.tsx` | Email preview — `From/To/Subject` envelope + `invoiceHtml()` body in a sandboxed iframe |
 | `preview-payment-page.tsx` | Payment-page preview — uses `PublicBlockRenderer` with `useCurrentBranding(surface)` for pixel-faithful render |
+| `use-apply-sources.ts` | Packages / invoice templates as "start from" sources for the builders |
 | `preview-shared.ts` | The `PreviewDoc` shape the parent modals pass into every preview tab |
 
 All parts are ≤200 LOC, TSDoc'd, and unit-tested under
 `tests/unit/components/builders/parts/*.test.tsx`.
 
+### Builder first-paint skeleton
+
+`builder-modal-shell.tsx` already renders skeletons for the form body and
+the preview pane behind its `loading` prop. The invoice builder gates that
+prop on **every** input the first paint needs, not just the invoice row:
+the invoice, `useApplySources()` (packages / templates), the couple
+list, and `useCurrentBranding('invoice')`. Gating on
+the invoice alone meant a new invoice showed no skeleton at all and then
+reflowed three times as each of the others landed.
+
+Two supporting changes make that gate cheap:
+
+- `useCurrentBranding()` is backed by React Query (`['current-branding',
+  surface]`) with `staleTime: 0`, so the several consumers inside one modal
+  (Link tab, PDF tab, pane header, and the modal's own gate) share a single
+  fetch while still refetching per mount. It also returns `brandLabel`, so
+  `builder-preview-pane.tsx` no longer runs its own `auth.getUser()`.
+- `getCurrentUser()` (`@/lib/supabase/current-user`) deduplicates
+  `supabase.auth.getUser()`. That call always hits the network and
+  supabase-js serialises concurrent calls, so opening the builder used to
+  issue ten of them back to back. See the module TSDoc for why the TTL is
+  deliberately 2 seconds.
+
+Measured on the dev server against the remote DB, first paint went from
+~3.9s to ~1.9-2.9s; the remainder is genuine query latency.
+
 ## Public Blocks components — `components/public-blocks/*` (Phase 11)
 
-Shared branded surface renderers. Each public surface (quote, invoice, contract, proposal, vendor timeline, questionnaire) consumes a block tree and renders it with the MC's branding (colours, fonts, corner radius, spacing).
+Shared branded surface renderers. Each public surface (invoice, contract, client portal, vendor timeline, questionnaire) consumes a block tree and renders it with the MC's branding (colours, fonts, corner radius, spacing).
 
 **Slots + Chrome Pattern:** The public component is the sole markup source. The editor injects `InlineText` slots (for editable fields: business name, heading, button text) as React node props. The editor's toolbar is a chrome overlay sitting above the public renderer without modifying DOM structure. **Two binding amendments:**
 1. Slots always render, even if empty (undefined slots render as nothing, not errors).
@@ -142,11 +169,10 @@ Shared branded surface renderers. Each public surface (quote, invoice, contract,
 | `public-block-renderer.tsx` | All surfaces | Orchestrator: renders a block tree by type (HeaderBanner, BusinessName, Text, Image, Spacer, Divider, Footer, Action, and surface-specific fixed cores). |
 | `header-banner.tsx` | All surfaces | Header image + overlay gradient. |
 | `business-name.tsx` | All surfaces | Logo + business name + tagline. |
-| `action-block.tsx` | Quote, Invoice, Proposal | Accept/Download/etc button. |
+| `action-block.tsx` | Invoice, Contract | Pay / Download / Sign button. |
 | `text-block.tsx` | All surfaces | Rich text with font/colour overrides. |
 | `image-block.tsx` | All surfaces (chrome) | Image with fit, focal point, rounding, padding. |
 | `spacer-block.tsx` | All surfaces (chrome) | Vertical spacing. |
-| `quote-body.tsx` | Quote surface (fixed) | Renders proposal options + acceptance flow. |
 | `invoice-items.tsx` | Invoice surface (fixed) | Line items + totals + payment schedule. |
 | `contract-body.tsx` | Contract surface (fixed) | Contract text content. |
 

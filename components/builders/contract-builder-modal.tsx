@@ -3,10 +3,10 @@
  *
  * Phase 3.1 rewrite — orchestrator over the shared
  * `components/builders/parts/*` set + the new contract-specific
- * parts (`contract-body-editor`, `contract-quote-link`,
- * `contract-signature-display`, `contract-preview-pane`).
+ * parts (`contract-body-editor`, `contract-signature-display`,
+ * `contract-preview-pane`).
  *
- * Mirrors the post-2C.2 proposal/invoice modal shape:
+ * Mirrors the post-2C.2 invoice modal shape:
  * - `BuilderModalShell` provides the modal frame, hero title input,
  *   state pill, overflow menu, trash icon.
  * - Right-pane preview shows the rendered contract HTML (live JSON
@@ -49,10 +49,6 @@ import {
 } from '@/components/builders/parts/builder-modal-shell';
 import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-pane';
 import { ContractBodyEditor } from '@/components/builders/parts/contract-body-editor';
-import {
-  ContractProposalLink,
-  type ContractProposalLinkOption,
-} from '@/components/builders/parts/contract-proposal-link';
 import { ContractSignatureDisplay } from '@/components/builders/parts/contract-signature-display';
 import type { JSONContent } from '@/components/builders/parts/contract-types';
 import type { PreviewDoc } from '@/components/builders/parts/preview-shared';
@@ -65,7 +61,6 @@ import {
   buildContractVariables,
   renderContractHtml,
 } from '@/lib/contracts/contract-variables';
-import { loadDefaultScheduleFirstStage } from '@/lib/payments/load-default-schedule';
 import { generateAndPrintPdf, publicBrandingToPdfOpts } from '@/lib/pdf/generate-pdf';
 import { createClient } from '@/lib/supabase/client';
 
@@ -78,8 +73,6 @@ interface Contract {
   expires_at: string | null;
   share_token: string;
   share_token_enabled: boolean;
-  /** Linked accepted proposal — drives {{total_amount}} / {{deposit_amount}}. */
-  proposal_id?: string | null;
   couple_id: string;
   signed_at: string | null;
   signer_name: string | null;
@@ -139,29 +132,43 @@ const DEFAULT_TEMPLATE: JSONContent = {
 };
 
 export interface ContractBuilderModalProps {
-  contractId: string;
-  coupleId: string;
-  coupleName: string;
+  /** `null` composes a fresh draft; the couple is picked in the modal. */
+  contractId: string | null;
+  /** Pre-selects the couple, e.g. when opened from a couple profile. */
+  initialCoupleId?: string;
+  initialCoupleName?: string;
   isOpen: boolean;
   onClose: () => void;
+  /** Fired with the new contract's id the first time a fresh draft is
+   *  saved, so a parent list can pick the row up. */
+  onCreated?: (contractId: string) => void;
 }
 
 export function ContractBuilderModal({
   contractId,
-  coupleId,
-  coupleName,
+  initialCoupleId,
+  initialCoupleName,
   isOpen,
   onClose,
+  onCreated,
 }: ContractBuilderModalProps) {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Adopt the id of a contract first saved from the "new" state so the
+  // detail query — and with it the share link, Send, and PDF actions —
+  // light up without reopening the modal.
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const effectiveId = contractId ?? savedId;
+  const isNew = !effectiveId;
+
   /* ─── form state ────────────────────────────────────────────── */
+  const [coupleId, setCoupleId] = useState<string | null>(initialCoupleId ?? null);
+  const [coupleName, setCoupleName] = useState<string | null>(initialCoupleName ?? null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState<JSONContent>(DEFAULT_TEMPLATE);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [linkedProposalId, setLinkedProposalId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmingRevoke, setConfirmingRevoke] = useState(false);
@@ -169,40 +176,34 @@ export function ContractBuilderModal({
 
   /* ─── data ──────────────────────────────────────────────────── */
   const { data: contract, isLoading } = useQuery({
-    queryKey: ['contract', contractId],
-    enabled: isOpen && !!contractId,
+    queryKey: ['contract', effectiveId],
+    enabled: isOpen && !!effectiveId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contracts')
         .select('*')
-        .eq('id', contractId)
+        .eq('id', effectiveId!)
         .single();
       if (error) throw error;
       return data as Contract;
     },
   });
 
-  // Linkable money sources for {{total_amount}} / {{deposit_amount}}:
-  // the couple's ACCEPTED proposals.
-  const { data: proposals } = useQuery({
-    queryKey: ['couple-accepted-proposals', coupleId],
-    enabled: isOpen && !!coupleId,
+  // Couples for the in-modal picker. Only needed while the couple is
+  // still changeable, i.e. before the draft has been saved.
+  const { data: couples } = useQuery({
+    queryKey: ['all-couples-for-contract'],
+    enabled: isOpen && isNew,
     queryFn: async () => {
+      const { data: userRes } = await supabase.auth.getUser();
+      if (!userRes.user) return [];
       const { data, error } = await supabase
-        .from('proposals')
-        .select('id, proposal_number, title, status, subtotal')
-        .eq('couple_id', coupleId)
-        .eq('status', 'accepted')
-        .order('accepted_at', { ascending: false });
+        .from('couples')
+        .select('id, name')
+        .eq('user_id', userRes.user.id)
+        .order('name', { ascending: true });
       if (error) throw error;
-      const options: ContractProposalLinkOption[] = (data ?? []).map((p) => ({
-        id: p.id,
-        proposal_number: p.proposal_number,
-        title: p.title,
-        status: p.status,
-        subtotal: Number(p.subtotal),
-      }));
-      return options;
+      return (data ?? []) as { id: string; name: string }[];
     },
   });
 
@@ -228,75 +229,13 @@ export function ContractBuilderModal({
       const { data } = await supabase
         .from('events')
         .select('date, venue')
-        .eq('couple_id', coupleId)
+        .eq('couple_id', coupleId!)
         .order('date', { ascending: true })
         .limit(1)
         .maybeSingle();
       return (data as FirstEventRow | null) ?? null;
     },
   });
-
-  // Optional: the linked ACCEPTED proposal — its recorded subtotal
-  // feeds the same variables.
-  const { data: linkedProposal } = useQuery({
-    queryKey: ['contract-linked-proposal', linkedProposalId],
-    enabled: isOpen && !!linkedProposalId,
-    queryFn: async () => {
-      if (!linkedProposalId) return null;
-      const { data } = await supabase
-        .from('proposals')
-        .select('subtotal')
-        .eq('id', linkedProposalId)
-        .maybeSingle();
-      if (!data) return null;
-      return {
-        total: Number(data.subtotal),
-      };
-    },
-  });
-
-  // Resolve the first stage of the MC's default schedule for the preview pane.
-  // Load and resolve both happen here rather than in the render memo below,
-  // because loadDefaultScheduleFirstStage is async and a memo cannot await.
-  // Keyed on the proposal total: the first stage is a percentage of it, so a
-  // different linked proposal means a different figure.
-  const { data: firstStageData, error: scheduleError } = useQuery({
-    queryKey: ['default-schedule-first-stage', linkedProposal?.total ?? null],
-    enabled: isOpen && !!linkedProposal,
-    queryFn: async () => {
-      if (!linkedProposal) return null;
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      const issueDate = new Date().toISOString().slice(0, 10);
-      const result = await loadDefaultScheduleFirstStage(
-        supabase,
-        user.id,
-        Math.round(linkedProposal.total * 100),
-        issueDate,
-      );
-
-      // Only an infrastructure failure is worth interrupting the MC for. A
-      // missing or invalid schedule renders as a dash, matching the send
-      // route, which logs the invalid case to Slack rather than blocking.
-      if (!result.ok) {
-        if (result.reason === 'read_error') throw result.error;
-        return null;
-      }
-      return result.firstStage
-        ? { amountCents: result.firstStage.amountCents, dueDate: result.firstStage.dueDate }
-        : null;
-    },
-  });
-
-  // Show error if schedule load fails
-  useEffect(() => {
-    if (scheduleError) {
-      toast('Failed to load payment schedule', 'error');
-    }
-  }, [scheduleError, toast]);
 
   /* ─── hydrate state from DB ─────────────────────────────────── */
   useEffect(() => {
@@ -308,9 +247,35 @@ export function ContractBuilderModal({
         : DEFAULT_TEMPLATE,
     );
     setExpiresAt(contract.expires_at);
-    setLinkedProposalId(contract.proposal_id ?? null);
+    setCoupleId(contract.couple_id);
     setDirty(false);
   }, [contract]);
+
+  // A saved contract carries only `couple_id`, so resolve the name for
+  // the picker + preview from whichever source knows it.
+  useEffect(() => {
+    if (!coupleId) {
+      setCoupleName(null);
+      return;
+    }
+    const match = couples?.find((c) => c.id === coupleId);
+    if (match) setCoupleName(match.name);
+    else if (coupleId === initialCoupleId && initialCoupleName) setCoupleName(initialCoupleName);
+  }, [coupleId, couples, initialCoupleId, initialCoupleName]);
+
+  // Start clean on the next open rather than reloading the draft that
+  // was just saved from the "new" state.
+  useEffect(() => {
+    if (isOpen) return;
+    setSavedId(null);
+    setCoupleId(initialCoupleId ?? null);
+    setCoupleName(initialCoupleName ?? null);
+    setTitle('');
+    setContent(DEFAULT_TEMPLATE);
+    setExpiresAt(null);
+    setDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset on close only
+  }, [isOpen]);
 
   /* ─── derived ───────────────────────────────────────────────── */
   const status = contract?.status ?? 'draft';
@@ -342,33 +307,39 @@ export function ContractBuilderModal({
     }
 
     const vars = buildContractVariables({
-      couple: { name: coupleName, email: null },
+      couple: { name: coupleName ?? '', email: null },
       firstEvent: firstEvent ?? null,
-      proposal: linkedProposal ?? null,
       userMeta,
-      firstStage: firstStageData ?? null,
     });
     return renderContractHtml(content, vars);
-  }, [canEdit, contract?.locked_content_html, content, coupleName, firstStageData, firstEvent, linkedProposal, userMeta]);
+  }, [canEdit, contract?.locked_content_html, content, coupleName, firstEvent, userMeta]);
 
   /* ─── mutations ─────────────────────────────────────────────── */
   const save = useMutation({
     mutationFn: async () => {
+      if (!coupleId) throw new Error('Pick a couple for this contract first');
       const input: SaveContractInput = {
-        contractId,
-        title: title || `Contract for ${coupleName}`,
+        contractId: effectiveId,
+        coupleId,
+        title: title || `Contract for ${coupleName ?? 'couple'}`,
         content,
         expiresAt: expiresAt,
-        proposalId: linkedProposalId,
       };
       const result = await saveContractAction(input);
       if (!result.ok) throw new Error(result.error);
       return result.data.id;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
       setDirty(false);
-      queryClient.invalidateQueries({ queryKey: ['contract', contractId] });
+      // First save of a fresh draft: adopt the new id so the detail
+      // query hydrates and the send/share actions become available.
+      if (!effectiveId) {
+        setSavedId(id);
+        onCreated?.(id);
+      }
+      queryClient.invalidateQueries({ queryKey: ['contract', id] });
       queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-couple-limit'] });
       queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
     },
     onError: (err) =>
@@ -376,21 +347,35 @@ export function ContractBuilderModal({
   });
 
   const send = async () => {
-    if (!contract) return;
-    if (dirty) await save.mutateAsync();
+    if (!coupleId) {
+      toast('Pick a couple for this contract first', 'error');
+      return;
+    }
+    // A never-saved draft has no row (and so no share token) for the
+    // send route to work against, so always save it first. `save`
+    // surfaces its own error toast; bail out rather than send on a
+    // stale document.
+    let idToSend = effectiveId;
+    if (!idToSend || dirty) {
+      try {
+        idToSend = await save.mutateAsync();
+      } catch {
+        return;
+      }
+    }
     setSending(true);
     try {
       const res = await fetch('/api/email/send-contract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contractId }),
+        body: JSON.stringify({ contractId: idToSend }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast(data.error || 'Failed to send contract', 'error');
       } else {
         toast('Contract sent');
-        queryClient.invalidateQueries({ queryKey: ['contract', contractId] });
+        queryClient.invalidateQueries({ queryKey: ['contract', idToSend] });
         queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
         queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
       }
@@ -401,13 +386,14 @@ export function ContractBuilderModal({
 
   const revoke = useMutation({
     mutationFn: async () => {
-      const result = await revokeContractAction(contractId);
+      if (!effectiveId) return;
+      const result = await revokeContractAction(effectiveId);
       if (!result.ok) throw new Error(result.error);
     },
     onSuccess: () => {
       toast('Contract revoked — you can now edit');
       setConfirmingRevoke(false);
-      queryClient.invalidateQueries({ queryKey: ['contract', contractId] });
+      queryClient.invalidateQueries({ queryKey: ['contract', effectiveId] });
       queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
       queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
     },
@@ -422,13 +408,16 @@ export function ContractBuilderModal({
 
   const remove = useMutation({
     mutationFn: async () => {
-      const result = await deleteContractAction(contractId);
+      // Nothing persisted yet — discarding is just closing the modal.
+      if (!effectiveId) return;
+      const result = await deleteContractAction(effectiveId);
       if (!result.ok) throw new Error(result.error);
     },
     onSuccess: () => {
-      toast('Contract deleted');
+      toast(effectiveId ? 'Contract deleted' : 'Draft discarded');
       setConfirmingDelete(false);
       queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-couple-limit'] });
       queryClient.invalidateQueries({ queryKey: ['all-contracts'] });
       onClose();
     },
@@ -455,7 +444,7 @@ export function ContractBuilderModal({
         documentNumber: contract.contract_number,
         title: contract.title,
         status: contract.status,
-        coupleName,
+        coupleName: coupleName ?? '',
         businessName: (userMeta.business_name as string | undefined) ?? '',
         items: [],
         subtotal: 0,
@@ -502,9 +491,9 @@ export function ContractBuilderModal({
   const previewDoc: PreviewDoc = {
     kind: 'contract',
     documentNumber: contract?.contract_number ?? 'CTR-…',
-    title: title || `Contract for ${coupleName}`,
+    title: title || `Contract for ${coupleName ?? 'couple'}`,
     status,
-    coupleName,
+    coupleName: coupleName ?? '',
     businessName: (userMeta.business_name as string | undefined) ?? null,
     items: [],
     taxRate: 0,
@@ -535,14 +524,14 @@ export function ContractBuilderModal({
         primaryAction={primaryAction}
         overflowItems={overflowItems}
         onDelete={() => setConfirmingDelete(true)}
-        deleteLabel="Delete contract"
+        deleteLabel={isNew ? 'Discard draft' : 'Delete contract'}
         loading={isLoading && !contract}
         title={title}
         onTitleChange={(v) => {
           setTitle(v);
           setDirty(true);
         }}
-        titlePlaceholder={`Contract for ${coupleName}`}
+        titlePlaceholder={coupleName ? `Contract for ${coupleName}` : 'Wedding MC contract'}
         titleReadOnly={!canEdit}
         previewPane={
           <BuilderPreviewPane doc={previewDoc} surface="contract" />
@@ -556,21 +545,25 @@ export function ContractBuilderModal({
             locked={!canEdit}
             saving={save.isPending}
             sending={sending}
-            hasCouple={true}
+            hasCouple={!!coupleId}
             onSave={() => save.mutate()}
             onSend={() => void send()}
           />
         }
       >
-        {/* Meta row — couple is read-only (contract is bound to one
-            couple at creation), expiry is editable. */}
+        {/* Meta row — the couple is chosen here on a fresh draft, then
+            fixed: a contract is bound to one couple once it exists, so
+            the picker locks after the first save. Expiry stays
+            editable while the contract is a draft. */}
         <BuilderMetaRow
           selectedCoupleId={coupleId}
           selectedCoupleName={coupleName}
-          coupleOptions={[]}
-          canEditCouple={false}
-          onSelectCouple={() => {
-            /* couple isn't editable on contracts */
+          coupleOptions={couples ?? []}
+          canEditCouple={isNew}
+          onSelectCouple={(c) => {
+            setCoupleId(c.id);
+            setCoupleName(c.name);
+            setDirty(true);
           }}
           dateValue={expiresAt}
           dateLabel="Set expiry date"
@@ -581,20 +574,6 @@ export function ContractBuilderModal({
           }}
           canEdit={canEdit}
         />
-
-        {/* Linked-proposal picker — separate row since it needs more
-            width than the meta-row's date / terms slots. */}
-        <div className="mt-3">
-          <ContractProposalLink
-            selectedProposalId={linkedProposalId}
-            options={proposals ?? []}
-            canEdit={canEdit}
-            onSelect={(id) => {
-              setLinkedProposalId(id);
-              setDirty(true);
-            }}
-          />
-        </div>
 
         {/* Body */}
         <div className="mt-6">
@@ -654,9 +633,13 @@ export function ContractBuilderModal({
       />
       <ConfirmDialog
         open={confirmingDelete}
-        title="Delete this contract?"
-        description="This removes the contract permanently."
-        confirmLabel="Delete"
+        title={isNew ? 'Discard this draft?' : 'Delete this contract?'}
+        description={
+          isNew
+            ? "Nothing has been saved yet, so this just closes the builder."
+            : 'This removes the contract permanently.'
+        }
+        confirmLabel={isNew ? 'Discard' : 'Delete'}
         loading={remove.isPending}
         onConfirm={() => remove.mutate()}
         onCancel={() => setConfirmingDelete(false)}

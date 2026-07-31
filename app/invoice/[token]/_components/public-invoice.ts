@@ -41,6 +41,9 @@ export interface PublicInvoice extends PublicBranding {
   status: string;
   subtotal: number;
   tax_rate: number;
+  /** Display-only: renders a "Prices include GST" note under the total.
+   *  Never participates in subtotal, tax, or total. */
+  gst_inclusive: boolean;
   due_date: string | null;
   notes: string | null;
   paid_at: string | null;

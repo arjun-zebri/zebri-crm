@@ -62,7 +62,9 @@ import { execSync } from 'node:child_process';
 // Payment schedules phase: replaced two-stage deposit model with N-stage
 // payment timeline; rewrite of payment-schedule.tsx removed set-state-in-effect
 // error → 64 → 63.
-const ERROR_BUDGET = 63;
+// Feature removal (2026-07-31): deleting the retired offer-document surface
+// and its builders cleared one lint error → 62.
+const ERROR_BUDGET = 62;
 // Phase 1 follow-up (auth UI polish + billing tab redesign) further
 // reduced warnings: 826 → 818 → 769 → 607 (in-app subscription
 // management + couples-page autofix sweep). Phase 2C
@@ -137,7 +139,7 @@ const ERROR_BUDGET = 63;
 // legacy managers and their stray hook-deps suppressions → 395 → 394.
 // Phase G quotes removal: cleaned up imports/exports from files that
 // previously exported quote types or references → 394 → 392.
-// Proposal branding audit follow-ups: starter-designs work removed a
+// Branding audit follow-ups: starter-designs work removed a
 // stale unused import in brand-panel → 342 → 341.
 // P3.1 business-section extraction: fixed @next/next/no-img-element and
 // @typescript-eslint/no-unused-expressions violations by using Image from
@@ -168,14 +170,20 @@ const ERROR_BUDGET = 63;
 // STATUS_COLORS constants, dropping one more warning (271 -> 270).
 // Welcome onboarding wizard: pure utility modules + component extraction cleared
 // unused-import warnings across preview files (270 -> 267).
-// Proposals single/multi-package + branding batch drifted warnings up to 307
-// (mostly import-order across the new proposal/branding surfaces). Auto-fixed
+// Single/multi-package + branding batch drifted warnings up to 307
+// (mostly import-order across the new branding surfaces). Auto-fixed
 // import-order in the changed files, removed dead imports/vars, and applied the
 // established disable-comment convention for the deliberate app->lib Block type
 // import (no-restricted-imports) and public-branding logo <img> (no-img-element).
 // Also made the eslint `.next` ignore recursive so a local git worktree's build
 // output stops polluting the count (307 -> 265). Locking in at 265.
-const WARNING_BUDGET = 265;
+// Contract create-in-modal: deleted new-contract-popover.tsx (raw
+// inputs + off-token colours) and the now-dead unused imports in the
+// payments header and couple-contracts (265 -> 261). Locking in.
+// Feature removal (2026-07-31): deleting the retired offer-document surface,
+// builders, automations, and email cleared dead imports/vars net of the ones
+// the removal exposed (261 -> 259). Locking in.
+const WARNING_BUDGET = 259;
 
 function runEslintJson() {
   try {

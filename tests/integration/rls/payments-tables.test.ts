@@ -14,11 +14,8 @@
  *   - invoice_items
  *   - stripe_customers
  *
- * The quote tables this suite used to cover were dropped with the
- * proposals rollout; the successor tables' cross-tenant denial lives
- * in `tests/integration/payments/public-proposal-rpcs.test.ts`
- * (proposals / proposal_options / proposal_option_items) and
- * `tests/integration/templates/packages-v2.test.ts` (provenance).
+ * The quote tables this suite used to cover were dropped during the
+ * payments consolidation.
  *
  * This locks in the §5 DoD RLS-matrix tick for the /payments page.
  */

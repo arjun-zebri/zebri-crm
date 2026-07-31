@@ -14,23 +14,23 @@ describe('repairBlocks (redesign)', () => {
 
   it('migrates headerBanner to image, preserving the image', () => {
     const input: Block[] = [{ id: 'h', type: 'headerBanner', heightPx: 200 } as Block]
-    const out = repairBlocks('proposal', input)
+    const out = repairBlocks('invoice', input)
     expect(out[0]!.type).toBe('image')
   })
 
-  it('expands a legacy proposalBody marker into four package blocks', () => {
+  it('drops an unknown legacy block type', () => {
     const input: Block[] = [
       { id: 'bn', type: 'businessName' },
-      { id: 'pb', type: 'proposalBody', locked: true },
-      { id: 'ac', type: 'action', primary: 'Accept', secondary: null },
+      { id: 'pb', type: 'proposalBody', locked: true } as unknown as Block,
+      { id: 'ac', type: 'action', primary: 'Pay now', secondary: null },
     ]
-    const out = types(repairBlocks('proposal', input))
-    expect(out).toEqual(['businessName', 'packageHeader', 'packageDetails', 'packageLineItems', 'packageInclusions', 'packageTotals', 'action'])
+    const out = types(repairBlocks('invoice', input))
+    expect(out).toEqual(['businessName', 'action'])
   })
 
   it('is idempotent', () => {
-    const once = repairBlocks('proposal', [{ id: 'pb', type: 'proposalBody', locked: true }, { id: 'ac', type: 'action', primary: 'A', secondary: null }])
-    const twice = repairBlocks('proposal', once)
+    const once = repairBlocks('invoice', [{ id: 'h', type: 'headerBanner', heightPx: 200 } as Block, { id: 'ac', type: 'action', primary: 'A', secondary: null }])
+    const twice = repairBlocks('invoice', once)
     expect(types(twice)).toEqual(types(once))
   })
 

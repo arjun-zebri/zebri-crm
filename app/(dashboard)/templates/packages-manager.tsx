@@ -35,7 +35,6 @@ import { StarterCatalogModal } from './starter-catalog-modal'
 import { TemplatesActions } from './templates-actions-slot'
 import { TemplatesTwoPane } from './templates-two-pane'
 import { usePackageCategories } from './use-package-categories'
-import { usePackageUsage } from './use-package-usage'
 
 /** A single priced line item within a package. */
 interface PackageItem {
@@ -114,23 +113,17 @@ function PackageRow({
   )
 }
 
-/** Meta line for the detail card: "Used in N proposals · M accepted ·
- *  Edited X ago". Usage parts hide until there is history. */
-function PackageCaption({ packageId, updatedAt }: { packageId: string; updatedAt?: string | null }) {
-  const { data } = usePackageUsage(packageId)
+/** Meta line for the detail card: "Edited X ago". */
+function PackageCaption({ updatedAt }: { updatedAt?: string | null }) {
   // Capture "now" once at mount via a lazy initializer (Date.now() during
   // render is impure); the relative "Edited X ago" recomputes from props.
   const [nowMs] = useState(() => Date.now())
 
-  const parts: string[] = []
-  if (data && data.total > 0) {
-    parts.push(`Used in ${String(data.total)} proposal${data.total !== 1 ? 's' : ''}`)
-    if (data.accepted > 0) parts.push(`${String(data.accepted)} accepted`)
-  }
-  if (updatedAt) parts.push(`Edited ${formatRelativeTime(updatedAt, nowMs)}`)
-  if (parts.length === 0) return null
+  if (!updatedAt) return null
 
-  return <p className="text-xs text-text-muted">{parts.join(' · ')}</p>
+  return (
+    <p className="text-xs text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
+  )
 }
 
 /**
@@ -632,7 +625,7 @@ export function PackagesManager() {
                 subtitle={selectedPkg.notes}
                 archived={!!selectedPkg.archived_at}
                 category={categories.find((c) => c.id === selectedPkg.category_id) ?? null}
-                meta={<PackageCaption packageId={selectedPkg.id} updatedAt={selectedPkg.updated_at} />}
+                meta={<PackageCaption updatedAt={selectedPkg.updated_at} />}
                 actions={
                   <>
                     <Button

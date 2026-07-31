@@ -43,9 +43,9 @@ function makeCtx(): RunContext {
     triggerEvent: {
       id: 'evt',
       user_id: 'u1',
-      source_table: 'proposals',
-      source_id: 'p1',
-      event_type: 'proposal_overdue',
+      source_table: 'invoices',
+      source_id: 'i1',
+      event_type: 'invoice_overdue',
       payload: {},
       couple_id: 'c1',
       created_at: new Date().toISOString(),

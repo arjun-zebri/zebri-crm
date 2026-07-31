@@ -76,7 +76,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
   const [enabledSurfaces, setEnabledSurfaces] = useState<SurfaceTab[]>(
     props.initial.enabledSurfaces && props.initial.enabledSurfaces.length > 0
       ? props.initial.enabledSurfaces
-      : ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
+      : ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
   )
   const [loading, setLoading] = useState(false)
 
@@ -125,7 +125,7 @@ export function OnboardingWizard(props: OnboardingWizardProps) {
       fontHeading: fontHeading || props.initial.fontHeading || 'playfair',
       fontBody: fontBody || props.initial.fontBody || 'inter',
       density: density || props.initial.density || 'cozy',
-      enabledSurfaces: ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
+      enabledSurfaces: ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'],
     }
     setLoading(true)
     try {

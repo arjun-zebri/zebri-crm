@@ -1,6 +1,8 @@
 # Document Blocks — Redesign Spec
 
 **Status:** Implemented 2026-07-23 on branch feature/proposals-phase-a. Integration/e2e tests deferred to CI (local Docker unavailable). All phases of block decomposition, readiness validation, and onboarding fixes complete.
+
+**Update (2026-07-30):** The Proposal document was removed entirely, and with it the package block types (`proposalBody`, `packageHeader`, `packageDetails`, `packageLineItems`, `packageInclusions`, `packageTotals`). The shared `action` block survives. The current document set is five: Invoice, Contract, Client Portal, Run sheet, Questionnaire. The proposal-specific and package-block detail below has been pruned to match; the readiness, validation, and onboarding sections still apply to the remaining documents.
 **Owner:** Arjun
 **Supersedes block taxonomy in:** `branding-editor-redesign.md` (block list),
 `blocks/types.ts`, `blocks/blocks-by-surface.ts`, `blocks/policy.ts`,
@@ -8,20 +10,18 @@
 
 ## 1. Goal
 
-Redefine the block model behind the six branding documents so that:
+Redefine the block model behind the five branding documents so that:
 
 1. Every block is clearly classified as **General** (usable on all
    documents) or **Document-specific** (only on its own document).
 2. Each document has an explicit, enforced set of **required** and
    **optional** blocks, and the editor tells the user in plain language
    what is missing before a document can be sent.
-3. The monolithic `proposalBody` core is broken into real, editable
-   blocks.
-4. Two onboarding bugs are fixed at the same time (modal flash, default
+3. Two onboarding bugs are fixed at the same time (modal flash, default
    styling needing a hard refresh).
 
-The six documents are unchanged: **Proposal, Invoice, Contract, Client
-Portal, Run sheet (vendor), Questionnaire**.
+The five documents are: **Invoice, Contract, Client Portal, Run sheet
+(vendor), Questionnaire**.
 
 ## 2. Block classification
 
@@ -53,8 +53,8 @@ fields (`facebook_url`, `instagram_url`, `twitter_url`, `pinterest_url`,
 
 **Removed:** `headerBanner` is deleted entirely. There is no banner
 block. Existing `headerBanner` blocks migrate to an `image` block during
-block repair (see §6). The old `action` block is removed as a general
-block — CTAs are now document-specific (Accept / Pay / Sign).
+block repair (see §6). The shared `action` block is retained and carries
+the document CTA (Pay on invoices, Sign on contracts).
 
 ### 2.2 Document-specific blocks
 
@@ -62,17 +62,6 @@ Required unless marked optional. "Required" means: if the block is
 absent, the document is flagged **not ready to send** (see §4). Required
 blocks **can be reordered and can be deleted**; deleting one raises the
 not-ready flag until it is re-added from the palette.
-
-**Proposal** — replaces the single locked `proposalBody` marker with
-five real blocks:
-
-| Block                       | Required? |
-|-----------------------------|-----------|
-| Package header              | Required  |
-| Package details             | Required  |
-| Package optional inclusions | Optional  |
-| Package totals              | Required  |
-| Accept CTA                  | Required  |
 
 **Invoice:**
 
@@ -115,8 +104,6 @@ without a mode.
 
 Fresh templates ship valid out of the box (all required blocks present).
 
-- **Proposal:** My details → Package header → Package details → Package
-  optional inclusions → Package totals → Accept CTA → Footer
 - **Invoice:** My details → Invoice header → Invoice line items → Invoice
   totals → Payment schedule → Text (you have a choice to choose between sentence) → Bank details → Pay CTA → Footer
   (default includes **both** Bank details and Pay CTA)
@@ -138,8 +125,8 @@ Per-document checks against the block tree only:
 - Questionnaire: a mode is selected.
 
 When a check fails, the editor shows a **"Not ready to send"** panel that
-names what is missing in plain language, e.g. "Add Package totals and an
-Accept CTA to finish this proposal." No jargon, no block-type codes.
+names what is missing in plain language, e.g. "Add Invoice totals and a
+Pay CTA to finish this invoice." No jargon, no block-type codes.
 
 ### 4.2 Layer B — Account-wide readiness
 
@@ -196,11 +183,9 @@ is ready, not only on manual remount).
 `lib/branding/validate-blocks.ts`) must:
 
 - Migrate any `headerBanner` block → `image` block (preserve the image).
-- Drop the old `action` general block type; map existing proposal accept
-  actions to the new **Accept CTA**, invoice pay actions to **Pay CTA**,
-  contract sign actions to **Sign CTA**.
-- Expand any legacy `proposalBody` marker into the five proposal blocks
-  (Package header, details, optional inclusions, totals, Accept CTA).
+- Drop any legacy `proposalBody` marker and the removed package block
+  types (`packageHeader`, `packageDetails`, `packageLineItems`,
+  `packageInclusions`, `packageTotals`); the `action` block is kept.
 - Ensure required blocks exist; do **not** auto-delete extra optional
   blocks the user has added.
 - Stay idempotent (safe to run on every load/save).
@@ -218,7 +203,6 @@ rows so current users are migrated without manual action.
 - `app/(dashboard)/branding/blocks/sample-doc.ts` — preview data
 - `lib/branding/validate-blocks.ts` — repair / migration
 - `lib/branding/public-renderer.tsx` + `lib/branding/public-blocks/*` — public rendering
-- `components/proposal/proposal-document-body.tsx` + proposal public page — proposal decomposition
 - `app/(dashboard)/branding/onboarding/onboarding-modal.tsx`,
   `lib/branding/onboarding-gate.ts`,
   `app/(dashboard)/branding/page.tsx` — onboarding fixes
@@ -233,7 +217,7 @@ rows so current users are migrated without manual action.
   at-least-one rule, questionnaire-mode rule, and `repairBlocks`
   migration paths.
 - Integration test proving cross-tenant RLS denial on `user_branding`.
-- E2E: build a proposal/invoice, delete a required block, see the
+- E2E: build an invoice, delete a required block, see the
   not-ready flag; onboarding modal shows once and default styling paints
   without refresh.
 - Design-system compliant (tokens + primitives). Explicit loading / empty
@@ -247,5 +231,3 @@ rows so current users are migrated without manual action.
 - Block-tree rendering redesign on public surfaces beyond what the block
   changes require.
 - Any new document type.
-- Changing how proposal package data is authored (only how it is split
-  into blocks for display).

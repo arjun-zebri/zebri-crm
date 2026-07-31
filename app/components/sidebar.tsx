@@ -17,6 +17,7 @@ import {
   Paintbrush,
   Sparkles,
   FileStack,
+  RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -172,6 +173,27 @@ export function Sidebar({ mobileOpen, onMobileClose = () => {}, isExpanded, onTo
                 </Link>
               );
             })}
+
+            {/* TEMPORARY: dev-only branding-onboarding re-trigger. Clears the
+                paint-hint cache and force-opens the wizard via ?onboarding=1.
+                Never ships to production: the NODE_ENV check strips it from
+                the build. Remove with the branding page's forceOnboarding
+                branch once onboarding QA has a permanent home. */}
+            {process.env.NODE_ENV === "development" && (
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem("zebri:branding-onboarded");
+                  window.location.href = "/branding?onboarding=1";
+                }}
+                className="w-full flex items-center gap-3 px-[10px] py-3 md:py-2.5 rounded-xl text-base text-gray-800 hover:bg-gray-50 hover:text-gray-900 transition whitespace-nowrap cursor-pointer"
+              >
+                <RotateCcw size={18} strokeWidth={1.5} className="flex-shrink-0" />
+                <span className={`opacity-100 ${isExpanded ? "md:opacity-100" : "md:opacity-0"} transition-opacity duration-300 text-[13px]`}>
+                  Replay onboarding
+                </span>
+              </button>
+            )}
 
             {user && (
               <div className="border-t border-gray-200 mt-2 pt-2">

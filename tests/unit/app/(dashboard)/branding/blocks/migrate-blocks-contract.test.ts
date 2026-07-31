@@ -209,7 +209,7 @@ describe('migrateBlocks — contract surface', () => {
         text: 'PARTIES\n\nThis is a quote that happens to start with PARTIES.',
       },
     ];
-    const result = migrateBlocks(quoteWithLookalike, 'proposal');
+    const result = migrateBlocks(quoteWithLookalike, 'invoice');
     expect(result.find((b) => b.type === 'contractBody')).toBeUndefined();
     expect(result.find((b) => b.type === 'text')).toBeDefined();
   });

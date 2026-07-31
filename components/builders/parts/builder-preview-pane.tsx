@@ -19,9 +19,9 @@
 'use client';
 
 import { ExternalLink, FileText, Globe, Mail, Palette } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { createClient } from '@/lib/supabase/client';
+import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 
 import { PreviewEmail } from './preview-email';
 import { PreviewPaymentPage } from './preview-payment-page';
@@ -33,9 +33,9 @@ export type PreviewTab = 'pdf' | 'email' | 'payment_page';
 export interface BuilderPreviewPaneProps {
   doc: PreviewDoc;
   /** Used by the payment-page tab to load the right block tree +
-   *  default fonts. Quote builder passes 'quote'; invoice
-   *  'invoice'; contract 'contract'. */
-  surface: 'proposal' | 'invoice' | 'contract';
+   *  default fonts. Invoice builder passes 'invoice'; contract
+   *  'contract'. */
+  surface: 'invoice' | 'contract';
   /** Couple's email for the "To:" line of the email preview.
    *  Optional — when missing the preview shows a placeholder. */
   coupleEmail?: string | null | undefined;
@@ -51,40 +51,10 @@ const TABS: { id: PreviewTab; label: string; icon: typeof FileText }[] = [
 
 export function BuilderPreviewPane({ doc, surface, coupleEmail }: BuilderPreviewPaneProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('payment_page');
-  const [brandingLabel, setBrandingLabel] = useState<string | null>(null);
-
-  // Resolve the active brand-kit name for the "Branded as …" link.
-  // Preference order:
-  //   1. `active_kit_id` → match in `brand_kits[]` by id → kit.name
-  //   2. `brand_kit_name` (legacy default-kit field)
-  //   3. `business_name` (fallback while a kit isn't named)
-  // Null when none of these are set — the label renders as
-  // "Using default branding".
-  useEffect(() => {
-    let cancelled = false;
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (cancelled) return;
-      const meta = (data.user?.user_metadata ?? {}) as {
-        active_kit_id?: string | null;
-        brand_kits?: { id: string; name?: string }[];
-        brand_kit_name?: string;
-        business_name?: string;
-      };
-      const kit = meta.active_kit_id
-        ? meta.brand_kits?.find((k) => k.id === meta.active_kit_id)
-        : undefined;
-      const label =
-        kit?.name?.trim() ||
-        meta.brand_kit_name?.trim() ||
-        meta.business_name?.trim() ||
-        null;
-      setBrandingLabel(label);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Shares the cached branding fetch with the PDF + Link tabs below
+  // rather than issuing its own `auth.getUser()`, so the header label
+  // and the preview surface land on the same beat.
+  const { brandLabel } = useCurrentBranding(surface);
 
   return (
     // Bordless tonal wrapper — the bg-surface-muted is enough to
@@ -119,9 +89,9 @@ export function BuilderPreviewPane({ doc, surface, coupleEmail }: BuilderPreview
       <div className="flex items-center justify-between gap-2 text-caption text-text-muted">
         <span className="inline-flex items-center gap-1.5">
           <Palette size={12} strokeWidth={1.5} className="text-text-subtle" />
-          {brandingLabel ? (
+          {brandLabel ? (
             <>
-              Branded as <span className="text-text">{brandingLabel}</span>
+              Branded as <span className="text-text">{brandLabel}</span>
             </>
           ) : (
             <span className="italic">Using default branding</span>

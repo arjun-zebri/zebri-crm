@@ -1,5 +1,13 @@
 # Custom payment schedules
 
+> **PARTIALLY OBSOLETE (2026-07-30):** the proposal-facing half of this design
+> (contracts seeding an invoice + payment schedule from an accepted proposal on
+> signing) is superseded by the proposals removal
+> ([docs/superpowers/specs/2026-07-30-remove-proposals-design.md](2026-07-30-remove-proposals-design.md)).
+> Invoices are fully manual now; signing a contract creates nothing. The
+> invoice-side payment-schedule design (stages on manually created invoices)
+> still stands.
+
 Status: approved for planning
 Date: 2026-07-28
 Revised: 2026-07-30

@@ -82,6 +82,7 @@ export function InvoiceBrandedCard({
     items: invoice.items,
     subtotal: invoice.subtotal,
     taxRate: invoice.tax_rate ?? 0,
+    gstInclusive: invoice.gst_inclusive ?? false,
   };
 
   // AU tax invoices must carry an identifying number, so the reference is

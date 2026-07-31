@@ -3,19 +3,8 @@
 import { ImageIcon, LayoutDashboard, Clock, Users2, Receipt, FileSignature, Music, FileText } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { PackageDetails } from '@/components/proposal/package-details'
-import { PackageHeader } from '@/components/proposal/package-header'
-import { PackageInclusions } from '@/components/proposal/package-inclusions'
-import { PackageLineItems } from '@/components/proposal/package-line-items'
-import { PackageTotals } from '@/components/proposal/package-totals'
-import {
-  ProposalBlockProvider,
-  type ProposalBlockContextValue,
-} from '@/components/proposal/proposal-block-context'
-import { PROPOSAL_SAMPLE_MULTI } from '@/components/proposal/proposal-sample-data'
-import { getTextColor, pillForeground } from '@/lib/branding/contrast'
+import { pillForeground } from '@/lib/branding/contrast'
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import { resolveProposalLabels } from '@/lib/branding/proposal-labels'
 import { RenderAction as PublicRenderAction, type ActionSlots } from '@/lib/branding/public-blocks/action'
 import { RenderBusinessName as PublicRenderBusinessName } from '@/lib/branding/public-blocks/business-name'
 import { RenderHeaderBanner as PublicRenderHeaderBanner, type HeaderBannerInteraction } from '@/lib/branding/public-blocks/header-banner'
@@ -26,10 +15,7 @@ import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
 import { RenderTitle as PublicRenderTitle, type TitleSlots } from '@/lib/branding/public-blocks/title'
 import { RenderTotals as PublicRenderTotals } from '@/lib/branding/public-blocks/totals'
 import { VarChip } from '@/lib/branding/public-blocks/var-chip'
-import { htmlToPlainText } from '@/lib/branding/sanitize'
 import { roleDefaults } from '@/lib/branding/type-defaults'
-import { defaultSelection } from '@/lib/payments/proposal-view'
-import type { ProposalViewBranding } from '@/lib/payments/proposal-view'
 import { DENSITY_PADDING } from '@/types/branding-preview'
 import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 
@@ -51,11 +37,6 @@ import type {
   PaymentDetailsBlock,
   ActionBlock,
   ImageBlock,
-  PackageHeaderBlock,
-  PackageDetailsBlock,
-  PackageLineItemsBlock,
-  PackageInclusionsBlock,
-  PackageTotalsBlock,
   QuestionnaireBodyBlock,
   PaymentScheduleBlock,
 } from './types'
@@ -756,9 +737,7 @@ export function RenderAction({
         placeholder={
           surface === 'invoice'
             ? 'Add a note above the button, e.g. how to pay…'
-            : surface === 'proposal'
-              ? 'Add a note above the button, e.g. what happens next…'
-              : 'Add a note above the button…'
+            : 'Add a note above the button…'
         }
         as="span"
       />
@@ -809,7 +788,7 @@ export function RenderAction({
           onClick={(e) => {
             e.stopPropagation()
             updateBlock<ActionBlock>(block.id, {
-              secondary: surface === 'proposal' ? 'Decline' : 'Secondary',
+              secondary: 'Secondary',
             })
           }}
           className={`absolute left-1/2 -translate-x-1/2 mt-2 px-4 border border-dashed border-text-muted rounded-md text-xs text-text-muted hover:text-text hover:border-text cursor-pointer transition ${
@@ -1148,121 +1127,6 @@ export function RenderContractBody({ state }: { state: BrandPreviewState }) {
         </div>
       </div>
     </div>
-  )
-}
-
-// ── Proposal body (fixed core) ────────────────────────────────────────────────
-
-/** Map the editor's preview state onto the proposal view's branding. */
-function proposalBranding(state: BrandPreviewState): ProposalViewBranding {
-  return {
-    pageBg: state.surfaceColor || '#FFFFFF',
-    textColor: state.textColor || '#111827',
-    mutedColor: state.textColor || '#6B7280',
-    brand: state.brandColor || '#111827',
-    accent: state.brandColor || state.brandColor || '#111827',
-    secondaryColor: state.secondaryColor || '#FFFFFF',
-    secondaryTextColor: getTextColor(state.secondaryColor || '#FFFFFF'),
-    headingColor: state.textColor || '#111827',
-    subheadingColor: state.textColor || '#6B7280',
-    radius: state.cornerRadius ?? 16,
-    borderColor: state.borderColor || '#E5E7EB',
-    cornerRadius: state.cornerRadius ?? 8,
-    headingFontFamily: FONT_STACKS[state.fontHeading],
-    bodyFontFamily: FONT_STACKS[state.fontBody],
-    headingWeight: state.fontWeight,
-    docPadding: 0, // the block-renderer already applies doc padding
-    logoUrl: null, // logo lives in its own block on this surface
-    headerImageUrl: null, // header banner is its own block
-    businessName: state.businessName ? htmlToPlainText(state.businessName) : null,
-    tagline: state.tagline ? htmlToPlainText(state.tagline) : null,
-    abn: state.abn || null,
-    labels: resolveProposalLabels(state.proposalLabels),
-  }
-}
-
-
-
-// ── Package blocks (proposal decomposed) ───────────────────────────────
-//
-// The editor previews render the exact same public package components the
-// public proposal page uses, wrapped in a sample block context. This is the
-// same reuse pattern the line-items / totals previews follow, so the editor
-// and the sent document can never drift in styling or padding.
-
-/**
- * Build a sample proposal block context for the editor preview: the "Full Day"
- * sample option with its default add-on selection, non-interactive (no choose /
- * toggle handlers), styled from the editor's live branding state.
- */
-function sampleProposalContext(state: BrandPreviewState): ProposalBlockContextValue {
-  const chosen = PROPOSAL_SAMPLE_MULTI[1]!
-  return {
-    options: PROPOSAL_SAMPLE_MULTI,
-    chosenId: chosen.id,
-    selection: defaultSelection(chosen),
-    onChoose: undefined,
-    onToggle: undefined,
-    branding: publicBrandingFromEditorState(state),
-    view: proposalBranding(state),
-    expiresAt: null,
-    state: 'active',
-  }
-}
-
-/** Editor preview for the packageHeader block. */
-export function RenderPackageHeader({ block, state }: RenderProps<PackageHeaderBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageHeader block={block} variablePreview />
-    </ProposalBlockProvider>
-  )
-}
-
-/** Editor preview for the packageDetails block. */
-export function RenderPackageDetails({ block, state }: RenderProps<PackageDetailsBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageDetails block={block} variablePreview />
-    </ProposalBlockProvider>
-  )
-}
-
-/** Editor preview for the packageLineItems block. */
-export function RenderPackageLineItems({ block, state, updateBlock }: RenderProps<PackageLineItemsBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageLineItems
-        block={block}
-        variablePreview
-        headingSlot={
-          <InlineText
-            value={block.heading || 'Included services'}
-            onChange={(v) => updateBlock<PackageLineItemsBlock>(block.id, { heading: v })}
-            placeholder="Included services"
-            as="span"
-          />
-        }
-      />
-    </ProposalBlockProvider>
-  )
-}
-
-/** Editor preview for the packageInclusions block. */
-export function RenderPackageInclusions({ block, state }: RenderProps<PackageInclusionsBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageInclusions block={block} variablePreview />
-    </ProposalBlockProvider>
-  )
-}
-
-/** Editor preview for the packageTotals block. */
-export function RenderPackageTotals({ block, state }: RenderProps<PackageTotalsBlock>) {
-  return (
-    <ProposalBlockProvider value={sampleProposalContext(state)}>
-      <PackageTotals block={block} variablePreview />
-    </ProposalBlockProvider>
   )
 }
 

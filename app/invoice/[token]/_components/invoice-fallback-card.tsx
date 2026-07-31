@@ -367,6 +367,21 @@ export function InvoiceFallbackCard({
               {formatCurrency(total)}
             </span>
           </div>
+          {/* Tax disclosure, not a money row: it sits under the total so
+              nothing in the tally above it changes. */}
+          {invoice.gst_inclusive ? (
+            <p
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
+            >
+              Prices include GST
+            </p>
+          ) : null}
         </div>
       </div>
 

@@ -92,13 +92,6 @@ describe('renderTemplate', () => {
     expect(renderTemplate('{{nope.foo}}', ctx)).toBe('')
   })
 
-  it('reads from prior action outputs when payload lacks the field', () => {
-    const ctx = makeCtx({
-      actionResults: { 'action-1': { proposal_link: 'https://example.com/proposal/abc' } as never },
-    })
-    expect(renderTemplate('{{proposal.link}}', ctx)).toBe('https://example.com/proposal/abc')
-  })
-
   it('resolves {{questionnaire.link}} from a prior send-questionnaire action', () => {
     const ctx = makeCtx({
       actionResults: { 'action-1': { questionnaire_link: 'https://example.com/questionnaire/xyz' } as never },

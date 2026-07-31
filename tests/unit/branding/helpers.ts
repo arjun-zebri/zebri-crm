@@ -1,4 +1,3 @@
-import { PROPOSAL_LABEL_DEFAULTS } from '@/lib/branding/proposal-labels'
 import type { PublicBranding } from '@/lib/branding/public-branding'
 
 /**
@@ -48,7 +47,6 @@ export function makeBranding(overrides?: Partial<PublicBranding>): PublicBrandin
     density: 'cozy',
     corner_radius: 8,
     doc_padding: 0,
-    proposal_labels: PROPOSAL_LABEL_DEFAULTS,
     theme_preset: 'minimal',
     email_show_logo: true,
     email_logo_align: 'left',

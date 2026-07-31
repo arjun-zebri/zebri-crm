@@ -60,6 +60,13 @@ export interface PublicDocData {
   items: PublicDocItem[]
   subtotal: number
   taxRate: number
+  /**
+   * Invoice-only display flag. When true the totals block renders a
+   * "Prices include GST" note under the total, so a couple looking at a
+   * GST-inclusive price knows the tax is already covered. Purely
+   * informational: it never participates in subtotal, tax, or total.
+   */
+  gstInclusive?: boolean
   discountType?: 'percentage' | 'fixed' | null
   discountValue?: number | null
   /**

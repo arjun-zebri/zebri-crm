@@ -43,7 +43,6 @@ describe('user_branding — cross-tenant RLS denial', () => {
       quote: [{ id: 'title-a', type: 'title' as const }],
       invoice: [],
       contract: [],
-      proposal: [],
       vendorTimeline: [],
       questionnaire: [],
     }
@@ -78,7 +77,6 @@ describe('user_branding — cross-tenant RLS denial', () => {
       quote: [{ id: 'title-a', type: 'title' as const }],
       invoice: [],
       contract: [],
-      proposal: [],
       vendorTimeline: [],
       questionnaire: [],
     }
@@ -175,7 +173,6 @@ describe('user_branding — cross-tenant RLS denial', () => {
         quote: [{ id: 'evil', type: 'title' as const }],
         invoice: [],
         contract: [],
-        proposal: [],
         vendorTimeline: [],
         questionnaire: [],
       },

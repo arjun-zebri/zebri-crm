@@ -10,7 +10,6 @@
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
 import type { HeadingFont, BodyFont, FontWeight } from '@/lib/branding/fonts'
-import type { ProposalLabels } from '@/lib/branding/proposal-labels'
 import type { TextCase } from '@/lib/branding/text-case'
 import type { Density } from '@/lib/branding/themes'
 
@@ -82,8 +81,6 @@ export interface BrandPreviewState {
     songs: boolean
     files: boolean
   }
-  /** Editable proposal section wording — drives the proposalBody block. */
-  proposalLabels?: ProposalLabels
 }
 
 export interface BrandPreviewActions {
@@ -93,7 +90,7 @@ export interface BrandPreviewActions {
   setTagline: (v: string) => void
 }
 
-export type SurfaceTab = 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'
+export type SurfaceTab = 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'
 
 export const NOOP_ACTIONS: BrandPreviewActions = {
   onEditLogo: () => {},
@@ -127,12 +124,8 @@ export interface BrandKit {
   logoUrl?: string
   faviconUrl?: string
   headerImageUrl?: string
-  /** Per-surface block trees. `quote` is the LEGACY key from before
-   *  the proposals rollout — kits saved earlier still carry it; the
-   *  editor normalises it into `proposal` on apply. */
+  /** Per-surface block trees. */
   blocks?: {
-    proposal?: Block[]
-    quote?: Block[]
     invoice: Block[]
     contract: Block[]
     portal: Block[]

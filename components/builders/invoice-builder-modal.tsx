@@ -68,8 +68,10 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { StatePillProps } from '@/components/ui/state-pill';
 import { useToast } from '@/components/ui/toast';
 import { stripeConnectEnabled } from '@/lib/auth/entitlements';
+import { useCurrentBranding } from '@/lib/branding/use-current-branding';
 import { weekendLoadingLine } from '@/lib/payments/package-math';
 import { createClient } from '@/lib/supabase/client';
+import { getCurrentUser } from '@/lib/supabase/current-user';
 import { isPastDue } from '@/lib/utils';
 
 interface Invoice {
@@ -82,6 +84,8 @@ interface Invoice {
   due_date: string | null;
   payment_terms: string | null;
   tax_rate: number | null;
+  /** Display-only: drives the "Prices include GST" note. */
+  gst_inclusive: boolean | null;
   discount_type: 'percentage' | 'fixed' | null;
   discount_value: number | null;
   paid_at: string | null;
@@ -93,9 +97,6 @@ interface Invoice {
   couple_name: string;
   event_id: string | null;
   created_at: string;
-  /** Provenance: the accepted proposal this invoice was generated
-   *  from, if any. Never feeds rendering. */
-  proposal_id?: string | null;
   /** Payment stages on this invoice. */
   invoice_payment_stages?: Array<{
     id: string;
@@ -157,8 +158,8 @@ export function InvoiceBuilderModal({
   const [coupleId, setCoupleId] = useState<string | null>(null);
   const [coupleName, setCoupleName] = useState<string | null>(null);
   const [eventId] = useState<string | null>(null);
-  const [proposalId, setProposalId] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState<number | null>(null);
+  const [gstInclusive, setGstInclusive] = useState(false);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | null>(null);
   const [discountValue, setDiscountValue] = useState<number | null>(null);
   const [stripePaymentEnabled, setStripePaymentEnabled] = useState(false);
@@ -175,7 +176,7 @@ export function InvoiceBuilderModal({
   const [scheduleSlotRef] = useAutoAnimate<HTMLDivElement>();
 
   /* ─── data ──────────────────────────────────────────────────── */
-  const { data: invoice, isLoading: invoiceLoading } = useQuery({
+  const { data: invoice } = useQuery({
     queryKey: ['invoice', effectiveId],
     enabled: !!effectiveId,
     queryFn: async () => {
@@ -204,22 +205,26 @@ export function InvoiceBuilderModal({
     },
   });
 
-  // Invoice templates + quote templates + packages, offered as
-  // "start from" sources (invoice templates are invoice-builder only).
-  const { data: applySources } = useApplySources({
+  // Invoice templates + packages, offered as "start from" sources
+  // (invoice templates are invoice-builder only).
+  const { data: applySources, isPending: applySourcesLoading } = useApplySources({
     includeInvoiceTemplates: true,
-    includeAcceptedProposals: true,
   });
 
-  const { data: couples } = useQuery({
+  // Branding is fetched here purely so the skeleton gate below can wait
+  // on it. The preview pane calls the same hook and hits the shared
+  // cache, so this costs no extra request.
+  const { loading: brandingLoading } = useCurrentBranding('invoice');
+
+  const { data: couples, isPending: couplesLoading } = useQuery({
     queryKey: ['all-couples-for-invoice'],
     queryFn: async () => {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) return [];
+      const user = await getCurrentUser();
+      if (!user) return [];
       const { data, error } = await supabase
         .from('couples')
         .select('id, name')
-        .eq('user_id', user.user.id)
+        .eq('user_id', user.id)
         .order('name', { ascending: true });
       if (error) throw error;
       return (data ?? []) as { id: string; name: string }[];
@@ -233,6 +238,17 @@ export function InvoiceBuilderModal({
   const canEdit = !['paid', 'cancelled'].includes(rawStatus);
   const templateOptions = applySources?.options ?? [];
   const shareEnabled = invoice?.share_token_enabled ?? false;
+
+  // Hold the skeleton until EVERY input the first paint depends on has
+  // landed, not just the invoice row. Gating on the invoice alone let
+  // the form render and then visibly reflow three more times as the
+  // packages picker, the couple selector, and the branded preview each
+  // arrived on their own beat.
+  const firstPaintReady =
+    (isNewInvoice || !!invoice) &&
+    !applySourcesLoading &&
+    !couplesLoading &&
+    !brandingLoading;
   const shareUrl =
     typeof window !== 'undefined' && invoice?.share_token
       ? `${window.location.origin}/invoice/${invoice.share_token}`
@@ -241,13 +257,10 @@ export function InvoiceBuilderModal({
   /* ─── hydrate from DB / initial defaults ────────────────────── */
   useEffect(() => {
     async function loadStripeConnect() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setStripeConnectOn(stripeConnectEnabled(user));
+      setStripeConnectOn(stripeConnectEnabled(await getCurrentUser()));
     }
     void loadStripeConnect();
-  }, [supabase, isOpen]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (isNewInvoice) {
@@ -261,10 +274,10 @@ export function InvoiceBuilderModal({
         initialCoupleId ? couples?.find((c) => c.id === initialCoupleId)?.name ?? null : null,
       );
       setTaxRate(null);
+      setGstInclusive(false);
       setDiscountType(null);
       setDiscountValue(null);
       setStripePaymentEnabled(false);
-      setProposalId(null);
       setDirty(false);
       return;
     }
@@ -276,10 +289,10 @@ export function InvoiceBuilderModal({
       setCoupleId(invoice.couple_id);
       setCoupleName(invoice.couple_name);
       setTaxRate(invoice.tax_rate != null && invoice.tax_rate > 0 ? invoice.tax_rate : null);
+      setGstInclusive(invoice.gst_inclusive ?? false);
       setDiscountType(invoice.discount_type);
       setDiscountValue(invoice.discount_value);
       setStripePaymentEnabled(invoice.stripe_payment_enabled);
-      setProposalId(invoice.proposal_id ?? null);
       setDirty(false);
     }
   }, [invoice?.id, isNewInvoice, initialCoupleId, couples]);
@@ -418,16 +431,11 @@ export function InvoiceBuilderModal({
     if (source.notes && !notes) setNotes(source.notes);
     if (source.package) {
       // GST-inclusive prices already carry the tax; adding 10% on top
-      // would misquote. Exclusive packages keep GST on top.
+      // would misquote. Exclusive packages keep GST on top. Either way
+      // the flag comes across so the couple is told which it is —
+      // before, the inclusive case cleared the rate and said nothing.
       setTaxRate(source.package.gstInclusive ? null : 10);
-    }
-    if (source.proposal) {
-      // Invoicing what the couple agreed to: the accepted option's
-      // terms carry over, and the invoice records its provenance.
-      setTaxRate(source.proposal.gstInclusive ? null : 10);
-      setProposalId(source.proposal.id);
-    } else {
-      setProposalId(null);
+      setGstInclusive(source.package.gstInclusive);
     }
     setPendingApply(null);
     setDirty(true);
@@ -447,12 +455,12 @@ export function InvoiceBuilderModal({
         paymentTerms: paymentTerms || null,
         dueDate,
         taxRate: effectiveTaxRate,
+        gstInclusive,
         discount:
           discountType && discountValue != null && discountValue > 0
             ? { type: discountType, value: discountValue }
             : null,
         stripePaymentEnabled,
-        proposalId,
         items: items.map((item, idx) => ({
           id: item.id,
           description: item.description,
@@ -710,6 +718,7 @@ export function InvoiceBuilderModal({
       amount: Number(item.amount || 0),
     })),
     taxRate: effectiveTaxRate,
+    gstInclusive,
     discount:
       discountType && discountValue != null && discountValue > 0
         ? { type: discountType, value: discountValue }
@@ -741,7 +750,7 @@ export function InvoiceBuilderModal({
         primaryAction={primaryAction}
         overflowItems={overflowItems}
         {...(effectiveId ? { onDelete: () => setConfirmDelete(true), deleteLabel: 'Delete invoice' } : {})}
-        loading={!!effectiveId && invoiceLoading && !invoice}
+        loading={isOpen && !firstPaintReady}
         title={title}
         onTitleChange={(v) => {
           setTitle(v);
@@ -854,6 +863,15 @@ export function InvoiceBuilderModal({
                 setTaxRate(next);
                 setDirty(true);
               }}
+              gstInclusive={gstInclusive}
+              {...(canEdit
+                ? {
+                    onGstInclusiveChange: (next: boolean) => {
+                      setGstInclusive(next);
+                      setDirty(true);
+                    },
+                  }
+                : {})}
             />
           </div>
           <TotalsPanel
@@ -862,6 +880,7 @@ export function InvoiceBuilderModal({
             tax={tax > 0 ? tax : undefined}
             taxLabel={`GST ${Math.round(effectiveTaxRate)}%`}
             total={total}
+            {...(gstInclusive ? { note: 'Prices include GST' } : {})}
           />
         </div>
 

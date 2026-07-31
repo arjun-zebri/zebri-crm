@@ -41,12 +41,6 @@ export type BlockType =
   | 'couplePortal'
   | 'paymentSchedule'
   | 'contractBody'
-  | 'proposalBody'        // deprecated: decomposed into the four package blocks; kept for repair
-  | 'packageHeader'
-  | 'packageDetails'
-  | 'packageLineItems'
-  | 'packageInclusions'
-  | 'packageTotals'
   | 'vendorTimelineBody'
   | 'questionnaireBody'
   | 'image'
@@ -337,58 +331,6 @@ export interface ContractBodyBlock extends BaseBlock {
 }
 
 /**
- * Marker block — the fixed proposal core (the package chooser, the
- * chosen option's priced detail, the accept block). Its STRUCTURE +
- * order are fixed (a chooser can't be expressed as blocks), but the
- * MC drags chrome blocks above and below it and can retype its
- * section labels inline. Same model as `couplePortal` /
- * `contractBody`.
- */
-export interface ProposalBodyBlock extends BaseBlock {
-  type: 'proposalBody'
-}
-
-/** Proposal package name + (when several packages were sent) a subtle in-block
- *  "switch package" control. Renders the chosen option's title. */
-export interface PackageHeaderBlock extends BaseBlock {
-  type: 'packageHeader'
-  titleStyle?: TextStyle
-}
-
-/** Proposal package description / marketing copy for the chosen option. */
-export interface PackageDetailsBlock extends BaseBlock {
-  type: 'packageDetails'
-  bodyStyle?: TextStyle
-}
-
-/** Optional add-on inclusions for the chosen option, as couple-toggleable rows. */
-export interface PackageInclusionsBlock extends BaseBlock {
-  type: 'packageInclusions'
-  headingStyle?: TextStyle
-  itemStyle?: TextStyle
-}
-
-/** The package's included (base) services, displayed as styled line items. */
-export interface PackageLineItemsBlock extends BaseBlock {
-  type: 'packageLineItems'
-  showHeader?: boolean
-  /** Editable section heading. Defaults to "Included services". */
-  heading?: string
-  rowStyle?: 'lines' | 'stripes' | 'plain'
-  headerStyle?: TextStyle
-  itemStyle?: TextStyle
-  colSpread?: boolean
-}
-
-/** Live-recalculating price summary (subtotal, GST, total) for the chosen
- *  option + current add-on selection. */
-export interface PackageTotalsBlock extends BaseBlock {
-  type: 'packageTotals'
-  subtotalStyle?: TextStyle
-  totalStyle?: TextStyle
-}
-
-/**
  * Marker block represents the position where the vendor run sheet
  * (live timeline data) will appear. The MC can drag chrome blocks above
  * and below it in the branding editor; the run sheet content itself is
@@ -429,18 +371,12 @@ export type Block =
   | CouplePortalBlock
   | PaymentScheduleBlock
   | ContractBodyBlock
-  | ProposalBodyBlock
-  | PackageHeaderBlock
-  | PackageDetailsBlock
-  | PackageLineItemsBlock
-  | PackageInclusionsBlock
-  | PackageTotalsBlock
   | VendorTimelineBodyBlock
   | QuestionnaireBodyBlock
   | ImageBlock
   | SpacerBlock
 
-export type BlocksByDoc = Record<'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire', Block[]>
+export type BlocksByDoc = Record<'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire', Block[]>
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   headerBanner: 'Header banner',
@@ -457,12 +393,6 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   couplePortal: 'Couple portal',
   paymentSchedule: 'Payment schedule',
   contractBody: 'Contract body',
-  proposalBody: 'Proposal',
-  packageHeader: 'Package header',
-  packageDetails: 'Package details',
-  packageLineItems: 'Package line items',
-  packageInclusions: 'Package optional inclusions',
-  packageTotals: 'Package totals',
   vendorTimelineBody: 'Run sheet',
   questionnaireBody: 'Questionnaire',
   image: 'Image',
@@ -471,11 +401,10 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
 
 /**
  * Surface-specific overrides for {@link BLOCK_LABELS}. The action block is a
- * payment CTA on invoices ("Pay with card") but an accept/decline CTA on
- * proposals ("Accept proposal"), so its label depends on the document.
+ * payment CTA on invoices ("Pay with card") but a sign CTA on contracts
+ * ("Sign contract"), so its label depends on the document.
  */
 const BLOCK_LABEL_OVERRIDES: Record<string, Partial<Record<BlockType, string>>> = {
-  proposal: { action: 'Accept proposal' },
   contract: { title: 'Contract header', action: 'Sign contract' },
 }
 
@@ -484,7 +413,7 @@ const BLOCK_LABEL_OVERRIDES: Record<string, Partial<Record<BlockType, string>>> 
  * the surface-agnostic {@link BLOCK_LABELS} entry.
  *
  * @param type - The block type.
- * @param surface - The document surface (e.g. 'proposal', 'invoice'); optional.
+ * @param surface - The document surface (e.g. 'invoice', 'contract'); optional.
  */
 export function blockLabel(type: BlockType, surface?: string): string {
   return (surface ? BLOCK_LABEL_OVERRIDES[surface]?.[type] : undefined) ?? BLOCK_LABELS[type]
@@ -505,12 +434,6 @@ export const BLOCK_DESCRIPTIONS: Record<BlockType, string> = {
   couplePortal: 'The couple-facing portal (fixed)',
   paymentSchedule: 'Payment stages (live invoice data)',
   contractBody: 'The contract body (fixed — edited per couple)',
-  proposalBody: 'Packages, chooser and accept (fixed)',
-  packageHeader: 'Package name and chooser',
-  packageDetails: 'Package description',
-  packageLineItems: 'The package\'s included services',
-  packageInclusions: 'Optional add-ons the couple can toggle',
-  packageTotals: 'Subtotal, GST and total',
   vendorTimelineBody: 'The vendor run sheet (live timeline data)',
   questionnaireBody: 'The questionnaire steps (fixed)',
   image: 'An uploaded image',

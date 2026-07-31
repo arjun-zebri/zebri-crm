@@ -63,7 +63,7 @@ export interface SurfaceReadiness {
  * - If action block is present on invoice, account.stripeConnected must be true.
  * - On contract surface, account.contractTemplateExists must be true.
  *
- * @param surface - The surface tab ('proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire').
+ * @param surface - The surface tab ('invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire').
  * @param blocks - The block tree for this surface.
  * @param account - The MC's account readiness state.
  * @returns { ready, issues } — Layer A readiness + all issues (Layer A + Layer B).

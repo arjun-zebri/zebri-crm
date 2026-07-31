@@ -56,8 +56,8 @@ export function PublicBlockRenderer(props: PublicRendererProps) {
 /**
  * Wrap a block in its per-block outer styles (padding, background, border,
  * radius, alignment, spacing). Exported so surfaces that render blocks outside
- * {@link PublicBlockRenderer} (the proposal renderer, which substitutes its own
- * package blocks) apply the exact same outer treatment and can't drift.
+ * {@link PublicBlockRenderer} apply the exact same outer treatment and can't
+ * drift.
  */
 export function BlockOuter({
   block,
@@ -121,7 +121,6 @@ function BlockBody(props: PublicRendererProps & { block: Block }) {
     case 'couplePortal': return null
     case 'paymentSchedule': return <RenderPaymentSchedule block={block} branding={branding} doc={doc} />
     case 'contractBody': return null
-    case 'proposalBody': return null
     case 'vendorTimelineBody': return null
     case 'questionnaireBody': return null
     case 'image': return <RenderImage block={block} branding={branding} />

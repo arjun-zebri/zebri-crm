@@ -1,7 +1,7 @@
 /**
- * Block tree repair: migrates legacy block shapes (headerBanner to image,
- * proposalBody marker to package blocks), dedups render-split markers, and
- * drops unknown block types. Idempotent: safe to run on every load and save.
+ * Block tree repair: migrates legacy block shapes (headerBanner to image),
+ * dedups render-split markers, and drops unknown block types. Idempotent:
+ * safe to run on every load and save.
  *
  * Does NOT enforce or auto-insert required blocks. Required blocks are now
  * deletable, and their absence is surfaced by the readiness layer
@@ -27,10 +27,9 @@ import type { Block, BlockType } from '@/app/(dashboard)/branding/blocks/types'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 /**
- * Type for a blocks-by-surface object containing trees for all six surfaces.
+ * Type for a blocks-by-surface object containing trees for all five surfaces.
  */
 export interface BlocksByDoc {
-  proposal: Block[]
   invoice: Block[]
   contract: Block[]
   portal: Block[]
@@ -61,10 +60,9 @@ export interface BlocksByDoc {
  */
 export function repairAllSurfaces(blocks: Partial<BlocksByDoc>): BlocksByDoc {
   // Initialize all six surfaces. Missing keys become empty arrays.
-  const surfaces: SurfaceTab[] = ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire']
+  const surfaces: SurfaceTab[] = ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire']
 
   const result: BlocksByDoc = {
-    proposal: [],
     invoice: [],
     contract: [],
     portal: [],
@@ -97,20 +95,20 @@ export function repairAllSurfaces(blocks: Partial<BlocksByDoc>): BlocksByDoc {
 
 /**
  * Repair a block tree for a specific surface. Guarantees:
- * - Legacy shapes migrated (headerBanner→image, proposalBody→package blocks)
+ * - Legacy shapes migrated (headerBanner→image)
  * - Unknown block types dropped
  * - Render-split markers deduped (keep first occurrence)
  * - Idempotent: running twice produces the same result
  * - Does NOT auto-insert required blocks (readiness layer flags absence)
  *
- * @param surface - The surface being rendered (proposal/invoice/contract/portal)
+ * @param surface - The surface being rendered (invoice/contract/portal)
  * @param blocks - Block tree, or null/undefined if no custom tree exists
  * @returns Repaired block tree with legacy shapes migrated and duplicates removed
  */
 export function repairBlocks(surface: SurfaceTab, blocks: Block[] | null | undefined): Block[] {
   if (!blocks) return []
-  // Step 1: migrate legacy shapes (headerBanner->image, proposalBody->packages,
-  // dash stripping) so downstream steps see the current schema.
+  // Step 1: migrate legacy shapes (headerBanner->image, dash stripping) so
+  // downstream steps see the current schema.
   let out = migrateBlocks(blocks, surface)
   // Step 2: drop unknown types.
   const validTypes = new Set(Object.keys(BLOCK_LABELS) as BlockType[])

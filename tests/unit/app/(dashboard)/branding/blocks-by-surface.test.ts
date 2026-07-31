@@ -4,17 +4,16 @@ import { blocksForSurface } from '@/app/(dashboard)/branding/blocks/blocks-by-su
 import type { SurfaceTab } from '@/types/branding-preview'
 
 describe('blocksForSurface', () => {
-  it('returns blocks for proposal surface including general + doc-specific', () => {
-    const blocks = blocksForSurface('proposal')
+  it('returns blocks for invoice surface including general + doc-specific', () => {
+    const blocks = blocksForSurface('invoice')
     expect(blocks).toContain('text')
     expect(blocks).toContain('divider')
-    expect(blocks).toContain('packageHeader')
-    expect(blocks).toContain('packageDetails')
+    expect(blocks).toContain('title')
     expect(blocks).toContain('action')
   })
 
-  it('proposal excludes old headerBanner', () => {
-    const blocks = blocksForSurface('proposal')
+  it('invoice excludes old headerBanner', () => {
+    const blocks = blocksForSurface('invoice')
     expect(blocks).not.toContain('headerBanner')
   })
 
@@ -36,8 +35,8 @@ describe('blocksForSurface', () => {
     expect(blocks).toContain('paymentDetails')
   })
 
-  it('proposal excludes lineItems, totals, and paymentDetails', () => {
-    const blocks = blocksForSurface('proposal')
+  it('contract excludes lineItems, totals, and paymentDetails', () => {
+    const blocks = blocksForSurface('contract')
     expect(blocks).not.toContain('lineItems')
     expect(blocks).not.toContain('totals')
     expect(blocks).not.toContain('paymentDetails')
@@ -62,7 +61,7 @@ describe('blocksForSurface', () => {
   })
 
   it('does not include old fixed marker blocks (headerBanner, proposalBody, contractBody)', () => {
-    const allBlocks = ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as const
+    const allBlocks = ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire'] as const
     const allBlocksFlat = allBlocks.flatMap(s => blocksForSurface(s))
     expect(allBlocksFlat).not.toContain('headerBanner')
     expect(allBlocksFlat).not.toContain('proposalBody')

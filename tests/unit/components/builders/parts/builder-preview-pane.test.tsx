@@ -2,8 +2,10 @@
  * Unit tests for BuilderPreviewPane — tab switching, branding label,
  * Update branding link.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render as rtlRender, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { BuilderPreviewPane } from '@/components/builders/parts/builder-preview-pane';
@@ -36,6 +38,18 @@ vi.mock('@/components/builders/parts/preview-email', () => ({
 vi.mock('@/components/builders/parts/preview-payment-page', () => ({
   PreviewPaymentPage: () => <div data-testid="preview-payment-page" />,
 }));
+
+// The pane reads its brand label through `useCurrentBranding`, which is a
+// React Query hook, so every render needs a client. A fresh one per test
+// keeps the cache from leaking between cases.
+function render(ui: ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
 
 function baseDoc(): PreviewDoc {
   return {

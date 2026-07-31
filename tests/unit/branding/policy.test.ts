@@ -11,15 +11,14 @@ describe('policy', () => {
     expect(isMarker('contractBody')).toBe(true)
     expect(isMarker('vendorTimelineBody')).toBe(true)
     expect(isMarker('questionnaireBody')).toBe(true)
-    expect(isMarker('proposalBody')).toBe(false)
     expect(isMarker('paymentSchedule')).toBe(false)
   })
 
-  it('proposal requires the four package essentials + accept CTA, inclusions optional', () => {
-    expect(requiredTypesForSurface('proposal').sort()).toEqual(
-      ['action', 'packageDetails', 'packageHeader', 'packageTotals'].sort(),
+  it('contract requires title/contractBody/action', () => {
+    expect(requiredTypesForSurface('contract').sort()).toEqual(
+      ['action', 'contractBody', 'title'].sort(),
     )
-    expect(isRequired('packageInclusions', 'proposal')).toBe(false)
+    expect(isRequired('footer', 'contract')).toBe(false)
   })
 
   it('invoice requires header/lineItems/totals; bank-or-pay is at-least-one', () => {
@@ -29,8 +28,8 @@ describe('policy', () => {
   })
 
   it('required blocks are deletable (deletion raises a flag, not a guard)', () => {
-    const b: Block = { id: 'x', type: 'packageHeader' }
-    expect(isDeletable(b, 'proposal')).toBe(true)
+    const b: Block = { id: 'x', type: 'title', title: 'Invoice', showCoupleName: false, showRef: true, showExpires: true, showAbn: true }
+    expect(isDeletable(b, 'invoice')).toBe(true)
     const locked: Block = { id: 'y', type: 'couplePortal', locked: true }
     expect(isDeletable(locked, 'portal')).toBe(false)
   })

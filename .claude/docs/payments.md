@@ -170,6 +170,33 @@ cancel) stay inline in the modals as one-line UPDATEs — they're
 RLS-protected by the session client and don't justify their own
 server actions.
 
+### GST-inclusive pricing (`invoices.gst_inclusive`)
+
+Australian wedding vendors commonly advertise a single GST-inclusive
+price. Packages have carried a `gst_inclusive` flag since packages-v2,
+but invoices had nowhere to record it: applying a
+GST-inclusive package cleared the tax rate so nothing was added on top,
+and the couple was simply never told the price already covered GST.
+
+`invoices.gst_inclusive` closes that gap as a **display flag**:
+
+- It never participates in an amount. `subtotal`, `tax_rate`, the total,
+  Stripe charge amounts, and payment-stage totals are all computed
+  exactly as before, so `false` is byte-identical to pre-column behaviour.
+- When true, a muted "Prices include GST" line renders under the total on
+  the builder's totals panel, the shared `totals` branding block (public
+  page and the Link preview tab), the PDF, and the fallback card. The
+  invoice email carries no totals table, so it needs nothing.
+- It is **independent of `tax_rate`**. An MC can set 10% and tick the box,
+  which produces a document that adds GST on top while also saying prices
+  include it. The Tax popover states this rather than blocking it, because
+  the far more common intent is no rate plus the note. Opening that
+  popover no longer pre-applies 10%, so ticking the box cannot silently
+  add a GST line.
+- `saveInvoiceAction` takes `gstInclusive` as an optional boolean and only
+  writes the column when the client sent it, so an older bundle
+  mid-deploy cannot blank it.
+
 ### `invoice_items.quantity` + `unit_price` deprecation
 
 The two columns remain in the schema for forward-compat. New writes

@@ -33,7 +33,7 @@ export interface StepFormProps {
  *
  * A single focused column, centred in the modal. Name and business name
  * arrive prefilled from signup and stay editable, because business name
- * appears on every proposal and invoice and a typo made at signup should
+ * appears on every invoice and contract and a typo made at signup should
  * be fixable here. Email is read-only: changing it needs Supabase's
  * confirmation round-trip, so an editable field would appear to work and
  * then quietly not take effect — the info glyph beside the label explains
@@ -48,7 +48,7 @@ export function StepDetails({ value, email, onChange }: StepFormProps) {
       <div>
         <h2 className="text-xl font-semibold text-text">Tell us about you</h2>
         <p className="text-sm text-text-muted mt-2">
-          This appears on the proposals, invoices and contracts you send.
+          This appears on the invoices and contracts you send.
           Your home address is used to calculate the distance to each event.
         </p>
       </div>

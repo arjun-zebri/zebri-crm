@@ -342,101 +342,6 @@ function amountSpec<T extends string>(
   }
 }
 
-const proposalSent = amountSpec('proposal_sent', {
-  category: 'payment',
-  label: 'Proposal sent',
-  description: 'When a proposal share link goes live',
-  icon: 'Send',
-})
-
-const proposalAccepted = amountSpec('proposal_accepted', {
-  category: 'payment',
-  label: 'Proposal accepted',
-  description: 'When a couple accepts a proposal',
-  icon: 'CheckCircle2',
-})
-
-const proposalDeclined = amountSpec('proposal_declined', {
-  category: 'payment',
-  label: 'Proposal declined',
-  description: 'When a couple declines a proposal',
-  icon: 'XCircle',
-})
-
-// Optional props carry `| undefined` explicitly: Zod's `.optional()`
-// output type includes undefined, and exactOptionalPropertyTypes
-// treats that as a different type from a merely-absent property.
-const proposalDue: TriggerSpec<{
-  days: number
-  notificationCount?: number | undefined
-  respectQuietHours?: boolean | undefined
-}> = {
-  type: 'proposal_due',
-  configSchema: z.object({
-    days: z.number().int().min(0).max(180).default(0),
-    notificationCount: z.number().int().min(1).max(5).optional(),
-    respectQuietHours: z.boolean().optional(),
-  }).passthrough(),
-  // The `proposal_due` event is emitted by the time-emitter once per
-  // (proposal, lead-time, day) — see `lib/automations/time-emitters/
-  // proposal-due.ts`. The emitter stamps the matching lead-time in
-  // `payload.days_until_due`. Narrowing here means an automation
-  // with `days=3` only fires for events that fire 3 days before
-  // the expiry, not for `days=0` events on the same proposal.
-  match: (event, config) => {
-    const payload = p(event)
-    const emitted = Number(payload.days_until_due)
-    return Number.isFinite(emitted) && emitted === config.days
-  },
-  ui: { category: 'payment', label: 'Proposal due', description: 'When a proposal reaches its expiry date', icon: 'Hourglass' },
-}
-
-/**
- * Effective overdue threshold (days past `expires_at`) for a
- * `proposal_overdue` automation config. "Overdue" means strictly past
- * the expiry date — a configured min of 0 is clamped up to 1 so the
- * trigger never collides with `proposal_due` (`days: 0`) on the expiry
- * day itself. Shared by the trigger's `match()` and the time-emitter
- * so both sides agree on which calendar day a proposal fires.
- */
-export function proposalOverdueThresholdDays(config: {
-  daysOverdueMin?: number | undefined
-}): number {
-  return Math.max(1, config.daysOverdueMin ?? 1)
-}
-
-const proposalOverdue: TriggerSpec<{
-  daysOverdueMin?: number | undefined
-  daysOverdueMax?: number | undefined
-  couplePreviouslyViewed?: boolean | undefined
-}> = {
-  type: 'proposal_overdue',
-  configSchema: z.object({
-    daysOverdueMin: z.number().int().min(0).max(365).optional(),
-    daysOverdueMax: z.number().int().min(0).max(365).optional(),
-    couplePreviouslyViewed: z.boolean().optional(),
-  }).passthrough(),
-  // The `proposal_overdue` event is emitted by the time-emitter once per
-  // (proposal, threshold, day) — see `lib/automations/time-emitters/
-  // proposal-overdue.ts`. The emitter stamps the overdue depth in
-  // `payload.days_overdue`; narrowing here means an automation with
-  // min=7 only fires for the day-7 event, not the day-1 one.
-  // `couplePreviouslyViewed` is accepted but not yet enforced — proposal
-  // view tracking doesn't exist in the schema.
-  match: (event, config) => {
-    const payload = p(event)
-    const emitted = Number(payload.days_overdue)
-    if (!Number.isFinite(emitted)) return false
-    const threshold = proposalOverdueThresholdDays(config)
-    if (emitted !== threshold) return false
-    if (config.daysOverdueMax !== undefined && emitted > config.daysOverdueMax) {
-      return false
-    }
-    return true
-  },
-  ui: { category: 'payment', label: 'Proposal overdue', description: 'When a proposal has passed its expiry without acceptance', icon: 'AlertTriangle' },
-}
-
 const invoiceCreated = amountSpec('invoice_created', {
   category: 'payment',
   label: 'Invoice created',
@@ -1523,12 +1428,6 @@ export const triggerRegistry: Record<TriggerType, TriggerSpec<any>> = {
   couple_stage_changed: coupleStageChanged,
   booking_cancelled: bookingCancelled,
   // Quotes / invoices / payments
-  // Proposals
-  proposal_sent: proposalSent,
-  proposal_accepted: proposalAccepted,
-  proposal_declined: proposalDeclined,
-  proposal_due: proposalDue,
-  proposal_overdue: proposalOverdue,
   // Invoices / payments
   invoice_created: invoiceCreated,
   invoice_sent: invoiceSent,

@@ -36,8 +36,7 @@ export interface PackageDraft {
   category_id: string | null
   gst_inclusive: boolean
   weekend_loading_percent: number | null
-  /** Marketing flag: highlighted as "Most popular" when a proposal
-   *  offers this package alongside others. */
+  /** Marketing flag: highlights this package as "Most popular". */
   is_popular: boolean
   /** Base items first, then add-ons: index is the save order. */
   items: (EditableItem & { optional: boolean })[]
@@ -247,7 +246,7 @@ export function PackageEditForm({ title, value, onSave, onClose, isSaving }: Pac
         <div>
           <SectionLabel
             label="Highlight"
-            hint="Only shows when a proposal offers more than one package"
+            hint="Marks this package as your most popular option"
           />
           <Checkbox
             checked={isPopular}

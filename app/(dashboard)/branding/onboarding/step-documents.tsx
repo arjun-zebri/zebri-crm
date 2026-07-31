@@ -24,10 +24,6 @@ interface SurfaceDescription {
  * Surface descriptions for the onboarding step.
  */
 const SURFACES: Record<SurfaceTab, SurfaceDescription> = {
-  proposal: {
-    label: 'Proposals',
-    description: 'Priced packages your couples review and accept online',
-  },
   invoice: {
     label: 'Invoices',
     description: 'Deposits and balances, paid by card or bank transfer',
@@ -54,7 +50,6 @@ const SURFACES: Record<SurfaceTab, SurfaceDescription> = {
  * Ordered list of all surfaces for consistent display.
  */
 const SURFACE_ORDER: SurfaceTab[] = [
-  'proposal',
   'invoice',
   'contract',
   'portal',

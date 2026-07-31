@@ -1,13 +1,12 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { FileSignature, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 
 import { ContractBuilderModal } from '@/components/builders/contract-builder-modal'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/components/ui/toast'
 import {
   contractCoupleLimit,
   STARTER_CONTRACT_COUPLE_LIMIT,
@@ -40,13 +39,18 @@ interface CoupleContractsProps {
   coupleName: string
 }
 
-const EMPTY_DOC = { type: 'doc', content: [{ type: 'paragraph' }] }
-
 export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
-  const { toast } = useToast()
+  // `contractOpen` is separate from `activeContractId` because a new
+  // draft has no id yet: null means "compose a fresh one".
+  const [contractOpen, setContractOpen] = useState(false)
   const [activeContractId, setActiveContractId] = useState<string | null>(null)
+
+  function openContract(id: string | null) {
+    setActiveContractId(id)
+    setContractOpen(true)
+  }
 
   const { data: contracts, isLoading } = useQuery({
     queryKey: ['couple-contracts', coupleId],
@@ -100,44 +104,6 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
     !limitInfo.coupleHasContract &&
     limitInfo.distinctCount >= limitInfo.limit
 
-  const createContract = useMutation({
-    mutationFn: async () => {
-      if (atLimit) throw new Error('starter-limit')
-      const { data: user } = await supabase.auth.getUser()
-      if (!user.user) throw new Error('Not authenticated')
-      const { data: num, error: numError } = await supabase.rpc('generate_contract_number', {
-        p_user_id: user.user.id,
-      })
-      if (numError) throw numError
-      const { data, error } = await supabase
-        .from('contracts')
-        .insert({
-          user_id: user.user.id,
-          couple_id: coupleId,
-          title: `Contract for ${coupleName}`,
-          contract_number: num as string,
-          status: 'draft',
-          content: EMPTY_DOC,
-        })
-        .select('id')
-        .single()
-      if (error) throw error
-      return data.id as string
-    },
-    onSuccess: (id) => {
-      queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] })
-      queryClient.invalidateQueries({ queryKey: ['contracts-couple-limit'] })
-      setActiveContractId(id)
-    },
-    onError: (err) => {
-      if (err instanceof Error && err.message === 'starter-limit') {
-        toast('Free plan limit: contracts for 5 couples', 'error')
-        return
-      }
-      toast('Failed to create contract', 'error')
-    },
-  })
-
   const all = contracts || []
   const signedCount = all.filter((c) => c.status === 'signed').length
   const sentCount = all.filter((c) => c.status === 'sent').length
@@ -154,7 +120,7 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
         stats={all.length > 0 ? stats : undefined}
         actions={
           !atLimit ? (
-            <Button size="sm" onClick={() => createContract.mutate()} disabled={createContract.isPending} className="cursor-pointer gap-1.5">
+            <Button size="sm" onClick={() => openContract(null)} className="cursor-pointer gap-1.5">
               <Plus size={14} strokeWidth={1.5} />
               New Contract
             </Button>
@@ -194,7 +160,7 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
               {all.map((c) => (
                 <button
                   key={c.id}
-                  onClick={() => setActiveContractId(c.id)}
+                  onClick={() => openContract(c.id)}
                   className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50 transition text-left border border-transparent hover:border-gray-100"
                 >
                   <FileSignature size={14} strokeWidth={1.5} className="text-gray-400 shrink-0" />
@@ -209,23 +175,28 @@ export function CoupleContracts({ coupleId, coupleName }: CoupleContractsProps) 
               ))}
             </div>
             <button
-              onClick={() => createContract.mutate()}
-              disabled={createContract.isPending}
-              className="text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer disabled:opacity-50 px-2"
+              onClick={() => openContract(null)}
+              className="text-sm text-gray-400 hover:text-gray-600 transition cursor-pointer px-2"
             >
-              {createContract.isPending ? 'Creating…' : '+ New Contract'}
+              + New Contract
             </button>
           </div>
         )}
       </CoupleTabShell>
 
-      {!!activeContractId && (
+      {contractOpen && (
         <ContractBuilderModal
           contractId={activeContractId}
-          coupleId={coupleId}
-          coupleName={coupleName}
+          initialCoupleId={coupleId}
+          initialCoupleName={coupleName}
           isOpen
-          onClose={() => setActiveContractId(null)}
+          onClose={() => {
+            setContractOpen(false)
+            setActiveContractId(null)
+          }}
+          onCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ['couple-contracts', coupleId] })
+          }}
         />
       )}
     </>

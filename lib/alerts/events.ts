@@ -182,7 +182,7 @@ export type AlertEvent =
   | (BaseEvent & {
       type: 'email_rate_limit_hit';
       severity: 'warn';
-      action: 'sendQuote' | 'sendProposal' | 'sendInvoice' | 'sendTemplate';
+      action: 'sendQuote' | 'sendInvoice' | 'sendTemplate';
       userId: string;
       ip: string;
     })

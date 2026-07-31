@@ -265,7 +265,7 @@ design-token cleanup pattern Phases 10/11 used.
 
 **All 8 phases shipped on feature/proposals-phase-a; awaiting CI migration deploy to main.**
 
-The `/branding` editor is the MC's block-based brand designer. Six customizable surfaces: Quote, Invoice, Contract, Proposal, Vendor Timeline, Questionnaire. Public rendering spans websites (quotes/invoices/contracts/proposals/vendor timelines/questionnaires), email (Resend transactional), and PDF (Supabase Functions).
+The `/branding` editor is the MC's block-based brand designer. Five customizable surfaces: Invoice, Contract, Portal, Run sheet, Questionnaire. Public rendering spans websites (invoices/contracts/portals/run sheets/questionnaires), email (Resend transactional), and PDF (Supabase Functions).
 
 **Phases delivered:**
 - Task 1-5: Block types, rendering layer, public-surface unification

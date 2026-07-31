@@ -8,39 +8,14 @@ import { STATUS_COLORS } from '@/lib/branding/status-colors'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 import { isPastDue } from '@/lib/utils'
 
-import { PortalProposal, PortalInvoice } from './page'
+import { PortalInvoice } from './page'
 
 interface PaymentsSectionProps {
   payments: {
-    proposals?: PortalProposal[]
-    /** Legacy key the RPC keeps returning until the quotes drop
-     *  migration deploys - ignored by this component. */
-    quotes?: unknown[]
     invoices: PortalInvoice[]
   }
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding
-}
-
-function getStatusColor(status: string): { bg: string; fg: string } {
-  switch (status) {
-    case 'draft':
-      return { bg: `${STATUS_COLORS.warning}20`, fg: STATUS_COLORS.warning }
-    case 'sent':
-      return { bg: `${STATUS_COLORS.warning}20`, fg: STATUS_COLORS.warning }
-    case 'accepted':
-      return { bg: `${STATUS_COLORS.success}20`, fg: STATUS_COLORS.success }
-    case 'declined':
-      return { bg: `${STATUS_COLORS.error}20`, fg: STATUS_COLORS.error }
-    case 'expired':
-      return { bg: `${STATUS_COLORS.warning}20`, fg: STATUS_COLORS.warning }
-    case 'paid':
-      return { bg: `${STATUS_COLORS.success}20`, fg: STATUS_COLORS.success }
-    case 'overdue':
-      return { bg: `${STATUS_COLORS.error}20`, fg: STATUS_COLORS.error }
-    default:
-      return { bg: `${STATUS_COLORS.warning}20`, fg: STATUS_COLORS.warning }
-  }
 }
 
 function formatAUD(value: number): string {
@@ -53,13 +28,11 @@ function formatAUD(value: number): string {
 const isOverdue = isPastDue
 
 export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
-  const proposals = payments.proposals ?? []
-  const hasProposals = proposals.length > 0
   const hasInvoices = payments.invoices.length > 0
   const bodyDefaults = roleDefaults(branding, 'body')
   const finePrintDefaults = roleDefaults(branding, 'finePrint')
 
-  if (!hasProposals && !hasInvoices) {
+  if (!hasInvoices) {
     return (
       <div
         className="rounded-card p-6 text-center"
@@ -77,14 +50,13 @@ export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
             lineHeight: bodyDefaults.lineHeight,
           }}
         >
-          Nothing here yet. Your MC will send proposals and invoices here.
+          Nothing here yet. Your MC will send invoices here.
         </p>
       </div>
     )
   }
 
   // Calculate summary
-  const totalProposals = proposals.reduce((sum, p) => sum + p.subtotal, 0)
   const totalInvoices = payments.invoices.reduce((sum, i) => sum + i.subtotal, 0)
   const overdueInvoices = payments.invoices.filter(
     (i) => i.status !== 'paid' && i.status !== 'cancelled' && isOverdue(i.due_date)
@@ -93,41 +65,8 @@ export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
   return (
     <div className="space-y-6">
       {/* Summary strip */}
-      {(totalProposals > 0 || totalInvoices > 0) && (
+      {totalInvoices > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {totalProposals > 0 && (
-            <div
-              className="rounded-card p-3"
-              style={{
-                border: `1px solid ${branding.border_color}`,
-                backgroundColor: branding.surface_color,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: `${finePrintDefaults.fontSize}px`,
-                  color: finePrintDefaults.color,
-                  fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                  fontWeight: finePrintDefaults.fontWeight,
-                  lineHeight: finePrintDefaults.lineHeight,
-                }}
-              >
-                Total proposals
-              </p>
-              <p
-                className="mt-1 font-semibold"
-                style={{
-                  fontSize: `${bodyDefaults.fontSize}px`,
-                  color: bodyDefaults.color,
-                  fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                  fontWeight: bodyDefaults.fontWeight,
-                  lineHeight: bodyDefaults.lineHeight,
-                }}
-              >
-                {formatAUD(totalProposals)}
-              </p>
-            </div>
-          )}
           {totalInvoices > 0 && (
             <div
               className="rounded-card p-3"
@@ -194,123 +133,6 @@ export function PaymentsSection({ payments, branding }: PaymentsSectionProps) {
               </p>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Proposals */}
-      {hasProposals && (
-        <div>
-          <h3
-            className="font-medium mb-3"
-            style={{
-              fontSize: `${bodyDefaults.fontSize}px`,
-              color: finePrintDefaults.color,
-              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-              fontWeight: 500,
-              lineHeight: bodyDefaults.lineHeight,
-            }}
-          >
-            Proposals
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {proposals.map((proposal) => {
-              const statusColor = getStatusColor(proposal.status)
-              return (
-                <div
-                  key={proposal.id}
-                  className="rounded-card p-4 flex flex-col"
-                  style={{
-                    border: `1px solid ${branding.border_color}`,
-                    backgroundColor: branding.surface_color,
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2.5">
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className="font-medium"
-                        style={{
-                          fontSize: `${bodyDefaults.fontSize}px`,
-                          color: bodyDefaults.color,
-                          fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                          fontWeight: 500,
-                          lineHeight: bodyDefaults.lineHeight,
-                        }}
-                      >
-                        {proposal.title}
-                      </p>
-                      <p
-                        className="mt-0.5"
-                        style={{
-                          fontSize: `${finePrintDefaults.fontSize}px`,
-                          color: finePrintDefaults.color,
-                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                          fontWeight: finePrintDefaults.fontWeight,
-                          lineHeight: finePrintDefaults.lineHeight,
-                        }}
-                      >
-                        Proposal #{proposal.proposal_number}
-                      </p>
-                    </div>
-                    <span
-                      className="shrink-0 font-medium px-2 py-1 capitalize"
-                      style={{
-                        fontSize: `${finePrintDefaults.fontSize}px`,
-                        color: statusColor.fg,
-                        backgroundColor: statusColor.bg,
-                        fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                        fontWeight: 500,
-                        lineHeight: finePrintDefaults.lineHeight,
-                        borderRadius: branding.corner_radius,
-                      }}
-                    >
-                      {proposal.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-auto pt-3">
-                    <p
-                      className="font-semibold"
-                      style={{
-                        fontSize: `${bodyDefaults.fontSize}px`,
-                        color: bodyDefaults.color,
-                        fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                        fontWeight: 600,
-                        lineHeight: bodyDefaults.lineHeight,
-                      }}
-                    >
-                      {formatAUD(proposal.subtotal)}
-                    </p>
-                    {proposal.share_token_enabled && proposal.share_token ? (
-                      <a
-                        href={`/proposal/${proposal.share_token}`}
-                        className="inline-flex items-center gap-1.5 font-medium transition cursor-pointer hover:opacity-75"
-                        style={{
-                          fontSize: `${finePrintDefaults.fontSize}px`,
-                          color: branding.brand_color,
-                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                          fontWeight: 500,
-                          lineHeight: finePrintDefaults.lineHeight,
-                        }}
-                      >
-                        View <ExternalLink size={13} strokeWidth={1.5} />
-                      </a>
-                    ) : (
-                      <span
-                        style={{
-                          fontSize: `${finePrintDefaults.fontSize}px`,
-                          color: finePrintDefaults.color,
-                          fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                          fontWeight: finePrintDefaults.fontWeight,
-                          lineHeight: finePrintDefaults.lineHeight,
-                        }}
-                      >
-                        Not yet shared
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
         </div>
       )}
 

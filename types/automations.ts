@@ -50,13 +50,6 @@ export type TriggerType =
   // Pipeline (couples)
   | 'couple_stage_changed'
   | 'booking_cancelled'
-  // Quotes
-  // Proposals
-  | 'proposal_sent'
-  | 'proposal_accepted'
-  | 'proposal_declined'
-  | 'proposal_due' // emitted by the tick
-  | 'proposal_overdue' // emitted by the tick
   // Invoices / payments
   | 'invoice_created'
   | 'invoice_sent'
@@ -191,7 +184,6 @@ export type ActionType =
   | 'create_calendar_event'
   | 'create_reminder'
   // Payments
-  | 'send_proposal'
   | 'send_contract'
   | 'send_invoice'
   // Couple questionnaires
@@ -226,7 +218,6 @@ export type ActionType =
   | 'remove_from_segment'
   | 'enqueue_for_newsletter'
   // Payments
-  | 'create_invoice_from_proposal'
   | 'create_contract_from_template'
   | 'void_invoice'
   | 'revoke_contract'

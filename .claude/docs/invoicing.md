@@ -11,8 +11,7 @@ A lightweight invoicing system. MCs generate an invoice from an accepted quote (
 ## Access Points
 
 1. **Couple Profile → Invoices tab**  -  lists all invoices for this couple; "+ New Invoice" button; click any invoice row to open the builder page
-2. **Accepted quote → "Create Invoice" button**  -  pre-fills invoice with quote title and line items (see `quotes.md`)
-3. **`/invoices/[id]` route**  -  dedicated full-page invoice builder
+2. **`/invoices/[id]` route**  -  dedicated full-page invoice builder
 
 ---
 

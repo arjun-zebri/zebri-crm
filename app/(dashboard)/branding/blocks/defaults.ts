@@ -27,18 +27,14 @@ let counter = 0
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`
 
 /**
- * Default primary/secondary labels for an action block, by surface. Proposals
- * accept or decline; invoices and every other surface pay, with no decline.
- *
- * @param surface - The document surface the action block belongs to.
+ * Default primary/secondary labels for an action block. Every surface pays,
+ * with no decline.
  */
-export function actionDefaults(surface?: string): { primary: string; secondary: string | null } {
-  return surface === 'proposal'
-    ? { primary: 'Accept', secondary: 'Decline' }
-    : { primary: 'Pay now', secondary: null }
+export function actionDefaults(): { primary: string; secondary: string | null } {
+  return { primary: 'Pay now', secondary: null }
 }
 
-export function blockTemplate(type: BlockType, surface?: string): Block {
+export function blockTemplate(type: BlockType): Block {
   switch (type) {
     case 'headerBanner':
       return { id: newId('hb'), type: 'headerBanner' }
@@ -65,7 +61,7 @@ export function blockTemplate(type: BlockType, surface?: string): Block {
       // only and an untouched text block renders nothing on the public document.
       return { id: newId('tx'), type: 'text', text: textDoc('') }
     case 'action':
-      return { id: newId('ac'), type: 'action', ...actionDefaults(surface) }
+      return { id: newId('ac'), type: 'action', ...actionDefaults() }
     case 'divider':
       return { id: newId('dv'), type: 'divider' }
     case 'footer':
@@ -78,18 +74,6 @@ export function blockTemplate(type: BlockType, surface?: string): Block {
       return { id: newId('ps'), type: 'paymentSchedule' }
     case 'contractBody':
       return { id: newId('cb'), type: 'contractBody', locked: true }
-    case 'proposalBody':
-      return { id: newId('pb'), type: 'proposalBody', locked: true }
-    case 'packageHeader':
-      return { id: newId('ph'), type: 'packageHeader' }
-    case 'packageDetails':
-      return { id: newId('pd2'), type: 'packageDetails' }
-    case 'packageLineItems':
-      return { id: newId('pli'), type: 'packageLineItems', showHeader: true }
-    case 'packageInclusions':
-      return { id: newId('pi'), type: 'packageInclusions' }
-    case 'packageTotals':
-      return { id: newId('pt'), type: 'packageTotals' }
     case 'vendorTimelineBody':
       return { id: newId('vt'), type: 'vendorTimelineBody', locked: true }
     case 'questionnaireBody':
@@ -103,23 +87,11 @@ export function blockTemplate(type: BlockType, surface?: string): Block {
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
-export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
+export function defaultBlocksFor(surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
   if (surface === 'portal') {
     return [
       { id: newId('bn'), type: 'businessName' },
       { id: newId('cp'), type: 'couplePortal', locked: true },
-    ]
-  }
-  if (surface === 'proposal') {
-    return [
-      { id: newId('bn'), type: 'businessName' },
-      { id: newId('ph'), type: 'packageHeader' },
-      { id: newId('pd2'), type: 'packageDetails' },
-      { id: newId('pli'), type: 'packageLineItems', showHeader: true },
-      { id: newId('pi'), type: 'packageInclusions' },
-      { id: newId('pt'), type: 'packageTotals' },
-      { id: newId('ac'), type: 'action', ...actionDefaults('proposal') },
-      { id: newId('ft'), type: 'footer', closingNote: textDoc('Thank you for thinking of us.') },
     ]
   }
   if (surface === 'invoice') {
@@ -185,7 +157,7 @@ export function defaultBlocksFor(surface: 'proposal' | 'invoice' | 'contract' | 
  * Migrate persisted block data from older shapes (e.g. type: 'message') to the
  * current schema. Safe to run on every load.
  */
-export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
+export function migrateBlocks(blocks: unknown, surface?: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire'): Block[] {
   if (!Array.isArray(blocks)) return []
   let migrated = blocks
     .map((raw): Block | null => {
@@ -224,20 +196,6 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
     migrated = migrated.map((b) =>
       b.type === 'action' && b.secondary !== null ? ({ ...b, secondary: null } as Block) : b,
     )
-  }
-
-  // Proposals are accepted or declined, never paid. An action block still
-  // carrying the old surface-blind "Pay now" default (or the "Secondary"
-  // placeholder) leaked from the invoice-shaped template; give it the proposal
-  // accept/decline wording. Idempotent — only the exact legacy strings match.
-  if (surface === 'proposal') {
-    migrated = migrated.map((b) => {
-      if (b.type !== 'action') return b
-      let next = b
-      if (next.primary === 'Pay now') next = { ...next, ...actionDefaults('proposal') }
-      if (next.secondary === 'Secondary') next = { ...next, secondary: 'Decline' }
-      return next
-    })
   }
 
   // Contract surface migration (Phase 3.1):
@@ -300,33 +258,6 @@ export function migrateBlocks(blocks: unknown, surface?: 'proposal' | 'invoice' 
     }
   }
 
-  // Proposal surface migration: expand any surviving `proposalBody` marker
-  // into the four real package blocks (header, details, inclusions, totals).
-  if (surface === 'proposal') {
-    migrated = expandProposalBody(migrated)
-
-    // Insert packageLineItems block after packageDetails if the tree has package
-    // blocks but no packageLineItems yet. Idempotent — runs harmlessly when the
-    // data is already in the new shape.
-    const hasPackageBlocks = migrated.some((b) => b.type === 'packageDetails')
-    const hasLineItems = migrated.some((b) => b.type === 'packageLineItems')
-    if (hasPackageBlocks && !hasLineItems) {
-      const detailsIdx = migrated.findIndex((b) => b.type === 'packageDetails')
-      if (detailsIdx >= 0) {
-        const lineItemsBlock: Block = {
-          id: `pli_${Math.random().toString(36).slice(2, 9)}`,
-          type: 'packageLineItems',
-          showHeader: true,
-        }
-        migrated = [
-          ...migrated.slice(0, detailsIdx + 1),
-          lineItemsBlock,
-          ...migrated.slice(detailsIdx + 1),
-        ]
-      }
-    }
-  }
-
   return migrated
 }
 
@@ -383,25 +314,4 @@ function stripDashes(block: Block): Block {
     default:
       return block
   }
-}
-
-/**
- * Spec §6: expand a legacy `proposalBody` marker into the four real package
- * blocks (header, details, optional inclusions, totals) in place. The Accept
- * CTA is the existing `action` block that already sits after the marker; we do
- * not synthesise one here (readiness flags its absence). Idempotent: a tree
- * with no `proposalBody` is returned unchanged.
- */
-export function expandProposalBody(blocks: Block[]): Block[] {
-  const idx = blocks.findIndex((b) => b.type === 'proposalBody')
-  if (idx < 0) return blocks
-  const pkg: Block[] = [
-    blockTemplate('packageHeader'),
-    blockTemplate('packageDetails'),
-    blockTemplate('packageInclusions'),
-    blockTemplate('packageTotals'),
-  ]
-  // Drop the marker and any duplicate proposalBody markers further down.
-  const rest = blocks.filter((b) => b.type !== 'proposalBody')
-  return [...rest.slice(0, idx), ...pkg, ...rest.slice(idx)]
 }

@@ -22,13 +22,11 @@ export const MARKER_TYPES: ReadonlySet<BlockType> = new Set([
 /** Blocks whose content comes from live document data, not template text. */
 const DATA_BOUND: ReadonlySet<BlockType> = new Set([
   'paymentSchedule', 'lineItems', 'totals',
-  'packageLineItems', 'packageInclusions', 'packageTotals',
 ] as const)
 
 /** Required non-conditional blocks per surface (the CTA `action` is required
  *  where the document must have a call to action). */
 export const REQUIRED_BY_SURFACE: Readonly<Record<SurfaceTab, readonly BlockType[]>> = {
-  proposal: ['packageHeader', 'packageDetails', 'packageTotals', 'action'],
   invoice: ['title', 'lineItems', 'totals'],
   contract: ['title', 'contractBody', 'action'],
   portal: ['couplePortal'],

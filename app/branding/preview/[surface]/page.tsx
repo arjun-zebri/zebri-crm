@@ -2,7 +2,7 @@
  * Customer preview page for the branding editor.
  *
  * Authed via the dashboard session (not token-gated). Renders the current user's
- * saved branding for the chosen surface (proposal/invoice/contract/portal) with
+ * saved branding for the chosen surface (invoice/contract/portal) with
  * sample data using the same shared renderers the public pages use, so the preview
  * matches exactly what the couple receives. Reads the surface from route params via
  * useParams for SSR safety (window.location during render breaks hydration).
@@ -15,70 +15,16 @@ import { useParams } from 'next/navigation'
 import { useEffect } from 'react'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { ProposalDocumentBody } from '@/components/proposal/proposal-document-body'
-import { StaticAcceptCta } from '@/components/proposal/proposal-page-view'
 import { googleFontsHref } from '@/lib/branding/fonts'
 import { PublicBlockRenderer, type PublicDocData } from '@/lib/branding/public-renderer'
 import { useBrandingHead, type PublicBranding } from '@/lib/branding/public-surface'
 import { useCurrentBranding } from '@/lib/branding/use-current-branding'
-import type { PublicProposalOption } from '@/lib/payments/proposal-view'
 
 /**
  * Validates a surface string and returns true if it is a valid BuilderSurface.
  */
-function isValidSurface(s: unknown): s is 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' {
-  return s === 'proposal' || s === 'invoice' || s === 'contract' || s === 'portal' || s === 'vendorTimeline' || s === 'questionnaire'
-}
-
-/**
- * Sample proposal data for preview.
- */
-function sampleProposal(): {
-  options: PublicProposalOption[]
-  title: string
-  coupleName: string
-  proposalNumber: string
-  expiresAt: string
-  notes: string
-} {
-  return {
-    title: 'Wedding MC & Hosting',
-    coupleName: 'Emma & James',
-    proposalNumber: 'PROP-2024-001',
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] ?? '',
-    notes: 'Includes a pre-wedding planning meeting, a detailed run sheet, and full hosting of your ceremony and reception. Vendor coordination on the day so everything runs to time.',
-    options: [
-      {
-        id: 'opt-1',
-        title: 'Standard Package',
-        description: 'Ceremony hosting plus reception MC',
-        subtotal: 1800,
-        gst_inclusive: true,
-        is_popular: true,
-        position: 0,
-        items: [
-          { id: 'i1', description: 'Pre-wedding planning meeting', amount: 0, position: 0, is_addon: false, default_included: false },
-          { id: 'i2', description: 'Ceremony & reception hosting', amount: 1200, position: 1, is_addon: false, default_included: false },
-          { id: 'i3', description: 'Run sheet & vendor coordination', amount: 600, position: 2, is_addon: false, default_included: false },
-        ],
-      },
-      {
-        id: 'opt-2',
-        title: 'Premium Package',
-        description: 'Full-day hosting with rehearsal attendance',
-        subtotal: 2500,
-        gst_inclusive: true,
-        is_popular: false,
-        position: 1,
-        items: [
-          { id: 'i4', description: 'Pre-wedding planning meeting', amount: 0, position: 0, is_addon: false, default_included: false },
-          { id: 'i5', description: 'Full-day ceremony & reception hosting', amount: 1500, position: 1, is_addon: false, default_included: false },
-          { id: 'i6', description: 'Ceremony rehearsal attendance', amount: 500, position: 2, is_addon: false, default_included: false },
-          { id: 'i7', description: 'Run sheet & vendor coordination', amount: 500, position: 3, is_addon: false, default_included: false },
-        ],
-      },
-    ],
-  }
+function isValidSurface(s: unknown): s is 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' {
+  return s === 'invoice' || s === 'contract' || s === 'portal' || s === 'vendorTimeline' || s === 'questionnaire'
 }
 
 /**
@@ -147,11 +93,11 @@ export default function BrandingPreviewPage() {
 /**
  * Content renderer for a valid surface.
  */
-function PreviewContent({ surface }: { surface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' }) {
+function PreviewContent({ surface }: { surface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' }) {
   const { branding, blocks: savedBlocks, loading } = useCurrentBranding(surface)
   useBrandingHead(branding)
 
-  // Inject branding fonts (same pattern as proposal-preview-pane)
+  // Inject branding fonts (same pattern as the builder preview pane)
   useEffect(() => {
     if (!branding) return
     const id = 'zebri-branding-preview-fonts'
@@ -177,10 +123,6 @@ function PreviewContent({ surface }: { surface: 'proposal' | 'invoice' | 'contra
     minHeight: '100vh',
   }
 
-  if (surface === 'proposal') {
-    return <ProposalPreview branding={branding} blocks={savedBlocks} pageStyle={pageStyle} />
-  }
-
   if (surface === 'invoice') {
     return <InvoicePreview branding={branding} blocks={savedBlocks} pageStyle={pageStyle} />
   }
@@ -202,53 +144,6 @@ function PreviewContent({ surface }: { surface: 'proposal' | 'invoice' | 'contra
   }
 
   return null
-}
-
-/**
- * Proposal surface preview with sample couple data.
- */
-function ProposalPreview({
-  branding,
-  blocks,
-  pageStyle,
-}: {
-  branding: PublicBranding
-  blocks: Block[]
-  pageStyle: Record<string, string | number>
-}) {
-  const sample = sampleProposal()
-  const chosen = sample.options[0]!
-
-  // Compute selection (pre-select first item of each add-on)
-  const selection: Record<string, boolean> = {}
-  for (const item of chosen.items) {
-    if (item.is_addon) selection[item.id] = item.default_included
-  }
-
-  return (
-    <div style={pageStyle}>
-      <div className="mx-auto max-w-2xl p-4">
-        <div className="rounded-xl border shadow-sm overflow-hidden @container/doc" style={{ background: branding.surface_color }}>
-          <ProposalDocumentBody
-            blocks={blocks}
-            branding={branding}
-            title={sample.title}
-            coupleName={sample.coupleName}
-            proposalNumber={sample.proposalNumber}
-            notes={sample.notes}
-            expiresAt={sample.expiresAt}
-            options={sample.options}
-            state="active"
-            chosenId={chosen.id}
-            selection={selection}
-            renderAccept={({ view, style, publicBranding }) => (
-              <StaticAcceptCta expiresAt={sample.expiresAt} branding={view} publicBranding={publicBranding} style={style} />
-            )}
-          />
-        </div>
-      </div>
-    </div>
-  )
 }
 
 /**
@@ -433,7 +328,7 @@ function UnknownSurfaceState({ surface }: { surface: string }) {
     <div className="flex items-center justify-center min-h-screen bg-surface p-4">
       <div className="text-center">
         <p className="text-text-muted text-sm">Unknown surface: {surface}</p>
-        <p className="text-text-subtle text-xs mt-2">Valid surfaces: proposal, invoice, contract, portal, vendorTimeline, questionnaire</p>
+        <p className="text-text-subtle text-xs mt-2">Valid surfaces: invoice, contract, portal, vendorTimeline, questionnaire</p>
       </div>
     </div>
   )

@@ -83,17 +83,6 @@ export interface PortalContact {
   phone: string | null
 }
 
-export interface PortalProposal {
-  id: string
-  title: string
-  proposal_number: string
-  status: string
-  subtotal: number
-  share_token: string | null
-  share_token_enabled: boolean
-}
-
-
 export interface PortalInvoice {
   id: string
   title: string
@@ -171,8 +160,6 @@ export interface PortalData {
   vows: PortalVow[]
   timeline_items: PortalTimelineItem[]
   payments: {
-    proposals?: PortalProposal[]
-    quotes?: unknown[]
     invoices: PortalInvoice[]
   }
   contracts: PortalContract[]

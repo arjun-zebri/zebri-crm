@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useToast } from '@/components/ui/toast'
 import { getAccountReadiness } from '@/lib/branding/account-readiness'
 import { type HeadingFont, type BodyFont, type FontWeight } from '@/lib/branding/fonts'
-import type { ProposalLabels } from '@/lib/branding/proposal-labels'
 import { evaluateSurface, type AccountReadiness } from '@/lib/branding/readiness'
 import type { TextCase } from '@/lib/branding/text-case'
 import {
@@ -70,7 +69,7 @@ interface BrandingEditorProps {
     cornerRadius: number
     docPadding: number
     themePreset: ThemeIdOrCustom
-    blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
+    blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
     businessName: string
     phone: string
     website: string
@@ -84,7 +83,6 @@ interface BrandingEditorProps {
     brandKits: BrandKit[]
     activeKitId: string | null
     portalSections: PortalSectionSettings
-    proposalLabels: ProposalLabels
     headingSize: number
     bodySize: number
     headingCase: TextCase
@@ -137,11 +135,10 @@ export interface EditorState {
   cornerRadius: number
   docPadding: number
   themePreset: ThemeIdOrCustom
-  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] }
   brandKits: BrandKit[]
   activeKitId: string | null
   portalSections: PortalSectionSettings
-  proposalLabels: ProposalLabels
   headingSize: number
   bodySize: number
   headingCase: TextCase
@@ -201,7 +198,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       brandKits: initialData.brandKits,
       activeKitId: initialData.activeKitId,
       portalSections: initialData.portalSections,
-      proposalLabels: initialData.proposalLabels,
       headingSize: initialData.headingSize,
       bodySize: initialData.bodySize,
       headingCase: initialData.headingCase,
@@ -226,7 +222,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
 
   const { state, set: setState, undo, redo, canUndo, canRedo } = useHistory<EditorState>(initial)
 
-  const [surface, setSurface] = useState<SurfaceTab>('proposal')
+  const [surface, setSurface] = useState<SurfaceTab>('invoice')
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [zoom, setZoom] = useState(1)
   const [selectedBlockIds, setSelectedBlockIds] = useState<string[]>([])
@@ -312,7 +308,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
         doc_padding: value.docPadding,
         theme_preset: value.themePreset,
         active_kit_id: value.activeKitId,
-        proposal_labels: value.proposalLabels,
         heading_size: value.headingSize,
         body_size: value.bodySize,
         heading_case: value.headingCase,
@@ -356,7 +351,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   // Switch to the first enabled surface if the active surface becomes disabled.
   useEffect(() => {
     if (!state.enabledSurfaces.includes(surface)) {
-      setSurface(state.enabledSurfaces[0] || 'proposal')
+      setSurface(state.enabledSurfaces[0] || 'invoice')
     }
   }, [state.enabledSurfaces, surface])
 
@@ -625,17 +620,16 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     updateBlock<ImageBlock>(blockId, { url: undefined })
   }
 
-  const docSurface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' = surface
+  const docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire' = surface
 
-  /** Kit block trees saved before the proposals rollout keyed the
-   *  first surface `quote`; normalise to the editor's `proposal` key
-   *  so applying an old kit keeps the MC's design. */
+  /** Normalise a kit's per-surface block trees, filling any missing
+   *  surface with its default layout so applying a kit keeps the MC's
+   *  design. */
   const normalizeKitBlocks = (
     blocks: BrandKit['blocks'],
   ): EditorState['blocks'] | null => {
     if (!blocks) return null
     return {
-      proposal: blocks.proposal ?? blocks.quote ?? defaultBlocksFor('proposal'),
       invoice: blocks.invoice ?? defaultBlocksFor('invoice'),
       contract: blocks.contract ?? defaultBlocksFor('contract'),
       portal: blocks.portal ?? defaultBlocksFor('portal'),
@@ -691,7 +685,7 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
   }
 
   const addBlock = (type: Parameters<typeof blockTemplate>[0]) => {
-    const newBlock = blockTemplate(type, docSurface)
+    const newBlock = blockTemplate(type)
     const list = state.blocks[docSurface] ?? []
     if (insertAfterId) {
       const idx = list.findIndex((b) => b.id === insertAfterId)
@@ -787,7 +781,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
       name = `${baseName} ${n++}`
     }
     const defaultBlocks = {
-      proposal: defaultBlocksFor('proposal'),
       invoice: defaultBlocksFor('invoice'),
       contract: defaultBlocksFor('contract'),
       portal: defaultBlocksFor('portal'),
@@ -962,7 +955,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
     bankBsb: state.bankBsb,
     bankAccountNumber: state.bankAccountNumber,
     portalSections: state.portalSections,
-    proposalLabels: state.proposalLabels,
   }), [state])
 
   // Null-safe: state persisted or hot-reloaded from before the six-surface
@@ -1170,9 +1162,6 @@ export function BrandingEditor({ initialData }: BrandingEditorProps) {
             removeHeader={removeHeader}
             uploadImage={uploadImage}
             removeImage={removeImage}
-            onEditProposalLabel={(key, val) =>
-              setEditor({ proposalLabels: { ...state.proposalLabels, [key]: val } })
-            }
           />
         </CanvasFrame>
       </div>
@@ -1279,8 +1268,8 @@ const TOKEN_TO_BLOCK_TYPES: Partial<Record<TokenKey, Set<Block['type']>>> = {
 
 function flashAffectedBlocks(
   patch: Partial<EditorState>,
-  blocks: { proposal: Block[]; invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] },
-  docSurface: 'proposal' | 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire',
+  blocks: { invoice: Block[]; contract: Block[]; portal: Block[]; vendorTimeline: Block[]; questionnaire: Block[] },
+  docSurface: 'invoice' | 'contract' | 'portal' | 'vendorTimeline' | 'questionnaire',
   surface: SurfaceTab,
 ) {
   if (typeof document === 'undefined') return

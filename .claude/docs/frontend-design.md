@@ -398,23 +398,6 @@ interface TextStyle {
 }
 ```
 
-## Stylable proposal labels
-
-`lib/branding/proposal-labels.ts` upgrades fixed-core proposal labels from plain strings to `{ text, style }`:
-
-```ts
-interface StyledLabel {
-  text: string
-  style?: TextStyle
-}
-
-type ProposalLabels = Record<LabelKey, StyledLabel>
-
-resolveProposalLabels(raw: unknown): ProposalLabels
-```
-
-Back-compat reader accepts both legacy `Record<LabelKey, string>` and new `Record<LabelKey, StyledLabel>` shapes. Used by `EditableLabel` in the branding editor (click-to-edit on the canvas) and by `ProposalPageView` on the public page.
-
 ------------------------------------------------------------------------
 
 # Branding Editor Per-Block Controls (2026-07-15)

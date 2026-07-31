@@ -122,6 +122,112 @@ describe('saveInvoiceAction — integration', () => {
     }
   });
 
+  it('defaults gst_inclusive to false and persists it when sent', async () => {
+    const user = await createTestUser({}, pro);
+    activeUser = user;
+    try {
+      const coupleId = await arrangeCouple(user);
+      const base = {
+        invoiceId: null,
+        coupleId,
+        eventId: null,
+        title: 'GST invoice',
+        notes: null,
+        paymentTerms: null,
+        dueDate: null,
+        taxRate: 0,
+        discount: null,
+        stripePaymentEnabled: false,
+        items: [{ id: 'new-1', description: 'MC services', amount: 3000, position: 0 }],
+      };
+
+      // Omitting the field entirely mirrors an older client bundle: the
+      // column default must hold rather than the write failing.
+      const implicit = await saveInvoiceAction(base);
+      expect(implicit.ok).toBe(true);
+      if (!implicit.ok) throw new Error(implicit.error);
+
+      const explicit = await saveInvoiceAction({ ...base, gstInclusive: true });
+      expect(explicit.ok).toBe(true);
+      if (!explicit.ok) throw new Error(explicit.error);
+
+      const admin = serviceClient();
+      const { data: rows } = await admin
+        .from('invoices')
+        .select('id, gst_inclusive, subtotal, tax_rate')
+        .in('id', [implicit.data.id, explicit.data.id]);
+      const byId = new Map((rows ?? []).map((r) => [r.id, r]));
+      expect(byId.get(implicit.data.id)?.gst_inclusive).toBe(false);
+      expect(byId.get(explicit.data.id)?.gst_inclusive).toBe(true);
+      // Display flag only: the money columns are identical either way.
+      expect(byId.get(explicit.data.id)?.subtotal).toBe(
+        byId.get(implicit.data.id)?.subtotal,
+      );
+      expect(byId.get(explicit.data.id)?.tax_rate).toBe(
+        byId.get(implicit.data.id)?.tax_rate,
+      );
+
+      // And it can be turned back off.
+      const off = await saveInvoiceAction({
+        ...base,
+        invoiceId: explicit.data.id,
+        gstInclusive: false,
+      });
+      expect(off.ok).toBe(true);
+      const { data: reverted } = await admin
+        .from('invoices')
+        .select('gst_inclusive')
+        .eq('id', explicit.data.id)
+        .single();
+      expect(reverted?.gst_inclusive).toBe(false);
+    } finally {
+      await user.cleanup();
+    }
+  });
+
+  it('exposes gst_inclusive through get_public_invoice for the couple', async () => {
+    const user = await createTestUser({}, pro);
+    activeUser = user;
+    try {
+      const coupleId = await arrangeCouple(user);
+      const created = await saveInvoiceAction({
+        invoiceId: null,
+        coupleId,
+        eventId: null,
+        title: 'Public GST invoice',
+        notes: null,
+        paymentTerms: null,
+        dueDate: null,
+        taxRate: 0,
+        gstInclusive: true,
+        discount: null,
+        stripePaymentEnabled: false,
+        items: [{ id: 'new-1', description: 'MC services', amount: 3000, position: 0 }],
+      });
+      expect(created.ok).toBe(true);
+      if (!created.ok) throw new Error(created.error);
+
+      const admin = serviceClient();
+      const { data: inv } = await admin
+        .from('invoices')
+        .select('share_token')
+        .eq('id', created.data.id)
+        .single();
+      await admin
+        .from('invoices')
+        .update({ share_token_enabled: true })
+        .eq('id', created.data.id);
+
+      const { data: payload, error } = await admin.rpc('get_public_invoice', {
+        token: inv!.share_token,
+      });
+      expect(error).toBeNull();
+      expect((payload as { gst_inclusive?: boolean }).gst_inclusive).toBe(true);
+    } finally {
+      await user.cleanup();
+    }
+  });
+
   it('blocks cross-tenant writes — User B cannot save into User A invoice', async () => {
     const userA = await createTestUser({}, pro);
     const userB = await createTestUser({}, pro);

@@ -10,7 +10,7 @@
  * Bodies are TipTap JSON whose mention nodes carry the same contract
  * variable keys the signing/preview pipeline resolves (`today`,
  * `mc_business_name`, `couple_name`, `event_date`, `venue`,
- * `total_amount`, `deposit_amount`, `couple_email`): see
+ * `couple_email`): see
  * `supabase/migrations/20260421000001_seed_default_contract_template.sql`.
  *
  * This is scaffolding, not legal advice: an MC should have a lawyer in
@@ -104,8 +104,8 @@ export const STARTER_CONTRACTS: readonly StarterContract[] = [
       ),
 
       h(2, 'Fees and payment'),
-      p('The total fee for the services is ', v('total_amount'), ', inclusive of GST unless otherwise stated on the accompanying quote.'),
-      p('A non-refundable deposit of ', v('deposit_amount'), ' is payable within 7 days of signing this agreement. The booking is not secured until the deposit is received in cleared funds.'),
+      p('The total fee for the services is as set out in the accompanying invoice, inclusive of GST unless otherwise stated.'),
+      p('A non-refundable deposit, as set out in the accompanying invoice, is payable within 7 days of signing this agreement. The booking is not secured until the deposit is received in cleared funds.'),
       p('The balance is payable no later than 14 days before the event by bank transfer to the account shown on the invoice.'),
 
       h(2, 'Cancellation'),
@@ -145,10 +145,10 @@ export const STARTER_CONTRACTS: readonly StarterContract[] = [
       ),
 
       h(2, 'Deposit'),
-      p('A non-refundable deposit of ', v('deposit_amount'), ' is payable within 7 days of signing. The date is held only once the deposit is received in cleared funds.'),
+      p('A non-refundable deposit, as set out in the accompanying invoice, is payable within 7 days of signing. The date is held only once the deposit is received in cleared funds.'),
 
       h(2, 'Balance'),
-      p('The balance of ', v('total_amount'), ' (less the deposit) is payable no later than 14 days before the event. Late payment may, at the discretion of the MC, result in suspension of the services, with the Couple remaining liable for the full fee.'),
+      p('The balance, as set out in the accompanying invoice, is payable no later than 14 days before the event. Late payment may, at the discretion of the MC, result in suspension of the services, with the Couple remaining liable for the full fee.'),
 
       h(2, 'Cancellation'),
       p('If the Couple cancels:'),

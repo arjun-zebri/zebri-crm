@@ -23,7 +23,7 @@ export interface ImageInteraction {
 }
 
 /**
- * Renders an image block on public surfaces (proposal, invoice, contract, portal).
+ * Renders an image block on public surfaces (invoice, contract, portal).
  * Applies pan/zoom positioning if configured.
  * In the editor, chrome contains the InlineAsset overlay and ResizeHandle.
  *
