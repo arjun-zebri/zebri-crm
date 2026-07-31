@@ -976,6 +976,39 @@ a CASA assessment. Microsoft's `Mail.Send` has no equivalent gate. The
 Google Cloud OAuth client + Azure app registration are operational
 prerequisites (`.env.example`).
 
+### Lead Capture (`?tab=lead-capture`) — ZEB-2
+
+An embeddable enquiry form the MC puts on their own website; submissions
+create couples automatically. Component: `lead-capture-section.tsx`
+(self-loads via the `ensureLeadForm` server action, which lazily creates
+the one-per-MC `lead_capture_forms` row on first open). Server actions:
+`app/(dashboard)/settings/lead-capture/actions.ts`
+(`ensureLeadForm`, `saveLeadCaptureSettings`).
+
+Controls:
+
+- **Form enabled** toggle (`lead_capture_forms.enabled`). Off stops the
+  public form (`get_lead_form` returns null → "Form unavailable").
+- **New leads land in** — a `Select` of the MC's `couple_statuses`; the
+  chosen slug is `target_status_slug`. "Top of pipeline (default)" (a
+  sentinel, not `value=""`) leaves it null → first status by position.
+- **Three copy blocks:** hosted link (`{origin}/lead/{token}`), iframe
+  embed (`?embed=1`), and a JS snippet
+  (`<script src="{origin}/lead-embed.js" data-zebri-form="{token}">` — a
+  static loader in `public/lead-embed.js` that injects the iframe and
+  auto-resizes it from the form's `postMessage` height).
+
+**Public form — `/lead/[token]`** (`app/lead/[token]/page.tsx`, client
+orchestrator). Loads `get_lead_form` via the anon client, applies the
+MC's `_user_branding` scalars, and renders `lead-form.tsx` with explicit
+loading / submitting / success / error states plus an "unavailable" card.
+Fields: your name (required), partner's name, email (required), phone,
+wedding date, venue, "how did you hear about me?", message, a hidden
+honeypot, and a render timestamp. Submits to `POST /api/lead/submit`
+(rate-limited, honeypot + timing bot check, then the `submit_lead` RPC;
+the MC is emailed on success). `?embed=1` strips the page chrome for
+iframe embedding. Works on desktop + mobile.
+
 ### Signature (`?tab=signature`)
 
 Listed **below Public Page** in the nav. A single reusable **email

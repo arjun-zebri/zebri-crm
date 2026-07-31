@@ -137,6 +137,31 @@ anyway, but we cap on our side so the alert fires on our schedule.
 | `app/api/email/send-template/route.ts` | ✅ `z.object({ coupleId, templateId?, inlineSubject?, inlineBody?, overrides, sendAnyway, attachmentFileIds })` | ✅ 5/min/user via `EMAIL_RATE_LIMITS.sendTemplate`; hit fires `email_rate_limit_hit` (`action: 'sendTemplate'`) | RLS scopes template + couple loads to the caller. **Safety property:** the send is **blocked (422)** when `detectMissingVariables` finds an unresolved variable, unless `sendAnyway` is set — re-checked server-side so the client can't bypass it. Static attachments downloaded via the owner-only `email-template-files` bucket |
 | `app/api/email/send-contract-reminders/route.ts` | n/a (cron) | n/a (cron-secret gated) | Already uses `isCronAuthorized` |
 
+### Public lead-capture ingest — `get_lead_form` / `submit_lead` (ZEB-2)
+
+Backs the public `/lead/[token]` form and the `POST /api/lead/submit`
+endpoint. Unauthenticated: the `lead_capture_forms.capture_token`
+(`uuid`, `gen_random_uuid()` default) IS the capability. Both RPCs are
+`security definer`, `set search_path = public, auth`, granted to `anon`,
+and return `null`/`{error}` (never raise) for a missing/disabled token
+so token existence never leaks.
+
+- **Scoping:** `submit_lead` derives the owning `user_id` from the token
+  and inserts the couple under it — a confused-deputy write into another
+  MC's account is impossible (proved by the cross-tenant test in
+  `tests/integration/lead-capture/rpc.test.ts`).
+- **Field selection:** `get_lead_form` returns only `enabled`,
+  `business_name`, and the MC branding scalars — no `user_id`, no token,
+  no internal flags.
+- **Route hardening (`app/api/lead/submit/route.ts`):** Zod-validated
+  (`leadSubmitSchema`), `inMemoryLimiter` 5/min/IP, honeypot + min-fill
+  timing (silent success so bots learn nothing), and
+  `recordInvalidTokenAttempt({ surface: 'lead' })` on a bad token. No
+  service-role key on the path (RLS server client → RPC).
+- **Plan limit:** a Starter couple-cap block returns a generic success
+  to the visitor and fires `lead_blocked_plan_limit` + an upgrade email
+  to the MC, so inbound leads are never silently dropped.
+
 ### Public RPC audit — `get_public_proposal` / `get_public_invoice`
 
 These `security definer` functions back the public-facing
@@ -509,6 +534,7 @@ DELETE (sampled clean across the migrations).
 | `couple_questionnaires` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-questionnaires.test.ts` (8 tests — RLS + public RPC token gating + submit/double-submit) + `tests/integration/rls/portal-questionnaires.test.ts` (3 tests — portal RPC) | Questionnaires |
 | `admin_audit_log` | ✅ (SELECT-only for admins via app_metadata; no write policies — Phase 13) | `actor_id` | ✅ `tests/integration/rls/admin-audit-log.test.ts` (8 tests) + `tests/integration/admin/audit-log-flow.test.ts` (3 tests — helper round-trip) | Admin |
 | `couple_statuses` | ✅ | `user_id` | ✅ `tests/integration/rls/couple-statuses.test.ts` (Phase 4A, 5 tests) | Couples & Events |
+| `lead_capture_forms` | ✅ | `user_id` | ✅ `tests/integration/lead-capture/rpc.test.ts` (10 tests — RLS isolation + `get_lead_form`/`submit_lead` token gating, cross-tenant ingest, status resolution, plan-limit) | Lead capture (ZEB-2) |
 | `couple_contacts` | ✅ | (join via `couple_id`, denorm `user_id`) | ✅ `tests/integration/rls/couple-contacts.test.ts` (Phase 4B, 4 tests) | Couples & Events |
 | `event_contacts` | ✅ | (join via `event_id`, denorm `user_id`) | ✅ `tests/integration/rls/event-contacts.test.ts` (Phase 4C, 4 tests) | Couples & Events |
 | `vendors` (legacy alias of contacts) | ✅ | `user_id` | ☐ | Contacts |
