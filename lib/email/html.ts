@@ -499,13 +499,13 @@ export interface LeadNotificationOpts {
   mcBusinessName: string;
   lead: {
     name: string;
-    partnerName?: string;
+    partnerName?: string | undefined;
     email: string;
-    phone?: string;
-    weddingDate?: string;
-    venue?: string;
-    referralSource?: string;
-    message?: string;
+    phone?: string | undefined;
+    weddingDate?: string | undefined;
+    venue?: string | undefined;
+    referralSource?: string | undefined;
+    message?: string | undefined;
   };
 }
 

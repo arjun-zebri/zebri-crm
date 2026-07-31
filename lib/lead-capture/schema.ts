@@ -53,7 +53,7 @@ export type LeadSubmitInput = z.infer<typeof leadSubmitSchema>;
  * success so scrapers get no signal.
  */
 export function isLikelyBot(
-  input: { hp?: string; rendered_at: number },
+  input: { hp?: string | undefined; rendered_at: number },
   nowMs: number,
 ): boolean {
   if (input.hp && input.hp.trim().length > 0) return true;
