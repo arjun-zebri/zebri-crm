@@ -110,6 +110,8 @@ function describe(event: AlertEvent): string {
       return `tick took ${event.durationMs}ms · ${event.actionsExecuted} actions`;
     case 'automation_tick_backlog':
       return `pending events=${event.pendingEvents}`;
+    case 'lead_blocked_plan_limit':
+      return `user=${event.userId} · ${event.email} — website lead blocked by plan limit`;
     case 'app_error':
       return `${event.source ? `${event.source}: ` : ''}${event.message}`;
   }

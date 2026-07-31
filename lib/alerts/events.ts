@@ -138,7 +138,7 @@ export type AlertEvent =
       type: 'public_token_attempt_burst';
       severity: 'warn';
       ip: string;
-      surface: 'invoice' | 'quote' | 'portal' | 'contract';
+      surface: 'invoice' | 'quote' | 'portal' | 'contract' | 'lead';
       /** Number of invalid attempts inside the burst window
        *  (typically 10 in 60s). */
       attempts: number;
@@ -274,6 +274,15 @@ export type AlertEvent =
       type: 'automation_tick_backlog';
       severity: 'warn';
       pendingEvents: number;
+    })
+
+  // ───── Lead capture ────────────────────────────────────────────────
+  | (BaseEvent & {
+      type: 'lead_blocked_plan_limit';
+      severity: 'warn';
+      /** The MC whose plan cap blocked the inbound website lead. */
+      userId: string;
+      email: string;
     })
 
   // ───── Catch-all ──────────────────────────────────────────────────
