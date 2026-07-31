@@ -46,7 +46,7 @@ test.describe('invoice builder: payment schedule modal', () => {
 
     // Empty state: one button opens the modal, pre-loaded with the default.
     await page.getByRole('button', { name: /add schedule/i }).click()
-    await expect(page.getByLabelText('Schedule name')).toBeVisible()
+    await expect(page.getByLabel('Schedule name')).toBeVisible()
     await expect(page.getByText(/Stages total .* of \$4,000\.00/i)).toBeVisible()
 
     // Apply writes the timeline onto the invoice and closes the modal.
@@ -56,7 +56,7 @@ test.describe('invoice builder: payment schedule modal', () => {
 
     // Reopen via the single "Change" door and edit the first stage's offset.
     await page.getByRole('button', { name: 'Change' }).click()
-    await page.getByLabelText('Offset amount').first().fill('14')
+    await page.getByLabel('Offset amount').first().fill('14')
 
     // Re-apply; the invoice still balances against the total.
     await page.getByRole('button', { name: /^apply$/i }).click()
