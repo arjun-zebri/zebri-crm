@@ -1,0 +1,162 @@
+/**
+ * "Lead Capture" settings section. Surfaces the MC's embeddable enquiry form:
+ * an enable toggle, the landing-status selector, and three copy-paste blocks
+ * (hosted link, iframe embed, JS snippet). The form row is created lazily on
+ * first open via {@link ensureLeadForm}; changes autosave.
+ *
+ * @module app/(dashboard)/settings/lead-capture-section
+ */
+'use client';
+
+import { Check, Copy } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import {
+  buildHostedUrl,
+  buildIframeSnippet,
+  buildScriptSnippet,
+} from '@/lib/lead-capture/snippets';
+import { createClient } from '@/lib/supabase/client';
+
+import { ensureLeadForm, saveLeadCaptureSettings } from './lead-capture/actions';
+
+/** Sentinel for "let leads land in the first pipeline status". */
+const DEFAULT_STATUS = '__default__';
+
+interface StatusOption {
+  slug: string;
+  name: string;
+}
+
+function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      onClick={() => onChange(!enabled)}
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer ${
+        enabled ? 'bg-black' : 'bg-gray-200'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+          enabled ? 'translate-x-[18px]' : 'translate-x-0.5'
+        }`}
+      />
+    </button>
+  );
+}
+
+function CopyField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <div>
+      <div className="flex items-end gap-2">
+        <Input label={label} readOnly value={value} className="font-mono text-xs" />
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={`Copy ${label}`}
+          className="mb-0.5 inline-flex h-9 items-center gap-1.5 rounded-xl border border-gray-200 px-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+        >
+          {copied ? <Check size={16} strokeWidth={1.5} /> : <Copy size={16} strokeWidth={1.5} />}
+          <span>{copied ? 'Copied' : 'Copy'}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function LeadCaptureSection() {
+  const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+  const [enabled, setEnabled] = useState(true);
+  const [targetSlug, setTargetSlug] = useState<string>(DEFAULT_STATUS);
+  const [statuses, setStatuses] = useState<StatusOption[]>([]);
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      setOrigin(window.location.origin);
+      const [form, statusRows] = await Promise.all([
+        ensureLeadForm(),
+        supabase.from('couple_statuses').select('slug, name').order('position'),
+      ]);
+      setToken(form.token);
+      setEnabled(form.enabled);
+      setTargetSlug(form.targetStatusSlug ?? DEFAULT_STATUS);
+      setStatuses(statusRows.data ?? []);
+      setLoading(false);
+    };
+    void load();
+  }, [supabase]);
+
+  const persist = (next: { enabled: boolean; targetSlug: string }) => {
+    void saveLeadCaptureSettings({
+      enabled: next.enabled,
+      targetStatusSlug: next.targetSlug === DEFAULT_STATUS ? null : next.targetSlug,
+    });
+  };
+
+  if (loading || !token) {
+    return <p className="text-sm text-gray-500">Loading...</p>;
+  }
+
+  const options = [
+    { value: DEFAULT_STATUS, label: 'Top of pipeline (default)' },
+    ...statuses.map((s) => ({ value: s.slug, label: s.name })),
+  ];
+
+  return (
+    <div className="space-y-10">
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900">Lead capture</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Embed an enquiry form on your website. Submissions arrive as new couples.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between max-w-xl">
+        <div>
+          <p className="text-sm font-medium text-gray-700">Form enabled</p>
+          <p className="text-xs text-gray-400">Turn off to stop accepting new enquiries.</p>
+        </div>
+        <Toggle
+          enabled={enabled}
+          onChange={(v) => {
+            setEnabled(v);
+            persist({ enabled: v, targetSlug });
+          }}
+        />
+      </div>
+
+      <div className="max-w-xl">
+        <Select
+          label="New leads land in"
+          value={targetSlug}
+          onValueChange={(v) => {
+            setTargetSlug(v);
+            persist({ enabled, targetSlug: v });
+          }}
+          options={options}
+          contentClassName="z-[90]"
+        />
+      </div>
+
+      <div className="space-y-6 max-w-xl">
+        <CopyField label="Hosted link" value={buildHostedUrl(origin, token)} />
+        <CopyField label="Embed (iframe)" value={buildIframeSnippet(origin, token)} />
+        <CopyField label="Embed (script)" value={buildScriptSnippet(origin, token)} />
+      </div>
+    </div>
+  );
+}
