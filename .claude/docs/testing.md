@@ -82,6 +82,37 @@ seed). The integration project runs serially in one process (shared DB).
 - `tests/integration/branding/account-readiness.test.ts` — Layer B validation: Stripe Connect, bank details, contract template prerequisites gate "ready to send" per surface.
 - `tests/integration/branding/social-urls-rpc.test.ts` — `_user_branding()` exposes twitter_url, pinterest_url, website_url from `raw_user_meta_data`.
 
+### Payment schedule modal specs (2026-07-30 redesign)
+
+Unit (`tests/unit/`), all with semantic selectors:
+- `lib/payments/describe-schedule.test.ts` — `describeSchedule` across
+  remainder, single-stage, fixed, and percentage combinations.
+- `components/builders/schedule-template-row.test.tsx` — label/offset edits,
+  the value field hides for a remainder. The amount-type control is a Radix
+  `Select`; its option selection is **not** drivable in jsdom (same as
+  `select.test.tsx`), so the switch-clears-value behaviour is asserted by
+  rendering each state, not by opening the dropdown.
+- `components/builders/schedule-editor.test.tsx` — Save disabled with a stated
+  reason (two remainders, percentages > 100, empty), dirty reporting, add stage.
+- `components/builders/schedule-library-list.test.tsx` — click-to-apply,
+  overflow actions, New schedule, `describeSchedule` summaries.
+- `components/builders/schedule-library-modal.test.tsx` — apply closes, Edit
+  opens the editor + saves an update, unsaved-changes guard prompts, delete
+  confirms, the paid-stage note.
+- `components/builders/payment-schedule.test.tsx` (rewritten) — empty state
+  names the default, applies it, the running total, "Change" opens the library.
+- `schedule-picker.test.tsx` was **removed** with the retired picker.
+
+E2E: `tests/e2e/payment-schedule-modal.spec.ts` — one flow across desktop +
+Mobile Chrome/Safari: apply the default, duplicate + edit a schedule, re-apply,
+confirm the invoice reflects it, then delete the throwaway. Self-cleaning so it
+never mutates the seeded "Default". **Deferred to CI / isolated local
+Supabase:** `npm run dev` targets the remote DB, which lacks the
+`payment_schedules` tables (migration `20260730000000`) until the CI deploy;
+running it against that DB fails on missing schema. No new integration tests —
+`schedule-actions.ts` is unchanged and already covered by
+`tests/integration/payments/schedule-actions.test.ts`.
+
 **New key selectors for blocks:**
 | Element | Selector |
 |---------|----------|

@@ -180,6 +180,39 @@ new UI has soaked for a release; it'll need a
 `@ALLOW_DESTRUCTIVE` marker + a one-time backfill for any historic
 rows where `quantity > 1`.
 
+### Custom payment schedules (invoice builder)
+
+An invoice can be split into N stages (deposit + progress + final, etc.).
+Two scopes, deliberately kept distinct:
+
+- **The library is explicit.** Saved schedules (`payment_schedules` +
+  `payment_schedule_stages`) are reusable templates, managed only in the
+  schedule library modal, reached from the invoice via a single "Change"
+  door. Every MC is seeded a default named "Default"
+  (migration `20260730000000`, plus an `auth.users` trigger for new
+  signups).
+- **The invoice is local.** Applying a schedule copies its stages onto
+  this invoice (`invoice_payment_stages`, amounts frozen at apply time).
+  Editing a stage here never touches the library, and editing a library
+  schedule never touches an already-applied invoice — to adopt a new
+  shape the MC re-applies the schedule.
+
+Design + rationale: `docs/superpowers/specs/2026-07-30-payment-schedule-modal-design.md`.
+No schema change and no new server action shipped with the 2026-07-30 UI
+redesign — the surface is a rewrite over the existing
+`schedule-actions.ts` (`listSchedules` / `createSchedule` /
+`updateSchedule` / `deleteSchedule` / `setDefaultSchedule` /
+`replaceInvoiceStages` / `markStagePaid`) and the pure resolver in
+`lib/payments/resolve-stages.ts`. Row summaries come from the pure
+`lib/payments/describe-schedule.ts` helper, never prose in the DB, so a
+summary cannot drift from its stages. `replaceInvoiceStages` deletes only
+unpaid rows, so re-applying a schedule to a part-paid invoice cannot erase
+a recorded payment.
+
+**Still note:** card payment via Stripe Connect covers the full invoice
+total only; when a schedule is active the "Pay with card" button is
+hidden and installments are tracked manually (see Part 2 below).
+
 ## Stripe Dashboard configuration (REQUIRED for plan changes)
 
 The `subscription_update_confirm` flow used by

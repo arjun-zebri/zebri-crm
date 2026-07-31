@@ -113,7 +113,12 @@ changes; the parent modals own the actual form state + mutations.
 | `tax-control.tsx` | "+ Apply 10% GST" toggle |
 | `notes-field.tsx` | Tokenised textarea wrapper |
 | `share-and-send.tsx` | Footer: share-link affordance + Save + primary "Send to couple" CTA |
-| `payment-schedule.tsx` | Vertical-timeline schedule for invoices (deposit ┊ final) |
+| `payment-schedule.tsx` | Invoice payment section: empty-state (one-tap "Apply <default>" + "Choose another"), the drag-reorder stage timeline, an always-visible running total that warns when the stages do not sum to the invoice, and a single "Change" door into the library |
+| `payment-stage-row.tsx` | One invoice stage on the timeline; unpaid rows edit inline, paid rows lock and lose their remove control |
+| `schedule-library-modal.tsx` | The saved-schedule library: list-or-editor mode, unsaved-changes guard, delete confirm. Opened only via "Change". Uses the shared `Modal` (`nested`) |
+| `schedule-library-list.tsx` | Schedule rows (click-to-apply) + overflow menu (Edit / Duplicate / Set as default / Delete) + "New schedule"; summaries via `describeSchedule` |
+| `schedule-editor.tsx` | Focused editor for one saved schedule: name + template stage rows + Cancel/Save. Writes the library only, never the current invoice; Save is disabled with a stated reason for an invalid template |
+| `schedule-template-row.tsx` | One template stage: label, amount type, value, offset in days, remove (separate from `payment-stage-row` because a template carries an offset and no payment state) |
 | `template-picker.tsx` | Quote templates — empty-state card + inline popover variants |
 | `builder-preview-pane.tsx` | Right pane: PDF / Email / Payment page tabs + "Update branding" link (Phase 2C.2 redesign) |
 | `preview-pdf.tsx` | PDF preview — renders `buildPdfHtml()` output in a sandboxed iframe |
