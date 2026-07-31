@@ -5,6 +5,8 @@ import {
   contractHtml,
   contractReminderHtml,
   invoiceHtml,
+  type LeadNotificationOpts,
+  leadNotificationHtml,
   proposalHtml,
   questionnaireHtml,
 } from "./html";
@@ -15,7 +17,7 @@ export type { EmailAttachment } from "./dispatch";
 // them from `@/lib/email`. Client code (e.g. the email preview) must import
 // them from `@/lib/email/html` directly to avoid bundling the transport
 // layer (Resend + nodemailer) into the browser.
-export { contractHtml, invoiceHtml, proposalHtml, questionnaireHtml, wrapTemplateHtml } from "./html";
+export { contractHtml, invoiceHtml, leadNotificationHtml, proposalHtml, questionnaireHtml, wrapTemplateHtml } from "./html";
 
 /**
  * Default transport for couple-facing mail: Resend, from the shared Zebri
@@ -47,6 +49,25 @@ export async function sendTemplateEmail(opts: {
     ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
     ...(opts.bcc ? { bcc: opts.bcc } : {}),
     ...(opts.attachments ? { attachments: opts.attachments } : {}),
+  });
+}
+
+/**
+ * Notify the MC that a website lead-capture form was submitted. Sent from the
+ * shared Zebri address; reply-to is set to the couple so the MC can respond
+ * straight to the lead.
+ */
+export async function sendLeadNotificationEmail(opts: {
+  to: string;
+  mcBusinessName: string;
+  lead: LeadNotificationOpts["lead"];
+  replyTo?: string;
+}): Promise<DispatchResult> {
+  return dispatchEmail(DEFAULT_SENDER, {
+    to: opts.to,
+    subject: `New enquiry from ${opts.lead.name}`,
+    html: leadNotificationHtml({ mcBusinessName: opts.mcBusinessName, lead: opts.lead }),
+    ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
   });
 }
 
