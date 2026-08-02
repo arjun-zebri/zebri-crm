@@ -9,16 +9,44 @@ describe('blocks-by-surface', () => {
     expect(GENERAL_BLOCKS).toEqual(['text', 'divider', 'spacer', 'businessName', 'image', 'tagline', 'footer'])
   })
 
-  it('proposal doc-specific palette lists the four package blocks + accept CTA', () => {
-    const proposal = blocksForSurface('proposal')
-    expect(proposal).toEqual(expect.arrayContaining(['packageHeader', 'packageDetails', 'packageInclusions', 'packageTotals', 'action']))
-    expect(proposal).not.toContain('headerBanner')
-    expect(proposal).not.toContain('proposalBody')
+  it('invoice doc-specific palette lists the invoice blocks and excludes retired markers', () => {
+    const invoice = blocksForSurface('invoice')
+    expect(invoice).toEqual(expect.arrayContaining(['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action']))
+    expect(invoice).not.toContain('headerBanner')
   })
 
   it('exposes two labelled palette groups', () => {
     const groups = paletteGroupsForSurface('invoice')
     expect(groups.map((g) => g.label)).toEqual(['General', 'Document-specific'])
     expect(groups[1]!.types).toEqual(expect.arrayContaining(['title', 'lineItems', 'totals', 'paymentSchedule', 'paymentDetails', 'action']))
+  })
+
+  it('contract doc-specific palette includes body + sign markers', () => {
+    const contract = blocksForSurface('contract')
+    expect(contract).toEqual(expect.arrayContaining(['title', 'contractBody', 'contractSign']))
+  })
+
+  it('contract palette always lists the clearable markers (body + sign)', () => {
+    // They stay in the palette even once inserted so the MC always sees the full
+    // set of contract blocks; addBlock guards against inserting a duplicate.
+    const contract = paletteGroupsForSurface('contract')[1]!.types
+    expect(contract).toContain('contractBody')
+    expect(contract).toContain('contractSign')
+  })
+
+  it('run sheet palette always lists the clearable run sheet body', () => {
+    expect(paletteGroupsForSurface('vendorTimeline')[1]!.types).toContain('vendorTimelineBody')
+  })
+
+  it('portal palette always lists the clearable couple portal body', () => {
+    expect(paletteGroupsForSurface('portal')[1]!.types).toContain('couplePortal')
+  })
+
+  it('questionnaire palette lists both clearable form-style blocks', () => {
+    // The form style is chosen by adding one of these two clearable markers, so
+    // both stay listed permanently; addBlock guards against duplicates.
+    const questionnaire = paletteGroupsForSurface('questionnaire')[1]!.types
+    expect(questionnaire).toContain('questionnaireOneAtATime')
+    expect(questionnaire).toContain('questionnaireAllOnePage')
   })
 })

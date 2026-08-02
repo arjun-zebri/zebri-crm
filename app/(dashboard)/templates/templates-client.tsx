@@ -2,7 +2,7 @@
  * Templates page orchestrator.
  *
  * Hosts every reusable-template kind under one tabbed page (Emails,
- * Quotes, Timelines, Contracts) — these moved out of Settings so all
+ * Quotes, Contracts) — these moved out of Settings so all
  * templates live in one place. Stays a thin orchestrator: each tab's
  * data, list, and editing live in their own components.
  *
@@ -22,7 +22,6 @@ import { PackagesManager } from './packages-manager'
 import { QuestionnaireTemplateManager } from './questionnaire-template-manager'
 import { TemplatesActionsProvider } from './templates-actions-slot'
 import { TemplatesTabs, type TemplateTab } from './templates-tabs'
-import { TimelineTemplateManager } from './timeline-template-manager'
 
 interface TemplatesClientProps {
   businessName?: string | undefined
@@ -62,7 +61,6 @@ export function TemplatesClient({ businessName, contactName, email, emailSignatu
           )}
           {activeTab === 'packages' && <PackagesManager />}
           {activeTab === 'invoices' && <InvoiceTemplatesManager />}
-          {activeTab === 'timelines' && <TimelineTemplateManager />}
           {activeTab === 'contracts' && <ContractTemplateManager />}
           {activeTab === 'questionnaires' && <QuestionnaireTemplateManager />}
         </div>

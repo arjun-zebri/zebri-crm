@@ -30,7 +30,7 @@ describe('questionnaireChrome', () => {
 
   describe('marker-only tree', () => {
     it('splits at the marker and returns empty pre/post', () => {
-      const blocks: Block[] = [mockBlock('questionnaireBody')]
+      const blocks: Block[] = [mockBlock('questionnaireAllOnePage')]
       const result = questionnaireChrome(blocks, 'form')
       expect(result).toEqual({
         preBlocks: [],
@@ -52,7 +52,7 @@ describe('questionnaireChrome', () => {
 
   describe('lone businessName pre-block (no welcome)', () => {
     it('returns businessName as pre-block, no welcome in oneAtATime', () => {
-      const blocks: Block[] = [mockBlock('businessName'), mockBlock('questionnaireBody')]
+      const blocks: Block[] = [mockBlock('businessName'), mockBlock('questionnaireAllOnePage')]
       const result = questionnaireChrome(blocks, 'oneAtATime')
       expect(result.preBlocks).toEqual([blocks[0]])
       expect(result.postBlocks).toEqual([])
@@ -66,7 +66,7 @@ describe('questionnaireChrome', () => {
       const blocks: Block[] = [
         mockBlock('businessName'),
         mockBlock('text', 'intro'),
-        mockBlock('questionnaireBody'),
+        mockBlock('questionnaireAllOnePage'),
       ]
       const result = questionnaireChrome(blocks, 'oneAtATime')
       expect(result.preBlocks).toEqual([blocks[0], blocks[1]])
@@ -79,7 +79,7 @@ describe('questionnaireChrome', () => {
       const blocks: Block[] = [
         mockBlock('text', 'intro1'),
         mockBlock('text', 'intro2'),
-        mockBlock('questionnaireBody'),
+        mockBlock('questionnaireAllOnePage'),
       ]
       const result = questionnaireChrome(blocks, 'oneAtATime')
       expect(result.preBlocks).toEqual([blocks[0], blocks[1]])
@@ -92,7 +92,7 @@ describe('questionnaireChrome', () => {
       const blocks: Block[] = [
         mockBlock('text', 'intro1'),
         mockBlock('text', 'intro2'),
-        mockBlock('questionnaireBody'),
+        mockBlock('questionnaireAllOnePage'),
       ]
       const result = questionnaireChrome(blocks, 'form')
       expect(result.preBlocks).toEqual([blocks[0], blocks[1]])
@@ -105,7 +105,7 @@ describe('questionnaireChrome', () => {
     it('returns post-blocks after the marker', () => {
       const blocks: Block[] = [
         mockBlock('text', 'intro'),
-        mockBlock('questionnaireBody'),
+        mockBlock('questionnaireAllOnePage'),
         mockBlock('text', 'outro1'),
         mockBlock('text', 'outro2'),
       ]
@@ -117,28 +117,43 @@ describe('questionnaireChrome', () => {
 
   describe('businessName detection', () => {
     it('detects businessName in pre-blocks', () => {
-      const blocks: Block[] = [mockBlock('businessName'), mockBlock('questionnaireBody')]
+      const blocks: Block[] = [mockBlock('businessName'), mockBlock('questionnaireAllOnePage')]
       const result = questionnaireChrome(blocks, 'form')
       expect(result.hasBusinessName).toBe(true)
     })
 
     it('detects businessName in post-blocks', () => {
-      const blocks: Block[] = [mockBlock('questionnaireBody'), mockBlock('businessName')]
+      const blocks: Block[] = [mockBlock('questionnaireAllOnePage'), mockBlock('businessName')]
       const result = questionnaireChrome(blocks, 'form')
       expect(result.hasBusinessName).toBe(true)
     })
 
     it('returns false when no businessName block exists', () => {
-      const blocks: Block[] = [mockBlock('text', 'text1'), mockBlock('questionnaireBody')]
+      const blocks: Block[] = [mockBlock('text', 'text1'), mockBlock('questionnaireAllOnePage')]
       const result = questionnaireChrome(blocks, 'form')
       expect(result.hasBusinessName).toBe(false)
+    })
+  })
+
+  describe('both form-style markers present (invalid state)', () => {
+    it('splits at the first marker in the tree (first-in-tree tiebreak)', () => {
+      const blocks: Block[] = [
+        mockBlock('text', 'intro'),
+        mockBlock('questionnaireOneAtATime'),
+        mockBlock('questionnaireAllOnePage'),
+        mockBlock('text', 'outro'),
+      ]
+      const result = questionnaireChrome(blocks, 'oneAtATime')
+      expect(result.preBlocks).toEqual([blocks[0]])
+      // The second marker falls into post-blocks (it renders as null publicly).
+      expect(result.postBlocks).toEqual([blocks[2], blocks[3]])
     })
   })
 
   describe('back-compat: questionnaire with no saved blocks', () => {
     it('renders exactly as legacy (empty tree => no chrome, legacy header shows)', () => {
       // Simulate repair seeding a marker-only tree.
-      const blocks: Block[] = [mockBlock('questionnaireBody')]
+      const blocks: Block[] = [mockBlock('questionnaireAllOnePage')]
       const result = questionnaireChrome(blocks, 'oneAtATime')
       // No pre-blocks beyond marker → no welcome.
       expect(result.preBlocks).toEqual([])

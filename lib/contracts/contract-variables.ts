@@ -1,8 +1,8 @@
-import { generateHTML } from '@tiptap/html'
-import StarterKit from '@tiptap/starter-kit'
 import Mention from '@tiptap/extension-mention'
-import sanitizeHtml from 'sanitize-html'
+import { generateHTML } from '@tiptap/html'
 import type { JSONContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import sanitizeHtml from 'sanitize-html'
 
 export interface ContractVariable {
   id: string
@@ -15,8 +15,6 @@ export const CONTRACT_VARIABLES: ContractVariable[] = [
   { id: 'couple_email', label: 'Couple email', description: 'Primary email on the couple record' },
   { id: 'event_date', label: 'Event date', description: 'Earliest wedding event date' },
   { id: 'venue', label: 'Venue', description: 'Earliest event venue' },
-  { id: 'total_amount', label: 'Total amount', description: 'Total from the linked proposal' },
-  { id: 'deposit_amount', label: 'Deposit amount', description: 'Deposit owed (default 25% of total)' },
   { id: 'mc_business_name', label: 'Your business name', description: 'Your business name from settings' },
   { id: 'mc_signature_name', label: 'Your signature name', description: 'Your typed signature name from settings' },
   { id: 'today', label: "Today's date", description: 'Date the contract was sent' },
@@ -29,8 +27,6 @@ export interface ContractVariableValues {
   couple_email: string
   event_date: string
   venue: string
-  total_amount: string
-  deposit_amount: string
   mc_business_name: string
   mc_signature_name: string
   today: string
@@ -49,31 +45,22 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
-function formatCurrency(n: number): string {
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n)
-}
-
+/**
+ * Build the substitution values for a contract's mention variables.
+ *
+ * A contract has no linked money source, so the seven variables are all
+ * derived from the couple, their first event, and the MC's own settings.
+ */
 export function buildContractVariables(input: {
   couple: { name: string; email: string | null }
   firstEvent: { date: string | null; venue: string | null } | null
-  /** Linked ACCEPTED proposal: `total` is the recorded selection's
-   *  subtotal, `depositPercent` the accepted option's rule. */
-  proposal?: { total: number; depositPercent: number | null } | null
   userMeta: Record<string, unknown>
-  depositPercent: number
 }): ContractVariableValues {
-  const total = input.proposal ? Number(input.proposal.total) || 0 : 0
-  const effectiveDepositPct = input.proposal?.depositPercent ?? input.depositPercent ?? 25
-  const deposit = (total * (effectiveDepositPct || 25)) / 100
-  const hasMoneySource = !!input.proposal
-
   return {
     couple_name: input.couple.name || '-',
     couple_email: input.couple.email || '-',
     event_date: formatDate(input.firstEvent?.date ?? null),
     venue: input.firstEvent?.venue || '-',
-    total_amount: hasMoneySource ? formatCurrency(total) : '-',
-    deposit_amount: hasMoneySource ? formatCurrency(deposit) : '-',
     mc_business_name: (input.userMeta.business_name as string) || '-',
     mc_signature_name:
       (input.userMeta.mc_signature_name as string) ||

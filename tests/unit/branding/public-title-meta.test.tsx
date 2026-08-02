@@ -3,7 +3,6 @@ import '@testing-library/jest-dom'
 import { describe, expect, it } from 'vitest'
 
 import type { Block } from '@/app/(dashboard)/branding/blocks/types'
-import { PROPOSAL_LABEL_DEFAULTS } from '@/lib/branding/proposal-labels'
 import type { PublicDocData } from '@/lib/branding/public-blocks/shared'
 import { PublicBlockRenderer } from '@/lib/branding/public-renderer'
 import type { PublicBranding } from '@/lib/branding/public-surface'
@@ -41,7 +40,6 @@ const createMockBranding = (overrides: Partial<PublicBranding> = {}): PublicBran
   density: 'cozy' as never,
   corner_radius: 8,
   doc_padding: 0,
-  proposal_labels: PROPOSAL_LABEL_DEFAULTS,
   theme_preset: 'minimal',
   email_show_logo: true,
   email_logo_align: 'left',

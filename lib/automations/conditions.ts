@@ -150,7 +150,11 @@ export function evaluateBranch(predicate: BranchPredicate, ctx: RunContext): 'ye
   return evaluatePredicate(predicate, ctx) ? 'yes' : 'no'
 }
 
-function evaluatePredicate(pred: BranchPredicate, ctx: RunContext): boolean {
+/**
+ * Evaluate a predicate and return a boolean. Used by evaluateBranch
+ * and exported for testing purposes.
+ */
+export function evaluatePredicate(pred: BranchPredicate, ctx: RunContext): boolean {
   switch (pred.kind) {
     case 'couple_field': {
       if (!ctx.couple) return false
@@ -172,8 +176,12 @@ function evaluatePredicate(pred: BranchPredicate, ctx: RunContext): boolean {
           return days >= pred.days
       }
     }
-    case 'has_paid_deposit':
-      return Boolean((ctx.couple as Record<string, unknown> | null)?.['deposit_paid_at'])
+    case 'has_paid_deposit': {
+      // "Deposit paid" means the first stage of the invoice's schedule is
+      // settled. The previous implementation read ctx.couple.deposit_paid_at,
+      // a column the couples table does not have, so it never returned true.
+      return Boolean(ctx.invoice?.firstStagePaidAt)
+    }
     case 'has_signed_contract':
       return Boolean(ctx.actionResults?.['contract_signed_at']) || Boolean((ctx.triggerEvent.payload as Record<string, unknown>)?.['contract_signed'])
     case 'custom_field': {

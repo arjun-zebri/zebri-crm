@@ -11,7 +11,7 @@
  */
 'use client'
 
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
@@ -35,9 +35,15 @@ interface ClassicFormProps {
   saveState?: SaveState
   /** Required: the MC's resolved branding for typography roles and styling. */
   branding: PublicBranding
+  /** Optional question-heading typography override from the form-style block. */
+  questionCss?: CSSProperties
+  /** Optional answer typography override from the form-style block. */
+  answerCss?: CSSProperties
+  /** Optional submit-button background from the form-style block. */
+  buttonColor?: string
 }
 
-export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSubmit, submitting = false, submitError = null, saveState = 'idle', branding }: ClassicFormProps) {
+export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSubmit, submitting = false, submitError = null, saveState = 'idle', branding, questionCss, answerCss, buttonColor }: ClassicFormProps) {
   const { brand, mutedColor } = theme
   const [missing, setMissing] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
@@ -81,7 +87,7 @@ export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSub
           if (!QUESTION_TYPE_META[q.type].isInput) return null
           return (
             <div key={q.id} id={`question-${q.id}`}>
-              <h3 style={{ color: questionHeadingStyles.color, fontSize: `${questionHeadingStyles.fontSize}px`, fontFamily: questionHeadingStyles.fontFamily, fontWeight: questionHeadingStyles.fontWeight, lineHeight: questionHeadingStyles.lineHeight, marginBottom: '0.375rem' }}>
+              <h3 style={{ color: questionHeadingStyles.color, fontSize: `${questionHeadingStyles.fontSize}px`, fontFamily: questionHeadingStyles.fontFamily, fontWeight: questionHeadingStyles.fontWeight, lineHeight: questionHeadingStyles.lineHeight, ...questionCss, marginBottom: '0.375rem' }}>
                 {q.label}
                 {q.required && <span style={{ color: brand }}> *</span>}
               </h3>
@@ -99,6 +105,7 @@ export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSub
                   onAnswer(q.id, v)
                 }}
                 theme={theme}
+                {...(answerCss ? { answerCss } : {})}
               />
               {missing.has(q.id) && <p style={{ color: STATUS_COLORS.error, fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight, marginTop: '0.5rem', lineHeight: bodyStyles.lineHeight }}>This one is required.</p>}
             </div>
@@ -121,7 +128,7 @@ export function ClassicForm({ questions, responses, onAnswer, theme, mode, onSub
             onClick={handleSubmitClick}
             disabled={submitting}
             className="cursor-pointer transition hover:opacity-90 disabled:opacity-60"
-            style={{ background: brand, color: readableTextOn(brand), borderRadius: branding.corner_radius, padding: '0.625rem 1.5rem', fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}
+            style={{ background: buttonColor ?? brand, color: readableTextOn(buttonColor ?? brand), borderRadius: branding.corner_radius, padding: '0.625rem 1.5rem', fontSize: `${bodyStyles.fontSize}px`, fontFamily: bodyStyles.fontFamily, fontWeight: bodyStyles.fontWeight }}
           >
             {submitting ? 'Sending…' : confirming ? 'Send answers' : 'Submit'}
           </button>

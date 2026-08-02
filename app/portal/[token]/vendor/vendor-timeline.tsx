@@ -3,11 +3,13 @@
 import { ChevronDown, Clock } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import type { TextStyle } from '@/app/(dashboard)/branding/blocks/types'
 import { getRgb } from '@/lib/branding/contrast'
-import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
 import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { STATUS_COLORS } from '@/lib/branding/status-colors'
+import { applyCase, cssTextTransform } from '@/lib/branding/text-case'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 
 export interface VendorTimelineItem {
@@ -180,6 +182,19 @@ interface VendorTimelineProps {
   items: VendorTimelineItem[]
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding
+  /**
+   * Optional run-sheet-scoped typography overrides, from the
+   * `vendorTimelineBody` branding block. `title` styles the `<h1>`, `subtitle`
+   * the date / venue line, `body` the per-item title, and `note` the per-item
+   * description. Each unset field falls back to the value the component
+   * currently hard-codes, so a run sheet with no overrides is byte-identical.
+   */
+  styles?: {
+    title?: TextStyle | undefined
+    subtitle?: TextStyle | undefined
+    body?: TextStyle | undefined
+    note?: TextStyle | undefined
+  }
 }
 
 /**
@@ -205,7 +220,7 @@ const PROVISIONAL = (() => {
   }
 })()
 
-export function VendorTimeline({ events, items, branding }: VendorTimelineProps) {
+export function VendorTimeline({ events, items, branding, styles }: VendorTimelineProps) {
   const days = useMemo(() => buildDays(events), [events])
   const [pickedDay, setPickedDay] = useState<string | null>(null)
 
@@ -232,32 +247,51 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
   const mutedCol = branding.text_color
   const softBorder = branding.border_color
 
+  // Run-sheet-scoped typography. Each element resolves its block override over
+  // defaults built from the SAME values it currently hard-codes: the role's
+  // font / size / weight / line-height, its current manual colour (hCol /
+  // mutedCol), and `letterSpacing: 0` + `textTransform: 'none'` — the neutral
+  // values today's inline styles already render, since they set neither. So
+  // with no override each `resolveTextStyle` yields today's style exactly (the
+  // three forced fields are visual no-ops), keeping legacy run sheets identical.
+  const titleCss = resolveTextStyle(styles?.title, {
+    ...docTitleDefaults,
+    color: hCol,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
+  const subtitleCss = resolveTextStyle(styles?.subtitle, {
+    ...finePrintDefaults,
+    color: mutedCol,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
+  // The item title and its description are independent targets: the title uses
+  // the `body` override over the body role; the description uses the separate
+  // `note` override over the finePrint role. An unset override on either
+  // reproduces its distinct historical style exactly.
+  const itemTitleCss = resolveTextStyle(styles?.body, {
+    ...bodyDefaults,
+    color: hCol,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
+  const itemDescCss = resolveTextStyle(styles?.note, {
+    ...finePrintDefaults,
+    color: mutedCol,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
+
   return (
     <>
       {/* Header */}
       <div className="pt-8 pb-8" style={{ borderColor: softBorder, borderBottomWidth: 1 }}>
-        <h1
-          className="font-semibold mb-1"
-          style={{
-            fontSize: `${docTitleDefaults.fontSize}px`,
-            color: hCol,
-            fontFamily: FONT_STACKS[docTitleDefaults.fontFamily as never],
-            fontWeight: docTitleDefaults.fontWeight,
-            lineHeight: docTitleDefaults.lineHeight,
-          }}
-        >
+        <h1 data-subtarget="title" className="font-semibold mb-1" style={titleCss}>
           Run Sheet
         </h1>
         {selectedDay && (
-          <p
-            style={{
-              fontSize: `${finePrintDefaults.fontSize}px`,
-              color: mutedCol,
-              fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-              fontWeight: finePrintDefaults.fontWeight,
-              lineHeight: finePrintDefaults.lineHeight,
-            }}
-          >
+          <p data-subtarget="subtitle" style={subtitleCss}>
             {formatEventDate(selectedDay)}
             {activeDay && activeDay.venues.length > 0
               ? ` · ${activeDay.venues.join(', ').replace(/\s*-\s*/g, ', ')}`
@@ -333,29 +367,11 @@ export function VendorTimeline({ events, items, branding }: VendorTimelineProps)
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p
-                  className="font-medium"
-                  style={{
-                    fontSize: `${bodyDefaults.fontSize}px`,
-                    color: hCol,
-                    fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-                    fontWeight: bodyDefaults.fontWeight,
-                    lineHeight: bodyDefaults.lineHeight,
-                  }}
-                >
+                <p data-subtarget="body" className="font-medium" style={itemTitleCss}>
                   {item.title}
                 </p>
                 {item.description && (
-                  <p
-                    className="mt-0.5"
-                    style={{
-                      fontSize: `${finePrintDefaults.fontSize}px`,
-                      color: mutedCol,
-                      fontFamily: FONT_STACKS[finePrintDefaults.fontFamily as never],
-                      fontWeight: finePrintDefaults.fontWeight,
-                      lineHeight: finePrintDefaults.lineHeight,
-                    }}
-                  >
+                  <p data-subtarget="note" className="mt-0.5" style={itemDescCss}>
                     {item.description}
                   </p>
                 )}

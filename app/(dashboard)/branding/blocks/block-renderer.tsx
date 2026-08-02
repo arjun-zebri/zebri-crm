@@ -21,7 +21,6 @@ import { Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { FONT_STACKS } from '@/lib/branding/fonts'
-import type { ProposalLabelEdit } from '@/lib/branding/proposal-labels'
 import { RenderDivider as PublicRenderDivider } from '@/lib/branding/public-blocks/divider'
 import { RenderFooter as PublicRenderFooter } from '@/lib/branding/public-blocks/footer'
 import { RenderTagline as PublicRenderTagline } from '@/lib/branding/public-blocks/tagline'
@@ -36,18 +35,14 @@ import {
   RenderAction,
   RenderBusinessName,
   RenderContractBody,
+  RenderContractSign,
   RenderCouplePortal,
   RenderHeaderBanner,
   RenderImage,
   RenderLineItems,
-  RenderPackageDetails,
-  RenderPackageHeader,
-  RenderPackageLineItems,
-  RenderPackageInclusions,
-  RenderPackageTotals,
   RenderPaymentDetails,
   RenderPaymentSchedule,
-  RenderQuestionnaireBody,
+  RenderQuestionnairePreview,
   RenderTitle,
   RenderTotals,
   RenderVendorTimelineBody,
@@ -75,8 +70,6 @@ interface BlockRendererProps {
   removeHeader?: () => void | Promise<void>
   uploadImage?: (file: File, blockId: string) => Promise<void>
   removeImage?: (blockId: string) => void | Promise<void>
-  /** Proposal surface only: edit the fixed core's section labels. */
-  onEditProposalLabel?: ProposalLabelEdit
 }
 
 export function BlockRenderer({
@@ -99,7 +92,6 @@ export function BlockRenderer({
   removeHeader,
   uploadImage,
   removeImage,
-  onEditProposalLabel,
 }: BlockRendererProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const activeBlock = activeId ? blocks.find(b => b.id === activeId) ?? null : null
@@ -231,43 +223,11 @@ export function BlockRenderer({
               <div aria-hidden className="absolute inset-x-0 -top-4 h-8" />
             </div>
             {blocks.map((block) => {
-              if (
-                block.type === 'couplePortal' ||
-                block.type === 'contractBody' ||
-                block.type === 'proposalBody' ||
-                block.type === 'vendorTimelineBody' ||
-                block.type === 'questionnaireBody'
-              ) {
-                const fixedLabel =
-                  block.type === 'couplePortal'
-                    ? 'Couple portal (fixed)'
-                    : block.type === 'contractBody'
-                      ? 'Contract body (fixed)'
-                      : block.type === 'proposalBody'
-                        ? 'Proposal (fixed)'
-                        : block.type === 'vendorTimelineBody'
-                          ? 'Run sheet (fixed)'
-                          : 'Questionnaire (fixed)';
-                return (
-                  <div key={block.id} aria-label={fixedLabel} className="group relative">
-                    {renderBlock(block, state, updateBlock, {
-                      onEditProposalLabel,
-                    }, surface)}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        requestAddAfter(block.id)
-                      }}
-                      aria-label="Add block below"
-                      title="Add block below"
-                      className="absolute left-1/2 -translate-x-1/2 -bottom-3 z-10 w-6 h-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-300 opacity-0 group-hover:opacity-100 transition cursor-pointer"
-                    >
-                      <Plus size={12} strokeWidth={2} />
-                    </button>
-                  </div>
-                )
-              }
+              // Every block (including the questionnaire form-style markers)
+              // flows through the normal BlockFrame path so the MC can select
+              // it and reach the shared style toolbar. The form blocks are
+              // locked, so duplicate stays disabled, but they remain deletable +
+              // re-addable as clearable markers (swapping the form style).
               const selected = primarySelectedId === block.id
               const multi = !selected && selectedBlockIds.includes(block.id)
               return (
@@ -338,7 +298,6 @@ interface RenderExtras {
   removeHeader?: () => void | Promise<void>
   uploadImage?: (file: File, blockId: string) => Promise<void>
   removeImage?: (blockId: string) => void | Promise<void>
-  onEditProposalLabel?: ProposalLabelEdit | undefined
 }
 
 interface SpacerWithResizeProps {
@@ -497,25 +456,18 @@ function renderBlock(
       )
     }
     case 'couplePortal':
-      return <RenderCouplePortal state={state} />
+      return <RenderCouplePortal state={state} block={block} />
     case 'paymentSchedule':
       return <RenderPaymentSchedule block={block} state={state} updateBlock={updateBlock} />
     case 'contractBody':
-      return <RenderContractBody state={state} />
+      return <RenderContractBody state={state} block={block} />
+    case 'contractSign':
+      return <RenderContractSign state={state} block={block} />
     case 'vendorTimelineBody':
-      return <RenderVendorTimelineBody state={state} />
-    case 'questionnaireBody':
-      return <RenderQuestionnaireBody block={block} state={state} updateBlock={updateBlock} />
-    case 'packageHeader':
-      return <RenderPackageHeader block={block} state={state} surface={surface} updateBlock={updateBlock} />
-    case 'packageDetails':
-      return <RenderPackageDetails block={block} state={state} surface={surface} updateBlock={updateBlock} />
-    case 'packageLineItems':
-      return <RenderPackageLineItems block={block} state={state} surface={surface} updateBlock={updateBlock} />
-    case 'packageInclusions':
-      return <RenderPackageInclusions block={block} state={state} surface={surface} updateBlock={updateBlock} />
-    case 'packageTotals':
-      return <RenderPackageTotals block={block} state={state} surface={surface} updateBlock={updateBlock} />
+      return <RenderVendorTimelineBody state={state} block={block} />
+    case 'questionnaireOneAtATime':
+    case 'questionnaireAllOnePage':
+      return <RenderQuestionnairePreview block={block} state={state} />
     case 'image':
       return (
         <RenderImage

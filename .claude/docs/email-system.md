@@ -329,7 +329,7 @@ Applies per phase (see `security.md`):
 | Slack alerts wiring | `alerts.md` |
 | Settings / couple-profile pages | `page-specs.md` |
 | Security posture | `security.md` |
-| Transactional email behaviour | `payments.md`, `quotes.md`, `invoicing.md`, `contracts.md` |
+| Transactional email behaviour | `payments.md`, `invoicing.md`, `contracts.md` |
 
 ## Related files (reuse map)
 

@@ -1,6 +1,10 @@
 # Proposal: multiple packages stack
 
-Status: implemented
+> **OBSOLETE (2026-07-30):** superseded by the proposals removal
+> ([docs/superpowers/specs/2026-07-30-remove-proposals-design.md](2026-07-30-remove-proposals-design.md)).
+> Proposals were deleted in full; this spec is kept only so the history reads correctly.
+
+Status: obsolete (was: implemented)
 Date: 2026-07-28 (revised)
 Owner: Arjun
 

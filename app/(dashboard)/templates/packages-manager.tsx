@@ -35,7 +35,6 @@ import { StarterCatalogModal } from './starter-catalog-modal'
 import { TemplatesActions } from './templates-actions-slot'
 import { TemplatesTwoPane } from './templates-two-pane'
 import { usePackageCategories } from './use-package-categories'
-import { usePackageUsage } from './use-package-usage'
 
 /** A single priced line item within a package. */
 interface PackageItem {
@@ -58,7 +57,6 @@ interface Package {
   category_id: string | null
   position: number
   updated_at: string | null
-  deposit_percent: number | null
   gst_inclusive: boolean | null
   archived_at: string | null
   weekend_loading_percent: number | null
@@ -115,23 +113,17 @@ function PackageRow({
   )
 }
 
-/** Meta line for the detail card: "Used in N proposals · M accepted ·
- *  Edited X ago". Usage parts hide until there is history. */
-function PackageCaption({ packageId, updatedAt }: { packageId: string; updatedAt?: string | null }) {
-  const { data } = usePackageUsage(packageId)
+/** Meta line for the detail card: "Edited X ago". */
+function PackageCaption({ updatedAt }: { updatedAt?: string | null }) {
   // Capture "now" once at mount via a lazy initializer (Date.now() during
   // render is impure); the relative "Edited X ago" recomputes from props.
   const [nowMs] = useState(() => Date.now())
 
-  const parts: string[] = []
-  if (data && data.total > 0) {
-    parts.push(`Used in ${String(data.total)} proposal${data.total !== 1 ? 's' : ''}`)
-    if (data.accepted > 0) parts.push(`${String(data.accepted)} accepted`)
-  }
-  if (updatedAt) parts.push(`Edited ${formatRelativeTime(updatedAt, nowMs)}`)
-  if (parts.length === 0) return null
+  if (!updatedAt) return null
 
-  return <p className="text-xs text-text-muted">{parts.join(' · ')}</p>
+  return (
+    <p className="text-xs text-text-muted">Edited {formatRelativeTime(updatedAt, nowMs)}</p>
+  )
 }
 
 /**
@@ -274,7 +266,6 @@ export function PackagesManager() {
           notes: draft.notes,
           description: draft.description,
           category_id: draft.category_id,
-          deposit_percent: draft.deposit_percent,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
           is_popular: draft.is_popular,
@@ -309,7 +300,6 @@ export function PackagesManager() {
           notes: draft.notes,
           description: draft.description,
           category_id: draft.category_id,
-          deposit_percent: draft.deposit_percent,
           gst_inclusive: draft.gst_inclusive,
           weekend_loading_percent: draft.weekend_loading_percent,
           is_popular: draft.is_popular,
@@ -372,7 +362,6 @@ export function PackagesManager() {
           description: source.description,
           notes: source.notes,
           category_id: source.category_id,
-          deposit_percent: source.deposit_percent,
           gst_inclusive: source.gst_inclusive ?? true,
           weekend_loading_percent: source.weekend_loading_percent,
           position: source.position + 1,
@@ -441,7 +430,6 @@ export function PackagesManager() {
     notes: pkg.notes,
     description: pkg.description,
     category_id: pkg.category_id,
-    deposit_percent: pkg.deposit_percent,
     gst_inclusive: pkg.gst_inclusive ?? true,
     weekend_loading_percent: pkg.weekend_loading_percent,
     is_popular: pkg.is_popular ?? false,
@@ -482,7 +470,6 @@ export function PackagesManager() {
     notes: null,
     description: null,
     category_id: null,
-    deposit_percent: null,
     gst_inclusive: true,
     weekend_loading_percent: null,
     is_popular: false,
@@ -638,7 +625,7 @@ export function PackagesManager() {
                 subtitle={selectedPkg.notes}
                 archived={!!selectedPkg.archived_at}
                 category={categories.find((c) => c.id === selectedPkg.category_id) ?? null}
-                meta={<PackageCaption packageId={selectedPkg.id} updatedAt={selectedPkg.updated_at} />}
+                meta={<PackageCaption updatedAt={selectedPkg.updated_at} />}
                 actions={
                   <>
                     <Button
@@ -682,7 +669,6 @@ export function PackagesManager() {
                 }
                 items={allItems?.[selectedPkg.id] ?? []}
                 description={selectedPkg.description}
-                depositPercent={selectedPkg.deposit_percent}
                 gstInclusive={selectedPkg.gst_inclusive ?? true}
                 weekendLoadingPercent={selectedPkg.weekend_loading_percent}
               />

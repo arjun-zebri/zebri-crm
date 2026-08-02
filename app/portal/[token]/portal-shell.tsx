@@ -3,8 +3,9 @@
 import { LayoutDashboard, Users2, Clock, Music, FileText, FileSignature, Receipt, Heart, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
 
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import type { TextStyle } from '@/app/(dashboard)/branding/blocks/types'
 import { PortalSectionNav } from '@/app/(dashboard)/couples/portal-section-nav'
-import { FONT_STACKS } from '@/lib/branding/fonts'
 import type { PublicBranding } from '@/lib/branding/public-surface'
 import { roleDefaults } from '@/lib/branding/type-defaults'
 
@@ -36,12 +37,37 @@ interface PortalShellProps {
   initialData: PortalData
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding
+  /**
+   * Portal-scoped typography overrides from the `couplePortal` branding block.
+   * `heading` styles each section's `<h2>`, `body` its subtitle `<p>`. Each unset
+   * field falls back to the value the shell currently hard-codes, so a portal
+   * with no overrides renders byte-identically.
+   */
+  styles?: {
+    heading?: TextStyle | undefined
+    body?: TextStyle | undefined
+  }
 }
 
-export function PortalShell({ token, initialData, branding }: PortalShellProps) {
+export function PortalShell({ token, initialData, branding, styles }: PortalShellProps) {
   // Type scale from branding.
   const sectionHeadingDefaults = roleDefaults(branding, 'sectionHeading')
   const bodyDefaults = roleDefaults(branding, 'body')
+  // Portal-scoped overrides resolved over defaults built from the SAME values
+  // the shell hard-codes today (the role's font / size / weight / colour /
+  // line-height) with `letterSpacing: 0` + `textTransform: 'none'` forced — the
+  // neutral values the current inline styles already render (they set neither).
+  // So with no override each `resolveTextStyle` yields today's style exactly.
+  const headingCss = resolveTextStyle(styles?.heading, {
+    ...sectionHeadingDefaults,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
+  const bodyCss = resolveTextStyle(styles?.body, {
+    ...bodyDefaults,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
 
   const enabledSections = initialData.enabled_sections
   // Questionnaires is a newer section, so it won't appear in an MC's saved
@@ -70,7 +96,7 @@ export function PortalShell({ token, initialData, branding }: PortalShellProps) 
           count: s.id === 'overview' ? initialData.events.length
             : s.id === 'timeline' ? initialData.timeline_items.length
             : s.id === 'contacts' ? initialData.contacts.length + initialData.people.length
-            : s.id === 'payments' ? ((initialData.payments.proposals?.length || 0) + initialData.payments.invoices.length)
+            : s.id === 'payments' ? initialData.payments.invoices.length
             : s.id === 'contracts' ? (initialData.contracts?.length ?? 0)
             : s.id === 'questionnaires' ? (initialData.questionnaires?.length ?? 0)
             : s.id === 'songs' ? initialData.songs.length
@@ -84,28 +110,10 @@ export function PortalShell({ token, initialData, branding }: PortalShellProps) 
 
       <div className="flex-1 min-w-0">
         <div className="mb-5">
-          <h2
-            className="font-semibold"
-            style={{
-              fontSize: `${sectionHeadingDefaults.fontSize}px`,
-              color: sectionHeadingDefaults.color,
-              fontFamily: FONT_STACKS[sectionHeadingDefaults.fontFamily as never],
-              fontWeight: sectionHeadingDefaults.fontWeight,
-              lineHeight: sectionHeadingDefaults.lineHeight,
-            }}
-          >
+          <h2 className="font-semibold" style={headingCss}>
             {active.label}
           </h2>
-          <p
-            className="mt-0.5"
-            style={{
-              fontSize: `${bodyDefaults.fontSize}px`,
-              color: bodyDefaults.color,
-              fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
-              fontWeight: bodyDefaults.fontWeight,
-              lineHeight: bodyDefaults.lineHeight,
-            }}
-          >
+          <p className="mt-0.5" style={bodyCss}>
             {active.subtitle}
           </p>
         </div>

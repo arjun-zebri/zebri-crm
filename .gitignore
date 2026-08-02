@@ -60,3 +60,5 @@ next-env.d.ts
 scripts/celebrants/.cache/
 scripts/celebrants/out/
 .claude/worktrees/
+
+.claude/worktrees/

@@ -170,6 +170,33 @@ cancel) stay inline in the modals as one-line UPDATEs — they're
 RLS-protected by the session client and don't justify their own
 server actions.
 
+### GST-inclusive pricing (`invoices.gst_inclusive`)
+
+Australian wedding vendors commonly advertise a single GST-inclusive
+price. Packages have carried a `gst_inclusive` flag since packages-v2,
+but invoices had nowhere to record it: applying a
+GST-inclusive package cleared the tax rate so nothing was added on top,
+and the couple was simply never told the price already covered GST.
+
+`invoices.gst_inclusive` closes that gap as a **display flag**:
+
+- It never participates in an amount. `subtotal`, `tax_rate`, the total,
+  Stripe charge amounts, and payment-stage totals are all computed
+  exactly as before, so `false` is byte-identical to pre-column behaviour.
+- When true, a muted "Prices include GST" line renders under the total on
+  the builder's totals panel, the shared `totals` branding block (public
+  page and the Link preview tab), the PDF, and the fallback card. The
+  invoice email carries no totals table, so it needs nothing.
+- It is **independent of `tax_rate`**. An MC can set 10% and tick the box,
+  which produces a document that adds GST on top while also saying prices
+  include it. The Tax popover states this rather than blocking it, because
+  the far more common intent is no rate plus the note. Opening that
+  popover no longer pre-applies 10%, so ticking the box cannot silently
+  add a GST line.
+- `saveInvoiceAction` takes `gstInclusive` as an optional boolean and only
+  writes the column when the client sent it, so an older bundle
+  mid-deploy cannot blank it.
+
 ### `invoice_items.quantity` + `unit_price` deprecation
 
 The two columns remain in the schema for forward-compat. New writes
@@ -179,6 +206,50 @@ column drop is scheduled for a Phase 9 (Quotes) follow-up once the
 new UI has soaked for a release; it'll need a
 `@ALLOW_DESTRUCTIVE` marker + a one-time backfill for any historic
 rows where `quantity > 1`.
+
+### Custom payment schedules (invoice builder)
+
+An invoice can be split into N stages (deposit + progress + final, etc.).
+The authoring UI is a **single modal** (2026-07-31 redesign,
+`schedule-modal.tsx`), reached from the invoice's one "Add schedule" /
+"Change" button:
+
+- **Apply to the invoice only.** The modal edits a template-shaped draft
+  and, on Apply, resolves it against this invoice's total + issue date and
+  writes `invoice_payment_stages` (amounts frozen at apply time). The
+  Start-from dropdown loads a saved schedule as a starting point.
+- **Save to library is explicit.** A separate action persists the current
+  draft as a new named `payment_schedules` template; it always creates
+  (a name collision appends " copy"), so it never silently rewrites a
+  reused schedule. Every MC is seeded a default named "Default"
+  (migration `20260730000000` + an `auth.users` trigger).
+- **Flexible timing.** A stage falls due `<value> <unit>` from an anchor,
+  where unit is day / week / month (`due_offset_value` + `due_offset_unit`,
+  migration `20260731010000`; `due_offset_days` deprecated) and the anchor is
+  either **`issue`** (forward from the issue date) or **`due`** (backward from
+  the invoice due date) (`due_offset_anchor`, migration `20260731020000`).
+  `month` resolves to a real calendar month, clamped to the end of a short
+  month; a `due`-anchored schedule needs the invoice to have a due date, or the
+  resolver returns `no_due_date`. `invoice_payment_stages` carry the same
+  columns so the choice round-trips when the modal reopens.
+- **UI (2026-07-31 v2).** One `md`-width modal: a Schedule combobox (name +
+  saved-schedule dropdown), global **Amount** (% / $) and **Timing** (after
+  issue / before due) toggles, and a "final stage collects the remaining
+  balance" checkbox, so each row is just stage / share / due.
+
+Design + rationale: `docs/superpowers/specs/2026-07-31-payment-schedule-modal-v2-design.md`
+(supersedes the 2026-07-30 UI). The server actions in `schedule-actions.ts`
+(`listSchedules` / `createSchedule` / `deleteSchedule` /
+`setDefaultSchedule` / `replaceInvoiceStages` / `markStagePaid`) and the
+pure resolver in `lib/payments/resolve-stages.ts` are extended, not
+rewritten. Row summaries come from the pure
+`lib/payments/describe-schedule.ts` helper, never prose in the DB.
+`replaceInvoiceStages` deletes only unpaid rows, so re-applying a schedule
+to a part-paid invoice cannot erase a recorded payment.
+
+**Still note:** card payment via Stripe Connect covers the full invoice
+total only; when a schedule is active the "Pay with card" button is
+hidden and installments are tracked manually (see Part 2 below).
 
 ## Stripe Dashboard configuration (REQUIRED for plan changes)
 

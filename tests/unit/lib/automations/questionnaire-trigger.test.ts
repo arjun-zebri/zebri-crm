@@ -34,6 +34,7 @@ function ctxWith(payload: Record<string, unknown>, actionResults: RunContext['ac
     coupleId: 'c',
     triggerEvent: completionEvent(payload),
     couple: null,
+    invoice: null,
     mc: {
       userId: 'u',
       businessName: 'Acme MC Co',

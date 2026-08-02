@@ -56,8 +56,9 @@ const subscriptionItemSchema = z.object({
  *   needs to expose enough to route the event correctly.
  * - **Invoice path:** `metadata.invoice_id` is set (Connect-mediated
  *   couple → MC payment). The handler reads `metadata.payment_type`
- *   to distinguish deposit / final / full payment, and
- *   `payment_intent` for receipt reference.
+ *   to distinguish stage / remaining / full payment, `stage_ids` for
+ *   multi-stage settlement (comma-separated UUIDs or empty string for
+ *   stageless), and `payment_intent` for receipt reference.
  */
 const checkoutSessionCompletedSchema = z.object({
   id: z.string(),
@@ -69,6 +70,8 @@ const checkoutSessionCompletedSchema = z.object({
     .object({
       invoice_id: z.string().optional(),
       payment_type: z.string().optional(),
+      stage_ids: z.string().optional(),
+      connected_account_id: z.string().optional(),
       plan: z.string().optional(),
       supabase_user_id: z.string().optional(),
     })

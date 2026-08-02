@@ -13,20 +13,18 @@ import { DocumentsSection } from '@/app/(dashboard)/branding/documents-section'
 import type { SurfaceTab } from '@/types/branding-preview'
 
 describe('DocumentsSection', () => {
-  it('renders all six surfaces with labels and descriptions', () => {
+  it('renders all five surfaces with labels and descriptions', () => {
     const handleToggle = vi.fn()
-    const enabledSurfaces: SurfaceTab[] = ['proposal', 'invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire']
+    const enabledSurfaces: SurfaceTab[] = ['invoice', 'contract', 'portal', 'vendorTimeline', 'questionnaire']
 
     render(<DocumentsSection enabledSurfaces={enabledSurfaces} onToggleSurface={handleToggle} />)
 
-    expect(screen.getByText('Proposals')).toBeInTheDocument()
     expect(screen.getByText('Invoices')).toBeInTheDocument()
     expect(screen.getByText('Contracts')).toBeInTheDocument()
     expect(screen.getByText('Client portal')).toBeInTheDocument()
     expect(screen.getByText('Run sheet')).toBeInTheDocument()
     expect(screen.getByText('Questionnaires')).toBeInTheDocument()
 
-    expect(screen.getByText('Priced packages couples accept online')).toBeInTheDocument()
     expect(screen.getByText('Card and bank-transfer payments')).toBeInTheDocument()
     expect(screen.getByText('E-sign agreements')).toBeInTheDocument()
     expect(screen.getByText('The couple\'s home for everything')).toBeInTheDocument()
@@ -37,7 +35,7 @@ describe('DocumentsSection', () => {
   it('calls onToggleSurface with enabled=true when enabling a disabled surface', async () => {
     const user = userEvent.setup()
     const handleToggle = vi.fn()
-    const enabledSurfaces: SurfaceTab[] = ['proposal', 'invoice', 'contract', 'portal']
+    const enabledSurfaces: SurfaceTab[] = ['invoice', 'contract', 'portal']
 
     render(<DocumentsSection enabledSurfaces={enabledSurfaces} onToggleSurface={handleToggle} />)
 
@@ -50,7 +48,7 @@ describe('DocumentsSection', () => {
   it('uses armed-confirm pattern when disabling: first click arms, second confirms', async () => {
     const user = userEvent.setup()
     const handleToggle = vi.fn()
-    const enabledSurfaces: SurfaceTab[] = ['proposal', 'invoice', 'contract', 'portal', 'questionnaire', 'vendorTimeline']
+    const enabledSurfaces: SurfaceTab[] = ['invoice', 'contract', 'portal', 'questionnaire', 'vendorTimeline']
 
     render(<DocumentsSection enabledSurfaces={enabledSurfaces} onToggleSurface={handleToggle} />)
 
@@ -72,29 +70,29 @@ describe('DocumentsSection', () => {
   it('prevents disabling the last enabled surface', async () => {
     const user = userEvent.setup()
     const handleToggle = vi.fn()
-    const enabledSurfaces: SurfaceTab[] = ['proposal']
+    const enabledSurfaces: SurfaceTab[] = ['invoice']
 
     render(<DocumentsSection enabledSurfaces={enabledSurfaces} onToggleSurface={handleToggle} />)
 
-    const proposalToggle = screen.getAllByRole('button').find((btn) => btn.textContent?.includes('Proposals'))
+    const invoiceToggle = screen.getAllByRole('button').find((btn) => btn.textContent?.includes('Invoices'))
 
     // Try to disable the only enabled surface
-    await user.click(proposalToggle!)
+    await user.click(invoiceToggle!)
     expect(handleToggle).not.toHaveBeenCalled()
 
     // The button should be disabled
-    expect(proposalToggle).toHaveAttribute('disabled')
+    expect(invoiceToggle).toHaveAttribute('disabled')
   })
 
   it('shows the enabled state with eye icon and disabled state with eye-off icon', () => {
     const handleToggle = vi.fn()
-    const enabledSurfaces: SurfaceTab[] = ['proposal', 'invoice']
+    const enabledSurfaces: SurfaceTab[] = ['invoice', 'contract']
 
     render(<DocumentsSection enabledSurfaces={enabledSurfaces} onToggleSurface={handleToggle} />)
 
     // Enabled surfaces should show the eye icon
-    const proposalsCheckbox = screen.getByLabelText('Toggle Proposals')
-    expect(proposalsCheckbox).toBeChecked()
+    const invoicesCheckbox = screen.getByLabelText('Toggle Invoices')
+    expect(invoicesCheckbox).toBeChecked()
 
     // Disabled surfaces should show the eye-off icon and no checkmark
     const vendorTimelineCheckbox = screen.getByLabelText('Toggle Run sheet')

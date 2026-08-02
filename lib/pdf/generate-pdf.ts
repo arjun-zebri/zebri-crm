@@ -22,6 +22,9 @@ export interface PdfDocumentData {
   discountType?: 'percentage' | 'fixed' | null
   discountValue?: number | null
   taxRate?: number
+  /** Invoice-only display flag: adds a "Prices include GST" note under
+   *  the total. Never participates in any amount. */
+  gstInclusive?: boolean
   total: number
   notes?: string | null
   // Quote specific
@@ -330,6 +333,14 @@ export function buildPdfHtml(
         </tr>`
       : ''
 
+  // Tax disclosure, not a money row: it sits under the total rather than
+  // in the running tally, so nothing above it changes.
+  const gstInclusiveRow = doc.gstInclusive
+    ? `<tr>
+          <td colspan="2" style="padding:2px 0 0;font-size:var(--pdf-body);color:${mutedColor};text-align:right">Prices include GST</td>
+        </tr>`
+    : ''
+
   const metaLine = doc.type === 'invoice' && doc.dueDate
     ? `<p style="margin:4px 0 0;font-size:var(--pdf-body);color:${mutedColor}">Due: ${formatDate(doc.dueDate)}</p>`
     : ''
@@ -407,6 +418,7 @@ export function buildPdfHtml(
         <td class="heading" style="padding:10px 0 6px;font-size:var(--pdf-total);font-weight:700;color:${headingColor}">Total</td>
         <td class="heading" style="padding:10px 0 6px;font-size:var(--pdf-total);font-weight:700;color:${headingColor};text-align:right">${formatCurrency(doc.total)}</td>
       </tr>
+      ${gstInclusiveRow}
     </table>
   </div>
 

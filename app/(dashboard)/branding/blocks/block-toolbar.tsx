@@ -14,9 +14,10 @@ import type { BrandPreviewState, SurfaceTab } from '@/types/branding-preview'
 import { Slider } from '../components/slider'
 import { publicBrandingFromEditorState } from '../editor-branding'
 
-import { isDataBound, isDeletable, isRequired } from './policy'
+import { isDataBound, isDeletable, isMarker, isRequired, stylesWrapMarker } from './policy'
 import type { TextStyleDefaults } from './text-style'
 import { TextStyleControls } from './text-style-controls'
+import { blockLabel } from './types'
 import type {
   Block,
   TextStyle,
@@ -34,10 +35,12 @@ import type {
   ImageBlock,
   SpacerBlock,
   PaymentScheduleBlock,
-  PackageHeaderBlock,
-  PackageDetailsBlock,
-  PackageInclusionsBlock,
-  PackageTotalsBlock,
+  ContractBodyBlock,
+  ContractSignBlock,
+  CouplePortalBlock,
+  VendorTimelineBodyBlock,
+  QuestionnaireOneAtATimeBlock,
+  QuestionnaireAllOnePageBlock,
 } from './types'
 
 interface BlockToolbarProps {
@@ -56,6 +59,15 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
   const canDelete = isDeletable(block, surface)
   const hasLiveData = isDataBound(block.type)
   const isBlockRequired = isRequired(block.type, surface)
+  // Render-split markers (contract body/sign, run sheet, couple portal) inject
+  // live/couple-owned content on the sent document, so per-block background,
+  // padding, border, radius and v-align do nothing there — they'd only tint the
+  // editor preview and mislead. Their background comes from the brand Surface
+  // colour. Show only their typography controls + actions, not the structural
+  // chrome. (The couple portal background, e.g., is the brand Surface colour.)
+  // Exception: the style-wrapping markers (questionnaire form blocks) frame the
+  // questions area, so they get the full structural controls like any block.
+  const isMarkerBlock = isMarker(block.type) && !stylesWrapMarker(block.type)
 
   return (
     <div
@@ -65,7 +77,7 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
     >
       {/* Row 0: block-type label + lock/live-data chips */}
       <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-        <span className="text-xs font-medium text-gray-600 capitalize">{block.type}</span>
+        <span className="text-xs font-medium text-gray-600">{blockLabel(block.type, surface)}</span>
         <div className="flex items-center gap-1 ml-auto">
           {isBlockRequired && (
             <Tooltip label="Required to send. You can remove it, but the document will show as not ready until you add it back.">
@@ -91,7 +103,11 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
         {/* Text-content blocks render Background inside their controls, right
             next to the text colour (via bgSlot); the divider renders it beside
             its line colour. The rest show it here. */}
-        {block.type !== 'action' &&
+        {/* The couple portal is the exception among markers: its `bgColor` is a
+            real portal-specific background that the sent portal consumes (page +
+            cards), so it keeps the Background control. Other markers take their
+            surface from the brand Surface colour, so it stays hidden for them. */}
+        {block.type !== 'action' && (!isMarkerBlock || block.type === 'couplePortal') &&
           !['title', 'text', 'businessName', 'tagline', 'footer', 'divider'].includes(block.type) && (
             <BackgroundControl block={block} updateBlock={updateBlock} />
           )}
@@ -99,13 +115,13 @@ export function BlockToolbar({ block, state, surface, updateBlock, activeSubTarg
 
       {/* Row 2: structural controls + actions */}
       <div className="flex items-center gap-1 px-1 pb-1 pt-0.5 border-t border-gray-100 mt-1">
-        {block.type !== 'headerBanner' && block.type !== 'action' && (
+        {block.type !== 'headerBanner' && block.type !== 'action' && !isMarkerBlock && (
           <>
             <VAlignControl block={block} updateBlock={updateBlock} />
             <Divider />
           </>
         )}
-        {block.type !== 'action' && (
+        {block.type !== 'action' && !isMarkerBlock && (
           <>
             <SpacingControl block={block} updateBlock={updateBlock} />
             <RadiusControl block={block} updateBlock={updateBlock} />
@@ -190,16 +206,6 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
       return <PaymentDetailsControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'lineItems':
       return <LineItemsControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
-    case 'packageLineItems':
-      return <LineItemsControls block={block as unknown as LineItemsBlock} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
-    case 'packageHeader':
-      return <PackageHeaderControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
-    case 'packageDetails':
-      return <PackageDetailsControls block={block} state={state} updateBlock={updateBlock} {...(expanded !== undefined ? { expanded } : {})} />
-    case 'packageInclusions':
-      return <PackageInclusionsControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
-    case 'packageTotals':
-      return <PackageTotalsControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'divider':
       return <DividerControls block={block} updateBlock={updateBlock} />
     case 'footer':
@@ -209,16 +215,86 @@ function BlockSpecificControls({ block, state, surface, updateBlock, activeSubTa
     case 'spacer':
       return <SpacerControls block={block} updateBlock={updateBlock} />
     case 'couplePortal':
-      return null
+      return <CouplePortalControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'paymentSchedule':
       return <PaymentScheduleControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'contractBody':
-      return null
+      return <ContractBodyControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
+    case 'contractSign':
+      return <ContractSignControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
     case 'vendorTimelineBody':
-      return null
-    case 'questionnaireBody':
-      return null
+      return <VendorTimelineBodyControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
+    case 'questionnaireOneAtATime':
+    case 'questionnaireAllOnePage':
+      return <QuestionnaireControls block={block} state={state} updateBlock={updateBlock} activeSubTarget={activeSubTarget} {...(expanded !== undefined ? { expanded } : {})} />
   }
+}
+
+// ── Questionnaire ─────────────────────────────────────────────────────────────
+
+/**
+ * Style controls for the questionnaire form blocks. The questions are fixed, so
+ * there is no content editing; instead the MC styles the question heading and
+ * the answer text (targeted by clicking either in the preview) and picks the
+ * Submit / Next button colour. Mirrors the marker-block typography pattern
+ * (see {@link CouplePortalControls}).
+ */
+function QuestionnaireControls({
+  block,
+  state,
+  updateBlock,
+  activeSubTarget,
+  expanded,
+}: {
+  block: QuestionnaireOneAtATimeBlock | QuestionnaireAllOnePageBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
+  expanded?: boolean
+}) {
+  // Target from the preview click, defaulting to the question heading.
+  const target: 'question' | 'answer' = activeSubTarget === 'answer' ? 'answer' : 'question'
+  const style = target === 'question' ? block.questionStyle : block.answerStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(publicBrandingFromEditorState(state), target === 'question' ? 'sectionHeading' : 'body'),
+    align: 'left',
+  }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock(block.id, (target === 'question' ? { questionStyle: merged } : { answerStyle: merged }) as Partial<Block>)
+  }
+  const buttonColor = block.buttonColor ?? state.brandColor
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'question' ? 'Question' : 'Answer'} />
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        fontKind={target === 'question' ? 'heading' : 'body'}
+        onChange={onStyleChange}
+        {...(expanded !== undefined ? { expanded } : {})}
+      />
+      <Divider />
+      <Tooltip label="Button colour">
+        <ColorPopover
+          value={buttonColor}
+          onChange={(v) => updateBlock(block.id, { buttonColor: v } as Partial<Block>)}
+          swatches={COLOR_PALETTE}
+          trigger={
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200 text-xs text-gray-700"
+            >
+              <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: buttonColor }} />
+              Button
+            </button>
+          }
+        />
+      </Tooltip>
+    </div>
+  )
 }
 
 // ── Title ─────────────────────────────────────────────────────────────────────
@@ -1805,186 +1881,322 @@ function PaymentScheduleControls({
   )
 }
 
-// ── Package header ────────────────────────────────────────────────────────────
+// ── Contract body ─────────────────────────────────────────────────────────────
 
-function PackageHeaderControls({
-  block,
-  state,
-  updateBlock,
-  expanded,
-}: {
-  block: PackageHeaderBlock
-  state: BrandPreviewState
-  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
-  expanded?: boolean
-}) {
-  const defaults: TextStyleDefaults = {
-    ...roleDefaults(publicBrandingFromEditorState(state), 'sectionHeading'),
-    align: 'left',
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <TextStyleControls
-        style={block.titleStyle}
-        defaults={defaults}
-        onChange={(patch) =>
-          updateBlock<PackageHeaderBlock>(block.id, { titleStyle: { ...(block.titleStyle ?? {}), ...patch } })
-        }
-        {...(expanded !== undefined ? { expanded } : {})}
-        bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />}
-      />
-    </div>
-  )
-}
-
-// ── Package details ───────────────────────────────────────────────────────────
-
-function PackageDetailsControls({
-  block,
-  state,
-  updateBlock,
-  expanded,
-}: {
-  block: PackageDetailsBlock
-  state: BrandPreviewState
-  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
-  expanded?: boolean
-}) {
-  const defaults: TextStyleDefaults = {
-    ...roleDefaults(publicBrandingFromEditorState(state), 'body'),
-    align: 'left',
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <TextStyleControls
-        style={block.bodyStyle}
-        defaults={defaults}
-        onChange={(patch) =>
-          updateBlock<PackageDetailsBlock>(block.id, { bodyStyle: { ...(block.bodyStyle ?? {}), ...patch } })
-        }
-        {...(expanded !== undefined ? { expanded } : {})}
-        bgSlot={<BackgroundControl block={block} updateBlock={updateBlock} />}
-      />
-    </div>
-  )
-}
-
-// ── Package inclusions ────────────────────────────────────────────────────────
-
-type PackageInclusionsTarget = 'rows' | 'heading' | 'item'
-
-function PackageInclusionsControls({
+/**
+ * Typography controls for the contract-body block. Two targets, chosen by what
+ * the MC clicked in the preview mock: a clause heading (`data-subtarget=
+ * "subheading"`) edits {@link ContractBodyBlock.subheadingStyle}; anything else
+ * defaults to the paragraph body ({@link ContractBodyBlock.bodyStyle}). Mirrors
+ * the multi-target pattern in {@link PaymentScheduleControls} — selection is by
+ * preview click, and {@link ActiveTargetLabel} just names the active target.
+ *
+ * These overrides are contract-scoped (they live on the block), so nothing here
+ * reaches invoices or quotes. Defaults come from the global body / section-
+ * heading roles, so an untouched target shows the same values the live prose
+ * already uses.
+ */
+function ContractBodyControls({
   block,
   state,
   updateBlock,
   activeSubTarget,
   expanded,
 }: {
-  block: PackageInclusionsBlock
+  block: ContractBodyBlock
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   activeSubTarget: string | null
   expanded?: boolean
 }) {
-  const target: PackageInclusionsTarget =
-    activeSubTarget === 'heading' || activeSubTarget === 'item' ? activeSubTarget : 'rows'
-
-  if (target === 'rows') {
-    return (
-      <div className="flex items-center gap-2">
-        <ActiveTargetLabel label="Rows" />
-      </div>
+  const target: 'body' | 'subheading' = activeSubTarget === 'subheading' ? 'subheading' : 'body'
+  const style = target === 'subheading' ? block.subheadingStyle : block.bodyStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(
+      publicBrandingFromEditorState(state),
+      target === 'subheading' ? 'sectionHeading' : 'body',
+    ),
+    align: 'left',
+  }
+  // Merge onto the existing override so each single-field patch from the
+  // controls preserves the MC's prior changes for this target (matching every
+  // sibling *Controls). Only the fields the MC actually touched persist.
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<ContractBodyBlock>(
+      block.id,
+      target === 'subheading' ? { subheadingStyle: merged } : { bodyStyle: merged },
     )
   }
-
-  const isHeading = target === 'heading'
-  const style = isHeading ? block.headingStyle : block.itemStyle
-  const defaults: TextStyleDefaults = isHeading
-    ? {
-        ...roleDefaults(publicBrandingFromEditorState(state), 'sectionLabel'),
-        align: 'left',
-      }
-    : {
-        ...roleDefaults(publicBrandingFromEditorState(state), 'body'),
-        align: 'left',
-      }
-
   return (
-    <div className="flex items-center gap-2">
-      <ActiveTargetLabel label={isHeading ? 'Heading' : 'Items'} />
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'subheading' ? 'Subheading' : 'Paragraph'} />
       <Divider />
       <TextStyleControls
         style={style}
         defaults={defaults}
-        onChange={(patch) => {
-          const merged = { ...(style ?? {}), ...patch }
-          updateBlock<PackageInclusionsBlock>(
-            block.id,
-            isHeading ? { headingStyle: merged } : { itemStyle: merged },
-          )
-        }}
+        fontKind={target === 'subheading' ? 'heading' : 'body'}
+        onChange={onStyleChange}
         {...(expanded !== undefined ? { expanded } : {})}
       />
     </div>
   )
 }
 
-// ── Package totals ────────────────────────────────────────────────────────────
-
-type PackageTotalsTarget = 'rows' | 'subtotal' | 'total'
-
-function PackageTotalsControls({
+/**
+ * Toolbar for the contract sign block. Editable content is the prompt heading +
+ * the two button labels (text inputs) and the sign-button colour; typography is
+ * two click-targets — the prompt heading (over the section-heading role) and the
+ * field / agreement labels (over the body role). The form's behaviour is fixed
+ * and never surfaced here. Patches merge onto the existing override so each
+ * single-field change preserves the MC's prior edits, matching every sibling
+ * *Controls.
+ */
+function ContractSignControls({
   block,
   state,
   updateBlock,
   activeSubTarget,
   expanded,
 }: {
-  block: PackageTotalsBlock
+  block: ContractSignBlock
   state: BrandPreviewState
   updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
   activeSubTarget: string | null
   expanded?: boolean
 }) {
-  const target: PackageTotalsTarget =
-    activeSubTarget === 'subtotal' || activeSubTarget === 'total' ? activeSubTarget : 'rows'
+  // Three click-to-target parts (like every other multi-target block): the
+  // prompt heading, the couple-facing label text, and the sign/decline button.
+  // Clicking a part in the preview focuses the toolbar to just that part's
+  // controls, so the button gets its own dedicated labels + fill styling rather
+  // than everything showing at once.
+  const target: 'heading' | 'label' | 'button' =
+    activeSubTarget === 'heading' ? 'heading' : activeSubTarget === 'button' ? 'button' : 'label'
+  const buttonColor = block.buttonColor ?? state.brandColor
 
-  if (target === 'rows') {
+  if (target === 'button') {
     return (
-      <div className="flex items-center gap-2">
-        <ActiveTargetLabel label="Rows" />
+      <div className="flex flex-wrap items-center gap-2">
+        <ActiveTargetLabel label="Sign button" />
+        <Divider />
+        <TextField
+          label="Sign"
+          value={block.primaryLabel ?? ''}
+          placeholder="Sign contract"
+          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { primaryLabel: v })}
+        />
+        <TextField
+          label="Decline"
+          value={block.secondaryLabel ?? ''}
+          placeholder="Decline"
+          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { secondaryLabel: v })}
+        />
+        <ColorPopover
+          value={buttonColor}
+          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { buttonColor: v })}
+          swatches={COLOR_PALETTE}
+          trigger={
+            <button
+              type="button"
+              title="Button fill"
+              className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md hover:bg-gray-100 cursor-pointer border border-gray-200 text-xs text-gray-600"
+            >
+              <span className="w-4 h-4 rounded ring-1 ring-black/10" style={{ background: buttonColor }} />
+              Fill
+            </button>
+          }
+        />
       </div>
     )
   }
 
-  const isSubtotal = target === 'subtotal'
-  const style = isSubtotal ? block.subtotalStyle : block.totalStyle
-  const defaults: TextStyleDefaults = isSubtotal
-    ? {
-        ...roleDefaults(publicBrandingFromEditorState(state), 'body'),
-        align: 'left',
-      }
-    : {
-        ...roleDefaults(publicBrandingFromEditorState(state), 'total'),
-        align: 'left',
-      }
+  // heading / label typography target
+  const style = target === 'heading' ? block.headingStyle : block.labelStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(
+      publicBrandingFromEditorState(state),
+      target === 'heading' ? 'sectionHeading' : 'body',
+    ),
+    align: 'left',
+  }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<ContractSignBlock>(
+      block.id,
+      target === 'heading' ? { headingStyle: merged } : { labelStyle: merged },
+    )
+  }
 
   return (
-    <div className="flex items-center gap-2">
-      <ActiveTargetLabel label={isSubtotal ? 'Subtotal' : 'Total'} />
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'heading' ? 'Heading' : 'Label'} />
+      {target === 'heading' ? (
+        <TextField
+          label="Text"
+          value={block.heading ?? ''}
+          placeholder="Sign to accept"
+          onChange={(v) => updateBlock<ContractSignBlock>(block.id, { heading: v })}
+        />
+      ) : null}
       <Divider />
       <TextStyleControls
         style={style}
         defaults={defaults}
-        onChange={(patch) => {
-          const merged = { ...(style ?? {}), ...patch }
-          updateBlock<PackageTotalsBlock>(
-            block.id,
-            isSubtotal ? { subtotalStyle: merged } : { totalStyle: merged },
-          )
-        }}
+        fontKind={target === 'heading' ? 'heading' : 'body'}
+        onChange={onStyleChange}
+        {...(expanded !== undefined ? { expanded } : {})}
+      />
+    </div>
+  )
+}
+
+// ── Run sheet body ────────────────────────────────────────────────────────────
+
+/**
+ * Typography controls for the run-sheet body block. Four click-to-target parts,
+ * chosen by what the MC clicked in the preview: the `<h1>` title
+ * (`data-subtarget="title"`) edits {@link VendorTimelineBodyBlock.titleStyle}
+ * over the docTitle role; the date / venue line (`data-subtarget="subtitle"`)
+ * edits {@link VendorTimelineBodyBlock.subtitleStyle} over the finePrint role;
+ * the per-item description (`data-subtarget="note"`) edits
+ * {@link VendorTimelineBodyBlock.noteStyle} over the finePrint role; anything
+ * else defaults to the body ({@link VendorTimelineBodyBlock.bodyStyle}), which
+ * styles the per-item title over the body role. Mirrors the multi-target pattern
+ * in {@link ContractSignControls} — selection is by preview click, and
+ * {@link ActiveTargetLabel} just names the target.
+ *
+ * These overrides are run-sheet-scoped (they live on the block), so nothing here
+ * reaches invoices, quotes, or contracts. Defaults come from the global type
+ * roles, so an untouched target shows the same values the live run sheet uses.
+ * Patches merge onto the existing override so each single-field change preserves
+ * the MC's prior edits, matching every sibling *Controls.
+ */
+function VendorTimelineBodyControls({
+  block,
+  state,
+  updateBlock,
+  activeSubTarget,
+  expanded,
+}: {
+  block: VendorTimelineBodyBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
+  expanded?: boolean
+}) {
+  const target: 'title' | 'subtitle' | 'note' | 'body' =
+    activeSubTarget === 'title' ? 'title'
+      : activeSubTarget === 'subtitle' ? 'subtitle'
+        : activeSubTarget === 'note' ? 'note'
+          : 'body'
+  const role =
+    target === 'title' ? 'docTitle'
+      : target === 'subtitle' || target === 'note' ? 'finePrint'
+        : 'body'
+  const style =
+    target === 'title' ? block.titleStyle
+      : target === 'subtitle' ? block.subtitleStyle
+        : target === 'note' ? block.noteStyle
+          : block.bodyStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(publicBrandingFromEditorState(state), role),
+    align: 'left',
+  }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<VendorTimelineBodyBlock>(
+      block.id,
+      target === 'title' ? { titleStyle: merged }
+        : target === 'subtitle' ? { subtitleStyle: merged }
+          : target === 'note' ? { noteStyle: merged }
+            : { bodyStyle: merged },
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'title' ? 'Title' : target === 'subtitle' ? 'Subtitle' : target === 'note' ? 'Note' : 'Body'} />
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        fontKind={target === 'title' ? 'heading' : 'body'}
+        onChange={onStyleChange}
+        {...(expanded !== undefined ? { expanded } : {})}
+      />
+    </div>
+  )
+}
+
+// ── Couple portal ─────────────────────────────────────────────────────────────
+
+/**
+ * Typography controls for the couple-portal body block. Four click-to-target
+ * parts, chosen by what the MC clicked in the preview: the hero couple name
+ * (`data-subtarget="title"`) edits {@link CouplePortalBlock.titleStyle} over the
+ * docTitle role; the hero intro line (`data-subtarget="subtitle"`) edits
+ * {@link CouplePortalBlock.subtitleStyle} over the body role; a section heading
+ * (`data-subtarget="heading"`) edits {@link CouplePortalBlock.headingStyle} over
+ * the sectionHeading role; anything else defaults to the section subtitle
+ * ({@link CouplePortalBlock.bodyStyle}) over the body role. Mirrors the
+ * multi-target pattern in {@link VendorTimelineBodyControls} — selection is by
+ * preview click, and {@link ActiveTargetLabel} just names the target.
+ *
+ * These overrides are portal-scoped (they live on the block), so nothing here
+ * reaches invoices, quotes, or contracts. Defaults come from the global type
+ * roles, so an untouched target shows the same values the live portal uses.
+ * Patches merge onto the existing override so each single-field change preserves
+ * the MC's prior edits, matching every sibling *Controls.
+ */
+function CouplePortalControls({
+  block,
+  state,
+  updateBlock,
+  activeSubTarget,
+  expanded,
+}: {
+  block: CouplePortalBlock
+  state: BrandPreviewState
+  updateBlock: <B extends Block>(id: string, patch: Partial<B>) => void
+  activeSubTarget: string | null
+  expanded?: boolean
+}) {
+  const target: 'title' | 'subtitle' | 'heading' | 'body' =
+    activeSubTarget === 'title' ? 'title'
+      : activeSubTarget === 'subtitle' ? 'subtitle'
+        : activeSubTarget === 'heading' ? 'heading'
+          : 'body'
+  const role =
+    target === 'title' ? 'docTitle'
+      : target === 'heading' ? 'sectionHeading'
+        : 'body'
+  const style =
+    target === 'title' ? block.titleStyle
+      : target === 'subtitle' ? block.subtitleStyle
+        : target === 'heading' ? block.headingStyle
+          : block.bodyStyle
+  const defaults: TextStyleDefaults = {
+    ...roleDefaults(publicBrandingFromEditorState(state), role),
+    align: 'left',
+  }
+  const onStyleChange = (patch: TextStyle) => {
+    const merged = { ...(style ?? {}), ...patch }
+    updateBlock<CouplePortalBlock>(
+      block.id,
+      target === 'title' ? { titleStyle: merged }
+        : target === 'subtitle' ? { subtitleStyle: merged }
+          : target === 'heading' ? { headingStyle: merged }
+            : { bodyStyle: merged },
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <ActiveTargetLabel label={target === 'title' ? 'Title' : target === 'subtitle' ? 'Subtitle' : target === 'heading' ? 'Heading' : 'Body'} />
+      <Divider />
+      <TextStyleControls
+        style={style}
+        defaults={defaults}
+        fontKind={target === 'title' || target === 'heading' ? 'heading' : 'body'}
+        onChange={onStyleChange}
         {...(expanded !== undefined ? { expanded } : {})}
       />
     </div>
@@ -1992,6 +2204,35 @@ function PackageTotalsControls({
 }
 
 // ── Primitives ────────────────────────────────────────────────────────────────
+
+/**
+ * Compact labelled text input for a toolbar. Controlled directly by the block
+ * field; the placeholder shows the default label when the MC has cleared it.
+ */
+function TextField({
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string
+  value: string
+  placeholder: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <label className="inline-flex items-center gap-1.5 text-xs text-gray-700 border border-gray-200 rounded-md px-2 h-8">
+      <span className="text-gray-500 shrink-0">{label}</span>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-24 bg-transparent outline-none text-gray-900 placeholder:text-gray-400"
+      />
+    </label>
+  )
+}
 
 /**
  * Compact toolbar button that opens a single-slider popover. Used for the footer

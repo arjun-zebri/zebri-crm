@@ -3,7 +3,8 @@ import { headers } from 'next/headers'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 
-import type { Block } from '@/app/(dashboard)/branding/blocks/types'
+import { resolveTextStyle } from '@/app/(dashboard)/branding/blocks/text-style'
+import type { Block, CouplePortalBlock } from '@/app/(dashboard)/branding/blocks/types'
 import { recordInvalidTokenAttempt } from '@/lib/api/public-token-limiter'
 import { ipOfHeaders } from '@/lib/api/rate-limit'
 import { DENSITY_PADDING } from '@/lib/branding/density'
@@ -83,17 +84,6 @@ export interface PortalContact {
   phone: string | null
 }
 
-export interface PortalProposal {
-  id: string
-  title: string
-  proposal_number: string
-  status: string
-  subtotal: number
-  share_token: string | null
-  share_token_enabled: boolean
-}
-
-
 export interface PortalInvoice {
   id: string
   title: string
@@ -171,8 +161,6 @@ export interface PortalData {
   vows: PortalVow[]
   timeline_items: PortalTimelineItem[]
   payments: {
-    proposals?: PortalProposal[]
-    quotes?: unknown[]
     invoices: PortalInvoice[]
   }
   contracts: PortalContract[]
@@ -257,6 +245,39 @@ export default async function PortalPage({
   const cpIdx = allBlocks.findIndex((b) => b.type === 'couplePortal')
   const preBlocks = cpIdx >= 0 ? allBlocks.slice(0, cpIdx) : allBlocks
   const postBlocks = cpIdx >= 0 ? allBlocks.slice(cpIdx + 1) : []
+
+  // Portal-scoped typography overrides live on the couplePortal marker block.
+  // The hero title / intro apply title/subtitle here; the section heading /
+  // subtitle flow to PortalShell. Legacy safety: with no block or no override,
+  // each `resolveTextStyle` reproduces the historical inline style exactly — its
+  // defaults keep the element's current colour and force `letterSpacing: 0` +
+  // `textTransform: 'none'` (the neutral values the old inline styles rendered).
+  const cpBlock = cpIdx >= 0 ? (allBlocks[cpIdx] as CouplePortalBlock) : undefined
+  const heroTitleStyle = resolveTextStyle(cpBlock?.titleStyle, {
+    ...roleDefaults(branding, 'docTitle'),
+    color: textColor,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
+  const heroIntroStyle = resolveTextStyle(cpBlock?.subtitleStyle, {
+    ...roleDefaults(branding, 'body'),
+    color: mutedColor,
+    letterSpacing: 0,
+    textTransform: 'none',
+  })
+  const portalStyles = cpBlock
+    ? { heading: cpBlock.headingStyle, body: cpBlock.bodyStyle }
+    : undefined
+
+  // Portal-specific background: the couplePortal block's colour (if set)
+  // overrides the brand Surface colour for the WHOLE portal render, so it
+  // reaches the page background AND every card (all of which read
+  // `surface_color`) — a portal-only background, distinct from the other
+  // documents. Unset → the brand Surface colour, unchanged.
+  const portalBg = cpBlock?.bgColor ?? pageBg
+  const portalBranding: PublicBranding = cpBlock?.bgColor
+    ? { ...branding, surface_color: cpBlock.bgColor }
+    : branding
 
   return (
     <div
@@ -357,38 +378,34 @@ export default async function PortalPage({
           </>
         )}
 
-        {/* Hero */}
-        <div
-          className={`${docX} pt-8 pb-8 border-b`}
-          style={{ borderColor: branding.border_color, borderBottomWidth: 1 }}
-        >
-          <h1
-            className="mb-1"
-            style={{ fontSize: `${roleDefaults(branding, 'docTitle').fontSize}px`, color: textColor, fontFamily: headingStack, fontWeight: headingWeight }}
+        {/* The portal's background colour (from the couplePortal block) wraps
+            ONLY the portal itself — the hero + dashboard + its cards — not the
+            page or the MC's chrome blocks above/below. Unset → transparent, so
+            it shows the page background exactly as before. */}
+        <div style={cpBlock?.bgColor ? { background: portalBg } : undefined}>
+          {/* Hero */}
+          <div
+            className={`${docX} pt-8 pb-8 border-b`}
+            style={{ borderColor: branding.border_color, borderBottomWidth: 1 }}
           >
-            {portal.couple_name}
-          </h1>
-          <p
-            className="mt-3"
-            style={{
-              color: mutedColor,
-              fontSize: `${roleDefaults(branding, 'body').fontSize}px`,
-              fontFamily: FONT_STACKS[roleDefaults(branding, 'body').fontFamily as never],
-              lineHeight: roleDefaults(branding, 'body').lineHeight,
-            }}
-          >
-            Fill in your details below. Everything saves automatically. You can come back anytime.
-          </p>
-        </div>
+            <h1 className="mb-1" style={heroTitleStyle}>
+              {portal.couple_name}
+            </h1>
+            <p className="mt-3" style={heroIntroStyle}>
+              Fill in your details below. Everything saves automatically. You can come back anytime.
+            </p>
+          </div>
 
-        {/* Portal sections - same horizontal padding as the blocks/hero so the
-            Overview nav lines up with the logo, couple name and intro. */}
-        <div className={docX}>
-          <PortalShell
-            token={token}
-            initialData={portal}
-            branding={branding}
-          />
+          {/* Portal sections - same horizontal padding as the blocks/hero so the
+              Overview nav lines up with the logo, couple name and intro. */}
+          <div className={docX}>
+            <PortalShell
+              token={token}
+              initialData={portal}
+              branding={portalBranding}
+              {...(portalStyles ? { styles: portalStyles } : {})}
+            />
+          </div>
         </div>
 
         {/* Blocks the MC placed below the couple portal in the editor. */}

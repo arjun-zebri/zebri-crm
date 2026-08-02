@@ -25,8 +25,8 @@ const SCALE = 0.55
 
 /** Same sample wedding line items the wizard preview uses. */
 const SAMPLE_DOC: PublicDocData = {
-  title: 'Wedding proposal',
-  refNumber: 'PROP-0412',
+  title: 'Wedding invoice',
+  refNumber: 'INV-0412',
   expiresAt: null,
   items: [
     { id: 'p1', description: 'MC and hosting, reception', amount: 1200 },
@@ -57,12 +57,12 @@ interface DemoDocProps {
 }
 
 /**
- * DemoDoc — the real proposal document on the demo's canvas.
+ * DemoDoc — the real invoice document on the demo's canvas.
  *
  * Not a mock: this renders the shared PublicBlockRenderer (the exact code
- * live proposals use) through buildPublicBranding, scaled down, so every
+ * live invoices use) through buildPublicBranding, scaled down, so every
  * change the pointer makes flows through the real branding pipeline. The
- * selection overlay is positioned by measuring the real Accept button
+ * selection overlay is positioned by measuring the real pay button
  * (`data-subtarget="primary"`) and carries the `doc-accept` cursor target.
  * @internal
  */
@@ -77,10 +77,10 @@ export function DemoDoc({ headingHex, fontHeading, headingSize, buttonColor, sel
   const blocks: Block[] = [
     { id: 'd-bn', type: 'businessName' },
     { id: 'd-tg', type: 'tagline' },
-    { id: 'd-title', type: 'title', title: 'Wedding proposal', showRef: true, showExpires: false, showAbn: false },
+    { id: 'd-title', type: 'title', title: 'Wedding invoice', showRef: true, showExpires: false, showAbn: false },
     { id: 'd-li', type: 'lineItems', colSpread: true },
     { id: 'd-to', type: 'totals', taxRate: 10, showSubtotal: true },
-    { id: 'd-act', type: 'action', primary: 'Accept proposal', secondary: 'Decline', ...(buttonColor ? { buttonColor } : {}) },
+    { id: 'd-act', type: 'action', primary: 'Pay now', secondary: null, ...(buttonColor ? { buttonColor } : {}) },
   ]
 
   const wrapRef = useRef<HTMLDivElement>(null)

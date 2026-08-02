@@ -11,8 +11,6 @@ import { PaymentsFooter } from '@/app/(dashboard)/payments/payments-footer';
 
 describe('PaymentsFooter', () => {
   it.each([
-    ['proposals', 1, '1 proposal'],
-    ['proposals', 5, '5 proposals'],
     ['invoices', 1, '1 invoice'],
     ['invoices', 0, '0 invoices'],
     ['contracts', 1, '1 contract'],
@@ -22,8 +20,8 @@ describe('PaymentsFooter', () => {
     expect(screen.getByText(expected)).toBeInTheDocument();
   });
 
-  it('renders the money total for proposals', () => {
-    render(<PaymentsFooter tab="proposals" count={2} total={4900} />);
+  it('renders the money total for invoices', () => {
+    render(<PaymentsFooter tab="invoices" count={2} total={4900} />);
     expect(screen.getByText(/\$4,900/)).toBeInTheDocument();
   });
 

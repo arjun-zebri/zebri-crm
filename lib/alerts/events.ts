@@ -154,12 +154,35 @@ export type AlertEvent =
       sessionId: string;
       reason: string;
     })
+  | (BaseEvent & {
+      // A Checkout session for an invoice included stage IDs in metadata
+      // that do not correspond to any stage rows on that invoice. Money
+      // has already moved, so this is a reconciliation emergency: the
+      // session metadata and the database disagree about what stages this
+      // payment settles. Humans must intervene.
+      type: 'invoice_payment_stage_mismatch';
+      severity: 'error';
+      invoiceId: string;
+      missingStageIds: string[];
+    })
+  | (BaseEvent & {
+      // The webhook succeeded (money moved via Stripe), but we cannot
+      // determine the invoice's new status because a database query failed.
+      // The stage stamping is idempotent and will re-run on the next
+      // Checkout retry, so the invoice will eventually reach the correct
+      // status. This alert is for visibility: the invoice is in a
+      // temporarily inconsistent state.
+      type: 'invoice_payment_status_indeterminate';
+      severity: 'error';
+      invoiceId: string;
+      failureReason: string;
+    })
 
   // ───── Email / Resend ──────────────────────────────────────────────
   | (BaseEvent & {
       type: 'email_rate_limit_hit';
       severity: 'warn';
-      action: 'sendQuote' | 'sendProposal' | 'sendInvoice' | 'sendTemplate';
+      action: 'sendQuote' | 'sendInvoice' | 'sendTemplate';
       userId: string;
       ip: string;
     })

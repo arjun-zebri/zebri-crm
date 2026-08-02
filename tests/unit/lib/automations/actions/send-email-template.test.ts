@@ -66,6 +66,7 @@ function makeCtx(): RunContext {
       spousePhone: null,
       timezone: 'Australia/Sydney',
     },
+    invoice: null,
     mc: {
       userId: 'u1',
       businessName: 'MC Business',

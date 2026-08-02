@@ -2,8 +2,8 @@
  * Unit tests for `PaymentsTable` + the `formatCurrency` export.
  *
  * Walks the populated / empty / loading branches against a tiny
- * row type so the table primitive doesn't have to know about Proposal
- * or Invoice domain types.
+ * row type so the table primitive doesn't have to know about the
+ * Invoice or Contract domain types.
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -15,37 +15,37 @@ import {
   type PaymentsRow,
 } from '@/app/(dashboard)/payments/payments-table';
 
-// Use the Proposal shape as a stand-in for the table primitive's
+// Use the Invoice shape as a stand-in for the table primitive's
 // generic — keeps the test code stable while satisfying the
 // PaymentsTableItem union.
-import type { Proposal } from '@/app/(dashboard)/payments/use-payments-data';
+import type { Invoice } from '@/app/(dashboard)/payments/use-payments-data';
 
-function makeProposal(overrides: Partial<Proposal> = {}): Proposal {
+function makeInvoice(overrides: Partial<Invoice> = {}): Invoice {
   return {
-    id: 'p1',
-    proposal_number: 'P-1',
-    title: 'Test Proposal',
+    id: 'i1',
+    invoice_number: 'INV-1',
+    title: 'Test Invoice',
     status: 'sent',
     subtotal: 1000,
-    expires_at: null,
+    due_date: null,
     created_at: '2026-04-01T00:00:00Z',
     couple: { id: 'c1', name: 'Test Couple' },
     ...overrides,
   };
 }
 
-function row(p: Proposal, opts: { onClick?: () => void } = {}): PaymentsRow {
+function row(inv: Invoice, opts: { onClick?: () => void } = {}): PaymentsRow {
   return {
-    key: p.id,
+    key: inv.id,
     onClick: opts.onClick ?? vi.fn(),
-    number: p.proposal_number,
-    title: p.title,
-    coupleName: p.couple.name,
-    statusPill: <span>{p.status}</span>,
-    valueCell: <span>{formatCurrency(p.subtotal)}</span>,
-    lastCell: <span>{p.created_at.slice(0, 10)}</span>,
-    mobileValueRight: <span>{formatCurrency(p.subtotal)}</span>,
-    mobileStatus: <span>{p.status}</span>,
+    number: inv.invoice_number,
+    title: inv.title,
+    coupleName: inv.couple.name,
+    statusPill: <span>{inv.status}</span>,
+    valueCell: <span>{formatCurrency(inv.subtotal)}</span>,
+    lastCell: <span>{inv.created_at.slice(0, 10)}</span>,
+    mobileValueRight: <span>{formatCurrency(inv.subtotal)}</span>,
+    mobileStatus: <span>{inv.status}</span>,
     mobileSecondary: null,
   };
 }
@@ -93,20 +93,20 @@ describe('PaymentsTable', () => {
     render(
       <PaymentsTable
         loading={false}
-        rows={[makeProposal()]}
+        rows={[makeInvoice()]}
         emptyIcon={<span />}
         emptyMessage="Nothing here"
         valueColLabel="Total"
         valueColIcon={<span />}
         lastColLabel="Date"
         lastColIcon={<span />}
-        renderRow={(p) => row(p, { onClick })}
+        renderRow={(inv) => row(inv, { onClick })}
       />,
     );
     // Desktop table is `hidden sm:table` in jsdom — but `display`
     // CSS isn't enforced at the DOM level, so the table cells are
     // still in the tree. Click the rendered title cell.
-    await userEvent.click(screen.getAllByText('Test Proposal')[0]!);
+    await userEvent.click(screen.getAllByText('Test Invoice')[0]!);
     expect(onClick).toHaveBeenCalledOnce();
   });
 });

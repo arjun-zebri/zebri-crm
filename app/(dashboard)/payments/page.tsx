@@ -1,82 +1,62 @@
 /**
- * /payments — Proposals / Invoices / Contracts tabbed list.
+ * /payments — Invoices / Contracts tabbed list.
  *
  * Orchestrator only: owns tab + search + active-modal state, calls
- * the three data hooks side-by-side, and composes the header /
- * list / footer / modal pieces. List rendering, row mapping, and
- * the new-contract popover live in co-located files so this page
- * stays close to the §5 DoD's "page is an orchestrator" rule.
+ * the two data hooks side-by-side, and composes the header /
+ * list / footer / modal pieces. List rendering and row mapping live
+ * in co-located files so this page stays close to the §5 DoD's
+ * "page is an orchestrator" rule.
  *
- * Contracts hardening (the modal + per-row server actions) is
- * Phase 3. This decomposition keeps the existing contract UI
- * working unchanged so the Contracts tab doesn't regress.
+ * Both tabs create the same way: New opens the builder modal on
+ * an unsaved draft and the couple is picked inside it. Nothing is
+ * written until the MC saves.
  *
  * @module app/(dashboard)/payments/page
  */
 'use client';
 
-import { Plus } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
 import { ContractBuilderModal } from '@/components/builders/contract-builder-modal';
 import { InvoiceBuilderModal } from '@/components/builders/invoice-builder-modal';
-import { ProposalBuilderModal } from '@/components/builders/proposal-builder-modal';
 
 import { ContractsList } from './contracts-list';
 import { deriveInvoices, InvoicesList } from './invoices-list';
-import { NewContractPopover } from './new-contract-popover';
 import { PaymentsFooter } from './payments-footer';
 import { PaymentsHeader } from './payments-header';
-import { displayStatus, ProposalsList } from './proposals-list';
-import { useContracts, useInvoices, useProposals } from './use-payments-data';
+import { useContracts, useInvoices } from './use-payments-data';
 import { type PaymentsTab, usePaymentsShortcut } from './use-payments-shortcut';
 
 export default function PaymentsPage() {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [activeTab, setActiveTab] = useState<PaymentsTab>('proposals');
-  const [activeProposalId, setActiveProposalId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<PaymentsTab>('invoices');
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
+  // `{ id: null }` is a fresh draft: the contract builder opens
+  // straight away and the couple is chosen inside it.
   const [activeContract, setActiveContract] = useState<{
-    id: string;
-    coupleId: string;
-    coupleName: string;
+    id: string | null;
+    coupleId?: string;
+    coupleName?: string;
   } | null>(null);
-  const [proposalSearch, setProposalSearch] = useState('');
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [contractSearch, setContractSearch] = useState('');
-  const [newContractOpen, setNewContractOpen] = useState(false);
 
   // Contracts is available on every plan (2026-06-03). The Starter
-  // 5-couple cap is enforced inside `NewContractPopover` at create
-  // time, not by hiding the tab.
+  // 5-couple cap is enforced by `saveContractAction` at create time,
+  // not by hiding the tab.
 
   // Keyboard shortcut + Escape-to-clear-search.
   usePaymentsShortcut({
     searchInputRef,
     onClearSearch: () => {
-      setProposalSearch('');
       setInvoiceSearch('');
       setContractSearch('');
     },
   });
 
-  const { data: proposals, isLoading: proposalsLoading } = useProposals();
   const { data: invoices, isLoading: invoicesLoading } = useInvoices();
   const { data: contracts, isLoading: contractsLoading } = useContracts();
-
-  const filteredProposals = useMemo(() => {
-    const list = proposals ?? [];
-    if (!proposalSearch) return list;
-    const s = proposalSearch.toLowerCase();
-    return list.filter(
-      (p) =>
-        p.title.toLowerCase().includes(s) ||
-        p.proposal_number.toLowerCase().includes(s) ||
-        p.couple.name.toLowerCase().includes(s) ||
-        displayStatus(p).toLowerCase().includes(s),
-    );
-  }, [proposals, proposalSearch]);
 
   const filteredInvoices = useMemo(() => {
     const derived = deriveInvoices(invoices ?? []);
@@ -104,66 +84,27 @@ export default function PaymentsPage() {
     );
   }, [contracts, contractSearch]);
 
-  const currentSearch =
-    activeTab === 'proposals'
-      ? proposalSearch
-      : activeTab === 'invoices'
-        ? invoiceSearch
-        : contractSearch;
+  const currentSearch = activeTab === 'invoices' ? invoiceSearch : contractSearch;
 
   function setCurrentSearch(value: string) {
-    if (activeTab === 'proposals') setProposalSearch(value);
-    else if (activeTab === 'invoices') setInvoiceSearch(value);
+    if (activeTab === 'invoices') setInvoiceSearch(value);
     else setContractSearch(value);
   }
 
   const count =
-    activeTab === 'proposals'
-      ? filteredProposals.length
-      : activeTab === 'invoices'
-        ? filteredInvoices.length
-        : filteredContracts.length;
+    activeTab === 'invoices' ? filteredInvoices.length : filteredContracts.length;
 
   const total =
-    activeTab === 'proposals'
-      ? filteredProposals.reduce((sum, p) => sum + p.subtotal, 0)
-      : activeTab === 'invoices'
-        ? filteredInvoices.reduce((sum, inv) => sum + inv.subtotal, 0)
-        : undefined;
+    activeTab === 'invoices'
+      ? filteredInvoices.reduce((sum, inv) => sum + inv.subtotal, 0)
+      : undefined;
 
-  const isLoading =
-    activeTab === 'proposals'
-      ? proposalsLoading
-      : activeTab === 'invoices'
-        ? invoicesLoading
-        : contractsLoading;
+  const isLoading = activeTab === 'invoices' ? invoicesLoading : contractsLoading;
 
   function handleNew() {
-    if (activeTab === 'proposals') setActiveProposalId('new');
-    else if (activeTab === 'invoices') setActiveInvoiceId('new');
-    else setNewContractOpen(true);
+    if (activeTab === 'invoices') setActiveInvoiceId('new');
+    else setActiveContract({ id: null });
   }
-
-  // Contracts tab needs a popover-anchored New button; quotes/
-  // invoices use the standard button. Build both forms here so the
-  // header's `newButtonOverride` either receives the popover or
-  // falls through to its default.
-  const contractsNewButton = (
-    <NewContractPopover
-      open={newContractOpen}
-      onOpenChange={setNewContractOpen}
-      onCreated={(c) => setActiveContract(c)}
-      trigger={
-        <button
-          onClick={() => setNewContractOpen(true)}
-          className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
-        >
-          <Plus size={11} strokeWidth={2} />
-          New contract
-        </button>
-      }
-    />
-  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -175,19 +116,10 @@ export default function PaymentsPage() {
         onSearchChange={setCurrentSearch}
         searchInputRef={searchInputRef}
         onNew={handleNew}
-        newButtonOverride={activeTab === 'contracts' ? contractsNewButton : undefined}
       />
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-6 sm:px-[3.75rem] pb-28">
-          {activeTab === 'proposals' && (
-            <ProposalsList
-              loading={isLoading}
-              proposals={filteredProposals}
-              searching={Boolean(proposalSearch)}
-              onOpen={setActiveProposalId}
-            />
-          )}
           {activeTab === 'invoices' && (
             <InvoicesList
               loading={isLoading}
@@ -209,19 +141,6 @@ export default function PaymentsPage() {
 
       <PaymentsFooter tab={activeTab} count={count} total={total} />
 
-      {!!activeProposalId && (
-        <ProposalBuilderModal
-          proposalId={activeProposalId}
-          isOpen
-          onClose={() => setActiveProposalId(null)}
-          onDuplicated={(newId) => setActiveProposalId(newId)}
-          onCreateInvoice={(invId) => {
-            setActiveProposalId(null);
-            setActiveInvoiceId(invId);
-          }}
-        />
-      )}
-
       {!!activeInvoiceId && (
         <InvoiceBuilderModal
           invoiceId={activeInvoiceId}
@@ -233,8 +152,8 @@ export default function PaymentsPage() {
       {!!activeContract && (
         <ContractBuilderModal
           contractId={activeContract.id}
-          coupleId={activeContract.coupleId}
-          coupleName={activeContract.coupleName}
+          {...(activeContract.coupleId ? { initialCoupleId: activeContract.coupleId } : {})}
+          {...(activeContract.coupleName ? { initialCoupleName: activeContract.coupleName } : {})}
           isOpen
           onClose={() => setActiveContract(null)}
         />

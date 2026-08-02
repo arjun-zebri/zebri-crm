@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import * as Popover from '@radix-ui/react-popover'
 import { MoreHorizontal, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
 
 export interface RowAction {
   label: string
@@ -20,9 +20,20 @@ interface RowActionsMenuProps {
   submenus?: { label: string; icon?: React.ReactNode; items: RowAction[] }[]
   /** Always visible (mobile / touch) - otherwise hover-only */
   alwaysVisible?: boolean
+  /**
+   * Item text size. `'md'` (default, `text-sm`) matches the page-level
+   * lists; `'sm'` (`text-caption`) is for compact surfaces whose own rows
+   * are caption-sized, so the menu does not tower over them.
+   */
+  size?: 'sm' | 'md'
 }
 
-export function RowActionsMenu({ actions, submenus, alwaysVisible }: RowActionsMenuProps) {
+export function RowActionsMenu({
+  actions,
+  submenus,
+  alwaysVisible,
+  size = 'md',
+}: RowActionsMenuProps) {
   const [open, setOpen] = useState(false)
   const [submenuKey, setSubmenuKey] = useState<string | null>(null)
 
@@ -30,6 +41,14 @@ export function RowActionsMenu({ actions, submenus, alwaysVisible }: RowActionsM
     setOpen(false)
     setSubmenuKey(null)
   }
+
+  // One source of truth for item metrics so the actions and the submenu
+  // items can never drift apart.
+  const itemClass =
+    size === 'sm'
+      ? 'w-full text-left px-2.5 py-1.5 text-caption flex items-center gap-2 transition'
+      : 'w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition'
+  const contentWidth = size === 'sm' ? 'min-w-36' : 'min-w-44'
 
   return (
     <Popover.Root
@@ -53,7 +72,7 @@ export function RowActionsMenu({ actions, submenus, alwaysVisible }: RowActionsM
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className="bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] min-w-44"
+          className={`bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-[80] ${contentWidth}`}
           sideOffset={4}
           align="end"
           onClick={(e) => e.stopPropagation()}
@@ -66,7 +85,7 @@ export function RowActionsMenu({ actions, submenus, alwaysVisible }: RowActionsM
                 onClick={() =>
                   setSubmenuKey((k) => (k === sub.label ? null : sub.label))
                 }
-                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-2 transition ${
+                className={`${itemClass} justify-between ${
                   submenuKey === sub.label ? 'bg-gray-50' : 'hover:bg-gray-50'
                 } text-gray-700`}
               >
@@ -89,7 +108,7 @@ export function RowActionsMenu({ actions, submenus, alwaysVisible }: RowActionsM
                         item.onSelect()
                         close()
                       }}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                      className={`${itemClass} text-gray-700 hover:bg-gray-50`}
                     >
                       {item.label}
                     </button>
@@ -106,7 +125,7 @@ export function RowActionsMenu({ actions, submenus, alwaysVisible }: RowActionsM
                 a.onSelect()
                 close()
               }}
-              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition ${
+              className={`${itemClass} ${
                 a.destructive
                   ? 'text-red-600 hover:bg-red-50'
                   : 'text-gray-700 hover:bg-gray-50'

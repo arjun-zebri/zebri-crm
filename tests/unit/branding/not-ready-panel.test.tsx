@@ -20,7 +20,7 @@ describe('NotReadyPanel', () => {
       issues: [
         {
           kind: 'missing-required',
-          message: 'Add a title to finish this proposal.',
+          message: 'Add a title to finish this invoice.',
         },
         {
           kind: 'account',
@@ -29,7 +29,7 @@ describe('NotReadyPanel', () => {
       ],
     }
     render(<NotReadyPanel readiness={readiness} />)
-    expect(screen.getByText('Add a title to finish this proposal.')).toBeInTheDocument()
+    expect(screen.getByText('Add a title to finish this invoice.')).toBeInTheDocument()
     expect(screen.getByText('Add your bank details in Settings.')).toBeInTheDocument()
   })
 

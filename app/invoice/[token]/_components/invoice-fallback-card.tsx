@@ -33,11 +33,9 @@ export interface InvoiceFallbackCardProps {
   hasSchedule: boolean;
   taxAmount: number;
   total: number;
-  depositAmount: number;
-  finalAmount: number;
-  showFullButton: boolean;
-  showDepositButton: boolean;
-  showFinalButton: boolean;
+  /** Id of the earliest unpaid stage, the only one with a live Pay button. */
+  nextPayableStageId: string | null;
+  showPayButtons: boolean;
   /** Global branding for type scale, colours, and fonts. */
   branding: PublicBranding;
   radius: number;
@@ -51,11 +49,8 @@ export function InvoiceFallbackCard({
   hasSchedule,
   taxAmount,
   total,
-  depositAmount,
-  finalAmount,
-  showFullButton,
-  showDepositButton,
-  showFinalButton,
+  nextPayableStageId,
+  showPayButtons,
   branding,
   radius,
   actionStyle,
@@ -372,6 +367,21 @@ export function InvoiceFallbackCard({
               {formatCurrency(total)}
             </span>
           </div>
+          {/* Tax disclosure, not a money row: it sits under the total so
+              nothing in the tally above it changes. */}
+          {invoice.gst_inclusive ? (
+            <p
+              style={{
+                fontSize: `${bodyDefaults.fontSize}px`,
+                color: bodyDefaults.color,
+                fontFamily: FONT_STACKS[bodyDefaults.fontFamily as never],
+                fontWeight: bodyDefaults.fontWeight,
+                lineHeight: bodyDefaults.lineHeight,
+              }}
+            >
+              Prices include GST
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -394,11 +404,9 @@ export function InvoiceFallbackCard({
           </p>
           <InvoicePaymentSchedule
             invoice={invoice}
+            nextPayableStageId={nextPayableStageId}
+            showPayButtons={showPayButtons}
             branding={branding}
-            depositAmount={depositAmount}
-            finalAmount={finalAmount}
-            showDepositButton={showDepositButton}
-            showFinalButton={showFinalButton}
             actionStyle={actionStyle}
           />
         </div>
@@ -592,8 +600,8 @@ export function InvoiceFallbackCard({
         </div>
       ) : null}
 
-      {/* Pay with card (full - no schedule) */}
-      {showFullButton && actionStyle ? (
+      {/* Pay with card (stageless invoice) */}
+      {!hasSchedule && showPayButtons && actionStyle ? (
         <div className="px-8 pb-8">
           <PayWithCardButton
             invoiceId={invoice.id}

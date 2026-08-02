@@ -12,7 +12,7 @@ import { fmt, pad, type PublicDocData } from './shared'
 import { VarChip } from './var-chip'
 
 /**
- * Renders the line items block for a document (invoice, proposal).
+ * Renders the line items block for a document (invoice).
  * Each item displays description and amount with responsive layout.
  *
  * @note The `colSpread` prop is deprecated and no longer affects layout.

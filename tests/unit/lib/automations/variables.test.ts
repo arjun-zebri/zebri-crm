@@ -44,6 +44,7 @@ function makeCtx(overrides: Partial<RunContext> = {}): RunContext {
       spousePhone: null,
       timezone: 'Australia/Sydney',
     },
+    invoice: null,
     mc: {
       userId: 'u',
       businessName: 'Acme MC Co',
@@ -89,13 +90,6 @@ describe('renderTemplate', () => {
   it('returns empty string for unknown namespaces', () => {
     const ctx = makeCtx()
     expect(renderTemplate('{{nope.foo}}', ctx)).toBe('')
-  })
-
-  it('reads from prior action outputs when payload lacks the field', () => {
-    const ctx = makeCtx({
-      actionResults: { 'action-1': { proposal_link: 'https://example.com/proposal/abc' } as never },
-    })
-    expect(renderTemplate('{{proposal.link}}', ctx)).toBe('https://example.com/proposal/abc')
   })
 
   it('resolves {{questionnaire.link}} from a prior send-questionnaire action', () => {

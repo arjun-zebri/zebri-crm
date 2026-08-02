@@ -2,13 +2,13 @@
 /**
  * Public surface styling gate (Task 16: branding hardening).
  *
- * The public surfaces (invoices, contracts, proposals, questionnaires, portal)
- * must inherit typography and colors from the MC's global branding instead of
+ * The public surfaces (invoices, contracts, questionnaires, portal) must
+ * inherit typography and colors from the MC's global branding instead of
  * hardcoded Tailwind classes. This gate prevents new hardcoded styling from
  * leaking back in.
  *
- * Scans: lib/branding/public-blocks, components/proposal, components/questionnaires,
- * app/proposal, app/invoice, app/contract, app/portal, app/questionnaire.
+ * Scans: lib/branding/public-blocks, components/questionnaires,
+ * app/invoice, app/contract, app/portal, app/questionnaire.
  *
  * Exemptions (declared inline with why-comments):
  * - Files matching *-loading.tsx and *-unavailable.tsx (render before branding RPC resolves)
@@ -24,9 +24,7 @@ import { extname, join } from 'node:path';
 
 const ROOTS = [
   'lib/branding/public-blocks',
-  'components/proposal',
   'components/questionnaires',
-  'app/proposal',
   'app/invoice',
   'app/contract',
   'app/portal',

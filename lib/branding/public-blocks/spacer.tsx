@@ -9,7 +9,7 @@ import type { SpacerBlock } from '@/app/(dashboard)/branding/blocks/types'
 import type { PublicBranding } from '../public-surface'
 
 /**
- * Renders a spacer block on public surfaces (proposal, invoice, contract, portal).
+ * Renders a spacer block on public surfaces (invoice, contract, portal).
  * Outputs an empty div with the specified height to create vertical gaps.
  * The editor injects a resize handle via the chrome prop.
  */

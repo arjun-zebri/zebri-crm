@@ -39,7 +39,7 @@ export interface CheckboxProps {
   /** Accessible name for label-less checkboxes (e.g. per-row ticks). */
   ariaLabel?: string
   /** Checked fill/border colour. Defaults to the app emerald. Branded surfaces
-   *  (e.g. the proposal add-ons) pass the MC's brand colour. */
+   *  pass the MC's brand colour. */
   color?: string
 }
 

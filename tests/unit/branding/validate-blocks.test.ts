@@ -57,21 +57,19 @@ describe('repairBlocks', () => {
 })
 
 describe('repairAllSurfaces', () => {
-  it('returns all six surface keys when input has all six', () => {
+  it('returns all five surface keys when input has all five', () => {
     const input: BlocksByDoc = {
-      proposal: [{ id: 'p', type: 'proposalBody', locked: true }],
       invoice: [{ id: 'i', type: 'paymentSchedule', locked: true }],
       contract: [{ id: 'c', type: 'contractBody', locked: true }],
       portal: [{ id: 'pt', type: 'couplePortal', locked: true }],
       vendorTimeline: [{ id: 'vt', type: 'vendorTimelineBody', locked: true }],
-      questionnaire: [{ id: 'q', type: 'questionnaireBody', locked: true }],
+      questionnaire: [{ id: 'q', type: 'questionnaireAllOnePage', locked: true }],
     }
     const result = repairAllSurfaces(input)
     expect(Object.keys(result).sort()).toEqual([
       'contract',
       'invoice',
       'portal',
-      'proposal',
       'questionnaire',
       'vendorTimeline',
     ])
@@ -79,14 +77,12 @@ describe('repairAllSurfaces', () => {
 
   it('preserves empty arrays; non-empty trees migrate but do not auto-insert required blocks', () => {
     const input: Partial<BlocksByDoc> = {
-      proposal: [],
       invoice: [{ id: 'i', type: 'headerBanner' }],
       contract: [],
     }
     const result = repairAllSurfaces(input)
 
     // Empty arrays stay empty, never get markers or required blocks added.
-    expect(result.proposal).toEqual([])
     expect(result.contract).toEqual([])
 
     // Non-empty invoice tree migrates headerBanner->image but does NOT auto-insert required.
@@ -95,18 +91,17 @@ describe('repairAllSurfaces', () => {
 
   it('repairs non-empty trees (migrates legacy) without auto-inserting required', () => {
     const input: Partial<BlocksByDoc> = {
-      proposal: [{ id: 'h', type: 'headerBanner' }],
+      vendorTimeline: [{ id: 'h', type: 'headerBanner' }],
     }
     const result = repairAllSurfaces(input)
 
-    // Proposal tree migrates headerBanner->image; proposalBody is NOT auto-inserted.
-    expect(result.proposal.map((b) => b.type)).toEqual(['image'])
+    // Tree migrates headerBanner->image; no required blocks are auto-inserted.
+    expect(result.vendorTimeline.map((b) => b.type)).toEqual(['image'])
   })
 
   it('seeds missing keys as empty arrays for lossless round-trip', () => {
     // Old data without vendorTimeline and questionnaire.
     const input: Partial<BlocksByDoc> = {
-      proposal: [{ id: 'p', type: 'proposalBody', locked: true }],
       invoice: [{ id: 'i', type: 'paymentSchedule', locked: true }],
       contract: [{ id: 'c', type: 'contractBody', locked: true }],
       portal: [{ id: 'pt', type: 'couplePortal', locked: true }],
@@ -117,14 +112,7 @@ describe('repairAllSurfaces', () => {
     expect(result.vendorTimeline).toEqual([])
     expect(result.questionnaire).toEqual([])
 
-    // Existing surfaces: proposalBody expands to 4 package blocks, others preserved.
-    expect(result.proposal.map((b) => b.type)).toEqual([
-      'packageHeader',
-      'packageDetails',
-      'packageLineItems',
-      'packageInclusions',
-      'packageTotals',
-    ])
+    // Existing surfaces are preserved as-is.
     expect(result.invoice[0]?.id).toBe('i')
     expect(result.invoice[0]?.type).toBe('paymentSchedule')
     expect(result.contract[0]?.id).toBe('c')

@@ -2,12 +2,14 @@
  * Fallback-card variant — used when the MC hasn't customised the
  * contract block tree. Renders the legacy hero header (brand-colour
  * band with logo + business name + contract number + title), then
- * the locked HTML body + MC signature, then the sign/decline slot
- * passed in by the caller.
+ * the locked HTML body, then the sign slot (sign/decline form + MC
+ * countersignature) passed in by the caller.
  *
  * This is the path most contracts will take until the MC opens the
  * branding editor — the block-tree variant kicks in for users who
- * customise.
+ * customise. The MC countersignature now lives in the sign slot (it
+ * moved out of the body section), so this card no longer renders it
+ * separately — that is expected.
  *
  * @module app/contract/[token]/_components/contract-fallback-card
  */
@@ -29,8 +31,9 @@ export interface ContractFallbackCardProps {
   brand: string;
   radius: number;
   headingWeight: number;
-  /** Sign/decline form + any status banners — placed under the body. */
-  bodyTrailing?: React.ReactNode;
+  /** Sign/decline form + status banners + MC countersignature — placed under
+   *  the body (see ContractSignSection). */
+  signSlot?: React.ReactNode;
 }
 
 export function ContractFallbackCard({
@@ -41,7 +44,7 @@ export function ContractFallbackCard({
   brand,
   radius,
   headingWeight,
-  bodyTrailing,
+  signSlot,
 }: ContractFallbackCardProps) {
   const pad = DENSITY_PAD[contract.density ?? 'cozy'];
   const brandText = getTextColor(brand);
@@ -155,7 +158,7 @@ export function ContractFallbackCard({
           textColor={textColor}
           mutedColor={mutedColor}
         />
-        {bodyTrailing}
+        {signSlot}
 
         {contract.show_contact_on_documents &&
         (contract.phone || contract.website) ? (

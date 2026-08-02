@@ -15,12 +15,11 @@ interface DemoTabsProps {
 
 // Same labels, subtitles and icons as the real surface-tabs strip.
 const TABS = [
-  { label: 'Proposal', subtitle: 'For new enquiries', Icon: FileText, active: true },
-  { label: 'Invoice', subtitle: 'Once booked', Icon: Receipt, active: false },
+  { label: 'Invoice', subtitle: 'Once booked', Icon: Receipt, active: true },
   { label: 'Contract', subtitle: 'E-sign agreement', Icon: FileSignature, active: false },
 ]
 
-const DOC_ROWS = ['Proposal', 'Invoice', 'Contract', 'Run sheet'] as const
+const DOC_ROWS = ['Invoice', 'Contract', 'Run sheet'] as const
 
 /** One document tab card, mirroring the real strip's icon + label + subtitle. @internal */
 function Tab({ label, subtitle, Icon, active }: { label: string; subtitle: string; Icon: typeof FileText; active: boolean }) {

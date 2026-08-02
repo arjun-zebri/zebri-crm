@@ -196,6 +196,120 @@ describe('migrateBlocks — contract surface', () => {
     ]);
   });
 
+  it('does NOT re-add the marker to an intentionally-cleared contract', () => {
+    // A contract the MC cleared via "Clear all blocks" has no marker and no
+    // legacy template text. The migration must leave it marker-less so the
+    // removal sticks across reloads (the body is re-addable from the palette).
+    const cleared: Block[] = [];
+    expect(migrateBlocks(cleared, 'contract')).toEqual([]);
+
+    // Same rule for a cleared-then-partially-rebuilt contract: chrome with no
+    // legacy template content stays as-is, no marker forced in.
+    const rebuilt: Block[] = [
+      { id: 'bn_1', type: 'businessName' },
+      { id: 'tt_1', type: 'title', title: 'Contract', showCoupleName: true, showRef: false, showExpires: false, showAbn: false },
+      { id: 'tx_1', type: 'text', text: 'A friendly intro the MC wrote.' },
+    ];
+    const result = migrateBlocks(rebuilt, 'contract');
+    expect(result.some((b) => b.type === 'contractBody')).toBe(false);
+    expect(result.map((b) => b.type)).toEqual(['businessName', 'title', 'text']);
+  });
+
+  it('preserves contract-body typography overrides (bodyStyle / subheadingStyle) unchanged', () => {
+    // The contract-body typography feature stores paragraph + subheading style
+    // overrides directly on the `contractBody` block. migrateBlocks must not
+    // strip these unknown-to-the-migration fields — losing them would silently
+    // restyle a contract the MC deliberately customised.
+    const withOverrides: Block[] = [
+      { id: 'bn_1', type: 'businessName' },
+      {
+        id: 'cb_1',
+        type: 'contractBody',
+        locked: true,
+        bodyStyle: { color: '#334155', lineHeight: 1.8, textTransform: 'none' },
+        subheadingStyle: { fontFamily: 'playfair', fontSize: 22, fontWeight: 700, color: '#0f172a' },
+      } as Block,
+      { id: 'ft_1', type: 'footer' },
+    ];
+    const result = migrateBlocks(withOverrides, 'contract');
+    const cb = result.find((b) => b.type === 'contractBody');
+    expect(cb).toEqual({
+      id: 'cb_1',
+      type: 'contractBody',
+      locked: true,
+      bodyStyle: { color: '#334155', lineHeight: 1.8, textTransform: 'none' },
+      subheadingStyle: { fontFamily: 'playfair', fontSize: 22, fontWeight: 700, color: '#0f172a' },
+    });
+  });
+
+  it('a bare contractBody marker round-trips unchanged (no overrides added)', () => {
+    // A legacy marker with no typography overrides must stay exactly a bare
+    // marker — the feature never fabricates a bodyStyle/subheadingStyle, which
+    // is what keeps every already-sent contract byte-identical.
+    const bare: Block[] = [
+      { id: 'bn_1', type: 'businessName' },
+      { id: 'cb_1', type: 'contractBody', locked: true },
+      { id: 'ft_1', type: 'footer' },
+    ];
+    const result = migrateBlocks(bare, 'contract');
+    expect(result.find((b) => b.type === 'contractBody')).toEqual({
+      id: 'cb_1',
+      type: 'contractBody',
+      locked: true,
+    });
+  });
+
+  it('round-trips a contractSign marker unchanged, overrides preserved', () => {
+    // The sign marker carries label / colour / typography overrides. migrate
+    // must pass them through untouched — losing them would silently restyle a
+    // contract the MC customised.
+    const withSign: Block[] = [
+      { id: 'bn_1', type: 'businessName' },
+      { id: 'cb_1', type: 'contractBody', locked: true },
+      {
+        id: 'cs_1',
+        type: 'contractSign',
+        locked: true,
+        heading: 'Ready to sign?',
+        primaryLabel: 'Accept & sign',
+        secondaryLabel: 'Not yet',
+        buttonColor: '#1d4ed8',
+        headingStyle: { fontSize: 22, fontWeight: 700 },
+        labelStyle: { color: '#334155' },
+      } as Block,
+    ];
+    const result = migrateBlocks(withSign, 'contract');
+    expect(result.find((b) => b.type === 'contractSign')).toEqual({
+      id: 'cs_1',
+      type: 'contractSign',
+      locked: true,
+      heading: 'Ready to sign?',
+      primaryLabel: 'Accept & sign',
+      secondaryLabel: 'Not yet',
+      buttonColor: '#1d4ed8',
+      headingStyle: { fontSize: 22, fontWeight: 700 },
+      labelStyle: { color: '#334155' },
+    });
+  });
+
+  it('NEVER force-adds a contractSign marker (legacy contracts rely on the card fallback)', () => {
+    // Legacy contracts sent before this feature carry a body marker but no sign
+    // marker. migrate must not fabricate one — the public card injects the sign
+    // form after the body instead, keeping those contracts byte-identical.
+    const legacy: Block[] = [
+      { id: 'bn_1', type: 'businessName' },
+      { id: 'tt_1', type: 'title', title: 'Contract', showCoupleName: true, showRef: false, showExpires: false, showAbn: false },
+      { id: 'cb_1', type: 'contractBody', locked: true },
+    ];
+    const result = migrateBlocks(legacy, 'contract');
+    expect(result.some((b) => b.type === 'contractSign')).toBe(false);
+    expect(result.map((b) => b.type)).toEqual(['businessName', 'title', 'contractBody']);
+    // Even the old inline-template migration path (which inserts a body marker)
+    // must not add a sign marker.
+    const fromOldDefault = migrateBlocks(oldContractDefault, 'contract');
+    expect(fromOldDefault.some((b) => b.type === 'contractSign')).toBe(false);
+  });
+
   it('does not touch non-contract surfaces', () => {
     // Quote / invoice surfaces should NOT have the contract-body
     // injection applied even if they contain text blocks matching
@@ -209,7 +323,7 @@ describe('migrateBlocks — contract surface', () => {
         text: 'PARTIES\n\nThis is a quote that happens to start with PARTIES.',
       },
     ];
-    const result = migrateBlocks(quoteWithLookalike, 'proposal');
+    const result = migrateBlocks(quoteWithLookalike, 'invoice');
     expect(result.find((b) => b.type === 'contractBody')).toBeUndefined();
     expect(result.find((b) => b.type === 'text')).toBeDefined();
   });

@@ -91,6 +91,14 @@ export function RenderTotals({
         )}
         <div className="pt-3 mt-2 border-t" style={{ borderTopColor: branding.border_color }}>
           <Row label={caseText('Total', block.totalStyle, totalDefaults)} value={variablePreview ? <VarChip label="Amount" hint="The total, calculated from the subtotal, any discount, and GST." /> : fmt(total)} css={totalCss} spread={spread} subtarget="total" />
+          {/* Display-only note. Deliberately not styleable from the
+              branding editor: it's a tax disclosure, not decoration, so
+              it always renders in the muted body voice. */}
+          {doc.gstInclusive ? (
+            <p className="mt-1.5" style={{ ...rowDefaults, fontSize: 12, color: branding.muted_color }}>
+              Prices include GST
+            </p>
+          ) : null}
         </div>
       </div>
       {chrome}

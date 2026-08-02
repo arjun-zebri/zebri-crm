@@ -18,8 +18,6 @@ const PUBLIC_ROUTES = [
   "/api/cron",
   "/api/email/send-contract-reminders",
   "/timeline",
-  // Couple-facing proposal accept page — token-gated capability URL.
-  "/proposal",
   "/invoice",
   "/portal",
   "/contract",

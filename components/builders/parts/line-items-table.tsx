@@ -49,11 +49,10 @@ export interface LineItemsTableProps {
   onAdd: () => void;
   /** Optional slot rendered above the table (template picker on quotes). */
   headerAccessory?: React.ReactNode;
-  /** Borderless compact rendering for tables nested inside a card
-   *  (the proposal option card) — same visual language as the
-   *  Templates line-item editors: no outer box, hairline row rules,
-   *  caption-size text. Default keeps the boxed table the invoice
-   *  builder uses at the top level. */
+  /** Borderless compact rendering for tables nested inside a card —
+   *  same visual language as the Templates line-item editors: no outer
+   *  box, hairline row rules, caption-size text. Default keeps the boxed
+   *  table the invoice builder uses at the top level. */
   compact?: boolean;
 }
 
