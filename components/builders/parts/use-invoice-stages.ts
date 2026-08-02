@@ -58,6 +58,19 @@ export function useInvoiceStages(input: {
   // Amounts are NOT stored here; see the `stages` memo below.
   const [draft, setDraft] = useState<InvoiceStage[]>(initialStages)
 
+  // Re-seed the draft when the invoice this hook is bound to changes. The
+  // `useState` initializer only runs on mount, and on mount the invoice query
+  // is still pending — so `initialStages` is [] and the draft would stay empty
+  // even after the invoice (and its saved stages) load a moment later. Adjusting
+  // state during render (React's sanctioned pattern) re-seeds without a
+  // `useEffect`, which this repo bans for setState. It fires only on an id
+  // change, so an applied-but-unsaved draft on the current invoice is preserved.
+  const [seededInvoiceId, setSeededInvoiceId] = useState(invoiceId)
+  if (invoiceId !== seededInvoiceId) {
+    setSeededInvoiceId(invoiceId)
+    setDraft(initialStages)
+  }
+
   const schedulesQuery = useQuery({ queryKey: ['payment-schedules'], queryFn: listSchedules })
 
   /** Template view of the current stages, for re-resolution and saving. */
