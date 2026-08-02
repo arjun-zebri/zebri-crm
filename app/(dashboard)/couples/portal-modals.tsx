@@ -37,23 +37,8 @@ export function AudioRecorder({
   // browser, non-secure context) so the button doesn't just "do
   // nothing" when the user clicks - it shows an inline note.
   const [error, setError] = useState<string | null>(null)
-  const [playing, setPlaying] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const chunksRef = useRef<Blob[]>([])
-
-  const togglePlayback = () => {
-    const el = audioRef.current
-    if (!el) return
-    if (playing) {
-      el.pause()
-      // Rewind so the next click replays the name from the start
-      // rather than resuming a half-heard word.
-      el.currentTime = 0
-      return
-    }
-    void el.play()
-  }
 
   const startRecording = async () => {
     setError(null)
@@ -141,46 +126,13 @@ export function AudioRecorder({
   if (audioUrl) {
     return (
       <div className="flex items-center gap-2">
-        {/* Playback state is driven by the element's own events, not by
-            the click handler, so it stays right when audio ends on its
-            own or is stopped from OS media controls. */}
-        <audio
-          ref={audioRef}
+        <AudioPlayButton
           src={audioUrl}
-          className="hidden"
-          id={`mc-audio-recorder-${personId}`}
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          onEnded={() => setPlaying(false)}
+          label="Play"
+          className="flex items-center gap-1 text-xs border rounded-lg px-2.5 py-1.5 transition cursor-pointer"
+          idleClassName="text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
+          playingClassName="text-emerald-700 border-emerald-300 bg-emerald-100 hover:bg-emerald-200"
         />
-        <button
-          type="button"
-          onClick={togglePlayback}
-          className={`flex items-center gap-1 text-xs border rounded-lg px-2.5 py-1.5 transition cursor-pointer ${
-            playing
-              ? 'text-emerald-700 border-emerald-300 bg-emerald-100 hover:bg-emerald-200'
-              : 'text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100'
-          }`}
-        >
-          {playing ? (
-            <>
-              <Square size={12} strokeWidth={2} className="fill-current" />
-              <span className="inline-flex items-center gap-1">
-                Playing
-                <span className="inline-flex items-end gap-px" aria-hidden>
-                  <span className="w-0.5 h-2 bg-current animate-pulse [animation-delay:-0.3s]" />
-                  <span className="w-0.5 h-3 bg-current animate-pulse [animation-delay:-0.15s]" />
-                  <span className="w-0.5 h-1.5 bg-current animate-pulse" />
-                </span>
-              </span>
-            </>
-          ) : (
-            <>
-              <Play size={12} strokeWidth={2} />
-              Play
-            </>
-          )}
-        </button>
         <button type="button" onClick={startRecording} className="p-1 text-gray-400 hover:text-gray-600 transition cursor-pointer" title="Re-record">
           <Mic size={13} strokeWidth={1.5} />
         </button>
