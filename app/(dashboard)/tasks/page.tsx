@@ -125,6 +125,9 @@ export default function TasksPage() {
   const [filters, setFilters] = useState<TaskFilter[]>([]);
   const [sorts, setSorts] = useState<TaskSort[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  // Id of the task created by the most recent "New task" click, so the panel
+  // knows to select the placeholder title instead of opening read-ready.
+  const [createdTaskId, setCreatedTaskId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
   const [selectedCouple, setSelectedCouple] = useState<Couple | null>(null);
@@ -415,6 +418,22 @@ export default function TasksPage() {
   };
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
+  /**
+   * Create a task and open it in the side panel straight away.
+   *
+   * The id is generated client-side and used for the optimistic row, so the
+   * panel can render (and patch) the new task before the server round-trip
+   * finishes.
+   *
+   * @param defaults - Field defaults from the section the task was added to.
+   */
+  const handleCreateTask = (defaults?: Partial<Task>) => {
+    const id = crypto.randomUUID();
+    insertTask.mutate({ ...defaults, id, title: "Untitled task" });
+    setCreatedTaskId(id);
+    setEditingTaskId(id);
+  };
+
   const handleSelectCouple = (coupleId: string) => {
     const c = (couples || []).find((x) => x.id === coupleId);
     if (c) setSelectedCouple(c);
@@ -658,18 +677,11 @@ export default function TasksPage() {
     clearSelection();
   };
 
-  // ─── Side-panel prev/next ──────────────────────────────────────────────────
+  // ─── Selection range + panel target ────────────────────────────────────────
   const flatVisible = useMemo(
     () => sections.flatMap((s) => s.tasks.map((t) => t.id)),
     [sections]
   );
-  const editingIdx = editingTaskId ? flatVisible.indexOf(editingTaskId) : -1;
-  const goPrev =
-    editingIdx > 0 ? () => setEditingTaskId(flatVisible[editingIdx - 1]) : undefined;
-  const goNext =
-    editingIdx >= 0 && editingIdx < flatVisible.length - 1
-      ? () => setEditingTaskId(flatVisible[editingIdx + 1])
-      : undefined;
   const editingTask = (tasks || []).find((t) => t.id === editingTaskId);
 
   // Total stats
@@ -686,7 +698,7 @@ export default function TasksPage() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-semibold text-gray-900">Tasks</h1>
           <button
-            onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
+            onClick={() => handleCreateTask()}
             className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-gray-900 text-white hover:bg-gray-700 transition cursor-pointer"
             aria-label="New task"
           >
@@ -734,7 +746,7 @@ export default function TasksPage() {
           <div className="ml-auto flex items-center gap-2">
             <GroupByToggle value={groupBy} onChange={setGroupBy} />
             <button
-              onClick={() => insertTask.mutate({ id: crypto.randomUUID(), title: 'Untitled task' })}
+              onClick={() => handleCreateTask()}
               className="hidden sm:inline-flex items-center gap-1 px-2 py-2 bg-gray-900 text-white text-xs rounded-md hover:bg-gray-700 transition cursor-pointer"
             >
               <Plus size={11} strokeWidth={2} />
@@ -779,13 +791,7 @@ export default function TasksPage() {
                     : undefined
                 }
                 onDelete={s.group ? (id) => deleteGroup.mutate(id) : undefined}
-                onAddTask={() =>
-                  insertTask.mutate({
-                    id: crypto.randomUUID(),
-                    title: "Untitled task",
-                    ...s.addTaskDefaults,
-                  })
-                }
+                onAddTask={() => handleCreateTask(s.addTaskDefaults)}
               >
                 {s.tasks.map((t) => (
                   <TaskRow
@@ -873,8 +879,12 @@ export default function TasksPage() {
 
       <TaskSidePanel
         isOpen={!!editingTask}
-        onClose={() => setEditingTaskId(null)}
+        onClose={() => {
+          setEditingTaskId(null);
+          setCreatedTaskId(null);
+        }}
         task={editingTask}
+        autoFocusTitle={!!editingTaskId && editingTaskId === createdTaskId}
         couples={coupleList}
         groups={groupsList}
         statusOptions={statusOptions}
@@ -903,8 +913,6 @@ export default function TasksPage() {
           setEditingTaskId(null);
           toast("Task deleted");
         }}
-        onPrev={goPrev}
-        onNext={goNext}
       />
 
       <CoupleProfile

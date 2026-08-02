@@ -29,6 +29,9 @@ export interface PreviewDoc {
   businessName: string | null;
   items: PreviewLineItem[];
   taxRate: number;
+  /** Invoice-only display flag: renders a "Prices include GST" note
+   *  under the total. Never affects a computed amount. */
+  gstInclusive?: boolean;
   discount: PreviewDiscount | null;
   notes: string | null;
   /** Contract-only: when the document expires. */
